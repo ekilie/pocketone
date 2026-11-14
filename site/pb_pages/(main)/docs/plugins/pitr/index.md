@@ -36,12 +36,25 @@ gets it.
 
 ## Configure
 
-### Single app
+### On, off and how far back
+
+Set it in `pocketone.yaml`:
+
+```yaml
+pitr:
+  enabled: true          # false turns it off
+  retention: 72h         # how far back a restore can go
+  snapshot_interval: 24h # how often a full copy is taken
+```
+
+Or with flags, which win over the file:
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--pitr` | `true` | Record history while serving. `--pitr=false` turns it off. |
 | `--pitrRetention` | `72h` | How far back a restore can go. |
+
+A shorter `snapshot_interval` makes restores faster and uses more storage.
 
 ### Where the history is stored
 
@@ -62,14 +75,10 @@ the app has its own bucket.
 
 ### Many instances (pocker)
 
-The `pitr` section of `pocketone.yaml` sets the defaults for every instance; each instance can override `enabled` and
-`retention` in its own settings (for example, off for a plan without PITR):
+On a pocker host, the `pitr` section sets the defaults for every instance, and each instance can override `enabled`
+and `retention` in its own settings (for example, off for a plan without PITR):
 
 ```yaml
-pitr:
-  retention: 72h
-  snapshot_interval: 24h
-
 # instances.yaml
 instances:
   - id: abc
@@ -82,12 +91,12 @@ instances:
 
 #### `pitr:`
 
-Point-in-time restore on a pocker host: on by default, retention, snapshot interval (instances may override).
+Point-in-time restore: on by default, retention, snapshot interval. On a single app the --pitr and --pitrRetention flags win; under pocker, instances may override enabled and retention.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool |  | On unless false. An instance's own setting wins. |
-| `retention` | duration |  | How far back a restore can go. Default 72h. An instance's own retention wins. |
+| `enabled` | bool |  | On unless false. The --pitr flag, or an instance's own setting, wins. |
+| `retention` | duration |  | How far back a restore can go. Default 72h. The --pitrRetention flag, or an instance's own retention, wins. |
 | `snapshot_interval` | duration |  | How often a full copy is taken. Default 24h. Shorter: faster restores, more storage. |
 
 

@@ -1,9 +1,22 @@
-### Single app
+### On, off and how far back
+
+Set it in `pocketone.yaml`:
+
+```yaml
+pitr:
+  enabled: true          # false turns it off
+  retention: 72h         # how far back a restore can go
+  snapshot_interval: 24h # how often a full copy is taken
+```
+
+Or with flags, which win over the file:
 
 | Flag | Default | What it does |
 |---|---|---|
 | `--pitr` | `true` | Record history while serving. `--pitr=false` turns it off. |
 | `--pitrRetention` | `72h` | How far back a restore can go. |
+
+A shorter `snapshot_interval` makes restores faster and uses more storage.
 
 ### Where the history is stored
 
@@ -24,14 +37,10 @@ the app has its own bucket.
 
 ### Many instances (pocker)
 
-The `pitr` section of `pocketone.yaml` sets the defaults for every instance; each instance can override `enabled` and
-`retention` in its own settings (for example, off for a plan without PITR):
+On a pocker host, the `pitr` section sets the defaults for every instance, and each instance can override `enabled`
+and `retention` in its own settings (for example, off for a plan without PITR):
 
 ```yaml
-pitr:
-  retention: 72h
-  snapshot_interval: 24h
-
 # instances.yaml
 instances:
   - id: abc

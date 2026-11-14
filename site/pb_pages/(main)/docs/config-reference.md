@@ -127,12 +127,12 @@ Owned by [Mothership](/docs/plugins/mothership).
 
 #### `pitr:`
 
-Point-in-time restore on a pocker host: on by default, retention, snapshot interval (instances may override).
+Point-in-time restore: on by default, retention, snapshot interval. On a single app the --pitr and --pitrRetention flags win; under pocker, instances may override enabled and retention.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool |  | On unless false. An instance's own setting wins. |
-| `retention` | duration |  | How far back a restore can go. Default 72h. An instance's own retention wins. |
+| `enabled` | bool |  | On unless false. The --pitr flag, or an instance's own setting, wins. |
+| `retention` | duration |  | How far back a restore can go. Default 72h. The --pitrRetention flag, or an instance's own retention, wins. |
 | `snapshot_interval` | duration |  | How often a full copy is taken. Default 24h. Shorter: faster restores, more storage. |
 
 Owned by [PITR](/docs/plugins/pitr).

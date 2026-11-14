@@ -171,11 +171,13 @@ func main() {
 		"how long each signed file download URL stays valid",
 	)
 
+	// pocketone.yaml's pitr section sets the defaults for --pitr and --pitrRetention, and the snapshot interval
+	pitrCfg, _ := pitr.Section.Get()
 	var pitrEnabled bool
 	app.RootCmd.PersistentFlags().BoolVar(
 		&pitrEnabled,
 		"pitr",
-		true,
+		or(pitrCfg.Enabled, true),
 		"point-in-time restore: replicate data.db into pb_data/litestream/ while serving",
 	)
 
@@ -183,7 +185,7 @@ func main() {
 	app.RootCmd.PersistentFlags().DurationVar(
 		&pitrRetention,
 		"pitrRetention",
-		72*time.Hour,
+		orDur(pitrCfg.Retention, pitr.DefaultRetention),
 		"how far back a point-in-time restore can go",
 	)
 
@@ -286,7 +288,7 @@ func main() {
 
 	// point-in-time restore: on by default (--pitr=false turns it off); history in pb_data/litestream/, restore from
 	// Settings → Backups or `pocketbase pitr restore`
-	pitr.MustRegister(app, pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention})
+	pitr.MustRegister(app, pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention, SnapshotInterval: pitrCfg.SnapshotInterval})
 	pluginkit.MustRegister(app, defaultPlugins...)
 
 	// migrate command (with js templates)
@@ -377,4 +379,11 @@ func defaultPublicDir() string {
 	}
 
 	return filepath.Join(os.Args[0], "../pb_public")
+}
+
+func orDur(v, def time.Duration) time.Duration {
+	if v > 0 {
+		return v
+	}
+	return def
 }
