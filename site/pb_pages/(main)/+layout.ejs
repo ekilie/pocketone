@@ -1,0 +1,29 @@
+<%- slot() %>
+
+<% if (ctx.req.url.pathname.startsWith('/docs')) { %>
+<!-- Mobile docs drawer: a native popover (light-dismiss and Esc for free).
+     The button that opens it lives in the site header (+layout.ejs). -->
+<aside id="mobile-nav" class="mobile-nav" popover>
+  <header>
+    <h2>Contents</h2>
+    <button
+      class="icon-btn sm"
+      popovertarget="mobile-nav"
+      popovertargetaction="hide"
+      aria-label="Close sidebar"
+    >
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M6 18L18 6M6 6l12 12"
+        ></path>
+      </svg>
+    </button>
+  </header>
+  <nav aria-label="Documentation navigation">
+    <div class="docs-toc-navigation"><%- include('toc') %></div>
+  </nav>
+</aside>
+<% } %>

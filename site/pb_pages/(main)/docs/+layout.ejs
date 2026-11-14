@@ -1,0 +1,16 @@
+<div class="docs-layout">
+  <!-- Desktop sidebar; hidden below 64rem, where the drawer takes over -->
+  <aside class="docs-sidebar">
+    <div>
+      <nav class="docs-nav-scroll" aria-label="Documentation navigation">
+        <div class="docs-toc-navigation" id="toc"><%- include('toc') %></div>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="docs-main">
+    <article class="prose">
+      <div id="content"><%- slot() %></div>
+    </article>
+  </main>
+</div>

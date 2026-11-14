@@ -1,0 +1,37 @@
+<%
+  meta('title', 'Blog · PocketOne')
+  meta('description', 'Releases and news from PocketOne.')
+  const posts = ctx.resolve('posts').list(ctx)
+%>
+<header class="blog-hero">
+  <p class="eyebrow">The PocketOne Blog</p>
+  <h1>News from PocketOne</h1>
+  <p class="lead">
+    Releases, new plugins, and notes from the people building PocketOne.
+  </p>
+</header>
+
+<ol class="post-list">
+  <% posts.forEach((post) => { %>
+  <li>
+    <article class="post-card">
+      <div class="post-meta">
+        <time datetime="<%= post.date %>"><%= post.dateLabel %></time>
+        <span aria-hidden="true">·</span>
+        <span><%= post.minutes %> min read</span>
+      </div>
+      <h2><a href="/blog/<%= post.slug %>"><%= post.title %></a></h2>
+      <p><%= post.description %></p>
+      <% if (post.tags.length) { %>
+      <ul class="tags">
+        <% post.tags.forEach((tag) => { %><li><%= tag %></li><% }) %>
+      </ul>
+      <% } %>
+    </article>
+  </li>
+  <% }) %>
+</ol>
+
+<% if (!posts.length) { %>
+<p class="lead" style="text-align: center">No posts yet.</p>
+<% } %>

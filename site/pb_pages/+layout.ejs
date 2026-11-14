@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%=meta('title') || 'PocketOne'%></title>
+    <link rel="icon" href="<%=asset('/logo.svg')%>" type="image/svg+xml" />
+    <link href="<%=asset('/assets/prism.css')%>" rel="stylesheet" />
+    <link href="<%=asset(`/assets/site.css`)%>" rel="stylesheet" />
+    <meta
+      name="description"
+      content="<%=meta('description') || 'A community fork of PocketBase: a small core, and everything else is a plugin'%>"
+    />
+    <meta property="og:title" content="<%=meta('title') || 'PocketOne'%>" />
+    <meta
+      property="og:description"
+      content="<%=meta('description') || 'A community fork of PocketBase: a small core, and everything else is a plugin'%>"
+    />
+    <meta
+      property="og:url"
+      content="<%=meta('path') ? `https://pocketone.dev${meta('path')}` : meta('url') || `https://pocketone.dev${ctx.req.url.pathname}`%>"
+    />
+    <%- ctx.datastar.scripts({ spa: { scope: '#toc', selector: '#content' } }) %> <%- slot('head') %>
+  </head>
+
+  <body>
+    <% const section = ctx.req.url.pathname.split('/')[1] %>
+    <header class="site-header">
+      <% if (section === 'docs') { %>
+      <button
+        class="icon-btn lg-hidden"
+        popovertarget="mobile-nav"
+        aria-label="Open docs navigation"
+      >
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"
+          ></path>
+        </svg>
+      </button>
+      <% } %>
+      <a href="/" class="brand">
+        <span class="avatar">
+          <img src="<%=asset('/logo.svg')%>" alt="" />
+        </span>
+        <span class="brand-name">PocketOne</span>
+      </a>
+      <nav aria-label="Site">
+        <ul class="nav-links">
+          <li><a href="/docs" <%- section === 'docs' ? 'aria-current="page"' : '' %>>Docs</a></li>
+          <li><a href="/blog" <%- section === 'blog' ? 'aria-current="page"' : '' %>>Blog</a></li>
+          <li><a href="https://github.com/pockethost/pocketone/discussions" target="_blank">Discussions</a></li>
+        </ul>
+      </nav>
+      <div class="header-tools">
+        <%# Search (MiniSearch over a built index) arrives in a later step. Icons are CSS masks so they take the theme's text color %>
+        <a class="icon-link" href="https://github.com/pockethost/pocketone" target="_blank" aria-label="GitHub">
+          <span class="icon" style="--icon: url(https://api.iconify.design/simple-icons/github.svg)"></span>
+        </a>
+        <a class="icon-link" href="https://discord.gg/nVTxCMEcGT" target="_blank" aria-label="Discord">
+          <span class="icon" style="--icon: url(https://api.iconify.design/simple-icons/discord.svg)"></span>
+        </a>
+      </div>
+    </header>
+    <%- slot() %>
+    <footer class="site-footer">
+      <p>
+        PocketOne is a community fork of <a href="https://pocketbase.io">PocketBase</a>, maintained by
+        <a href="https://pockethost.io">PocketHost</a>. It is not affiliated with or endorsed by the PocketBase project.
+        MIT licensed.
+      </p>
+    </footer>
+    <script src="<%=asset('/assets/prism.js')%>" defer></script>
+  </body>
+</html>
