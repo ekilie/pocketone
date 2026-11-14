@@ -9,7 +9,8 @@ import (
 
 // Pages the server renders.
 const (
-	PageSignIn  = "signin"  // email + password (or "email me a code")
+	PageSignIn  = "signin"  // the collection's sign-in methods: password, "email me a code", OAuth2 providers
+	PageMFA     = "mfa"     // the second sign-in step when the collection has MFA on
 	PageOTP     = "otp"     // enter the one-time code
 	PageConsent = "consent" // allow or deny the client
 	PageDevice  = "device"  // enter the code shown on the other device
@@ -37,19 +38,38 @@ type PageData struct {
 	// FullAccess: no scopes requested, so the token gets the account's full rights.
 	FullAccess bool
 
-	// Email is the signed-in account (consent), or the address a code went to (otp).
+	// Email is the signed-in account (consent, mfa), or the address a code went to (otp).
 	Email string
-	// Collection is the auth collection signing in; Collections the choices when there are several.
+	// Collection is the auth collection signing in (or signed in, on consent). Collections are the user
+	// collections to choose from on the user form (a choice is shown when there are several).
 	Collection  string
 	Collections []string
-	// What the collection allows.
+	// Superuser: the page is about the _superusers collection (the superuser form, or consent as a superuser);
+	// the pages look clearly different then. AccountKind is "user" or "superuser".
+	Superuser   bool
+	AccountKind string
+	// SuperuserLink: the user form offers "Sign in as a superuser"; UserLink: the superuser form links back.
+	SuperuserLink bool
+	UserLink      bool
+	// The methods the collection has on (PocketBase's auth-methods). IdentityLabel is "Email" or "Email or
+	// username". Providers are the OAuth2 providers (never for superusers).
 	PasswordEnabled bool
 	OTPEnabled      bool
+	IdentityLabel   string
+	Providers       []Provider
 	OTPId           string
+	// MFAId is PocketBase's MFA session while the second step is pending (post it back as "mfa_id").
+	MFAId string
 
 	UserCode string
 	Error    string
 	Message  string
+}
+
+// Provider is an OAuth2 sign-in option. Its button posts step "oauth2:<Name>".
+type Provider struct {
+	Name        string
+	DisplayName string
 }
 
 // pagesRenderer is what ext/pages offers (duck-typed, so this module doesn't depend on it): render
@@ -104,12 +124,18 @@ func pageMap(d PageData) map[string]any {
 	for _, s := range d.Scopes {
 		scopes = append(scopes, map[string]string{"name": s.Name, "description": s.Description})
 	}
+	providers := make([]map[string]string, 0, len(d.Providers))
+	for _, p := range d.Providers {
+		providers = append(providers, map[string]string{"name": p.Name, "displayName": p.DisplayName})
+	}
 	return map[string]any{
 		"page": d.Page, "appName": d.AppName, "logoUrl": d.LogoURL, "accent": d.Accent, "footer": d.Footer,
 		"action": d.Action, "hidden": d.Hidden, "csrf": d.CSRF, "clientName": d.ClientName, "clientHost": d.ClientHost,
 		"scopes": scopes, "fullAccess": d.FullAccess, "email": d.Email, "collection": d.Collection,
-		"collections": d.Collections, "passwordEnabled": d.PasswordEnabled, "otpEnabled": d.OTPEnabled, "otpId": d.OTPId,
-		"userCode": d.UserCode, "error": d.Error, "message": d.Message,
+		"collections": d.Collections, "superuser": d.Superuser, "accountKind": d.AccountKind,
+		"superuserLink": d.SuperuserLink, "userLink": d.UserLink, "passwordEnabled": d.PasswordEnabled,
+		"otpEnabled": d.OTPEnabled, "identityLabel": d.IdentityLabel, "providers": providers, "otpId": d.OTPId,
+		"mfaId": d.MFAId, "userCode": d.UserCode, "error": d.Error, "message": d.Message,
 	}
 }
 
@@ -139,7 +165,19 @@ ul.scopes li{padding:10px 12px;border-top:1px solid var(--line)}ul.scopes li:fir
 ul.scopes b{display:block}ul.scopes span{color:var(--muted);font-size:13px}
 .code{font:600 22px ui-monospace,Menlo,monospace;letter-spacing:3px;text-align:center;text-transform:uppercase}
 .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
-</style></head><body><main class="card">
+.tabs{display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:9px}
+.tab{flex:1;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.tab.on{background:var(--accent);color:#fff}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:18px 0 0}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
+.alt{margin:22px 0 0;padding-top:4px;border-top:1px solid var(--line)}
+.badge{display:block;width:max-content;margin:0 auto 10px;padding:3px 10px;border-radius:999px;background:var(--accent);
+color:#fff;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.warn{background:color-mix(in srgb,var(--accent) 12%,transparent);border-left:3px solid var(--accent);border-radius:6px;
+padding:10px 12px;margin:0 0 12px;font-size:14px}
+body.su{--accent:#c2410c;--bg:#fde8d7}body.su .card{border:2px solid var(--accent)}
+@media (prefers-color-scheme:dark){body.su{--bg:#2b1708}}
+</style></head><body{{if .Superuser}} class="su"{{end}}><main class="card">
 {{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="">{{end}}{{end}}
 
 {{define "foot"}}{{if .Footer}}<p class="foot">{{.Footer}}</p>{{end}}</main></body></html>{{end}}
@@ -147,28 +185,49 @@ ul.scopes b{display:block}ul.scopes span{color:var(--muted);font-size:13px}
 {{define "hidden"}}{{range $k, $v := .Hidden}}<input type="hidden" name="{{$k}}" value="{{$v}}">{{end}}<input type="hidden" name="csrf" value="{{.CSRF}}">{{end}}
 
 {{define "signin"}}{{template "head" .}}
-<h1>Sign in to {{.AppName}}</h1>
-<p class="sub">{{if .ClientName}}to continue to {{.ClientName}}{{else}}to continue{{end}}</p>
+{{if .Superuser}}<span class="badge">Superuser</span><h1>Superuser sign-in</h1>
+<p class="sub">to {{.AppName}}{{if .ClientName}}, to continue to {{.ClientName}}{{end}}</p>
+<p class="warn">A superuser has full control of {{.AppName}}. Only sign in here if you mean to give {{if .ClientName}}{{.ClientName}}{{else}}this app{{end}} that power.</p>
+{{else}}<h1>Sign in to {{.AppName}}</h1>
+<p class="sub">{{if .ClientName}}to continue to {{.ClientName}}{{else}}to continue{{end}}</p>{{end}}
 {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
-<form method="post" action="{{.Action}}">{{template "hidden" .}}
-{{if gt (len .Collections) 1}}<label for="collection">Account type</label><select id="collection" name="collection">{{range .Collections}}<option value="{{.}}" {{if eq . $.Collection}}selected{{end}}>{{.}}</option>{{end}}</select>
-{{else}}<input type="hidden" name="collection" value="{{.Collection}}">{{end}}
-<label for="email">Email</label><input id="email" type="email" name="email" value="{{.Email}}" autocomplete="username" required autofocus>
+<form method="post" action="{{.Action}}">{{template "hidden" .}}<input type="hidden" name="collection" value="{{.Collection}}">
+{{if gt (len .Collections) 1}}<div class="tabs">{{range .Collections}}<button class="tab{{if eq . $.Collection}} on{{end}}" name="step" value="use:{{.}}" formnovalidate>{{.}}</button>{{end}}</div>{{end}}
+{{if or .PasswordEnabled .OTPEnabled}}<label for="email">{{.IdentityLabel}}</label><input id="email" type="{{if eq .IdentityLabel "Email"}}email{{else}}text{{end}}" name="email" value="{{.Email}}" autocomplete="username" required autofocus>{{end}}
 {{if .PasswordEnabled}}<label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password">
 <button class="btn" name="step" value="password">Sign in</button>{{end}}
 {{if .OTPEnabled}}<button class="{{if .PasswordEnabled}}link{{else}}btn{{end}}" name="step" value="request_otp" formnovalidate>Email me a sign-in code</button>{{end}}
+{{if .Providers}}{{if or .PasswordEnabled .OTPEnabled}}<p class="or">or</p>{{end}}
+{{range .Providers}}<button class="btn secondary" name="step" value="oauth2:{{.Name}}" formnovalidate>Continue with {{.DisplayName}}</button>{{end}}{{end}}
+{{if .SuperuserLink}}<p class="alt"><button class="link" name="step" value="use:_superusers" formnovalidate>Sign in as a superuser</button></p>{{end}}
+{{if .UserLink}}<p class="alt"><button class="link" name="step" value="use:" formnovalidate>Sign in as a user instead</button></p>{{end}}
+</form>{{template "foot" .}}{{end}}
+
+{{define "mfa"}}{{template "head" .}}
+{{if .Superuser}}<span class="badge">Superuser</span>{{end}}
+<h1>One more step</h1><p class="sub">{{.AppName}} needs a second sign-in method for <b>{{.Email}}</b></p>
+{{if .Error}}<p class="err">{{.Error}}</p>{{end}}
+<form method="post" action="{{.Action}}">{{template "hidden" .}}<input type="hidden" name="collection" value="{{.Collection}}"><input type="hidden" name="mfa_id" value="{{.MFAId}}">
+{{if .PasswordEnabled}}<label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password" required autofocus>
+<button class="btn" name="step" value="password">Continue</button>{{end}}
+{{if .OTPEnabled}}<button class="{{if .PasswordEnabled}}link{{else}}btn{{end}}" name="step" value="request_otp" formnovalidate>Email me a sign-in code</button>{{end}}
+{{range .Providers}}<button class="btn secondary" name="step" value="oauth2:{{.Name}}" formnovalidate>Continue with {{.DisplayName}}</button>{{end}}
+<p class="alt"><button class="link" name="step" value="use:{{.Collection}}" formnovalidate>Start over</button></p>
 </form>{{template "foot" .}}{{end}}
 
 {{define "otp"}}{{template "head" .}}
 <h1>Check your email</h1><p class="sub">We sent a code to {{.Email}}</p>
 {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
 <form method="post" action="{{.Action}}">{{template "hidden" .}}
-<input type="hidden" name="collection" value="{{.Collection}}"><input type="hidden" name="email" value="{{.Email}}"><input type="hidden" name="otp_id" value="{{.OTPId}}">
+<input type="hidden" name="collection" value="{{.Collection}}"><input type="hidden" name="email" value="{{.Email}}"><input type="hidden" name="otp_id" value="{{.OTPId}}">{{if .MFAId}}<input type="hidden" name="mfa_id" value="{{.MFAId}}">{{end}}
 <label for="code">Code</label><input id="code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required autofocus>
 <button class="btn" name="step" value="otp">Continue</button></form>{{template "foot" .}}{{end}}
 
 {{define "consent"}}{{template "head" .}}
+{{if .Superuser}}<span class="badge">Superuser</span>{{end}}
 <h1>{{.ClientName}}</h1><p class="sub">wants to access {{.AppName}} as <b>{{.Email}}</b></p>
+{{if .Superuser}}<p class="warn"><b>Superuser account.</b> {{.ClientName}} will act as a superuser, with full control of {{.AppName}}: every record, collection and setting.</p>
+{{else}}<p class="msg">User account ({{.Collection}}). {{.ClientName}} can do what this user can.</p>{{end}}
 {{if .FullAccess}}<ul class="scopes"><li><b>Full access</b><span>Everything this account can do.</span></li></ul>
 {{else}}<ul class="scopes">{{range .Scopes}}<li><b>{{.Name}}</b><span>{{.Description}}</span></li>{{end}}</ul>{{end}}
 {{if .ClientHost}}<p class="msg">You'll be sent back to {{.ClientHost}}.</p>{{end}}

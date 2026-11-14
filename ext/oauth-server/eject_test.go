@@ -45,14 +45,14 @@ func TestEjectRendersThroughPages(t *testing.T) {
 		return out.String(), err
 	}
 	out, err := run("eject")
-	if err != nil || strings.Count(out, "wrote ") != 9 || !strings.Contains(out, filepath.Join(pagesDir, "_private", "oauth", "signin.ejs")) {
+	if err != nil || strings.Count(out, "wrote ") != 10 || !strings.Contains(out, filepath.Join(pagesDir, "_private", "oauth", "signin.ejs")) {
 		t.Fatalf("eject: %v\n%s", err, out)
 	}
 	if _, err := run("eject"); err == nil || !strings.Contains(err.Error(), "--force") {
 		t.Fatalf("second eject: %v", err)
 	}
 	var ee *ExistsError
-	if _, err := Eject(pagesDir, false); !errors.As(err, &ee) || len(ee.Files) != 9 {
+	if _, err := Eject(pagesDir, false); !errors.As(err, &ee) || len(ee.Files) != 10 {
 		t.Fatalf("exists: %v", err)
 	}
 	// customize the ejected sign-in page; --force restores it
@@ -69,11 +69,11 @@ func TestEjectRendersThroughPages(t *testing.T) {
 	if br.status != 200 || !br.has("EJECTED Sign in to Acme Cloud") || !br.has(`name="csrf"`) {
 		t.Fatalf("ejected sign-in: %d %s", br.status, br.page)
 	}
-	br.submit("password", map[string]string{"email": "test@example.com", "password": "wrong"})
+	br.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "wrong"})
 	if br.status != 401 || !br.has("Wrong email or password") {
 		t.Fatalf("ejected error status: %d %s", br.status, br.page)
 	}
-	br.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+	br.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
 	if !br.has("wants to access Acme Cloud") || !br.has("Full access") {
 		t.Fatalf("ejected consent: %s", br.page)
 	}
@@ -82,7 +82,7 @@ func TestEjectRendersThroughPages(t *testing.T) {
 		t.Fatalf("allow through ejected consent: %d %s", res.StatusCode, loc)
 	}
 
-	if out, err := run("eject", "--force"); err != nil || !strings.Contains(out, "Ejected 9") {
+	if out, err := run("eject", "--force"); err != nil || !strings.Contains(out, "Ejected 10") {
 		t.Fatalf("force: %v %s", err, out)
 	}
 	if b, _ := os.ReadFile(signin); strings.Contains(string(b), "EJECTED") {

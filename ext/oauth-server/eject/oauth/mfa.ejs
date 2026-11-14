@@ -1,0 +1,15 @@
+<%- include('/oauth/head') %>
+<%# The second sign-in step (the collection has MFA on): the methods not used yet. Post mfa_id back. %>
+<% if (data.superuser) { %><span class="badge">Superuser</span><% } %>
+<h1>One more step</h1><p class="sub"><%= data.appName %> needs a second sign-in method for <b><%= data.email %></b></p>
+<% if (data.error) { %><p class="err"><%= data.error %></p><% } %>
+<form method="post" action="<%= data.action %>"><%- include('/oauth/hidden') %><input type="hidden" name="collection" value="<%= data.collection %>"><input type="hidden" name="mfa_id" value="<%= data.mfaId %>">
+<% if (data.passwordEnabled) { %>
+<label for="password">Password</label><input id="password" type="password" name="password" autocomplete="current-password" required autofocus>
+<button class="btn" name="step" value="password">Continue</button>
+<% } %>
+<% if (data.otpEnabled) { %><button class="<%= data.passwordEnabled ? 'link' : 'btn' %>" name="step" value="request_otp" formnovalidate>Email me a sign-in code</button><% } %>
+<% for (const p of data.providers) { %><button class="btn secondary" name="step" value="oauth2:<%= p.name %>" formnovalidate>Continue with <%= p.displayName %></button><% } %>
+<p class="alt"><button class="link" name="step" value="use:<%= data.collection %>" formnovalidate>Start over</button></p>
+</form>
+<%- include('/oauth/foot') %>

@@ -53,7 +53,7 @@ func TestClaudeConnectorFlow(t *testing.T) {
 		"code_challenge": {challenge}, "code_challenge_method": {"S256"}, "scope": {"mcp:read offline_access"}, "resource": {resource}}
 	b := newBrowser(t)
 	b.get(e.url + "/oauth/authorize?" + q.Encode())
-	b.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+	b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
 	if !b.has("Claude Code") || !b.has("mcp:read") || b.has("<b>offline_access</b>") {
 		t.Fatalf("consent: %s", b.page)
 	}

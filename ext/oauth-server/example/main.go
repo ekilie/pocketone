@@ -5,7 +5,8 @@
 //	go run ./example login http://127.0.0.1:8090              # opens the browser; --device for a code
 //	go run ./example remote whoami http://127.0.0.1:8090
 //
-// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
+// Logins (ext/devusers, local testing only): app user user@example.com / password (the default form), superuser
+// admin@example.com / password ("Sign in as a superuser").
 package main
 
 import (
@@ -22,7 +23,8 @@ func main() {
 	app := pocketbase.New()
 	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
 
-	tokens.MustRegister(app, tokens.Config{})   // OAuth access tokens are API tokens
+	// OAuth access tokens are API tokens, owned by whoever signed in: superusers and app users
+	tokens.MustRegister(app, tokens.Config{Collections: []string{"_superusers", "users"}})
 	remotes.MustRegister(app, remotes.Config{}) // whoami discovery + login/remote commands
 	oauthserver.MustRegister(app, oauthserver.Config{
 		DynamicRegistration: true, // MCP connectors register themselves
