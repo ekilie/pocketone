@@ -15,6 +15,22 @@ started from the pocketpages.dev site in [`../ext/pages/site`](../ext/pages/site
 
 Core PocketBase topics are linked to pocketbase.io, never copied here.
 
+## Plugin docs (`sync/`)
+
+Plugin pages are copies of the READMEs in `ext/`, made by `sync/`. Don't edit them here; edit the README and run:
+
+```bash
+cd site/sync && go run .
+```
+
+- `plugins.json` lists every plugin: title, one-line summary and group. Every `ext/<name>` folder must be in it.
+- Each `ext/<name>/README.md` becomes `/docs/plugins/<name>`; other `.md` files in the plugin folder become guides
+  under it; `docs/plugins.md` becomes `/docs/writing-a-plugin`.
+- Links between plugins and docs point at the site pages; links to source files point at GitHub.
+- It also writes the plugin index (`/docs/plugins`) and the plugin part of the docs nav (between the markers in
+  `pb_pages/(main)/_private/toc.md`).
+- CI (`.github/workflows/site.yml`) runs `go run . --check` and fails when a page is out of date.
+
 ## Run it
 
 With a `pocketone` binary, from this folder:

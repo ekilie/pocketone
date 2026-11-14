@@ -1,0 +1,23 @@
+# pocketone.dev copies the plugin READMEs from ext/ (site/sync). Fail when the copy is out of date or a plugin
+# folder isn't listed in site/plugins.json.
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths: ['ext/**', 'docs/**', 'site/**', '.github/workflows/site.yml']
+  pull_request:
+    paths: ['ext/**', 'docs/**', 'site/**', '.github/workflows/site.yml']
+
+jobs:
+  sync-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: site/sync/go.mod
+      - name: Site is in sync with ext/ and docs/
+        working-directory: site/sync
+        run: go run . --check

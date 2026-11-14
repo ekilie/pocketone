@@ -10,7 +10,14 @@
 
   <main class="docs-main">
     <article class="prose">
-      <div id="content"><%- slot() %></div>
+      <div id="content">
+        <%- slot() %>
+        <% if (meta('source')) { %>
+        <p class="edit-page">
+          <a href="https://github.com/pockethost/pocketone/edit/main/<%= meta('source') %>" target="_blank">Edit this page on GitHub</a>
+        </p>
+        <% } %>
+      </div>
     </article>
   </main>
 </div>

@@ -27,7 +27,7 @@ or endorsed by the PocketBase project.
 PocketOne is open to everyone. Ask questions and share ideas in
 [GitHub Discussions](https://github.com/pockethost/pocketone/discussions), report bugs in
 [Issues](https://github.com/pockethost/pocketone/issues), and send plugins as pull requests. Start with
-[Writing a plugin](https://github.com/pockethost/pocketone/blob/main/docs/plugins.md).
+[Writing a plugin](/docs/writing-a-plugin).
 
 ## Where to next
 
