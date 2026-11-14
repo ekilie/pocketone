@@ -29,18 +29,18 @@ The single app: data dir, dev mode, encryption, hooks, migrations, public dir, a
 
 #### `autotls:`
 
-Automatic HTTPS certificates (ACME) for a pocker host: auto, email, CA, domains, DNS-01.
+Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. On a single app the --autotls* flags win.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `auto` | bool |  |  |
-| `email` | string |  |  |
-| `ca` | string |  |  |
-| `storage` | string |  |  |
-| `domains` | list of string |  |  |
-| `dns.provider` | string |  |  |
-| `dns.api_token` | string |  |  |
-| `dns.api_token_env` | string |  |  |
+| `auto` | bool |  | Get certificates through ACME (CertMagic). Flag: --autotls. |
+| `email` | string |  | ACME account email, for expiry notices from the CA. Flag: --autotlsEmail. |
+| `ca` | string |  | letsencrypt (default), letsencrypt-staging, zerossl, or an ACME directory URL. Flag: --autotlsCA. |
+| `storage` | string |  | Where certificates are kept. Default pb_data/.autotls (single app), <pb root>/.pocker-certs (pocker). |
+| `domains` | list of string |  | Extra domains to get at start; wildcards (*.example.com) need dns. Flag: --autotlsDomains. |
+| `dns.provider` | string |  | DNS provider for DNS-01 challenges (needed for wildcards): cloudflare. Flag: --autotlsDNS. |
+| `dns.api_token` | string |  | The provider's API token. Write $VAR to read it from the .env beside the file. |
+| `dns.api_token_env` | string |  | Or: the environment variable holding the token. Default CF_API_TOKEN. Flag: --autotlsDNSTokenEnv. |
 
 Owned by [Auto TLS](/docs/plugins/autotls).
 
@@ -182,12 +182,12 @@ Owned by [Firewall](/docs/plugins/firewall).
 
 #### `s3redirect:`
 
-Signed S3 redirects for file downloads: enabled, URL lifetime (instances may override).
+Signed S3 redirects for file downloads: enabled, URL lifetime. On a single app the --s3Redirect* flags win; under pocker, instances may override.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool |  |  |
-| `ttl` | duration |  |  |
+| `enabled` | bool |  | On unless false (it only acts when S3 file storage is on). Flag: --s3Redirect. |
+| `ttl` | duration |  | How long each signed URL stays valid. Default 5m, max 7 days. Flag: --s3RedirectTTL. |
 
 Owned by [S3 Redirect](/docs/plugins/s3redirect).
 

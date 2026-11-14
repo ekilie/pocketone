@@ -50,11 +50,11 @@ const HookID = "__ext_s3redirect__"
 type Config struct {
 	// Enabled is the default for every app: on unless set to false (including the plugin is the opt-in). An app's
 	// [AppConfig.Enabled] overrides it.
-	Enabled *bool `yaml:"enabled"`
+	Enabled *bool `yaml:"enabled" doc:"On unless false (it only acts when S3 file storage is on). Flag: --s3Redirect."`
 
 	// TTL is how long each signed URL is valid (default 5m, max 7 days). Keep it short: anyone holding the URL can
 	// fetch the file until it expires, including protected files.
-	TTL time.Duration `yaml:"ttl"`
+	TTL time.Duration `yaml:"ttl" doc:"How long each signed URL stays valid. Default 5m, max 7 days. Flag: --s3RedirectTTL."`
 
 	Logger *slog.Logger `yaml:"-"`
 

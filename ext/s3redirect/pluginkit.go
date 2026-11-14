@@ -10,7 +10,7 @@ import (
 var _ pluginkit.Plugin = (*Plugin)(nil)
 
 // Section is the key of the `s3redirect` section (pocketone.yaml): the process defaults, under the values set in Go.
-var Section = pluginkit.NewSection(Name, Config{}, "Signed S3 redirects for file downloads: enabled, URL lifetime (instances may override).")
+var Section = pluginkit.NewSection(Name, Config{}, "Signed S3 redirects for file downloads: enabled, URL lifetime. On a single app the --s3Redirect* flags win; under pocker, instances may override.")
 
 // settings is the shape of an instance's `plugins.s3redirect`.
 type settings struct {
