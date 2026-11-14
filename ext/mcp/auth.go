@@ -10,24 +10,16 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
 
-// Grant is what a valid credential allows.
+// Grant is who a valid credential signs in, and how tool calls forward it.
 type Grant struct {
-	// Auth is the signed-in record.
+	// Auth is the signed-in record; tool calls run as it.
 	Auth *core.Record
-	// Scopes granted to the client (see [ScopeRead], [ScopeWrite]).
-	Scopes []string
 	// ClientID of the OAuth client, when the credential came from one.
 	ClientID string
-}
-
-func (g *Grant) has(scope string) bool {
-	if g == nil {
-		return false
-	}
-	if slices.Contains(g.Scopes, scope) {
-		return true
-	}
-	return scope == ScopeRead && slices.Contains(g.Scopes, ScopeWrite)
+	// Credential is the Authorization value tool calls forward to the REST API unchanged (the caller's own
+	// PocketBase token). Empty: each MCP request makes a PocketBase token for Auth, as ext/pages' ctx.pb() does
+	// (an OAuth token bound to /mcp isn't accepted on the REST API).
+	Credential string
 }
 
 var (
@@ -49,11 +41,10 @@ type Authenticator interface {
 	AuthorizationServers(e *core.RequestEvent, s *Server) []string
 }
 
-// PocketBaseTokenAuth accepts ordinary PocketBase auth tokens (Authorization: Bearer <token>, e.g. one minted with
-// the impersonate API) for records of the listed collections (default: superusers only), with full scope.
+// PocketBaseTokenAuth accepts ordinary PocketBase auth tokens (Authorization: Bearer <token>) for records of the
+// listed collections (default: any auth collection). Tool calls forward the same token.
 //
-// It's the fallback for apps without ext/oauth-server, and handy in tests. Tokens aren't audience-bound or scoped,
-// and clients can't sign in by themselves with it.
+// It's the fallback for apps without ext/oauth-server, and handy in tests. Clients can't sign in by themselves with it.
 type PocketBaseTokenAuth struct {
 	Collections []string
 }
@@ -66,14 +57,10 @@ func (a PocketBaseTokenAuth) Authenticate(e *core.RequestEvent, _ string) (*Gran
 		}
 		return nil, ErrInvalidToken
 	}
-	cols := a.Collections
-	if len(cols) == 0 {
-		cols = []string{core.CollectionNameSuperusers}
-	}
-	if !slices.Contains(cols, e.Auth.Collection().Name) {
+	if len(a.Collections) > 0 && !slices.Contains(a.Collections, e.Auth.Collection().Name) {
 		return nil, fmt.Errorf("%w: %s records can't use MCP", ErrInvalidToken, e.Auth.Collection().Name)
 	}
-	return &Grant{Auth: e.Auth, Scopes: []string{ScopeRead, ScopeWrite}}, nil
+	return &Grant{Auth: e.Auth, Credential: e.Request.Header.Get("Authorization")}, nil
 }
 
 // AuthorizationServers implements [Authenticator]: the app itself, where ext/oauth-server will answer.
@@ -97,7 +84,6 @@ func (s *Server) ProtectedResourceMetadata(e *core.RequestEvent) map[string]any 
 	return map[string]any{
 		"resource":                 s.ResourceURL(e),
 		"authorization_servers":    s.cfg.Auth.AuthorizationServers(e, s),
-		"scopes_supported":         []string{ScopeRead, ScopeWrite},
 		"bearer_methods_supported": []string{"header"},
 		"resource_name":            name + " MCP",
 	}
@@ -105,7 +91,7 @@ func (s *Server) ProtectedResourceMetadata(e *core.RequestEvent) map[string]any 
 
 // challenge answers 401 with the WWW-Authenticate header MCP clients (Claude) need to find the sign-in.
 func (s *Server) challenge(e *core.RequestEvent, err error) error {
-	v := fmt.Sprintf(`Bearer resource_metadata=%q, scope=%q`, s.MetadataURL(e), ScopeRead+" "+ScopeWrite)
+	v := fmt.Sprintf(`Bearer resource_metadata=%q`, s.MetadataURL(e))
 	msg := "Sign-in required."
 	if err != nil && !errors.Is(err, ErrNoCredentials) {
 		v += `, error="invalid_token"`
@@ -113,11 +99,4 @@ func (s *Server) challenge(e *core.RequestEvent, err error) error {
 	}
 	e.Response.Header().Set("WWW-Authenticate", v)
 	return e.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized", "message": msg})
-}
-
-// insufficientScope answers 403 so the client can ask for more (step-up).
-func (s *Server) insufficientScope(e *core.RequestEvent, id any, scope string) error {
-	e.Response.Header().Set("WWW-Authenticate", fmt.Sprintf(
-		`Bearer error="insufficient_scope", scope=%q, resource_metadata=%q`, scope, s.MetadataURL(e)))
-	return e.JSON(http.StatusForbidden, rpcError(id, codeInvalidParams, "This tool needs the "+scope+" scope."))
 }

@@ -201,14 +201,10 @@ func (o *oauthEnv) connect(scope string) map[string]any {
 	}
 	issuer := prm["authorization_servers"].([]any)[0].(string)
 
-	// 3. authorization server metadata: same issuer, DCR on, MCP scopes listed
+	// 3. authorization server metadata: same issuer, DCR on
 	as := o.getJSON(issuer + "/.well-known/oauth-authorization-server")
 	if as["issuer"] != issuer || as["registration_endpoint"] == nil {
 		o.t.Fatalf("AS metadata: %v", as)
-	}
-	scopes, _ := json.Marshal(as["scopes_supported"])
-	if !strings.Contains(string(scopes), ScopeRead) || !strings.Contains(string(scopes), ScopeWrite) {
-		o.t.Fatalf("MCP scopes not advertised: %s", scopes)
 	}
 
 	// 4. dynamic client registration, as Claude does with "Register automatically"
@@ -261,7 +257,7 @@ func toolsOf(m map[string]any) []string {
 
 func TestOAuthConnectorFlow(t *testing.T) {
 	o := newOAuthEnv(t)
-	tok := o.connect("mcp:read mcp:write offline_access")
+	tok := o.connect("offline_access")
 	access := tok["access_token"].(string)
 
 	res, m := o.mcp(access, "initialize", map[string]any{"protocolVersion": "2025-11-25"})
@@ -269,16 +265,16 @@ func TestOAuthConnectorFlow(t *testing.T) {
 		t.Fatalf("initialize with OAuth token: %d %v", res.StatusCode, m)
 	}
 	_, m = o.mcp(access, "tools/list", nil)
-	if names := toolsOf(m); !contains(names, "pb_create_record") || !contains(names, "pb_list_records") {
-		t.Fatalf("full-scope token should see read and write tools: %v", names)
+	if names := toolsOf(m); !contains(names, "pb_create_record") || !contains(names, "pb_list_collections") {
+		t.Fatalf("superuser token should see every tool: %v", names)
 	}
-	_, m = o.mcp(access, "tools/call", map[string]any{"name": "pb_server_info"})
-	sc := m["result"].(map[string]any)["structuredContent"].(map[string]any)
-	if sc["auth"].(map[string]any)["collection"] != core.CollectionNameSuperusers {
-		t.Fatalf("server info: %v", sc)
+	// tool calls run on the REST API as the signed-in superuser
+	_, m = o.mcp(access, "tools/call", map[string]any{"name": "pb_list_collections", "arguments": map[string]any{}})
+	if r := m["result"].(map[string]any); r["isError"] == true || r["structuredContent"] == nil {
+		t.Fatalf("tool call with OAuth token: %v", r)
 	}
 
-	// the MCP token can't be used elsewhere (audience + scope paths)
+	// the MCP token can't be used on the REST API directly (audience)
 	req, _ := http.NewRequest(http.MethodGet, o.url+"/api/collections", nil)
 	req.Header.Set("Authorization", "Bearer "+access)
 	if r, _ := o.http.Do(req); r.StatusCode == 200 {
@@ -298,45 +294,30 @@ func TestOAuthConnectorFlow(t *testing.T) {
 	}
 }
 
-func TestOAuthReadOnlyGrant(t *testing.T) {
-	o := newOAuthEnv(t)
-	access := o.connect("mcp:read offline_access")["access_token"].(string)
-
-	_, m := o.mcp(access, "tools/list", nil)
-	names := toolsOf(m)
-	if !contains(names, "pb_list_records") || contains(names, "pb_create_record") {
-		t.Fatalf("read-only token: %v", names)
-	}
-	res, _ := o.mcp(access, "tools/call", map[string]any{"name": "pb_create_record", "arguments": map[string]any{}})
-	if res.StatusCode != http.StatusForbidden || !strings.Contains(res.Header.Get("WWW-Authenticate"), `scope="mcp:write"`) {
-		t.Fatalf("write tool with read token: %d %q", res.StatusCode, res.Header.Get("WWW-Authenticate"))
-	}
-}
-
-func TestOAuthRejectsTokensNotIssuedForMCP(t *testing.T) {
+func TestOAuthTokens(t *testing.T) {
 	o := newOAuthEnv(t)
 	su, err := o.app.FindAuthRecordByEmail(core.CollectionNameSuperusers, "test@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// an API token without an audience (e.g. made for deploys)
-	unbound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "deploy"})
+	// a pasted PocketBase auth token works, as on the REST API, and tool calls forward it
+	jwt, _ := su.NewAuthToken()
+	if res, m := o.mcp(jwt, "tools/call", map[string]any{"name": "pb_list_collections", "arguments": map[string]any{}}); res.StatusCode != 200 ||
+		m["result"].(map[string]any)["isError"] == true {
+		t.Fatalf("PocketBase JWT: %d %v", res.StatusCode, m)
+	}
+
+	// an API token without an audience and without scopes (full rights) works the same way
+	unbound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "full"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res, _ := o.mcp(unbound, "ping", nil); res.StatusCode != http.StatusUnauthorized ||
-		!strings.Contains(res.Header.Get("WWW-Authenticate"), `error="invalid_token"`) {
-		t.Fatalf("unbound API token: %d %q", res.StatusCode, res.Header.Get("WWW-Authenticate"))
+	if res, _ := o.mcp(unbound, "ping", nil); res.StatusCode != 200 {
+		t.Fatalf("unbound API token: %d", res.StatusCode)
 	}
 
-	// a pasted PocketBase auth token
-	jwt, _ := su.NewAuthToken()
-	if res, _ := o.mcp(jwt, "ping", nil); res.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("PocketBase JWT: want 401, got %d", res.StatusCode)
-	}
-
-	// a token bound to another resource on this host
+	// a token bound to another resource on this host isn't accepted
 	other, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "other", Audience: o.url + "/other"})
 	if err != nil {
 		t.Fatal(err)
@@ -345,13 +326,30 @@ func TestOAuthRejectsTokensNotIssuedForMCP(t *testing.T) {
 		t.Fatal("token for another resource accepted")
 	}
 
-	// a token bound to /mcp works
-	bound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "mcp", Audience: o.url + "/mcp", Scopes: []string{ScopeRead}})
+	// a token bound to /mcp but limited to some scope can't run tools with the account's full rights
+	o.tk.RegisterScope(tokens.Scope{Name: "notes:read", Description: "x", Paths: []string{"/mcp"}})
+	scoped, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "scoped", Audience: o.url + "/mcp", Scopes: []string{"notes:read"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res, _ := o.mcp(bound, "ping", nil); res.StatusCode != 200 {
-		t.Fatalf("token bound to /mcp: %d", res.StatusCode)
+	if res, _ := o.mcp(scoped, "ping", nil); res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("scoped token bound to /mcp: want 401, got %d", res.StatusCode)
+	}
+
+	// a token bound to /mcp works there, and tool calls reach the REST API as its owner
+	bound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "mcp", Audience: o.url + "/mcp"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res, m := o.mcp(bound, "tools/call", map[string]any{"name": "pb_list_collections", "arguments": map[string]any{}}); res.StatusCode != 200 ||
+		m["result"].(map[string]any)["isError"] == true {
+		t.Fatalf("token bound to /mcp: %d %v", res.StatusCode, m)
+	}
+	// …but not on the REST API itself
+	req, _ := http.NewRequest(http.MethodGet, o.url+"/api/collections", nil)
+	req.Header.Set("Authorization", "Bearer "+bound)
+	if r, err := o.http.Do(req); err != nil || r.StatusCode == 200 {
+		t.Fatalf("bound token on the REST API: %v %v", r.StatusCode, err)
 	}
 }
 
