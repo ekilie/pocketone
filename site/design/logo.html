@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- PocketOne logo and mascot (the joey). Render: headless Chrome, 1200x1200 (see render.sh).
+     ?v=lockup|mark  &bg=dark|light|none -->
+<html>
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=block" rel="stylesheet" />
+<style>
+  html, body { margin: 0; width: 1200px; height: 1200px; background: transparent; }
+  body.dark { background: #0b0d12; }
+  body.light { background: #f4f1ea; }
+  .wrap { width: 1200px; height: 1200px; display: grid; place-items: center; }
+  .word { font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap"><svg id="art" viewBox="0 0 1200 1200" width="1200" height="1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4f46e5" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#4f46e5" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <circle id="halo" cx="600" cy="470" r="440" fill="url(#glow)" />
+  <g id="sparkles" fill="#ffd25a">
+    <path d="M215 250 l10 34 34 10 -34 10 -10 34 -10 -34 -34 -10 34 -10z" />
+    <path d="M975 190 l7 24 24 7 -24 7 -7 24 -7 -24 -24 -7 24 -7z" />
+    <path d="M1000 560 l6 20 20 6 -20 6 -6 20 -6 -20 -20 -6 20 -6z" />
+  </g>
+  <image id="mark" href="mark.svg" x="300" y="150" width="600" height="600" />
+  <g id="lockup">
+    <text x="600" y="905" text-anchor="middle" class="word" font-size="150" letter-spacing="2" id="wm"><tspan fill="#f4f1ea" id="wm1">Pocket</tspan><tspan fill="#f08a4b">One</tspan></text>
+    <text x="600" y="990" text-anchor="middle" class="word" font-size="40" letter-spacing="6" fill="#a5a8ff" id="tag">A COMMUNITY FORK OF POCKETBASE</text>
+  </g>
+</svg></div>
+<script>
+  const q = new URLSearchParams(location.search)
+  const bg = q.get('bg') || 'dark'
+  document.body.className = bg
+  if (bg === 'light') {
+    document.getElementById('wm1').setAttribute('fill', '#1b1f2e')
+    document.getElementById('tag').setAttribute('fill', '#4f46e5')
+    document.getElementById('sparkles').setAttribute('fill', '#f08a4b')
+  }
+  if (q.get('v') === 'mark') {
+    document.getElementById('lockup').remove()
+    document.getElementById('sparkles').remove()
+    document.getElementById('halo').remove()
+    const m = document.getElementById('mark')
+    m.setAttribute('x', 0); m.setAttribute('y', 0); m.setAttribute('width', 1200); m.setAttribute('height', 1200)
+  }
+</script>
+</body>
+</html>

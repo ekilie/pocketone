@@ -1,1 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><!-- Placeholder mark until PocketOne has a logo --><rect width="64" height="64" fill="#4f46e5"/><text x="32" y="46" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="40" font-weight="900" fill="#fff">1</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>PocketOne</title>
+  <!-- Joey: ears and head sit behind the pocket -->
+  <g id="joey">
+    <path d="M196 168 C150 120 140 46 160 14 C196 34 236 96 240 150 Z" fill="#f08a4b"/>
+    <path d="M316 168 C362 120 372 46 352 14 C316 34 276 96 272 150 Z" fill="#f08a4b"/>
+    <path d="M204 146 C178 112 170 68 176 46 C196 64 220 102 224 138 Z" fill="#ffc7a3"/>
+    <path d="M308 146 C334 112 342 68 336 46 C316 64 292 102 288 138 Z" fill="#ffc7a3"/>
+    <ellipse cx="256" cy="214" rx="90" ry="104" fill="#f08a4b"/>
+    <ellipse cx="256" cy="204" rx="40" ry="34" fill="#ffc7a3"/>
+    <circle cx="220" cy="158" r="13" fill="#1b1f2e"/>
+    <circle cx="292" cy="158" r="13" fill="#1b1f2e"/>
+    <circle cx="224" cy="153" r="4" fill="#fff"/>
+    <circle cx="296" cy="153" r="4" fill="#fff"/>
+    <ellipse cx="256" cy="190" rx="14" ry="10" fill="#1b1f2e"/>
+  </g>
+  <!-- Pocket -->
+  <path id="pocket" d="M84 226 H428 V392 L256 486 L84 392 Z" fill="#4f46e5" stroke="#4f46e5" stroke-width="28" stroke-linejoin="round"/>
+  <path id="stitch" d="M92 254 H420 V382 L256 470 L92 382 Z" fill="none" stroke="#f4f1ea" stroke-opacity="0.7" stroke-width="6" stroke-dasharray="16 12" stroke-linejoin="round"/>
+  <!-- The "one" -->
+  <path id="one" d="M228 312 L262 288 V410" fill="none" stroke="#f4f1ea" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Paws on the pocket edge -->
+  <ellipse cx="178" cy="226" rx="34" ry="24" fill="#f08a4b"/>
+  <ellipse cx="334" cy="226" rx="34" ry="24" fill="#f08a4b"/>
+  <path d="M166 220 v12 M190 220 v12 M322 220 v12 M346 220 v12" stroke="#c4602a" stroke-width="5" stroke-linecap="round"/>
+</svg>

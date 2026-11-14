@@ -10,7 +10,8 @@ started from the pocketpages.dev site in [`../ext/pages/site`](../ext/pages/site
 - `pb_pages/(main)/_private/toc.md` is the docs navigation.
 - `pb_pages/(main)/blog/`: every `.md` file there is a post (front matter: title, description, date, author, tags).
 - `pb_pages/assets/site.css` is the whole stylesheet: hand-written, no build step.
-- `pb_pages/logo.svg` is a placeholder mark until PocketOne has a logo.
+- `design/`: the logo and mascot (the joey in the pocket). `mark.svg` is the source; `design/render.sh` renders
+  `logo.html` to PNGs in `design/out/` and copies the mark and favicons into `pb_pages/`.
 
 Core PocketBase topics are linked to pocketbase.io, never copied here.
 
