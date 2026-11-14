@@ -3,9 +3,10 @@
 //	cd site/sync && go run .          # write the generated pages
 //	cd site/sync && go run . --check  # fail if the site is out of date (CI)
 //
-// Each plugin gets one page, /docs/plugins/<name>, with three parts: Install (ext/<name>/docs/install.md, or generated:
+// Each plugin gets one page, /docs/plugins/<name>, with four parts: Install (ext/<name>/docs/install.md, or generated:
 // "built in" for plugins in the pocketone binary, else its example/main.go), Configure (docs/configure.md plus the
-// pocketone.yaml sections the plugin owns, read from `pocketone config --json`) and Use (docs/use.md). A plugin
+// pocketone.yaml sections the plugin owns, read from `pocketone config --json`), Use (docs/use.md) and Integrations
+// (docs/integrations.md: the plugins it works with, and how other plugins build on it). A plugin
 // without docs/use.md yet (see .github/plugins) shows its README instead. Other top-level .md files in the plugin
 // folder become guides under the page.
 //

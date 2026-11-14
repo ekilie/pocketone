@@ -32,17 +32,3 @@ From then on the history is recorded in the bucket, starting with a fresh copy, 
 saved. The secret is never shown again after saving. If the app runs with an encryption key (`--encryptionEnv`), the secret
 is stored encrypted.
 
-On a host that gives every instance shared storage ([S3 Fallback](/docs/plugins/storage)), history goes there unless
-the app has its own bucket.
-
-### Many instances (pocker)
-
-On a pocker host, the `pitr` section sets the defaults for every instance, and each instance can override `enabled`
-and `retention` in its own settings (for example, off for a plan without PITR):
-
-```yaml
-# instances.yaml
-instances:
-  - id: abc
-    plugins: { pitr: { retention: 168h } }
-```

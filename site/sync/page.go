@@ -54,7 +54,8 @@ func exists(root, p string) bool {
 	return err == nil
 }
 
-// pluginPage is /docs/plugins/<name>: Install, Configure and Use, or the README while docs/use.md doesn't exist.
+// pluginPage is /docs/plugins/<name>: Install, Configure, Use and Integrations, or the README while docs/use.md
+// doesn't exist.
 func pluginPage(root string, rw *rewriter, p *plugin, m *manifest, secs []section) (string, error) {
 	dir := "ext/" + p.Name
 	if !exists(root, dir+"/docs/use.md") {
@@ -76,7 +77,7 @@ func pluginPage(root string, rw *rewriter, p *plugin, m *manifest, secs []sectio
 	var b strings.Builder
 	b.WriteString(strings.Replace(frontMatter(p.Title, p.Summary, ""), "from site/plugins.json.",
 		"from "+dir+"/docs/ and site/plugins.json. Edit those, then run site/sync.", 1))
-	fmt.Fprintf(&b, "# %s\n\n%s\n\n[Install](#install) · [Configure](#configure) · [Use](#use)\n", p.Title, escapeEJS(p.Summary))
+	fmt.Fprintf(&b, "# %s\n\n%s\n\n[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)\n", p.Title, escapeEJS(p.Summary))
 
 	b.WriteString("\n## Install\n\n")
 	install, err := part("install")
@@ -117,6 +118,13 @@ func pluginPage(root string, rw *rewriter, p *plugin, m *manifest, secs []sectio
 		return "", err
 	}
 	b.WriteString(use)
+
+	b.WriteString("\n## Integrations\n\n")
+	integrations, err := part("integrations")
+	if err != nil {
+		return "", err
+	}
+	b.WriteString(integrations)
 
 	b.WriteString("\n## More\n\n")
 	fmt.Fprintf(&b, "- [How it works](%s/blob/main/%s/README.md): the plugin's README, for developers\n", repoURL, dir)

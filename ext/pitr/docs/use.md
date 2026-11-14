@@ -33,11 +33,6 @@ pocketone pitr restore --at 2026-11-11T14:05:00Z                     # in place
 from; the app keeps running. Without `--to`, run it while the server is stopped: the restore is swapped in when it
 next starts.
 
-### From code
-
-Superusers can call `GET /api/pitr` for the status and `POST /api/pitr/restore` with `{"at": "<RFC 3339 time>"}` to
-restore.
-
 ### What it costs
 
 About 176 KiB of memory per serving app, and the storage for your history. Replication runs only while the app is

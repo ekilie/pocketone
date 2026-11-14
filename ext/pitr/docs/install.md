@@ -14,6 +14,3 @@ app := pocketbase.New()
 pitr.MustRegister(app, pitr.Config{})
 app.Start()
 ```
-
-Under a [pocker](/docs/plugins/pocker) host, add `pitr.New(pitr.Config{})` to the server's plugins and every instance
-gets it.

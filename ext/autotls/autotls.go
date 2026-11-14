@@ -34,7 +34,7 @@ type Config struct {
 	Auto    bool       `yaml:"auto" json:"auto" doc:"Get certificates through ACME (CertMagic). Flag: --autotls."`
 	Email   string     `yaml:"email" json:"email" doc:"ACME account email, for expiry notices from the CA. Flag: --autotlsEmail."`
 	CA      string     `yaml:"ca" json:"ca" doc:"letsencrypt (default), letsencrypt-staging, zerossl, or an ACME directory URL. Flag: --autotlsCA."`
-	Storage string     `yaml:"storage" json:"storage" doc:"Where certificates are kept. Default pb_data/.autotls (single app), <pb root>/.pocker-certs (pocker)."`
+	Storage string     `yaml:"storage" json:"storage" doc:"Where certificates are kept. Default pb_data/.autotls."`
 	Domains []string   `yaml:"domains" json:"domains" doc:"Extra domains to get at start; wildcards (*.example.com) need dns. Flag: --autotlsDomains."`
 	DNS     *DNSConfig `yaml:"dns" json:"dns"`
 }
@@ -252,4 +252,4 @@ func normalizeHost(h string) string {
 }
 
 // Section is the key of the `autotls` section (pocketone.yaml): automatic certificates for a pocker host.
-var Section = pluginkit.NewSection("autotls", Config{}, "Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. On a single app the --autotls* flags win.")
+var Section = pluginkit.NewSection("autotls", Config{}, "Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. The --autotls* flags win.")

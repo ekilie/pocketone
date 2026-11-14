@@ -29,14 +29,14 @@ The single app: data dir, dev mode, encryption, hooks, migrations, public dir, a
 
 #### `autotls:`
 
-Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. On a single app the --autotls* flags win.
+Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. The --autotls* flags win.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `auto` | bool |  | Get certificates through ACME (CertMagic). Flag: --autotls. |
 | `email` | string |  | ACME account email, for expiry notices from the CA. Flag: --autotlsEmail. |
 | `ca` | string |  | letsencrypt (default), letsencrypt-staging, zerossl, or an ACME directory URL. Flag: --autotlsCA. |
-| `storage` | string |  | Where certificates are kept. Default pb_data/.autotls (single app), <pb root>/.pocker-certs (pocker). |
+| `storage` | string |  | Where certificates are kept. Default pb_data/.autotls. |
 | `domains` | list of string |  | Extra domains to get at start; wildcards (*.example.com) need dns. Flag: --autotlsDomains. |
 | `dns.provider` | string |  | DNS provider for DNS-01 challenges (needed for wildcards): cloudflare. Flag: --autotlsDNS. |
 | `dns.api_token` | string |  | The provider's API token. Write $VAR to read it from the .env beside the file. |
@@ -127,12 +127,12 @@ Owned by [Mothership](/docs/plugins/mothership).
 
 #### `pitr:`
 
-Point-in-time restore: on by default, retention, snapshot interval. On a single app the --pitr and --pitrRetention flags win; under pocker, instances may override enabled and retention.
+Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool |  | On unless false. The --pitr flag, or an instance's own setting, wins. |
-| `retention` | duration |  | How far back a restore can go. Default 72h. The --pitrRetention flag, or an instance's own retention, wins. |
+| `enabled` | bool |  | On unless false. The --pitr flag wins. |
+| `retention` | duration |  | How far back a restore can go. Default 72h. The --pitrRetention flag wins. |
 | `snapshot_interval` | duration |  | How often a full copy is taken. Default 24h. Shorter: faster restores, more storage. |
 
 Owned by [PITR](/docs/plugins/pitr).
@@ -182,7 +182,7 @@ Owned by [Firewall](/docs/plugins/firewall).
 
 #### `s3redirect:`
 
-Signed S3 redirects for file downloads: enabled, URL lifetime. On a single app the --s3Redirect* flags win; under pocker, instances may override.
+Signed S3 redirects for file downloads: enabled, URL lifetime. The --s3Redirect and --s3RedirectTTL flags win.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

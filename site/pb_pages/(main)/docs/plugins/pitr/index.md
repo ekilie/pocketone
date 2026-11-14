@@ -8,7 +8,7 @@ description: "Point-in-time restore of your database with Litestream. On by defa
 
 Point-in-time restore of your database with Litestream. On by default.
 
-[Install](#install) · [Configure](#configure) · [Use](#use)
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
 
 ## Install
 
@@ -28,9 +28,6 @@ app := pocketbase.New()
 pitr.MustRegister(app, pitr.Config{})
 app.Start()
 ```
-
-Under a [pocker](/docs/plugins/pocker) host, add `pitr.New(pitr.Config{})` to the server's plugins and every instance
-gets it.
 
 <p class="edit-page"><a href="https://github.com/pockethost/pocketone/edit/main/ext/pitr/docs/install.md">Edit this section</a></p>
 
@@ -70,33 +67,18 @@ From then on the history is recorded in the bucket, starting with a fresh copy, 
 saved. The secret is never shown again after saving. If the app runs with an encryption key (`--encryptionEnv`), the secret
 is stored encrypted.
 
-On a host that gives every instance shared storage ([S3 Fallback](/docs/plugins/storage)), history goes there unless
-the app has its own bucket.
-
-### Many instances (pocker)
-
-On a pocker host, the `pitr` section sets the defaults for every instance, and each instance can override `enabled`
-and `retention` in its own settings (for example, off for a plan without PITR):
-
-```yaml
-# instances.yaml
-instances:
-  - id: abc
-    plugins: { pitr: { retention: 168h } }
-```
-
 <p class="edit-page"><a href="https://github.com/pockethost/pocketone/edit/main/ext/pitr/docs/configure.md">Edit this section</a></p>
 
 ### pocketone.yaml reference
 
 #### `pitr:`
 
-Point-in-time restore: on by default, retention, snapshot interval. On a single app the --pitr and --pitrRetention flags win; under pocker, instances may override enabled and retention.
+Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool |  | On unless false. The --pitr flag, or an instance's own setting, wins. |
-| `retention` | duration |  | How far back a restore can go. Default 72h. The --pitrRetention flag, or an instance's own retention, wins. |
+| `enabled` | bool |  | On unless false. The --pitr flag wins. |
+| `retention` | duration |  | How far back a restore can go. Default 72h. The --pitrRetention flag wins. |
 | `snapshot_interval` | duration |  | How often a full copy is taken. Default 24h. Shorter: faster restores, more storage. |
 
 
@@ -137,17 +119,52 @@ pocketone pitr restore --at 2026-11-11T14:05:00Z                     # in place
 from; the app keeps running. Without `--to`, run it while the server is stopped: the restore is swapped in when it
 next starts.
 
-### From code
-
-Superusers can call `GET /api/pitr` for the status and `POST /api/pitr/restore` with `{"at": "<RFC 3339 time>"}` to
-restore.
-
 ### What it costs
 
 About 176 KiB of memory per serving app, and the storage for your history. Replication runs only while the app is
 serving, never during CLI commands.
 
 <p class="edit-page"><a href="https://github.com/pockethost/pocketone/edit/main/ext/pitr/docs/use.md">Edit this section</a></p>
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Pocker](/docs/plugins/pocker) | Every instance on the host gets PITR. The `pitr` section sets the defaults for all of them; each instance can override `enabled` and `retention` (below). A restore restarts only that instance, and sleeping instances cost nothing. |
+| [S3 Fallback](/docs/plugins/storage) | Mount `litestream` on a backend and every app without its own bucket keeps its history there, under its own prefix. An app's own bucket (Settings → Backups) still wins. |
+| [Multitenant](/docs/plugins/tenants) (planned) | Sets each instance's `enabled` and `retention` from its plan, for example a plan without PITR. |
+| PocketBase backups | `pb_data/litestream/` is left out of backup zips, and restoring a zip doesn't wipe it. |
+
+### Per-instance settings (pocker)
+
+Each instance can override `enabled` and `retention` in its `plugins.pitr` settings, from `instances.yaml` or a
+provider:
+
+```yaml
+instances:
+  - id: abc
+    plugins: { pitr: { retention: 168h } }
+  - id: free-plan-app
+    plugins: { pitr: { enabled: false } }
+```
+
+Each instance's history goes to `instances/<id>/litestream/` in the shared bucket, or its own `pb_data/litestream/`.
+A bucket in an instance's settings is refused, so credentials never sit in instance data.
+
+### Building on PITR
+
+- **Store history somewhere else.** PITR asks PocketBase for a filesystem of kind `litestream` (`pitr.Kind`) through
+  `OnFilesystemCreate`. Answer it and the history goes to your filesystem; S3 Fallback works this way.
+- **Set it per instance.** Write `plugins.pitr.enabled` and `plugins.pitr.retention` into an instance's settings;
+  PITR reads them when the instance starts. Multitenant will work this way.
+- **Go API.** `(*pitr.Plugin).Status(ctx, app)` returns the restorable window, size, destination and last restore;
+  `Restore(ctx, app, at)` restores an app to a time.
+- **REST API** (superusers): `GET /api/pitr` for the status, `POST /api/pitr/restore` with
+  `{"at": "<RFC 3339 time>"}` to restore.
+
+<p class="edit-page"><a href="https://github.com/pockethost/pocketone/edit/main/ext/pitr/docs/integrations.md">Edit this section</a></p>
 
 ## More
 

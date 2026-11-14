@@ -10,8 +10,9 @@
 // The rules (`check`), per module:
 //   - a module with a pluginkit plugin (a `Register(app core.App, _ pluginkit.Config) error` method) has a test
 //     that calls conformance.Run (docs/plugins.md).
-//   - every plugin (ext/<name>) has user docs for pocketone.dev: docs/configure.md and docs/use.md (docs/install.md
-//     is optional), written as sections of one page: no "#" or "##" headings, start at "###" (docs/plugins.md).
+//   - every plugin (ext/<name>) has user docs for pocketone.dev: docs/configure.md, docs/use.md and
+//     docs/integrations.md (docs/install.md is optional), written as sections of one page: no "#" or "##" headings,
+//     start at "###" (docs/plugins.md).
 package main
 
 import (
@@ -267,7 +268,8 @@ var docsExempt = map[string]string{
 	"devusers":  "test users for examples and tests only; never in a production build",
 }
 
-// docsPending are plugins written before user docs were required. Each needs docs/configure.md and docs/use.md;
+// docsPending are plugins written before user docs were required. Each needs docs/configure.md, docs/use.md and
+// docs/integrations.md;
 // remove it from this list when they land. New plugins don't go here.
 var docsPending = map[string]bool{
 	"autotls": true, "bulkmail": true, "config": true, "deploy": true, "docker": true, "edge": true,
@@ -280,7 +282,10 @@ var docsPending = map[string]bool{
 
 var docHeading = regexp.MustCompile(`^#{1,2}\s`)
 
-// checkDocs: a plugin folder (ext/<name>) has docs/configure.md and docs/use.md for its pocketone.dev page.
+// requiredDocs are the user docs every plugin has (install.md is optional).
+var requiredDocs = []string{"configure.md", "use.md", "integrations.md"}
+
+// checkDocs: a plugin folder (ext/<name>) has its user docs for its pocketone.dev page.
 func checkDocs(dir string) []string {
 	name, ok := strings.CutPrefix(dir, "ext/")
 	if !ok || strings.Contains(name, "/") {
@@ -291,12 +296,12 @@ func checkDocs(dir string) []string {
 	}
 	var problems []string
 	have := 0
-	for _, f := range []string{"install.md", "configure.md", "use.md"} {
+	for _, f := range append([]string{"install.md"}, requiredDocs...) {
 		p := dir + "/docs/" + f
 		src, err := os.ReadFile(p)
 		if err != nil {
 			if f != "install.md" && !docsPending[name] {
-				problems = append(problems, fmt.Sprintf("%s: missing; every plugin documents how to configure and use it for pocketone.dev (docs/plugins.md)", p))
+				problems = append(problems, fmt.Sprintf("%s: missing; every plugin documents how to configure it, use it and integrate with it for pocketone.dev (docs/plugins.md)", p))
 			}
 			continue
 		}
@@ -310,7 +315,7 @@ func checkDocs(dir string) []string {
 				fence = !fence
 			}
 			if !fence && docHeading.MatchString(line) {
-				problems = append(problems, fmt.Sprintf("%s:%d: %q: the site adds the Install/Configure/Use headings; start at ###", p, i+1, line))
+				problems = append(problems, fmt.Sprintf("%s:%d: %q: the site adds the Install/Configure/Use/Integrations headings; start at ###", p, i+1, line))
 			}
 		}
 	}
@@ -320,9 +325,9 @@ func checkDocs(dir string) []string {
 	return problems
 }
 
-// docsMissing reports whether configure.md or use.md is still missing.
+// docsMissing reports whether any required doc is still missing.
 func docsMissing(dir string) bool {
-	for _, f := range []string{"configure.md", "use.md"} {
+	for _, f := range requiredDocs {
 		if _, err := os.Stat(dir + "/docs/" + f); err != nil {
 			return true
 		}

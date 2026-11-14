@@ -202,7 +202,8 @@ ext/<name>/
   docs/             for users, shown on pocketone.dev (below)
     install.md      optional: how to get it (default: "built in", or your example/main.go)
     configure.md    flags, settings screens, pocketone.yaml
-    use.md          day to day: admin screens, commands, API
+    use.md          day to day: admin screens, commands
+    integrations.md the plugins it works with, and how other plugins build on it
   <name>.go         the plugin
   <name>_test.go
   conformance_test.go  the shared plugin test (below)
@@ -234,15 +235,17 @@ ext/<name>/
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
   feature.
-- **User docs are required.** Your plugin's page on pocketone.dev has three parts, Install, Configure and Use, made
-  from `docs/install.md`, `docs/configure.md` and `docs/use.md`. Write them for someone running PocketOne, not for a
-  Go developer: the flags, the settings screens and what to click, the commands. The site adds the three headings, so
-  start your own at `###`. Configure also lists your `pocketone.yaml` section, generated from your
+- **User docs are required.** Your plugin's page on pocketone.dev has four parts, made from `docs/install.md`,
+  `docs/configure.md`, `docs/use.md` and `docs/integrations.md`. Install, Configure and Use are for someone running
+  one PocketOne app, not for a Go developer: the flags, the settings screens and what to click, the commands.
+  Integrations is everything else: which plugins yours works with and how (pocker and multi-instance hosting go
+  here, not in the other parts), and how other plugins can build on yours (hooks, filesystem kinds, per-instance
+  settings, Go and REST APIs). The site adds the four headings, so start your own at `###`. Configure also lists your `pocketone.yaml` section, generated from your
   `pluginkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag. Add your plugin to
   [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
   [`ext/pitr/docs`](../ext/pitr/docs) is the example to follow.
 - **CI enforces all three.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
-  has no `docs/configure.md` or `docs/use.md`, or when a module that implements `pluginkit.Plugin` has no conformance
+  is missing `docs/configure.md`, `docs/use.md` or `docs/integrations.md`, or when a module that implements `pluginkit.Plugin` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
   for a core change. Run the same checks locally from the repository root:
