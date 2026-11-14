@@ -12,7 +12,7 @@ tokens.MustRegister(app, tokens.Config{}) // any auth record may own tokens
 remotes.MustRegister(app, remotes.Config{}) // optional: advertises "oauth" in /_pocker/whoami so login finds it
 oauthserver.MustRegister(app, oauthserver.Config{
     Collections:         nil,                     // who may sign in; default: _superusers + every auth collection
-    AccessTTL:           30 * 24 * time.Hour,     // default
+    AccessTTL:           30 * 24 * time.Hour,     // default; per resource with srv.SetAccessTTL("/mcp", 0) (0: never expires)
     RefreshTTL:          180 * 24 * time.Hour,    // default, renewed on each refresh
     DynamicRegistration: false,                   // POST /oauth/register for MCP clients
     Branding:            oauthserver.Branding{LogoURL: "/logo.svg", Accent: "#4f46e5", Footer: "Acme Inc."},
@@ -29,7 +29,7 @@ after "Sign in as a superuser").
 |---|---|
 | `GET /.well-known/oauth-authorization-server` | Metadata (RFC 8414). The issuer is `Config.Issuer`, else the request's own URL. |
 | `GET/POST /oauth/authorize` | Sign-in and consent pages. Authorization code with PKCE (S256 only; required). |
-| `POST /oauth/token` | `authorization_code`, `refresh_token` (rotated; the old access token is revoked), `urn:ietf:params:oauth:grant-type:device_code`. |
+| `POST /oauth/token` | `authorization_code`, `refresh_token` (rotated without logouts: the old access token lives out its time, and the old refresh token works again for 2 minutes, so two processes refreshing at once both succeed), `urn:ietf:params:oauth:grant-type:device_code`. |
 | `POST /oauth/device` + `/oauth/device/verify` | Device flow (RFC 8628): codes like `WDJB-MJHT`, valid 10 minutes. |
 | `POST /oauth/revoke` | Revocation (RFC 7009): an access token or a refresh token (revokes both). |
 | `GET/POST /oauth/provider/callback` | Where OAuth2 providers (Google, GitHub, …) send the browser back after sign-in. |

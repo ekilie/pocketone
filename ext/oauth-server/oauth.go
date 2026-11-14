@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -113,6 +114,26 @@ type Server struct {
 
 	dcr  atomic.Bool
 	cimd sync.Map // client id URL -> cimdEntry
+
+	ttls sync.Map // resource path -> time.Duration (0: never expires), see SetAccessTTL
+}
+
+// SetAccessTTL sets the lifetime of access tokens issued for a resource on this server (by its URL path, e.g.
+// "/mcp"); 0 means they never expire (revoke them instead). Other tokens use Config.AccessTTL. ext/mcp uses it so an
+// agent's connection isn't signed out.
+func (s *Server) SetAccessTTL(resourcePath string, ttl time.Duration) {
+	s.ttls.Store(strings.TrimRight(resourcePath, "/"), ttl)
+}
+
+func (s *Server) accessTTL(audience string) time.Duration {
+	if audience != "" {
+		if u, err := url.Parse(audience); err == nil {
+			if v, ok := s.ttls.Load(strings.TrimRight(u.Path, "/")); ok {
+				return v.(time.Duration)
+			}
+		}
+	}
+	return s.cfg.AccessTTL
 }
 
 // MustRegister is [Register] that panics on error.

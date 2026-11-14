@@ -40,7 +40,7 @@ A tool call runs as whoever signed in to `/mcp`: a superuser gets what the API g
 1. A request without a token gets `401` with `WWW-Authenticate: Bearer resource_metadata="https://<host>/.well-known/oauth-protected-resource/mcp"`.
 2. The protected resource metadata names the app as its authorization server. oauth-server publishes the authorization server metadata, with PKCE S256, CIMD and dynamic registration.
 3. The client registers itself (Claude's published identity through CIMD, or dynamic registration, which `ext/mcp` turns on), and the user signs in in a browser.
-4. The access token is an API token bound to `https://<host>/mcp` (RFC 8707). It carries the account's rights, like a PocketBase auth token, but works only on `/mcp`; tool calls reach the REST API with a PocketBase auth token for the same account, made per MCP request (as `ext/pages`' `ctx.pb()` does). A token bound to `/mcp` but limited to scopes is refused, since tool calls would run with full rights.
+4. The access token is an API token bound to `https://<host>/mcp` (RFC 8707). It carries the account's rights, like a PocketBase auth token, but works only on `/mcp`; tool calls reach the REST API with a PocketBase auth token for the same account, made per MCP request (as `ext/pages`' `ctx.pb()` does). A token bound to `/mcp` but limited to scopes is refused, since tool calls would run with full rights. MCP access tokens don't expire (`ext/mcp` sets that with oauth-server's `SetAccessTTL`), so an agent's connection isn't signed out; revoke one to end it.
 
 ```bash
 claude mcp add --transport http my-app https://<host>/mcp

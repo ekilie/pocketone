@@ -251,16 +251,21 @@ func TestAuthorizeCodeFlow(t *testing.T) {
 		t.Fatalf("access token: %v", err)
 	}
 
-	// refresh rotates both and revokes the old access token
+	// refresh rotates both; the old access token lives out its time (no logout mid-request), and the old refresh
+	// token works again only within the grace period (two processes refreshing at once both succeed)
 	st, tok2 := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {CLIClientId}})
 	if st != 200 || tok2["access_token"] == access {
 		t.Fatalf("refresh: %d %v", st, tok2)
 	}
-	if _, err := e.tk.Verify(access); err == nil {
-		t.Fatal("old access token survived the refresh")
+	if _, err := e.tk.Verify(access); err != nil {
+		t.Fatalf("old access token revoked by the refresh: %v", err)
 	}
-	if st, _ := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {CLIClientId}}); st != 400 {
-		t.Fatal("refresh token reused")
+	if st, _ := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {CLIClientId}}); st != 200 {
+		t.Fatal("refresh token refused within the grace period")
+	}
+	used, err := e.app.FindFirstRecordByData(CodesCollectionId, "hash", hashSecret(tok["refresh_token"].(string)))
+	if err != nil || used.GetDateTime("expires").Time().After(time.Now().Add(refreshGrace+time.Second)) {
+		t.Fatalf("used refresh token should expire within the grace period: %v %v", err, used)
 	}
 
 	// revoke

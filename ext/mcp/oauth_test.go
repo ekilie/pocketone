@@ -281,7 +281,7 @@ func TestOAuthConnectorFlow(t *testing.T) {
 		t.Fatal("MCP token worked on the records API")
 	}
 
-	// refresh: new token works, the old one is revoked
+	// refresh: the new token works and the old one keeps working (MCP tokens don't expire; an agent isn't signed out)
 	st, tok2 := o.tokenRequest(url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {tok["client_id"].(string)}})
 	if st != 200 {
 		t.Fatalf("refresh: %d %v", st, tok2)
@@ -289,8 +289,11 @@ func TestOAuthConnectorFlow(t *testing.T) {
 	if res, _ := o.mcp(tok2["access_token"].(string), "ping", nil); res.StatusCode != 200 {
 		t.Fatalf("refreshed token: %d", res.StatusCode)
 	}
-	if res, _ := o.mcp(access, "ping", nil); res.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("old token after refresh: want 401, got %d", res.StatusCode)
+	if res, _ := o.mcp(access, "ping", nil); res.StatusCode != 200 {
+		t.Fatalf("old token after refresh: want 200, got %d", res.StatusCode)
+	}
+	if tok["expires_in"] != nil {
+		t.Fatalf("MCP access tokens shouldn't expire: expires_in %v", tok["expires_in"])
 	}
 }
 

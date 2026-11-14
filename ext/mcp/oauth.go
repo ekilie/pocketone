@@ -89,5 +89,7 @@ func (s *Server) setupAuth() {
 	}
 	if _, ok := s.cfg.Auth.(OAuth); ok && osrv != nil {
 		osrv.EnableDynamicRegistration()
+		// An agent's connection should stay signed in: MCP access tokens don't expire; revoke one to end it.
+		osrv.SetAccessTTL(s.cfg.Path, 0)
 	}
 }

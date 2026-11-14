@@ -21,6 +21,7 @@ const (
 	sessionCookie = "pb_oauth"
 	csrfCookie    = "pb_oauth_csrf"
 	sessionTTL    = 15 * time.Minute
+	refreshGrace  = 2 * time.Minute
 	codeTTL       = 60 * time.Second
 	deviceTTL     = 10 * time.Minute
 
@@ -540,12 +541,19 @@ func (s *Server) grantRefresh(e *core.RequestEvent, c *Client) error {
 	if err != nil || rec.GetString("client_id") != c.Id {
 		return oauthError(e, http.StatusBadRequest, "invalid_grant", "unknown refresh token")
 	}
-	_ = s.app.Delete(rec)
-	if old := rec.GetString("token_id"); old != "" {
-		_ = s.tokens().Revoke(old)
-	}
-	if !rec.GetDateTime("expires").Time().After(s.cfg.Now()) {
+	now := s.cfg.Now()
+	if !rec.GetDateTime("expires").Time().After(now) {
+		_ = s.app.Delete(rec)
 		return oauthError(e, http.StatusBadRequest, "invalid_grant", "the refresh token expired")
+	}
+	// Rotation without logouts: the used refresh token keeps working for refreshGrace (two processes of one client
+	// often refresh at once, and the loser would otherwise be signed out), and the access token it replaced stays
+	// valid until its own expiry instead of being revoked mid-request.
+	if grace := now.Add(refreshGrace); rec.GetDateTime("expires").Time().After(grace) {
+		rec.Set("expires", grace.UTC())
+		if err := s.app.Save(rec); err != nil {
+			return err
+		}
 	}
 	return s.issue(e, c, rec)
 }
@@ -601,8 +609,12 @@ func (s *Server) issue(e *core.RequestEvent, c *Client, rec *core.Record) error 
 		audience = r
 	}
 	now := s.cfg.Now()
+	var expires time.Time // zero: never expires
+	if ttl := s.accessTTL(audience); ttl > 0 {
+		expires = now.Add(ttl)
+	}
 	access, tokRec, err := s.tokens().Create(owner, tokens.CreateOptions{
-		Name: c.Name + " (OAuth)", Scopes: scopes, Expires: now.Add(s.cfg.AccessTTL), ClientId: c.Id, Audience: audience,
+		Name: c.Name + " (OAuth)", Scopes: scopes, Expires: expires, ClientId: c.Id, Audience: audience,
 	})
 	if err != nil {
 		return oauthError(e, http.StatusBadRequest, "invalid_scope", err.Error())
@@ -626,11 +638,11 @@ func (s *Server) issue(e *core.RequestEvent, c *Client, rec *core.Record) error 
 		return err
 	}
 	e.Response.Header().Set("Cache-Control", "no-store")
-	exp := tokRec.GetDateTime("expires").Time().Sub(now)
-	return e.JSON(http.StatusOK, map[string]any{
-		"access_token": access, "token_type": "Bearer", "expires_in": int(exp.Seconds()),
-		"refresh_token": refresh, "scope": strings.Join(scopes, " "),
-	})
+	out := map[string]any{"access_token": access, "token_type": "Bearer", "refresh_token": refresh, "scope": strings.Join(scopes, " ")}
+	if exp := tokRec.GetDateTime("expires"); !exp.IsZero() {
+		out["expires_in"] = int(exp.Time().Sub(now).Seconds())
+	}
+	return e.JSON(http.StatusOK, out)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
