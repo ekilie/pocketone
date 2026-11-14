@@ -46,14 +46,14 @@ const (
 type Config struct {
 	// Enabled is the default for every app: on unless set to false (including the plugin is the opt-in). An app's
 	// [AppConfig.Enabled] overrides it, e.g. off for a hosting plan without PITR. There is no admin switch.
-	Enabled *bool `yaml:"enabled"`
+	Enabled *bool `yaml:"enabled" doc:"On unless false. An instance's own setting wins."`
 
 	// Retention is how far back a restore can go (default 72h). An app's [AppConfig.Retention] overrides it.
-	Retention time.Duration `yaml:"retention"`
+	Retention time.Duration `yaml:"retention" doc:"How far back a restore can go. Default 72h. An instance's own retention wins."`
 
 	// SnapshotInterval is how often a full copy of the database is taken (default 24h). Restores replay the changes
 	// since the snapshot before the chosen time, so a shorter interval makes restores faster and uses more storage.
-	SnapshotInterval time.Duration `yaml:"snapshot_interval"`
+	SnapshotInterval time.Duration `yaml:"snapshot_interval" doc:"How often a full copy is taken. Default 24h. Shorter: faster restores, more storage."`
 
 	Logger *slog.Logger `yaml:"-"`
 }
