@@ -43,8 +43,9 @@ func (p *Plugin) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello", ..
 - **Single app:** `pluginkit.MustRegister(app, plugins...)`, and `pluginkit.BindJS(app, vm, plugins...)` in jsvm's
   `OnInit`. The standard binary does this for the plugins it ships ([`examples/pocketone`](../examples/pocketone/main.go)).
 - **Pocker:** put the plugin in `Server.Plugins`. Pocker calls `Register` for every instance with that instance's
-  settings: the config file's top-level `<name>:` key, then the instance's `plugins.<name>`, over the defaults given
-  to your constructor. `enabled: false` (the instance wins) means `Register` and `BindJS` are never called for it.
+  settings (its `plugins.<name>`), over the defaults given to your constructor; process-wide settings come from a
+  pocketone.yaml section your plugin owns (`pluginkit.NewSection`). `enabled: false` means `Register` and `BindJS`
+  are never called for that instance.
 - **No pocker import:** a contract plugin doesn't depend on ext/pocker, so single-app builds don't link it. Reach for
   the host interfaces below only for what's process-wide (a request gate, TLS, background jobs).
 - [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/plugin.go) is the reference implementation.
@@ -153,7 +154,7 @@ document.addEventListener("mount:pageBackupsSettings", (e) => {
 
 | Field | Use it for |
 |---|---|
-| `Server.Plugins` | Packaged host plugins (`Configurer`, `Gate`, `TLSProvider`, `Wrapper`, `Starter`, `AppIniter`; see [POCKER.md](/docs/plugins/pocker/pocker#plugins)), e.g. [autotls](/docs/plugins/autotls), [servertiming](/docs/plugins/servertiming), [pitr](/docs/plugins/pitr). |
+| `Server.Plugins` | Plugins: any `pluginkit.Plugin` (registered on every instance), plus host-only extras (`Configurer`, `Gate`, `TLSProvider`, `Wrapper`, `Starter`; see [POCKER.md](/docs/plugins/pocker/pocker#plugins)), e.g. [pitr](/docs/plugins/pitr), [storage](/docs/plugins/storage), [mailrelay](/docs/plugins/mailrelay), [autotls](/docs/plugins/autotls), [servertiming](/docs/plugins/servertiming). |
 | `Server.Wrap` | Middleware around every instance request, e.g. auth in front of all instances, metrics, headers. |
 | `Server.OnStart` | Gets the `Manager` before the first request: start background jobs (schedules, sweeps) in your own goroutines. |
 | `Server.OnEvent` | Instance events: started, stopped, restarted, failed. |
@@ -204,9 +205,14 @@ core doesn't offer yet:
 ```
 ext/<name>/
   go.mod            module github.com/pockethost/pocketone/ext/<name>
-  README.md         what it does, runs on (single app, pocker or both), config
+  README.md         for developers: what it does, runs on (single app, pocker or both), how it works
+  docs/             for users, shown on pocketone.dev (below)
+    install.md      optional: how to get it (default: "built in", or your example/main.go)
+    configure.md    flags, settings screens, pocketone.yaml
+    use.md          day to day: admin screens, commands, API
   <name>.go         the plugin
   <name>_test.go
+  conformance_test.go  the shared plugin test (below)
   example/main.go   a minimal program that builds cleanly and shows the feature
   ui/               optional: admin screens (embedded main.js)
 ```
@@ -219,6 +225,39 @@ ext/<name>/
   `devusers.Register(app)` right after `pocketbase.New()` (under pocker, `devusers.Ensure(app)` in
   `SetupApp`), from [`ext/devusers`](../ext/devusers/devusers.go). A fresh data dir is then ready to log
   in to, with no installer page and no CLI step. Never register it in a production build.
+- **`conformance_test.go` is required.** It runs the shared plugin test from
+  [`ext/pluginkit/conformance`](../ext/pluginkit/conformance/conformance.go) once:
+
+  ```go
+  func TestConformance(t *testing.T) {
+  	conformance.Run(t, func() pluginkit.Plugin { return myplugin.New(myplugin.Config{}) })
+  }
+  ```
+
+  It checks that the plugin registers, migrates, serves and shuts down on a fresh app with no goroutines left
+  behind; that PocketBase's own collections are unchanged and every collection it adds is named `_<name>` or `_<name>_…`; and
+  that one plugin value serves several apps at once (as under pocker) without registering on one app touching
+  another's hooks. Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
+  feature.
+- **User docs are required.** Your plugin's page on pocketone.dev has three parts, Install, Configure and Use, made
+  from `docs/install.md`, `docs/configure.md` and `docs/use.md`. Write them for someone running PocketOne, not for a
+  Go developer: the flags, the settings screens and what to click, the commands. The site adds the three headings, so
+  start your own at `###`. Configure also lists your `pocketone.yaml` section, generated from your
+  `pluginkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag. Add your plugin to
+  [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
+  [`ext/pitr/docs`](../ext/pitr/docs) is the example to follow.
+- **CI enforces all three.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
+  has no `docs/configure.md` or `docs/use.md`, or when a module that implements `pluginkit.Plugin` has no conformance
+  test, then builds, vets and runs `go test -race` on every module the
+  change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
+  for a core change. Run the same checks locally from the repository root:
+
+  ```bash
+  go run ./.github/plugins check
+  go run ./.github/plugins affected origin/main HEAD
+  ```
+
+  Tests that need an external tool (MinIO, Docker) skip themselves when it isn't installed, so they don't block CI.
 - **Dependencies stay in your module.** Heavy libraries go in your plugin's `go.mod`, never in core's.
 - **Single app first.** Where it makes sense, a plugin should work on one PocketBase app, and add more under the
   pocker (multitenant) host.

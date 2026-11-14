@@ -10,6 +10,8 @@
 // The rules (`check`), per module:
 //   - a module with a pluginkit plugin (a `Register(app core.App, _ pluginkit.Config) error` method) has a test
 //     that calls conformance.Run (docs/plugins.md).
+//   - every plugin (ext/<name>) has user docs for pocketone.dev: docs/configure.md and docs/use.md (docs/install.md
+//     is optional), written as sections of one page: no "#" or "##" headings, start at "###" (docs/plugins.md).
 package main
 
 import (
@@ -197,7 +199,7 @@ func affected(base, head string) ([]string, error) {
 
 // isCore matches .github/core-audit/core-diff.sh: everything PocketOne doesn't own.
 func isCore(f string) bool {
-	for _, p := range []string{"ext/", "examples/pocketone/", "docs/", ".github/", ".claude/"} {
+	for _, p := range []string{"ext/", "site/", "examples/pocketone/", "docs/", ".github/", ".claude/"} {
 		if strings.HasPrefix(f, p) {
 			return false
 		}
@@ -254,6 +256,76 @@ func check(dirs []string) []string {
 		if len(plugins) > 0 && !tested {
 			problems = append(problems, fmt.Sprintf("%s: implements pluginkit.Plugin (%s) but has no test calling conformance.Run; add conformance_test.go (docs/plugins.md)", dir, strings.Join(plugins, ", ")))
 		}
+		problems = append(problems, checkDocs(dir)...)
 	}
 	return problems
+}
+
+// docsExempt are plugin folders that aren't something a user installs, configures or uses, with the reason.
+var docsExempt = map[string]string{
+	"pluginkit": "the plugin contract, a library for plugin authors (docs/plugins.md covers it)",
+	"devusers":  "test users for examples and tests only; never in a production build",
+}
+
+// docsPending are plugins written before user docs were required. Each needs docs/configure.md and docs/use.md;
+// remove it from this list when they land. New plugins don't go here.
+var docsPending = map[string]bool{
+	"autotls": true, "bulkmail": true, "config": true, "deploy": true, "docker": true, "edge": true,
+	"firewall": true, "host": true, "jsembed": true, "jserrors": true, "mailrelay": true, "mailtrap": true,
+	"mcp": true, "mothership": true, "oauth-server": true, "pages": true, "pocker": true, "remotes": true,
+	"s3redirect": true, "sandbox": true, "schedules": true, "servertiming": true, "storage": true,
+	"tenant-billing": true, "tenant-billing-ls": true, "tenants": true, "tokens": true, "upgrade": true,
+	"vacuum": true,
+}
+
+var docHeading = regexp.MustCompile(`^#{1,2}\s`)
+
+// checkDocs: a plugin folder (ext/<name>) has docs/configure.md and docs/use.md for its pocketone.dev page.
+func checkDocs(dir string) []string {
+	name, ok := strings.CutPrefix(dir, "ext/")
+	if !ok || strings.Contains(name, "/") {
+		return nil // not a plugin folder (examples/pocketone, or a module inside a plugin)
+	}
+	if _, ok := docsExempt[name]; ok {
+		return nil
+	}
+	var problems []string
+	have := 0
+	for _, f := range []string{"install.md", "configure.md", "use.md"} {
+		p := dir + "/docs/" + f
+		src, err := os.ReadFile(p)
+		if err != nil {
+			if f != "install.md" && !docsPending[name] {
+				problems = append(problems, fmt.Sprintf("%s: missing; every plugin documents how to configure and use it for pocketone.dev (docs/plugins.md)", p))
+			}
+			continue
+		}
+		have++
+		if strings.TrimSpace(string(src)) == "" {
+			problems = append(problems, p+": empty")
+		}
+		fence := false
+		for i, line := range strings.Split(string(src), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "```") {
+				fence = !fence
+			}
+			if !fence && docHeading.MatchString(line) {
+				problems = append(problems, fmt.Sprintf("%s:%d: %q: the site adds the Install/Configure/Use headings; start at ###", p, i+1, line))
+			}
+		}
+	}
+	if docsPending[name] && have > 0 && !docsMissing(dir) {
+		problems = append(problems, fmt.Sprintf("%s: has its docs now; remove %q from docsPending in .github/plugins/main.go", dir, name))
+	}
+	return problems
+}
+
+// docsMissing reports whether configure.md or use.md is still missing.
+func docsMissing(dir string) bool {
+	for _, f := range []string{"configure.md", "use.md"} {
+		if _, err := os.Stat(dir + "/docs/" + f); err != nil {
+			return true
+		}
+	}
+	return false
 }

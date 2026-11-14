@@ -64,4 +64,5 @@
 
 # Going Further
 
+- [pocketone.yaml reference](/docs/config-reference)
 - [PocketBase docs](/docs/pocketbase)

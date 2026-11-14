@@ -150,12 +150,13 @@ any of:
 
 | Interface | Used for |
 |---|---|
+| `pluginkit.Plugin` | a PocketOne plugin, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `plugins.<name>` settings, its id in `pluginkit.AppID(app)`; e.g. [pitr](/docs/plugins/pitr), [storage](/docs/plugins/storage), [tokens](/docs/plugins/tokens), [s3redirect](/docs/plugins/s3redirect), [mailrelay](/docs/plugins/mailrelay), [bulkmail](/docs/plugins/bulkmail). `enabled: false` skips it for that instance. A change to an instance's `plugins:` settings restarts its app on its next request. The same value works on a single app. |
 | `Configurer` | reading its own pocketone.yaml section before the server starts (`Configure(cfg)`) |
 | `Gate` | a peer check before routing, and admission (e.g. rate limits) before an instance is served or forwarded |
 | `TLSProvider` | the main listener's TLS (e.g. automatic certificates) |
 | `Wrapper` | wrapping the server's handler (the first listed is outermost) |
 | `Starter` | background work once the Manager exists |
-| `AppIniter` | setting up each instance's app before it bootstraps (`InitApp(inst, app)`), e.g. [pitr](/docs/plugins/pitr) binding `OnBootstrap`/`OnServe`/`OnTerminate`; runs on every start, including restarts |
+| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Plugins use `pluginkit.Plugin` instead, so they run on a single app too and pass the [conformance test](https://github.com/pockethost/pocketone/blob/main/ext/pluginkit/conformance/conformance.go). |
 
 Per-instance settings for a plugin go under the instance's `plugins.<name>` (read them with `pocker.DecodePluginConfig`).
 `app.Restart()` (PocketBase's backup restore, pitr) restarts only that instance, not the process.

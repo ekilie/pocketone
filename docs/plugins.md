@@ -198,7 +198,11 @@ core doesn't offer yet:
 ```
 ext/<name>/
   go.mod            module github.com/pockethost/pocketone/ext/<name>
-  README.md         what it does, runs on (single app, pocker or both), config
+  README.md         for developers: what it does, runs on (single app, pocker or both), how it works
+  docs/             for users, shown on pocketone.dev (below)
+    install.md      optional: how to get it (default: "built in", or your example/main.go)
+    configure.md    flags, settings screens, pocketone.yaml
+    use.md          day to day: admin screens, commands, API
   <name>.go         the plugin
   <name>_test.go
   conformance_test.go  the shared plugin test (below)
@@ -230,8 +234,16 @@ ext/<name>/
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
   feature.
-- **CI enforces both.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a module that
-  implements `pluginkit.Plugin` has no conformance test, then builds, vets and runs `go test -race` on every module the
+- **User docs are required.** Your plugin's page on pocketone.dev has three parts, Install, Configure and Use, made
+  from `docs/install.md`, `docs/configure.md` and `docs/use.md`. Write them for someone running PocketOne, not for a
+  Go developer: the flags, the settings screens and what to click, the commands. The site adds the three headings, so
+  start your own at `###`. Configure also lists your `pocketone.yaml` section, generated from your
+  `pluginkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag. Add your plugin to
+  [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
+  [`ext/pitr/docs`](../ext/pitr/docs) is the example to follow.
+- **CI enforces all three.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
+  has no `docs/configure.md` or `docs/use.md`, or when a module that implements `pluginkit.Plugin` has no conformance
+  test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
   for a core change. Run the same checks locally from the repository root:
 
