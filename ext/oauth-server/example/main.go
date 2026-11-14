@@ -24,7 +24,7 @@ func main() {
 	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
 
 	// OAuth access tokens are API tokens, owned by whoever signed in: superusers and app users
-	tokens.MustRegister(app, tokens.Config{Collections: []string{"_superusers", "users"}})
+	tokens.MustRegister(app, tokens.Config{}) // any auth record may own tokens (the default)
 	remotes.MustRegister(app, remotes.Config{}) // whoami discovery + login/remote commands
 	oauthserver.MustRegister(app, oauthserver.Config{
 		DynamicRegistration: true, // MCP connectors register themselves

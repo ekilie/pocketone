@@ -155,7 +155,7 @@ func (o *oauthEnv) signIn(authorizeURL, clientName string, wantScopes ...string)
 
 	req, _ := http.NewRequest(http.MethodGet, authorizeURL, nil)
 	do(req)
-	submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+	submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
 	if !strings.Contains(page, clientName) {
 		o.t.Fatalf("consent page doesn't name the client %q: %s", clientName, page)
 	}

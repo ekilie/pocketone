@@ -89,8 +89,12 @@ func TestCollectionsScopesAndExpiry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := tk.Create(user, CreateOptions{}); err == nil {
-		t.Fatal("users may not own tokens by default")
+	if _, _, err := tk.Create(user, CreateOptions{}); err != nil {
+		t.Fatalf("users may own tokens by default: %v", err)
+	}
+	_, narrow := newApp(t, Config{Collections: []string{"_superusers"}})
+	if _, _, err := narrow.Create(user, CreateOptions{}); err == nil {
+		t.Fatal("a narrowed list should refuse users")
 	}
 	su := superuser(t, app)
 	if _, _, err := tk.Create(su, CreateOptions{Scopes: []string{"nope"}}); err == nil {
@@ -110,7 +114,7 @@ func TestCollectionsScopesAndExpiry(t *testing.T) {
 	if _, err := tk.Verify(secret); err != ErrExpired {
 		t.Fatalf("expired: %v", err)
 	}
-	if n, err := tk.DeleteExpired(); err != nil || n != 1 {
+	if n, err := tk.DeleteExpired(); err != nil || n != 2 { // the superuser's and the user's
 		t.Fatalf("delete expired: %d %v", n, err)
 	}
 }

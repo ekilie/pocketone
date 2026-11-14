@@ -8,7 +8,7 @@ or ChatGPT connectors can register themselves and connect.
 
 ```go
 // tokens are owned by whoever signs in, so list every collection that may sign in (tokens' default is _superusers only)
-tokens.MustRegister(app, tokens.Config{Collections: []string{"_superusers", "users"}})
+tokens.MustRegister(app, tokens.Config{}) // any auth record may own tokens
 remotes.MustRegister(app, remotes.Config{}) // optional: advertises "oauth" in /_pocker/whoami so login finds it
 oauthserver.MustRegister(app, oauthserver.Config{
     Collections:         nil,                     // who may sign in; default: _superusers + every auth collection
@@ -58,7 +58,7 @@ collection allowed, the superuser form is the only one. The consent page names t
 will act as a user (and which collection) or as a superuser.
 
 **Tokens.** Access tokens are owned by the signed-in record, so every collection that may sign in must also be in
-`tokens.Config.Collections` (whose default is `_superusers` only). A collection that can't own tokens shows "isn't set
+`tokens.Config.Collections` (whose default is every auth collection, so this only matters when you narrow it). A collection that can't own tokens shows "isn't set
 up on this server" on its form, refuses sign-in, and logs a warning naming it.
 
 **How.** The pages never check passwords or codes themselves: each step calls PocketBase's own auth endpoint

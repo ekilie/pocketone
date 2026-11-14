@@ -130,9 +130,9 @@ func TestSignInNarrowed(t *testing.T) {
 	}
 }
 
-// ext/tokens' default lets only superusers own tokens: the user form says signing in isn't set up.
+// When ext/tokens is narrowed to superusers, the user form says signing in isn't set up.
 func TestSignInUsersWithoutTokens(t *testing.T) {
-	e := newEnvTokens(t, Config{}, tokens.Config{})
+	e := newEnvTokens(t, Config{}, tokens.Config{Collections: []string{core.CollectionNameSuperusers}})
 	b := newBrowser(t)
 	b.get(e.url + "/oauth/authorize?" + authorizeQuery().Encode())
 	if !b.has("isn&#39;t set up on this server") || b.has(`value="password"`) || !b.has("Sign in as a superuser") {
