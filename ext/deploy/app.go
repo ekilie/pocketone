@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"log/slog"
 	"net/http"
 	"path/filepath"
@@ -157,7 +158,7 @@ func (b *AppBackend) Lookup(*http.Request) (Instance, bool) {
 func (b *AppBackend) Authenticate(r *http.Request, _ Instance) (Auth, error) {
 	ra, _ := r.Context().Value(requestAuthKey{}).(requestAuth)
 	if ra.record == nil {
-		return Auth{}, &AuthError{401, "Sign in first: pocketbase login <this URL>, or send a superuser API token."}
+		return Auth{}, &AuthError{401, "Sign in first: " + pluginkit.Command + " login <this URL>, or send a superuser API token."}
 	}
 	if !ra.record.IsSuperuser() {
 		return Auth{}, &AuthError{403, "Only superusers can use the deploy API."}

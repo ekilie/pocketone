@@ -101,7 +101,7 @@ pocketone login prod
    browser). `--collection` picks another auth collection (default `_superusers`). If the account has MFA, a one-time
    code is sent and asked for.
 
-A password login creates an API token named "pocketbase CLI on <host>" and saves that, never the session, so the
+A password login creates an API token named "pocketone CLI on <host>" and saves that, never the session, so the
 remote needs [Tokens](/docs/plugins/tokens). A browser login keeps a refresh token and renews itself when it's within a
 day of expiring.
 

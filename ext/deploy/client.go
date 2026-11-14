@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"io"
 	"io/fs"
 	"net/http"
@@ -500,7 +501,7 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	case res.Restarted:
 		restart = " Restarted."
 	case res.StartError != "":
-		restart = " The app failed to start: " + res.StartError + " (see 'pocketbase logs')."
+		restart = " The app failed to start: " + res.StartError + " (see '" + pluginkit.Command + " logs')."
 	}
 	log(fmt.Sprintf("Deployed%s: %d changed, %d deleted, %d unchanged.%s", id, res.WrittenCount, res.DeletedCount, res.Unchanged, restart))
 	return res, nil

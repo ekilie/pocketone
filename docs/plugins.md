@@ -41,6 +41,9 @@ func (p *Plugin) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello", ..
   are never called for that instance.
 - **No pocker import:** a contract plugin doesn't depend on ext/pocker, so single-app builds don't link it. Reach for
   the host interfaces below only for what's process-wide (a request gate, TLS, background jobs).
+- **Name the command with `pluginkit.Command`:** when a message tells people what to run ("run 'pocketone login
+  prod'"), build it from `pluginkit.Command` (default `pocketone`), never a literal. A build shipped under another name
+  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/pluginkit.Command=pockethost"`.
 - [bulkmail](../ext/bulkmail/plugin.go) is the reference implementation.
 
 > **Status.** `pluginkit` covers per-app plugins. The process-wide host interfaces below (`pocker.Server` fields and

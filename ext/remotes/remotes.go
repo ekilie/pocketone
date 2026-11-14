@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -222,7 +223,7 @@ func (p *Project) Resolve(name string) (*Remote, error) {
 		return &Remote{Name: u, URL: u}, nil
 	}
 	if len(p.Remotes) == 0 {
-		return nil, fmt.Errorf("no remotes yet: run 'pocketbase remote add %s <url>' or 'pocketbase link <url>'", name)
+		return nil, fmt.Errorf("no remotes yet: run '%[1]s remote add %[2]s <url>' or '%[1]s link <url>'", pluginkit.Command, name)
 	}
 	return nil, fmt.Errorf("no remote %q (have: %s)", name, strings.Join(p.Names(), ", "))
 }

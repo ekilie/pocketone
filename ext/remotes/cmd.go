@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"io"
 	"net/http"
 	"os"
@@ -62,7 +63,7 @@ func remoteCommand() *cobra.Command {
 			if err := p.Save(); err != nil {
 				return err
 			}
-			fmt.Fprintf(c.OutOrStdout(), "Added %s → %s. Next: pocketbase login %s\n", r.Name, r.URL, r.Name)
+			fmt.Fprintf(c.OutOrStdout(), "Added %s → %s. Next: %s login %s\n", r.Name, r.URL, pluginkit.Command, r.Name)
 			return nil
 		},
 	}
@@ -80,7 +81,7 @@ func remoteCommand() *cobra.Command {
 				return err
 			}
 			if len(p.Remotes) == 0 {
-				fmt.Fprintln(c.OutOrStdout(), "No remotes. Add one: pocketbase remote add prod https://myapp.example.com")
+				fmt.Fprintln(c.OutOrStdout(), "No remotes. Add one: "+pluginkit.Command+" remote add prod https://myapp.example.com")
 				return nil
 			}
 			w := tabwriter.NewWriter(c.OutOrStdout(), 0, 4, 2, ' ', 0)
