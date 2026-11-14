@@ -108,3 +108,7 @@ curl -X POST http://beta.localhost:8090/api/collections/users/request-password-r
   instance's SMTP-less mail to the same trap, as is, with no relay rules.
 
 The trap only runs in dev mode. It accepts mail from anyone who can reach its port, so never expose it.
+
+## License
+
+MIT

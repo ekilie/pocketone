@@ -44,3 +44,7 @@ Under pocker, add `mailtrap.New()` to `Server.Plugins`.
 
 It's built on PocketBase's own `OnMailerSend` hook (the same way [mailrelay](/docs/plugins/mailrelay) takes over an
 instance's mail), so core is unchanged. It used to live in core (`tools/mailer/trap.go`); it moved here on 2026-11-13.
+
+## License
+
+MIT

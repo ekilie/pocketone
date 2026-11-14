@@ -240,11 +240,13 @@ ext/<name>/
     and REST APIs).
 
   Write the first three for someone running one PocketOne app, not for a Go developer. Anything else (how it works,
-  limits, license) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
+  limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
+- **Plugins here are MIT.** The README ends with `## License` and the single line `MIT`. A plugin under another
+  license lives in its author's own repository, not here.
   Add your plugin to [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
   [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
-- **CI enforces all three.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
-  README is missing one of the four sections, or when a module that implements `pluginkit.Plugin` has no conformance
+- **CI enforces all of this.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
+  README is missing one of the four sections or its MIT `## License`, or when a module that implements `pluginkit.Plugin` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
   for a core change. Run the same checks locally from the repository root:

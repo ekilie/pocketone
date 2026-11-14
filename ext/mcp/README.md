@@ -167,3 +167,7 @@ go build -o pbmcp .
 ```
 
 The example registers `ext/devusers`, so the logins are `admin@example.com` / `password` (superuser) and `user@example.com` / `password` (user). It also registers `ext/tokens` and `ext/oauth-server` for OAuth sign-in, and adds a tool over a Go route (`example_get_whoami`) and one over a JS route (`example_list_recent_users`, in `pb_hooks/mcp.pb.js`). Then: `claude mcp add --transport http pb-example http://127.0.0.1:8090/mcp` and `claude mcp login pb-example`.
+
+## License
+
+MIT

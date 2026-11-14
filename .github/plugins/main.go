@@ -258,6 +258,14 @@ func check(dirs []string) []string {
 		}
 		problems = append(problems, checkDocs(dir)...)
 	}
+	// Plugin folders with no Go module yet (a README for a planned plugin) get the docs rules too.
+	entries, _ := os.ReadDir("ext")
+	for _, e := range entries {
+		dir := "ext/" + e.Name()
+		if _, err := os.Stat(dir + "/go.mod"); e.IsDir() && err != nil {
+			problems = append(problems, checkDocs(dir)...)
+		}
+	}
 	return problems
 }
 
@@ -280,6 +288,16 @@ var docsPending = map[string]bool{
 
 // requiredSections are the README sections every plugin has, in this order.
 var requiredSections = []string{"Install", "Configure", "Use", "Integrations"}
+
+// licensedMIT: the README's last H2 is "License" and its body is exactly "MIT". Every plugin in this repo is MIT,
+// pending docs or not.
+func licensedMIT(src string, h2 []string) bool {
+	if len(h2) == 0 || h2[len(h2)-1] != "License" {
+		return false
+	}
+	i := strings.LastIndex(src, "\n## License")
+	return i >= 0 && strings.TrimSpace(src[i+len("\n## License"):]) == "MIT"
+}
 
 // checkDocs: a plugin folder (ext/<name>) has a README with the required sections, in order.
 func checkDocs(dir string) []string {
@@ -311,6 +329,9 @@ func checkDocs(dir string) []string {
 		}
 	}
 	complete := next == len(requiredSections)
+	if !licensedMIT(string(src), h2) {
+		return []string{dir + "/README.md: must end with a `## License` section that says `MIT`; plugins in this repo are MIT (host another license in your own repo) (docs/plugins.md)"}
+	}
 	switch {
 	case !complete && !docsPending[name]:
 		return []string{fmt.Sprintf("%s/README.md: needs the sections ## %s, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md)",
