@@ -3,12 +3,10 @@
 //	cd site/sync && go run .          # write the generated pages
 //	cd site/sync && go run . --check  # fail if the site is out of date (CI)
 //
-// Each plugin gets one page, /docs/plugins/<name>, with four parts: Install (ext/<name>/docs/install.md, or generated:
-// "built in" for plugins in the pocketone binary, else its example/main.go), Configure (docs/configure.md plus the
-// pocketone.yaml sections the plugin owns, read from `pocketone config --json`), Use (docs/use.md) and Integrations
-// (docs/integrations.md: the plugins it works with, and how other plugins build on it). A plugin
-// without docs/use.md yet (see .github/plugins) shows its README instead. Other top-level .md files in the plugin
-// folder become guides under the page.
+// Each plugin gets one page, /docs/plugins/<name>: its README, which has Install, Configure, Use and Integrations
+// sections (.github/plugins checks them), with the pocketone.yaml sections the plugin owns (read from
+// `pocketone config --json`) added to Configure. Other top-level .md files in the plugin folder become guides under
+// the page.
 //
 // It owns: pb_pages/(main)/docs/plugins/**, pb_pages/(main)/docs/config-reference.md, pb_pages/(main)/docs/writing-a-plugin.md (from docs/plugins.md), and the region of
 // pb_pages/(main)/_private/toc.md between the plugins markers. The plugin list, titles and groups come from
@@ -207,7 +205,7 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 			g.title = title
 			out[pluginsOut+"/"+p.Name+"/"+g.slug+".md"] = frontMatter(title, p.Title+": "+title, g.src) + body
 		}
-		page, err := pluginPage(root, rw, p, m, secs)
+		page, err := pluginPage(rw, p, secs)
 		if err != nil {
 			return nil, err
 		}

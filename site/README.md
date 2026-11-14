@@ -24,8 +24,10 @@ cd site/sync && go run .
 ```
 
 - `plugins.json` lists every plugin: title, one-line summary and group. Every `ext/<name>` folder must be in it.
-- Each `ext/<name>/README.md` becomes `/docs/plugins/<name>`; other `.md` files in the plugin folder become guides
-  under it; `docs/plugins.md` becomes `/docs/writing-a-plugin`.
+- Each `ext/<name>/README.md` becomes `/docs/plugins/<name>`, with the plugin's `pocketone.yaml` keys (from
+  `pocketone config --json`, so it builds `examples/pocketone`) added to its `## Configure` section. Other `.md` files
+  in the plugin folder become guides under it; `docs/plugins.md` becomes `/docs/writing-a-plugin`.
+- It also writes `/docs/config-reference`: every `pocketone.yaml` section.
 - Links between plugins and docs point at the site pages; links to source files point at GitHub.
 - It also writes the plugin index (`/docs/plugins`) and the plugin part of the docs nav (between the markers in
   `pb_pages/(main)/_private/toc.md`).

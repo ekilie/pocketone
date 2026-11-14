@@ -205,12 +205,7 @@ core doesn't offer yet:
 ```
 ext/<name>/
   go.mod            module github.com/pockethost/pocketone/ext/<name>
-  README.md         for developers: what it does, runs on (single app, pocker or both), how it works
-  docs/             for users, shown on pocketone.dev (below)
-    install.md      optional: how to get it (default: "built in", or your example/main.go)
-    configure.md    flags, settings screens, pocketone.yaml
-    use.md          day to day: admin screens, commands
-    integrations.md the plugins it works with, and how other plugins build on it
+  README.md         the plugin's docs, and its page on pocketone.dev (below)
   <name>.go         the plugin
   <name>_test.go
   conformance_test.go  the shared plugin test (below)
@@ -240,17 +235,21 @@ ext/<name>/
   that one plugin value serves several apps at once (as under pocker) without registering on one app touching
   another's hooks. Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
   feature.
-- **User docs are required.** Your plugin's page on pocketone.dev has four parts, made from `docs/install.md`,
-  `docs/configure.md`, `docs/use.md` and `docs/integrations.md`. Install, Configure and Use are for someone running
-  one PocketOne app, not for a Go developer: the flags, the settings screens and what to click, the commands.
-  Integrations is everything else: which plugins yours works with and how (pocker and multi-instance hosting go
-  here, not in the other parts), and how other plugins can build on yours (hooks, filesystem kinds, per-instance
-  settings, Go and REST APIs). The site adds the four headings, so start your own at `###`. Configure also lists your `pocketone.yaml` section, generated from your
-  `pluginkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag. Add your plugin to
-  [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
-  [`ext/pitr/docs`](../ext/pitr/docs) is the example to follow.
+- **The README has four required sections**, in this order. It is also your plugin's page on pocketone.dev.
+  - `## Install`: how to get it (built into `pocketone`, or the lines to add to a Go build).
+  - `## Configure`: the `pocketone.yaml` section, flags and settings screens. The site adds a table of your section's
+    keys, generated from your `pluginkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag.
+  - `## Use`: day to day: the admin screens and what to click, the commands.
+  - `## Integrations`: the plugins yours works with and how (pocker and multi-instance hosting go here, not in the
+    sections above), and how other plugins can build on yours (hooks, filesystem kinds, per-instance settings, Go
+    and REST APIs).
+
+  Write the first three for someone running one PocketOne app, not for a Go developer. Anything else (how it works,
+  limits, license) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
+  Add your plugin to [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
+  [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
 - **CI enforces all three.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
-  is missing `docs/configure.md`, `docs/use.md` or `docs/integrations.md`, or when a module that implements `pluginkit.Plugin` has no conformance
+  README is missing one of the four sections, or when a module that implements `pluginkit.Plugin` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
   for a core change. Run the same checks locally from the repository root:

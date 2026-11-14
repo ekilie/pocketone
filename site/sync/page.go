@@ -49,107 +49,54 @@ func loadSections(root string) ([]section, error) {
 	return secs, nil
 }
 
-func exists(root, p string) bool {
-	_, err := os.Stat(filepath.Join(root, p))
-	return err == nil
-}
+// requiredSections are the README sections every plugin has, in this order (.github/plugins checks them).
+var requiredSections = []string{"Install", "Configure", "Use", "Integrations"}
 
-// pluginPage is /docs/plugins/<name>: Install, Configure, Use and Integrations, or the README while docs/use.md
-// doesn't exist.
-func pluginPage(root string, rw *rewriter, p *plugin, m *manifest, secs []section) (string, error) {
-	dir := "ext/" + p.Name
-	if !exists(root, dir+"/docs/use.md") {
-		body, _, err := rw.page(dir+"/README.md", p.Title)
-		return frontMatter(p.Title, p.Summary, dir+"/README.md") + body, err
-	}
-	part := func(name string) (string, error) {
-		src := dir + "/docs/" + name + ".md"
-		if !exists(root, src) {
-			return "", nil
-		}
-		body, _, err := rw.page(src, "")
-		if err != nil {
-			return "", err
-		}
-		return body + "\n" + editLink(src), nil
-	}
-
-	var b strings.Builder
-	b.WriteString(strings.Replace(frontMatter(p.Title, p.Summary, ""), "from site/plugins.json.",
-		"from "+dir+"/docs/ and site/plugins.json. Edit those, then run site/sync.", 1))
-	fmt.Fprintf(&b, "# %s\n\n%s\n\n[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)\n", p.Title, escapeEJS(p.Summary))
-
-	b.WriteString("\n## Install\n\n")
-	install, err := part("install")
+// pluginPage is /docs/plugins/<name>: the plugin's README, with a jump line before its Install section and its
+// pocketone.yaml sections (from the binary) added at the end of its Configure section.
+func pluginPage(rw *rewriter, p *plugin, secs []section) (string, error) {
+	src := "ext/" + p.Name + "/README.md"
+	body, _, err := rw.page(src, p.Title)
 	if err != nil {
 		return "", err
 	}
-	if install == "" {
-		install = generatedInstall(root, p, m)
-	}
-	b.WriteString(install)
-
-	b.WriteString("\n## Configure\n\n")
-	configure, err := part("configure")
-	if err != nil {
-		return "", err
-	}
-	b.WriteString(configure)
-	owned := 0
+	var owned strings.Builder
 	for _, s := range secs {
 		if s.Plugin == p.Name {
-			owned++
+			owned.WriteString(sectionTable(s))
 		}
 	}
-	if owned > 0 {
-		b.WriteString("\n### pocketone.yaml reference\n\n")
-		for _, s := range secs {
-			if s.Plugin == p.Name {
-				b.WriteString(sectionTable(s))
+
+	lines := strings.Split(body, "\n")
+	var out []string
+	fence, inConfigure := false, false
+	flushConfigure := func() {
+		if inConfigure && owned.Len() > 0 {
+			out = append(out, "### pocketone.yaml reference", "", strings.TrimRight(owned.String(), "\n"), "")
+		}
+		inConfigure = false
+	}
+	for _, l := range lines {
+		if strings.HasPrefix(strings.TrimSpace(l), "```") {
+			fence = !fence
+		}
+		if !fence && strings.HasPrefix(l, "## ") {
+			flushConfigure()
+			switch strings.TrimSpace(l[3:]) {
+			case "Install":
+				var links []string
+				for _, name := range requiredSections {
+					links = append(links, fmt.Sprintf("[%s](#%s)", name, strings.ToLower(name)))
+				}
+				out = append(out, strings.Join(links, " · "), "")
+			case "Configure":
+				inConfigure = true
 			}
 		}
-	} else if configure == "" {
-		b.WriteString("Nothing to configure.\n")
+		out = append(out, l)
 	}
-
-	b.WriteString("\n## Use\n\n")
-	use, err := part("use")
-	if err != nil {
-		return "", err
-	}
-	b.WriteString(use)
-
-	b.WriteString("\n## Integrations\n\n")
-	integrations, err := part("integrations")
-	if err != nil {
-		return "", err
-	}
-	b.WriteString(integrations)
-
-	b.WriteString("\n## More\n\n")
-	fmt.Fprintf(&b, "- [How it works](%s/blob/main/%s/README.md): the plugin's README, for developers\n", repoURL, dir)
-	for _, g := range p.guides {
-		fmt.Fprintf(&b, "- [%s](/docs/plugins/%s/%s)\n", g.title, p.Name, g.slug)
-	}
-	fmt.Fprintf(&b, "- [Questions and ideas](%s/discussions)\n", repoURL)
-	return b.String(), nil
-}
-
-func editLink(src string) string {
-	return fmt.Sprintf("<p class=\"edit-page\"><a href=\"%s/edit/main/%s\">Edit this section</a></p>\n", repoURL, src)
-}
-
-func generatedInstall(root string, p *plugin, m *manifest) string {
-	if p.Group == m.Groups[0].ID {
-		return "Built into `pocketone`. There's nothing to install.\n"
-	}
-	example := "ext/" + p.Name + "/example/main.go"
-	src, err := os.ReadFile(filepath.Join(root, example))
-	if err != nil {
-		return fmt.Sprintf("Not in the `pocketone` binary: add `github.com/pockethost/pocketone/ext/%s` to your own build. See the [README](%s/blob/main/ext/%s/README.md).\n", p.Name, repoURL, p.Name)
-	}
-	return fmt.Sprintf("Not in the `pocketone` binary: add it to your own Go build. A minimal example, from [`%s`](%s/blob/main/%s):\n\n```go\n%s```\n",
-		example, repoURL, example, escapeEJS(strings.TrimRight(string(src), "\n")+"\n"))
+	flushConfigure()
+	return frontMatter(p.Title, p.Summary, src) + strings.TrimRight(strings.Join(out, "\n"), "\n") + "\n", nil
 }
 
 func sectionTable(s section) string {

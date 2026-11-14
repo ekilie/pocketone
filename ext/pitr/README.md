@@ -1,95 +1,157 @@
-# pitr
+# PITR
 
-Point-in-time restore: Litestream replication of each app's database (local or a bucket) and in-place restore from the Backups screen.
+Point-in-time restore: your database as it was at any moment in the last few days, restored from the dashboard.
+History is recorded with [Litestream](https://litestream.io), next to your data or in an S3-compatible bucket.
 
-**Runs on:** Single app, or many under [pocker](../pocker/README.md).
+## Install
 
-> **Status.** Working: Go module `github.com/pockethost/pocketone/ext/pitr` (Litestream v0.5.18, pinned).
-> [`example/main.go`](example/main.go) runs one app with local history.
+PITR is built into `pocketone` and **on by default**. Every app it serves starts recording history the first time it
+serves; there's nothing to install.
 
-## What it does
+To run without it:
 
-On by default: including the plugin is the opt-in. `enabled: false` turns it off for the server or for one
-instance.
+```bash
+pocketone serve --pitr=false
+```
 
-
-- Litestream continuously copies the app's `data.db` (records, collections, settings, superusers) to
-  `pb_data/litestream/`, or to an S3-compatible bucket.
-- **Settings → Backups** gets a "Point-in-time restore" section: the restorable window, a time picker, **Restore**,
-  and **Undo this restore**. Superusers only.
-- A restore is built into a side file while the app keeps serving, then swapped in when the app restarts. The
-  replaced database is kept in `pb_data/litestream/before-restore.db`, and history keeps recording, so the restore
-  can be undone.
-- Not covered: uploaded files, `pb_hooks`, `pb_public`, the logs database.
-- `pb_data/litestream/` is left out of backup zips, and restoring a zip doesn't wipe it.
-
-## Single app
+In your own Go build, register it before the app starts:
 
 ```go
 app := pocketbase.New()
-pitr.MustRegister(app, pitr.Config{Retention: 72 * time.Hour})
+pitr.MustRegister(app, pitr.Config{})
 app.Start()
 ```
 
-Commands:
+## Configure
 
-```
-pocketbase pitr status
-pocketbase pitr restore --at 2026-11-11T14:05:00Z --to /tmp/then.db   # side restore, any time
-pocketbase pitr restore --at 2026-11-11T14:05:00Z                     # in place, swapped in on the next start
-```
+### On, off and how far back
 
-Replication runs only while the app serves (`OnServe`), never for CLI commands.
-
-## Many apps (pocker)
-
-A [pluginkit](../pluginkit/pluginkit.go) plugin, which pocker hosts on every instance, plus pocker's `Configurer` and `Starter` for its process settings and shutdown:
-
-```go
-srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{pitr.New(pitr.Config{})}}
-```
+Set it in `pocketone.yaml`:
 
 ```yaml
-# pocketone.yaml (fields set in Go win)
 pitr:
-  retention: 72h          # on by default; enabled: false turns it off for every instance
-  snapshot_interval: 24h
+  enabled: true          # false turns it off
+  retention: 72h         # how far back a restore can go
+  snapshot_interval: 24h # how often a full copy is taken
+```
 
-# instances.yaml (or a provider): only enabled and retention per instance (e.g. enabled: false for a plan without PITR)
+Or with flags, which win over the file:
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--pitr` | `true` | Record history while serving. `--pitr=false` turns it off. |
+| `--pitrRetention` | `72h` | How far back a restore can go. |
+
+A shorter `snapshot_interval` makes restores faster and uses more storage.
+
+### Where the history is stored
+
+By default the history is kept next to your database, in `pb_data/litestream/`. That protects you from mistakes in
+your data, but not from losing the disk. To keep it somewhere else, use your own S3-compatible bucket:
+
+1. Open **Settings → Backups** in the dashboard and find **Point-in-time restore**.
+2. Tick **Store the history in my own S3 bucket** and fill in the endpoint, bucket, region, access key and secret.
+   Tick **Force path-style addressing** for MinIO and similar servers. The prefix defaults to `litestream`.
+3. Click **Test connection** to check that the bucket accepts a write, then **Save**.
+
+From then on the history is recorded in the bucket, starting with a fresh copy, so restores go back to the moment you
+saved. The secret is never shown again after saving. If the app runs with an encryption key (`--encryptionEnv`), the secret
+is stored encrypted.
+
+## Use
+
+### What's covered
+
+Your database: records, collections, settings and superusers. **Not** uploaded files, `pb_hooks`, `pb_public` or the
+logs database. Use PocketBase's backups for those.
+
+History starts with the first change after PITR is turned on, and goes back as far as the retention allows (72 hours
+by default).
+
+### Restore from the dashboard
+
+1. Open **Settings → Backups**. The **Point-in-time restore** section shows how far back you can go, how big the
+   history is and where it's stored.
+2. Under **Restore to**, pick a date and time, then click **Restore**.
+3. The app keeps serving while the old database is rebuilt, then restarts with it.
+
+Only superusers see this section.
+
+### Undo a restore
+
+The database you replaced is kept in `pb_data/litestream/before-restore.db`, and history keeps recording, so a restore
+can be undone. After a restore, the section shows when you restored and to what time, with an **Undo this restore**
+button.
+
+### From the command line
+
+```bash
+pocketone pitr status
+pocketone pitr restore --at 2026-11-11T14:05:00Z --to /tmp/then.db   # a copy, any time
+pocketone pitr restore --at 2026-11-11T14:05:00Z                     # in place
+```
+
+`--at` takes an RFC 3339 time. With `--to`, you get a copy of the database as it was, to inspect or pull records
+from; the app keeps running. Without `--to`, run it while the server is stopped: the restore is swapped in when it
+next starts.
+
+### What it costs
+
+About 176 KiB of memory per serving app, and the storage for your history. Replication runs only while the app is
+serving, never during CLI commands.
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Pocker](../pocker/README.md) | Every instance on the host gets PITR. The `pitr` section sets the defaults for all of them; each instance can override `enabled` and `retention` (below). A restore restarts only that instance, and sleeping instances cost nothing. |
+| [S3 Fallback](../storage/README.md) | Mount `litestream` on a backend and every app without its own bucket keeps its history there, under its own prefix. An app's own bucket (Settings → Backups) still wins. |
+| [Multitenant](../tenants/README.md) (planned) | Sets each instance's `enabled` and `retention` from its plan, for example a plan without PITR. |
+| PocketBase backups | `pb_data/litestream/` is left out of backup zips, and restoring a zip doesn't wipe it. |
+
+### Per-instance settings (pocker)
+
+Each instance can override `enabled` and `retention` in its `plugins.pitr` settings, from `instances.yaml` or a
+provider:
+
+```yaml
 instances:
   - id: abc
-    hosts: [abc.example.com]
     plugins: { pitr: { retention: 168h } }
+  - id: free-plan-app
+    plugins: { pitr: { enabled: false } }
 ```
 
-- Each instance's history goes to `instances/<id>/litestream/` in the bucket (or its own `pb_data/litestream/`).
-  A `bucket` in instance settings is refused, so credentials never sit in instance data.
-- Sleep and wake are covered by the app's own `OnServe`/`OnTerminate`: history is attached when an instance serves,
-  flushed and detached when it stops. Sleeping instances cost nothing.
-- Restores restart only that instance (pocker turns `app.Restart()` into a restart of that one app).
-- Apps with different retention get separate Litestream stores (Litestream applies retention per store).
-- `Plugin.Status` and `Plugin.Restore` are there for host code.
+Each instance's history goes to `instances/<id>/litestream/` in the shared bucket, or its own `pb_data/litestream/`.
+A bucket in an instance's settings is refused, so credentials never sit in instance data.
 
-## Bucket
+### Building on PITR
 
-```go
-Bucket: &pitr.Bucket{
-    Endpoint: "https://<account>.eu.r2.cloudflarestorage.com",
-    Bucket:   "pitr-eu",
-    Region:   "auto",
-    AccessKey: "...", Secret: "...",
-    Prefix:   "",      // keys: <prefix><AppConfig.Key>litestream/...
-    Label:    "EU",    // shown in the admin: "stored on bucket (EU)"
-},
-```
+- **Store history somewhere else.** PITR asks PocketBase for a filesystem of kind `litestream` (`pitr.Kind`) through
+  `OnFilesystemCreate`. Answer it and the history goes to your filesystem; S3 Fallback works this way.
+- **Set it per instance.** Write `plugins.pitr.enabled` and `plugins.pitr.retention` into an instance's settings;
+  PITR reads them when the instance starts. Multitenant will work this way.
+- **Go API.** `(*pitr.Plugin).Status(ctx, app)` returns the restorable window, size, destination and last restore;
+  `Restore(ctx, app, at)` restores an app to a time.
+- **REST API** (superusers): `GET /api/pitr` for the status, `POST /api/pitr/restore` with
+  `{"at": "<RFC 3339 time>"}` to restore.
 
-Uses PocketBase's own S3 client (no AWS SDK). Each LTX file's timestamp is kept in object metadata, so restoring to
-a time doesn't depend on upload times. Credentials stay in the host process. Residency is the operator's: give every
-server in a region that region's bucket.
+## How it works
 
-## Cost
-
-Per serving app: about 176 KiB of memory, 4 goroutines, 5 file descriptors. Binary: about +4 MiB.
+- Go module `github.com/pockethost/pocketone/ext/pitr`, Litestream v0.5.18 (pinned).
+  [`example/main.go`](example/main.go) runs one app with local history.
+- Litestream continuously copies `data.db` to its destination: the app's own bucket (its PITR settings), else a
+  filesystem of kind `litestream` (an `OnFilesystemCreate` handler, such as S3 Fallback), else `pb_data/litestream/`.
+  Buckets go through PocketBase's own S3 client, not the AWS SDK. Each LTX file's timestamp is kept in object
+  metadata, so restoring to a time doesn't depend on upload times.
+- Replication runs only while the app serves (`OnServe`), never for CLI commands. On terminate it's flushed and
+  detached, so under pocker a sleeping instance costs nothing.
+- A restore is built into a side file while the app keeps serving, then swapped in by `app.Restart()`. The replaced
+  database is kept as `pb_data/litestream/before-restore.db`.
+- Apps with different retention get separate Litestream stores, since Litestream applies retention per store.
+- Cost per serving app: about 176 KiB of memory, 4 goroutines, 5 file descriptors. Binary: about +4 MiB.
 
 ## License
 

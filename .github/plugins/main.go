@@ -10,9 +10,8 @@
 // The rules (`check`), per module:
 //   - a module with a pluginkit plugin (a `Register(app core.App, _ pluginkit.Config) error` method) has a test
 //     that calls conformance.Run (docs/plugins.md).
-//   - every plugin (ext/<name>) has user docs for pocketone.dev: docs/configure.md, docs/use.md and
-//     docs/integrations.md (docs/install.md is optional), written as sections of one page: no "#" or "##" headings,
-//     start at "###" (docs/plugins.md).
+//   - every plugin (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use` and `## Integrations`
+//     sections, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md).
 package main
 
 import (
@@ -268,9 +267,8 @@ var docsExempt = map[string]string{
 	"devusers":  "test users for examples and tests only; never in a production build",
 }
 
-// docsPending are plugins written before user docs were required. Each needs docs/configure.md, docs/use.md and
-// docs/integrations.md;
-// remove it from this list when they land. New plugins don't go here.
+// docsPending are plugins written before the README sections were required; remove each when its README has them.
+// New plugins don't go here.
 var docsPending = map[string]bool{
 	"autotls": true, "bulkmail": true, "config": true, "deploy": true, "docker": true, "edge": true,
 	"firewall": true, "host": true, "jsembed": true, "jserrors": true, "mailrelay": true, "mailtrap": true,
@@ -280,12 +278,10 @@ var docsPending = map[string]bool{
 	"vacuum": true,
 }
 
-var docHeading = regexp.MustCompile(`^#{1,2}\s`)
+// requiredSections are the README sections every plugin has, in this order.
+var requiredSections = []string{"Install", "Configure", "Use", "Integrations"}
 
-// requiredDocs are the user docs every plugin has (install.md is optional).
-var requiredDocs = []string{"configure.md", "use.md", "integrations.md"}
-
-// checkDocs: a plugin folder (ext/<name>) has its user docs for its pocketone.dev page.
+// checkDocs: a plugin folder (ext/<name>) has a README with the required sections, in order.
 func checkDocs(dir string) []string {
 	name, ok := strings.CutPrefix(dir, "ext/")
 	if !ok || strings.Contains(name, "/") {
@@ -294,43 +290,33 @@ func checkDocs(dir string) []string {
 	if _, ok := docsExempt[name]; ok {
 		return nil
 	}
-	var problems []string
-	have := 0
-	for _, f := range append([]string{"install.md"}, requiredDocs...) {
-		p := dir + "/docs/" + f
-		src, err := os.ReadFile(p)
-		if err != nil {
-			if f != "install.md" && !docsPending[name] {
-				problems = append(problems, fmt.Sprintf("%s: missing; every plugin documents how to configure it, use it and integrate with it for pocketone.dev (docs/plugins.md)", p))
-			}
-			continue
+	src, err := os.ReadFile(dir + "/README.md")
+	if err != nil {
+		return []string{dir + "/README.md: missing (docs/plugins.md)"}
+	}
+	var h2 []string
+	fence := false
+	for _, line := range strings.Split(string(src), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			fence = !fence
 		}
-		have++
-		if strings.TrimSpace(string(src)) == "" {
-			problems = append(problems, p+": empty")
-		}
-		fence := false
-		for i, line := range strings.Split(string(src), "\n") {
-			if strings.HasPrefix(strings.TrimSpace(line), "```") {
-				fence = !fence
-			}
-			if !fence && docHeading.MatchString(line) {
-				problems = append(problems, fmt.Sprintf("%s:%d: %q: the site adds the Install/Configure/Use/Integrations headings; start at ###", p, i+1, line))
-			}
+		if !fence && strings.HasPrefix(line, "## ") {
+			h2 = append(h2, strings.TrimSpace(line[3:]))
 		}
 	}
-	if docsPending[name] && have > 0 && !docsMissing(dir) {
-		problems = append(problems, fmt.Sprintf("%s: has its docs now; remove %q from docsPending in .github/plugins/main.go", dir, name))
-	}
-	return problems
-}
-
-// docsMissing reports whether any required doc is still missing.
-func docsMissing(dir string) bool {
-	for _, f := range requiredDocs {
-		if _, err := os.Stat(dir + "/docs/" + f); err != nil {
-			return true
+	next := 0
+	for _, h := range h2 {
+		if next < len(requiredSections) && h == requiredSections[next] {
+			next++
 		}
 	}
-	return false
+	complete := next == len(requiredSections)
+	switch {
+	case !complete && !docsPending[name]:
+		return []string{fmt.Sprintf("%s/README.md: needs the sections ## %s, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md)",
+			dir, strings.Join(requiredSections, ", ## "))}
+	case complete && docsPending[name]:
+		return []string{fmt.Sprintf("%s: its README has the required sections now; remove %q from docsPending in .github/plugins/main.go", dir, name)}
+	}
+	return nil
 }
