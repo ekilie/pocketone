@@ -489,3 +489,21 @@ func textOf(res map[string]any) string {
 	}
 	return b.String()
 }
+
+// jsvm runs pb_hooks when it's registered, which can be before mcp.Register (as in the stock binary).
+func TestBindJSBeforeRegister(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(app.Cleanup)
+	vm := goja.New()
+	BindJS(vm, app)
+	if _, err := vm.RunString(`$mcp.addEndpoint({ name: "early_get_thing", description: "x", method: "GET", path: "/api/health" }); $mcp.instructions("Early.")`); err != nil {
+		t.Fatal(err)
+	}
+	s := MustRegister(app, Config{})
+	if s.tool("early_get_thing") == nil || !strings.Contains(s.instructionsText(), "Early.") {
+		t.Fatal("tool declared before Register is missing")
+	}
+}

@@ -265,6 +265,20 @@ func Register(app core.App, cfg Config) (*Server, error) {
 			}
 		}
 	}
+	if p, ok := app.Store().Get(pendingKey).(*pending); ok { // declared by pb_hooks before Register
+		p.mu.Lock()
+		for _, t := range p.tools {
+			if err := s.AddEndpoint(t); err != nil {
+				p.mu.Unlock()
+				return nil, err
+			}
+		}
+		for _, text := range p.instructions {
+			s.AddInstructions(text)
+		}
+		p.tools, p.instructions = nil, nil
+		p.mu.Unlock()
+	}
 	app.Store().Set(storeKey, s)
 	pluginkit.SetToolLister(app, s) // lets checks such as the plugin conformance test see the tools
 

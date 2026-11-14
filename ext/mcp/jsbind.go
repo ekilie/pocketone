@@ -38,12 +38,17 @@ import (
 // variables); the REST call itself runs outside it. Keep them pure: the work belongs in the endpoint.
 func BindJS(vm *goja.Runtime, app core.App) {
 	obj := vm.NewObject()
-	get := func() *Server {
-		s := For(app)
-		if s == nil {
-			panic(vm.NewGoError(errors.New("mcp isn't registered on this app")))
+	// jsvm runs pb_hooks when it's registered, which may be before mcp.Register; until then tools and instructions
+	// wait in the app store and Register adds them.
+	addEndpoint := func(t Endpoint) error {
+		if s := For(app); s != nil {
+			return s.AddEndpoint(t)
 		}
-		return s
+		p := pendingFor(app)
+		p.mu.Lock()
+		p.tools = append(p.tools, t)
+		p.mu.Unlock()
+		return nil
 	}
 	lock := vmLock(vm)
 
@@ -127,7 +132,7 @@ func BindJS(vm *goja.Runtime, app core.App) {
 				return v.Export(), nil
 			}
 		}
-		if err := get().AddEndpoint(t); err != nil {
+		if err := addEndpoint(t); err != nil {
 			panic(vm.NewGoError(err))
 		}
 		return goja.Undefined()
@@ -142,14 +147,23 @@ func BindJS(vm *goja.Runtime, app core.App) {
 	})
 
 	_ = obj.Set("instructions", func(call goja.FunctionCall) goja.Value {
-		get().AddInstructions(jsString(call.Argument(0)))
+		if s := For(app); s != nil {
+			s.AddInstructions(jsString(call.Argument(0)))
+		} else {
+			p := pendingFor(app)
+			p.mu.Lock()
+			p.instructions = append(p.instructions, jsString(call.Argument(0)))
+			p.mu.Unlock()
+		}
 		return goja.Undefined()
 	})
 
 	_ = obj.Set("tools", func(call goja.FunctionCall) goja.Value {
 		names := []string{}
-		for _, t := range get().Tools() {
-			names = append(names, t.Name)
+		if s := For(app); s != nil {
+			for _, t := range s.Tools() {
+				names = append(names, t.Name)
+			}
 		}
 		return vm.ToValue(names)
 	})
@@ -157,6 +171,25 @@ func BindJS(vm *goja.Runtime, app core.App) {
 	if err := vm.Set("$mcp", obj); err != nil {
 		panic(fmt.Errorf("mcp: bind JS: %w", err))
 	}
+}
+
+const pendingKey = "mcp.pending"
+
+// pending holds what pb_hooks declared before mcp.Register ran.
+type pending struct {
+	mu           sync.Mutex
+	tools        []Endpoint
+	instructions []string
+}
+
+func pendingFor(app core.App) *pending {
+	app.Store().SetFunc(pendingKey, func(old any) any {
+		if p, ok := old.(*pending); ok {
+			return p
+		}
+		return &pending{}
+	})
+	return app.Store().Get(pendingKey).(*pending)
 }
 
 var vmLocks sync.Map // *goja.Runtime -> *sync.Mutex
