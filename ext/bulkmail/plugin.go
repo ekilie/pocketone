@@ -12,8 +12,7 @@ import (
 //	pluginkit.MustRegister(app, bulkmail.New(bulkmail.Config{}))         // a single app
 //	srv.Plugins = append(srv.Plugins, bulkmail.New(bulkmail.Config{})) // every pocker instance
 //
-// Settings (a pocker config file's top-level `bulkmail:` key, then an instance's `plugins.bulkmail`) apply over
-// the Config given to New: `rate`, `daily` (0 means this app may not send bulk mail; the screens say so) and
+// An instance's `plugins.bulkmail` settings apply over the Config given to New: `rate`, `daily` (0 means this app may not send bulk mail; the screens say so) and
 // `enabled`, which the host checks.
 type Plugin struct {
 	cfg Config

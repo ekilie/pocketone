@@ -278,12 +278,9 @@ var docsExempt = map[string]string{
 // docsPending are plugins written before the README sections were required; remove each when its README has them.
 // New plugins don't go here.
 var docsPending = map[string]bool{
-	"autotls": true, "bulkmail": true, "config": true, "deploy": true, "docker": true, "edge": true,
-	"firewall": true, "host": true, "jsembed": true, "jserrors": true, "mailrelay": true, "mailtrap": true,
-	"mcp": true, "mothership": true, "oauth-server": true, "pages": true, "pocker": true, "remotes": true,
-	"s3redirect": true, "sandbox": true, "schedules": true, "servertiming": true, "storage": true,
-	"tenant-billing": true, "tenant-billing-ls": true, "tenants": true, "tokens": true, "upgrade": true,
-	"vacuum": true,
+	"docker": true, "edge": true, "firewall": true, "host": true, "jsembed": true, "mailrelay": true, "mailtrap": true,
+	"mothership": true, "pocker": true, "sandbox": true, "schedules": true, "servertiming": true, "storage": true,
+	"tenant-billing": true, "tenant-billing-ls": true, "tenants": true,
 }
 
 // requiredSections are the README sections every plugin has, in this order.

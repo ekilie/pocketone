@@ -5,7 +5,7 @@
 //	tokens.MustRegister(app, tokens.Config{})
 //	oauthserver.MustRegister(app, oauthserver.Config{})
 //
-// Endpoints: /.well-known/oauth-authorization-server (RFC 8414), /.well-known/oauth-protected-resource (RFC 9728),
+// Endpoints: /.well-known/oauth-authorization-server (RFC 8414),
 // /oauth/authorize (sign-in + consent pages), /oauth/token (authorization code + PKCE S256, refresh, device code),
 // /oauth/device (RFC 8628), /oauth/revoke (RFC 7009), and /oauth/register (RFC 7591, off by default).
 package oauthserver
@@ -83,7 +83,8 @@ type Config struct {
 	// HTTPClient fetches client metadata documents (default: 5 s timeout).
 	HTTPClient *http.Client
 
-	// Issuer is the server's public base URL (default: Settings → Application URL, else the request's own URL).
+	// Issuer is the server's public base URL (default: the request's scheme and host; https when the request is TLS or
+	// X-Forwarded-Proto says so).
 	Issuer string
 
 	Branding Branding

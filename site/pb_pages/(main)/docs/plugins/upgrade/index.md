@@ -7,31 +7,74 @@ source: "ext/upgrade/README.md"
 
 # Upgrade
 
-`pocketone upgrade`: replaces the running executable with the latest PocketOne release and keeps the old one beside
-it as `<name>-<version>` (e.g. `pocketone-0.0.3`). Linked by default in the `pocketone` binary.
+`pocketone upgrade` replaces the `pocketone` executable with the latest PocketOne release and keeps the old one beside
+it as `<name>-<version>` (for example `pocketone-0.0.3`), so a project can keep running the engine it was built with.
 
-## What it does
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
 
-- Downloads the archive for your platform from the latest GitHub release and checks it against the release's
-  `checksums.txt` before touching anything.
-- Renames the current executable to `<name>-<version>` and puts the new one in its place. **Old copies are never
-  deleted**, so `pocketone-0.0.3 serve` still runs a project on the engine it was built with. A local build with no
-  release version is kept as `<name>.old`.
-- Backs up `pb_data` afterwards when the current folder has one (`--backup=false` skips it).
-- Installed with Homebrew: prints `brew upgrade pocketone` instead (brew keeps old versions until `brew cleanup`).
-- In a Docker container: refuses; upgrade the image instead.
+## Install
 
-A kept binary doesn't undo migrations: once a newer version has served a `pb_data`, an older one may not open it.
-The backup is the way back for that.
+Upgrade is built into `pocketone`: the `upgrade` command is always there. There's nothing to turn on.
+
+In your own Go build, register the command before the app starts:
+
+```go
+import "github.com/pockethost/pocketone/ext/upgrade"
+
+app := pocketbase.New()
+upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
+app.Start()
+```
+
+## Configure
+
+Nothing to configure: no `pocketone.yaml` section, no environment variables, no settings screens. The command has one
+flag:
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--backup` | `true` | Back up `pb_data` after upgrading, if the current folder has one. `--backup=false` skips it. |
 
 ## Use
 
-```go
-upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
+Run it from your project folder:
+
+```bash
+pocketone upgrade
 ```
 
-Custom builds that publish their own releases set `Owner`, `Repo`, `ArchivePrefix` and `ArchiveExecutable`.
-`Config.FetchRelease` and `Config.DownloadArchive` are exported for other tools that fetch a specific release.
+It:
+
+1. Checks the latest release on GitHub. If you already have it (or something newer), it says so and stops.
+2. Downloads the archive for your platform and checks it against the release's `checksums.txt` before touching
+   anything.
+3. Renames the current executable to `<name>-<version>` and puts the new one in its place. **Old copies are never
+   deleted**, so `pocketone-0.0.3 serve` still runs a project on that version. A local build with no release version
+   is kept as `<name>.old`, which the next such upgrade replaces.
+4. Backs up `pb_data`, when the current folder has one, as `@upgrade_<tag>.zip` in PocketBase's backups.
+5. Prints the new version, where the old one was kept, and the release notes.
+
+Two cases where it does something else:
+
+- **Installed with Homebrew:** it prints `brew upgrade pocketone` instead. Homebrew keeps the previous version until
+  `brew cleanup`.
+- **In a Docker container:** it refuses; upgrade the image instead.
+
+It needs write access to the folder the executable is in.
+
+A kept executable doesn't undo migrations: once a newer version has served a `pb_data`, an older one may not open it.
+The backup is the way back for that.
+
+## Integrations
+
+Nothing integrates with it yet. Other tools can reuse its release code:
+
+- **Custom builds** that publish their own releases set `Owner`, `Repo`, `ArchivePrefix` and `ArchiveExecutable` in
+  `upgrade.Config`. Release archives are named `<prefix>_<version>_<os>_<arch>.zip`, with a goreleaser-style
+  `checksums.txt` in the same release.
+- **Go API.** `Config.FetchRelease(ctx, tag)` fetches the latest release (tag `""`) or a given one;
+  `Config.DownloadArchive(ctx, release, goos, goarch, dir)` downloads and checks a platform's archive.
+  `upgrade.KeptName(exe, version)` is the name an old executable is kept under.
 
 ## License
 

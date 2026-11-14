@@ -14,18 +14,18 @@ The single app: data dir, dev mode, encryption, hooks, migrations, public dir, a
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `dir` | string |  |  |
-| `dev` | bool |  |  |
-| `encryption_env` | string |  |  |
-| `query_timeout` | duration |  |  |
-| `hooks_dir` | string |  |  |
-| `hooks_watch` | bool |  |  |
-| `hooks_pool` | int |  |  |
-| `migrations_dir` | string |  |  |
-| `automigrate` | bool |  |  |
-| `public_dir` | string |  |  |
-| `index_fallback` | bool |  |  |
-| `env_allow` | list of string |  |  |
+| `dir` | string |  | The data folder (pb_data). Default: pb_data next to the executable. The --dir flag wins. |
+| `dev` | bool |  | Dev mode: logs and SQL statements printed to the console. The --dev flag wins. |
+| `encryption_env` | string |  | Name of the environment variable holding a 32-character key that encrypts the app settings. The --encryptionEnv flag wins. |
+| `query_timeout` | duration |  | Default timeout for SELECT queries, such as 30s. The --queryTimeout flag wins. |
+| `hooks_dir` | string |  | The JS hooks folder. Default: pb_hooks next to pb_data. The --hooksDir flag wins. |
+| `hooks_watch` | bool |  | Restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
+| `hooks_pool` | int |  | How many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
+| `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
+| `automigrate` | bool |  | Write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
+| `public_dir` | string |  | The static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |
+| `index_fallback` | bool |  | Serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins. |
+| `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |
 
 #### `autotls:`
 
@@ -197,11 +197,11 @@ How the binary listens: http, https and CORS origins (single-app mode: the serve
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `http` | string |  |  |
-| `https` | string |  |  |
-| `origins` | list of string |  |  |
-| `plain` | list of string |  |  |
-| `tls.cert` | string |  |  |
-| `tls.key` | string |  |  |
-| `shutdown_timeout` | duration |  |  |
+| `http` | string |  | Plain HTTP address, such as 127.0.0.1:8090. Single app: the --http default (the flag wins). Many instances: redirects to https when https is set. |
+| `https` | string |  | HTTPS address. Single app: the --https default (the flag wins). Many instances: the main address. |
+| `origins` | list of string |  | Allowed CORS origins. Single app: the --origins default (the flag wins). |
+| `plain` | list of string |  | Many instances only: extra plain HTTP addresses with no redirect. |
+| `tls.cert` | string |  | Many instances only: the certificate file, reloaded when it changes. |
+| `tls.key` | string |  | Many instances only: the private key file, reloaded when it changes. |
+| `shutdown_timeout` | duration |  | Many instances only: how long in-flight requests get to finish at stop. |
 
