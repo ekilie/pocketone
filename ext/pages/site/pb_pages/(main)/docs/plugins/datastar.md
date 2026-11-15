@@ -1,9 +1,9 @@
 ---
-title: Datastar Plugin
+title: Datastar Add-on
 description: The Datastar add-on adds ctx.datastar helpers for Datastar script tags, SSE patches and signals.
 ---
 
-# Datastar Plugin
+# Datastar Add-on
 
 The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a JS plugin that ships with PocketPages
 rather than a built-in: copy [`addons/datastar.js`](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/datastar.js)
@@ -16,7 +16,7 @@ module.exports = {
 }
 ```
 
-Add the script tags to your root layout's `<head>`. They load [Datastar](https://data-star.dev) v1.0.4. Datastar 1.0 uses
+Add the script tags to your root layout's `<head>`. They load [Datastar](https://data-star.dev) v1.0.5. Datastar 1.0 uses
 a colon between the attribute name and its key (`data-on:click`, `data-bind:name`, `data-signals:count`,
 `data-class:active`, `data-attr:href`); the older hyphen form (`data-on-click`) is ignored. See the
 [Datastar attribute reference](https://data-star.dev/reference/attributes).
@@ -34,8 +34,14 @@ a colon between the attribute name and its key (`data-on:click`, `data-bind:name
 | `scripts({ spa, realtime }?)` | Returns the script tags. |
 | `patchElements(html, { selector, mode }?)` | Sends a patch-elements SSE event on the current response. |
 | `patchSignals(signals)` | Sends a patch-signals SSE event. |
-| `executeScript(js)` | Sends a script to run in the browser. |
-| `signals()` | Reads the request's signals. |
+| `executeScript(js, { autoRemove, attributes }?)` | Sends a script to run in the browser. |
+| `consoleLog(msg)` / `consoleError(err)` | Logs to the browser console. |
+| `redirect(url)` | Sends the browser to `url` (a full page load). A Datastar fetch can't follow `ctx.res.redirect`, so use this from `@get`/`@post` handlers. |
+| `dispatchCustomEvent(name, detail, { selector }?)` | Fires a `CustomEvent` on `document`, or on the elements matching `selector`. |
+| `replaceURL(url)` | Changes the address bar without a navigation (`history.replaceState`). |
+| `prefetch(urls)` | Adds speculation rules so the browser prefetches `urls`. |
+| `signals()` | Reads the request's signals as an object. |
+| `readSignals(target)` | Merges the request's signals into `target` and returns it (0.x's `readSignals(request, target)` also works). |
 | `realtime.*` | Sends the same patches to realtime subscribers. Needs the [`realtime`](/docs/plugins/realtime) plugin. |
 
 ## Pages as patches

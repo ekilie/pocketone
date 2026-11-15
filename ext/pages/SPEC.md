@@ -524,7 +524,12 @@ Plugins for third-party libraries ship as JS files in `ext/pages/addons/`, not b
   starts the stream (`ctx.res.sent` becomes `true`); later steps still run, but their output isn't sent and the
   automatic patch below doesn't happen. The stream closes when the request ends.
 - `ctx.datastar.signals()` returns the request's signals as an object (from the `datastar` query parameter on
-  `GET`, the JSON body otherwise).
+  `GET`, the JSON body otherwise). `readSignals(target)` (or 0.x's `readSignals(request, target)`) merges them into
+  `target` and returns it.
+- Script helpers, each an `executeScript` (options `{ eventId, retryDuration }`): `consoleLog(msg)`,
+  `consoleError(err)`, `redirect(url)` (a full page load), `dispatchCustomEvent(name, detail, { selector, bubbles,
+  cancelable, composed }?)` (on `document` by default), `replaceURL(url)` (`history.replaceState`) and
+  `prefetch(urls)` (a `speculationrules` script that stays in the page).
 - `mode` is one of `outer` (default), `inner`, `replace`, `prepend`, `append`, `before`, `after`, `remove`.
 - When a request has `Datastar-Request: true`, the rendered page (without layouts) is sent as a `patchElements`
   event, into `Datastar-Selector` if given.

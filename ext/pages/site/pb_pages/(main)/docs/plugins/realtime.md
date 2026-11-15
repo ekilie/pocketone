@@ -62,4 +62,4 @@ module.exports = {
 <%% ctx.realtime.send('chat', include('chat-msg', { message: ctx.req.body().message })) %>
 ```
 
-See [Realtime Events](/docs/realtime) and the [Datastar plugin](/docs/plugins/datastar), which can send Datastar patches over realtime.
+See [Realtime Events](/docs/realtime) and the [Datastar add-on](/docs/plugins/datastar), which can send Datastar patches over realtime.

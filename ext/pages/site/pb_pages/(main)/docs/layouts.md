@@ -73,6 +73,6 @@ Layouts render after the page, with the same `ctx`. Everything middleware, `+pag
 - When the response isn't HTML (a handler set another `Content-Type`).
 - When a handler or middleware sent the response itself (`ctx.res.json`, `ctx.res.html`, `ctx.res.redirect`, ...).
 - For `+api.js` routes, which have no template.
-- With the [datastar plugin](/docs/plugins/datastar), for requests that carry `Datastar-Request: true`.
+- With the [Datastar add-on](/docs/plugins/datastar), for requests that carry `Datastar-Request: true`.
 
 To serve HTML fragments without the site layout, put the layout in a group (`(site)/+layout.ejs`) and the fragments outside it, or send them with `ctx.res.html()`.
