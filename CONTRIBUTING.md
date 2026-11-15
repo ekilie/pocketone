@@ -1,12 +1,32 @@
-# Contributing to PocketBase
+# Contributing to PocketOne
 
-If you stumble on a problem that you want to fix, please consider opening a discussion with your suggested fix as inline code, git diff attachment (`git diff > mychange.diff`) or link to your fork **(if not obvious - LLM contributions are not welcome no matter of their validity)**.
+PocketOne is an open community fork of PocketBase that strongly encourages contributions. This document describes how to modify and work with the codebase.
 
-This document describes how to modify and work with the codebase.
-
+- [Types of Contributions](#types-of-contributions)
+- [LLM Policy](#llm-policy)
 - [Prerequisites](#prerequisites)
 - [Making changes in the Go code](#making-changes-in-the-go-code)
 - [Making changes in the Superuser UI](#making-changes-in-the-superuser-ui)
+
+
+
+## Types of Contributions
+
+### Core PocketBase Contributions
+
+We are going to try our best to maintain upstream parity with Gani's great core work. Therefore, modifications to the core PocketBase code will undergo a more careful review before being accepted. Hooks to extend functionality are preferred over features so future merges from upstream are clean and easy. 
+
+If you find a legitimate bug in the core code, by all means please submit a PR to fix it. We maintain a separate list of upstream bugs in case Gani wants to pick them up.
+
+### Community Extension Contributions
+
+This is where we think most people will spend their time. We have already added a bunch of hooks to PocketBase core to enable all kinds of extensions. The hook you need may already be there. If your extenion requires a new hook in the core PocketBase code, that's fine.
+
+The `/ext/*` folder is where your extension(s) live, and generally you own the code in your folder. It must pass a few CI checks (inspired by DefinitelyTyped) but is otherwise up to you in terms of code quality and approach.
+
+## LLM Policy
+
+Here, we take a major departure from PocketBase. LLM's are allowed and encouraged. You, the human, are responsible for the content of your PR's. Whether you use an LLM to acheive your desired result does not matter, but clean PR's do matter especially if they touch the builtin PocketOne extensions or the core PocketBase code. 
 
 ## Prerequisites
 
@@ -57,5 +77,3 @@ Since the Superuser UI is just a client-side application, you need to have the P
 Every change you make in the Superuser UI should be automatically reflected in the browser at `http://127.0.0.1:5173` without reloading the page.
 
 When you are done with your changes, you have to build the Superuser UI with `npm run build` so that it can be embedded in the Go module.
-
-And that's it - you can continue maintaining your own indipendent fork and/or suggest your changes to the upstream _(once again LLM contributions are not welcome)_.
