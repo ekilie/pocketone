@@ -8,7 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-provider-pocker v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
@@ -62,7 +62,7 @@ replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace github.com/pockethost/pocketone/ext/devusers => ../devusers
 
-replace github.com/pockethost/pocketone/ext/multisite-provider-pocker => ../multisite-provider-pocker
+replace github.com/pockethost/pocketone/ext/pocker => ../pocker
 
 replace github.com/pockethost/pocketone/ext/sandbox => ../sandbox
 
@@ -70,7 +70,7 @@ replace github.com/pockethost/pocketone/ext/tokens => ../tokens
 
 replace github.com/pockethost/pocketone/ext/remotes => ../remotes
 
-replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
+replace github.com/pockethost/pocketone/ext/edge => ../edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 

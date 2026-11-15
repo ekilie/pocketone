@@ -1,5 +1,5 @@
 // Package extkit is PocketOne's extension contract: one extension value that works on a single app and,
-// unchanged, on every instance under pocker (ext/multisite-provider-pocker hosts any [Extension] in Server.Extensions).
+// unchanged, on every instance under pocker (ext/pocker hosts any [Extension] in Server.Extensions).
 //
 // An extension implements Name and Register, and optionally [JSBinder]:
 //

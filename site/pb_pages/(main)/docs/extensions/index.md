@@ -35,15 +35,15 @@ Host hundreds of PocketBase instances in one process, across regions.
 
 | Extension | What it does |
 |---|---|
-| [Pocker](/docs/extensions/multisite-provider-pocker) | Hundreds of PocketBase instances in one Go process, routed by hostname. |
+| [Pocker](/docs/extensions/pocker) | Hundreds of PocketBase instances in one Go process, routed by hostname. |
 | [Multisite](/docs/extensions/multisite) | Many instances behind one listener, routed by hostname, run by one provider. |
-| [Docker](/docs/extensions/multisite-provider-docker) | A host provider that runs each instance in its own container. |
+| [Docker](/docs/extensions/docker) | A host provider that runs each instance in its own container. |
 | [Sandbox](/docs/extensions/sandbox) | Confines untrusted JS hooks, SQL and outbound network. |
-| [Firewall](/docs/extensions/multisite-firewall) | Peer allow-lists, trusted proxies and rate limits for a host. |
-| [Edge](/docs/extensions/multisite-edge) | Forwards each request to the edge that owns the instance. |
-| [Mothership](/docs/extensions/multisite-mothership) | A control plane and its edges, across regions. |
-| [Schedules](/docs/extensions/multisite-schedules) | Scheduled webhooks that wake sleeping instances. |
-| [Stats](/docs/extensions/multisite-stats) | Measures disk use and last request for each instance a host serves. |
+| [Firewall](/docs/extensions/firewall) | Peer allow-lists, trusted proxies and rate limits for a host. |
+| [Edge](/docs/extensions/edge) | Forwards each request to the edge that owns the instance. |
+| [Mothership](/docs/extensions/mothership) | A control plane and its edges, across regions. |
+| [Schedules](/docs/extensions/schedules) | Scheduled webhooks that wake sleeping instances. |
+| [Stats](/docs/extensions/stats) | Measures disk use and last request for each instance a host serves. |
 
 ## Services for your instances
 
@@ -51,9 +51,9 @@ Shared services a host gives every instance it runs.
 
 | Extension | What it does |
 |---|---|
-| [Mail Relay](/docs/extensions/multisite-mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
-| [S3 Fallback](/docs/extensions/multisite-s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
-| [Server Timing](/docs/extensions/multisite-servertiming) | Server-Timing headers for each step of a request. |
+| [Mail Relay](/docs/extensions/mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
+| [S3 Fallback](/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
+| [Server Timing](/docs/extensions/servertiming) | Server-Timing headers for each step of a request. |
 
 ## Sell it as a service
 
@@ -61,9 +61,9 @@ Accounts, quotas and billing, for running PocketBase as a service.
 
 | Extension | What it does |
 |---|---|
-| [Multitenant](/docs/extensions/multisite-tenants) | Accounts that own instances: quotas, owner logins, tokens and an API. |
-| [Multitenant Billing](/docs/extensions/multisite-tenant-billing) | Plans, quotas and the billing provider hook for Multitenant. |
-| [Lemon Squeezy Adapter](/docs/extensions/multisite-tenant-billing-ls) | Lemon Squeezy as the billing provider. |
+| [Multitenant](/docs/extensions/tenants) | Accounts that own instances: quotas, owner logins, tokens and an API. |
+| [Multitenant Billing](/docs/extensions/tenant-billing) | Plans, quotas and the billing provider hook for Multitenant. |
+| [Lemon Squeezy Adapter](/docs/extensions/tenant-billing-ls) | Lemon Squeezy as the billing provider. |
 
 ## For extension authors
 

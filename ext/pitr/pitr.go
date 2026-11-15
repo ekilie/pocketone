@@ -158,7 +158,7 @@ func (p *Extension) resolve(ac AppConfig) (enabled bool, retention time.Duration
 }
 
 // destination is where an app's history goes, in order: the app's own S3 (its PITR settings), the operator's
-// fall-through storage (core filesystem kind "litestream", e.g. an ext/multisite-s3-fallback mount), else pb_data/litestream/.
+// fall-through storage (core filesystem kind "litestream", e.g. an ext/s3-fallback mount), else pb_data/litestream/.
 type destination struct {
 	client litestream.ReplicaClient
 	kind   string // "s3" (the app's own bucket), "storage" (the operator's) or "local"
@@ -394,7 +394,7 @@ func (a *appPITR) reattach() error {
 	return a.attach()
 }
 
-// filesystemOfKind asks app's OnFilesystemCreate handlers (e.g. ext/multisite-s3-fallback's "litestream" mount) for a filesystem of
+// filesystemOfKind asks app's OnFilesystemCreate handlers (e.g. ext/s3-fallback's "litestream" mount) for a filesystem of
 // kind; nil and no error when none supplies one. Close the result when done.
 func filesystemOfKind(app core.App, kind string) (*filesystem.System, error) {
 	e := &core.FilesystemCreateEvent{App: app, Kind: kind}

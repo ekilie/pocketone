@@ -8,7 +8,7 @@ require (
 	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
 	github.com/evanw/esbuild v0.28.2
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-provider-pocker v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 	github.com/yuin/goldmark v1.8.7
 	golang.org/x/oauth2 v0.37.0
@@ -61,11 +61,11 @@ replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace github.com/pockethost/pocketone/ext/devusers => ../devusers
 
-replace github.com/pockethost/pocketone/ext/multisite-provider-pocker => ../multisite-provider-pocker
+replace github.com/pockethost/pocketone/ext/pocker => ../pocker
 
 replace github.com/pockethost/pocketone/ext/sandbox => ../sandbox
 
-replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
+replace github.com/pockethost/pocketone/ext/edge => ../edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 

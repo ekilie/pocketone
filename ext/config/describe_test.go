@@ -50,7 +50,7 @@ func TestDescribe(t *testing.T) {
 
 func TestExtensionOf(t *testing.T) {
 	for in, want := range map[string]string{
-		"github.com/pockethost/pocketone/ext/multisite-mothership/mirror": "multisite-mothership",
+		"github.com/pockethost/pocketone/ext/mothership/mirror": "mothership",
 		"github.com/pockethost/pocketone/ext/pitr":                        "pitr",
 		"main": "",
 	} {

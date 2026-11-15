@@ -59,7 +59,7 @@ replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace github.com/pockethost/pocketone/ext/devusers => ../devusers
 
-replace github.com/pockethost/pocketone/ext/multisite-provider-pocker => ../multisite-provider-pocker
+replace github.com/pockethost/pocketone/ext/pocker => ../pocker
 
 replace github.com/pockethost/pocketone/ext/sandbox => ../sandbox
 
@@ -69,7 +69,7 @@ replace github.com/pockethost/pocketone/ext/remotes => ../remotes
 
 replace github.com/pockethost/pocketone/ext/pages => ../pages
 
-replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
+replace github.com/pockethost/pocketone/ext/edge => ../edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 

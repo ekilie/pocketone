@@ -187,7 +187,7 @@ In `pocketone` it always is.
 | [S3 Redirect](../s3redirect/README.md) | `pb_download_file` follows its one redirect to storage. |
 | JS hooks | `$mcp` in `pb_hooks` (above). |
 
-Under [Pocker](../multisite-provider-pocker/README.md), a Go build registers MCP (with Tokens and OAuth Server) in each instance's
+Under [Pocker](../pocker/README.md), a Go build registers MCP (with Tokens and OAuth Server) in each instance's
 `SetupApp`; there's no extkit extension for it. The stock `pocketone` binary doesn't add it to pocker instances.
 
 ### Tools from Go

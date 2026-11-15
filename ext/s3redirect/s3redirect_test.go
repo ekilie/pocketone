@@ -144,7 +144,7 @@ func TestDownloadRedirects(t *testing.T) {
 			ExpectedContent: []string{`"data":{}`},
 		},
 		{
-			Name:   "a filesystem supplied through OnFilesystemCreate is signed by its driver when it's a Signer (ext/multisite-s3-fallback)",
+			Name:   "a filesystem supplied through OnFilesystemCreate is signed by its driver when it's a Signer (ext/s3-fallback)",
 			Method: http.MethodGet,
 			URL:    "/api/files/docs/rec000000000001/photo_abc.png",
 			TestAppFactory: func(t testing.TB) *tests.TestApp {

@@ -127,9 +127,9 @@ serving, never during CLI commands.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/multisite-provider-pocker) | Every instance on the host gets PITR. The `pitr` section sets the defaults for all of them; each instance can override `enabled` and `retention` (below). A restore restarts only that instance, and sleeping instances cost nothing. |
-| [S3 Fallback](/docs/extensions/multisite-s3-fallback) | Mount `litestream` on a backend and every app without its own bucket keeps its history there, under its own prefix. An app's own bucket (Settings → Backups) still wins. |
-| [Multitenant](/docs/extensions/multisite-tenants) (planned) | Sets each instance's `enabled` and `retention` from its plan, for example a plan without PITR. |
+| [Pocker](/docs/extensions/pocker) | Every instance on the host gets PITR. The `pitr` section sets the defaults for all of them; each instance can override `enabled` and `retention` (below). A restore restarts only that instance, and sleeping instances cost nothing. |
+| [S3 Fallback](/docs/extensions/s3-fallback) | Mount `litestream` on a backend and every app without its own bucket keeps its history there, under its own prefix. An app's own bucket (Settings → Backups) still wins. |
+| [Multitenant](/docs/extensions/tenants) (planned) | Sets each instance's `enabled` and `retention` from its plan, for example a plan without PITR. |
 | PocketBase backups | `pb_data/litestream/` is left out of backup zips, and restoring a zip doesn't wipe it. |
 
 ### Per-instance settings (pocker)

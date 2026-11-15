@@ -52,13 +52,13 @@ require (
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace (
-	github.com/pockethost/pocketone/ext/multisite-provider-pocker => ../multisite-provider-pocker
+	github.com/pockethost/pocketone/ext/pocker => ../pocker
 	github.com/pockethost/pocketone/ext/sandbox => ../sandbox
 )
 
 replace github.com/pockethost/pocketone/ext/devusers => ../devusers
 
-replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
+replace github.com/pockethost/pocketone/ext/edge => ../edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 

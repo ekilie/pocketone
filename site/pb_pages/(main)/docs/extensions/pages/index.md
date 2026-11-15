@@ -142,7 +142,7 @@ cd example && go run . serve --dir=./pb_data
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/multisite-provider-pocker) | `pockerext` serves each instance's own `pb_pages` (below). |
+| [Pocker](/docs/extensions/pocker) | `pockerext` serves each instance's own `pb_pages` (below). |
 | [OAuth Server](/docs/extensions/oauth-server) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
 | [Deploy](/docs/extensions/deploy) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 | [JS Errors](/docs/extensions/jserrors) | Both run in the same JS VM; JS Errors covers `pb_hooks`, pages report their own file and line. |

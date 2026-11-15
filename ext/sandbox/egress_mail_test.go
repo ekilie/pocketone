@@ -69,7 +69,7 @@ func fakeSMTP(t *testing.T) (string, <-chan string) {
 }
 
 // The app's own SMTP and $http.send's client both go through the egress policy; 127.0.0.1 is allowed here so the
-// test needs no second loopback address (ext/multisite-provider-pocker's TestEgressFromApps covers the rest on Linux).
+// test needs no second loopback address (ext/pocker's TestEgressFromApps covers the rest on Linux).
 func TestEgressMailAndHTTPClient(t *testing.T) {
 	InstallEgressPolicy(EgressPolicy{Allow: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}})
 

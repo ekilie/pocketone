@@ -24,7 +24,7 @@ type Host struct {
 	Gates    []Gate                                                      // in order; a ConfigurableGate is configured by its owner
 	Wrappers []func(http.Handler) http.Handler                           // the first is the outermost
 	TLS      TLSProvider                                                 // nil = Listeners.TLS cert files, or plain HTTP
-	Forward  func(w http.ResponseWriter, r *http.Request, inst Instance) // instances another server runs (ext/multisite-edge); nil = plain proxy to Remote
+	Forward  func(w http.ResponseWriter, r *http.Request, inst Instance) // instances another server runs (ext/edge); nil = plain proxy to Remote
 	Dev      bool                                                        // also serve unknown hostnames (dev ids)
 
 	Listeners  Listeners

@@ -8,8 +8,8 @@ source: "ext/multisite/README.md"
 # Multisite
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
-request passes the gates (such as the [firewall](/docs/extensions/multisite-firewall)), and one runtime provider serves it:
-[pocker](/docs/extensions/multisite-provider-pocker) runs instances in-process, [docker](/docs/extensions/multisite-provider-docker) runs each in its own container.
+request passes the gates (such as the [firewall](/docs/extensions/firewall)), and one runtime provider serves it:
+[pocker](/docs/extensions/pocker) runs instances in-process, [docker](/docs/extensions/docker) runs each in its own container.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -103,7 +103,7 @@ letters, digits, dots and dashes. Other fields: `version` and `runtime` (which r
   the hostname, in dev mode.
 - A `blocked` instance answers every request with its status and message.
 - An instance with `remote` set is forwarded there after the gates (a plain proxy to the URL, or
-  [Edge](/docs/extensions/multisite-edge) for a fleet).
+  [Edge](/docs/extensions/edge) for a fleet).
 - `GET /_pocker/health` on any hostname reports the host's status, how many instances it knows and how many are
   running.
 
@@ -119,14 +119,14 @@ started on a newer version than wrote its data is upgraded.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/multisite-provider-pocker) | Runtime provider: every instance runs in this process (`provider: pocker`). |
-| [Docker](/docs/extensions/multisite-provider-docker) | Runtime provider: each instance runs in its own container (`provider: docker`). |
-| [Firewall](/docs/extensions/multisite-firewall) | A gate: peer allow-list, client IPs and rate limits. On when the config has `firewall` or `rate_limits`. |
-| [Edge](/docs/extensions/multisite-edge) | Forwards requests for instances another edge runs (the `edges` section). |
-| [Mothership](/docs/extensions/multisite-mothership) | Its mirror replaces the instances file as the instance source, and lists the other edges. |
+| [Pocker](/docs/extensions/pocker) | Runtime provider: every instance runs in this process (`provider: pocker`). |
+| [Docker](/docs/extensions/docker) | Runtime provider: each instance runs in its own container (`provider: docker`). |
+| [Firewall](/docs/extensions/firewall) | A gate: peer allow-list, client IPs and rate limits. On when the config has `firewall` or `rate_limits`. |
+| [Edge](/docs/extensions/edge) | Forwards requests for instances another edge runs (the `edges` section). |
+| [Mothership](/docs/extensions/mothership) | Its mirror replaces the instances file as the instance source, and lists the other edges. |
 | [Auto TLS](/docs/extensions/autotls) | Certificates for the main listener, issued for the hostnames instances map. |
-| [Stats](/docs/extensions/multisite-stats) | Measures disk use and last request for each instance. |
-| [Server Timing](/docs/extensions/multisite-servertiming) | Server-Timing headers for each step of a request. |
+| [Stats](/docs/extensions/stats) | Measures disk use and last request for each instance. |
+| [Server Timing](/docs/extensions/servertiming) | Server-Timing headers for each step of a request. |
 
 ### Building on Host
 
@@ -151,7 +151,7 @@ this folder with `go run ./example --instances instances.yaml`, then `curl -H 'H
 
 ```go
 // A minimal host: instances from a YAML file, routed by hostname, served by a toy runtime that answers with the
-// instance it resolved. Real hosts plug in a provider instead (ext/multisite-provider-pocker in-process, ext/multisite-provider-docker in containers).
+// instance it resolved. Real hosts plug in a provider instead (ext/pocker in-process, ext/docker in containers).
 //
 //	go run ./example --instances instances.yaml
 //	curl -H 'Host: blog.localhost' localhost:8090/

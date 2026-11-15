@@ -1,5 +1,5 @@
 // A minimal host: instances from a YAML file, routed by hostname, served by a toy runtime that answers with the
-// instance it resolved. Real hosts plug in a provider instead (ext/multisite-provider-pocker in-process, ext/multisite-provider-docker in containers).
+// instance it resolved. Real hosts plug in a provider instead (ext/pocker in-process, ext/docker in containers).
 //
 //	go run ./example --instances instances.yaml
 //	curl -H 'Host: blog.localhost' localhost:8090/

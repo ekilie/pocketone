@@ -130,7 +130,7 @@ pocketone serve --dev
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../multisite-provider-pocker/README.md) | Add the same extension value to `srv.Extensions` and every instance gets Bulk Mail. Each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
+| [Pocker](../pocker/README.md) | Add the same extension value to `srv.Extensions` and every instance gets Bulk Mail. Each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
 | [Mailtrap](../mailtrap/README.md) | In dev mode with SMTP off, campaign mail lands in the local inbox instead of being sent. |
 
 ### Per-instance settings (pocker)

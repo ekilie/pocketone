@@ -59,29 +59,29 @@ own custom PocketOne experience.
 
 | Extension | Description |
 |---|---|
-| **[Pocker](ext/multisite-provider-pocker/README.md)** | Hundreds of PocketOne instances in one Go process, routed by hostname. |
-| **[Schedules](ext/multisite-schedules/README.md)** | Scheduled webhooks that wake sleeping instances (headed into Pocker). |
-| **[Mothership](ext/multisite-mothership/README.md)** | A control plane and its edges, across regions. Needs Pocker. |
+| **[Pocker](ext/pocker/README.md)** | Hundreds of PocketOne instances in one Go process, routed by hostname. |
+| **[Schedules](ext/schedules/README.md)** | Scheduled webhooks that wake sleeping instances (headed into Pocker). |
+| **[Mothership](ext/mothership/README.md)** | A control plane and its edges, across regions. Needs Pocker. |
 | **[Sandbox](ext/sandbox/README.md)** | Confines untrusted JS hooks, SQL and outbound network ([how is this safe?](ext/sandbox/README.md#how-is-this-safe)). Required for Multitenant. |
 | **[Multisite](ext/multisite/README.md)** | Many instances behind one listener, routed by hostname, run by one provider (Pocker or Docker). |
-| **[Firewall](ext/multisite-firewall/README.md)** | Peer allow-lists, trusted proxies and rate limits for a host. |
-| **[Edge](ext/multisite-edge/README.md)** | The fleet layer: forward to the edge that owns an instance. |
+| **[Firewall](ext/firewall/README.md)** | Peer allow-lists, trusted proxies and rate limits for a host. |
+| **[Edge](ext/edge/README.md)** | The fleet layer: forward to the edge that owns an instance. |
 
 **Services for your instances**
 
 | Extension | Description |
 |---|---|
-| **[Mail Relay](ext/multisite-mailrelay/README.md)** | Outgoing mail for instances without SMTP, sent as `<instance>@<your domain>` through your relay, with limits. |
-| **[S3 Fallback](ext/multisite-s3-fallback/README.md)** | A default bucket for uploads and backups when an instance hasn't set its own S3. |
-| **[Server Timing](ext/multisite-servertiming/README.md)** | `Server-Timing` headers for each step of a request. |
+| **[Mail Relay](ext/mailrelay/README.md)** | Outgoing mail for instances without SMTP, sent as `<instance>@<your domain>` through your relay, with limits. |
+| **[S3 Fallback](ext/s3-fallback/README.md)** | A default bucket for uploads and backups when an instance hasn't set its own S3. |
+| **[Server Timing](ext/servertiming/README.md)** | `Server-Timing` headers for each step of a request. |
 
 **Sell it as a service**
 
 | Extension | Description |
 |---|---|
-| **[Multitenant](ext/multisite-tenants/README.md)** | Accounts that own instances: quotas, owner logins, tokens, and the API for your own dashboard. |
-| **[Multitenant Billing](ext/multisite-tenant-billing/README.md)** | Plans, quotas and the billing provider hook for Multitenant. |
-| **[Multitenant Billing LemonSqueezy Adapter](ext/multisite-tenant-billing-ls/README.md)** | Lemon Squeezy as the billing provider. |
+| **[Multitenant](ext/tenants/README.md)** | Accounts that own instances: quotas, owner logins, tokens, and the API for your own dashboard. |
+| **[Multitenant Billing](ext/tenant-billing/README.md)** | Plans, quotas and the billing provider hook for Multitenant. |
+| **[Multitenant Billing LemonSqueezy Adapter](ext/tenant-billing-ls/README.md)** | Lemon Squeezy as the billing provider. |
 
 **For extension authors**
 
@@ -113,11 +113,11 @@ Each hook has its own branch, stacked in this order; its diff shows just that ho
 
 | Hook | What it lets extensions do | Used by | Diff |
 |---|---|---|---|
-| `filesystem.New` / `Driver()` | Wrap a filesystem's blob driver (a key prefix, a fallback). | multisite-s3-fallback, s3redirect, sandbox | [diff](https://github.com/pockethost/pocketone/compare/7b9ab7ccce7a0e5c9d96796a6bf804f3dd5e4c77...core-hook/filesystem-driver) |
-| `OnFilesystemCreate` | Supply or wrap the storage and backups filesystems. | multisite-s3-fallback, pitr, s3redirect | [diff](https://github.com/pockethost/pocketone/compare/core-hook/filesystem-driver...core-hook/on-filesystem-create) |
-| `BaseAppConfig.AppMigrations` | Give an app its own migrations list, so several apps can share one process. | multisite-provider-pocker, sandbox | [diff](https://github.com/pockethost/pocketone/compare/core-hook/on-filesystem-create...core-hook/app-migrations) |
-| `BaseAppConfig.OnLog` | Receive every log entry the app writes, e.g. for per-instance logs. | multisite-provider-pocker | [diff](https://github.com/pockethost/pocketone/compare/core-hook/app-migrations...core-hook/on-log) |
-| jsvm `Config.Extensions` | Set up each JS VM and wrap every call into JS (`OnInit`, `OnCall`); wrap loading a hook file and compiling a handler (`OnLoad`, `OnCompile`); choose the client `$http.send` uses (`HTTPClient`); load hooks, migrations and modules from somewhere other than `pb_hooks` (`HookFiles`, `MigrationFiles`, `Require`). | sandbox, jserrors, jsembed, multisite-provider-pocker | [diff](https://github.com/pockethost/pocketone/compare/core-hook/on-log...core-hook/jsvm-extensions) |
+| `filesystem.New` / `Driver()` | Wrap a filesystem's blob driver (a key prefix, a fallback). | s3-fallback, s3redirect, sandbox | [diff](https://github.com/pockethost/pocketone/compare/7b9ab7ccce7a0e5c9d96796a6bf804f3dd5e4c77...core-hook/filesystem-driver) |
+| `OnFilesystemCreate` | Supply or wrap the storage and backups filesystems. | s3-fallback, pitr, s3redirect | [diff](https://github.com/pockethost/pocketone/compare/core-hook/filesystem-driver...core-hook/on-filesystem-create) |
+| `BaseAppConfig.AppMigrations` | Give an app its own migrations list, so several apps can share one process. | pocker, sandbox | [diff](https://github.com/pockethost/pocketone/compare/core-hook/on-filesystem-create...core-hook/app-migrations) |
+| `BaseAppConfig.OnLog` | Receive every log entry the app writes, e.g. for per-instance logs. | pocker | [diff](https://github.com/pockethost/pocketone/compare/core-hook/app-migrations...core-hook/on-log) |
+| jsvm `Config.Extensions` | Set up each JS VM and wrap every call into JS (`OnInit`, `OnCall`); wrap loading a hook file and compiling a handler (`OnLoad`, `OnCompile`); choose the client `$http.send` uses (`HTTPClient`); load hooks, migrations and modules from somewhere other than `pb_hooks` (`HookFiles`, `MigrationFiles`, `Require`). | sandbox, jserrors, jsembed, pocker | [diff](https://github.com/pockethost/pocketone/compare/core-hook/on-log...core-hook/jsvm-extensions) |
 | `jsvm.Run` | Run JS from Go on the app's VM pool; VMs are created only when first needed. | pages | [diff](https://github.com/pockethost/pocketone/compare/core-hook/jsvm-extensions...core-hook/jsvm-run) |
 
 ### Bugfixes

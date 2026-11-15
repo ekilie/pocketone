@@ -131,7 +131,7 @@ An empty section (`pitr:` with nothing after it) is allowed and means all defaul
 | Extension | How they fit |
 |---|---|
 | Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](../pitr/README.md), [S3 Redirect](../s3redirect/README.md) and [Auto TLS](../autotls/README.md) are examples. |
-| [Pocker](../multisite-provider-pocker/README.md) and [Docker](../multisite-provider-docker/README.md) | Set `provider: pocker` or `provider: docker` and `pocketone serve` runs many instances instead of one app. The `app` section and `env_allow` don't apply then; each instance has its own folder under the provider's root. |
+| [Pocker](../pocker/README.md) and [Docker](../docker/README.md) | Set `provider: pocker` or `provider: docker` and `pocketone serve` runs many instances instead of one app. The `app` section and `env_allow` don't apply then; each instance has its own folder under the provider's root. |
 
 ### The server section with many instances
 

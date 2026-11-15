@@ -155,7 +155,7 @@ Redirect URIs must be `https`, `http` on a loopback address, or an app's custom 
 | [Deploy](../deploy/README.md) | `pocketone login` gives the deploy commands a token for the account that signed in. |
 | [Pages](../pages/README.md) | `pocketone oauth eject` writes the pages as PocketPages templates, rendered from then on. |
 
-Under [Pocker](../multisite-provider-pocker/README.md), a Go build registers OAuth Server (and Tokens) in each instance's `SetupApp`;
+Under [Pocker](../pocker/README.md), a Go build registers OAuth Server (and Tokens) in each instance's `SetupApp`;
 there's no extkit extension for it yet. The stock `pocketone` binary doesn't add it to pocker instances.
 
 ### Audience (RFC 8707)

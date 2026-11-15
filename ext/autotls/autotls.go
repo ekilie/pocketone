@@ -26,7 +26,7 @@ import (
 
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/cloudflare"
-	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
+	"github.com/pockethost/pocketone/ext/pocker"
 )
 
 // Config is the `autotls` section (pocketone.yaml), or the settings given in Go.

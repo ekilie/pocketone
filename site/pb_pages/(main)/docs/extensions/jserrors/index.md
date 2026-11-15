@@ -69,7 +69,7 @@ and read the log.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/multisite-provider-pocker) | Built in for every instance: hook errors in each instance's log name `pb_hooks/<file>:<line>:<col>`. |
+| [Pocker](/docs/extensions/pocker) | Built in for every instance: hook errors in each instance's log name `pb_hooks/<file>:<line>:<col>`. |
 | [jsembed](/docs/extensions/jsembed) | Combine the two, for example `Extensions: []jsvm.Extension{jsembed.Hooks(hooks), jserrors.New()}`. Embedded files are named `pb_hooks/<file>`. |
 
 ### Building on JS Errors

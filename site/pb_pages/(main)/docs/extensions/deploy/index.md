@@ -185,7 +185,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 | [Remotes](/docs/extensions/remotes) | Gives the commands their remotes, saved logins and CI tokens. The commands find the deploy API through the remote's `/_pocker/whoami`. |
 | [OAuth Server](/docs/extensions/oauth-server) | `pocketone login` signs in through the browser when the remote runs it. |
 | [Tokens](/docs/extensions/tokens) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. |
-| [Pocker](/docs/extensions/multisite-provider-pocker) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
+| [Pocker](/docs/extensions/pocker) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
 | PocketHost | A remote without `/_pocker/whoami` is taken to be a PocketHost instance: the commands use `/_ph/deploy/v1` and a PocketHost token (`POCKETHOST_TOKEN`, or the `pockethost` remote read from `.pockethostconfig`). |
 
 ### Building on Deploy

@@ -2,7 +2,7 @@
 // streaming the file through the app, when the app's files filesystem can sign URLs (S3).
 //
 // It asks the filesystem PocketBase serves the download from (the event's Filesystem) to sign, so it works the same for an app's own S3 settings
-// and for any extension that supplies the filesystem through OnFilesystemCreate (e.g. ext/multisite-s3-fallback's default bucket):
+// and for any extension that supplies the filesystem through OnFilesystemCreate (e.g. ext/s3-fallback's default bucket):
 // whatever the app's files live on, if it can sign, downloads redirect; if not (local disk), they stream as usual.
 //
 // PocketBase still does everything up to the point of sending bytes: it finds the record, checks protected-file
@@ -232,7 +232,7 @@ func responseHeaders(r *http.Request, servedPath, name string) (disposition, con
 }
 
 // Signer is implemented by filesystem drivers that can hand out a time-limited direct URL for a key, such as
-// ext/multisite-s3-fallback's bucket driver. An extension supplying its own S3 filesystem (OnFilesystemCreate) implements it on its
+// ext/s3-fallback's bucket driver. An extension supplying its own S3 filesystem (OnFilesystemCreate) implements it on its
 // driver so downloads from it can be redirected.
 type Signer interface {
 	SignedURL(key string, ttl time.Duration, now time.Time, overrides url.Values) (string, error)

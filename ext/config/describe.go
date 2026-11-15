@@ -41,7 +41,7 @@ func Describe() []SectionDoc {
 	return out
 }
 
-// extensionOf turns ".../ext/multisite-mothership/mirror" into "multisite-mothership".
+// extensionOf turns ".../ext/mothership/mirror" into "mothership".
 func extensionOf(pkg string) string {
 	i := strings.Index(pkg, "/ext/")
 	if i < 0 {

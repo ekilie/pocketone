@@ -29,7 +29,7 @@ Nothing to use yet.
 
 ## Integrations
 
-Nothing yet. It is planned to run on a single app and, under [pocker](/docs/extensions/multisite-provider-pocker), on many instances, one
+Nothing yet. It is planned to run on a single app and, under [pocker](/docs/extensions/pocker), on many instances, one
 stopped instance at a time.
 
 ## Example

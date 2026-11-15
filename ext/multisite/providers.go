@@ -13,7 +13,7 @@ import (
 )
 
 // Provider is a runtime provider: it turns a host into a multi-instance server by supplying its one runtime
-// (ext/multisite-provider-pocker in-process, ext/multisite-provider-docker in containers). A binary registers the providers it links; the config's
+// (ext/pocker in-process, ext/docker in containers). A binary registers the providers it links; the config's
 // `provider` section picks one.
 type Provider interface {
 	// Name is the value of `provider:` that selects it ("pocker", "docker").
@@ -47,7 +47,7 @@ func Providers() []string {
 	return out
 }
 
-// SectionGate is a gate configured from its own config sections (e.g. ext/multisite-firewall's `firewall` / `rate_limits`):
+// SectionGate is a gate configured from its own config sections (e.g. ext/firewall's `firewall` / `rate_limits`):
 // linking its package registers it, and FromConfig turns it on when New reports it enabled.
 type SectionGate struct {
 	Name string
@@ -83,7 +83,7 @@ var Instances = extkit.NewSection("instances", InstancesConfig{File: "instances.
 // Options are what the binary adds to a host built from config.
 type Options struct {
 	Source   InstanceSource                                              // nil = the `instances` section's file
-	Forward  func(w http.ResponseWriter, r *http.Request, inst Instance) // the fleet hook (ext/multisite-edge)
+	Forward  func(w http.ResponseWriter, r *http.Request, inst Instance) // the fleet hook (ext/edge)
 	Gates    []Gate                                                      // after the section gates
 	Wrappers []func(http.Handler) http.Handler                           // outermost first
 	Logger   *slog.Logger

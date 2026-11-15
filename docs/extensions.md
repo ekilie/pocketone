@@ -39,7 +39,7 @@ func (p *Extension) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello",
   settings (its `extensions.<name>`), over the defaults given to your constructor; process-wide settings come from a
   pocketone.yaml section your extension owns (`extkit.NewSection`). `enabled: false` means `Register` and `BindJS`
   are never called for that instance.
-- **No pocker import:** a contract extension doesn't depend on ext/multisite-provider-pocker, so single-app builds don't link it. Reach for
+- **No pocker import:** a contract extension doesn't depend on ext/pocker, so single-app builds don't link it. Reach for
   the host interfaces below only for what's process-wide (a request gate, TLS, background jobs).
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
@@ -49,7 +49,7 @@ func (p *Extension) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello",
 > **Status.** `extkit` covers per-app extensions. The process-wide host interfaces below (`pocker.Server` fields and
 > `Server.Extensions` host interfaces) are pocker's for now; a `pocketbase.Main(extensions...)` entry point is planned.
 
-A complete, runnable example is in [`ext/multisite-provider-pocker/example`](../ext/multisite-provider-pocker/example).
+A complete, runnable example is in [`ext/pocker/example`](../ext/pocker/example).
 
 ## Compiled in, not loaded at run time
 
@@ -150,7 +150,7 @@ document.addEventListener("mount:pageBackupsSettings", (e) => {
 
 | Field | Use it for |
 |---|---|
-| `Server.Extensions` | Extensions: any `extkit.Extension` (registered on every instance), plus host-only extras (`Configurer`, `Gate`, `TLSProvider`, `Wrapper`, `Starter`; see [POCKER.md](../ext/multisite-provider-pocker/POCKER.md#extensions)), e.g. [pitr](../ext/pitr), [storage](../ext/multisite-s3-fallback), [mailrelay](../ext/multisite-mailrelay), [autotls](../ext/autotls), [servertiming](../ext/multisite-servertiming). |
+| `Server.Extensions` | Extensions: any `extkit.Extension` (registered on every instance), plus host-only extras (`Configurer`, `Gate`, `TLSProvider`, `Wrapper`, `Starter`; see [POCKER.md](../ext/pocker/POCKER.md#extensions)), e.g. [pitr](../ext/pitr), [storage](../ext/s3-fallback), [mailrelay](../ext/mailrelay), [autotls](../ext/autotls), [servertiming](../ext/servertiming). |
 | `Server.Wrap` | Middleware around every instance request, e.g. auth in front of all instances, metrics, headers. |
 | `Server.OnStart` | Gets the `Manager` before the first request: start background jobs (schedules, sweeps) in your own goroutines. |
 | `Server.OnEvent` | Instance events: started, stopped, restarted, failed. |
@@ -211,7 +211,7 @@ ext/<name>/
 
 - **`example/main.go` is required.** Keep it as small as possible: just enough to build a binary that shows the
   feature working, with no extra harness. `go build ./example` and `go vet ./...` must pass with no warnings.
-  [`ext/multisite-provider-pocker/example`](../ext/multisite-provider-pocker/example) and [`ext/sandbox/example`](../ext/sandbox/example) are the size to aim for.
+  [`ext/pocker/example`](../ext/pocker/example) and [`ext/sandbox/example`](../ext/sandbox/example) are the size to aim for.
 - **Examples come with two logins:** superuser `admin@example.com` and user `user@example.com` (verified, in
   `users`), both with password `password`. Every `example/main.go` calls
   `devusers.Register(app)` right after `pocketbase.New()` (under pocker, `devusers.Ensure(app)` in
@@ -270,4 +270,4 @@ ext/<name>/
 
 ## Planned extensions
 
-Our own extensions live in this repo under [`ext/`](../ext), each as its own Go module (`github.com/pockethost/pocketone/ext/<name>`). A `multisite-` name means the extension only works on a multi-instance host. See [ext/README.md](../ext/README.md).
+Our own extensions live in this repo under [`ext/`](../ext), each as its own Go module (`github.com/pockethost/pocketone/ext/<name>`). See [ext/README.md](../ext/README.md).

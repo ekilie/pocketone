@@ -7,7 +7,7 @@ require (
 	github.com/caddyserver/certmagic v0.25.6
 	github.com/libdns/cloudflare v0.2.2
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-provider-pocker v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.58.0
 )
 
@@ -66,11 +66,11 @@ require (
 
 replace (
 	ganigeorgiev.com/pocketbase/pocketbase => ../..
-	github.com/pockethost/pocketone/ext/multisite-provider-pocker => ../multisite-provider-pocker
+	github.com/pockethost/pocketone/ext/pocker => ../pocker
 	github.com/pockethost/pocketone/ext/sandbox => ../sandbox
 )
 
-replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
+replace github.com/pockethost/pocketone/ext/edge => ../edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 

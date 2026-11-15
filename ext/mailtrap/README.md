@@ -51,8 +51,8 @@ catches mail and prints each message in the terminal.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../multisite-provider-pocker/README.md) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
-| [Mail Relay](../multisite-mailrelay/README.md) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |
+| [Pocker](../pocker/README.md) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
+| [Mail Relay](../mailrelay/README.md) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |
 | [Bulk Mail](../bulkmail/README.md) | In dev mode with SMTP off, campaign mail lands in the inbox instead of being sent. |
 
 ### Building on Mail Trap
@@ -100,7 +100,7 @@ func main() {
 
 ## How it works
 
-It's built on PocketBase's own `OnMailerSend` hook (the same way [Mail Relay](../multisite-mailrelay/README.md) takes over an
+It's built on PocketBase's own `OnMailerSend` hook (the same way [Mail Relay](../mailrelay/README.md) takes over an
 instance's mail), so PocketBase is unchanged. It used to live in core (`tools/mailer/trap.go`); it moved here on
 2026-11-13.
 

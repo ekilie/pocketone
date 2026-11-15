@@ -406,7 +406,7 @@ func TestS3SettingDestination(t *testing.T) {
 	ta.stop()
 }
 
-// The operator's storage: an OnFilesystemCreate handler serving kind "litestream" (what ext/multisite-s3-fallback does when
+// The operator's storage: an OnFilesystemCreate handler serving kind "litestream" (what ext/s3-fallback does when
 // mounted) gets the history; the app's own S3 setting, once on, wins over it.
 func TestStorageKindDestination(t *testing.T) {
 	served := t.TempDir()

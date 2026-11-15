@@ -9,23 +9,23 @@ require (
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-provider-docker v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-edge v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-firewall v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/docker v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/edge v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/firewall v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-stats v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/stats v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/mailtrap v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-mothership v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/mothership v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/oauth-server v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pitr v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-provider-pocker v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite-servertiming v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/servertiming v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/upgrade v0.0.0-00010101000000-000000000000
 )
@@ -113,7 +113,7 @@ replace (
 	github.com/pockethost/pocketone/ext/s3redirect => ../../ext/s3redirect
 )
 
-replace github.com/pockethost/pocketone/ext/multisite-provider-pocker => ../../ext/multisite-provider-pocker
+replace github.com/pockethost/pocketone/ext/pocker => ../../ext/pocker
 
 replace github.com/pockethost/pocketone/ext/sandbox => ../../ext/sandbox
 
@@ -137,7 +137,7 @@ replace (
 
 replace github.com/pockethost/pocketone/ext/config => ../../ext/config
 
-replace github.com/pockethost/pocketone/ext/multisite-edge => ../../ext/multisite-edge
+replace github.com/pockethost/pocketone/ext/edge => ../../ext/edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../../ext/multisite
 
@@ -147,14 +147,14 @@ replace github.com/pockethost/pocketone/ext/extkit => ../../ext/extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../../ext/jserrors
 
-replace github.com/pockethost/pocketone/ext/multisite-provider-docker => ../../ext/multisite-provider-docker
+replace github.com/pockethost/pocketone/ext/docker => ../../ext/docker
 
-replace github.com/pockethost/pocketone/ext/multisite-firewall => ../../ext/multisite-firewall
+replace github.com/pockethost/pocketone/ext/firewall => ../../ext/firewall
 
-replace github.com/pockethost/pocketone/ext/multisite-mothership => ../../ext/multisite-mothership
+replace github.com/pockethost/pocketone/ext/mothership => ../../ext/mothership
 
-replace github.com/pockethost/pocketone/ext/multisite-servertiming => ../../ext/multisite-servertiming
+replace github.com/pockethost/pocketone/ext/servertiming => ../../ext/servertiming
 
 replace github.com/pockethost/pocketone/ext/upgrade => ../../ext/upgrade
 
-replace github.com/pockethost/pocketone/ext/multisite-stats => ../../ext/multisite-stats
+replace github.com/pockethost/pocketone/ext/stats => ../../ext/stats

@@ -15,7 +15,7 @@ leave the app's own database files, and outbound connections reach public addres
 
 ## Install
 
-Sandbox isn't a switch in `pocketone`: [Pocker](/docs/extensions/multisite-provider-pocker) applies it to every instance it runs. With
+Sandbox isn't a switch in `pocketone`: [Pocker](/docs/extensions/pocker) applies it to every instance it runs. With
 `provider: pocker` in `pocketone.yaml`, every instance is sandboxed and there's nothing to install. A single app
 served by `pocketone` without a provider is not sandboxed.
 
@@ -76,10 +76,10 @@ Under Pocker, `console.*` output and hook errors go to the instance's own `logs/
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/multisite-provider-pocker) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](../multisite-provider-pocker/sandbox_test.go). |
+| [Pocker](/docs/extensions/pocker) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](../pocker/sandbox_test.go). |
 | [Multisite](/docs/extensions/multisite) | Carries the per-instance `limits` from `instances.yaml` or a mothership. |
-| [Firewall](/docs/extensions/multisite-firewall) | Rate and concurrency limits in front of every request. |
-| [Docker](/docs/extensions/multisite-provider-docker) | The alternative for untrusted apps: a container per instance instead of checks inside one process. Docker doesn't use the sandbox. |
+| [Firewall](/docs/extensions/firewall) | Rate and concurrency limits in front of every request. |
+| [Docker](/docs/extensions/docker) | The alternative for untrusted apps: a container per instance instead of checks inside one process. Docker doesn't use the sandbox. |
 
 ### Building on Sandbox
 
@@ -141,10 +141,10 @@ func main() {
 
 ## How is this safe?
 
-With [pocker](/docs/extensions/multisite-provider-pocker), PocketOne can serve hundreds of instances from one Go process, each with its own owner, hooks and data.
+With [pocker](/docs/extensions/pocker), PocketOne can serve hundreds of instances from one Go process, each with its own owner, hooks and data.
 This section explains why that's safe enough to run code from people you don't know, and where it isn't.
 
-Configuration and the engine API are in [POCKER.md](/docs/extensions/multisite-provider-pocker/pocker). The attack tests are in [`sandbox_test.go`](../multisite-provider-pocker/sandbox_test.go).
+Configuration and the engine API are in [POCKER.md](/docs/extensions/pocker/pocker). The attack tests are in [`sandbox_test.go`](../pocker/sandbox_test.go).
 
 ### Why one process
 

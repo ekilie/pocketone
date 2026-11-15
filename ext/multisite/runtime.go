@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// Runtime runs instances on this edge: ext/multisite-provider-pocker in-process, ext/multisite-provider-docker in containers.
+// Runtime runs instances on this edge: ext/pocker in-process, ext/docker in containers.
 type Runtime interface {
 	// Name identifies the runtime ("pocker", "docker"); an instance may ask for one in [Instance.Runtime].
 	Name() string

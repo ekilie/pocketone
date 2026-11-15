@@ -119,7 +119,7 @@ Use `--autotlsCA letsencrypt-staging` while testing, so failed attempts don't co
 
 ### Pocker
 
-Under [pocker](/docs/extensions/multisite-provider-pocker), the stock `pocketone` binary (with `provider: pocker`) runs `autotls.New()`, a
+Under [pocker](/docs/extensions/pocker), the stock `pocketone` binary (with `provider: pocker`) runs `autotls.New()`, a
 server extension that gets certificates for every instance the host serves. It's configured by the same `autotls`
 section:
 

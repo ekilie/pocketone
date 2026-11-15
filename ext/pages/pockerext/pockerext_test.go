@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
+	"github.com/pockethost/pocketone/ext/pocker"
 	"github.com/pockethost/pocketone/ext/pages"
 )
 

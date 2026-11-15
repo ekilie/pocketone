@@ -17,7 +17,7 @@ import (
 )
 
 // Kind is the filesystem kind PITR asks the OnFilesystemCreate handlers for: the operator's fall-through storage
-// (ext/multisite-s3-fallback mount `litestream`) serves it when mounted.
+// (ext/s3-fallback mount `litestream`) serves it when mounted.
 const Kind = "litestream"
 
 // DefaultS3Prefix is where the history goes in an app's own bucket when the form leaves the prefix empty.

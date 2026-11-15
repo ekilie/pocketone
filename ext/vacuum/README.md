@@ -20,7 +20,7 @@ Nothing to use yet.
 
 ## Integrations
 
-Nothing yet. It is planned to run on a single app and, under [pocker](../multisite-provider-pocker/README.md), on many instances, one
+Nothing yet. It is planned to run on a single app and, under [pocker](../pocker/README.md), on many instances, one
 stopped instance at a time.
 
 ## Example

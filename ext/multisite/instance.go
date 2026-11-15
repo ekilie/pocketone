@@ -1,7 +1,7 @@
 // Package host is PocketOne's multi-instance host: the instance model and where instances come from (sources), the
 // hostname directory, the request front (peer check, resolve, gates, then a runtime or the forward hook), listeners
-// and TLS, and the runtime contract a provider (ext/multisite-provider-pocker in-process, ext/multisite-provider-docker in containers) implements. Exactly
-// one runtime per process. The fleet (forwarding to other edges) is ext/multisite-edge, on top.
+// and TLS, and the runtime contract a provider (ext/pocker in-process, ext/docker in containers) implements. Exactly
+// one runtime per process. The fleet (forwarding to other edges) is ext/edge, on top.
 package multisite
 
 import "context"

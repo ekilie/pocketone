@@ -176,7 +176,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 | [Remotes](../remotes/README.md) | Gives the commands their remotes, saved logins and CI tokens. The commands find the deploy API through the remote's `/_pocker/whoami`. |
 | [OAuth Server](../oauth-server/README.md) | `pocketone login` signs in through the browser when the remote runs it. |
 | [Tokens](../tokens/README.md) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. |
-| [Pocker](../multisite-provider-pocker/README.md) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
+| [Pocker](../pocker/README.md) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
 | PocketHost | A remote without `/_pocker/whoami` is taken to be a PocketHost instance: the commands use `/_ph/deploy/v1` and a PocketHost token (`POCKETHOST_TOKEN`, or the `pockethost` remote read from `.pockethostconfig`). |
 
 ### Building on Deploy

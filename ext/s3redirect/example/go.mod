@@ -60,7 +60,7 @@ replace ganigeorgiev.com/pocketbase/pocketbase => ../../..
 
 replace (
 	github.com/pockethost/pocketone/ext/devusers => ../../devusers
-	github.com/pockethost/pocketone/ext/multisite-provider-pocker => ../../multisite-provider-pocker
+	github.com/pockethost/pocketone/ext/pocker => ../../pocker
 	github.com/pockethost/pocketone/ext/s3redirect => ..
 	github.com/pockethost/pocketone/ext/sandbox => ../../sandbox
 )

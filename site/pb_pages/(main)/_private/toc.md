@@ -31,28 +31,28 @@
 
 # Extensions: many instances
 
-- [Pocker](/docs/extensions/multisite-provider-pocker)
-- [Pocker: Pocker](/docs/extensions/multisite-provider-pocker/pocker)
+- [Pocker](/docs/extensions/pocker)
+- [Pocker: Pocker](/docs/extensions/pocker/pocker)
 - [Multisite](/docs/extensions/multisite)
-- [Docker](/docs/extensions/multisite-provider-docker)
+- [Docker](/docs/extensions/docker)
 - [Sandbox](/docs/extensions/sandbox)
-- [Firewall](/docs/extensions/multisite-firewall)
-- [Edge](/docs/extensions/multisite-edge)
-- [Mothership](/docs/extensions/multisite-mothership)
-- [Schedules](/docs/extensions/multisite-schedules)
-- [Stats](/docs/extensions/multisite-stats)
+- [Firewall](/docs/extensions/firewall)
+- [Edge](/docs/extensions/edge)
+- [Mothership](/docs/extensions/mothership)
+- [Schedules](/docs/extensions/schedules)
+- [Stats](/docs/extensions/stats)
 
 # Extensions: services
 
-- [Mail Relay](/docs/extensions/multisite-mailrelay)
-- [S3 Fallback](/docs/extensions/multisite-s3-fallback)
-- [Server Timing](/docs/extensions/multisite-servertiming)
+- [Mail Relay](/docs/extensions/mailrelay)
+- [S3 Fallback](/docs/extensions/s3-fallback)
+- [Server Timing](/docs/extensions/servertiming)
 
 # Extensions: sell it
 
-- [Multitenant](/docs/extensions/multisite-tenants)
-- [Multitenant Billing](/docs/extensions/multisite-tenant-billing)
-- [Lemon Squeezy Adapter](/docs/extensions/multisite-tenant-billing-ls)
+- [Multitenant](/docs/extensions/tenants)
+- [Multitenant Billing](/docs/extensions/tenant-billing)
+- [Lemon Squeezy Adapter](/docs/extensions/tenant-billing-ls)
 
 # Extensions: for authors
 

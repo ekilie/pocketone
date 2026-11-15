@@ -14,13 +14,13 @@ import (
 	"github.com/pockethost/pocketone/ext/config"
 	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/multisite-edge"
-	_ "github.com/pockethost/pocketone/ext/multisite-firewall" // turns on with a firewall / rate_limits section
-	"github.com/pockethost/pocketone/ext/multisite-mothership/mirror"
-	"github.com/pockethost/pocketone/ext/multisite-provider-docker"
-	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
-	"github.com/pockethost/pocketone/ext/multisite-servertiming"
-	"github.com/pockethost/pocketone/ext/multisite-stats"
+	"github.com/pockethost/pocketone/ext/edge"
+	_ "github.com/pockethost/pocketone/ext/firewall" // turns on with a firewall / rate_limits section
+	"github.com/pockethost/pocketone/ext/mothership/mirror"
+	"github.com/pockethost/pocketone/ext/docker"
+	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/servertiming"
+	"github.com/pockethost/pocketone/ext/stats"
 )
 
 // serveMany runs the binary as a multi-instance host when pocketone.yaml names a provider: instances from the

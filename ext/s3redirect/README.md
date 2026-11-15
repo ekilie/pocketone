@@ -102,8 +102,8 @@ The example is its own Go module, so its demo dependencies (gofakes3, the AWS SD
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../multisite-provider-pocker/README.md) | The same extension runs on every instance. The `s3redirect` section sets the defaults; each instance can override `enabled` and `ttl` (below). |
-| [S3 Fallback](../multisite-s3-fallback/README.md) | Apps without their own S3 settings keep files in its bucket (under pocker, fenced to `instances/<id>/storage/`). Its driver signs, so those downloads redirect too. |
+| [Pocker](../pocker/README.md) | The same extension runs on every instance. The `s3redirect` section sets the defaults; each instance can override `enabled` and `ttl` (below). |
+| [S3 Fallback](../s3-fallback/README.md) | Apps without their own S3 settings keep files in its bucket (under pocker, fenced to `instances/<id>/storage/`). Its driver signs, so those downloads redirect too. |
 
 ### Per-instance settings (pocker)
 

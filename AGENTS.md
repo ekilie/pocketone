@@ -67,8 +67,7 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 
 ## Other rules
 
-- Extensions are their own Go modules under `ext/<name>/` with a README and a minimal `example/main.go`; a `multisite-`
-  name means it only works under `ext/multisite`
+- Extensions are their own Go modules under `ext/<name>/` with a README and a minimal `example/main.go`
   (`docs/extensions.md`). Modules that reach another `ext/` module add a `replace` for it.
 - Extension CI (`.github/workflows/extensions.yml`, tool in `.github/extensions/`): every `extkit.Extension` module has a
   conformance test, and each module a change affects builds, vets and passes `go test -race`. Check locally with
