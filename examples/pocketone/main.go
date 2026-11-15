@@ -323,6 +323,8 @@ func main() {
 				re.Response.Header().Set("X-Powered-By", PoweredBy)
 				return re.Next()
 			})
+			// PocketOne's logo and version in the superuser dashboard
+			e.UIExtensions = append(e.UIExtensions, brandingUI())
 			if !e.Router.HasRoute(http.MethodGet, "/{path...}") {
 				e.Router.GET("/{path...}", apis.Static(os.DirFS(publicDir), indexFallback))
 			}
