@@ -149,6 +149,35 @@ module.exports = {
 </form>
 ```
 
+## Pages without a template
+
+A `+page.js` in a folder with no page file serves the folder's URL from JS. Use it for a page you'd rather build in
+code, or for a URL that only acts and redirects:
+
+```js
+// pb_pages/logout/+page.js
+module.exports = {
+  post(ctx) {
+    ctx.session.signOut()
+    return ctx.res.redirect('/')
+  },
+}
+```
+
+```js
+// pb_pages/hello/+page.js
+module.exports = {
+  get(ctx) {
+    return ctx.res.html(`<h1>Hello ${ctx.auth ? ctx.auth.getString('name') : 'there'}</h1>`)
+  },
+}
+```
+
+- With no template to render, each handler must send a response; returning without one is a 500.
+- Methods without a handler answer `405`, `GET` included: `/logout` above only takes `POST`.
+- Folder middleware runs; layouts don't, so wrap HTML yourself (or render a partial with `ctx.include`).
+- Errors show your `+error.ejs` page. For JSON responses and JSON errors, use [`+api.js`](/docs/api-routes) instead.
+
 ## Middleware or `+page.js`?
 
 - Only the route's own folder's `+page.js` runs.

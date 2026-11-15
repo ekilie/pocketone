@@ -93,6 +93,9 @@ A **page** is a template file: `.ejs`, `.md`, `.jsx` or `.tsx` (4.5).
 A `+api.js` file serves its folder's URL without a template: `feeds/rss/+api.js` serves `/feeds/rss`.
 `[param]` folders work as for pages. If a folder has both `+api.js` and an `index` page, startup fails.
 
+A `+page.js` in a folder with no page (no template file) and no `+api.js` serves the folder's URL the same way, from
+JS: `logout/+page.js` serves `/logout` (3.2).
+
 ### 2.3 Static files
 
 Every other file is served as-is at its path (groups removed): `assets/app.css` serves `/assets/app.css`. Files that
@@ -173,6 +176,10 @@ module.exports = {
 - A method with no handler still renders the page for `GET` and `HEAD`. Other methods without a handler answer
   `405` with an `Allow` header listing `GET, HEAD` and the methods that have handlers, in the order
   `GET, HEAD, POST, PUT, PATCH, DELETE`.
+- **Without a page.** A `+page.js` in a folder with no template serves the folder's URL from JS (2.2): there's nothing
+  to render, so a handler must send a response (`ctx.res.html`, `ctx.res.redirect`, `ctx.res.json`, ...), and
+  returning without one is a 500. Methods without a handler answer `405`, `GET` included. Unlike `+api.js`, errors
+  are pages (`+error.ejs` or the HTML error page), not JSON. Folder middleware runs; layouts don't.
 
 ### 3.3 API handlers: `+api.js`
 

@@ -294,16 +294,16 @@
     if (typeof h === 'function') {
       assign(h(ctx))
       if (rt.sent()) return
-    } else if (route.kind === 'api' || m !== 'get') {
+    } else if (route.kind === 'api' || route.kind === 'page-js' || m !== 'get') {
       var allow = ['GET', 'HEAD']
       for (var i = 1; i < methods.length; i++) {
         if (mod && typeof mod[methods[i]] === 'function') allow.push(methods[i].toUpperCase())
       }
-      if (route.kind === 'api' && !(mod && typeof mod.get === 'function')) allow = allow.slice(2)
+      if ((route.kind === 'api' || route.kind === 'page-js') && !(mod && typeof mod.get === 'function')) allow = allow.slice(2)
       rt.methodNotAllowed(allow.join(', '))
       return
     }
-    if (route.kind === 'api') {
+    if (route.kind === 'api' || route.kind === 'page-js') {
       if (!rt.sent()) throw new Error(route.file + ': the ' + m + ' handler returned without sending a response')
       return
     }

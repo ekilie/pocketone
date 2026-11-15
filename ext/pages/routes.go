@@ -23,6 +23,9 @@ const (
 	KindAPI
 	// KindStatic is any other file, served as-is.
 	KindStatic
+	// KindPageJS is a folder's +page.js when the folder has no page: the handlers serve the folder's URL from JS,
+	// like +api.js, but errors are pages (HTML), not JSON.
+	KindPageJS
 )
 
 func (k Kind) String() string {
@@ -31,6 +34,8 @@ func (k Kind) String() string {
 		return "page"
 	case KindAPI:
 		return "api"
+	case KindPageJS:
+		return "page-js"
 	default:
 		return "static"
 	}
@@ -112,6 +117,7 @@ func Build(dir string) (*Table, []error) {
 	type folder struct {
 		layout, middleware, page, api string
 		hasIndexPage                  bool
+		hasPage                       bool // any page template in the folder
 	}
 	folders := map[string]*folder{} // physical folder ("." = root) → its + files
 	getFolder := func(d string) *folder {
@@ -264,6 +270,7 @@ func Build(dir string) (*Table, []error) {
 
 		r := &Route{File: file}
 		if templateExt[ext] {
+			getFolder(dirName).hasPage = true
 			r.Kind = KindPage
 			r.Name = strings.TrimSuffix(base, ext)
 			if r.Name != "index" {
@@ -310,6 +317,29 @@ func Build(dir string) (*Table, []error) {
 			Name:        "+api",
 			File:        f.api,
 			Handler:     f.api,
+			Middlewares: middlewaresFor(d),
+		})
+	}
+
+	// A +page.js in a folder with no page (and no +api.js) serves the folder's URL from JS (SPEC 3.2).
+	for d, f := range folders {
+		if f.page == "" || f.hasPage || f.api != "" {
+			continue
+		}
+		var parts []string
+		if d != "." {
+			parts = strings.Split(d, "/")
+		}
+		segs, ok := urlSegments(f.page, parts)
+		if !ok {
+			continue
+		}
+		routes = append(routes, &Route{
+			Kind:        KindPageJS,
+			Segments:    segs,
+			Name:        "+page",
+			File:        f.page,
+			Handler:     f.page,
 			Middlewares: middlewaresFor(d),
 		})
 	}
