@@ -6,9 +6,11 @@
 package upgrade
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -78,7 +80,7 @@ func MustRegister(app core.App, rootCmd *cobra.Command, cfg Config) {
 // Register adds the `upgrade` command to rootCmd.
 func Register(app core.App, rootCmd *cobra.Command, cfg Config) error {
 	cfg.defaults()
-	p := &extension{app: app, cfg: cfg, current: rootCmd.Version, executable: os.Executable}
+	p := &extension{app: app, cfg: cfg, current: rootCmd.Version, executable: os.Executable, stdin: os.Stdin}
 	rootCmd.AddCommand(p.command())
 	return nil
 }
@@ -88,25 +90,30 @@ type extension struct {
 	cfg        Config
 	current    string
 	executable func() (string, error)
-	goos       string // tests; default runtime.GOOS
+	stdin      io.Reader // answers to "install this prerelease?"; default os.Stdin
+	goos       string    // tests; default runtime.GOOS
 	goarch     string
 }
 
 func (p *extension) command() *cobra.Command {
-	var backup bool
+	var backup, yes bool
 	cmd := &cobra.Command{
-		Use:          "upgrade",
-		Short:        "Upgrades this executable to the latest release, keeping the old one as <name>-<version>",
+		Use:   "upgrade",
+		Short: "Upgrades this executable to the latest release, keeping the old one as <name>-<version>",
+		Long: "Upgrades this executable to the latest release, keeping the old one as <name>-<version>.\n\n" +
+			"On a stable release, only newer stable releases are offered. On a prerelease (or a dev build), the newest\n" +
+			"release is offered, prereleases included, and you're asked before a prerelease is installed.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return p.upgrade(backup)
+			return p.upgrade(backup, yes)
 		},
 	}
 	cmd.Flags().BoolVar(&backup, "backup", true, "Back up pb_data after upgrading, if this folder has one")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Install a prerelease without asking")
 	return cmd
 }
 
-func (p *extension) upgrade(backup bool) error {
+func (p *extension) upgrade(backup, yes bool) error {
 	exe, err := p.executable()
 	if err != nil {
 		return err
@@ -125,14 +132,27 @@ func (p *extension) upgrade(backup bool) error {
 	}
 
 	color.Yellow("Fetching release information...")
-	latest, err := p.cfg.FetchRelease(p.cfg.Context, "")
+	releases, err := p.cfg.FetchReleases(p.cfg.Context)
 	if err != nil {
 		return err
 	}
 	current := strings.TrimPrefix(p.current, "v")
-	if isRelease(current) && compareVersions(current, latest.Version()) <= 0 {
-		color.Green("You already have the latest version %s.", current)
+	latest := UpgradeFor(current, releases)
+	if latest == nil {
+		if isRelease(current) && !isPrerelease(current) {
+			color.Green("You already have the latest release %s. Prereleases aren't offered to a release.", current)
+		} else {
+			color.Green("You already have the latest version %s.", current)
+		}
 		return nil
+	}
+	if latest.IsPrerelease() && !yes {
+		fmt.Printf("%s is a prerelease, not a stable release. Install it? [y/N] ", latest.Tag)
+		if !p.confirm() {
+			fmt.Println()
+			color.Yellow("Not upgraded. Run `upgrade --yes` to install it without asking.")
+			return nil
+		}
 	}
 
 	tmp, err := os.MkdirTemp(filepath.Dir(exe), ".upgrade-")
@@ -193,9 +213,26 @@ func (p *extension) upgrade(backup bool) error {
 	return nil
 }
 
-var releaseRe = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+// confirm reads a yes/no answer; anything but "y"/"yes" (including no input at all) is no.
+func (p *extension) confirm() bool {
+	in := p.stdin
+	if in == nil {
+		in = os.Stdin
+	}
+	line, _ := bufio.NewReader(in).ReadString('\n')
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		return true
+	}
+	return false
+}
 
-func isRelease(v string) bool { return releaseRe.MatchString(v) }
+// releaseRe matches a release version: "1.2.3", or a prerelease "1.2.3-alpha.1".
+var releaseRe = regexp.MustCompile(`^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`)
+
+// isRelease reports whether v is a published version. A goreleaser snapshot ("0.0.3-next") is a local build, like a dev
+// build, not a release.
+func isRelease(v string) bool { return releaseRe.MatchString(v) && !strings.HasSuffix(v, "-next") }
 
 // KeptName is where upgrade keeps the executable at exe when it is version v: "<dir>/<name>-<v>[.exe]". A dev build
 // (no release version) is kept as "<name>.old", which the next dev upgrade replaces.

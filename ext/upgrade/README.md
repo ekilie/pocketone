@@ -25,6 +25,7 @@ flag:
 | Flag | Default | What it does |
 |---|---|---|
 | `--backup` | `true` | Back up `pb_data` after upgrading, if the current folder has one. `--backup=false` skips it. |
+| `--yes`, `-y` | `false` | Install a prerelease without asking. |
 
 ## Use
 
@@ -36,7 +37,12 @@ pocketone upgrade
 
 It:
 
-1. Checks the latest release on GitHub. If you already have it (or something newer), it says so and stops.
+1. Picks the newest release on GitHub that fits what you're running, and stops if you already have it:
+   - **On a stable release** (`0.1.0`), only newer stable releases are offered. A prerelease never is, even a newer
+     one: `0.1.0` doesn't go to `0.1.1-alpha.1`.
+   - **On a prerelease** (`0.1.0-alpha.2`) **or a local build**, the newest release of either kind is offered:
+     `0.1.0-alpha.2` goes to `0.1.0-alpha.3` or `0.1.0`, whichever is newest.
+   - Before installing a prerelease, it asks. `--yes` answers for you; with no answer (no terminal), it doesn't install.
 2. Downloads the archive for your platform and checks it against the release's `checksums.txt` before touching
    anything.
 3. Renames the current executable to `<name>-<version>` and puts the new one in its place. **Old copies are never
@@ -63,7 +69,9 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 - **Custom builds** that publish their own releases set `Owner`, `Repo`, `ArchivePrefix` and `ArchiveExecutable` in
   `upgrade.Config`. Release archives are named `<prefix>_<version>_<os>_<arch>.zip`, with a goreleaser-style
   `checksums.txt` in the same release.
-- **Go API.** `Config.FetchRelease(ctx, tag)` fetches the latest release (tag `""`) or a given one;
+- **Go API.** `Config.FetchReleases(ctx)` lists the published releases, prereleases included, and
+  `upgrade.UpgradeFor(current, releases)` picks the one to upgrade to by the rules above. `Config.FetchRelease(ctx, tag)`
+  fetches GitHub's latest stable release (tag `""`) or a given one;
   `Config.DownloadArchive(ctx, release, goos, goarch, dir)` downloads and checks a platform's archive.
   `upgrade.KeptName(exe, version)` is the name an old executable is kept under.
 

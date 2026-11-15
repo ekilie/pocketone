@@ -52,6 +52,8 @@ builds:
 
 release:
   draft: true
+  # a tag with a prerelease part (v0.1.0-alpha.1) is published as a GitHub prerelease, so it's never "Latest"
+  prerelease: auto
   name_template: 'PocketOne {{ .Tag }}'
   # every release's notes start with the install lines
   header: |
@@ -63,7 +65,7 @@ release:
 
     Homebrew on macOS or Linux; the formula comes from [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap). Or download the zip for your platform below and run `./pocketone serve`.
 
-# the Homebrew formula in pockethost/homebrew-tap, updated on every release. brews is deprecated in favor of
+# the Homebrew formula in pockethost/homebrew-tap, updated on every release, prereleases included. brews is deprecated in favor of
 # homebrew_casks, but casks are macOS-only and quarantine unsigned binaries; the formula works on macOS and Linux.
 brews:
   - name: pocketone

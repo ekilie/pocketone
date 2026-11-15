@@ -42,21 +42,27 @@ func TestHomebrewFormula(t *testing.T) {
 }
 
 func TestCompareVersions(t *testing.T) {
-	if compareVersions("0.0.3", "0.0.4") != 1 || compareVersions("0.1.0", "0.0.9") != -1 || compareVersions("1.0", "1.0.0") != 0 {
+	if compareVersions("0.0.3", "0.0.4") != 1 || compareVersions("0.1.0", "0.0.9") != -1 || compareVersions("1.0", "1.0.0") != 0 ||
+		compareVersions("0.1.0-alpha.1", "0.1.0-alpha.2") != 1 || compareVersions("0.1.0", "0.1.0-alpha.9") != -1 {
 		t.Fatal("compareVersions is wrong")
 	}
 }
 
 // fakeReleases serves a GitHub-style latest release "v0.0.4" with one darwin/arm64 archive holding a "pocketone"
 // executable whose content is body. badSum corrupts checksums.txt.
-func fakeReleases(t *testing.T, body string, badSum bool) *httptest.Server {
+func zipWith(t *testing.T, name, body string) []byte {
 	t.Helper()
 	var zbuf bytes.Buffer
 	zw := zip.NewWriter(&zbuf)
-	w, _ := zw.Create("pocketone")
+	w, _ := zw.Create(name)
 	w.Write([]byte(body))
 	zw.Close()
-	archive := zbuf.Bytes()
+	return zbuf.Bytes()
+}
+
+func fakeReleases(t *testing.T, body string, badSum bool) *httptest.Server {
+	t.Helper()
+	archive := zipWith(t, "pocketone", body)
 	sum := sha256.Sum256(archive)
 	hexSum := hex.EncodeToString(sum[:])
 	if badSum {
@@ -66,11 +72,11 @@ func fakeReleases(t *testing.T, body string, badSum bool) *httptest.Server {
 
 	mux := http.NewServeMux()
 	var srv *httptest.Server
-	mux.HandleFunc("/repos/pockethost/pocketone/releases/latest", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(Release{Tag: "v0.0.4", Body: "notes", Assets: []Asset{
+	mux.HandleFunc("/repos/pockethost/pocketone/releases", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode([]Release{{Tag: "v0.0.4", Body: "notes", Assets: []Asset{
 			{Name: name, DownloadURL: srv.URL + "/dl/" + name},
 			{Name: "checksums.txt", DownloadURL: srv.URL + "/dl/checksums.txt"},
-		}})
+		}}, {Tag: "v0.0.9", Draft: true}})
 	})
 	mux.HandleFunc("/dl/"+name, func(w http.ResponseWriter, r *http.Request) { w.Write(archive) })
 	mux.HandleFunc("/dl/checksums.txt", func(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +102,7 @@ func TestUpgradeKeepsEveryOldVersion(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "pocketone-0.0.2"), []byte("older"), 0o755)
 	os.WriteFile(exe, []byte("old"), 0o755)
 
-	if err := testExtension(t, srv, "0.0.3", exe).upgrade(false); err != nil {
+	if err := testExtension(t, srv, "0.0.3", exe).upgrade(false, false); err != nil {
 		t.Fatal(err)
 	}
 	for path, want := range map[string]string{exe: "new", exe + "-0.0.3": "old", exe + "-0.0.2": "older"} {
@@ -115,7 +121,7 @@ func TestUpgradeAlreadyLatest(t *testing.T) {
 	srv := fakeReleases(t, "new", false)
 	exe := filepath.Join(t.TempDir(), "pocketone")
 	os.WriteFile(exe, []byte("current"), 0o755)
-	if err := testExtension(t, srv, "0.0.4", exe).upgrade(false); err != nil {
+	if err := testExtension(t, srv, "0.0.4", exe).upgrade(false, false); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := os.ReadFile(exe); string(got) != "current" {
@@ -128,7 +134,7 @@ func TestUpgradeRejectsBadChecksum(t *testing.T) {
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "pocketone")
 	os.WriteFile(exe, []byte("old"), 0o755)
-	err := testExtension(t, srv, "0.0.3", exe).upgrade(false)
+	err := testExtension(t, srv, "0.0.3", exe).upgrade(false, false)
 	if err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
 		t.Fatalf("want checksum mismatch, got %v", err)
 	}
@@ -144,10 +150,87 @@ func TestUpgradeDevBuildKeptAsOld(t *testing.T) {
 	srv := fakeReleases(t, "new", false)
 	exe := filepath.Join(t.TempDir(), "pocketone")
 	os.WriteFile(exe, []byte("dev"), 0o755)
-	if err := testExtension(t, srv, "(untracked)", exe).upgrade(false); err != nil {
+	if err := testExtension(t, srv, "(untracked)", exe).upgrade(false, false); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := os.ReadFile(exe + ".old"); string(got) != "dev" {
 		t.Errorf("dev build not kept as .old: %q", got)
+	}
+}
+
+func TestUpgradeFor(t *testing.T) {
+	rs := []Release{
+		{Tag: "v0.0.1-alpha.1", Prerelease: true},
+		{Tag: "v0.0.1-alpha.2", Prerelease: true},
+		{Tag: "v0.0.1"},
+		{Tag: "v0.0.2-alpha.1", Prerelease: true},
+	}
+	cases := map[string]string{
+		"0.0.1-alpha.1": "v0.0.2-alpha.1", // a prerelease follows the newest of either kind
+		"0.0.1":         "",               // a release is never offered a prerelease, even a newer one
+		"0.0.0":         "v0.0.1",         // a release is offered newer releases only
+		"0.0.2-alpha.1": "",               // nothing newer
+		"(untracked)":   "v0.0.2-alpha.1", // a dev build: the newest of either kind
+	}
+	for current, want := range cases {
+		got := ""
+		if r := UpgradeFor(current, rs); r != nil {
+			got = r.Tag
+		}
+		if got != want {
+			t.Errorf("UpgradeFor(%q) = %q, want %q", current, got, want)
+		}
+	}
+	// ordering: alpha.2 > alpha.1, a release > its prereleases
+	if UpgradeFor("0.0.1-alpha.1", rs[:3]).Tag != "v0.0.1" || UpgradeFor("0.0.1-alpha.1", rs[:2]).Tag != "v0.0.1-alpha.2" {
+		t.Fatal("prerelease ordering is wrong")
+	}
+}
+
+func TestUpgradeAsksBeforeAPrerelease(t *testing.T) {
+	// the fake server's only release is v0.0.4; flagged as a prerelease here by its tag instead
+	archive := zipWith(t, "pocketone", "new")
+	sum := sha256.Sum256(archive)
+	const name = "pocketone_0.0.4-alpha.1_darwin_arm64.zip"
+	mux := http.NewServeMux()
+	var srv *httptest.Server
+	mux.HandleFunc("/repos/pockethost/pocketone/releases", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode([]Release{{Tag: "v0.0.4-alpha.1", Prerelease: true, Assets: []Asset{
+			{Name: name, DownloadURL: srv.URL + "/dl/" + name},
+			{Name: "checksums.txt", DownloadURL: srv.URL + "/dl/checksums.txt"},
+		}}})
+	})
+	mux.HandleFunc("/dl/"+name, func(w http.ResponseWriter, r *http.Request) { w.Write(archive) })
+	mux.HandleFunc("/dl/checksums.txt", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "%s  %s\n", hex.EncodeToString(sum[:]), name)
+	})
+	srv = httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	for _, c := range []struct {
+		answer string
+		yes    bool
+		want   string
+	}{{"n\n", false, "old"}, {"", false, "old"}, {"y\n", false, "new"}, {"", true, "new"}} {
+		exe := filepath.Join(t.TempDir(), "pocketone")
+		os.WriteFile(exe, []byte("old"), 0o755)
+		p := testExtension(t, srv, "0.0.3-alpha.1", exe)
+		p.stdin = strings.NewReader(c.answer)
+		if err := p.upgrade(false, c.yes); err != nil {
+			t.Fatal(err)
+		}
+		if got, _ := os.ReadFile(exe); string(got) != c.want {
+			t.Errorf("answer %q, --yes %v: executable is %q, want %q", c.answer, c.yes, got, c.want)
+		}
+	}
+
+	// on a stable release the prerelease isn't offered at all, so nothing is asked or changed
+	exe := filepath.Join(t.TempDir(), "pocketone")
+	os.WriteFile(exe, []byte("old"), 0o755)
+	if err := testExtension(t, srv, "0.0.3", exe).upgrade(false, true); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(exe); string(got) != "old" {
+		t.Errorf("a release was upgraded to a prerelease: %q", got)
 	}
 }
