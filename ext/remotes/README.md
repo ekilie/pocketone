@@ -45,19 +45,20 @@ remote `pockethost` → `https://myapp.pockethost.io` (a name with a dot is take
 
 ### Saved logins
 
-Logins are saved per user, keyed by URL, in `~/.config/pocketbase/credentials.json` (mode 0600). Set
-`POCKETBASE_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketbase/`.
+Logins are saved per user, keyed by URL, in `~/.config/pocketone/credentials.json` (mode 0600). Set
+`POCKETONE_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
 
 ### Environment variables
 
 | Variable | What it does |
 |---|---|
-| `POCKETBASE_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`POCKETBASE_TOKEN_PROD`). |
-| `POCKETBASE_TOKEN` | A token for any remote. |
+| `POCKETONE_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`POCKETONE_TOKEN_PROD`). |
+| `POCKETONE_TOKEN` | A token for any remote. |
 | `POCKETHOST_TOKEN` | A token for the `pockethost` remote. |
-| `POCKETBASE_PASSWORD` | The password for `login --email`, so it isn't asked for. |
+| `POCKETONE_PASSWORD` | The password for `login --email`, so it isn't asked for. |
 
-A token in the environment wins over a saved login.
+A token in the environment wins over a saved login. The `POCKETONE` in these names and the `pocketone` folder come
+from the command's name, so a build shipped under another name uses its own (`POCKETHOST_TOKEN`, `~/.config/pockethost`).
 
 ## Use
 

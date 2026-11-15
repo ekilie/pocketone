@@ -309,7 +309,7 @@ func runLogin(c *cobra.Command, cl *Client, f loginFlags) error {
 		}
 		if res == nil {
 			if !isTerminal(c.InOrStdin()) {
-				return errors.New("no terminal to prompt in: pass --token, --token-stdin, or set POCKETBASE_TOKEN")
+				return errors.New("no terminal to prompt in: pass --token, --token-stdin, or set " + EnvVar("TOKEN"))
 			}
 			fmt.Fprintf(out, "Signing in to %s.\nPaste an API token, or enter a superuser email to sign in with a password: ", cl.Remote.URL)
 			line, rerr := in.ReadString('\n')
@@ -357,7 +357,7 @@ func passwordLogin(ctx context.Context, cl *Client, f loginFlags, in *bufio.Read
 		}
 		email = strings.TrimSpace(line)
 	}
-	password := os.Getenv("POCKETBASE_PASSWORD")
+	password := os.Getenv(EnvVar("PASSWORD"))
 	if password == "" {
 		fmt.Fprint(out, "Password: ")
 		p, err := readSecret(in)

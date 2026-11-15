@@ -15,6 +15,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
 
@@ -65,10 +66,10 @@ func newApp(t *testing.T, withTokens bool) (*tests.TestApp, string) {
 
 func isolate(t *testing.T) string {
 	t.Helper()
-	t.Setenv("POCKETBASE_CONFIG_DIR", t.TempDir())
-	t.Setenv("POCKETBASE_TOKEN", "")
+	t.Setenv("POCKETONE_CONFIG_DIR", t.TempDir())
+	t.Setenv("POCKETONE_TOKEN", "")
 	t.Setenv("POCKETHOST_TOKEN", "")
-	t.Setenv("POCKETBASE_PASSWORD", "")
+	t.Setenv("POCKETONE_PASSWORD", "")
 	return t.TempDir()
 }
 
@@ -140,8 +141,8 @@ func TestLegacyPocketHostLinkAndEnv(t *testing.T) {
 	if tok, src := EnvToken(PocketHostRemote); tok != "ph_pat_x" || src != "POCKETHOST_TOKEN" {
 		t.Fatal(tok, src)
 	}
-	t.Setenv("POCKETBASE_TOKEN", "general")
-	t.Setenv("POCKETBASE_TOKEN_MY_PROD", "specific")
+	t.Setenv("POCKETONE_TOKEN", "general")
+	t.Setenv("POCKETONE_TOKEN_MY_PROD", "specific")
 	if tok, _ := EnvToken("my-prod"); tok != "specific" {
 		t.Fatal(tok)
 	}
@@ -257,7 +258,7 @@ func TestCommands(t *testing.T) {
 	if out, err := runCmd(t, dir, "remote", "add", "prod", url); err != nil || !strings.Contains(out, "Added prod") {
 		t.Fatalf("%v %s", err, out)
 	}
-	t.Setenv("POCKETBASE_PASSWORD", "1234567890")
+	t.Setenv("POCKETONE_PASSWORD", "1234567890")
 	if out, err := runCmd(t, dir, "login", "prod", "--email", "test@example.com"); err != nil || !strings.Contains(out, "Logged in") {
 		t.Fatalf("login: %v %s", err, out)
 	}
@@ -301,4 +302,25 @@ func runCmd(t *testing.T, dir string, args ...string) (string, error) {
 	}
 	t.Fatalf("no command %s", args[0])
 	return "", nil
+}
+
+// A build shipped under another command name (pluginkit.Command) gets its own variables and config folder.
+func TestNamesFollowCommand(t *testing.T) {
+	old := pluginkit.Command
+	t.Cleanup(func() { pluginkit.Command = old })
+	pluginkit.Command = "my-tool"
+	home := t.TempDir()
+	t.Setenv("MY_TOOL_CONFIG_DIR", "")
+	t.Setenv("XDG_CONFIG_HOME", home)
+	if d, _ := ConfigDir(); d != filepath.Join(home, "my-tool") {
+		t.Fatal(d)
+	}
+	t.Setenv("MY_TOOL_CONFIG_DIR", "/elsewhere")
+	if d, _ := ConfigDir(); d != "/elsewhere" {
+		t.Fatal(d)
+	}
+	t.Setenv("MY_TOOL_TOKEN", "t")
+	if tok, src := EnvToken("prod"); tok != "t" || src != "MY_TOOL_TOKEN" {
+		t.Fatal(tok, src)
+	}
 }

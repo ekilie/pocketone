@@ -1,12 +1,14 @@
-// Package remotes gives the pocketbase command named remotes: other PocketBase instances (or PocketHost instances) a
-// project deploys to, signed in once with `pocketbase login`.
+// Package remotes gives the command named remotes: other PocketBase instances (or PocketHost instances) a project
+// deploys to, signed in once with `pocketone login`.
 //
-//	pocketbase remote add prod https://myapp.example.com
-//	pocketbase login prod
-//	pocketbase deploy prod
+//	pocketone remote add prod https://myapp.example.com
+//	pocketone login prod
+//	pocketone deploy prod
 //
 // Remote names and URLs live in the project's .pocketbase/remotes.json (commit it); secrets live in the user's
-// ~/.config/pocketbase/credentials.json (0600), keyed by URL. CI sets POCKETBASE_TOKEN or POCKETBASE_TOKEN_<REMOTE>.
+// ~/.config/pocketone/credentials.json (0600), keyed by URL. CI sets POCKETONE_TOKEN or POCKETONE_TOKEN_<REMOTE>.
+// The command name in these (pocketone) comes from [pluginkit.Command], so a build shipped under another name gets
+// its own folder and variables (~/.config/pockethost, POCKETHOST_TOKEN).
 //
 // The server half is GET /_pocker/whoami: who the request's token is, its scopes, and which features (deploy, OAuth,
 // tokens) the instance offers, so clients discover what a remote supports.
@@ -272,20 +274,24 @@ type Credentials struct {
 	ByURL map[string]*Credential `json:"credentials"`
 }
 
-// ConfigDir is the user's pocketbase config folder: $POCKETBASE_CONFIG_DIR, else $XDG_CONFIG_HOME/pocketbase, else
-// ~/.config/pocketbase.
+// EnvVar is the environment variable for suffix, named after [pluginkit.Command]: EnvVar("TOKEN") is POCKETONE_TOKEN
+// in pocketone.
+func EnvVar(suffix string) string { return envSuffix(pluginkit.Command) + "_" + suffix }
+
+// ConfigDir is the user's config folder, named after [pluginkit.Command]: $POCKETONE_CONFIG_DIR, else
+// $XDG_CONFIG_HOME/pocketone, else ~/.config/pocketone.
 func ConfigDir() (string, error) {
-	if d := os.Getenv("POCKETBASE_CONFIG_DIR"); d != "" {
+	if d := os.Getenv(EnvVar("CONFIG_DIR")); d != "" {
 		return d, nil
 	}
 	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return filepath.Join(d, "pocketbase"), nil
+		return filepath.Join(d, pluginkit.Command), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "pocketbase"), nil
+	return filepath.Join(home, ".config", pluginkit.Command), nil
 }
 
 // LoadCredentials reads the credential store (empty if there's none).
@@ -330,17 +336,17 @@ func (c *Credentials) Save() error {
 // Path is the store's file.
 func (c *Credentials) Path() string { return c.path }
 
-// EnvToken returns the CI token for a remote: POCKETBASE_TOKEN_<NAME> (upper case, other characters as _), then
-// POCKETBASE_TOKEN; for the legacy pockethost remote, POCKETHOST_TOKEN too.
+// EnvToken returns the CI token for a remote: POCKETONE_TOKEN_<NAME> (upper case, other characters as _), then
+// POCKETONE_TOKEN (named after [pluginkit.Command]); for the legacy pockethost remote, POCKETHOST_TOKEN too.
 func EnvToken(remoteName string) (token, source string) {
 	if remoteName != "" && !strings.Contains(remoteName, "://") {
-		key := "POCKETBASE_TOKEN_" + envSuffix(remoteName)
+		key := EnvVar("TOKEN_" + envSuffix(remoteName))
 		if v := strings.TrimSpace(os.Getenv(key)); v != "" {
 			return v, key
 		}
 	}
-	if v := strings.TrimSpace(os.Getenv("POCKETBASE_TOKEN")); v != "" {
-		return v, "POCKETBASE_TOKEN"
+	if key := EnvVar("TOKEN"); strings.TrimSpace(os.Getenv(key)) != "" {
+		return strings.TrimSpace(os.Getenv(key)), key
 	}
 	if remoteName == PocketHostRemote {
 		if v := strings.TrimSpace(os.Getenv("POCKETHOST_TOKEN")); v != "" {

@@ -42,7 +42,7 @@ There is no `pocketone.yaml` section, flag or settings screen. Defaults on the r
   `pb_data`, so backups skip it, and it's never deployed.
 
 On your machine, the commands use the project's remotes and saved logins from [Remotes](../remotes/README.md). In CI,
-set `POCKETBASE_TOKEN` (or `POCKETBASE_TOKEN_<REMOTE>`) instead of signing in.
+set `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`) instead of signing in.
 
 ## Use
 
