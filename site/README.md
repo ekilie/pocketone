@@ -43,3 +43,9 @@ pocketone serve --dev --dir ./pb_data
 ```
 
 PocketPages finds `pb_pages` next to `pb_data`. Open http://localhost:8090.
+
+## Deploy
+
+Pushes to `main` deploy `site/pb_pages` to pocketone.dev once the sync check passes (`.github/workflows/site.yml`,
+job `deploy`). It needs the `POCKETHOST_TOKEN` repository secret; without it the job skips. To deploy by hand:
+`cd site && npx pockethost@latest deploy pocketone --no-node-modules`.

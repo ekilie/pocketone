@@ -1,5 +1,8 @@
-# pocketone.dev builds each plugin's page from ext/<name>/docs/ and the pocketone binary's config sections
+# pocketone.dev builds each plugin's page from ext/<name>/README.md and the pocketone binary's config sections
 # (site/sync). Fail when a page is out of date or a plugin folder isn't listed in site/plugins.json.
+# On main, once the check passes, deploy site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev).
+# The deploy needs the POCKETHOST_TOKEN repository secret (a PocketHost personal access token that can write to
+# that instance); without it the job says so and skips.
 name: site
 
 on:
@@ -22,3 +25,27 @@ jobs:
       - name: Site is in sync with ext/ and docs/
         working-directory: site/sync
         run: go run . --check
+
+  deploy:
+    needs: sync-check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: pocketone-dev-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy site/pb_pages to pocketone.dev
+        working-directory: site
+        env:
+          POCKETHOST_TOKEN: ${{ secrets.POCKETHOST_TOKEN }}
+        run: |
+          if [ -z "$POCKETHOST_TOKEN" ]; then
+            echo "::notice::POCKETHOST_TOKEN is not set; skipping the pocketone.dev deploy"
+            exit 0
+          fi
+          npx -y pockethost@latest deploy pocketone --no-node-modules -y -m "site.yml ${GITHUB_SHA::8}"
