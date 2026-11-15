@@ -1,3 +1,9 @@
+<p align="center">
+    <a href="https://pocketone.dev" target="_blank" rel="noopener">
+        <img src="site/pb_pages/logo.svg" width="160" alt="PocketOne logo" />
+    </a>
+</p>
+
 # PocketOne - A community fork of PocketBase
 
 PocketOne is a community fork of [PocketBase](https://pocketbase.io). It tracks
