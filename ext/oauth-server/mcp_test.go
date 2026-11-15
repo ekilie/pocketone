@@ -53,7 +53,7 @@ func TestClaudeConnectorFlow(t *testing.T) {
 		"code_challenge": {challenge}, "code_challenge_method": {"S256"}, "scope": {"mcp:read offline_access"}, "resource": {resource}}
 	b := newBrowser(t)
 	b.get(e.url + "/oauth/authorize?" + q.Encode())
-	b.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+	b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
 	if !b.has("Claude Code") || !b.has("mcp:read") || b.has("<b>offline_access</b>") {
 		t.Fatalf("consent: %s", b.page)
 	}
@@ -84,7 +84,7 @@ func TestClaudeConnectorFlow(t *testing.T) {
 	if code := call(tok["access_token"].(string), "/api/collections"); code != 403 {
 		t.Fatalf("MCP token on the records API: %d", code)
 	}
-	// refresh keeps the audience; the old pair dies in the same response
+	// refresh keeps the audience; the old refresh token works again only during the grace period
 	st, tok2 := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {docURL}})
 	if st != 200 {
 		t.Fatalf("refresh %d %v", st, tok2)
@@ -92,8 +92,8 @@ func TestClaudeConnectorFlow(t *testing.T) {
 	if info, _ := e.tk.Verify(tok2["access_token"].(string)); info == nil || info.Audience != resource {
 		t.Fatal("audience lost on refresh")
 	}
-	if st, o := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {docURL}}); st != 400 || o["error"] != "invalid_grant" {
-		t.Fatalf("dead refresh token: %d %v", st, o)
+	if st, o := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {docURL}}); st != 200 {
+		t.Fatalf("refresh token reused within the grace period: %d %v", st, o)
 	}
 
 	// resource on another host, untrusted CIMD host, mismatched document

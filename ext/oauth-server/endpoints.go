@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/mails"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
@@ -22,6 +21,7 @@ const (
 	sessionCookie = "pb_oauth"
 	csrfCookie    = "pb_oauth_csrf"
 	sessionTTL    = 15 * time.Minute
+	refreshGrace  = 2 * time.Minute
 	codeTTL       = 60 * time.Second
 	deviceTTL     = 10 * time.Minute
 
@@ -46,6 +46,8 @@ func (s *Server) bindRoutes(se *core.ServeEvent) {
 	se.Router.POST(deviceVerifyPath, s.deviceVerify)
 	se.Router.POST(revokePath, s.revoke)
 	se.Router.POST(registerPath, s.register) // answers 404 unless dynamic registration is on
+	se.Router.GET(providerCallbackPath, s.providerCallback)
+	se.Router.POST(providerCallbackPath, s.providerCallback) // Apple answers with form_post
 }
 
 // Issuer is the public base URL: Config.Issuer, else the request's scheme and host (so it always matches the URL
@@ -121,12 +123,18 @@ func param(e *core.RequestEvent, name string) string {
 // parseAuthorize validates the request. A problem with the client or redirect URI is shown as a page (redirect=false);
 // anything else can be sent back to the client.
 func (s *Server) parseAuthorize(e *core.RequestEvent) (*authRequest, string, bool) {
-	c, err := s.FindClient(param(e, "client_id"))
+	return s.parseAuthorizeWith(e, func(name string) string { return param(e, name) })
+}
+
+// parseAuthorizeWith is parseAuthorize reading the parameters from get (the OAuth2 provider callback restores them
+// from its cookie).
+func (s *Server) parseAuthorizeWith(e *core.RequestEvent, get func(string) string) (*authRequest, string, bool) {
+	c, err := s.FindClient(get("client_id"))
 	if err != nil {
 		return nil, "Unknown client.", false
 	}
-	ar := &authRequest{client: c, redirectURI: param(e, "redirect_uri"), state: param(e, "state"),
-		challenge: param(e, "code_challenge"), scope: param(e, "scope"), resource: param(e, "resource")}
+	ar := &authRequest{client: c, redirectURI: get("redirect_uri"), state: get("state"),
+		challenge: get("code_challenge"), scope: get("scope"), resource: get("resource")}
 	if ar.redirectURI == "" && len(c.RedirectURIs) == 1 {
 		ar.redirectURI = c.RedirectURIs[0]
 	}
@@ -136,10 +144,10 @@ func (s *Server) parseAuthorize(e *core.RequestEvent) (*authRequest, string, boo
 	if ar.resource != "" && !s.validResource(e, ar.resource) {
 		return ar, "invalid_target: resource must be a URL on this server", true
 	}
-	if param(e, "response_type") != "code" {
+	if get("response_type") != "code" {
 		return ar, "unsupported_response_type", true
 	}
-	if ar.challenge == "" || param(e, "code_challenge_method") != "S256" {
+	if ar.challenge == "" || get("code_challenge_method") != "S256" {
 		return ar, "invalid_request: PKCE with code_challenge_method=S256 is required", true
 	}
 	return ar, "", true
@@ -205,25 +213,35 @@ func (s *Server) flow(e *core.RequestEvent, ar *authRequest, action string) erro
 			base.Page, base.Error = PageError, "This form expired. Go back and try again."
 			return s.render(e, http.StatusForbidden, base)
 		}
-		switch e.Request.PostFormValue("step") {
-		case "password":
+		step := e.Request.PostFormValue("step")
+		switch {
+		case step == "password":
 			return s.stepPassword(e, ar, base)
-		case "request_otp":
-			return s.stepRequestOTP(e, ar, base, "")
-		case "otp":
+		case step == "request_otp":
+			return s.stepRequestOTP(e, ar, base)
+		case step == "otp":
 			return s.stepOTP(e, ar, base)
-		case "switch":
-			s.clearSession(e)
-			return s.signInPage(e, base, "", "")
-		case "allow", "deny":
-			if user == nil {
-				return s.signInPage(e, base, "Your sign-in expired. Sign in again.", "")
+		case strings.HasPrefix(step, "oauth2:"):
+			return s.stepOAuth2(e, base, strings.TrimPrefix(step, "oauth2:"))
+		case strings.HasPrefix(step, "use:"):
+			// switch forms: another user collection, the superuser form ("use:_superusers") or back ("use:")
+			col, err := s.pickCollection(strings.TrimPrefix(step, "use:"))
+			if err != nil {
+				return s.signInPage(e, base, nil, err.Error(), "")
 			}
-			return s.decide(e, ar, base, user, e.Request.PostFormValue("step") == "allow")
+			return s.signInPage(e, base, col, "", strings.TrimSpace(e.Request.PostFormValue("email")))
+		case step == "switch":
+			s.clearSession(e)
+			return s.signInPage(e, base, nil, "", "")
+		case step == "allow" || step == "deny":
+			if user == nil {
+				return s.signInPage(e, base, nil, "Your sign-in expired. Sign in again.", "")
+			}
+			return s.decide(e, ar, base, user, step == "allow")
 		}
 	}
 	if user == nil {
-		return s.signInPage(e, base, "", "")
+		return s.signInPage(e, base, nil, "", "")
 	}
 	return s.consentPage(e, ar, base, user)
 }
@@ -241,174 +259,13 @@ func (s *Server) basePage(e *core.RequestEvent, ar *authRequest, action string) 
 	return d
 }
 
-func (s *Server) signInPage(e *core.RequestEvent, d PageData, errMsg, email string) error {
-	d.Page, d.Error, d.Email = PageSignIn, errMsg, email
-	d.Collections = s.cfg.Collections
-	d.Collection = e.Request.PostFormValue("collection")
-	if !containsStr(d.Collections, d.Collection) {
-		d.Collection = d.Collections[0]
-	}
-	if col, err := s.app.FindCachedCollectionByNameOrId(d.Collection); err == nil {
-		d.PasswordEnabled = col.PasswordAuth.Enabled
-		d.OTPEnabled = col.OTP.Enabled
-	}
-	status := http.StatusOK
-	if errMsg != "" {
-		status = http.StatusUnauthorized
-	}
-	return s.render(e, status, d)
-}
-
-func containsStr(list []string, v string) bool {
-	for _, x := range list {
-		if x == v {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *Server) signInCollection(e *core.RequestEvent) (*core.Collection, error) {
-	name := e.Request.PostFormValue("collection")
-	if name == "" {
-		name = s.cfg.Collections[0]
-	}
-	if !containsStr(s.cfg.Collections, name) {
-		return nil, errors.New("This account type can't sign in here.")
-	}
-	col, err := s.app.FindCachedCollectionByNameOrId(name)
-	if err != nil || !col.IsAuth() {
-		return nil, errors.New("This account type can't sign in here.")
-	}
-	return col, nil
-}
-
-const badCredentials = "Wrong email or password."
-
-func (s *Server) stepPassword(e *core.RequestEvent, ar *authRequest, d PageData) error {
-	email := strings.TrimSpace(e.Request.PostFormValue("email"))
-	ip := e.RealIP()
-	if s.limiter.blocked(ip) {
-		return s.signInPage(e, d, "Too many attempts. Wait a few minutes and try again.", email)
-	}
-	col, err := s.signInCollection(e)
-	if err != nil {
-		return s.signInPage(e, d, err.Error(), email)
-	}
-	if !col.PasswordAuth.Enabled {
-		return s.signInPage(e, d, "Password sign-in is off for this account type.", email)
-	}
-	rec, err := s.app.FindAuthRecordByEmail(col, email)
-	if err != nil || !rec.ValidatePassword(e.Request.PostFormValue("password")) {
-		s.limiter.fail(ip)
-		return s.signInPage(e, d, badCredentials, email)
-	}
-	if col.MFA.Enabled {
-		// second factor: a code by email, bound to this password check
-		return s.stepRequestOTP(e, ar, d, s.sign("mfa", rec.Id))
-	}
-	return s.signedIn(e, ar, d, rec)
-}
-
-func (s *Server) stepRequestOTP(e *core.RequestEvent, ar *authRequest, d PageData, mfa string) error {
-	email := strings.TrimSpace(e.Request.PostFormValue("email"))
-	col, err := s.signInCollection(e)
-	if err != nil {
-		return s.signInPage(e, d, err.Error(), email)
-	}
-	if mfa == "" && !col.OTP.Enabled {
-		return s.signInPage(e, d, "Sign-in codes are off for this account type.", email)
-	}
-	if s.limiter.blocked(e.RealIP()) {
-		return s.signInPage(e, d, "Too many attempts. Wait a few minutes and try again.", email)
-	}
-	otpId := ""
-	if rec, err := s.app.FindAuthRecordByEmail(col, email); err == nil {
-		pass := security.RandomStringWithAlphabet(max(col.OTP.Length, 6), "0123456789")
-		otp := core.NewOTP(s.app)
-		otp.SetCollectionRef(col.Id)
-		otp.SetRecordRef(rec.Id)
-		otp.SetPassword(pass)
-		otp.SetSentTo(rec.Email())
-		if err := s.app.Save(otp); err != nil {
-			return err
-		}
-		if err := mails.SendRecordOTP(s.app, rec, otp.Id, pass); err != nil {
-			s.app.Logger().Error("oauth-server: send OTP", "error", err)
-		}
-		otpId = otp.Id
-	} else {
-		otpId = security.RandomString(15) // don't reveal whether the account exists
-	}
-	d.Page, d.Email, d.Collection, d.OTPId = PageOTP, email, col.Name, otpId
-	if mfa != "" {
-		d.Hidden = cloneMap(d.Hidden)
-		d.Hidden["mfa"] = mfa
-	}
-	return s.render(e, http.StatusOK, d)
-}
-
-func cloneMap(m map[string]string) map[string]string {
-	out := make(map[string]string, len(m)+1)
-	for k, v := range m {
-		out[k] = v
-	}
-	return out
-}
-
-func (s *Server) stepOTP(e *core.RequestEvent, ar *authRequest, d PageData) error {
-	email := strings.TrimSpace(e.Request.PostFormValue("email"))
-	ip := e.RealIP()
-	col, err := s.signInCollection(e)
-	if err != nil {
-		return s.signInPage(e, d, err.Error(), email)
-	}
-	retry := func(msg string) error {
-		s.limiter.fail(ip)
-		d.Page, d.Email, d.Collection, d.OTPId, d.Error = PageOTP, email, col.Name, e.Request.PostFormValue("otp_id"), msg
-		if mfa := e.Request.PostFormValue("mfa"); mfa != "" {
-			d.Hidden = cloneMap(d.Hidden)
-			d.Hidden["mfa"] = mfa
-		}
-		return s.render(e, http.StatusUnauthorized, d)
-	}
-	if s.limiter.blocked(ip) {
-		return s.signInPage(e, d, "Too many attempts. Wait a few minutes and try again.", email)
-	}
-	otp, err := s.app.FindOTPById(e.Request.PostFormValue("otp_id"))
-	if err != nil || otp.CollectionRef() != col.Id || otp.HasExpired(col.OTP.DurationTime()) ||
-		!otp.ValidatePassword(strings.TrimSpace(e.Request.PostFormValue("code"))) {
-		return retry("That code is wrong or expired.")
-	}
-	rec, err := s.app.FindRecordById(col, otp.RecordRef())
-	if err != nil || !strings.EqualFold(rec.Email(), email) {
-		return retry("That code is wrong or expired.")
-	}
-	mfa := e.Request.PostFormValue("mfa")
-	if col.MFA.Enabled && subtle.ConstantTimeCompare([]byte(mfa), []byte(s.sign("mfa", rec.Id))) != 1 {
-		return s.signInPage(e, d, "This account needs its password and a code. Sign in with your password first.", email)
-	}
-	_ = s.app.Delete(otp)
-	return s.signedIn(e, ar, d, rec)
-}
-
-func (s *Server) signedIn(e *core.RequestEvent, ar *authRequest, d PageData, rec *core.Record) error {
-	tok, err := rec.NewStaticAuthToken(sessionTTL)
-	if err != nil {
-		return err
-	}
-	e.SetCookie(&http.Cookie{Name: sessionCookie, Value: tok, Path: "/oauth", HttpOnly: true, Secure: e.IsTLS(),
-		SameSite: http.SameSiteLaxMode, MaxAge: int(sessionTTL.Seconds())})
-	return s.consentPage(e, ar, d, rec)
-}
-
 func (s *Server) sessionUser(e *core.RequestEvent) *core.Record {
 	c, err := e.Request.Cookie(sessionCookie)
 	if err != nil || c.Value == "" {
 		return nil
 	}
 	rec, err := s.app.FindAuthRecordByToken(c.Value, core.TokenTypeAuth)
-	if err != nil || !s.allowedCollection(rec.Collection()) {
+	if err != nil || !s.allows(rec.Collection()) {
 		return nil
 	}
 	return rec
@@ -444,10 +301,11 @@ func (s *Server) consentPage(e *core.RequestEvent, ar *authRequest, d PageData, 
 		return ar.errorRedirect(e, "invalid_scope: "+err.Error())
 	}
 	if !s.tokens().AllowedCollection(user.Collection()) {
-		d.Page, d.Error = PageError, user.Collection().Name+" accounts can't hold API tokens on this server."
+		d.Page, d.Error = PageError, s.noTokensMessage(user.Collection())
 		return s.render(e, http.StatusForbidden, d)
 	}
-	d.Page, d.Email, d.Scopes, d.FullAccess = PageConsent, user.Email(), scopes, len(scopes) == 0
+	d.Page, d.Email, d.Scopes, d.FullAccess = PageConsent, accountName(user), scopes, len(scopes) == 0
+	s.fillAccount(&d, user.Collection())
 	return s.render(e, http.StatusOK, d)
 }
 
@@ -572,21 +430,28 @@ func (s *Server) deviceVerify(e *core.RequestEvent) error {
 	if userCode == "" {
 		return s.render(e, http.StatusOK, base)
 	}
+	ar, err := s.deviceRequest(userCode)
+	if err != nil {
+		base.Error = err.Error()
+		return s.render(e, http.StatusNotFound, base)
+	}
+	return s.flow(e, ar, deviceVerifyPath)
+}
+
+// deviceRequest finds the pending device authorization for a user code.
+func (s *Server) deviceRequest(userCode string) (*authRequest, error) {
 	dev, err := s.app.FindFirstRecordByData(CodesCollectionId, "user_code", userCode)
 	if err != nil || dev.GetString("kind") != KindDevice || dev.GetString("status") != StatusPending ||
 		!dev.GetDateTime("expires").Time().After(s.cfg.Now()) {
-		base.Error = "That code is wrong or expired. Check your device for a new one."
-		return s.render(e, http.StatusNotFound, base)
+		return nil, errors.New("That code is wrong or expired. Check your device for a new one.")
 	}
 	c, err := s.FindClient(dev.GetString("client_id"))
 	if err != nil {
-		base.Error = "That code is wrong or expired."
-		return s.render(e, http.StatusNotFound, base)
+		return nil, errors.New("That code is wrong or expired.")
 	}
 	var scopes []string
 	_ = dev.UnmarshalJSONField("scopes", &scopes)
-	ar := &authRequest{client: c, scope: strings.Join(scopes, " "), device: dev}
-	return s.flow(e, ar, deviceVerifyPath)
+	return &authRequest{client: c, scope: strings.Join(scopes, " "), device: dev}, nil
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -676,12 +541,19 @@ func (s *Server) grantRefresh(e *core.RequestEvent, c *Client) error {
 	if err != nil || rec.GetString("client_id") != c.Id {
 		return oauthError(e, http.StatusBadRequest, "invalid_grant", "unknown refresh token")
 	}
-	_ = s.app.Delete(rec)
-	if old := rec.GetString("token_id"); old != "" {
-		_ = s.tokens().Revoke(old)
-	}
-	if !rec.GetDateTime("expires").Time().After(s.cfg.Now()) {
+	now := s.cfg.Now()
+	if !rec.GetDateTime("expires").Time().After(now) {
+		_ = s.app.Delete(rec)
 		return oauthError(e, http.StatusBadRequest, "invalid_grant", "the refresh token expired")
+	}
+	// Rotation without logouts: the used refresh token keeps working for refreshGrace (two processes of one client
+	// often refresh at once, and the loser would otherwise be signed out), and the access token it replaced stays
+	// valid until its own expiry instead of being revoked mid-request.
+	if grace := now.Add(refreshGrace); rec.GetDateTime("expires").Time().After(grace) {
+		rec.Set("expires", grace.UTC())
+		if err := s.app.Save(rec); err != nil {
+			return err
+		}
 	}
 	return s.issue(e, c, rec)
 }
@@ -716,7 +588,7 @@ func (s *Server) grantDevice(e *core.RequestEvent, c *Client) error {
 // issue mints an access token (an API token) and a refresh token for the owner and scopes of rec.
 func (s *Server) issue(e *core.RequestEvent, c *Client, rec *core.Record) error {
 	col, err := s.app.FindCachedCollectionByNameOrId(rec.GetString("owner_collection"))
-	if err != nil || !s.allowedCollection(col) {
+	if err != nil || !s.allows(col) {
 		return oauthError(e, http.StatusBadRequest, "invalid_grant", "the account can't sign in here")
 	}
 	owner, err := s.app.FindRecordById(col, rec.GetString("owner"))
@@ -737,8 +609,12 @@ func (s *Server) issue(e *core.RequestEvent, c *Client, rec *core.Record) error 
 		audience = r
 	}
 	now := s.cfg.Now()
+	var expires time.Time // zero: never expires
+	if ttl := s.accessTTL(audience); ttl > 0 {
+		expires = now.Add(ttl)
+	}
 	access, tokRec, err := s.tokens().Create(owner, tokens.CreateOptions{
-		Name: c.Name + " (OAuth)", Scopes: scopes, Expires: now.Add(s.cfg.AccessTTL), ClientId: c.Id, Audience: audience,
+		Name: c.Name + " (OAuth)", Scopes: scopes, Expires: expires, ClientId: c.Id, Audience: audience,
 	})
 	if err != nil {
 		return oauthError(e, http.StatusBadRequest, "invalid_scope", err.Error())
@@ -762,11 +638,11 @@ func (s *Server) issue(e *core.RequestEvent, c *Client, rec *core.Record) error 
 		return err
 	}
 	e.Response.Header().Set("Cache-Control", "no-store")
-	exp := tokRec.GetDateTime("expires").Time().Sub(now)
-	return e.JSON(http.StatusOK, map[string]any{
-		"access_token": access, "token_type": "Bearer", "expires_in": int(exp.Seconds()),
-		"refresh_token": refresh, "scope": strings.Join(scopes, " "),
-	})
+	out := map[string]any{"access_token": access, "token_type": "Bearer", "refresh_token": refresh, "scope": strings.Join(scopes, " ")}
+	if exp := tokRec.GetDateTime("expires"); !exp.IsZero() {
+		out["expires_in"] = int(exp.Time().Sub(now).Seconds())
+	}
+	return e.JSON(http.StatusOK, out)
 }
 
 // ---------------------------------------------------------------------------------------------------------------

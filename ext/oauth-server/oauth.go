@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -26,6 +27,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 	"github.com/pockethost/pocketone/ext/remotes"
@@ -57,8 +59,11 @@ type Branding struct {
 
 // Config is set by whoever builds the binary.
 type Config struct {
-	// Collections are the auth collections (names) whose records may sign in and authorize clients. Default:
-	// _superusers. Their records must also be allowed to own API tokens (tokens.Config.Collections).
+	// Collections are the auth collections (names) whose records may sign in and authorize clients. Default (empty):
+	// _superusers and every auth collection, resolved on each request. The sign-in page signs in app users (the
+	// collections other than _superusers) by default and _superusers behind a "Sign in as a superuser" link. Their
+	// records must also be allowed to own API tokens: list them in tokens.Config.Collections too (its default is
+	// _superusers only); a collection that can't hold tokens shows an error on the page and logs a warning.
 	Collections []string
 
 	// AccessTTL is an access token's lifetime (default 30 days); RefreshTTL a refresh token's (default 180 days,
@@ -96,6 +101,12 @@ type Server struct {
 	app core.App
 	cfg Config
 
+	router  *router.Router[*core.RequestEvent] // for in-process calls to the auth API
+	muxOnce sync.Once
+	mux     http.Handler
+	muxErr  error
+	warned  sync.Map // collection name -> true: "can't hold tokens" logged
+
 	mu     sync.Mutex
 	secret []byte
 
@@ -103,6 +114,26 @@ type Server struct {
 
 	dcr  atomic.Bool
 	cimd sync.Map // client id URL -> cimdEntry
+
+	ttls sync.Map // resource path -> time.Duration (0: never expires), see SetAccessTTL
+}
+
+// SetAccessTTL sets the lifetime of access tokens issued for a resource on this server (by its URL path, e.g.
+// "/mcp"); 0 means they never expire (revoke them instead). Other tokens use Config.AccessTTL. ext/mcp uses it so an
+// agent's connection isn't signed out.
+func (s *Server) SetAccessTTL(resourcePath string, ttl time.Duration) {
+	s.ttls.Store(strings.TrimRight(resourcePath, "/"), ttl)
+}
+
+func (s *Server) accessTTL(audience string) time.Duration {
+	if audience != "" {
+		if u, err := url.Parse(audience); err == nil {
+			if v, ok := s.ttls.Load(strings.TrimRight(u.Path, "/")); ok {
+				return v.(time.Duration)
+			}
+		}
+	}
+	return s.cfg.AccessTTL
 }
 
 // MustRegister is [Register] that panics on error.
@@ -118,9 +149,6 @@ func MustRegister(app core.App, cfg Config) *Server {
 // "oauth" feature in /_pocker/whoami, and on a *pocketbase.PocketBase the `oauth clients` command. The app must
 // also register ext/tokens.
 func Register(app core.App, cfg Config) (*Server, error) {
-	if len(cfg.Collections) == 0 {
-		cfg.Collections = []string{core.CollectionNameSuperusers}
-	}
 	if cfg.AccessTTL <= 0 {
 		cfg.AccessTTL = 30 * 24 * time.Hour
 	}
@@ -151,6 +179,7 @@ func Register(app core.App, cfg Config) (*Server, error) {
 		return EnsureSchema(e.App)
 	})
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		s.router = se.Router
 		s.bindRoutes(se)
 		return se.Next()
 	})
@@ -180,8 +209,9 @@ func (s *Server) EnableDynamicRegistration() { s.dcr.Store(true) }
 // issues); it isn't stored on tokens.
 const OfflineAccess = "offline_access"
 
-func (s *Server) allowedCollection(c *core.Collection) bool {
-	return c != nil && c.IsAuth() && slices.Contains(s.cfg.Collections, c.Name)
+// allows: c is an auth collection whose records may sign in (Config.Collections, or any auth collection by default).
+func (s *Server) allows(c *core.Collection) bool {
+	return c != nil && c.IsAuth() && (len(s.cfg.Collections) == 0 || slices.Contains(s.cfg.Collections, c.Name))
 }
 
 // key returns the server's HMAC key (generated once, stored in _params).

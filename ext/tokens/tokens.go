@@ -46,7 +46,8 @@ var (
 
 // Config is set by whoever builds the binary (or, under pocker, per instance).
 type Config struct {
-	// Collections are the auth collections (by name) whose records may own tokens. Default: _superusers only.
+	// Collections are the auth collections (by name) whose records may own tokens. Default (empty): every auth
+	// collection, superusers and app users alike (an OAuth sign-in, e.g. to /mcp, gets a token owned by the account).
 	Collections []string
 
 	// MaxTTL caps a new token's lifetime (0: no cap; a token may never expire).
@@ -79,9 +80,6 @@ func MustRegister(app core.App, cfg Config) *Tokens {
 // dashboard screen (on serve), and on a *pocketbase.PocketBase the `token` command. Call it before app.Start(), or
 // from a pocker plugin's InitApp.
 func Register(app core.App, cfg Config) (*Tokens, error) {
-	if len(cfg.Collections) == 0 {
-		cfg.Collections = []string{core.CollectionNameSuperusers}
-	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
@@ -155,7 +153,7 @@ func (t *Tokens) Scopes() []Scope { return t.registry.list() }
 
 // AllowedCollection reports whether records of this auth collection may own tokens.
 func (t *Tokens) AllowedCollection(c *core.Collection) bool {
-	return c != nil && c.IsAuth() && slices.Contains(t.cfg.Collections, c.Name)
+	return c != nil && c.IsAuth() && (len(t.cfg.Collections) == 0 || slices.Contains(t.cfg.Collections, c.Name))
 }
 
 // CreateOptions describe a new token.
@@ -352,4 +350,17 @@ func (t *Tokens) revokeWhere(where dbx.Expression) (int, error) {
 func hashSecret(s string) string {
 	h := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(h[:])
+}
+
+// Collections returns the auth collections whose records may own tokens.
+func (t *Tokens) Collections() []string {
+	if len(t.cfg.Collections) > 0 {
+		return t.cfg.Collections
+	}
+	out := []string{}
+	cols, _ := t.app.FindAllCollections(core.CollectionTypeAuth)
+	for _, c := range cols {
+		out = append(out, c.Name)
+	}
+	return out
 }

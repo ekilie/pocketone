@@ -3,7 +3,6 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -22,7 +21,8 @@ const (
 	codeInternal       = -32603
 )
 
-const maxBody = 4 << 20
+// maxBody fits a 10 MB file as base64 plus its JSON-RPC envelope.
+const maxBody = 16 << 20
 
 type rpcRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -149,10 +149,12 @@ func (s *Server) dispatch(e *core.RequestEvent, grant *Grant, msg *rpcRequest) e
 
 	case "tools/list":
 		list := []map[string]any{}
+		super := grant.Auth != nil && grant.Auth.IsSuperuser()
 		for _, t := range s.Tools() {
-			if visible(t, &Call{App: s.app, Event: e, Grant: grant, Tool: t}) {
-				list = append(list, toolDef(t))
+			if t.SuperuserOnly && !super {
+				continue
 			}
+			list = append(list, toolDef(t))
 		}
 		return e.JSON(http.StatusOK, rpcResult(id, map[string]any{"tools": list}))
 
@@ -168,18 +170,11 @@ func (s *Server) dispatch(e *core.RequestEvent, grant *Grant, msg *rpcRequest) e
 			p.Arguments = map[string]any{}
 		}
 		t := s.tool(p.Name)
-		c := &Call{App: s.app, Event: e, Grant: grant, Tool: t, Args: p.Arguments}
-		if t == nil || t.Allow(c) != nil {
+		if t == nil {
 			return e.JSON(http.StatusOK, rpcError(id, codeInvalidParams, "Unknown tool: "+p.Name))
 		}
-		if !visible(t, c) {
-			scope := ScopeWrite
-			if t.Annotations.ReadOnly() {
-				scope = ScopeRead
-			}
-			return s.insufficientScope(e, id, scope)
-		}
-		return e.JSON(http.StatusOK, rpcResult(id, runTool(t, c)))
+		c := &Call{App: s.app, Event: e, Grant: grant, Tool: t, Args: p.Arguments, s: s}
+		return e.JSON(http.StatusOK, rpcResult(id, s.run(c)))
 
 	default:
 		return e.JSON(http.StatusOK, rpcError(id, codeMethodNotFound, "Method not found: "+msg.Method))
@@ -227,7 +222,7 @@ func slug(v string) string {
 
 var noArgs = map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}
 
-func toolDef(t *Tool) map[string]any {
+func toolDef(t *Endpoint) map[string]any {
 	def := map[string]any{"name": t.Name, "description": t.Description}
 	if t.InputSchema != nil {
 		def["inputSchema"] = t.InputSchema
@@ -246,39 +241,3 @@ func toolDef(t *Tool) map[string]any {
 	return def
 }
 
-// runTool calls the handler; failures (errors and panics) become isError results the model can read.
-func runTool(t *Tool, c *Call) (result map[string]any) {
-	defer func() {
-		if r := recover(); r != nil {
-			result = errorResult(fmt.Errorf("%v", r))
-		}
-	}()
-	v, err := t.Handler(c)
-	if err != nil {
-		return errorResult(err)
-	}
-	return toolResult(v)
-}
-
-func errorResult(err error) map[string]any {
-	return map[string]any{"isError": true, "content": []map[string]any{{"type": "text", "text": err.Error()}}}
-}
-
-func toolResult(v any) map[string]any {
-	if s, ok := v.(string); ok {
-		return map[string]any{"content": []map[string]any{{"type": "text", "text": s}}}
-	}
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return errorResult(fmt.Errorf("result is not JSON: %w", err))
-	}
-	var pretty bytes.Buffer
-	if json.Indent(&pretty, raw, "", "  ") != nil {
-		pretty.Write(raw)
-	}
-	out := map[string]any{"content": []map[string]any{{"type": "text", "text": pretty.String()}}}
-	if len(raw) > 0 && raw[0] == '{' {
-		out["structuredContent"] = json.RawMessage(raw)
-	}
-	return out
-}

@@ -15,10 +15,9 @@ type notes struct{ toolName string }
 func (n *notes) Name() string { return "notes" }
 func (n *notes) Register(app core.App, _ pluginkit.Config) error {
 	if s := mcp.For(app); s != nil {
-		return s.AddTool(mcp.Tool{
-			Name: n.toolName, Description: "Lists the app's notes.", Annotations: mcp.Read,
+		return s.AddEndpoint(mcp.Endpoint{
+			Name: n.toolName, Description: "Lists the app's notes.", Method: "GET", Path: "/api/notes",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
-			Handler:     func(*mcp.Call) (any, error) { return []string{}, nil },
 		})
 	}
 	return nil
