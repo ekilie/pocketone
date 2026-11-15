@@ -76,7 +76,7 @@ func (t *Tokens) bindRoutes(se *core.ServeEvent) {
 	g.GET("/scopes", func(e *core.RequestEvent) error {
 		return e.JSON(http.StatusOK, map[string]any{
 			"scopes":      t.Scopes(),
-			"collections": t.cfg.Collections,
+			"collections": t.Collections(),
 			"canCreate":   t.AllowedCollection(e.Auth.Collection()),
 		})
 	})

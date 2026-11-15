@@ -29,8 +29,8 @@ func (s *Server) PagesDir() (string, bool) {
 	return p.Dir(), true
 }
 
-// Eject writes the built-in pages as PocketPages templates into <pagesDir>/_private/oauth (sign-in, one-time code,
-// consent, device code, done, error, and the shared head/foot/hidden partials). Existing files are refused, and
+// Eject writes the built-in pages as PocketPages templates into <pagesDir>/_private/oauth (sign-in, MFA second step,
+// one-time code, consent, device code, done, error, and the shared head/foot/hidden partials). Existing files are refused, and
 // nothing is written, unless force. It returns the files written.
 func Eject(pagesDir string, force bool) ([]string, error) {
 	var names []string

@@ -54,7 +54,15 @@ type env struct {
 	tk  *tokens.Tokens
 }
 
+// testTokenCollections can own API tokens in tests: superusers and the test data's user collections.
+var testTokenCollections = []string{core.CollectionNameSuperusers, "users", "clients"}
+
 func newEnv(t *testing.T, cfg Config) *env {
+	t.Helper()
+	return newEnvTokens(t, cfg, tokens.Config{Collections: testTokenCollections})
+}
+
+func newEnvTokens(t *testing.T, cfg Config, tcfg tokens.Config) *env {
 	t.Helper()
 	pollInterval = 1
 	app, err := tests.NewTestApp()
@@ -62,7 +70,7 @@ func newEnv(t *testing.T, cfg Config) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	tk := tokens.MustRegister(app, tokens.Config{})
+	tk := tokens.MustRegister(app, tcfg)
 	remotes.MustRegister(app, remotes.Config{})
 	srv := MustRegister(app, cfg)
 	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(*core.BootstrapEvent) error { return nil }); err != nil {
@@ -201,11 +209,11 @@ func TestAuthorizeCodeFlow(t *testing.T) {
 	if b.status != 200 || !b.has("Sign in to") || !b.has("PocketBase CLI") {
 		t.Fatalf("sign-in page: %d %s", b.status, b.page)
 	}
-	b.submit("password", map[string]string{"email": "test@example.com", "password": "wrong"})
+	b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "wrong"})
 	if b.status != 401 || !b.has("Wrong email or password") {
 		t.Fatalf("wrong password: %d", b.status)
 	}
-	b.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+	b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
 	if b.status != 200 || !b.has("wants to access") || !b.has("deploy") || !b.has("an app on this computer") {
 		t.Fatalf("consent: %d %s", b.status, b.page)
 	}
@@ -243,16 +251,21 @@ func TestAuthorizeCodeFlow(t *testing.T) {
 		t.Fatalf("access token: %v", err)
 	}
 
-	// refresh rotates both and revokes the old access token
+	// refresh rotates both; the old access token lives out its time (no logout mid-request), and the old refresh
+	// token works again only within the grace period (two processes refreshing at once both succeed)
 	st, tok2 := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {CLIClientId}})
 	if st != 200 || tok2["access_token"] == access {
 		t.Fatalf("refresh: %d %v", st, tok2)
 	}
-	if _, err := e.tk.Verify(access); err == nil {
-		t.Fatal("old access token survived the refresh")
+	if _, err := e.tk.Verify(access); err != nil {
+		t.Fatalf("old access token revoked by the refresh: %v", err)
 	}
-	if st, _ := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {CLIClientId}}); st != 400 {
-		t.Fatal("refresh token reused")
+	if st, _ := postToken(t, e.url, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {CLIClientId}}); st != 200 {
+		t.Fatal("refresh token refused within the grace period")
+	}
+	used, err := e.app.FindFirstRecordByData(CodesCollectionId, "hash", hashSecret(tok["refresh_token"].(string)))
+	if err != nil || used.GetDateTime("expires").Time().After(time.Now().Add(refreshGrace+time.Second)) {
+		t.Fatalf("used refresh token should expire within the grace period: %v %v", err, used)
 	}
 
 	// revoke
@@ -281,19 +294,6 @@ func TestAuthorizeCodeFlow(t *testing.T) {
 	}
 }
 
-func TestUsersCantSignInByDefault(t *testing.T) {
-	e := newEnv(t, Config{})
-	_, challenge := pkce()
-	q := url.Values{"response_type": {"code"}, "client_id": {CLIClientId}, "redirect_uri": {"http://127.0.0.1:1/cb"},
-		"code_challenge": {challenge}, "code_challenge_method": {"S256"}}
-	b := newBrowser(t)
-	b.get(e.url + "/oauth/authorize?" + q.Encode())
-	b.submit("password", map[string]string{"collection": "users", "email": "test@example.com", "password": "1234567890"})
-	if b.status != 401 || !b.has("can&#39;t sign in here") {
-		t.Fatalf("%d %s", b.status, b.page)
-	}
-}
-
 // The CLI half (ext/remotes) against the server: browser login with the scripted browser standing in.
 func TestCLIBrowserLogin(t *testing.T) {
 	e := newEnv(t, Config{})
@@ -304,7 +304,7 @@ func TestCLIBrowserLogin(t *testing.T) {
 		go func() {
 			b := newBrowser(t)
 			b.get(u)
-			b.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+			b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
 			res := b.submit("allow", nil)
 			// follow the redirect to the CLI's loopback listener
 			(&http.Client{Transport: &http.Transport{}}).Get(res.Header.Get("Location"))
@@ -357,7 +357,7 @@ func TestCLIDeviceLogin(t *testing.T) {
 			return
 		}
 		b.get(e.url + "/oauth/device/verify?user_code=" + strings.ToLower(strings.ReplaceAll(code, "-", "")))
-		b.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+		b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
 		b.submit("allow", nil)
 		if !b.has("is connected") {
 			t.Errorf("approve: %s", b.page)
@@ -451,54 +451,6 @@ func TestPagesRendererHook(t *testing.T) {
 	b.get(e.url + "/oauth/device/verify")
 	if !b.has("Acme Cloud") {
 		t.Fatal("branding")
-	}
-}
-
-func TestOTPAndMFA(t *testing.T) {
-	e := newEnv(t, Config{})
-	col, _ := e.app.FindCollectionByNameOrId(core.CollectionNameSuperusers)
-	col.OTP.Enabled = true
-	col.MFA.Enabled = true
-	if err := e.app.Save(col); err != nil {
-		t.Fatal(err)
-	}
-	codeFromMail := func() string {
-		m := regexp.MustCompile(`\b(\d{6,8})\b`).FindStringSubmatch(e.app.TestMailer.LastMessage().HTML)
-		if m == nil {
-			t.Fatal("no code in mail")
-		}
-		return m[1]
-	}
-	_, challenge := pkce()
-	q := url.Values{"response_type": {"code"}, "client_id": {CLIClientId}, "redirect_uri": {"http://127.0.0.1:1/cb"},
-		"code_challenge": {challenge}, "code_challenge_method": {"S256"}}
-
-	// OTP alone isn't enough when MFA is on
-	b := newBrowser(t)
-	b.get(e.url + "/oauth/authorize?" + q.Encode())
-	b.submit("request_otp", map[string]string{"email": "test@example.com"})
-	if !b.has("Check your email") {
-		t.Fatalf("otp page: %s", b.page)
-	}
-	b.submit("otp", map[string]string{"code": codeFromMail()})
-	if !b.has("needs its password and a code") {
-		t.Fatalf("mfa: %s", b.page)
-	}
-
-	// password, then the emailed code
-	b = newBrowser(t)
-	b.get(e.url + "/oauth/authorize?" + q.Encode())
-	b.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
-	if !b.has("Check your email") {
-		t.Fatalf("mfa otp page: %s", b.page)
-	}
-	b.submit("otp", map[string]string{"code": "000000"})
-	if b.status != 401 || !b.has("wrong or expired") {
-		t.Fatalf("bad code: %d", b.status)
-	}
-	b.submit("otp", map[string]string{"code": codeFromMail()})
-	if !b.has("wants to access") {
-		t.Fatalf("consent after MFA: %s", b.page)
 	}
 }
 

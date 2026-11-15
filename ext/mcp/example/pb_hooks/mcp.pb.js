@@ -1,24 +1,34 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// Tools from JS: call $mcp.addTool at the top level of a pb_hooks file.
+// A tool from JS: write the REST endpoint, then the tool wrapper ($mcp.addEndpoint at the top level).
 
-const DEFAULT_LIMIT = 10 // top-level values are visible to tool handlers
+routerAdd(
+  'GET',
+  '/api/example/recent-users',
+  (e) => {
+    const limit = Math.min(100, Math.max(1, parseInt(e.request.url.query().get('limit')) || 10))
+    const rows = $app.findRecordsByFilter('users', '', '-created', limit, 0)
+    return e.json(200, { users: rows.map((r) => ({ email: r.email(), created: r.getString('created') })) })
+  },
+  $apis.requireSuperuserAuth()
+)
 
-$mcp.addTool({
-  name: 'recent_users',
+$mcp.addEndpoint({
+  name: 'example_list_recent_users',
   title: 'Recent users',
-  description: 'The newest users (email and created date).',
+  description: 'The newest users (email and created date). Superusers only.',
+  method: 'GET',
+  path: '/api/example/recent-users', // other args (limit) go to the query string
   inputSchema: {
     type: 'object',
     properties: { limit: { type: 'integer', minimum: 1, maximum: 100 } },
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true },
-  // allow defaults to "superuser"; "auth" = any signed-in record; ["users"] = those collections
-  handler: ({ args, app }) => {
-    const rows = app.findRecordsByFilter('users', '', '-created', args.limit || DEFAULT_LIMIT, 0)
-    return { users: rows.map((r) => ({ email: r.email(), created: r.getString('created') })) }
+  // optional: reshape the result for the model
+  response: ({ status, json }) => {
+    if (status !== 200) throw new Error(json?.message || 'HTTP ' + status)
+    return { count: json.users.length, users: json.users }
   },
 })
 
-$mcp.instructions('recent_users lists the newest app users.')
+$mcp.instructions('example_list_recent_users lists the newest app users.')

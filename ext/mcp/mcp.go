@@ -1,30 +1,34 @@
-// Package mcp serves a Model Context Protocol endpoint for one PocketBase app, so an agent (a Claude connector,
-// Claude Code, any Streamable HTTP client) can manage the app and call the app's own tools.
+// Package mcp serves a Model Context Protocol endpoint for one PocketBase app: a thin mapping of the app's REST API
+// for agents (a Claude connector, Claude Code, any Streamable HTTP client).
 //
 //	app := pocketbase.New()
 //	mcp.MustRegister(app, mcp.Config{})
 //
-// It comes with the built-in pb_* tools (collections, records, settings, logs, backups). Other plugins add tools with
-// [Server.AddTool] on [For](app); an app's pb_hooks add them with $mcp.addTool (see [BindJS]).
+// Every tool maps onto one REST endpoint. A call turns the tool's arguments into that request, runs it through the
+// app's own router in-process as the caller (their PocketBase auth), and turns the response back into an MCP result.
+// API rules, request hooks, middleware and rate limits apply because it is the REST request; ext/mcp makes no
+// permission decisions of its own.
+//
+// The built-in pb_* tools map the whole stock API. Plugins add tools for their own routes with [Server.AddEndpoint]
+// on [For](app); an app's pb_hooks add them with $mcp.addEndpoint (see [BindJS]). The shape is always the same:
+// write the REST endpoint, then the tool wrapper.
 //
 // Sign-in is an [Authenticator]. With ext/oauth-server + ext/tokens on the app it's [OAuth]: OAuth 2.1 the way Claude
-// connectors expect (protected resource metadata, PKCE, CIMD or dynamic registration, audience-bound tokens), so a
-// user adds https://<host>/mcp to Claude and signs in in a browser. Without them it falls back to
-// [PocketBaseTokenAuth] (pasted superuser tokens).
+// connectors expect, so a user adds https://<host>/mcp to Claude and signs in in a browser. Without them it falls
+// back to [PocketBaseTokenAuth] (pasted PocketBase auth tokens).
 package mcp
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 	"github.com/pockethost/pocketone/ext/pluginkit"
 )
 
@@ -34,10 +38,10 @@ const (
 	// DefaultPath is where the endpoint is served when [Config.Path] is empty.
 	DefaultPath = "/mcp"
 
-	// ScopeRead lets a client list and call tools marked read-only.
-	ScopeRead = "mcp:read"
-	// ScopeWrite lets a client call every tool it is allowed to see (it implies [ScopeRead]).
-	ScopeWrite = "mcp:write"
+	// DefaultMaxResponse caps a JSON tool result (1 MB).
+	DefaultMaxResponse = 1 << 20
+	// DefaultMaxFile caps a file sent to or read from a tool (10 MB).
+	DefaultMaxFile = 10 << 20
 )
 
 // SupportedVersions are the MCP protocol revisions this server speaks, newest first.
@@ -60,11 +64,11 @@ type Config struct {
 	Instructions string
 
 	// PublicURL is the origin clients reach the app at, used for the resource URL in protected resource metadata
-	// (default: Settings → Application URL, else derived from the request).
+	// (default: derived from the request).
 	PublicURL string
 
 	// Auth signs requests in. Default: [OAuth] when ext/oauth-server and ext/tokens are registered on the app (decided
-	// on serve, so registration order doesn't matter), else [PocketBaseTokenAuth] with superusers only.
+	// on serve, so registration order doesn't matter), else [PocketBaseTokenAuth].
 	Auth Authenticator
 
 	// NoBuiltins leaves out the pb_* tools. BuiltinGroups limits them to some groups (see [BuiltinGroups]).
@@ -72,6 +76,11 @@ type Config struct {
 	BuiltinGroups []string
 	// ReadOnlyBuiltins registers only the read-only pb_* tools.
 	ReadOnlyBuiltins bool
+
+	// MaxResponse caps a JSON result in bytes (default [DefaultMaxResponse]); a longer one is cut and says so.
+	MaxResponse int
+	// MaxFile caps one file uploaded or downloaded through a tool (default [DefaultMaxFile]).
+	MaxFile int
 
 	// AllowedOrigins lists browser origins (scheme://host[:port]) allowed besides the app's own host. Requests from
 	// other origins get 403 (the spec's DNS rebinding guard). Server-to-server clients send no Origin and pass.
@@ -87,49 +96,105 @@ type Annotations struct {
 	OpenWorldHint   *bool  `json:"openWorldHint,omitempty"`
 }
 
-// ReadOnly reports whether the tool only reads (it then needs just [ScopeRead]).
+// ReadOnly reports whether the tool only reads.
 func (a *Annotations) ReadOnly() bool { return a != nil && a.ReadOnlyHint != nil && *a.ReadOnlyHint }
 
 func ptr(b bool) *bool { return &b }
 
-// Common annotation sets.
+// Common annotation sets. An endpoint without annotations gets one from its method (GET/HEAD [Read], DELETE
+// [Destroy], others [Write]).
 var (
 	Read    = &Annotations{ReadOnlyHint: ptr(true)}
 	Write   = &Annotations{ReadOnlyHint: ptr(false), DestructiveHint: ptr(false)}
 	Destroy = &Annotations{ReadOnlyHint: ptr(false), DestructiveHint: ptr(true)}
 )
 
-// Tool is one callable tool.
-type Tool struct {
-	// Name: 1–128 characters of A-Za-z0-9_.- , unique per app.
+// Endpoint is one tool: a mapping onto a REST endpoint of the app.
+//
+// By default `{name}` segments of Path are filled from the argument of the same name; the other arguments go to the
+// query string (GET, HEAD, DELETE) or the JSON body (other methods). An argument holding a file (`{"name": …,
+// "base64": …}`, or a list of them) makes the body multipart, the way PocketBase takes uploads. Request and Response
+// reshape the call when the default doesn't fit.
+type Endpoint struct {
+	// Name: lowercase `<plugin>_<verb>_<noun>`, 1–128 of A-Za-z0-9_.-, unique per app. `pb_` is the built-ins'.
 	Name        string
 	Title       string
 	Description string
-	// InputSchema is a JSON Schema object (default: no arguments).
+
+	// Method and Path of the REST endpoint, e.g. "PATCH", "/api/collections/{collection}/records/{id}".
+	Method string
+	Path   string
+
+	// InputSchema is a JSON Schema object (default: no arguments). Arguments are checked against its required
+	// properties, types and enums before the request is made.
 	InputSchema map[string]any
 	// OutputSchema, when set, describes structuredContent.
 	OutputSchema map[string]any
-	// Annotations; tools without ReadOnlyHint=true need [ScopeWrite].
+	// Annotations (default: from the method).
 	Annotations *Annotations
 
-	// Allow decides who may see and call the tool (default [RequireSuperuser]).
-	Allow func(c *Call) error
+	// MaxResponse is how many bytes of the response the tool reads (default [Config.MaxResponse]); file tools raise it
+	// to [Config.MaxFile].
+	MaxResponse int
 
-	// Handler runs the tool. Return any JSON-able value; return an error for a tool failure the model can read.
-	Handler func(c *Call) (any, error)
+	// SuperuserOnly hides the tool from other callers in tools/list (the endpoint is superuser-only anyway). It's
+	// presentation, not permission: a call still goes to the endpoint, which decides.
+	SuperuserOnly bool
+
+	// Request, when set, builds the request instead of the default mapping. It sees the caller but can't change who
+	// the request runs as.
+	Request func(c *Call) (*Request, error)
+	// Response, when set, turns the response into the tool result (any JSON-able value, or a [Content] list). Return
+	// an error for a tool failure the model can read. Without it, 2xx is the result and anything else an error.
+	Response func(c *Call, res *Response) (any, error)
 }
 
-// Call is passed to a tool's Allow and Handler.
+// Request is one REST request a tool makes.
+type Request struct {
+	Method string
+	// Path is the URL path, e.g. "/api/collections/posts/records". Fill path parameters with [PathValue] (or
+	// [Call.Path]), never by joining raw strings.
+	Path   string
+	Query  url.Values
+	Header http.Header
+	// Body is sent as JSON (nil: no body), or as `@jsonPayload` next to Files when there are any.
+	Body any
+	// Files are multipart file parts, keyed by field name (e.g. "avatar", "documents+").
+	Files map[string][]File
+}
+
+// File is a file sent in a multipart request, or read from a response.
+type File struct {
+	Name string
+	Type string
+	Data []byte
+}
+
+// Response is what the REST endpoint answered.
+type Response struct {
+	Status int
+	Header http.Header
+	// Body is the response body, cut at the cap when Truncated.
+	Body      []byte
+	Truncated bool
+}
+
+// Content is an MCP content list; a Response func returns it to send images, text or files as they are.
+type Content []map[string]any
+
+// Call is one tool call.
 type Call struct {
 	App   core.App
 	Event *core.RequestEvent
 	Grant *Grant
-	Tool  *Tool
-	// Args are the tool arguments (never nil in Handler).
+	Tool  *Endpoint
+	// Args are the tool arguments (never nil).
 	Args map[string]any
+
+	s *Server
 }
 
-// Auth is the signed-in record (may be nil for a grant without a record).
+// Auth is the signed-in record the call runs as.
 func (c *Call) Auth() *core.Record {
 	if c.Grant == nil {
 		return nil
@@ -137,26 +202,13 @@ func (c *Call) Auth() *core.Record {
 	return c.Grant.Auth
 }
 
-// RequireSuperuser allows only superusers.
-func RequireSuperuser(c *Call) error {
-	if a := c.Auth(); a != nil && a.IsSuperuser() {
-		return nil
+// Do makes another REST request as the same caller (e.g. a file token before a download) and returns the response,
+// capped at max bytes (0: the JSON cap).
+func (c *Call) Do(req *Request, max int) (*Response, error) {
+	if max <= 0 {
+		max = c.s.cfg.MaxResponse
 	}
-	return errors.New("this tool requires a superuser")
-}
-
-// RequireAuth allows records of the given auth collections (any auth record when none are given).
-func RequireAuth(collections ...string) func(c *Call) error {
-	return func(c *Call) error {
-		a := c.Auth()
-		if a == nil {
-			return errors.New("this tool requires sign-in")
-		}
-		if len(collections) == 0 || slices.Contains(collections, a.Collection().Name) || slices.Contains(collections, a.Collection().Id) {
-			return nil
-		}
-		return fmt.Errorf("this tool is not available to %s", a.Collection().Name)
-	}
+	return c.s.send(c, req, max)
 }
 
 // Server is the MCP service of one app. Get it with [For].
@@ -165,8 +217,15 @@ type Server struct {
 	cfg Config
 
 	mu           sync.RWMutex
-	tools        map[string]*Tool
+	tools        map[string]*Endpoint
 	instructions []string
+
+	// The app's router, captured on serve; the handler is built from it on first use (after every OnServe hook has
+	// added its routes). Pocker and tests never set http.Server.Handler, so the router is the only reliable source.
+	router  *router.Router[*core.RequestEvent]
+	muxOnce sync.Once
+	mux     http.Handler
+	muxErr  error
 }
 
 var toolName = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
@@ -192,19 +251,40 @@ func Register(app core.App, cfg Config) (*Server, error) {
 	if cfg.Version == "" {
 		cfg.Version = "dev"
 	}
-	s := &Server{app: app, cfg: cfg, tools: map[string]*Tool{}}
+	if cfg.MaxResponse <= 0 {
+		cfg.MaxResponse = DefaultMaxResponse
+	}
+	if cfg.MaxFile <= 0 {
+		cfg.MaxFile = DefaultMaxFile
+	}
+	s := &Server{app: app, cfg: cfg, tools: map[string]*Endpoint{}}
 	if !cfg.NoBuiltins {
-		for _, t := range builtinTools(cfg.BuiltinGroups, cfg.ReadOnlyBuiltins) {
-			if err := s.AddTool(t); err != nil {
+		for _, t := range builtinTools(cfg.BuiltinGroups, cfg.ReadOnlyBuiltins, cfg.MaxFile) {
+			if err := s.AddEndpoint(t); err != nil {
 				return nil, err
 			}
 		}
+	}
+	if p, ok := app.Store().Get(pendingKey).(*pending); ok { // declared by pb_hooks before Register
+		p.mu.Lock()
+		for _, t := range p.tools {
+			if err := s.AddEndpoint(t); err != nil {
+				p.mu.Unlock()
+				return nil, err
+			}
+		}
+		for _, text := range p.instructions {
+			s.AddInstructions(text)
+		}
+		p.tools, p.instructions = nil, nil
+		p.mu.Unlock()
 	}
 	app.Store().Set(storeKey, s)
 	pluginkit.SetToolLister(app, s) // lets checks such as the plugin conformance test see the tools
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		s.setupOAuth()
+		s.setupAuth()
+		s.router = se.Router
 		s.bindRoutes(se)
 		return se.Next()
 	})
@@ -223,16 +303,17 @@ func (s *Server) App() core.App { return s.app }
 // Path returns the endpoint path.
 func (s *Server) Path() string { return s.cfg.Path }
 
-// AddTool registers t. It fails on an invalid or duplicate name, or a missing handler.
-func (s *Server) AddTool(t Tool) error {
+// AddEndpoint registers a tool. It fails on an invalid or duplicate name, or a missing method or path.
+func (s *Server) AddEndpoint(t Endpoint) error {
 	if !toolName.MatchString(t.Name) {
 		return fmt.Errorf("mcp: invalid tool name %q (1-128 of A-Za-z0-9_.-)", t.Name)
 	}
-	if t.Handler == nil {
-		return fmt.Errorf("mcp: tool %q has no handler", t.Name)
+	t.Method = strings.ToUpper(strings.TrimSpace(t.Method))
+	if t.Request == nil && (t.Method == "" || !strings.HasPrefix(t.Path, "/")) {
+		return fmt.Errorf("mcp: tool %q needs a method and a path starting with /", t.Name)
 	}
-	if t.Allow == nil {
-		t.Allow = RequireSuperuser
+	if t.Annotations == nil {
+		t.Annotations = methodAnnotations(t.Method)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -243,9 +324,9 @@ func (s *Server) AddTool(t Tool) error {
 	return nil
 }
 
-// MustAddTool is [Server.AddTool] that panics on error.
-func (s *Server) MustAddTool(t Tool) {
-	if err := s.AddTool(t); err != nil {
+// MustAddEndpoint is [Server.AddEndpoint] that panics on error.
+func (s *Server) MustAddEndpoint(t Endpoint) {
+	if err := s.AddEndpoint(t); err != nil {
 		panic(err)
 	}
 }
@@ -257,17 +338,35 @@ func (s *Server) RemoveTool(name string) {
 	s.mu.Unlock()
 }
 
-// Tools returns the registered tools sorted by name.
-func (s *Server) Tools() []*Tool {
+func methodAnnotations(method string) *Annotations {
+	switch method {
+	case http.MethodGet, http.MethodHead:
+		return Read
+	case http.MethodDelete:
+		return Destroy
+	}
+	return Write
+}
+
+// Tools returns the registered tools: the app's and plugins' own first, then the pb_* built-ins, each by name.
+func (s *Server) Tools() []*Endpoint {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]*Tool, 0, len(s.tools))
+	out := make([]*Endpoint, 0, len(s.tools))
 	for _, t := range s.tools {
 		out = append(out, t)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	sort.Slice(out, func(i, j int) bool {
+		bi, bj := isBuiltin(out[i].Name), isBuiltin(out[j].Name)
+		if bi != bj {
+			return bj
+		}
+		return out[i].Name < out[j].Name
+	})
 	return out
 }
+
+func isBuiltin(name string) bool { return strings.HasPrefix(name, "pb_") }
 
 // ToolInfos implements [pluginkit.ToolLister].
 func (s *Server) ToolInfos() []pluginkit.ToolInfo {
@@ -279,7 +378,7 @@ func (s *Server) ToolInfos() []pluginkit.ToolInfo {
 	return out
 }
 
-func (s *Server) tool(name string) *Tool {
+func (s *Server) tool(name string) *Endpoint {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.tools[name]
@@ -296,6 +395,13 @@ func (s *Server) AddInstructions(text string) {
 }
 
 func (s *Server) instructionsText() string {
+	own := false
+	for _, t := range s.Tools() {
+		if !isBuiltin(t.Name) {
+			own = true
+			break
+		}
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	parts := []string{}
@@ -306,18 +412,18 @@ func (s *Server) instructionsText() string {
 		if name == "" {
 			name = "this PocketBase app"
 		}
-		parts = append(parts, "Tools for "+name+", a PocketBase app. pb_* tools manage the app itself (collections, records, settings, logs, backups); call pb_list_collections first to see its data model. Filters and sorts use PocketBase syntax.")
+		parts = append(parts, "Tools for "+name+", a PocketBase app. Each tool is one call to the app's REST API, "+
+			"made as you (your account's API rules apply). The pb_* tools are PocketBase's generic API: records, "+
+			"files and auth for everyone; collections, settings, logs, crons, SQL and backups for superusers. "+
+			"Filters and sorts use PocketBase syntax; pb_list_collections (superusers) shows the data model.")
+	}
+	if own {
+		parts = append(parts, "This app has its own tools (the ones without the pb_ prefix). Use them when one fits "+
+			"the task: they carry the app's meaning and checks, and may span several collections. Fall back to pb_* "+
+			"tools for anything they don't cover.")
 	}
 	parts = append(parts, s.instructions...)
 	return strings.Join(parts, "\n\n")
-}
-
-// visible reports whether c's grant may see t: the tool allows the caller, and the scopes cover it.
-func visible(t *Tool, c *Call) bool {
-	if t.Allow(c) != nil {
-		return false
-	}
-	return c.Grant.has(ScopeWrite) || (t.Annotations.ReadOnly() && c.Grant.has(ScopeRead))
 }
 
 // publicOrigin is the scheme://host clients use to reach the app. The OAuth resource must match the URL the client

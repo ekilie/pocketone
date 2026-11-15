@@ -1,5 +1,8 @@
 <%- include('/oauth/head') %>
+<% if (data.superuser) { %><span class="badge">Superuser</span><% } %>
 <h1><%= data.clientName %></h1><p class="sub">wants to access <%= data.appName %> as <b><%= data.email %></b></p>
+<% if (data.superuser) { %><p class="warn"><b>Superuser account.</b> <%= data.clientName %> will act as a superuser, with full control of <%= data.appName %>: every record, collection and setting.</p>
+<% } else { %><p class="msg">User account (<%= data.collection %>). <%= data.clientName %> can do what this user can.</p><% } %>
 <ul class="scopes">
 <% if (data.fullAccess) { %><li><b>Full access</b><span>Everything this account can do.</span></li>
 <% } else { for (const s of data.scopes) { %><li><b><%= s.name %></b><span><%= s.description %></span></li><% } } %>

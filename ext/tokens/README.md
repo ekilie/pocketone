@@ -9,7 +9,7 @@ JWTs keep working unchanged.
 ```go
 app := pocketbase.New()
 tk := tokens.MustRegister(app, tokens.Config{
-    Collections: []string{"_superusers", "users"}, // who may own tokens (default: _superusers)
+    Collections: []string{"_superusers", "users"}, // who may own tokens (default: every auth collection)
     MaxTTL:      0,                                // cap on a token's lifetime (0: none)
 })
 ```

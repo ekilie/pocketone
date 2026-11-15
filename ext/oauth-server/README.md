@@ -7,11 +7,12 @@ or ChatGPT connectors can register themselves and connect.
 **Runs on:** Single app. Requires [tokens](../tokens/README.md).
 
 ```go
-tokens.MustRegister(app, tokens.Config{})
+// tokens are owned by whoever signs in, so list every collection that may sign in (tokens' default is _superusers only)
+tokens.MustRegister(app, tokens.Config{}) // any auth record may own tokens
 remotes.MustRegister(app, remotes.Config{}) // optional: advertises "oauth" in /_pocker/whoami so login finds it
 oauthserver.MustRegister(app, oauthserver.Config{
-    Collections:         []string{"_superusers"}, // who may sign in (default); their records must be able to own tokens
-    AccessTTL:           30 * 24 * time.Hour,     // default
+    Collections:         nil,                     // who may sign in; default: _superusers + every auth collection
+    AccessTTL:           30 * 24 * time.Hour,     // default; per resource with srv.SetAccessTTL("/mcp", 0) (0: never expires)
     RefreshTTL:          180 * 24 * time.Hour,    // default, renewed on each refresh
     DynamicRegistration: false,                   // POST /oauth/register for MCP clients
     Branding:            oauthserver.Branding{LogoURL: "/logo.svg", Accent: "#4f46e5", Footer: "Acme Inc."},
@@ -19,7 +20,8 @@ oauthserver.MustRegister(app, oauthserver.Config{
 ```
 
 Try it: `go run ./example serve`, then `go run ./example login http://127.0.0.1:8090` (logins from
-[devusers](../devusers/devusers.go): admin@example.com / password).
+[devusers](../devusers/devusers.go): user@example.com / password on the default form, admin@example.com / password
+after "Sign in as a superuser").
 
 ## Endpoints
 
@@ -27,9 +29,10 @@ Try it: `go run ./example serve`, then `go run ./example login http://127.0.0.1:
 |---|---|
 | `GET /.well-known/oauth-authorization-server` | Metadata (RFC 8414). The issuer is `Config.Issuer`, else the request's own URL. |
 | `GET/POST /oauth/authorize` | Sign-in and consent pages. Authorization code with PKCE (S256 only; required). |
-| `POST /oauth/token` | `authorization_code`, `refresh_token` (rotated; the old access token is revoked), `urn:ietf:params:oauth:grant-type:device_code`. |
+| `POST /oauth/token` | `authorization_code`, `refresh_token` (rotated without logouts: the old access token lives out its time, and the old refresh token works again for 2 minutes, so two processes refreshing at once both succeed), `urn:ietf:params:oauth:grant-type:device_code`. |
 | `POST /oauth/device` + `/oauth/device/verify` | Device flow (RFC 8628): codes like `WDJB-MJHT`, valid 10 minutes. |
 | `POST /oauth/revoke` | Revocation (RFC 7009): an access token or a refresh token (revokes both). |
+| `GET/POST /oauth/provider/callback` | Where OAuth2 providers (Google, GitHub, …) send the browser back after sign-in. |
 | `POST /oauth/register` | Dynamic client registration (RFC 7591), when `DynamicRegistration` is on or a plugin called `EnableDynamicRegistration()` (ext/mcp does). Public clients by default. |
 
 Protected resource metadata (RFC 9728) belongs to the resource: ext/mcp serves `/.well-known/oauth-protected-resource`.
@@ -45,9 +48,36 @@ the account's full rights; the consent page says so.
 
 ## Sign-in
 
-The pages sign in with what the collection allows: password, an emailed one-time code (OTP), and both when MFA is on.
-Failed attempts are limited per IP (10 per 5 minutes). The session is a 15-minute HttpOnly cookie on `/oauth`; forms
-carry a CSRF token. Sign-in with OAuth2 providers (Google, GitHub) isn't offered yet.
+**Who.** `Config.Collections` empty (the default) means `_superusers` plus every auth collection, resolved on each
+request; a list narrows it. MCP tools and API calls then run as whoever signed in, under the REST API's rules. The
+sign-in page signs in **app users** by default: the allowed auth collections other than `_superusers` that have a
+sign-in method on (`users` first; with several, a small choice at the top). At the bottom, **Sign in as a superuser**
+shows the same page against `_superusers`, styled clearly differently (its own background and accent, a "Superuser
+sign-in" heading and a warning), with a link back. Without `_superusers` allowed there's no link; with no user
+collection allowed, the superuser form is the only one. The consent page names the account and whether the client
+will act as a user (and which collection) or as a superuser.
+
+**Tokens.** Access tokens are owned by the signed-in record, so every collection that may sign in must also be in
+`tokens.Config.Collections` (whose default is every auth collection, so this only matters when you narrow it). A collection that can't own tokens shows "isn't set
+up on this server" on its form, refuses sign-in, and logs a warning naming it.
+
+**How.** The pages never check passwords or codes themselves: each step calls PocketBase's own auth endpoint
+in-process, through the app's router, so the collection's auth rule (e.g. `verified = true`), MFA, rate limits,
+superuser IP limits and every `onRecordAuth*Request` hook apply as for the REST API, and the record the endpoint
+returns is the one signed in. Only the methods the collection has on are offered (`GET …/auth-methods`):
+
+- password: `POST /api/collections/{c}/auth-with-password`;
+- emailed code: `POST …/request-otp`, then `POST …/auth-with-otp`;
+- OAuth2: one button per provider on the collection (never for `_superusers`, which PocketBase doesn't allow). The
+  browser goes to the provider with the state and PKCE from auth-methods, comes back to `/oauth/provider/callback`,
+  and `POST …/auth-with-oauth2` completes it (account linking and sign-up are PocketBase's). **Register
+  `<issuer>/oauth/provider/callback` as a redirect URI with each provider** (the issuer is `Config.Issuer`, else the
+  scheme and host the browser used; set `Issuer` behind a proxy so it's stable);
+- MFA: when an auth call answers 401 with an `mfaId`, a second page offers the collection's other methods and passes
+  the `mfaId` along (after a password, when an emailed code is the only option left, it's sent right away).
+
+Failed attempts are also limited per IP here (10 per 5 minutes). The session is a 15-minute HttpOnly cookie on
+`/oauth`; forms carry a CSRF token; a provider round trip keeps its state in a signed 10-minute cookie.
 
 ## Clients
 
@@ -69,12 +99,15 @@ The built-in pages (sign-in, one-time code, consent, device code, done, error) u
 
 To replace them:
 - **Eject (with [pages](../pages/README.md)):** `pocketbase oauth eject` writes the pages as PocketPages templates to
-  `pb_pages/_private/oauth/` (`signin.ejs`, `otp.ejs`, `consent.ejs`, `device.ejs`, `done.ejs`, `error.ejs`, and the
+  `pb_pages/_private/oauth/` (`signin.ejs`, `mfa.ejs`, `otp.ejs`, `consent.ejs`, `device.ejs`, `done.ejs`, `error.ejs`, and the
   shared `head.ejs` / `foot.ejs` / `hidden.ejs` with the CSS). It prints each file, refuses to overwrite existing ones
   unless `--force`, and from then on the server renders those templates (missing ones fall back to the built-in
   page; delete them to go back). `_private` keeps them from being served as routes. The data is `ctx.data`
-  (`data.appName`, `data.action`, `data.hidden`, `data.csrf`, `data.clientName`, `data.scopes`, `data.error`, …,
-  `PageData` in camelCase); every POST form must include `include('/oauth/hidden')` and a `step` button.
+  (`data.appName`, `data.action`, `data.hidden`, `data.csrf`, `data.clientName`, `data.scopes`, `data.superuser`,
+  `data.providers`, `data.error`, …, `PageData` in camelCase); every POST form must include `include('/oauth/hidden')`
+  and a `step` button. Steps: `password`, `request_otp`, `otp`, `oauth2:<provider>`, `use:<collection>` (switch
+  forms; `use:` is the default user form), `allow`, `deny`, `switch`. Sign-in forms post `collection`; the MFA and
+  code pages also post `mfa_id` / `otp_id`.
 - **`Config.Render(e, page, data)`** renders any page itself (return `handled=false` to fall back), with
   `PageData`. It wins over ejected templates.
 
