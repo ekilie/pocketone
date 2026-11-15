@@ -233,7 +233,9 @@ A template returns its text. There is no `echo`; anything you want in the output
   that is itself inside a `_private/` folder, the search starts at the folder containing that `_private/` (so its
   siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`. `..` is not allowed.
 - `name` may include its extension; without one, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
-- The partial sees the same `ctx`, plus `locals` as top-level variables.
+- The partial sees the same `ctx`, plus `locals` as top-level variables. As in EJS, `locals` is also the whole object,
+  so an optional one can be tested without a `ReferenceError`: `<%% if (locals.subtitle) { %>`. A page or layout gets an
+  empty `locals`.
 - Including more than 64 levels deep is an error (recursion guard).
 
 ### 4.3 Slots and layouts

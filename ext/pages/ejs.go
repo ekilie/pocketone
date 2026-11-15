@@ -17,7 +17,7 @@ import (
 
 var scriptServerRe = regexp.MustCompile(`(?s)<script\s+server\s*>(.*?)</script>`)
 
-// templatePrelude defines the names a template can use. `with (__locals)` makes include locals top-level variables.
+// templatePrelude defines the names a template can use. `with (locals)` makes include locals top-level variables.
 const templatePrelude = `var ctx = __pp.ctx, data = ctx.data, params = ctx.params, meta = ctx.meta;
 var asset = function (p) { return __pp.asset(__file, p); };
 var __b = { s: '' }, __l = 1;
@@ -124,7 +124,9 @@ func CompileEJS(src string) (string, error) {
 	var out strings.Builder
 	out.WriteString("(function (__pp, __file, __locals) {\n")
 	out.WriteString(templatePrelude)
-	out.WriteString("try {\nwith (__locals || {}) {\n")
+	// locals is the include's variables as one object (EJS's own name), so a partial can test an optional one with
+	// locals.x instead of hitting a ReferenceError; a page or layout gets an empty object.
+	out.WriteString("var locals = __locals || {};\ntry {\nwith (locals) {\n")
 	out.WriteString(body.String())
 	out.WriteString("}\n} catch (e) { throw __pp.rethrow(e, __file, __l); }\nreturn __b.s;\n})")
 	return out.String(), nil
