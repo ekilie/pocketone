@@ -13,13 +13,13 @@ Server-Timing: origin;dur=12.4, wake;dur=0.0
 Server Timing is built into `pocketone` and on whenever it serves many instances with `provider: pocker`. There's
 nothing to install. It isn't used for a single app or under `provider: docker`.
 
-In your own Pocker build, list it first among the plugins, so its header covers every other hop:
+In your own Pocker build, list it first among the extensions, so its header covers every other hop:
 
 ```go
-srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{servertiming.New() /*, other plugins */}}
+srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{servertiming.New() /*, other extensions */}}
 ```
 
-The module is `github.com/pockethost/pocketone/ext/multisite-servertiming`. It works the same in `pocker.Provider{Plugins: ...}`.
+The module is `github.com/pockethost/pocketone/ext/multisite-servertiming`. It works the same in `pocker.Provider{Extensions: ...}`.
 
 ## Configure
 
@@ -44,16 +44,16 @@ first; values a server in front already sent are kept, and this host's entries a
 ## Integrations
 
 - **[Pocker](../multisite-provider-pocker/README.md)** registers `origin` and `wake` for every request it hands to an instance.
-- **Add your own entries.** Host code and other plugins call `pocker.Timing(ctx, fn)` during a request; `fn` returns
-  `[]pocker.TimingEntry{{Name, Dur, Desc}}` and runs when the headers go out. Only plugins listed after Server Timing
+- **Add your own entries.** Host code and other extensions call `pocker.Timing(ctx, fn)` during a request; `fn` returns
+  `[]pocker.TimingEntry{{Name, Dur, Desc}}` and runs when the headers go out. Only extensions listed after Server Timing
   are covered. Put names in `Desc`, never addresses.
 - **Go API.** `FormatTiming`, `AppendServerTiming` and `WithServerTiming` render entries, append them to a header and
-  wrap a response writer, for a server that isn't a Pocker plugin.
+  wrap a response writer, for a server that isn't a Pocker extension.
 
 ## Example
 
 There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](../../examples/pocketone/multi.go), which
-lists it first in the `pocketone` binary's Pocker plugins.
+lists it first in the `pocketone` binary's Pocker extensions.
 
 ## How it works
 

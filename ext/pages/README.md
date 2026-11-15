@@ -20,7 +20,7 @@ app.Start()
 ```
 
 The module is `github.com/pockethost/pocketone/ext/pages`. See [example/main.go](example/main.go) and
-[Create your own plugin](../../docs/plugins.md).
+[Create your own extension](../../docs/extensions.md).
 
 ## Configure
 
@@ -131,19 +131,19 @@ cd example && go run . serve --dir=./pb_data
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
-| [Pocker](../multisite-provider-pocker/README.md) | `pockerplugin` serves each instance's own `pb_pages` (below). |
+| [Pocker](../multisite-provider-pocker/README.md) | `pockerext` serves each instance's own `pb_pages` (below). |
 | [OAuth Server](../oauth-server/README.md) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
 | [Deploy](../deploy/README.md) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 | [JS Errors](../jserrors/README.md) | Both run in the same JS VM; JS Errors covers `pb_hooks`, pages report their own file and line. |
 
 ### Under pocker
 
-`pockerplugin.New(pages.Config{})` serves every instance's `<instance dir>/pb_pages`:
+`pockerext.New(pages.Config{})` serves every instance's `<instance dir>/pb_pages`:
 
 ```go
-srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{pockerplugin.New(pages.Config{})}}
+srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pockerext.New(pages.Config{})}}
 ```
 
 - The stock `pocketone` binary doesn't add it in multi-instance mode yet; a custom build does, as above.
@@ -152,17 +152,17 @@ srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{pockerplugin.New(pag
 - Page code runs in the instance's own sandboxed JS runtimes, under its limits (execution time, single allocations,
   call stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
   `pb_pages`; `$os` file access stays inside the instance folder. Tests:
-  [pockerplugin_test.go](pockerplugin/pockerplugin_test.go).
-- An instance turns pages off in its settings with `plugins: { pages: { enabled: false } }`.
-- It's its own package ([pockerplugin](pockerplugin/pockerplugin.go)), so single-app builds don't link pocker.
+  [pockerext_test.go](pockerext/pockerext_test.go).
+- An instance turns pages off in its settings with `extensions: { pages: { enabled: false } }`.
+- It's its own package ([pockerext](pockerext/pockerext.go)), so single-app builds don't link pocker.
 
 Measured (same machine as [Speed](#speed), docs kit): each awake instance adds about **2.3 MB** (50 instances: 41 MB
 idle to 155 MB). One instance under pocker serves about **4,000 requests/s** (p50 5.6 ms, p99 80 ms at 50
 concurrent): less than a single app because pocker keeps 2 prewarmed JS runtimes per instance (`hooks_pool_size`; a
 single app has 15) and every call goes through the sandbox.
 
-To try it: copy sites into `pockerplugin/example/pb_root/<name>.localhost/pb_pages`, run
-`go run ./pockerplugin/example`, and open `http://<name>.localhost:8791`.
+To try it: copy sites into `pockerext/example/pb_root/<name>.localhost/pb_pages`, run
+`go run ./pockerext/example`, and open `http://<name>.localhost:8791`.
 
 ### Building on pages
 

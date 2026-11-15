@@ -35,7 +35,7 @@ A Go build can narrow both (see [Go config](#go-config)).
 ### Scopes
 
 A token without scopes has its owner's full rights. A token with scopes works only on the requests its scopes cover,
-plus `/_pocker/whoami`; anywhere else it gets `403`. Plugins and your own `pb_hooks` register the scopes. In
+plus `/_pocker/whoami`; anywhere else it gets `403`. Extensions and your own `pb_hooks` register the scopes. In
 `pocketone` the built-in ones are:
 
 | Scope | From | Allows | Who can hold it |
@@ -143,17 +143,17 @@ curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collection
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [OAuth Server](../oauth-server/README.md) | Its access tokens are API tokens, issued with the client's id, the granted scopes and, when asked for, an audience. They show up under Settings → API tokens and can be revoked there. OAuth Server needs Tokens on the app. |
 | [MCP](../mcp/README.md) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner. A full-access token's calls hold every registered scope; a token limited to scopes on the consent page has its calls checked like requests with those scopes (`WithScopes`). |
 | [Deploy](../deploy/README.md) | Registers `deploy` and `deploy:read`; a `deploy` token is what CI uses. |
 | [Remotes](../remotes/README.md) | A password `pocketone login` creates an API token and `logout` deletes it. In CI, put a token in `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`). `/_pocker/whoami` reports a token's id and scopes, whatever its scopes. |
-| [Pocker](../multisite-provider-pocker/README.md) | Add `tokens.New(tokens.Config{})` to the host's plugins and every instance gets its own tokens, routes and screen. Per instance, `plugins: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
+| [Pocker](../multisite-provider-pocker/README.md) | Add `tokens.New(tokens.Config{})` to the host's extensions and every instance gets its own tokens, routes and screen. Per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
 
 ### Building on Tokens
 
-**Register a scope from Go.** Plugins register their scopes on the app, usually on bootstrap, and guard their routes:
+**Register a scope from Go.** Extensions register their scopes on the app, usually on bootstrap, and guard their routes:
 
 ```go
 tk := tokens.For(app)
@@ -169,7 +169,7 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
 
 - **Guards.** A Go scope can add `Match func(*core.RequestEvent) bool`: a token with the scope also works on any
   request it returns true for. It runs before the owner is loaded, so it may look only at the request.
-- **Shared scopes.** Registering a name again merges its paths, methods, guards and collections, so several plugins
+- **Shared scopes.** Registering a name again merges its paths, methods, guards and collections, so several extensions
   can share one scope.
 - **Read the token on a request.** `tokens.FromRequest(e)` returns the token a request used (nil for a PocketBase
   auth token), with its `Owner`, `Scopes` and `Audience`. `tokens.HasScope(e, "x")` is true for PocketBase auth
@@ -190,7 +190,7 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
 **Go API.** `tokens.For(app)` returns the service: `Create(owner, CreateOptions{Name, Scopes, Expires, ClientId,
 Audience})` returns the secret and record; also `Verify(secret)`, `List(owner)`, `Get(id)`, `Revoke(id)`,
 `RevokeAll(owner)`, `DeleteExpired()`, `RegisterScope`, `MustRegisterScope`, `Scopes()`, `Collections()` and
-`AllowedCollection(c)`. `tokens.BindJS(vm, app)` adds `$tokens`; the pluginkit plugin (`tokens.New`) also binds it.
+`AllowedCollection(c)`. `tokens.BindJS(vm, app)` adds `$tokens`; the extkit extension (`tokens.New`) also binds it.
 
 **JS.** `$tokens.registerScope({name, description, paths, methods, collections})`, `$tokens.requireScope(name)`,
 `$tokens.hasScope(e, name)`, `$tokens.ruleField(name)` and `$tokens.scopes()`.
@@ -242,7 +242,7 @@ func main() {
 	tk := tokens.MustRegister(app, tokens.Config{
 		Collections: []string{"_superusers", "users"}, // who may own tokens
 	})
-	// a plugin's scope: a token limited to "hello" only authenticates under /api/hello; a JWT or unscoped token
+	// an extension's scope: a token limited to "hello" only authenticates under /api/hello; a JWT or unscoped token
 	// holds it too, and every request that holds it carries X-Token-Scope-Hello: 1 for rules and hooks
 	tk.MustRegisterScope(tokens.Scope{Name: "hello", Description: "Say hello", Paths: []string{"/api/hello"}, Methods: []string{"GET"}})
 

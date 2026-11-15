@@ -65,7 +65,7 @@ Under Pocker, `console.*` output and hook errors go to the instance's own `logs/
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Pocker](../multisite-provider-pocker/README.md) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](../multisite-provider-pocker/sandbox_test.go). |
 | [Multisite](../multisite/README.md) | Carries the per-instance `limits` from `instances.yaml` or a mothership. |

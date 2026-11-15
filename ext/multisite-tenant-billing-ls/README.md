@@ -8,7 +8,7 @@ side of the reconcile job. Plans, quotas and applying them to accounts live in t
 other providers can be adapters of their own.
 
 > **Build it.** Nothing is published here yet. PocketHost's own Lemon Squeezy billing (in its legacy Node mothership)
-> moves here. See [Create your own plugin](../../docs/plugins.md).
+> moves here. See [Create your own extension](../../docs/extensions.md).
 
 ## Install
 
@@ -28,7 +28,7 @@ It is planned to implement the provider hook of [tenant-billing](../multisite-te
 
 ## Example
 
-No example yet; it will come with the plugin.
+No example yet; it will come with the extension.
 
 ## License
 

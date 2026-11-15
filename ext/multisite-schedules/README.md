@@ -4,9 +4,9 @@ Scheduled webhooks per instance, called in-process even while the instance sleep
 
 **Runs on:** [pocker](../multisite-provider-pocker/README.md) (multitenant).
 
-> **Planned.** Nothing is published here yet. This folder will hold the plugin's Go module
+> **Planned.** Nothing is published here yet. This folder will hold the extension's Go module
 > (`github.com/pockethost/pocketone/ext/multisite-schedules`), its tests and a minimal `example/main.go` that builds and shows the
-> feature. See [Create your own plugin](../../docs/plugins.md).
+> feature. See [Create your own extension](../../docs/extensions.md).
 
 ## Install
 
@@ -26,7 +26,7 @@ It is planned to run on [pocker](../multisite-provider-pocker/README.md), which 
 
 ## Example
 
-No example yet; it will come with the plugin.
+No example yet; it will come with the extension.
 
 ## License
 

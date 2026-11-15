@@ -7,8 +7,8 @@
 # PocketOne - A community fork of PocketBase
 
 PocketOne is a community fork of [PocketBase](https://pocketbase.io). It tracks
-upstream and aims to keep its own changes to the core small: just the hooks that let plugins extend and override
-PocketBase. Everything else is a plugin. Maintained by [PocketHost](https://pockethost.io); not affiliated with or
+upstream and aims to keep its own changes to the core small: just the hooks that let extensions extend and override
+PocketBase. Everything else is an extension. Maintained by [PocketHost](https://pockethost.io); not affiliated with or
 endorsed by the PocketBase project.
 
 ## Install
@@ -30,12 +30,12 @@ Start a site from a starter kit with `pocketone pages create myapp` ([pages](ext
 In dev mode (`serve --dev`), an app without SMTP doesn't use the host's `sendmail`: its mail is caught in-process and
 you read it at http://127.0.0.1:8025 ([mailtrap](ext/mailtrap/README.md)).
 
-## Core Extensions
+## Standard Extensions
 
-These are extensions to the PocketBase core that ship with every binary. They do not add runtime overhead if you
+These extensions ship with every `pocketone` binary. They do not add runtime overhead if you
 choose not to use them.
 
-| Plugin | Description |
+| Extension | Description |
 |---|---|
 | **[PITR](ext/pitr/README.md)** (Litestream) | Point-in-time restore of your database, from Settings → Backups or `pocketone pitr restore`. On by default; `--pitr=false` turns it off. |
 | **[Auto TLS](ext/autotls/README.md)** | On-demand certificates and wildcards through ACME. |
@@ -50,14 +50,14 @@ choose not to use them.
 | **[Remotes](ext/remotes/README.md)** | Named remotes and saved logins for the `pocketone` command. |
 | **[Upgrade](ext/upgrade/README.md)** | `pocketone upgrade` to the latest release; the old executable is kept as `pocketone-<version>`, never deleted. |
 
-## Community Plugins
+## Community Extensions
 
-These plugins are maintained by PocketHost and the community and are MIT. You can mix and match them to create your
+These extensions are maintained by PocketHost and the community and are MIT. You can mix and match them to create your
 own custom PocketOne experience.
 
 **Run many instances**
 
-| Plugin | Description |
+| Extension | Description |
 |---|---|
 | **[Pocker](ext/multisite-provider-pocker/README.md)** | Hundreds of PocketOne instances in one Go process, routed by hostname. |
 | **[Schedules](ext/multisite-schedules/README.md)** | Scheduled webhooks that wake sleeping instances (headed into Pocker). |
@@ -69,7 +69,7 @@ own custom PocketOne experience.
 
 **Services for your instances**
 
-| Plugin | Description |
+| Extension | Description |
 |---|---|
 | **[Mail Relay](ext/multisite-mailrelay/README.md)** | Outgoing mail for instances without SMTP, sent as `<instance>@<your domain>` through your relay, with limits. |
 | **[S3 Fallback](ext/multisite-s3-fallback/README.md)** | A default bucket for uploads and backups when an instance hasn't set its own S3. |
@@ -77,27 +77,27 @@ own custom PocketOne experience.
 
 **Sell it as a service**
 
-| Plugin | Description |
+| Extension | Description |
 |---|---|
 | **[Multitenant](ext/multisite-tenants/README.md)** | Accounts that own instances: quotas, owner logins, tokens, and the API for your own dashboard. |
 | **[Multitenant Billing](ext/multisite-tenant-billing/README.md)** | Plans, quotas and the billing provider hook for Multitenant. |
 | **[Multitenant Billing LemonSqueezy Adapter](ext/multisite-tenant-billing-ls/README.md)** | Lemon Squeezy as the billing provider. |
 
-**For plugin authors**
+**For extension authors**
 
-| Plugin | Description |
+| Extension | Description |
 |---|---|
 | **[Mail Trap](ext/mailtrap/README.md)** | Dev mode: an app without SMTP sends to a built-in inbox at http://127.0.0.1:8025 instead of `sendmail`. |
-| **[Dev Users](ext/devusers/devusers.go)** | Local testing only: a superuser and a user with password `password`. Every plugin's `example/` uses it. |
+| **[Dev Users](ext/devusers/devusers.go)** | Local testing only: a superuser and a user with password `password`. Every extension's `example/` uses it. |
 
 **Stable** runs in PocketHost production · **Beta** complete and tested, not yet in production · **Alpha** working
 code, still changing · **Planned** a plan and a README so far.
 
-## Contribute a plugin
+## Contribute an extension
 
-Plugins are welcome. Read [Create your own plugin](docs/plugins.md), then open a pull request that adds
-`ext/<your-plugin>/`. Write it against the plugin contract ([`ext/pluginkit`](ext/pluginkit/pluginkit.go)) and the same plugin works at
-every level: on a single app and on every instance under pocker. Keep changes to PocketBase's own code to the minimum hook your plugin needs, and include a small
+Extensions are welcome. Read [Create your own extension](docs/extensions.md), then open a pull request that adds
+`ext/<your-extension>/`. Write it against the extension contract ([`ext/extkit`](ext/extkit/extkit.go)) and the same extension works at
+every level: on a single app and on every instance under pocker. Keep changes to PocketBase's own code to the minimum hook your extension needs, and include a small
 `example/main.go` that builds and shows the feature.
 
 ## Changes we made to PocketBase

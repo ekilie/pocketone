@@ -8,15 +8,15 @@ unsubscribe, keeps a list of addresses that must never be mailed again, and hand
 
 Bulk Mail is built into `pocketone` and **on** for every app. Nothing is sent until a superuser starts a campaign.
 
-In your own Go build, register the plugin before the app starts. Bind it into the JS runtime too if you want
+In your own Go build, register the extension before the app starts. Bind it into the JS runtime too if you want
 `$bulkmail` in `pb_hooks`:
 
 ```go
 mail := bulkmail.New(bulkmail.Config{Rate: 5, Daily: 5000})
 
 app := pocketbase.New()
-pluginkit.MustRegister(app, mail)
-jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { pluginkit.BindJS(app, vm, mail) }})
+extkit.MustRegister(app, mail)
+jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { extkit.BindJS(app, vm, mail) }})
 app.Start()
 ```
 
@@ -128,23 +128,23 @@ pocketone serve --dev
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
-| [Pocker](../multisite-provider-pocker/README.md) | Add the same plugin value to `srv.Plugins` and every instance gets Bulk Mail. Each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
+| [Pocker](../multisite-provider-pocker/README.md) | Add the same extension value to `srv.Extensions` and every instance gets Bulk Mail. Each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
 | [Mailtrap](../mailtrap/README.md) | In dev mode with SMTP off, campaign mail lands in the local inbox instead of being sent. |
 
 ### Per-instance settings (pocker)
 
-Each instance's `plugins.bulkmail` settings apply over the `Config` given to `bulkmail.New`:
+Each instance's `extensions.bulkmail` settings apply over the `Config` given to `bulkmail.New`:
 
 ```yaml
 instances:
   - id: abc
-    plugins: { bulkmail: { rate: 2, daily: 1000 } }
+    extensions: { bulkmail: { rate: 2, daily: 1000 } }
   - id: free-plan-app
-    plugins: { bulkmail: { daily: 0 } }      # may not send bulk mail
+    extensions: { bulkmail: { daily: 0 } }      # may not send bulk mail
   - id: other
-    plugins: { bulkmail: { enabled: false } } # no Bulk Mail at all
+    extensions: { bulkmail: { enabled: false } } # no Bulk Mail at all
 ```
 
 ### Go API
@@ -221,7 +221,7 @@ import (
 	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 func main() {
@@ -230,15 +230,15 @@ func main() {
 
 	registerDemoView(app) // a "newsletter_audience" view to use as a campaign audience (demo.go)
 
-	// the same plugin value pocker would host on every instance (srv.Plugins = append(srv.Plugins, mail))
+	// the same extension value pocker would host on every instance (srv.Extensions = append(srv.Extensions, mail))
 	mail := bulkmail.New(bulkmail.Config{
 		Rate:  5,    // messages per second
 		Daily: 5000, // messages per day; bulkmail.NoBulkMail forbids sending
 	})
-	pluginkit.MustRegister(app, mail)
+	extkit.MustRegister(app, mail)
 
 	jsvm.MustRegister(app, jsvm.Config{
-		OnInit: func(vm *goja.Runtime) { pluginkit.BindJS(app, vm, mail) }, // $bulkmail in JS hooks
+		OnInit: func(vm *goja.Runtime) { extkit.BindJS(app, vm, mail) }, // $bulkmail in JS hooks
 	})
 
 	if err := app.Start(); err != nil {
@@ -249,7 +249,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/bulkmail`, a [`pluginkit`](../pluginkit/pluginkit.go) plugin.
+- Go module `github.com/pockethost/pocketone/ext/bulkmail`, an [`extkit`](../extkit/extkit.go) extension.
   [`example/main.go`](example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
 - The audience is resolved when sending starts and queued into a ledger first (one row per campaign and address,
   unique). A background sender then mails one message at a time through the app's mail client, at the lower of the
@@ -269,7 +269,7 @@ func main() {
 
 All are superuser-only system collections with fixed collection and field ids ([`schema.go`](schema.go)).
 `LegacyJSMigration()` emits a PocketBase JS migration that creates the same collections, for apps that move onto this
-schema before they run this plugin.
+schema before they run this extension.
 
 ## License
 

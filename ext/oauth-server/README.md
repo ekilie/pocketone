@@ -147,7 +147,7 @@ Redirect URIs must be `https`, `http` on a loopback address, or an app's custom 
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Tokens](../tokens/README.md) | Required. Access tokens are API tokens owned by whoever signed in, with the client's id, the granted scopes and the audience. Every scope registered with Tokens can be requested. |
 | [Remotes](../remotes/README.md) | OAuth Server lists itself as the `oauth` feature in `/_pocker/whoami`; `pocketone login` then signs in in the browser (loopback redirect with PKCE) or with a device code, and renews through the refresh token. |
@@ -156,7 +156,7 @@ Redirect URIs must be `https`, `http` on a loopback address, or an app's custom 
 | [Pages](../pages/README.md) | `pocketone oauth eject` writes the pages as PocketPages templates, rendered from then on. |
 
 Under [Pocker](../multisite-provider-pocker/README.md), a Go build registers OAuth Server (and Tokens) in each instance's `SetupApp`;
-there's no pluginkit plugin for it yet. The stock `pocketone` binary doesn't add it to pocker instances.
+there's no extkit extension for it yet. The stock `pocketone` binary doesn't add it to pocker instances.
 
 ### Audience (RFC 8707)
 
@@ -236,7 +236,7 @@ func main() {
 | `POST /oauth/device`, `GET/POST /oauth/device/verify` | Device flow (RFC 8628): codes like `WDJB-MJHT`, valid 10 minutes. |
 | `POST /oauth/revoke` | Revocation (RFC 7009): an access token or a refresh token (revokes both). |
 | `GET/POST /oauth/provider/callback` | Where OAuth2 providers send the browser back after sign-in. |
-| `POST /oauth/register` | Dynamic client registration (RFC 7591), when `DynamicRegistration` is on or a plugin called `EnableDynamicRegistration()` (MCP does). Public clients by default. |
+| `POST /oauth/register` | Dynamic client registration (RFC 7591), when `DynamicRegistration` is on or an extension called `EnableDynamicRegistration()` (MCP does). Public clients by default. |
 
 Protected resource metadata (RFC 9728) belongs to the resource: MCP serves `/.well-known/oauth-protected-resource`.
 

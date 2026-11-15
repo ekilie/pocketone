@@ -178,7 +178,7 @@ In `pocketone` it always is.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [OAuth Server](../oauth-server/README.md) | Signs MCP clients in. MCP points clients at it from the protected resource metadata, turns on its client self-registration, and makes tokens bound to `/mcp` never expire. Who may sign in comes from its `Collections` (default: superusers and every auth collection). |
 | [Tokens](../tokens/README.md) | The access tokens are API tokens bound to `https://<host>/mcp` (RFC 8707): they work nowhere else, and are listed and revoked under Settings → API tokens. |
@@ -188,11 +188,11 @@ In `pocketone` it always is.
 | JS hooks | `$mcp` in `pb_hooks` (above). |
 
 Under [Pocker](../multisite-provider-pocker/README.md), a Go build registers MCP (with Tokens and OAuth Server) in each instance's
-`SetupApp`; there's no pluginkit plugin for it. The stock `pocketone` binary doesn't add it to pocker instances.
+`SetupApp`; there's no extkit extension for it. The stock `pocketone` binary doesn't add it to pocker instances.
 
 ### Tools from Go
 
-A plugin registered on the same app reaches the server with `mcp.For(app)`:
+An extension registered on the same app reaches the server with `mcp.For(app)`:
 
 ```go
 server := mcp.For(app) // or the *mcp.Server that mcp.MustRegister returned
@@ -205,7 +205,7 @@ app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 
 // the tool wrapper
 server.MustAddEndpoint(mcp.Endpoint{
-    Name:        "blog_publish_post",            // lowercase <plugin>_<verb>_<noun>; pb_ is the built-ins'
+    Name:        "blog_publish_post",            // lowercase <extension>_<verb>_<noun>; pb_ is the built-ins'
     Title:       "Publish post",
     Description: "Publish a draft post and email subscribers.",
     Method:      http.MethodPost,
@@ -239,15 +239,15 @@ request as the same caller (e.g. a file token before a download). `Response` may
 string, or an `mcp.Content` list (images, text, embedded files). `SuperuserOnly: true` hides a tool from other
 callers' tool list.
 
-### Tools from a plugin
+### Tools from an extension
 
-A PocketOne plugin that adds tools names them `<plugin>_<verb>_<noun>`: its name (with `-` as `_`), then at least two
+A PocketOne extension that adds tools names them `<extension>_<verb>_<noun>`: its name (with `-` as `_`), then at least two
 lowercase words, such as `notes_list_notes` or `oauth_server_revoke_client`. Each has a description, and an input
-schema, when it has one, is a JSON Schema object. The [conformance test](../../docs/plugins.md) checks all of this
-when the plugin's test puts an MCP server on the test apps:
+schema, when it has one, is a JSON Schema object. The [conformance test](../../docs/extensions.md) checks all of this
+when the extension's test puts an MCP server on the test apps:
 
 ```go
-conformance.Run(t, newPlugin, conformance.Options{Setup: func(app core.App) error {
+conformance.Run(t, newExtension, conformance.Options{Setup: func(app core.App) error {
     _, err := mcp.Register(app, mcp.Config{})
     return err
 }})

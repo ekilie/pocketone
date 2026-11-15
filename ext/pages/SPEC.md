@@ -1,6 +1,6 @@
 # PocketPages v1 specification
 
-The contract for `ext/pages`, PocketOne's server-rendered multi-page app plugin. The test fixtures
+The contract for `ext/pages`, PocketOne's server-rendered multi-page app extension. The test fixtures
 ([`fixtures/`](fixtures)), the starter kits and the PocketPages site are written against this document. Where the
 implementation and this document disagree, one of them is a bug.
 
@@ -23,7 +23,7 @@ myapp/
 - Serving is automatic: the standard PocketOne binary includes pages, and an app serves its `pb_pages` whenever the folder
   exists (it starts serving if the folder appears later). There is no on/off switch; no folder, no pages.
 - Under the multitenant host every instance has its own `pb_pages`.
-- If the folder doesn't exist, the plugin does nothing for that app.
+- If the folder doesn't exist, the extension does nothing for that app.
 - Page code can `require()` modules from `pb_pages/node_modules`, then from the app's usual module paths. The same
   `require` works in modules, JSX/TSX components and EJS templates:
   - `./x` and `../x` are files in `pb_pages`, relative to the requiring file, never above `pb_pages`. Without an
@@ -37,7 +37,7 @@ myapp/
     `pb_pages` (or restart) to reload.
 - Page code runs in the app's JS VM, so PocketBase's JSVM globals (`$app`, `Record`, `$dbx`, `$security`, ...) are
   available, as far as the sandbox allows for untrusted apps.
-- Deploying: `pb_pages` is part of an app's code, next to `pb_hooks` and `pb_migrations` (the `deploy` plugin
+- Deploying: `pb_pages` is part of an app's code, next to `pb_hooks` and `pb_migrations` (the `deploy` extension
   uploads it the same way).
 - Pages' own file access (routes, static files, includes, assets) never leaves `pb_pages`.
 

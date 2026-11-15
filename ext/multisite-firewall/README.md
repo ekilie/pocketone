@@ -44,14 +44,14 @@ rate_limits:                      # defaults for every instance
 The values shown are the defaults. In dev mode (`instances: { dev: true }`) rate limiting is off unless the file has a
 `rate_limits` section. A trusted limit is never lower than the normal one.
 
-Each instance can set its own limits and trusted IPs in its `plugins.firewall` settings; missing fields keep the
+Each instance can set its own limits and trusted IPs in its `extensions.firewall` settings; missing fields keep the
 defaults:
 
 ```yaml
 instances:
   - id: api
     hosts: [api.example.com]
-    plugins:
+    extensions:
       firewall: { rate_limits: { ip_hourly: 5000, instance_concurrent: 500 }, trusted_ips: [203.0.113.0/24] }
 ```
 
@@ -79,16 +79,16 @@ is ignored from anyone else, so it can't be spoofed to escape a limit.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | The firewall is a host gate: it checks the peer, then admits each request before the runtime or the forward hook. |
 | [Pocker](../multisite-provider-pocker/README.md), [Docker](../multisite-provider-docker/README.md) | Either provider; the firewall runs in front of both. |
 | [Edge](../multisite-edge/README.md) | The entry edge applies the limits before forwarding. The owner edge's rate-limit headers replace the entry edge's, since the owner counted every request for the instance. |
-| [Multitenant](../multisite-tenants/README.md) (planned) | Will write each instance's `plugins.firewall` settings, such as its owner's trusted IPs. |
+| [Multitenant](../multisite-tenants/README.md) (planned) | Will write each instance's `extensions.firewall` settings, such as its owner's trusted IPs. |
 
 ### Building on the firewall
 
-- **Per instance.** Write `plugins.firewall.rate_limits` and `plugins.firewall.trusted_ips` into an instance's
+- **Per instance.** Write `extensions.firewall.rate_limits` and `extensions.firewall.trusted_ips` into an instance's
   settings (from the instances file or your own instance source).
 - **Go API.** `firewall.Firewall{Config, RateLimits}` is a `multisite.Gate` you can add to `Host.Gates` yourself;
   `NewFirewall(cfg)` builds one ready to use. `ClientIP(r)` gives a request's client. `firewall.SectionAdjust` changes

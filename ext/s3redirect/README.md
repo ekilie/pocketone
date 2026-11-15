@@ -67,7 +67,7 @@ Once S3 is on, there's nothing to click. File URLs stay the same; they answer wi
   CSS, JS) are signed into the URL as S3 `response-*` overrides. Range requests work, because S3 serves them.
 - **Caching:** the browser may reuse the redirect for 80% of the TTL (`Cache-Control: private`, never shared
   caches); the file itself gets PocketBase's usual 30-day `Cache-Control`.
-- **Falls back to streaming** when S3 is off, the plugin is turned off, or signing fails. A failed signature logs a
+- **Falls back to streaming** when S3 is off, the extension is turned off, or signing fails. A failed signature logs a
   warning, `s3redirect: signing failed, streaming instead`.
 - Only `GET` and `HEAD` requests are redirected.
 
@@ -93,22 +93,22 @@ and hasn't expired, and logs each one (`demo bucket: presigned GET ..., signatur
 `403`. So a working download proves the signatures are AWS-compatible, not just accepted by a lenient fake.
 
 `S3REDIRECT_DEMO=0` skips the demo bucket (use your own Files storage settings); `S3REDIRECT_DEMO_ADDR` moves it.
-The example is its own Go module, so its demo dependencies (gofakes3, the AWS SDK signer) never reach the plugin's
+The example is its own Go module, so its demo dependencies (gofakes3, the AWS SDK signer) never reach the extension's
 `go.mod`.
 
 ## Integrations
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
-| [Pocker](../multisite-provider-pocker/README.md) | The same plugin runs on every instance. The `s3redirect` section sets the defaults; each instance can override `enabled` and `ttl` (below). |
+| [Pocker](../multisite-provider-pocker/README.md) | The same extension runs on every instance. The `s3redirect` section sets the defaults; each instance can override `enabled` and `ttl` (below). |
 | [S3 Fallback](../multisite-s3-fallback/README.md) | Apps without their own S3 settings keep files in its bucket (under pocker, fenced to `instances/<id>/storage/`). Its driver signs, so those downloads redirect too. |
 
 ### Per-instance settings (pocker)
 
 ```go
-srv.Plugins = append(srv.Plugins, s3redirect.New(s3redirect.Config{}))
+srv.Extensions = append(srv.Extensions, s3redirect.New(s3redirect.Config{}))
 ```
 
 ```yaml
@@ -118,20 +118,20 @@ s3redirect:            # server defaults
 
 instances:
   - id: abc
-    plugins:
+    extensions:
       s3redirect: { enabled: false }   # per instance: enabled, ttl
 ```
 
-It's a [pluginkit](../pluginkit/pluginkit.go) plugin, so the same value works on a single app and on every pocker
+It's an [extkit](../extkit/extkit.go) extension, so the same value works on a single app and on every pocker
 instance; it doesn't link pocker.
 
 ### Building on S3 Redirect
 
 - **Supply your own bucket.** S3 Redirect signs for whatever filesystem PocketBase serves the download from: the
-  app's own S3 settings, or one a plugin supplies through `OnFilesystemCreate`. Implement `s3redirect.Signer`
+  app's own S3 settings, or one an extension supplies through `OnFilesystemCreate`. Implement `s3redirect.Signer`
   (`SignedURL(key, ttl, now, overrides)`) on your filesystem driver and its downloads redirect. Nothing else needs
   wiring; a filesystem that can't sign (local disk) streams as usual.
-- **Your own download handlers run first.** The plugin binds `OnFileDownloadRequest` last (priority 1000, id
+- **Your own download handlers run first.** The extension binds `OnFileDownloadRequest` last (priority 1000, id
   `s3redirect.HookID`, `__ext_s3redirect__`), so your Go or JS handlers can still change the served file or answer
   themselves without calling `e.Next()`. Unbind the id to turn it off for one app.
 

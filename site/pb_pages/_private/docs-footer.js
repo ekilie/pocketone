@@ -2,9 +2,10 @@
 // giscus into it, and keeps
 // the tab title in step).
 //
-// Comments: one thread per page in the Q&A category, matched by an exact term. A plugin's page and its guides share
-// the plugin's thread. Front matter `discussion: <term>` picks another term; `discussion: false` turns comments off.
-// The docs home and the plugin index have none.
+// Comments: one thread per page in the Q&A category, matched by an exact term. An extension's page and its guides share
+// the extension's thread. Pages that moved from /docs/plugins/ and /docs/writing-a-plugin keep their old terms, so
+// their existing threads follow them. Front matter `discussion: <term>` picks another term; `discussion: false` turns comments off.
+// The docs home and the extension index have none.
 //
 // Docs links swap only #content, and a Datastar request gets the page without its layouts. So besides
 // ctx.docsFooter() for the docs layout, this sends the footer (carrying the page title) along with
@@ -18,9 +19,10 @@ module.exports = function () {
     const d = ctx.meta('discussion')
     if (d === false || d === 'false') return ''
     if (d) return String(d)
-    const plugin = path.match(/^\/docs\/plugins\/([^/]+)/)
-    if (plugin) return `pocketone.dev/docs/plugins/${plugin[1]}`
-    if (path === '/docs' || path === '/docs/plugins') return ''
+    const ext = path.match(/^\/docs\/extensions\/([^/]+)/)
+    if (ext) return `pocketone.dev/docs/plugins/${ext[1]}` // old term: keeps threads from before the rename
+    if (path === '/docs/writing-an-extension') return 'pocketone.dev/docs/writing-a-plugin'
+    if (path === '/docs' || path === '/docs/extensions') return ''
     return `pocketone.dev${path}`
   }
 

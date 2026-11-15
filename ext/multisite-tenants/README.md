@@ -7,7 +7,7 @@ get API tokens for the CLI and deploys; and an API your own tenant dashboard tal
 **Runs on:** [mothership](../multisite-mothership/README.md) (level 3) and [pocker](../multisite-provider-pocker/README.md); requires the
 [sandbox](../sandbox/README.md), since tenants run code you don't control.
 
-> **Planned.** Nothing is published here yet. See [Create your own plugin](../../docs/plugins.md).
+> **Planned.** Nothing is published here yet. See [Create your own extension](../../docs/extensions.md).
 
 ## Install
 
@@ -23,19 +23,19 @@ Nothing to use yet. It is planned to give each instance an owner account, with q
 
 ## Integrations
 
-It is planned to work with these plugins:
+It is planned to work with these extensions:
 
 - **Mothership:** adds an `owner` to instances and an accounts table through the mothership's schema hooks, and adds
-  owner-derived values (superusers, blocked status, plugin settings) to what edges receive through its feed hooks.
-- **Settings for other plugins:** written into each instance's `plugins:` block, e.g. an owner's trusted IPs for the
-  [firewall](../multisite-firewall/README.md) or a plan's retention for [pitr](../pitr/README.md). Those plugins don't know
+  owner-derived values (superusers, blocked status, extension settings) to what edges receive through its feed hooks.
+- **Settings for other extensions:** written into each instance's `extensions:` block, e.g. an owner's trusted IPs for the
+  [firewall](../multisite-firewall/README.md) or a plan's retention for [pitr](../pitr/README.md). Those extensions don't know
   tenants exist.
 - **Deploy:** supplies the tenant-token backend for the [deploy](../deploy/README.md) API.
 - **Billing:** a billing provider hook; [tenant-billing-ls](../multisite-tenant-billing-ls/README.md) is the Lemon Squeezy one.
 
 ## Example
 
-No example yet; it will come with the plugin.
+No example yet; it will come with the extension.
 
 ## License
 

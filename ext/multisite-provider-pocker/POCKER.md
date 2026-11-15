@@ -44,7 +44,7 @@ instances:
     secrets: { STRIPE_KEY: sk_live_... }               # the app's environment
     encryption_key: 0123456789abcdef0123456789abcdef   # encrypts the app's stored settings; not visible to JS
     access: { cors_origins: [https://shop.example.com] }
-    plugins: { firewall: { trusted_ips: [203.0.113.0/24] } }   # settings for plugins, by name
+    extensions: { firewall: { trusted_ips: [203.0.113.0/24] } }   # settings for extensions, by name
   - id: old
     hosts: [old.example.com]
     blocked: { status: 402, message: "Payment required" }
@@ -55,7 +55,7 @@ Hosting platforms plug in their own [`InstanceSource`](instance.go) (for example
 hostname -> id map over SSE) instead of the file; a community mothership is one (the `mothership` section,
 [ext/multisite-mothership](../multisite-mothership/README.md)).
 
-pocketone.yaml for a production host (each plugin owns its section; every field has a default):
+pocketone.yaml for a production host (each extension owns its section; every field has a default):
 
 ```yaml
 server:
@@ -132,26 +132,26 @@ instances:
     hosts: [api.example.com]
     access: { cors_origins: [https://app.example.com] }
     limits: { max_concurrent_js: 32 }
-    plugins:
+    extensions:
       firewall: { rate_limits: { ip_hourly: 5000, instance_concurrent: 500 }, trusted_ips: [203.0.113.0/24] }
 ```
 
-## Plugins
+## Extensions
 
-`pocker.Provider.Plugins` (or `pocker.Server.Plugins` in Go) takes plugins (see `plugin.go`). Each implements `Name()` and
+`pocker.Provider.Extensions` (or `pocker.Server.Extensions` in Go) takes extensions (see `extension.go`). Each implements `Name()` and
 any of:
 
 | Interface | Used for |
 |---|---|
-| `pluginkit.Plugin` | a PocketOne plugin, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `plugins.<name>` settings, its id in `pluginkit.AppID(app)`; e.g. [pitr](../pitr/README.md), [storage](../multisite-s3-fallback/README.md), [tokens](../tokens/README.md), [s3redirect](../s3redirect/README.md), [mailrelay](../multisite-mailrelay/README.md), [bulkmail](../bulkmail/README.md). `enabled: false` skips it for that instance. A change to an instance's `plugins:` settings restarts its app on its next request. The same value works on a single app. |
+| `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [pitr](../pitr/README.md), [storage](../multisite-s3-fallback/README.md), [tokens](../tokens/README.md), [s3redirect](../s3redirect/README.md), [mailrelay](../multisite-mailrelay/README.md), [bulkmail](../bulkmail/README.md). `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a single app. |
 | `Configurer` | reading its own pocketone.yaml section before the server starts (`Configure(cfg)`) |
 | `Gate` | a peer check before routing, and admission (e.g. rate limits) before an instance is served or forwarded |
 | `TLSProvider` | the main listener's TLS (e.g. automatic certificates) |
 | `Wrapper` | wrapping the server's handler (the first listed is outermost) |
 | `Starter` | background work once the Manager exists |
-| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Plugins use `pluginkit.Plugin` instead, so they run on a single app too and pass the [conformance test](../pluginkit/conformance/conformance.go). |
+| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a single app too and pass the [conformance test](../extkit/conformance/conformance.go). |
 
-Per-instance settings for a plugin go under the instance's `plugins.<name>` (read them with `pocker.DecodePluginConfig`).
+Per-instance settings for an extension go under the instance's `extensions.<name>` (read them with `pocker.DecodeExtensionConfig`).
 `app.Restart()` (a backup restore, pitr) restarts only that instance, not the process.
 Timings for the Server-Timing header are registered with `pocker.Timing(ctx, fn)`. The stock `pocketone` binary runs
 pocker with [servertiming](../multisite-servertiming/README.md), [autotls](../autotls/README.md) and
@@ -169,8 +169,8 @@ pocker with [servertiming](../multisite-servertiming/README.md), [autotls](../au
 - **Encryption key** (`encryption_key`) encrypts the app's stored settings (like `--encryptionEnv`). JS never sees it.
 - **Access** (`access: {cors_origins}`) is the owner's say over which browser origins may call the instance
   (PocketBase matching: exact, `*`, wildcards; empty = any). Client IPs that get the trusted rate limits are the
-  firewall's `plugins.firewall.trusted_ips` (on top of the process-wide `firewall.trusted_clients`).
-- **Plugins** (`plugins: {<name>: ...}`) are per-instance settings for plugins; plugins read them once, so changing them restarts the app on its next request.
+  firewall's `extensions.firewall.trusted_ips` (on top of the process-wide `firewall.trusted_clients`).
+- **Extensions** (`extensions: {<name>: ...}`) are per-instance settings for extensions; extensions read them once, so changing them restarts the app on its next request.
 - **Logs:** the app's own logs (the dashboard's Logs) are per instance in its `pb_data`. `console.*` from JS hooks
   goes to `<instance>/logs/exec.log` as JSON lines `{message, stream, time}` (`stdout` for log/info/debug, `stderr`
   for warn/error), rotated to `exec.log.1` at 10 MiB. A start failure (e.g. a broken hooks file) is written there too,
@@ -196,8 +196,8 @@ private network, and `Manager.Firewall()` lets host routes in front of the Manag
 
 ## Sandbox
 
-Every instance's JS hooks and migrations run in a sandbox (the [sandbox](../sandbox/README.md) plugin), and its SQL runs behind
-SQLite's authorizer ([`sandbox/sqlguard.go`](../sandbox/sqlguard.go)). The sandbox plugin also owns the egress policy
+Every instance's JS hooks and migrations run in a sandbox (the [sandbox](../sandbox/README.md) extension), and its SQL runs behind
+SQLite's authorizer ([`sandbox/sqlguard.go`](../sandbox/sqlguard.go)). The sandbox extension also owns the egress policy
 ([`sandbox/egress.go`](../sandbox/egress.go)); pocker turns it on for its instances. [`sandbox_test.go`](sandbox_test.go) runs one attack per
 route from one instance against another instance and the host; all of these are refused:
 
@@ -223,7 +223,7 @@ Landlock.
 
 ## Changes to PocketBase
 
-These live in the repo root (PocketBase's own files), not in this plugin.
+These live in the repo root (PocketBase's own files), not in this extension.
 
 Kept small and marked `// PocketOne:` so upstream merges stay easy:
 

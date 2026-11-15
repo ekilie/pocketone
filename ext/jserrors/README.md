@@ -58,7 +58,7 @@ and read the log.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Pocker](../multisite-provider-pocker/README.md) | Built in for every instance: hook errors in each instance's log name `pb_hooks/<file>:<line>:<col>`. |
 | [jsembed](../jsembed/README.md) | Combine the two, for example `Extensions: []jsvm.Extension{jsembed.Hooks(hooks), jserrors.New()}`. Embedded files are named `pb_hooks/<file>`. |
@@ -104,7 +104,7 @@ func main() {
 
 The JS VM turns each hook handler back into source (`fn.toString()`) and compiles it again as its own program under
 `<cwd>/pb.js`. That name also anchors relative `require()` calls, so it can't change, and errors carry it. This
-plugin:
+extension:
 
 - remembers each hooks file while it loads, and where each handler sits in it;
 - rewrites `pb.js:<line>:<col>` in errors those handlers throw to `pb_hooks/<file>:<line>:<col>` (the wrapped error

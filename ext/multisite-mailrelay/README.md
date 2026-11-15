@@ -3,7 +3,7 @@
 Outgoing mail for [Pocker](../multisite-provider-pocker/README.md) instances that haven't set up SMTP.
 
 Stock PocketBase falls back to the host's `sendmail` when SMTP is off. Under Pocker that would run `sendmail` on the
-shared host for every tenant. With this plugin:
+shared host for every tenant. With this extension:
 
 - **SMTP on** in an instance's Settings → Mail: the app sends the mail itself. Bring your own SMTP always wins.
 - **SMTP off:** the mail goes through your relay as `<instance>@<Domain>`, within per-instance limits. `sendmail`
@@ -11,17 +11,17 @@ shared host for every tenant. With this plugin:
 
 ## Install
 
-Mail Relay is not in the `pocketone` binary. Add it to the plugins of your own Pocker build, with your sending
+Mail Relay is not in the `pocketone` binary. Add it to the extensions of your own Pocker build, with your sending
 domain and relay:
 
 ```go
-srv.Plugins = append(srv.Plugins, mailrelay.New(mailrelay.Config{
+srv.Extensions = append(srv.Extensions, mailrelay.New(mailrelay.Config{
     Domain:   "mail.example.com",
     Upstream: mailrelay.SMTPUpstream{Addr: "smtp.provider.com:587", Username: "…", Password: "…"},
 }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/multisite-mailrelay`. It works the same in `pocker.Provider{Plugins: ...}`.
+The module is `github.com/pockethost/pocketone/ext/multisite-mailrelay`. It works the same in `pocker.Provider{Extensions: ...}`.
 It also registers on a single app, but a single app can set up its own SMTP and doesn't need a relay.
 
 ## Configure
@@ -65,7 +65,7 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Pocker](../multisite-provider-pocker/README.md) | The host it's built for. Every instance gets the relay, its own address and its own limits. |
 | [Mail Trap](../mailtrap/README.md) | In development, point `SMTPUpstream` at the trap's SMTP port and every relayed message lands in one inbox, tagged with the instance. The example below does this. |
@@ -73,20 +73,20 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 
 ### Per-instance settings (pocker)
 
-Each instance can override the defaults in its `plugins.mailrelay` settings, from `instances.yaml` or your instance
+Each instance can override the defaults in its `extensions.mailrelay` settings, from `instances.yaml` or your instance
 source (for example, per plan):
 
 ```yaml
 instances:
   - id: free-plan-app
-    plugins: { mailrelay: { send: false } }               # refuse its mail unless it uses its own SMTP
+    extensions: { mailrelay: { send: false } }               # refuse its mail unless it uses its own SMTP
   - id: big-app
-    plugins: { mailrelay: { per_minute: 60, daily: 2000 } }
+    extensions: { mailrelay: { per_minute: 60, daily: 2000 } }
 ```
 
 A change to these settings restarts the instance's app on its next request.
 
-Use `send: false`, not `enabled: false`, to stop an instance sending. `enabled: false` turns the plugin off for that
+Use `send: false`, not `enabled: false`, to stop an instance sending. `enabled: false` turns the extension off for that
 instance, and with SMTP off PocketBase then falls back to the host's `sendmail`. Don't set it under Pocker.
 
 ### Building on Mail Relay
@@ -94,7 +94,7 @@ instance, and with SMTP off PocketBase then falls back to the host's `sendmail`.
 - **Your own upstream.** Implement `mailrelay.Upstream` (`Send(ctx, from, to, raw)`) to deliver through an API.
 - **Your own hooks first.** The relay runs after the app's own `onMailerSend` hooks, so they can still change or
   drop a message.
-- **Go API.** `(*mailrelay.Plugin).Address(id)` returns the From address an instance sends as.
+- **Go API.** `(*mailrelay.Extension).Address(id)` returns the From address an instance sends as.
 - **REST API** (superusers): `GET /api/mailrelay` returns the instance's relay status: `active`, `send`, `address`,
   `perMinute`, `daily`, `sentToday`.
 
@@ -164,7 +164,7 @@ func main() {
 
 	srv := &pocker.Server{
 		Config: cfg,
-		Plugins: []pocker.Plugin{
+		Extensions: []pocker.Extension{
 			mailrelay.New(mailrelay.Config{
 				Domain:   "mail.localhost",
 				Upstream: mailrelay.SMTPUpstream{Addr: inbox.SMTPAddr},
@@ -181,7 +181,7 @@ func main() {
 
 ## How it works
 
-- The plugin binds PocketBase's `OnMailerSend` on every instance, last, after the app's own hooks. No core change.
+- The extension binds PocketBase's `OnMailerSend` on every instance, last, after the app's own hooks. No core change.
 - When SMTP is off it doesn't call `e.Next()`, so PocketBase's `sendmail` fallback never runs. It relays the message
   in-process instead.
 - Nothing is written to the instance's settings. A backup restored somewhere else has no relay credentials in it, and

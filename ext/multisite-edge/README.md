@@ -66,7 +66,7 @@ runs its instance:
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | Edge fills the host's forward hook for instances with `remote` set. |
 | [Pocker](../multisite-provider-pocker/README.md), [Docker](../multisite-provider-docker/README.md) | Either runs the instances this edge owns; an app already running here stops when its instance moves to another edge. |

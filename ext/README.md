@@ -10,5 +10,5 @@ dependencies (Litestream, CertMagic) never reach core or other extensions. This 
 [`multisite-provider-docker`](multisite-provider-docker/README.md)). Every other extension works on a single app,
 and per instance under multisite.
 
-Each extension's README has its docs, and is also its page on [pocketone.dev](https://pocketone.dev/docs/plugins).
-How to write one: [docs/plugins.md](../docs/plugins.md).
+Each extension's README has its docs, and is also its page on [pocketone.dev](https://pocketone.dev/docs/extensions).
+How to write one: [docs/extensions.md](../docs/extensions.md).

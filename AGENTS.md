@@ -1,9 +1,13 @@
 # PocketOne
 
-PocketOne is PocketBase plus plugins. **PocketBase's own code ("core") changes only for hooks that let `ext/`
+PocketOne is PocketBase plus extensions. **PocketBase's own code ("core") changes only for hooks that let `ext/`
 extend or override behavior; the features themselves live in `ext/`.** Core is every path outside what PocketOne owns:
 `ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.claude/`. Each core change is marked
 `// PocketOne:` so upstream merges stay easy.
+
+Words: everything in `ext/` is an **extension**, never a "plugin". **Standard extensions** ship in every `pocketone`
+binary (`examples/pocketone`); the rest of `ext/` are **community extensions**. "Plugin" means only upstream's
+`plugins/` (jsvm, migratecmd, ghupdate) and PocketPages' own plugin system in `ext/pages` (`+config.js` `plugins`).
 
 ## Every core change gets an independent audit before it reaches main
 
@@ -15,7 +19,7 @@ context from the change's session, or a human), and must record the result in a 
 2. Give the reviewer only that diff, this section, and the commit message. For each changed hunk it answers:
    - **Necessary:** could this live in `ext/` instead, using hooks core already has (upstream's own, or PocketOne's existing
      seams such as `OnFilesystemCreate`, `jsvm.Config.Extensions`, `BaseAppConfig.AppMigrations`/`OnLog`)?
-   - **Minimal:** is it the smallest seam that works, with no feature logic, policy or plugin-specific names in core?
+   - **Minimal:** is it the smallest seam that works, with no feature logic, policy or extension-specific names in core?
    - **Sensible:** marked `// PocketOne:`, documented on the hook, upstream behavior unchanged when nothing uses it, tested?
    - **Listed:** a new or changed hook is on its `core-hook/<name>` branch (a new one is added to `HOOK_STACK`) and has
      its row in the README's "Changes we made to PocketBase" Hooks table (what it lets extensions do, which extensions
@@ -63,14 +67,14 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 
 ## Other rules
 
-- Plugins are their own Go modules under `ext/<name>/` with a README and a minimal `example/main.go`; a `multisite-`
+- Extensions are their own Go modules under `ext/<name>/` with a README and a minimal `example/main.go`; a `multisite-`
   name means it only works under `ext/multisite`
-  (`docs/plugins.md`). Modules that reach another `ext/` module add a `replace` for it.
-- Plugin CI (`.github/workflows/plugins.yml`, tool in `.github/plugins/`): every `pluginkit.Plugin` module has a
+  (`docs/extensions.md`). Modules that reach another `ext/` module add a `replace` for it.
+- Extension CI (`.github/workflows/extensions.yml`, tool in `.github/extensions/`): every `extkit.Extension` module has a
   conformance test, and each module a change affects builds, vets and passes `go test -race`. Check locally with
-  `go run ./.github/plugins check` and `go run ./.github/plugins affected origin/main HEAD`.
-- pocketone.dev (`site/`) copies plugin READMEs and `docs/plugins.md`, and indexes every page for search. A new plugin
-  gets an entry in `site/plugins.json`; after changing a README, `docs/plugins.md` or any site page, run
+  `go run ./.github/extensions check` and `go run ./.github/extensions affected origin/main HEAD`.
+- pocketone.dev (`site/`) copies extension READMEs and `docs/extensions.md`, and indexes every page for search. A new extension
+  gets an entry in `site/extensions.json`; after changing a README, `docs/extensions.md` or any site page, run
   `cd site/sync && go run .` (CI checks it).
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.

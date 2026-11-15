@@ -4,7 +4,7 @@ A control plane for a fleet of edges. The mothership is a PocketOne app that rec
 instances run where. Each edge follows it, serves its own instances and forwards requests for the rest to the edge
 that runs them.
 
-One operator, no users: owners and accounts are the [tenants](../multisite-tenants/README.md) plugin (planned), which extends the
+One operator, no users: owners and accounts are the [tenants](../multisite-tenants/README.md) extension (planned), which extends the
 mothership through its collections and the mirror's extensions. Each layer is optional: an [edge](../multisite-edge/README.md)
 runs without a mothership, and a mothership without tenants.
 
@@ -56,7 +56,7 @@ You manage the fleet in the mothership's dashboard, in two collections only supe
   15 s, and offline when it shuts down.
 - **`instances`**: `name` (`<name>.<apex>` routes to it), `hosts` (extra hostnames), `edge` (where it runs),
   `power` (off answers 409 "instance is powered off"), `suspension` (non-empty answers 403 with that message), `dev`,
-  `version`, `secrets`, `encryption_key`, `access`, `limits`, `plugins` and `status`.
+  `version`, `secrets`, `encryption_key`, `access`, `limits`, `plugins` (extension settings; the field keeps its old name) and `status`.
 
 Changes reach the edges within moments over PocketBase's realtime stream; there's no polling. To move an instance,
 change its `edge`: the old edge drops its full record and forwards to the new one until the new edge has it. An
@@ -66,16 +66,16 @@ instance with no `edge` isn't served anywhere.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | The mirror is the host's instance source: which instances exist and which this edge runs. |
 | [Edge](../multisite-edge/README.md) | The mirror is also an edge source: where the other edges are, so requests for their instances are forwarded. It combines with a fixed `edges` list. |
-| [Docker](../multisite-provider-docker/README.md) and [Pocker](../multisite-provider-pocker/README.md) | Run the instances this edge owns, with the version, secrets, limits and plugin settings from each record. |
+| [Docker](../multisite-provider-docker/README.md) and [Pocker](../multisite-provider-pocker/README.md) | Run the instances this edge owns, with the version, secrets, limits and extension settings from each record. |
 | [Tenants](../multisite-tenants/README.md) (planned) | Adds owners and accounts through mirror extensions. |
 
 ### Building on Mothership
 
-- **Your own fields and collections.** `EnsureCollections` leaves fields an extension added alone, so a plugin can add
+- **Your own fields and collections.** `EnsureCollections` leaves fields an extension added alone, so an extension can add
   its own fields and collections to the mothership.
 - **Mirror extensions.** Pass a `mirror.Extension` to `mirror.FromSection` or `mirror.Config.Extensions`. `Views()`
   adds filtered subscriptions (such as `owners` filtered to `instances_via_owner.edge ?= {edge}`), `Instance()`

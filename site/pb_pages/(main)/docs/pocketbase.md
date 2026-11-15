@@ -6,7 +6,7 @@ description: Where to read about the parts of PocketOne that come straight from 
 # PocketBase docs
 
 PocketOne doesn't change how PocketBase itself works, so its docs are the reference for everything outside the
-plugins. This site doesn't copy them.
+extensions. This site doesn't copy them.
 
 - [Introduction](https://pocketbase.io/docs/)
 - [Collections](https://pocketbase.io/docs/collections/)

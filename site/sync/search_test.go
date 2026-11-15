@@ -25,11 +25,11 @@ func TestHeadingID(t *testing.T) {
 
 func TestPageURL(t *testing.T) {
 	for p, want := range map[string]string{
-		"site/pb_pages/(main)/docs/installation.md":         "/docs/installation",
-		"site/pb_pages/(main)/docs/plugins/deploy/index.md": "/docs/plugins/deploy",
-		"site/pb_pages/(main)/docs/plugins/pages/spec.md":   "/docs/plugins/pages/spec",
-		"site/pb_pages/(main)/docs/overview.ejs":            "/docs/overview",
-		"site/pb_pages/(main)/blog/hello-world.md":          "/blog/hello-world",
+		"site/pb_pages/(main)/docs/installation.md":            "/docs/installation",
+		"site/pb_pages/(main)/docs/extensions/deploy/index.md": "/docs/extensions/deploy",
+		"site/pb_pages/(main)/docs/extensions/pages/spec.md":   "/docs/extensions/pages/spec",
+		"site/pb_pages/(main)/docs/overview.ejs":               "/docs/overview",
+		"site/pb_pages/(main)/blog/hello-world.md":             "/blog/hello-world",
 	} {
 		if got := pageURL(p); got != want {
 			t.Errorf("pageURL(%q) = %q, want %q", p, got, want)
@@ -41,12 +41,12 @@ func TestPageSections(t *testing.T) {
 	md := "---\ntitle: \"Deploy\"\n---\n<!-- generated -->\n\n# Deploy\n\nIntro with [a link](/x) and `code`.\n\n" +
 		"## Install\n\n- one\n- two\n\n```bash\n# not a heading\npocketone deploy\n```\n\n" +
 		"| Key | Type |\n|---|---|\n| `dir` | string |\n\n### `deploy:`\n\nText.\n"
-	got := pageSections("site/pb_pages/(main)/docs/plugins/deploy/index.md", md)
+	got := pageSections("site/pb_pages/(main)/docs/extensions/deploy/index.md", md)
 	want := []searchEntry{
-		{URL: "/docs/plugins/deploy", Title: "Deploy", Text: "Intro with a link and code ."},
-		{URL: "/docs/plugins/deploy#install", Title: "Deploy", Heading: "Install", Text: "one two # not a heading pocketone deploy dir string"},
+		{URL: "/docs/extensions/deploy", Title: "Deploy", Text: "Intro with a link and code ."},
+		{URL: "/docs/extensions/deploy#install", Title: "Deploy", Heading: "Install", Text: "one two # not a heading pocketone deploy dir string"},
 		// the H1 "Deploy" already took "deploy"
-		{URL: "/docs/plugins/deploy#deploy-1", Title: "Deploy", Heading: "deploy:", Text: "Text."},
+		{URL: "/docs/extensions/deploy#deploy-1", Title: "Deploy", Heading: "deploy:", Text: "Text."},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %d sections, want %d: %+v", len(got), len(want), got)

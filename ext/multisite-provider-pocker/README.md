@@ -17,8 +17,8 @@ In your own Go build, register it as a provider ([`examples/pocketone/multi.go`]
 is the stock binary's version), or run a `pocker.Server` on its own as [the example](#example) does:
 
 ```go
-multisite.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Plugins: []pocker.Plugin{
-	pitr.New(pitr.Config{}), // any PocketOne plugin, on every instance
+multisite.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Extensions: []pocker.Extension{
+	pitr.New(pitr.Config{}), // any PocketOne extension, on every instance
 }})
 ```
 
@@ -78,7 +78,7 @@ runs in dev mode. In production only the hostnames in the instances file are ser
 - A normal app folder, `<root>/<id>`: `pb_data`, `pb_hooks`, `pb_migrations`, `pb_public`. Its dashboard is at
   `https://<its hostname>/_/`.
 - Its JS hooks see only its own `secrets`, through `$os.getenv` and `process.env`.
-- A change to its `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private`, `plugins` or `remote`
+- A change to its `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private`, `extensions` or `remote`
   restarts its app on the next request, after in-flight requests finish. A hostname change doesn't restart it.
 - A change in `pb_hooks` restarts just that instance. A broken hooks file affects only that instance (below).
 
@@ -101,24 +101,24 @@ failure is written there too.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | Routing, listeners, instances file and gates. Pocker is one of its runtime providers. |
 | [Sandbox](../sandbox/README.md) | Every instance's JS hooks, SQL and outbound network run in it, so one instance can't reach another or the host. |
-| [Firewall](../multisite-firewall/README.md) | Peer allow-list and rate limits in front of every instance; per-instance limits in `plugins.firewall`. |
+| [Firewall](../multisite-firewall/README.md) | Peer allow-list and rate limits in front of every instance; per-instance limits in `extensions.firewall`. |
 | [Auto TLS](../autotls/README.md) | In the stock binary: certificates for the hostnames instances map (`autotls` section). |
 | [Server Timing](../multisite-servertiming/README.md) | In the stock binary: Server-Timing headers on every response. |
 | [Mailtrap](../mailtrap/README.md) | In the stock binary: dev instances with SMTP off send mail to a local inbox. |
 | [Edge](../multisite-edge/README.md) | Instances another edge runs are forwarded there instead of started here. |
 | [Stats](../multisite-stats/README.md) | Measures disk use and last request for each instance under `root`. |
-| PocketOne plugins | In your own build, any plugin such as [PITR](../pitr/README.md), [S3 Fallback](../multisite-s3-fallback/README.md) or [Mail Relay](../multisite-mailrelay/README.md) runs on every instance, and an instance's `plugins.<name>` settings override the plugin's defaults. `enabled: false` turns it off for that instance. |
+| PocketOne extensions | In your own build, any extension such as [PITR](../pitr/README.md), [S3 Fallback](../multisite-s3-fallback/README.md) or [Mail Relay](../multisite-mailrelay/README.md) runs on every instance, and an instance's `extensions.<name>` settings override the extension's defaults. `enabled: false` turns it off for that instance. |
 
 ### Building on Pocker
 
-- **Plugins.** `pocker.Provider.Plugins` (or `pocker.Server.Plugins`) takes any `pluginkit.Plugin`, registered on each
-  instance's app before it starts with that instance's `plugins.<name>` settings. Host-level code can implement
+- **Extensions.** `pocker.Provider.Extensions` (or `pocker.Server.Extensions`) takes any `extkit.Extension`, registered on each
+  instance's app before it starts with that instance's `extensions.<name>` settings. Host-level code can implement
   `Configurer`, `AppIniter`, `JSIniter`, `Starter`, or a host `Gate`, `Wrapper` or `TLSProvider`. See
-  [POCKER.md](POCKER.md#plugins).
+  [POCKER.md](POCKER.md#extensions).
 - **Setup per instance.** `SetupApp(inst, app)` runs after migrations and before the app serves, e.g. to add a route
   checked against `inst.Private`.
 - **Manager.** `OnStart` hands host code the `Manager`: `WithInstanceStopped(ctx, id, fn)` changes an instance's files
@@ -133,7 +133,7 @@ this folder with `go run ./example`, then open `http://blog.localhost:8090/_/` (
 
 ```go
 // Command pocker-extension is a Pocker build with one extension: a Go route and an admin dashboard page,
-// added to every instance. See docs/plugins.md.
+// added to every instance. See docs/extensions.md.
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 package main
@@ -201,7 +201,7 @@ process. [POCKER.md](POCKER.md#sandbox) lists what the sandbox covers.
 
 ## Reference
 
-[POCKER.md](POCKER.md) is the full guide: production `pocketone.yaml`, every instance field, plugin interfaces, the
+[POCKER.md](POCKER.md) is the full guide: production `pocketone.yaml`, every instance field, extension interfaces, the
 sandbox, PocketBase changes and versions.
 
 ## License

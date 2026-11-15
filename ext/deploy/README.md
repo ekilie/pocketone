@@ -171,7 +171,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Remotes](../remotes/README.md) | Gives the commands their remotes, saved logins and CI tokens. The commands find the deploy API through the remote's `/_pocker/whoami`. |
 | [OAuth Server](../oauth-server/README.md) | `pocketone login` signs in through the browser when the remote runs it. |

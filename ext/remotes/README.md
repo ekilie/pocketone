@@ -122,7 +122,7 @@ login's refresh token. If the remote can't be reached, it tells you to revoke it
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Deploy](../deploy/README.md) | `deploy`, `dev`, `pull` and `logs` resolve their remote and login through Remotes, and find the deploy API through `/_pocker/whoami`. |
 | [OAuth Server](../oauth-server/README.md) | Advertises itself as the `oauth` feature in `/_pocker/whoami`; `login` then signs in through the browser (loopback redirect on 127.0.0.1 with PKCE) or a device code. |

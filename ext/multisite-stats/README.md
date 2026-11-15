@@ -95,7 +95,7 @@ go run ./example --root ./pb_root --instances instances.yaml
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | Lifecycle is a `multisite.Gate` (it sees each request to record `last_active`) and a host background job (`Run`). It lists instances from `multisite.Directory`. |
 | [Pocker](../multisite-provider-pocker/README.md) | Instances under `pocker.root` (default `./pb_root`), one folder per instance. |

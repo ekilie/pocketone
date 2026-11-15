@@ -4,11 +4,11 @@ Billing for [tenants](../multisite-tenants/README.md), independent of any paymen
 provider hook that adapters implement (checkout links, webhooks, renewals, cancellations, refunds), applying a
 subscription's plan to an account, and a reconcile job that compares accounts with the provider.
 
-**Runs on:** [tenants](../multisite-tenants/README.md) (level 4). Providers are separate plugins, e.g.
+**Runs on:** [tenants](../multisite-tenants/README.md) (level 4). Providers are separate extensions, e.g.
 [tenant-billing-ls](../multisite-tenant-billing-ls/README.md) for Lemon Squeezy.
 
 > **Build it.** Nothing is published here yet. PocketHost's own billing (in its legacy Node mothership) is split
-> between this plugin and the Lemon Squeezy adapter. See [Create your own plugin](../../docs/plugins.md).
+> between this extension and the Lemon Squeezy adapter. See [Create your own extension](../../docs/extensions.md).
 
 ## Install
 
@@ -24,11 +24,11 @@ Nothing to use yet. It is planned to apply each subscription's plan to its accou
 
 ## Integrations
 
-It is planned to run on [tenants](../multisite-tenants/README.md). Payment providers plug in through its provider hook as separate plugins; [tenant-billing-ls](../multisite-tenant-billing-ls/README.md) is the Lemon Squeezy one.
+It is planned to run on [tenants](../multisite-tenants/README.md). Payment providers plug in through its provider hook as separate extensions; [tenant-billing-ls](../multisite-tenant-billing-ls/README.md) is the Lemon Squeezy one.
 
 ## Example
 
-No example yet; it will come with the plugin.
+No example yet; it will come with the extension.
 
 ## License
 

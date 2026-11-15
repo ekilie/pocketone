@@ -1,6 +1,6 @@
 # Mail Trap
 
-A development mail catcher (like MailDev or Mailpit) for testing a plugin or app that sends mail. In dev mode, an
+A development mail catcher (like MailDev or Mailpit) for testing an extension or app that sends mail. In dev mode, an
 app whose SMTP is off sends its mail here instead of the host's `sendmail`, and you read it at http://127.0.0.1:8025.
 
 ## Install
@@ -16,7 +16,7 @@ mailtrap.MustRegister(app)
 app.Start()
 ```
 
-Under Pocker, add `mailtrap.New()` to the plugins. The module is `github.com/pockethost/pocketone/ext/mailtrap`.
+Under Pocker, add `mailtrap.New()` to the extensions. The module is `github.com/pockethost/pocketone/ext/mailtrap`.
 
 ## Configure
 
@@ -37,7 +37,7 @@ Never expose these ports: anyone who can reach them can read the mail.
 ## Use
 
 1. Start the app with `--dev`. It prints the inbox address once it's active.
-2. Make your plugin or app send mail: a verification, a password reset, `$app.newMailClient()`, a bulk mail campaign.
+2. Make your extension or app send mail: a verification, a password reset, `$app.newMailClient()`, a bulk mail campaign.
    Each caught message is also printed as one line in the terminal.
 3. Open http://127.0.0.1:8025. The list refreshes every 2 seconds. Click a message to see it as **HTML**, **Text** or
    **Raw** source. **Clear** empties the inbox.
@@ -49,7 +49,7 @@ catches mail and prints each message in the terminal.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Pocker](../multisite-provider-pocker/README.md) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
 | [Mail Relay](../multisite-mailrelay/README.md) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |

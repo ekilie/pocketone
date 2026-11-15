@@ -1,7 +1,7 @@
 # Config
 
 PocketOne's config file: `pocketone.yaml`, with secrets in a `.env` beside it. Put your app's settings in one file
-instead of a long line of flags. Each plugin has its own section in the file.
+instead of a long line of flags. Each extension has its own section in the file.
 
 ## Install
 
@@ -35,7 +35,7 @@ shows the full wiring: every `app` key as a flag default, and the `server` keys 
 
 ### What goes in it
 
-Each top-level key is one section, owned by the plugin that uses it. This package owns three:
+Each top-level key is one section, owned by the extension that uses it. This package owns three:
 
 - `server`: how the app listens. `http`, `https` and `origins` are the defaults for `serve --http`, `--https` and
   `--origins`.
@@ -55,7 +55,7 @@ pitr:
   retention: 168h
 ```
 
-Other plugins' sections (such as `pitr` above) are described on their own pages. `pocketone config` lists every
+Other extensions' sections (such as `pitr` above) are described on their own pages. `pocketone config` lists every
 section your binary knows.
 
 ### Flags win
@@ -93,7 +93,7 @@ pocketone config
 ```
 
 It prints each section with its description and defaults, as YAML you can copy into your file. For the same list as
-JSON (each section's name, description, owning plugin, and each key with its type and default):
+JSON (each section's name, description, owning extension, and each key with its type and default):
 
 ```bash
 pocketone config --json
@@ -117,7 +117,7 @@ With no file it says `no config file: defaults only`.
 
 The app won't start, and says why, when the file has:
 
-- a top-level key no plugin in the binary owns (usually a typo); the error lists the sections it knows;
+- a top-level key no extension in the binary owns (usually a typo); the error lists the sections it knows;
 - the same section twice;
 - a value that doesn't fit its key (for example text where a number goes);
 - a `$VAR` that is set in neither the `.env` nor the environment.
@@ -128,9 +128,9 @@ An empty section (`pitr:` with nothing after it) is allowed and means all defaul
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
-| Every plugin with a section | Each plugin declares its own section; its values become that plugin's defaults or flag defaults. [PITR](../pitr/README.md), [S3 Redirect](../s3redirect/README.md) and [Auto TLS](../autotls/README.md) are examples. |
+| Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](../pitr/README.md), [S3 Redirect](../s3redirect/README.md) and [Auto TLS](../autotls/README.md) are examples. |
 | [Pocker](../multisite-provider-pocker/README.md) and [Docker](../multisite-provider-docker/README.md) | Set `provider: pocker` or `provider: docker` and `pocketone serve` runs many instances instead of one app. The `app` section and `env_allow` don't apply then; each instance has its own folder under the provider's root. |
 
 ### The server section with many instances
@@ -148,7 +148,7 @@ server:
   tls: { cert: /etc/certs/cert.pem, key: /etc/certs/key.pem }
 ```
 
-### Give your plugin a section
+### Give your extension a section
 
 Declare it in your own package with a typed key and defaults:
 
@@ -157,13 +157,13 @@ type Config struct {
 	Limit int `yaml:"limit" doc:"Requests per minute. The --limit flag wins."`
 }
 
-var Section = pluginkit.NewSection("firewall", Config{Limit: 60}, "Request limits for the app.")
+var Section = extkit.NewSection("firewall", Config{Limit: 60}, "Request limits for the app.")
 
 cfg, found := firewall.Section.Get()   // the defaults with the file's values applied
 cfg, err := firewall.Section.Require() // fails when the file doesn't have the section
 ```
 
-- A plugin reads a section only through its owner's key, so it can read only sections from packages it imports.
+- An extension reads a section only through its owner's key, so it can read only sections from packages it imports.
   There is no lookup by name and no access to the raw file.
 - The `doc:"…"` tag on each field describes the key in `pocketone config --json` and in the key table on
   pocketone.dev.

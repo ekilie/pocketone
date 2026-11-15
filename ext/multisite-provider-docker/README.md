@@ -108,7 +108,7 @@ newer PocketBase than wrote its data is upgraded.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | Docker is a runtime provider of the host: the host routes by hostname, runs the listeners and gates, and hands each request to docker. |
 | [Pocker](../multisite-provider-pocker/README.md) | The other provider. A host runs one or the other, over the same instance folders. |

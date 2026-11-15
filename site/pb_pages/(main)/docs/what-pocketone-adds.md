@@ -45,7 +45,7 @@ the file, PocketOne behaves like stock PocketBase. `pocketone config` lists ever
 ## Everything else
 
 Automatic TLS certificates, bulk mail to your own users, scheduled VACUUM, signed S3 download redirects, and more. See
-[all plugins](/docs/plugins).
+[all extensions](/docs/extensions).
 
 ## What stays the same
 

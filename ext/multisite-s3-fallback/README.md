@@ -1,22 +1,22 @@
 # S3 Fallback
 
 A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount
-each kind of file on one: record uploads, backup zips, PITR history, or any plugin's own kind. Every instance gets
+each kind of file on one: record uploads, backup zips, PITR history, or any extension's own kind. Every instance gets
 its own folder in the bucket and can't reach anything outside it. The credentials never reach the instance.
 
 ## Install
 
 S3 Fallback isn't built into `pocketone`; add it to a Go build. Under [Pocker](../multisite-provider-pocker/README.md), add it to the
-server's plugins:
+server's extensions:
 
 ```go
-srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{s3fallback.New(s3fallback.Config{})}}
+srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{s3fallback.New(s3fallback.Config{})}}
 ```
 
 On a single app, register it with the backends and mounts in Go:
 
 ```go
-pluginkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
+extkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
 ```
 
 The module is `github.com/pockethost/pocketone/ext/multisite-s3-fallback`.
@@ -38,7 +38,7 @@ storage:
 ```
 
 Each backend also takes `prefix` (prepended to every key, so several deployments can share a bucket) and
-`force_path_style` (for MinIO and similar servers). With no mounts the plugin does nothing and files stay on local
+`force_path_style` (for MinIO and similar servers). With no mounts the extension does nothing and files stay on local
 disk, as in PocketBase.
 
 Each instance can turn it off in its own settings, from `instances.yaml` or a mothership. Only `enabled` is read per
@@ -47,7 +47,7 @@ instance; backends and mounts are the operator's:
 ```yaml
 instances:
   - id: blog
-    plugins: { storage: { enabled: false } }
+    extensions: { storage: { enabled: false } }
 ```
 
 The old shape (`bucket:` with `uploads:` / `backups:`) still works, with a warning: it becomes a backend named
@@ -64,13 +64,13 @@ When an instance turns on its own S3 (Settings â†’ Files storage, or Settings â†
 over with the instance's credentials. Files already in the default bucket stay there, as PocketBase's own S3 switch
 doesn't move files either.
 
-It applies to instances created with the plugin on. Files already on an instance's local disk are not read or moved.
+It applies to instances created with the extension on. Files already on an instance's local disk are not read or moved.
 
 ## Integrations
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Pocker](../multisite-provider-pocker/README.md) | Each instance gets the root `instances/<id>/`; the `storage` section is read when the server starts. |
 | [PITR](../pitr/README.md) | Mount `litestream` and every instance without its own bucket keeps its history there. An instance's own PITR bucket still wins. |
@@ -78,9 +78,9 @@ It applies to instances created with the plugin on. Files already on an instance
 
 ### Building on S3 Fallback
 
-- **Your own kind.** Any kind a plugin asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
+- **Your own kind.** Any kind an extension asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
   PITR's `litestream` works this way. Uploads and backups step aside when the app turned on its own S3; for other
-  kinds, the plugin asking checks its own app setting first.
+  kinds, the extension asking checks its own app setting first.
 - **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for a single app,
   `instances/<id>/` under Pocker). `FS(root, kind)` returns the same fenced filesystem outside a hook; close it when
   done. `Config()` returns the effective configuration.
@@ -92,7 +92,7 @@ it on a single app and under Pocker, against MinIO.
 
 ## How it works
 
-- PocketBase asks `OnFilesystemCreate` before it creates a filesystem. For a mounted kind, the plugin answers with the
+- PocketBase asks `OnFilesystemCreate` before it creates a filesystem. For a mounted kind, the extension answers with the
   backend, fenced to `<backend prefix><root><kind>/`. An instance can't list, read, write or delete anything outside
   it.
 - The fence is a driver that adds the prefix to every key and strips it from listings. Signed download URLs are made

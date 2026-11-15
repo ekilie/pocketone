@@ -17,11 +17,11 @@ In your own Go build, register it before the app starts:
 ```go
 import (
 	"github.com/pockethost/pocketone/ext/autotls"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 app := pocketbase.New()
-pluginkit.MustRegister(app, autotls.NewApp(autotls.Config{Auto: true, Email: "ops@example.com"}))
+extkit.MustRegister(app, autotls.NewApp(autotls.Config{Auto: true, Email: "ops@example.com"}))
 app.Start()
 ```
 
@@ -94,7 +94,7 @@ Use `--autotlsCA letsencrypt-staging` while testing, so failed attempts don't co
 ### Pocker
 
 Under [pocker](../multisite-provider-pocker/README.md), the stock `pocketone` binary (with `provider: pocker`) runs `autotls.New()`, a
-server plugin that gets certificates for every instance the host serves. It's configured by the same `autotls`
+server extension that gets certificates for every instance the host serves. It's configured by the same `autotls`
 section:
 
 ```yaml
@@ -110,16 +110,16 @@ autotls:
   DNS host and no API token. Hostnames no instance serves never trigger issuance.
 - Challenges include HTTP-01 on the pocker server's port 80, as well as TLS-ALPN-01 and DNS-01.
 - Certificate files (`server.tls.cert`/`key`) stay a core pocker feature. Setting both files and `auto` is an error.
-- Certificates belong to the pocker server, not to instances; the single-app plugin (`NewApp`) is a separate type so
+- Certificates belong to the pocker server, not to instances; the single-app extension (`NewApp`) is a separate type so
   it never runs per instance.
 
 ### Building on Auto TLS
 
 - `autotls.New()` implements pocker's `Configurer` and `TLSProvider`. A host that builds its own `pocker.Server` adds
-  it to `Plugins`:
+  it to `Extensions`:
 
   ```go
-  srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{autotls.New()}}
+  srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{autotls.New()}}
   ```
 
 - `AutoTLS.Config` can be set in Go before the server starts; the `autotls` section is read only when `Auto` is false
@@ -128,7 +128,7 @@ autotls:
 
 ## Example
 
-Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) registers it with the other default plugins.
+Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) registers it with the other default extensions.
 
 ## How it works
 

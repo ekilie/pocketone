@@ -47,7 +47,7 @@ firewall: { allow_cidrs: [10.0.0.0/8] }  # any gate's section turns that gate on
 
 - `provider` and `server` belong to [Config](../config/README.md). With no `https` or `http`, the host listens on
   `127.0.0.1:8090`.
-- The `instances` section is this plugin's (keys below). In production the instances file is required; with
+- The `instances` section is this extension's (keys below). In production the instances file is required; with
   `dev: true` it's optional.
 - The `app` section is for a single app and is refused when a provider is set: each instance has its own folder under
   the provider's root.
@@ -66,7 +66,7 @@ instances:
     encryption_key: 0123456789abcdef0123456789abcdef   # encrypts the app's stored settings
     access: { cors_origins: [https://shop.example.com] }
     limits: { max_js_execution: 60s }                  # over the provider's defaults
-    plugins: { firewall: { trusted_ips: [203.0.113.0/24] } }   # settings for plugins, by name
+    extensions: { firewall: { trusted_ips: [203.0.113.0/24] } }   # settings for extensions, by name
   - id: old
     hosts: [old.example.com]
     blocked: { status: 402, message: "Payment required" }
@@ -97,7 +97,7 @@ started on a newer version than wrote its data is upgraded.
 
 ### Works with
 
-| Plugin | How they fit |
+| Extension | How they fit |
 |---|---|
 | [Pocker](../multisite-provider-pocker/README.md) | Runtime provider: every instance runs in this process (`provider: pocker`). |
 | [Docker](../multisite-provider-docker/README.md) | Runtime provider: each instance runs in its own container (`provider: docker`). |
@@ -121,8 +121,8 @@ started on a newer version than wrote its data is upgraded.
 - **Forwarding.** `multisite.Options.Forward` serves requests for instances with `remote` set (Edge fills it).
 - **Listeners and wrappers.** `Host.TLS` takes a `TLSProvider`, `Host.Wrappers` wrap the whole handler, and
   `Host.Background` runs jobs until shutdown.
-- **Per-instance settings.** A plugin reads its own `plugins.<name>` with `inst.PluginConfig(name)` and
-  `multisite.DecodePluginConfig`.
+- **Per-instance settings.** An extension reads its own `extensions.<name>` with `inst.ExtensionConfig(name)` and
+  `multisite.DecodeExtensionConfig`.
 
 ## Example
 

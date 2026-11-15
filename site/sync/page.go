@@ -11,8 +11,8 @@ import (
 
 // section is one pocketone.yaml section, as `pocketone config --json` describes it.
 type section struct {
-	Name, Doc, Owner, Plugin string
-	Keys                     []struct{ Key, Type, Default, Doc string }
+	Name, Doc, Owner, Extension string
+	Keys                        []struct{ Key, Type, Default, Doc string }
 }
 
 // loadSections builds the pocketone binary (examples/pocketone) and asks it for its config sections.
@@ -37,7 +37,7 @@ func loadSections(root string) ([]section, error) {
 	if err != nil {
 		return nil, fmt.Errorf("pocketone config --json: %w", err)
 	}
-	// Decode only the JSON value (it starts with "[" alone on a line): plugins may log to stdout around it.
+	// Decode only the JSON value (it starts with "[" alone on a line): extensions may log to stdout around it.
 	var secs []section
 	start := strings.Index(string(raw), "[\n")
 	if start < 0 {
@@ -49,12 +49,12 @@ func loadSections(root string) ([]section, error) {
 	return secs, nil
 }
 
-// requiredSections are the README sections every plugin has, in this order (.github/plugins checks them).
+// requiredSections are the README sections every extension has, in this order (.github/extensions checks them).
 var requiredSections = []string{"Install", "Configure", "Use", "Integrations", "Example"}
 
-// pluginPage is /docs/plugins/<name>: the plugin's README, with a jump line before its Install section and its
+// extensionPage is /docs/extensions/<name>: the extension's README, with a jump line before its Install section and its
 // pocketone.yaml sections (from the binary) added at the end of its Configure section.
-func pluginPage(rw *rewriter, p *plugin, secs []section) (string, error) {
+func extensionPage(rw *rewriter, p *extension, secs []section) (string, error) {
 	src := "ext/" + p.Name + "/README.md"
 	body, _, err := rw.page(src, p.Title)
 	if err != nil {
@@ -62,7 +62,7 @@ func pluginPage(rw *rewriter, p *plugin, secs []section) (string, error) {
 	}
 	var owned strings.Builder
 	for _, s := range secs {
-		if s.Plugin == p.Name {
+		if s.Extension == p.Name {
 			owned.WriteString(sectionTable(s))
 		}
 	}
@@ -122,16 +122,16 @@ func cell(s string) string { return strings.ReplaceAll(s, "|", `\|`) }
 // configReference is /docs/config-reference: every section the pocketone binary understands.
 func configReference(m *manifest, secs []section) string {
 	titles := map[string]string{}
-	for _, p := range m.Plugins {
+	for _, p := range m.Extensions {
 		titles[p.Name] = p.Title
 	}
 	var b strings.Builder
 	b.WriteString(frontMatter("pocketone.yaml reference", "Every section of the pocketone.yaml config file, generated from the pocketone binary.", ""))
-	b.WriteString("# pocketone.yaml reference\n\nEvery section the `pocketone` binary understands, from `pocketone config --json`. Each plugin owns its own section. `pocketone config check` checks a file. How the file works (where it's found, `.env` secrets) is on the [Config](/docs/plugins/config) page.\n\n")
+	b.WriteString("# pocketone.yaml reference\n\nEvery section the `pocketone` binary understands, from `pocketone config --json`. Each extension owns its own section. `pocketone config check` checks a file. How the file works (where it's found, `.env` secrets) is on the [Config](/docs/extensions/config) page.\n\n")
 	for _, s := range secs {
 		b.WriteString(sectionTable(s))
-		if t, ok := titles[s.Plugin]; ok && s.Plugin != "config" {
-			fmt.Fprintf(&b, "Owned by [%s](/docs/plugins/%s).\n\n", t, s.Plugin)
+		if t, ok := titles[s.Extension]; ok && s.Extension != "config" {
+			fmt.Fprintf(&b, "Owned by [%s](/docs/extensions/%s).\n\n", t, s.Extension)
 		}
 	}
 	return b.String()
