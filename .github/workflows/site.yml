@@ -55,8 +55,8 @@ jobs:
           fi
           npx -y pockethost@latest deploy pocketone --no-node-modules -y -m "site.yml ${GITHUB_SHA::8}"
 
-  # pocketpages.dev is ext/pages/site/pb_pages, deployed to the `pocketpages` instance with the same token. No -y yet:
-  # if a deploy would delete files on the instance, it lists them and stops instead.
+  # pocketpages.dev is ext/pages/site/pb_pages, deployed to the `pocketpages` instance with the same token. Like
+  # pocketone.dev, a page removed here is removed from the live site.
   deploy-pocketpages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -78,4 +78,4 @@ jobs:
             echo "::notice::POCKETHOST_TOKEN is not set; skipping the pocketpages.dev deploy"
             exit 0
           fi
-          npx -y pockethost@latest deploy pocketpages --no-node-modules -m "site.yml ${GITHUB_SHA::8}"
+          npx -y pockethost@latest deploy pocketpages --no-node-modules -y -m "site.yml ${GITHUB_SHA::8}"
