@@ -1,5 +1,5 @@
 {
-  "_comment": "The plugin list for pocketone.dev. Every ext/core/<name> and ext/community/<name> folder must be listed here; site/sync fails otherwise. Each README becomes /docs/plugins/<name>; other top-level .md files in the plugin folder become guides under it. Entries with \"link\" have no README and point at that file on GitHub instead.",
+  "_comment": "The plugin list for pocketone.dev. Every ext/<name> folder must be listed here; site/sync fails otherwise. Each README becomes /docs/plugins/<name>; other top-level .md files in the plugin folder become guides under it. Entries with \"link\" have no README and point at that file on GitHub instead.",
   "groups": [
     { "id": "binary", "title": "In every binary", "nav": "Plugins: in every binary", "intro": "These ship with `pocketone` and add no work to an app that doesn't use them." },
     { "id": "many", "title": "Run many instances", "nav": "Plugins: many instances", "intro": "Host hundreds of PocketBase instances in one process, across regions." },
@@ -37,9 +37,9 @@
     { "name": "multisite-tenants", "title": "Multitenant", "group": "saas", "summary": "Accounts that own instances: quotas, owner logins, tokens and an API." },
     { "name": "multisite-tenant-billing", "title": "Multitenant Billing", "group": "saas", "summary": "Plans, quotas and the billing provider hook for Multitenant." },
     { "name": "multisite-tenant-billing-ls", "title": "Lemon Squeezy Adapter", "group": "saas", "summary": "Lemon Squeezy as the billing provider." },
-    { "name": "pluginkit", "title": "Plugin Kit", "group": "authors", "summary": "The plugin contract: one plugin works on a single app and under pocker.", "link": "ext/core/pluginkit/pluginkit.go" },
+    { "name": "pluginkit", "title": "Plugin Kit", "group": "authors", "summary": "The plugin contract: one plugin works on a single app and under pocker.", "link": "ext/pluginkit/pluginkit.go" },
     { "name": "mailtrap", "title": "Mail Trap", "group": "authors", "summary": "Dev mode: mail from an app without SMTP lands in a built-in inbox." },
-    { "name": "devusers", "title": "Dev Users", "group": "authors", "summary": "Local testing only: a superuser and a user with password \"password\".", "link": "ext/core/devusers/devusers.go" },
+    { "name": "devusers", "title": "Dev Users", "group": "authors", "summary": "Local testing only: a superuser and a user with password \"password\".", "link": "ext/devusers/devusers.go" },
     { "name": "jsembed", "title": "JS Embed", "group": "authors", "summary": "JS hooks and migrations embedded in the binary." }
   ]
 }

@@ -25,10 +25,10 @@ That's [Homebrew](https://brew.sh) on macOS or Linux (the formula lives in
 pocketone serve
 ```
 
-Start a site from a starter kit with `pocketone pages create myapp` ([pages](ext/core/pages/README.md)).
+Start a site from a starter kit with `pocketone pages create myapp` ([pages](ext/pages/README.md)).
 
 In dev mode (`serve --dev`), an app without SMTP doesn't use the host's `sendmail`: its mail is caught in-process and
-you read it at http://127.0.0.1:8025 ([mailtrap](ext/core/mailtrap/README.md)).
+you read it at http://127.0.0.1:8025 ([mailtrap](ext/mailtrap/README.md)).
 
 ## Core Extensions
 
@@ -37,18 +37,18 @@ choose not to use them.
 
 | Plugin | Description |
 |---|---|
-| **[PITR](ext/core/pitr/README.md)** (Litestream) | Point-in-time restore of your database, from Settings → Backups or `pocketone pitr restore`. On by default; `--pitr=false` turns it off. |
-| **[Auto TLS](ext/core/autotls/README.md)** | On-demand certificates and wildcards through ACME. |
-| **[Bulk Mail](ext/core/bulkmail/README.md)** | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
-| **[Pages](ext/core/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. |
-| **[Vacuum](ext/core/vacuum/README.md)** | Scheduled SQLite VACUUM. |
-| **[MCP](ext/core/mcp/README.md)** | An MCP endpoint at `/mcp` so agents can manage your app and call its tools. |
-| **[OAuth Server](ext/core/oauth-server/README.md)** | Your app as an OAuth provider; `pocketone login` and MCP sign-in use it. |
-| **[S3 Redirect](ext/core/s3redirect/README.md)** | File downloads as short-lived signed S3 redirects. |
-| **[Tokens](ext/core/tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes. |
-| **[Deploy](ext/core/deploy/README.md)** | `pocketone deploy \| dev \| pull \| logs` and the deploy API. |
-| **[Remotes](ext/core/remotes/README.md)** | Named remotes and saved logins for the `pocketone` command. |
-| **[Upgrade](ext/core/upgrade/README.md)** | `pocketone upgrade` to the latest release; the old executable is kept as `pocketone-<version>`, never deleted. |
+| **[PITR](ext/pitr/README.md)** (Litestream) | Point-in-time restore of your database, from Settings → Backups or `pocketone pitr restore`. On by default; `--pitr=false` turns it off. |
+| **[Auto TLS](ext/autotls/README.md)** | On-demand certificates and wildcards through ACME. |
+| **[Bulk Mail](ext/bulkmail/README.md)** | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
+| **[Pages](ext/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. |
+| **[Vacuum](ext/vacuum/README.md)** | Scheduled SQLite VACUUM. |
+| **[MCP](ext/mcp/README.md)** | An MCP endpoint at `/mcp` so agents can manage your app and call its tools. |
+| **[OAuth Server](ext/oauth-server/README.md)** | Your app as an OAuth provider; `pocketone login` and MCP sign-in use it. |
+| **[S3 Redirect](ext/s3redirect/README.md)** | File downloads as short-lived signed S3 redirects. |
+| **[Tokens](ext/tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes. |
+| **[Deploy](ext/deploy/README.md)** | `pocketone deploy \| dev \| pull \| logs` and the deploy API. |
+| **[Remotes](ext/remotes/README.md)** | Named remotes and saved logins for the `pocketone` command. |
+| **[Upgrade](ext/upgrade/README.md)** | `pocketone upgrade` to the latest release; the old executable is kept as `pocketone-<version>`, never deleted. |
 
 ## Community Plugins
 
@@ -59,36 +59,36 @@ own custom PocketOne experience.
 
 | Plugin | Description |
 |---|---|
-| **[Pocker](ext/core/multisite-provider-pocker/README.md)** | Hundreds of PocketOne instances in one Go process, routed by hostname. |
-| **[Schedules](ext/core/multisite-schedules/README.md)** | Scheduled webhooks that wake sleeping instances (headed into Pocker). |
-| **[Mothership](ext/core/multisite-mothership/README.md)** | A control plane and its edges, across regions. Needs Pocker. |
-| **[Sandbox](ext/core/sandbox/README.md)** | Confines untrusted JS hooks, SQL and outbound network ([how is this safe?](ext/core/sandbox/README.md#how-is-this-safe)). Required for Multitenant. |
-| **[Multisite](ext/core/multisite/README.md)** | Many instances behind one listener, routed by hostname, run by one provider (Pocker or Docker). |
-| **[Firewall](ext/core/multisite-firewall/README.md)** | Peer allow-lists, trusted proxies and rate limits for a host. |
-| **[Edge](ext/core/multisite-edge/README.md)** | The fleet layer: forward to the edge that owns an instance. |
+| **[Pocker](ext/multisite-provider-pocker/README.md)** | Hundreds of PocketOne instances in one Go process, routed by hostname. |
+| **[Schedules](ext/multisite-schedules/README.md)** | Scheduled webhooks that wake sleeping instances (headed into Pocker). |
+| **[Mothership](ext/multisite-mothership/README.md)** | A control plane and its edges, across regions. Needs Pocker. |
+| **[Sandbox](ext/sandbox/README.md)** | Confines untrusted JS hooks, SQL and outbound network ([how is this safe?](ext/sandbox/README.md#how-is-this-safe)). Required for Multitenant. |
+| **[Multisite](ext/multisite/README.md)** | Many instances behind one listener, routed by hostname, run by one provider (Pocker or Docker). |
+| **[Firewall](ext/multisite-firewall/README.md)** | Peer allow-lists, trusted proxies and rate limits for a host. |
+| **[Edge](ext/multisite-edge/README.md)** | The fleet layer: forward to the edge that owns an instance. |
 
 **Services for your instances**
 
 | Plugin | Description |
 |---|---|
-| **[Mail Relay](ext/core/multisite-mailrelay/README.md)** | Outgoing mail for instances without SMTP, sent as `<instance>@<your domain>` through your relay, with limits. |
-| **[S3 Fallback](ext/core/multisite-s3-fallback/README.md)** | A default bucket for uploads and backups when an instance hasn't set its own S3. |
-| **[Server Timing](ext/core/multisite-servertiming/README.md)** | `Server-Timing` headers for each step of a request. |
+| **[Mail Relay](ext/multisite-mailrelay/README.md)** | Outgoing mail for instances without SMTP, sent as `<instance>@<your domain>` through your relay, with limits. |
+| **[S3 Fallback](ext/multisite-s3-fallback/README.md)** | A default bucket for uploads and backups when an instance hasn't set its own S3. |
+| **[Server Timing](ext/multisite-servertiming/README.md)** | `Server-Timing` headers for each step of a request. |
 
 **Sell it as a service**
 
 | Plugin | Description |
 |---|---|
-| **[Multitenant](ext/core/multisite-tenants/README.md)** | Accounts that own instances: quotas, owner logins, tokens, and the API for your own dashboard. |
-| **[Multitenant Billing](ext/core/multisite-tenant-billing/README.md)** | Plans, quotas and the billing provider hook for Multitenant. |
-| **[Multitenant Billing LemonSqueezy Adapter](ext/core/multisite-tenant-billing-ls/README.md)** | Lemon Squeezy as the billing provider. |
+| **[Multitenant](ext/multisite-tenants/README.md)** | Accounts that own instances: quotas, owner logins, tokens, and the API for your own dashboard. |
+| **[Multitenant Billing](ext/multisite-tenant-billing/README.md)** | Plans, quotas and the billing provider hook for Multitenant. |
+| **[Multitenant Billing LemonSqueezy Adapter](ext/multisite-tenant-billing-ls/README.md)** | Lemon Squeezy as the billing provider. |
 
 **For plugin authors**
 
 | Plugin | Description |
 |---|---|
-| **[Mail Trap](ext/core/mailtrap/README.md)** | Dev mode: an app without SMTP sends to a built-in inbox at http://127.0.0.1:8025 instead of `sendmail`. |
-| **[Dev Users](ext/core/devusers/devusers.go)** | Local testing only: a superuser and a user with password `password`. Every plugin's `example/` uses it. |
+| **[Mail Trap](ext/mailtrap/README.md)** | Dev mode: an app without SMTP sends to a built-in inbox at http://127.0.0.1:8025 instead of `sendmail`. |
+| **[Dev Users](ext/devusers/devusers.go)** | Local testing only: a superuser and a user with password `password`. Every plugin's `example/` uses it. |
 
 **Stable** runs in PocketHost production · **Beta** complete and tested, not yet in production · **Alpha** working
 code, still changing · **Planned** a plan and a README so far.
@@ -96,7 +96,7 @@ code, still changing · **Planned** a plan and a README so far.
 ## Contribute a plugin
 
 Plugins are welcome. Read [Create your own plugin](docs/plugins.md), then open a pull request that adds
-`ext/<your-plugin>/`. Write it against the plugin contract ([`ext/core/pluginkit`](ext/core/pluginkit/pluginkit.go)) and the same plugin works at
+`ext/<your-plugin>/`. Write it against the plugin contract ([`ext/pluginkit`](ext/pluginkit/pluginkit.go)) and the same plugin works at
 every level: on a single app and on every instance under pocker. Keep changes to PocketBase's own code to the minimum hook your plugin needs, and include a small
 `example/main.go` that builds and shows the feature.
 

@@ -1,6 +1,6 @@
 // Command pocketbase is the standard PocketOne binary: PocketBase's examples/base plus the PocketOne plugins that ship
-// by default (ext/core/pages, ext/core/s3redirect, ext/core/bulkmail, ext/core/tokens, ext/core/remotes, ext/core/oauth-server, ext/core/deploy, ext/core/mcp,
-// ext/core/pitr, ext/core/autotls). It's its
+// by default (ext/pages, ext/s3redirect, ext/bulkmail, ext/tokens, ext/remotes, ext/oauth-server, ext/deploy, ext/mcp,
+// ext/pitr, ext/autotls). It's its
 // own module so core's go.mod stays upstream's.
 package main
 
@@ -21,23 +21,23 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
 	"github.com/dop251/goja"
-	"github.com/pockethost/pocketone/ext/core/autotls"
-	"github.com/pockethost/pocketone/ext/core/bulkmail"
-	"github.com/pockethost/pocketone/ext/core/config"
-	"github.com/pockethost/pocketone/ext/core/deploy"
-	"github.com/pockethost/pocketone/ext/core/jserrors"
-	"github.com/pockethost/pocketone/ext/core/mailtrap"
-	"github.com/pockethost/pocketone/ext/core/mcp"
-	"github.com/pockethost/pocketone/ext/core/multisite-provider-docker"
-	"github.com/pockethost/pocketone/ext/core/multisite-provider-pocker"
-	oauthserver "github.com/pockethost/pocketone/ext/core/oauth-server"
-	"github.com/pockethost/pocketone/ext/core/pages"
-	"github.com/pockethost/pocketone/ext/core/pitr"
-	"github.com/pockethost/pocketone/ext/core/pluginkit"
-	"github.com/pockethost/pocketone/ext/core/remotes"
-	"github.com/pockethost/pocketone/ext/core/s3redirect"
-	"github.com/pockethost/pocketone/ext/core/tokens"
-	"github.com/pockethost/pocketone/ext/core/upgrade"
+	"github.com/pockethost/pocketone/ext/autotls"
+	"github.com/pockethost/pocketone/ext/bulkmail"
+	"github.com/pockethost/pocketone/ext/config"
+	"github.com/pockethost/pocketone/ext/deploy"
+	"github.com/pockethost/pocketone/ext/jserrors"
+	"github.com/pockethost/pocketone/ext/mailtrap"
+	"github.com/pockethost/pocketone/ext/mcp"
+	"github.com/pockethost/pocketone/ext/multisite-provider-docker"
+	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
+	oauthserver "github.com/pockethost/pocketone/ext/oauth-server"
+	"github.com/pockethost/pocketone/ext/pages"
+	"github.com/pockethost/pocketone/ext/pitr"
+	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/remotes"
+	"github.com/pockethost/pocketone/ext/s3redirect"
+	"github.com/pockethost/pocketone/ext/tokens"
+	"github.com/pockethost/pocketone/ext/upgrade"
 )
 
 // PoweredBy is the X-Powered-By this binary sends on every response: "PocketOne 0.0.2" (see pocker.Version).
@@ -262,7 +262,7 @@ func main() {
 	// Plugins and hooks:
 	// ---------------------------------------------------------------
 
-	// load jsvm (pb_hooks and pb_migrations); hook errors name pb_hooks/<file>:<line>:<col> (ext/core/jserrors)
+	// load jsvm (pb_hooks and pb_migrations); hook errors name pb_hooks/<file>:<line>:<col> (ext/jserrors)
 	jsvm.MustRegister(app, jsvm.Config{
 		MigrationsDir: migrationsDir,
 		HooksDir:      hooksDir,

@@ -1,0 +1,468 @@
+package mcp
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
+	"html"
+	"io"
+	"net/http"
+	"net/http/cookiejar"
+	"net/http/httptest"
+	"net/url"
+	"regexp"
+	"strings"
+	"testing"
+
+	"ganigeorgiev.com/pocketbase/pocketbase/apis"
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	oauthserver "github.com/pockethost/pocketone/ext/oauth-server"
+	"github.com/pockethost/pocketone/ext/tokens"
+)
+
+// The whole Claude connector flow against a real HTTP server: 401 → protected resource metadata → authorization
+// server metadata → dynamic client registration → browser sign-in + consent → code + PKCE → token → /mcp.
+
+type oauthEnv struct {
+	t    *testing.T
+	app  *tests.TestApp
+	url  string
+	tk   *tokens.Tokens
+	http *http.Client
+}
+
+func newOAuthEnv(t *testing.T) *oauthEnv {
+	t.Helper()
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(app.Cleanup)
+	// mcp first: the authenticator is picked on serve, so registration order doesn't matter
+	MustRegister(app, Config{})
+	tk := tokens.MustRegister(app, tokens.Config{})
+	oauthserver.MustRegister(app, oauthserver.Config{})
+	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(*core.BootstrapEvent) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := tokens.EnsureSchema(app); err != nil {
+		t.Fatal(err)
+	}
+	router, err := apis.NewRouter(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var srv *httptest.Server
+	if err := app.OnServe().Trigger(&core.ServeEvent{App: app, Router: router}, func(e *core.ServeEvent) error {
+		mux, err := e.Router.BuildMux()
+		srv = httptest.NewServer(mux)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(srv.Close)
+	return &oauthEnv{t: t, app: app, url: srv.URL, tk: tk, http: &http.Client{Transport: &http.Transport{}}}
+}
+
+func (o *oauthEnv) getJSON(u string) map[string]any {
+	o.t.Helper()
+	res, err := o.http.Get(u)
+	if err != nil {
+		o.t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var m map[string]any
+	_ = json.NewDecoder(res.Body).Decode(&m)
+	if res.StatusCode != 200 {
+		o.t.Fatalf("GET %s: %d %v", u, res.StatusCode, m)
+	}
+	return m
+}
+
+// mcp posts a JSON-RPC request to /mcp.
+func (o *oauthEnv) mcp(token, method string, params any) (*http.Response, map[string]any) {
+	o.t.Helper()
+	b, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
+	req, _ := http.NewRequest(http.MethodPost, o.url+"/mcp", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	res, err := o.http.Do(req)
+	if err != nil {
+		o.t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var m map[string]any
+	_ = json.NewDecoder(res.Body).Decode(&m)
+	return res, m
+}
+
+func (o *oauthEnv) tokenRequest(form url.Values) (int, map[string]any) {
+	o.t.Helper()
+	res, err := o.http.PostForm(o.url+"/oauth/token", form)
+	if err != nil {
+		o.t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var m map[string]any
+	_ = json.NewDecoder(res.Body).Decode(&m)
+	return res.StatusCode, m
+}
+
+var (
+	hiddenRE = regexp.MustCompile(`<input type="hidden" name="([^"]+)" value="([^"]*)">`)
+	formRE   = regexp.MustCompile(`<form method="post" action="([^"]+)">`)
+)
+
+// signIn runs the browser part as the test superuser and returns the authorization code.
+func (o *oauthEnv) signIn(authorizeURL, clientName string, wantScopes ...string) string {
+	o.t.Helper()
+	jar, _ := cookiejar.New(nil)
+	b := &http.Client{Jar: jar, Transport: &http.Transport{}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	var page string
+	var last *url.URL
+	do := func(req *http.Request) *http.Response {
+		res, err := b.Do(req)
+		if err != nil {
+			o.t.Fatal(err)
+		}
+		body, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		page, last = string(body), req.URL
+		return res
+	}
+	submit := func(step string, fields map[string]string) *http.Response {
+		m := formRE.FindStringSubmatch(page)
+		if m == nil {
+			o.t.Fatalf("no form: %s", page)
+		}
+		form := url.Values{}
+		for _, h := range hiddenRE.FindAllStringSubmatch(page, -1) {
+			form.Set(h[1], html.UnescapeString(h[2]))
+		}
+		for k, v := range fields {
+			form.Set(k, v)
+		}
+		form.Set("step", step)
+		target, _ := last.Parse(html.UnescapeString(m[1]))
+		req, _ := http.NewRequest(http.MethodPost, target.String(), strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return do(req)
+	}
+
+	req, _ := http.NewRequest(http.MethodGet, authorizeURL, nil)
+	do(req)
+	submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
+	if !strings.Contains(page, clientName) {
+		o.t.Fatalf("consent page doesn't name the client %q: %s", clientName, page)
+	}
+	for _, s := range wantScopes {
+		if !strings.Contains(page, s) {
+			o.t.Fatalf("consent page doesn't list %q: %s", s, page)
+		}
+	}
+	res := submit("allow", nil)
+	loc, _ := url.Parse(res.Header.Get("Location"))
+	code := loc.Query().Get("code")
+	if code == "" {
+		o.t.Fatalf("no code in redirect %q (%d): %s", res.Header.Get("Location"), res.StatusCode, page)
+	}
+	return code
+}
+
+func pkcePair() (string, string) {
+	verifier := strings.Repeat("x", 64)
+	sum := sha256.Sum256([]byte(verifier))
+	return verifier, base64.RawURLEncoding.EncodeToString(sum[:])
+}
+
+// connect does what Claude does when a connector is added and returns the token response.
+func (o *oauthEnv) connect(scope string) map[string]any {
+	o.t.Helper()
+
+	// 1. unauthenticated → 401 pointing at the metadata
+	res, _ := o.mcp("", "initialize", map[string]any{"protocolVersion": "2025-11-25"})
+	if res.StatusCode != http.StatusUnauthorized {
+		o.t.Fatalf("want 401, got %d", res.StatusCode)
+	}
+	m := regexp.MustCompile(`resource_metadata="([^"]+)"`).FindStringSubmatch(res.Header.Get("WWW-Authenticate"))
+	if m == nil {
+		o.t.Fatalf("no resource_metadata in %q", res.Header.Get("WWW-Authenticate"))
+	}
+
+	// 2. protected resource metadata
+	prm := o.getJSON(m[1])
+	resource := prm["resource"].(string)
+	if resource != o.url+"/mcp" {
+		o.t.Fatalf("resource %q", resource)
+	}
+	issuer := prm["authorization_servers"].([]any)[0].(string)
+
+	// 3. authorization server metadata: same issuer, DCR on
+	as := o.getJSON(issuer + "/.well-known/oauth-authorization-server")
+	if as["issuer"] != issuer || as["registration_endpoint"] == nil {
+		o.t.Fatalf("AS metadata: %v", as)
+	}
+
+	// 4. dynamic client registration, as Claude does with "Register automatically"
+	redirect := "https://claude.ai/api/mcp/auth_callback"
+	body, _ := json.Marshal(map[string]any{"client_name": "Claude", "redirect_uris": []string{redirect},
+		"token_endpoint_auth_method": "none", "grant_types": []string{"authorization_code", "refresh_token"}, "response_types": []string{"code"}})
+	rr, err := o.http.Post(as["registration_endpoint"].(string), "application/json", bytes.NewReader(body))
+	if err != nil {
+		o.t.Fatal(err)
+	}
+	var client map[string]any
+	_ = json.NewDecoder(rr.Body).Decode(&client)
+	rr.Body.Close()
+	clientID, _ := client["client_id"].(string)
+	if rr.StatusCode != http.StatusCreated && rr.StatusCode != http.StatusOK || clientID == "" {
+		o.t.Fatalf("registration: %d %v", rr.StatusCode, client)
+	}
+
+	// 5. browser: sign in, consent
+	verifier, challenge := pkcePair()
+	q := url.Values{"response_type": {"code"}, "client_id": {clientID}, "redirect_uri": {redirect}, "state": {"st"},
+		"code_challenge": {challenge}, "code_challenge_method": {"S256"}, "scope": {scope}, "resource": {resource}}
+	want := []string{}
+	for _, s := range strings.Fields(scope) {
+		if s != "offline_access" {
+			want = append(want, s)
+		}
+	}
+	code := o.signIn(as["authorization_endpoint"].(string)+"?"+q.Encode(), "Claude", want...)
+
+	// 6. code + PKCE → token bound to the resource
+	st, tok := o.tokenRequest(url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {redirect},
+		"client_id": {clientID}, "code_verifier": {verifier}, "resource": {resource}})
+	if st != 200 || tok["access_token"] == nil || tok["refresh_token"] == nil {
+		o.t.Fatalf("token: %d %v", st, tok)
+	}
+	tok["client_id"] = clientID
+	return tok
+}
+
+func toolsOf(m map[string]any) []string {
+	res, _ := m["result"].(map[string]any)
+	list, _ := res["tools"].([]any)
+	out := []string{}
+	for _, t := range list {
+		out = append(out, t.(map[string]any)["name"].(string))
+	}
+	return out
+}
+
+func TestOAuthConnectorFlow(t *testing.T) {
+	o := newOAuthEnv(t)
+	tok := o.connect("offline_access")
+	access := tok["access_token"].(string)
+
+	res, m := o.mcp(access, "initialize", map[string]any{"protocolVersion": "2025-11-25"})
+	if res.StatusCode != 200 || m["result"] == nil {
+		t.Fatalf("initialize with OAuth token: %d %v", res.StatusCode, m)
+	}
+	_, m = o.mcp(access, "tools/list", nil)
+	if names := toolsOf(m); !contains(names, "pb_create_record") || !contains(names, "pb_list_collections") {
+		t.Fatalf("superuser token should see every tool: %v", names)
+	}
+	// tool calls run on the REST API as the signed-in superuser
+	_, m = o.mcp(access, "tools/call", map[string]any{"name": "pb_list_collections", "arguments": map[string]any{}})
+	if r := m["result"].(map[string]any); r["isError"] == true || r["structuredContent"] == nil {
+		t.Fatalf("tool call with OAuth token: %v", r)
+	}
+
+	// the MCP token can't be used on the REST API directly (audience)
+	req, _ := http.NewRequest(http.MethodGet, o.url+"/api/collections", nil)
+	req.Header.Set("Authorization", "Bearer "+access)
+	if r, _ := o.http.Do(req); r.StatusCode == 200 {
+		t.Fatal("MCP token worked on the records API")
+	}
+
+	// refresh: the new token works and the old one keeps working (MCP tokens don't expire; an agent isn't signed out)
+	st, tok2 := o.tokenRequest(url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}, "client_id": {tok["client_id"].(string)}})
+	if st != 200 {
+		t.Fatalf("refresh: %d %v", st, tok2)
+	}
+	if res, _ := o.mcp(tok2["access_token"].(string), "ping", nil); res.StatusCode != 200 {
+		t.Fatalf("refreshed token: %d", res.StatusCode)
+	}
+	if res, _ := o.mcp(access, "ping", nil); res.StatusCode != 200 {
+		t.Fatalf("old token after refresh: want 200, got %d", res.StatusCode)
+	}
+	if tok["expires_in"] != nil {
+		t.Fatalf("MCP access tokens shouldn't expire: expires_in %v", tok["expires_in"])
+	}
+}
+
+func TestOAuthTokens(t *testing.T) {
+	o := newOAuthEnv(t)
+	su, err := o.app.FindAuthRecordByEmail(core.CollectionNameSuperusers, "test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// a pasted PocketBase auth token works, as on the REST API, and tool calls forward it
+	jwt, _ := su.NewAuthToken()
+	if res, m := o.mcp(jwt, "tools/call", map[string]any{"name": "pb_list_collections", "arguments": map[string]any{}}); res.StatusCode != 200 ||
+		m["result"].(map[string]any)["isError"] == true {
+		t.Fatalf("PocketBase JWT: %d %v", res.StatusCode, m)
+	}
+
+	// an API token without an audience and without scopes (full rights) works the same way
+	unbound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "full"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res, _ := o.mcp(unbound, "ping", nil); res.StatusCode != 200 {
+		t.Fatalf("unbound API token: %d", res.StatusCode)
+	}
+
+	// a token bound to another resource on this host isn't accepted
+	other, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "other", Audience: o.url + "/other"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res, _ := o.mcp(other, "ping", nil); res.StatusCode == 200 {
+		t.Fatal("token for another resource accepted")
+	}
+
+	// a token bound to /mcp but limited to some scope signs in there (its scopes limit the tool calls)
+	o.tk.RegisterScope(tokens.Scope{Name: "notes:read", Description: "x", Paths: []string{"/api/collections/notes/records"}})
+	scoped, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "scoped", Audience: o.url + "/mcp", Scopes: []string{"notes:read"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res, _ := o.mcp(scoped, "ping", nil); res.StatusCode != http.StatusOK {
+		t.Fatalf("scoped token bound to /mcp: want 200, got %d", res.StatusCode)
+	}
+
+	// a token bound to /mcp works there, and tool calls reach the REST API as its owner
+	bound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "mcp", Audience: o.url + "/mcp"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res, m := o.mcp(bound, "tools/call", map[string]any{"name": "pb_list_collections", "arguments": map[string]any{}}); res.StatusCode != 200 ||
+		m["result"].(map[string]any)["isError"] == true {
+		t.Fatalf("token bound to /mcp: %d %v", res.StatusCode, m)
+	}
+	// …but not on the REST API itself
+	req, _ := http.NewRequest(http.MethodGet, o.url+"/api/collections", nil)
+	req.Header.Set("Authorization", "Bearer "+bound)
+	if r, err := o.http.Do(req); err != nil || r.StatusCode == 200 {
+		t.Fatalf("bound token on the REST API: %v %v", r.StatusCode, err)
+	}
+}
+
+func TestSameResource(t *testing.T) {
+	for _, c := range []struct {
+		a, b string
+		want bool
+	}{
+		{"https://Acme.example.com/mcp", "https://acme.example.com/mcp/", true},
+		{"https://acme.example.com/mcp", "http://acme.example.com/mcp", false},
+		{"https://acme.example.com/mcp", "https://acme.example.com/other", false},
+		{"https://acme.example.com/mcp", "https://evil.example.com/mcp", false},
+	} {
+		if got := sameResource(c.a, c.b); got != c.want {
+			t.Errorf("sameResource(%q, %q) = %v", c.a, c.b, got)
+		}
+	}
+}
+
+func TestOAuthIssuerFromOAuthServer(t *testing.T) {
+	h := newHarness(t, Config{}, func(s *Server) {
+		tokens.MustRegister(s.App(), tokens.Config{})
+		oauthserver.MustRegister(s.App(), oauthserver.Config{Issuer: "https://auth.example.com/"})
+	})
+	r := h.do(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", "", "")
+	if as := r.body["authorization_servers"].([]any); len(as) != 1 || as[0] != "https://auth.example.com" {
+		t.Fatalf("authorization_servers should be oauth-server's issuer: %s", r.raw)
+	}
+}
+
+// A connection limited to some scopes on the consent page: tools/list shows what those scopes reach, and each tool
+// call is checked like a request with an API token limited to them.
+func TestScopedConnection(t *testing.T) {
+	o := newOAuthEnv(t)
+	notes := core.NewBaseCollection("notes")
+	notes.Fields.Add(&core.TextField{Name: "title"})
+	notes.ListRule = types.Pointer(`@request.auth.id != ""`)
+	notes.CreateRule = types.Pointer(`@request.auth.id != "" && ` + tokens.ScopeRuleField("notes:write") + ` = "1"`)
+	if err := o.app.Save(notes); err != nil {
+		t.Fatal(err)
+	}
+	n := core.NewRecord(notes)
+	n.Set("title", "first")
+	if err := o.app.Save(n); err != nil {
+		t.Fatal(err)
+	}
+	recs := "/api/collections/notes/records"
+	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:read", Description: "Read notes", Paths: []string{recs}, Methods: []string{"GET"}})
+	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:write", Description: "Add notes", Paths: []string{recs}, Methods: []string{"POST"}})
+	o.tk.MustRegisterScope(tokens.Scope{Name: "deploy", Description: "Deploy", Paths: []string{"/_pocker/deploy/"}})
+	s := For(o.app)
+	s.MustAddEndpoint(Endpoint{Name: "notes_list", Description: "List notes.", Method: "GET", Path: recs})
+	s.MustAddEndpoint(Endpoint{Name: "notes_add", Description: "Add a note.", Method: "POST", Path: recs,
+		InputSchema: map[string]any{"type": "object", "properties": map[string]any{"title": map[string]any{"type": "string"}}}})
+
+	res, _ := o.mcp("", "initialize", map[string]any{})
+	m := regexp.MustCompile(`resource_metadata="([^"]+)"`).FindStringSubmatch(res.Header.Get("WWW-Authenticate"))
+	prm := o.getJSON(m[1])
+	if got := toStrings(prm["scopes_supported"]); strings.Join(got, ",") != "notes:read,notes:write" {
+		t.Fatalf("scopes_supported (no infrastructure scopes): %v", got)
+	}
+
+	tok := o.connect("notes:read offline_access")
+	if tok["scope"] != "notes:read" {
+		t.Fatalf("token scope: %v", tok["scope"])
+	}
+	access := tok["access_token"].(string)
+
+	_, init := o.mcp(access, "initialize", map[string]any{"protocolVersion": "2025-11-25"})
+	if !strings.Contains(init["result"].(map[string]any)["instructions"].(string), "limited to these scopes: notes:read") {
+		t.Fatalf("instructions: %v", init)
+	}
+	_, list := o.mcp(access, "tools/list", nil)
+	tools := strings.Join(toolsOf(list), ",")
+	for _, want := range []string{"notes_list", "pb_list_records", "pb_get_record"} {
+		if !strings.Contains(tools, want) {
+			t.Errorf("%s missing from %s", want, tools)
+		}
+	}
+	for _, hidden := range []string{"notes_add", "pb_create_record", "pb_list_collections", "pb_check_health"} {
+		if strings.Contains(tools, hidden+",") || strings.HasSuffix(tools, hidden) {
+			t.Errorf("%s listed on a read-only connection: %s", hidden, tools)
+		}
+	}
+
+	call := func(name string, args map[string]any) (bool, string) {
+		t.Helper()
+		_, m := o.mcp(access, "tools/call", map[string]any{"name": name, "arguments": args})
+		r := m["result"].(map[string]any)
+		b, _ := json.Marshal(r["content"])
+		return r["isError"] == true, string(b)
+	}
+	if isErr, out := call("notes_list", map[string]any{}); isErr || !strings.Contains(out, "first") {
+		t.Fatalf("notes_list: %v %s", isErr, out)
+	}
+	if isErr, out := call("notes_add", map[string]any{"title": "x"}); !isErr || !strings.Contains(out, "scopes (notes:read)") {
+		t.Fatalf("notes_add on a read-only connection: %v %s", isErr, out)
+	}
+	if isErr, out := call("pb_list_records", map[string]any{"collection": "users"}); !isErr || !strings.Contains(out, "403") && !strings.Contains(out, "scopes") {
+		t.Fatalf("another collection: %v %s", isErr, out)
+	}
+	if isErr, _ := call("pb_list_collections", map[string]any{}); !isErr {
+		t.Fatal("a superuser tool outside the scopes ran")
+	}
+
+	// the same account with full access lists and runs everything
+	full := o.connect("offline_access")["access_token"].(string)
+	_, list = o.mcp(full, "tools/list", nil)
+	if !strings.Contains(strings.Join(toolsOf(list), ","), "notes_add") {
+		t.Fatal("full connection misses notes_add")
+	}
+}

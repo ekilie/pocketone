@@ -17,7 +17,7 @@ It can also run process-wide jobs and middleware.
 
 ## The plugin contract: `pluginkit`
 
-Write a plugin once, against [`pluginkit`](../ext/core/pluginkit/pluginkit.go) (its own module, `github.com/pockethost/pocketone/ext/core/pluginkit`; core has no part in it), and the same value runs on a single app
+Write a plugin once, against [`pluginkit`](../ext/pluginkit/pluginkit.go) (its own module, `github.com/pockethost/pocketone/ext/pluginkit`; core has no part in it), and the same value runs on a single app
 and on every instance under pocker:
 
 ```go
@@ -46,17 +46,17 @@ func (p *Plugin) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello", ..
   settings (its `plugins.<name>`), over the defaults given to your constructor; process-wide settings come from a
   pocketone.yaml section your plugin owns (`pluginkit.NewSection`). `enabled: false` means `Register` and `BindJS`
   are never called for that instance.
-- **No pocker import:** a contract plugin doesn't depend on ext/core/multisite-provider-pocker, so single-app builds don't link it. Reach for
+- **No pocker import:** a contract plugin doesn't depend on ext/multisite-provider-pocker, so single-app builds don't link it. Reach for
   the host interfaces below only for what's process-wide (a request gate, TLS, background jobs).
 - **Name the command with `pluginkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `pluginkit.Command` (default `pocketone`), never a literal. A build shipped under another name
-  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/core/pluginkit.Command=pockethost"`.
-- [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/core/bulkmail/plugin.go) is the reference implementation.
+  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/pluginkit.Command=pockethost"`.
+- [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/plugin.go) is the reference implementation.
 
 > **Status.** `pluginkit` covers per-app plugins. The process-wide host interfaces below (`pocker.Server` fields and
 > `Server.Plugins` host interfaces) are pocker's for now; a `pocketbase.Main(plugins...)` entry point is planned.
 
-A complete, runnable example is in [`ext/core/multisite-provider-pocker/example`](../ext/core/multisite-provider-pocker/example).
+A complete, runnable example is in [`ext/multisite-provider-pocker/example`](../ext/multisite-provider-pocker/example).
 
 ## Compiled in, not loaded at run time
 
@@ -206,8 +206,8 @@ core doesn't offer yet:
 ### What a plugin folder contains
 
 ```
-ext/community/<name>/   (ext/core/<name>/ for PocketOne's own)
-  go.mod            module github.com/pockethost/pocketone/ext/community/<name>
+ext/<name>/
+  go.mod            module github.com/pockethost/pocketone/ext/<name>
   README.md         the plugin's docs, and its page on pocketone.dev (below)
   <name>.go         the plugin
   <name>_test.go
@@ -218,14 +218,14 @@ ext/community/<name>/   (ext/core/<name>/ for PocketOne's own)
 
 - **`example/main.go` is required.** Keep it as small as possible: just enough to build a binary that shows the
   feature working, with no extra harness. `go build ./example` and `go vet ./...` must pass with no warnings.
-  [`ext/core/multisite-provider-pocker/example`](../ext/core/multisite-provider-pocker/example) and [`ext/core/sandbox/example`](../ext/core/sandbox/example) are the size to aim for.
+  [`ext/multisite-provider-pocker/example`](../ext/multisite-provider-pocker/example) and [`ext/sandbox/example`](../ext/sandbox/example) are the size to aim for.
 - **Examples come with two logins:** superuser `admin@example.com` and user `user@example.com` (verified, in
   `users`), both with password `password`. Every `example/main.go` calls
   `devusers.Register(app)` right after `pocketbase.New()` (under pocker, `devusers.Ensure(app)` in
-  `SetupApp`), from [`ext/core/devusers`](../ext/core/devusers/devusers.go). A fresh data dir is then ready to log
+  `SetupApp`), from [`ext/devusers`](../ext/devusers/devusers.go). A fresh data dir is then ready to log
   in to, with no installer page and no CLI step. Never register it in a production build.
 - **`conformance_test.go` is required.** It runs the shared plugin test from
-  [`ext/core/pluginkit/conformance`](../ext/core/pluginkit/conformance/conformance.go) once:
+  [`ext/pluginkit/conformance`](../ext/pluginkit/conformance/conformance.go) once:
 
   ```go
   func TestConformance(t *testing.T) {
@@ -236,7 +236,7 @@ ext/community/<name>/   (ext/core/<name>/ for PocketOne's own)
   It checks that the plugin registers, migrates, serves and shuts down on a fresh app with no goroutines left
   behind; that PocketBase's own collections are unchanged and every collection it adds is named `_<name>` or `_<name>_…`; and
   that one plugin value serves several apps at once (as under pocker) without registering on one app touching
-  another's hooks. A plugin that adds MCP tools ([`ext/core/mcp`](../ext/core/mcp/README.md#tools-from-a-plugin)) also passes
+  another's hooks. A plugin that adds MCP tools ([`ext/mcp`](../ext/mcp/README.md#tools-from-a-plugin)) also passes
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
   feature.
@@ -257,7 +257,7 @@ ext/community/<name>/   (ext/core/<name>/ for PocketOne's own)
 - **Plugins here are MIT.** The README ends with `## License` and the single line `MIT`. A plugin under another
   license lives in its author's own repository, not here.
   Add your plugin to [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
-  [`ext/core/pitr/README.md`](../ext/core/pitr/README.md) is the example to follow.
+  [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
 - **CI enforces all of this.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
   README is missing one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, or when a module that implements `pluginkit.Plugin` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
@@ -277,4 +277,4 @@ ext/community/<name>/   (ext/core/<name>/ for PocketOne's own)
 
 ## Planned plugins
 
-PocketOne's own plugins live in this repo under [`ext/core/`](../ext/core), contributed ones under `ext/community/`, each as its own Go module (`github.com/pockethost/pocketone/ext/<tier>/<name>`). A `multisite-` name means the plugin only works on a multi-instance host. See [ext/README.md](../ext/README.md).
+Our own plugins live in this repo under [`ext/`](../ext), each as its own Go module (`github.com/pockethost/pocketone/ext/<name>`). A `multisite-` name means the plugin only works on a multi-instance host. See [ext/README.md](../ext/README.md).

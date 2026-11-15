@@ -1,4 +1,4 @@
-// Command plugins is CI for PocketOne's plugin modules (ext/core/*, ext/community/*, examples/pocketone): which modules a change affects,
+// Command plugins is CI for PocketOne's plugin modules (ext/*, examples/pocketone): which modules a change affects,
 // and the rules every plugin module follows. Run it from the repository root:
 //
 //	go run ./.github/plugins affected <base> <head>   # module dirs to build and test, one per line
@@ -11,7 +11,7 @@
 // The rules (`check`), per module:
 //   - a module with a pluginkit plugin (a `Register(app core.App, _ pluginkit.Config) error` method) has a test
 //     that calls conformance.Run (docs/plugins.md).
-//   - every plugin (ext/<tier>/<name>) has a README.md with `## Install`, `## Configure`, `## Use`, `## Integrations` and
+//   - every plugin (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use`, `## Integrations` and
 //     `## Example` sections, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md). When the
 //     plugin has example/main.go, the Example section shows it exactly, in a ```go block (`examples` writes it).
 package main
@@ -270,13 +270,11 @@ func check(dirs []string) []string {
 		problems = append(problems, checkDocs(dir)...)
 	}
 	// Plugin folders with no Go module yet (a README for a planned plugin) get the docs rules too.
-	for _, tier := range tiers {
-		entries, _ := os.ReadDir("ext/" + tier)
-		for _, e := range entries {
-			dir := "ext/" + tier + "/" + e.Name()
-			if _, err := os.Stat(dir + "/go.mod"); e.IsDir() && err != nil {
-				problems = append(problems, checkDocs(dir)...)
-			}
+	entries, _ := os.ReadDir("ext")
+	for _, e := range entries {
+		dir := "ext/" + e.Name()
+		if _, err := os.Stat(dir + "/go.mod"); e.IsDir() && err != nil {
+			problems = append(problems, checkDocs(dir)...)
 		}
 	}
 	return problems
@@ -305,24 +303,10 @@ func licensedMIT(src string, h2 []string) bool {
 	return i >= 0 && strings.TrimSpace(src[i+len("\n## License"):]) == "MIT"
 }
 
-// tiers are the extension folders under ext/: ext/core/<name> (shipped and maintained by PocketOne) and
-// ext/community/<name> (owned by whoever submitted it).
-var tiers = []string{"core", "community"}
-
-// pluginName returns <name> for a plugin folder ext/<tier>/<name>, or "" for anything else.
-func pluginName(dir string) string {
-	for _, tier := range tiers {
-		if name, ok := strings.CutPrefix(dir, "ext/"+tier+"/"); ok && name != "" && !strings.Contains(name, "/") {
-			return name
-		}
-	}
-	return ""
-}
-
-// checkDocs: a plugin folder (ext/<tier>/<name>) has a README with the required sections, in order.
+// checkDocs: a plugin folder (ext/<name>) has a README with the required sections, in order.
 func checkDocs(dir string) []string {
-	name := pluginName(dir)
-	if name == "" {
+	name, ok := strings.CutPrefix(dir, "ext/")
+	if !ok || strings.Contains(name, "/") {
 		return nil // not a plugin folder (examples/pocketone, or a module inside a plugin)
 	}
 	if _, ok := docsExempt[name]; ok {
@@ -395,7 +379,7 @@ func exampleBlock(src string) (span [2]int, body string, ok bool) {
 // syncExamples copies each plugin's example/main.go into its README's ## Example section (replacing the section's
 // first ```go block, or adding one at the end of the section) and returns the READMEs it changed.
 func syncExamples() ([]string, error) {
-	dirs, err := filepath.Glob("ext/*/*/example/main.go")
+	dirs, err := filepath.Glob("ext/*/example/main.go")
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ description: "Every plugin in PocketOne, grouped by what it's for."
 
 # Plugins
 
-Each plugin is a Go module in [`ext/core/`](https://github.com/pockethost/pocketone/tree/main/ext/core) (shipped with PocketOne) or `ext/community/` (contributed) with its own README; the pages here are those READMEs. Want to add one? Read [Writing a plugin](/docs/writing-a-plugin).
+Each plugin is a Go module in [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing a plugin](/docs/writing-a-plugin).
 
 ## In every binary
 
@@ -71,7 +71,7 @@ The plugin contract and tools for building and testing plugins.
 
 | Plugin | What it does |
 |---|---|
-| [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/core/pluginkit/pluginkit.go) | The plugin contract: one plugin works on a single app and under pocker. |
+| [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/pluginkit/pluginkit.go) | The plugin contract: one plugin works on a single app and under pocker. |
 | [Mail Trap](/docs/plugins/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
-| [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/core/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
+| [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
 | [JS Embed](/docs/plugins/jsembed) | JS hooks and migrations embedded in the binary. |

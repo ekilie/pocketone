@@ -1,4 +1,4 @@
-# pocketone.dev builds each plugin's page from ext/<tier>/<name>/README.md and the pocketone binary's config sections
+# pocketone.dev builds each plugin's page from ext/<name>/README.md and the pocketone binary's config sections
 # (site/sync), plus the search index of every page. Fail when a page or the index is out of date, or a plugin folder
 # isn't listed in site/plugins.json.
 # On main, once the check passes, deploy site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev).

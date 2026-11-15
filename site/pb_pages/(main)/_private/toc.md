@@ -56,9 +56,9 @@
 
 # Plugins: for authors
 
-- [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/core/pluginkit/pluginkit.go)
+- [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/pluginkit/pluginkit.go)
 - [Mail Trap](/docs/plugins/mailtrap)
-- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/core/devusers/devusers.go)
+- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
 - [JS Embed](/docs/plugins/jsembed)
 
 <!-- plugins:end -->

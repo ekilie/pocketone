@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-// The anchors must match the ids goldmark gives headings (ext/core/pages renders with parser.WithAutoHeadingID); these
+// The anchors must match the ids goldmark gives headings (ext/pages renders with parser.WithAutoHeadingID); these
 // cases come from real pocketone.dev headings.
 func TestHeadingID(t *testing.T) {
 	seen := map[string]bool{}

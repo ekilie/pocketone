@@ -10,17 +10,17 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/core/autotls"
-	"github.com/pockethost/pocketone/ext/core/config"
-	"github.com/pockethost/pocketone/ext/core/mailtrap"
-	"github.com/pockethost/pocketone/ext/core/multisite"
-	"github.com/pockethost/pocketone/ext/core/multisite-edge"
-	_ "github.com/pockethost/pocketone/ext/core/multisite-firewall" // turns on with a firewall / rate_limits section
-	"github.com/pockethost/pocketone/ext/core/multisite-mothership/mirror"
-	"github.com/pockethost/pocketone/ext/core/multisite-provider-docker"
-	"github.com/pockethost/pocketone/ext/core/multisite-provider-pocker"
-	"github.com/pockethost/pocketone/ext/core/multisite-servertiming"
-	"github.com/pockethost/pocketone/ext/core/multisite-stats"
+	"github.com/pockethost/pocketone/ext/autotls"
+	"github.com/pockethost/pocketone/ext/config"
+	"github.com/pockethost/pocketone/ext/mailtrap"
+	"github.com/pockethost/pocketone/ext/multisite"
+	"github.com/pockethost/pocketone/ext/multisite-edge"
+	_ "github.com/pockethost/pocketone/ext/multisite-firewall" // turns on with a firewall / rate_limits section
+	"github.com/pockethost/pocketone/ext/multisite-mothership/mirror"
+	"github.com/pockethost/pocketone/ext/multisite-provider-docker"
+	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
+	"github.com/pockethost/pocketone/ext/multisite-servertiming"
+	"github.com/pockethost/pocketone/ext/multisite-stats"
 )
 
 // serveMany runs the binary as a multi-instance host when pocketone.yaml names a provider: instances from the
