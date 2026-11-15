@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -187,4 +188,52 @@ func TestNotifyWatcher_CollectionsUpdate(t *testing.T) {
 	if concurrentQueries[0] != expectedQuery {
 		t.Fatalf("Expected query\n%s\ngot\n%s", expectedQuery, concurrentQueries[0])
 	}
+}
+
+// PocketOne: the watcher goroutine must be stopped, not just its watcher closed, before the app's bootstrap state is
+// cleared; it read IsBootstrapped (the DB handles ClearBootstrap sets to nil) with no synchronization. Fails under -race
+// without the fix.
+func TestNotifyWatcher_StoppedBeforeClearBootstrap(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	app := core.NewBaseApp(core.BaseAppConfig{DataDir: tmpDir})
+	if err := app.Bootstrap(); err != nil {
+		t.Fatal(err)
+	}
+
+	// a notify file from another app (not settings@/collections@, so nothing reloads and signals back): the watcher
+	// goroutine checks IsBootstrapped for it
+	if err := os.WriteFile(filepath.Join(tmpDir, core.LocalNotifyDirName, "other@x"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(200 * time.Millisecond)
+
+	if err := app.ResetBootstrapState(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// PocketOne: a settings reload already queued (debounced) when the bootstrap state is cleared must not run against the
+// cleared app. Fails under -race without the fix.
+func TestNotifyWatcher_QueuedReloadAfterClearBootstrap(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	app := core.NewBaseApp(core.BaseAppConfig{DataDir: tmpDir})
+	if err := app.Bootstrap(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(tmpDir, core.LocalNotifyDirName, "settings@other"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(20 * time.Millisecond) // inside the watcher's 50ms debounce
+
+	if err := app.ResetBootstrapState(); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond) // past the debounce: a reload that wasn't turned away runs now
 }
