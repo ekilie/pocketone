@@ -37,6 +37,8 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 - `apis/realtime.go` `realtimeCanAccessRecord`: a superuser's subscription filter may use hidden fields, as in the
   list API (`TestRealtimeSuperuserFilterOnHiddenField`).
 - `core/notify_watcher.go`: keeps the notify file until the next write, so macOS (kqueue) sees the change.
+- `core/notify_watcher.go`: stops the watcher goroutine (and waits for it) before `ClearBootstrap`, which it raced
+  (`TestNotifyWatcher_StoppedBeforeClearBootstrap`, `TestNotifyWatcher_QueuedReloadAfterClearBootstrap`).
 
 ## Other rules
 
