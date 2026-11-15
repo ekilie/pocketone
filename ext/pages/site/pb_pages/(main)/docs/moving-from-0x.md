@@ -30,8 +30,11 @@ Delete the `.pb.js` boot file and the `pocketpages` dependencies, and move the c
 | `response.redirect(path, status)` | `ctx.res.redirect(path, status)` (unchanged) |
 | `env()`, `store()`, `dbg()`, `info()`, `warn()`, `error()` | `ctx.env()`, `ctx.store()`, `ctx.log.debug()` / `info()` / `warn()` / `error()` |
 | `auth`, `request.auth` | `ctx.auth` |
+| `resolve(name)` | `ctx.resolve(name)` |
 
-Inside templates, `data`, `params`, `asset` and `meta` are still available without the `ctx.` prefix.
+Inside templates, `data`, `params`, `asset` and `meta` are still available without the `ctx.` prefix. The other
+0.x template globals are gone, including `resolve`, `redirect` and `env`: use `ctx.resolve()`, `ctx.res.redirect()` and
+`ctx.env()`.
 
 ## Parameters, query strings and cookies
 
