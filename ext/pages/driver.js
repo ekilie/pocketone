@@ -300,7 +300,9 @@
     if (typeof h === 'function') {
       assign(h(ctx))
       if (rt.sent()) return
-    } else if (route.kind === 'api' || route.kind === 'page-js' || m !== 'get') {
+    } else if (route.kind === 'api' || route.kind === 'page-js') {
+      // nothing to render, so a method without a handler is a 405. A page with a template renders for any
+      // method (like PHP); the template can branch on ctx.req.method.
       var allow = ['GET', 'HEAD']
       for (var i = 1; i < methods.length; i++) {
         if (mod && typeof mod[methods[i]] === 'function') allow.push(methods[i].toUpperCase())

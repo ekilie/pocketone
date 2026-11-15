@@ -57,3 +57,34 @@ func TestPageJSWithoutTemplate(t *testing.T) {
 		t.Fatalf("GET /feed: %d %q", rec.Code, rec.Body.String())
 	}
 }
+
+func TestPageRendersForAnyMethod(t *testing.T) {
+	dir := writeTree(t, map[string]string{
+		// a form handled in the template, like PHP: no +page.js
+		"contact.ejs": "<% if (ctx.req.method === 'POST') { %>thanks <%= ctx.req.body().name %><% } else { %>form<% } %>",
+		// a +page.js with only load: other methods still render
+		"shop/index.ejs": "<%= ctx.req.method %> <%= data.n %>",
+		"shop/+page.js":  "module.exports = { load() { return { n: 1 } } }",
+	})
+	h, _ := newServer(t, dir)
+	do := func(method, p, body string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(method, p, strings.NewReader(body))
+		if body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		h.ServeHTTP(rec, req)
+		return rec
+	}
+	if rec := do("GET", "/contact", ""); rec.Code != 200 || rec.Body.String() != "form" {
+		t.Fatalf("GET /contact: %d %q", rec.Code, rec.Body.String())
+	}
+	if rec := do("POST", "/contact", `{"name":"Ben"}`); rec.Code != 200 || rec.Body.String() != "thanks Ben" {
+		t.Fatalf("POST /contact: %d %q", rec.Code, rec.Body.String())
+	}
+	for _, m := range []string{"POST", "PUT", "PATCH", "DELETE"} {
+		if rec := do(m, "/shop", ""); rec.Code != 200 || rec.Body.String() != m+" 1" {
+			t.Fatalf("%s /shop: %d %q", m, rec.Code, rec.Body.String())
+		}
+	}
+}

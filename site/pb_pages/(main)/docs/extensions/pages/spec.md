@@ -166,16 +166,17 @@ module.exports = {
 }
 ```
 
-- Exports any of `load`, `get`, `post`, `put`, `patch`, `delete`. A page that only renders but must accept a form
-  post still needs `post() {}`: methods without a handler answer `405`.
+- Exports any of `load`, `get`, `post`, `put`, `patch`, `delete`. All are optional: a page renders for any method.
 - `load` runs for every method; then the method's handler, if there is one. `HEAD` runs `load` and `get` like
   `GET` (only the body is dropped), so keep side effects in `post`/`put`/`patch`/`delete`.
 - A handler may set `ctx.data` fields, or return a plain object, which is shallow-assigned into `ctx.data`
   (`Object.assign`). There is no deep merge.
 - A `+page.js` applies to every page in its folder. `ctx.route.name` tells them apart.
-- A method with no handler still renders the page for `GET` and `HEAD`. Other methods without a handler answer
-  `405` with an `Allow` header listing `GET, HEAD` and the methods that have handlers, in the order
-  `GET, HEAD, POST, PUT, PATCH, DELETE`.
+- A method with no handler still renders the page, for every method (like PHP): a template can handle a form itself
+  by checking `ctx.req.method`, with no `+page.js`.
+- Only routes with nothing to render (`+api.js`, and a `+page.js` without a page) answer `405` for a method with no
+  handler, with an `Allow` header listing the methods that have handlers (`GET, HEAD` when there's a `get`), in the
+  order `GET, HEAD, POST, PUT, PATCH, DELETE`.
 - **Without a page.** A `+page.js` in a folder with no template serves the folder's URL from JS (2.2): there's nothing
   to render, so a handler must send a response (`ctx.res.html`, `ctx.res.redirect`, `ctx.res.json`, ...), and
   returning without one is a 500. Methods without a handler answer `405`, `GET` included. Unlike `+api.js`, errors
@@ -326,7 +327,7 @@ export default function Product({ data, slot }: any) {
 | A handler or middleware sent one | That one |
 | Page rendered | `200 text/html; charset=utf-8` (or the status set with `ctx.res.status`) |
 | `HEAD` | As `GET`, without a body |
-| Handler for another method missing | `405` + `Allow` |
+| No handler for the method | Page: rendered as usual. `+api.js` or a `+page.js` without a page: `405` + `Allow` |
 | Error thrown | `500` (see 8) |
 
 JSON is only sent through `ctx.res.json` (or `+api.js`). Template output is never parsed as JSON.

@@ -104,8 +104,20 @@ module.exports = {
 
 ### Methods without a handler
 
-- `GET` and `HEAD` still render the page.
-- Other methods answer `405`, with an `Allow` header listing `GET, HEAD` and the methods that have handlers.
+Every handler is optional. A page renders for any method, like PHP, so a template can handle a form on its own:
+
+```ejs
+<!-- pb_pages/contact.ejs, no +page.js -->
+<%% if (ctx.req.method === 'POST') { %>
+  <p>Thanks, <%%= ctx.req.body().name %>!</p>
+<%% } else { %>
+  <form method="post"><input name="name" /><button>Send</button></form>
+<%% } %>
+```
+
+A `post` (or `put`, ...) handler in `+page.js` is the tidier place for form logic as a page grows, but you don't need
+one. Only routes with nothing to render, [`+api.js`](/docs/api-routes) and a `+page.js` without a page, answer `405`
+for a method they have no handler for.
 
 ## Example: a contact form
 

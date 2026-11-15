@@ -56,7 +56,7 @@ Put shared data on `ctx.data`. See [Middleware](/docs/middleware).
 
 ## Loaders
 
-`+load.js`, `+get.js`, `+post.js` and friends are replaced by one `+page.js` per folder that exports `load`, `get`, `post`, `put`, `patch` and `delete`. Returned objects are shallow-assigned into `ctx.data` (no deep merge).
+`+load.js`, `+get.js`, `+post.js` and friends are replaced by one `+page.js` per folder that exports `load`, `get`, `post`, `put`, `patch` and `delete`. Returned objects are shallow-assigned into `ctx.data` (no deep merge). As in 0.x, every handler is optional and a page renders for any method, so templates that check the request method keep working (`request.method` becomes `ctx.req.method`).
 
 ```js
 // 0.x: +load.js
