@@ -384,6 +384,45 @@ type CommitResult struct {
 	WasRunning          bool     `json:"wasRunning"`
 	Restarted           bool     `json:"restarted"`
 	StartError          string   `json:"startError,omitempty"`
+	RestartNeeded       bool     `json:"restartNeeded,omitempty"` // migrations or packages wait for a restart
+}
+
+// RestartResult is the remote's answer to [Client.Restart].
+type RestartResult struct {
+	WasRunning bool   `json:"wasRunning"`
+	Restarted  bool   `json:"restarted"`
+	StartError string `json:"startError,omitempty"`
+}
+
+// ErrNoRestartAPI: the remote can't restart on request (an older PocketOne or PocketHost edge).
+var ErrNoRestartAPI = errors.New("this remote can't restart on request")
+
+// Restart restarts the remote app so it applies migrations and packages. An app that isn't running is left alone.
+func (c *Client) Restart(ctx context.Context) (*RestartResult, error) {
+	var res RestartResult
+	err := c.call(ctx, http.MethodPost, "/restart", map[string]any{}, &res)
+	if isNotFound(err) {
+		return nil, ErrNoRestartAPI
+	}
+	return &res, err
+}
+
+// Message describes the restart for the user.
+func (r *RestartResult) Message() string {
+	switch {
+	case r.Restarted:
+		return "Restarted the app."
+	case r.StartError != "":
+		return "The app failed to start: " + r.StartError + " (see '" + pluginkit.Command + " logs')."
+	default:
+		return "The app isn't running; it applies the changes when it starts."
+	}
+}
+
+// isNotFound: the remote doesn't have the route (an older server).
+func isNotFound(err error) bool {
+	var ae *remotes.APIError
+	return errors.As(err, &ae) && (ae.Status == http.StatusNotFound || ae.Status == http.StatusMethodNotAllowed)
 }
 
 // Commit asks the remote to swap the files in.
@@ -400,10 +439,15 @@ type DeployOptions struct {
 	Source  string // recorded source (default: github-actions, ci, or pocketbase-cli)
 	Verbose bool
 	Log     func(string)
+	// Restart asks the remote to restart the app after the files are in, when migrations or packages changed.
+	Restart bool
+	// RestartHint is printed when migrations or packages changed and the app wasn't restarted (default: how to
+	// restart it).
+	RestartHint string
 }
 
-// Deploy sends the manifest, uploads only what the remote lacks, then commits. The remote swaps the files in and
-// restarts the app when hooks, migrations or packages changed.
+// Deploy sends the manifest, uploads only what the remote lacks, then commits. The remote swaps the files in; the app
+// restarts only with opts.Restart, and only when migrations or packages changed (hooks reload by themselves).
 func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, error) {
 	log := opts.Log
 	if log == nil {
@@ -449,7 +493,7 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	body := map[string]any{
 		"files": manifest, "nodeModules": managesNM,
 		"commit": orStr(opts.Commit, detectCommit(dir)), "message": opts.Message,
-		"source": orStr(opts.Source, detectSource()),
+		"source": orStr(opts.Source, detectSource()), "restart": opts.Restart,
 	}
 	res, err := up.commit(ctx, body)
 	if err != nil {
@@ -477,6 +521,9 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 		restart = " Restarted."
 	case res.StartError != "":
 		restart = " The app failed to start: " + res.StartError + " (see '" + pluginkit.Command + " logs')."
+	case res.RestartNeeded:
+		restart = " Migrations or packages changed: " + orStr(opts.RestartHint,
+			"run '"+pluginkit.Command+" restart' (or deploy with --restart) to apply them.")
 	}
 	log(fmt.Sprintf("Deployed%s: %d changed, %d deleted, %d unchanged.%s", id, res.WrittenCount, res.DeletedCount, res.Unchanged, restart))
 	return res, nil

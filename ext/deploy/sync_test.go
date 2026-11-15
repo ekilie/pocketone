@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
@@ -97,7 +98,7 @@ func TestReadIgnore(t *testing.T) {
 }
 
 func TestSyncP1(t *testing.T) {
-	r := newP1RemoteWith(t, func(c *Config) { c.HooksWatch = func() bool { return true } })
+	r := newP1Remote(t)
 	ctx := context.Background()
 	c := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeDeploy))
 	project := t.TempDir()
@@ -147,9 +148,9 @@ func TestSyncP1(t *testing.T) {
 	expect(r.dir, "pb_public/index.html", "local index")
 	expect(r.dir, "pb_data/data.db", "<missing>")
 	expect(project, "pb_public/server.html", "made on the server")
-	// the server had no pb_hooks when it started, so nothing watched it: creating it restarts once
-	if n := r.restarts.Load(); n != 1 {
-		t.Fatalf("first sync restarts = %d, want 1", n)
+	// sync never restarts by itself
+	if n := r.restarts.Load(); n != 0 {
+		t.Fatalf("first sync restarts = %d, want 0", n)
 	}
 
 	// a local edit goes up; the partial commit leaves the server's other files alone
@@ -180,18 +181,27 @@ func TestSyncP1(t *testing.T) {
 	if err := s.Sync(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if n := r.restarts.Load(); n != 1 {
+	if n := r.restarts.Load(); n != 0 {
 		t.Fatalf("hooks push restarted (restarts = %d)", n)
 	}
 
-	// a pushed migration restarts
+	// a pushed migration waits for the user's restart
+	var logged []string
+	s.opts.Log = func(l string) { logged = append(logged, l) }
 	write(project, "pb_migrations/2_mine.js", "migrate(up2)")
 	if err := s.Sync(ctx); err != nil {
 		t.Fatal(err)
 	}
+	s.opts.Log = func(string) {}
 	expect(r.dir, "pb_migrations/2_mine.js", "migrate(up2)")
-	if n := r.restarts.Load(); n != 2 {
-		t.Fatalf("migration push: restarts = %d, want 2", n)
+	if n := r.restarts.Load(); n != 0 {
+		t.Fatalf("migration push: restarts = %d, want 0", n)
+	}
+	if !strings.Contains(strings.Join(logged, "\n"), "Migrations or packages changed") {
+		t.Fatalf("no restart hint: %q", logged)
+	}
+	if _, err := c.Restart(ctx); err != nil || r.restarts.Load() != 1 {
+		t.Fatalf("restart: %v (restarts %d)", err, r.restarts.Load())
 	}
 
 	// deletes go both ways
@@ -230,27 +240,8 @@ func TestSyncP1(t *testing.T) {
 	if err := s2.Sync(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if n := r.restarts.Load(); n != 2 {
-		t.Fatalf("restarts = %d at the end, want 2", n)
-	}
-}
-
-func TestSyncHooksUnwatchedRestart(t *testing.T) {
-	r := newP1RemoteWith(t, func(c *Config) { c.HooksWatch = func() bool { return false } })
-	ctx := context.Background()
-	c := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeDeploy))
-	project := t.TempDir()
-	os.MkdirAll(filepath.Join(project, "pb_hooks"), 0o755)
-	os.WriteFile(filepath.Join(project, "pb_hooks/a.pb.js"), []byte("v1"), 0o644)
-	s, err := NewSyncer(c, SyncOptions{CollectOptions: CollectOptions{Dir: project}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Sync(ctx); err != nil {
-		t.Fatal(err)
-	}
 	if n := r.restarts.Load(); n != 1 {
-		t.Fatalf("restarts = %d, want 1 (nothing watches hooks)", n)
+		t.Fatalf("restarts = %d at the end, want 1", n)
 	}
 }
 

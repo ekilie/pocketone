@@ -43,13 +43,10 @@ type Config struct {
 	// Prefix is the API path (default /_pocker/deploy/v1).
 	Prefix string
 
-	// Restart restarts the app after a deploy that changed hooks, migrations or packages. Default: app.Restart()
-	// shortly after the response is sent (re-executes the process; not on Windows).
+	// Restart restarts the app when a client asks (POST /restart, or a commit with "restart": true) so it applies
+	// migrations and packages. Default: app.Restart() shortly after the response is sent (re-executes the process;
+	// not on Windows).
 	Restart func(app core.App) error
-
-	// HooksWatch reports whether the app restarts by itself when a pb_hooks file changes; deploys that change only
-	// hooks then don't restart it. Default: the value of the --hooksWatch flag when the app has one, else false.
-	HooksWatch func() bool
 
 	// DisableServer leaves only the client commands (e.g. a binary that deploys elsewhere but must not accept
 	// deploys).
@@ -67,7 +64,7 @@ func MustRegister(app core.App, cfg Config) *API {
 
 // Register adds the deploy API to a single app (its own files, auth by API tokens with the deploy scope or a
 // superuser JWT, history in _deploys, logs from the app's _logs) and, on a *pocketbase.PocketBase, the client
-// commands deploy, dev, pull and logs. It returns nil API when cfg.DisableServer.
+// commands deploy, dev, pull, logs and restart. It returns nil API when cfg.DisableServer.
 func Register(app core.App, cfg Config) (*API, error) {
 	if pb, ok := app.(*pocketbase.PocketBase); ok {
 		for _, c := range Commands() {
@@ -90,9 +87,6 @@ func Register(app core.App, cfg Config) (*API, error) {
 			}()
 			return nil
 		}
-	}
-	if cfg.HooksWatch == nil {
-		cfg.HooksWatch = func() bool { return hooksWatchFlag(app) }
 	}
 	insts := &appInstances{app: app, cfg: &cfg}
 	api := New(Options{
@@ -210,7 +204,7 @@ func (b *AppBackend) RecordDeploy(_ context.Context, rec DeployRecord) (string, 
 }
 
 // appInstances is the [Instances] of a single app: it can't stop itself, so files are swapped in while it runs
-// (each rename is atomic), then it restarts.
+// (each rename is atomic), and it restarts when a client asks.
 type appInstances struct {
 	app core.App
 	cfg *Config
@@ -231,21 +225,6 @@ func (a *appInstances) WithInstanceStopped(_ context.Context, _ string, fn func(
 }
 
 func (a *appInstances) StartInstance(context.Context, string) error { return a.cfg.Restart(a.app) }
-
-func (a *appInstances) WatchesHooks(string) bool { return a.cfg.HooksWatch() }
-
-// hooksWatchFlag reads the --hooksWatch flag PocketBase's jsvm setup adds (on by default in pocketone).
-func hooksWatchFlag(app core.App) bool {
-	pb, ok := app.(*pocketbase.PocketBase)
-	if !ok {
-		return false
-	}
-	f := pb.RootCmd.PersistentFlags().Lookup("hooksWatch")
-	if f == nil {
-		f = pb.RootCmd.Flags().Lookup("hooksWatch")
-	}
-	return f != nil && f.Value.String() == "true"
-}
 
 // DBLogs is a [LogSource] over the app's own logs (the _logs table: requests and app.Logger()). Entries at error
 // level and above come through as stderr. PocketBase writes logs in batches, so new lines show up a few seconds

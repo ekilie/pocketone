@@ -277,8 +277,9 @@ func TestAPIEndToEnd(t *testing.T) {
 		t.Fatalf("commit: %d %s", r.status, r.raw)
 	}
 	if r.body["deployId"] != "dep1" || num0(r.body["writtenCount"]) != 3 || num0(r.body["deletedCount"]) != 1 ||
-		r.body["wasRunning"] != true || r.body["restarted"] != true || r.body["nothingChanged"] != false {
-		t.Fatalf("commit body: %s", r.raw)
+		r.body["wasRunning"] != false || r.body["restarted"] != false || r.body["nothingChanged"] != false ||
+		r.body["restartNeeded"] != nil || f.mgr.stops != 0 {
+		t.Fatalf("commit body (hooks reload by themselves, no restart): %s", r.raw)
 	}
 	if _, ok := r.body["startError"]; ok {
 		t.Fatal("startError should be absent")
@@ -310,7 +311,7 @@ func TestAPIEndToEnd(t *testing.T) {
 
 	// a broken start is reported
 	f.mgr.startErr = errors.New("hook syntax error")
-	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": "broken(", "package.json": "{}"}, nil)
+	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": "broken(", "package.json": "{}", "pb_migrations/0.js": "m"}, map[string]any{"restart": true})
 	if r.body["restarted"] != false || r.body["startError"] != "hook syntax error" {
 		t.Fatalf("startError: %s", r.raw)
 	}
@@ -322,6 +323,33 @@ func TestAPIEndToEnd(t *testing.T) {
 	if id, _ := r.body["deployId"].(string); !strings.HasPrefix(id, "local-") {
 		t.Fatalf("local id: %s", r.raw)
 	}
+
+	// a migration waits for a restart: the commit says so and leaves the app alone...
+	stops = f.mgr.stops
+	f.mgr.running["inst1"] = true // started again after the broken start above
+	files := map[string]string{"pb_hooks/main.pb.js": "routerAdd()", "pb_public/index.html": "<h1>v2</h1>", "package.json": "{}", "pb_migrations/1.js": "m"}
+	r = f.deploy(files, nil)
+	if r.status != 200 || f.mgr.stops != stops || r.body["restarted"] != false || r.body["restartNeeded"] != true {
+		t.Fatalf("migration: %d %s", r.status, r.raw)
+	}
+	// ...until the client asks
+	r = f.do("POST", Prefix+"/restart", map[string]any{})
+	if r.status != 200 || r.body["restarted"] != true || f.mgr.stops != stops+1 {
+		t.Fatalf("restart: %d %s", r.status, r.raw)
+	}
+	// or asks on the commit
+	files["pb_migrations/2.js"] = "m2"
+	r = f.deploy(files, map[string]any{"restart": true})
+	if r.status != 200 || r.body["restarted"] != true || r.body["restartNeeded"] != nil || f.mgr.stops != stops+2 {
+		t.Fatalf("commit with restart: %d %s", r.status, r.raw)
+	}
+	// "restart" without a migration or packages changes nothing
+	files["pb_public/index.html"] = "<h1>v3</h1>"
+	r = f.deploy(files, map[string]any{"restart": true})
+	if r.status != 200 || r.body["restarted"] != false || f.mgr.stops != stops+2 {
+		t.Fatalf("commit with restart, nothing to apply: %d %s", r.status, r.raw)
+	}
+
 }
 
 func TestAPICommitBeforeUpload(t *testing.T) {
@@ -404,6 +432,7 @@ func TestAPIBadInput(t *testing.T) {
 	if r := f.do("POST", Prefix+"/check", bytes.Repeat([]byte(" "), maxJSONBytes+1)); r.status != 413 || r.body["message"] != "Request too large" {
 		t.Fatalf("%d %s", r.status, r.raw)
 	}
+
 	if r := f.do("POST", Prefix+"/check", map[string]any{"files": map[string]any{"pb_hooks/node_modules/x.js": sha("x")}}); r.status != 400 {
 		t.Fatalf("%d %s", r.status, r.raw)
 	}
@@ -425,7 +454,7 @@ func TestAPIFailedApply(t *testing.T) {
 func TestAPINodeModules(t *testing.T) {
 	f := newAPIFixture(t)
 	f.put("node_modules/old/index.js", "old")
-	r := f.deploy(map[string]string{"pb_hooks/main.pb.js": "h"}, map[string]any{"nodeModules": true})
+	r := f.deploy(map[string]string{"pb_hooks/main.pb.js": "h"}, map[string]any{"nodeModules": true, "restart": true})
 	if r.status != 200 || num0(r.body["deletedCount"]) != 1 || r.body["restarted"] != true {
 		t.Fatalf("%s", r.raw)
 	}

@@ -2,7 +2,7 @@
 // the production node_modules tree, as a hash diff (manifest → upload only missing files in gzipped PHB1 bundles →
 // commit, swapped in safely).
 //
-// Client half: `pocketone deploy | dev | pull | logs [remote]` (remotes from ext/remotes). It speaks the same
+// Client half: `pocketone deploy | dev | pull | logs | restart [remote]` (remotes from ext/remotes). It speaks the same
 // protocol as the pockethost npm CLI, so it deploys to PocketHost edges (/_ph/deploy/v1) and to PocketOne remotes
 // (/_pocker/deploy/v1), found through /_pocker/whoami.
 //

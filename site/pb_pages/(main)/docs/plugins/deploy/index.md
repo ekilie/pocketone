@@ -8,9 +8,9 @@ source: "ext/deploy/README.md"
 # Deploy
 
 Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
-`pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded, the app swaps them in
-and restarts when it needs to. `pocketone dev` keeps your folder and the app in step both ways and streams the app's
-logs; `pull` and `logs` work the other way.
+`pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded and the app swaps them
+in; `restart` applies new migrations and packages. `pocketone dev` keeps your folder and the app in step both ways and
+streams the app's logs; `pull` and `logs` work the other way.
 
 ```bash
 pocketone link https://myapp.example.com   # add the remote and sign in (Remotes)
@@ -23,8 +23,8 @@ pocketone logs
 ## Install
 
 Deploy is built into `pocketone` and **on** in both directions: every app it serves accepts deploys from its
-superusers, and the `deploy`, `dev`, `pull` and `logs` commands are there to deploy to other apps. There's nothing to
-install.
+superusers, and the `deploy`, `dev`, `pull`, `logs` and `restart` commands are there to deploy to other apps. There's
+nothing to install.
 
 In your own Go build, register it before the app starts. [Remotes](/docs/plugins/remotes) gives the commands their
 remotes and logins, and [Tokens](/docs/plugins/tokens) lets you deploy with API tokens:
@@ -33,7 +33,7 @@ remotes and logins, and [Tokens](/docs/plugins/tokens) lets you deploy with API 
 app := pocketbase.New()
 tokens.MustRegister(app, tokens.Config{})   // optional: API tokens with the deploy scope
 remotes.MustRegister(app, remotes.Config{}) // remotes, login, and /_pocker/whoami discovery
-deploy.MustRegister(app, deploy.Config{})   // the deploy API + deploy/dev/pull/logs commands
+deploy.MustRegister(app, deploy.Config{})   // the deploy API + deploy/dev/pull/logs/restart commands
 app.Start()
 ```
 
@@ -64,16 +64,17 @@ your project folder (or any folder below it).
 ```bash
 pocketone deploy                      # to the default remote
 pocketone deploy prod -m "fix signup" # to the remote "prod", with a note
+pocketone deploy --restart            # and restart if migrations or packages changed (CI)
 pocketone deploy --dry-run            # list what would be sent, send nothing
 pocketone deploy --out /tmp/set       # write the files to a folder instead
 ```
 
 You'll see how many files are deployed and how many are uploaded, then a line like
-`Deployed <id>: 3 changed, 0 deleted, 41 unchanged. Restarted.` With nothing changed it says
-`Up to date: no changes.`
+`Deployed <id>: 3 changed, 0 deleted, 41 unchanged.` With nothing changed it says `Up to date: no changes.`
 
 | Flag | What it does |
 |---|---|
+| `--restart` | Restart the app after the files are in, when migrations or packages changed. |
 | `--dry-run` | List what would be deployed; deploy nothing. |
 | `--out <dir>` | Write the deploy set to a local folder instead of deploying. |
 | `-i`, `--include` | Add include patterns to the default set. |
@@ -91,10 +92,21 @@ You'll see how many files are deployed and how many are uploaded, then a line li
 npm and bun, pnpm's store, workspace links; never devDependencies) and shipped as plain files, so plain JS hooks can
 `require` npm packages. The remote then owns its root `node_modules`: packages you no longer ship are removed there.
 
-**Restarts:** files are swapped in while the app runs, each rename atomic. A deploy restarts the app (about a second
-after it answers) only when it adds or changes a migration, changes packages, or changes `pb_hooks`; then it can tell
-you if the app fails to start. `pb_public`, `pb_pages` and the other folders are read from disk, so changing only them
-never restarts, and a deploy with nothing changed never restarts.
+**Restarts:** files are swapped in while the app runs, each rename atomic, and deploy never restarts the app on its
+own. `pb_pages` and `pb_public` are read from disk on each request, and hooks reload by themselves (PocketBase's
+`--hooksWatch`, Pocker's watcher). Migrations and packages apply only when the app starts, so a deploy that changes
+them says `Migrations or packages changed` and leaves the restart to you: pass `--restart` (the app restarts once,
+after the whole batch is in, and you hear if it fails to start), run `pocketone restart`, or type `r` in `dev`. So
+does the first deploy that creates `pb_hooks`, since a watcher only sees folders that existed when the app started.
+
+### `restart`
+
+```bash
+pocketone restart prod
+```
+
+Restarts the app so it applies new migrations and packages, and tells you if it fails to start. An app that isn't
+running (a sleeping Pocker instance) is left alone; it applies them when it starts.
 
 ### `dev`
 
@@ -116,9 +128,9 @@ Keeps the project folder and the remote in step, both ways, and streams the remo
 - **Changes on the remote**, such as the migrations the dashboard writes when you edit a collection, come down within
   a few seconds (`--poll`, default 5s). `dev` asks the remote for one hash and only looks further when it changed, so
   a large `pb_public` costs nothing while it's quiet.
-- **Restarts:** only a migration you upload, or new packages, restart the app. Hooks you upload reload by themselves
-  (PocketBase's `--hooksWatch`, or Pocker's watcher); pages and public files never restart. Migrations that come down
-  are already applied on the remote.
+- **Restarts:** `dev` never restarts the app by itself. Hooks reload by themselves, pages and public files are live on
+  the next request. After you upload a migration or new packages, `dev` says so: type `r` and Enter to restart the app
+  and apply them. Migrations that come down are already applied on the remote.
 - **Deletes** go both ways too.
 - **Changed on both sides:** your copy wins and is uploaded; the remote's is saved in `.pocketone/conflicts/` and
   `dev` says so.
@@ -187,9 +199,8 @@ message, source, token name, superuser and any error. Superusers can browse it i
   404) and records history. `Instances` is pocker's Manager (stop, swap, start). The default `FileLogs` tails each
   instance's `logs/exec.log`, which pocker writes. PocketHost composes it with its own token backend and keeps
   `/_ph/deploy/v1`.
-- **Hooks reload.** If your `Instances` restarts an instance by itself when its `pb_hooks` change, implement
-  `WatchesHooks(id) bool` (`deploy.HooksWatcher`; pocker's Manager does), and `dev` won't restart it for hook
-  changes. On a single app, `Config.HooksWatch` says the same (default: the `--hooksWatch` flag).
+- **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
+  does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
 - **Discovery.** Deploy advertises itself as the `deploy` feature of `/_pocker/whoami`, so clients find its path.
 
 ## Example
@@ -198,7 +209,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 
 ```go
 // Command example is a PocketOne app that accepts deploys and can deploy: the deploy API (/_pocker/deploy/v1), API
-// tokens, remotes, and the deploy/dev/pull/logs commands.
+// tokens, remotes, and the deploy/dev/pull/logs/restart commands.
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote
 //	cd myproject && mkdir pb_hooks && echo 'routerAdd("GET", "/hi", (e) => e.string(200, "hi"))' > pb_hooks/main.pb.js
@@ -244,7 +255,8 @@ func main() {
 | `GET /whoami` | Who the request acts as, on which instance. |
 | `POST /check` | Takes a manifest, returns the hashes the server is missing. |
 | `POST /blobs` | Gzipped `PHB1` bundles: `[sha256][uint32 length][bytes]`…, every hash verified, 64 MB per request. |
-| `POST /commit` | Stage, swap in, record, restart. With `"partial": true` only the listed files (and `"delete"`) change. |
+| `POST /commit` | Stage, swap in, record. `"restartNeeded": true` in the answer when migrations or packages wait for a restart; `"restart": true` in the request restarts after the swap. With `"partial": true` only the listed files (and `"delete"`) change. |
+| `POST /restart` | Restart the app (applies migrations and packages); `restarted` and any `startError`. |
 | `GET`/`DELETE /files` | List or delete files. |
 | `GET`/`PUT /files/raw` | Download or upload one file. |
 | `GET /tree` | One folder of the code set (`?path=`, default the root) with a hash over everything below it; `hashOnly=1` for just the hash. |
@@ -257,8 +269,8 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 - Go module `github.com/pockethost/pocketone/ext/deploy`. [`example/main.go`](example/main.go) is an app that accepts
   deploys and can deploy (logins from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
 - A deploy is a hash diff: the client sends a manifest, uploads only the missing files in bundles, then commits.
-- On a single app the files are swapped in while it runs, then `app.Restart()` re-executes the process
-  (`Config.Restart` overrides it; not on Windows).
+- On a single app the files are swapped in while it runs; a restart (when a client asks) is `app.Restart()`, which
+  re-executes the process (`Config.Restart` overrides it; not on Windows).
 - `Config.Dir` and `Config.StoreDir` move the deploy folder and the upload store; `Config.Prefix` moves the API.
 - Logs on a single app come from its own `_logs` table; entries at error level and above are marked as stderr.
 - The `node_modules` collector is [`nodemodules`](nodemodules/nodemodules.go), a port of the npm CLI's.

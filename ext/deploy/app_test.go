@@ -131,8 +131,12 @@ func TestP1ToP1(t *testing.T) {
 		return res
 	}
 	res := deploy()
-	if res.WrittenCount != 2 || !res.Restarted || r.restarts.Load() != 1 {
+	// the app booted without pb_hooks, so nothing watches it: the deploy says a restart is needed, and doesn't do it
+	if res.WrittenCount != 2 || res.Restarted || !res.RestartNeeded || r.restarts.Load() != 0 {
 		t.Fatalf("first %+v restarts %d", res, r.restarts.Load())
+	}
+	if rr, err := c.Restart(ctx); err != nil || !rr.Restarted || r.restarts.Load() != 1 {
+		t.Fatalf("restart %+v %v (restarts %d)", rr, err, r.restarts.Load())
 	}
 	if b, _ := os.ReadFile(filepath.Join(r.dir, "pb_hooks/main.pb.js")); string(b) != "routerAdd()" {
 		t.Fatal("hook not written")
@@ -156,6 +160,9 @@ func TestP1ToP1(t *testing.T) {
 	ro := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeRead))
 	if _, err := ro.Check(ctx, map[string]string{}, false); err == nil || !strings.Contains(err.Error(), "read-only") {
 		t.Fatalf("read-only check: %v", err)
+	}
+	if _, err := ro.Restart(ctx); err == nil || r.restarts.Load() != 1 {
+		t.Fatalf("read-only restart: %v", err)
 	}
 	pullDir := t.TempDir()
 	if n, err := Pull(ctx, ro, PullOptions{Dir: pullDir}); err != nil || n != 2 {

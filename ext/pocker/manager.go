@@ -305,10 +305,6 @@ func (m *Manager) watchHooks(inst Instance, slot *appSlot) {
 	})
 }
 
-// WatchesHooks reports whether the Manager reloads instances when their pb_hooks change (so a deploy that only
-// changes hooks needn't restart; deploy's HooksWatcher).
-func (m *Manager) WatchesHooks(string) bool { return m.hooks != nil }
-
 // hooksChanged reloads the instance's running app after its pb_hooks change. The new app starts beside the running
 // one, which keeps serving; only once the new one has started does it take over (the old one is retired like a
 // settings change). If the new code fails to load, the previous app keeps serving and the error goes to the instance

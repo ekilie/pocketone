@@ -348,6 +348,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.readFile(w, r)
 	case path == "/files/raw" && r.Method == http.MethodPut:
 		err = a.writeFile(w, r)
+	case path == "/restart" && r.Method == http.MethodPost:
+		err = a.restart(w, r)
 	case path == "/tree" && r.Method == http.MethodGet:
 		err = a.tree(w, r)
 	case path == "/logs" && r.Method == http.MethodGet:
@@ -431,31 +433,76 @@ func (a *API) blobs(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// HooksWatcher is implemented by an [Instances] that restarts an instance by itself when its pb_hooks change (Pocker's
-// shared watcher, PocketBase's HooksWatch on a single app). Deploys that only change hooks then skip the restart.
-type HooksWatcher interface {
-	WatchesHooks(id string) bool
-}
-
-// restartNeeded: files are swapped in while the app runs (each rename is atomic), so only changes the running app
-// can't pick up restart it: a new or changed migration (migrations run at boot), packages (require caches them), and
-// hooks unless hooksReload (something watches them and the caller doesn't need the start result). pb_public and pb_pages are read from disk on each request; deleting a migration
-// doesn't undo it, so neither restarts.
-func restartNeeded(st *staged, hooksReload bool) bool {
-	if st.replaceNodeModules {
+// restartNeeded: files are swapped in while the app runs (each rename is atomic), so the whole batch lands before
+// anything restarts. The running app picks up most of it by itself: pb_pages and pb_public are read on each request,
+// and every runtime watches pb_hooks (PocketBase's --hooksWatch, Pocker's and Docker's shared watcher). Only a
+// migration written (migrations run at startup), changed packages (require caches them) or a newly created pb_hooks
+// (a watcher only sees folders that existed when the app started) need a restart. Deploy never restarts on its own:
+// the client asks, with "restart": true on the commit or POST /restart. Deleting a migration doesn't undo it.
+func restartNeeded(st *staged, createsHooks bool) bool {
+	if st.replaceNodeModules || createsHooks {
 		return true
 	}
 	for _, p := range st.plan.toWrite {
-		if strings.HasPrefix(p, "pb_migrations/") || isNodeModulesPath(p) || (!hooksReload && strings.HasPrefix(p, "pb_hooks/")) {
+		if strings.HasPrefix(p, "pb_migrations/") || isNodeModulesPath(p) {
 			return true
 		}
 	}
 	for _, p := range st.plan.toDelete {
-		if isNodeModulesPath(p) || (!hooksReload && strings.HasPrefix(p, "pb_hooks/")) {
+		if isNodeModulesPath(p) {
 			return true
 		}
 	}
 	return false
+}
+
+// writesUnder reports whether the plan writes a file under prefix.
+func writesUnder(st *staged, prefix string) bool {
+	for _, p := range st.plan.toWrite {
+		if strings.HasPrefix(p, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// restart restarts the instance so it applies migrations and packages: POST /restart. An instance that isn't
+// running is left alone (it applies them when it next starts).
+func (a *API) restart(w http.ResponseWriter, r *http.Request) error {
+	c, err := a.authorize(r, true)
+	if err != nil {
+		return err
+	}
+	ctx := context.WithoutCancel(r.Context())
+	unlock := a.lock(c.inst.ID)
+	defer unlock()
+	mgr := a.instances()
+	res := restartResult{}
+	if mgr == nil {
+		return errf(503, "The server is starting; try again.")
+	}
+	if _, known := mgr.InstanceDir(c.inst.ID); !known || !c.inst.Power || !mgr.Running(c.inst.ID) {
+		writeJSON(w, 200, res)
+		return nil
+	}
+	res.WasRunning = true
+	if err := mgr.WithInstanceStopped(ctx, c.inst.ID, func(string) error { return nil }); err != nil {
+		return err
+	}
+	if err := mgr.StartInstance(ctx, c.inst.ID); err != nil {
+		res.StartError = err.Error()
+	} else {
+		res.Restarted = true
+	}
+	a.log.Info("restart", "instance", c.inst.ID, "subdomain", c.inst.Subdomain, "restarted", res.Restarted)
+	writeJSON(w, 200, res)
+	return nil
+}
+
+type restartResult struct {
+	WasRunning bool   `json:"wasRunning"`
+	Restarted  bool   `json:"restarted"`
+	StartError string `json:"startError,omitempty"`
 }
 
 // parsePartial reads {"partial": true, "delete": [paths]} from a commit body (nil for a full deploy).
@@ -493,6 +540,9 @@ type commitResult struct {
 	WasRunning          bool           `json:"wasRunning"`
 	Restarted           bool           `json:"restarted"`
 	StartError          string         `json:"startError,omitempty"`
+	// RestartNeeded: the commit wrote a migration or changed packages and the app hasn't restarted yet (POST
+	// /restart, or commit with "restart": true).
+	RestartNeeded bool `json:"restartNeeded,omitempty"`
 }
 
 func first(s []string, n int) []string {
@@ -516,6 +566,7 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	nodeModules := body["nodeModules"] == true
+	wantRestart := body["restart"] == true
 	partial, err := parsePartial(body)
 	if err != nil {
 		return err
@@ -548,19 +599,13 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 	}
 	nothingChanged := len(changed) == 0
 	mgr := a.instances()
-	hooksWatched := false
-	if hw, ok := mgr.(HooksWatcher); ok && mgr != nil {
-		hooksWatched = hw.WatchesHooks(c.inst.ID)
-	}
-	// a full deploy still restarts for hooks, so it can report a start error; dev's partial commits leave hooks to
-	// the watcher
-	// a watcher only sees pb_hooks if it existed when the app started, so a commit that creates it restarts
 	_, hooksDirErr := os.Stat(filepath.Join(c.dir, "pb_hooks"))
-	needsRestart := restartNeeded(st, hooksWatched && partial != nil && hooksDirErr == nil)
+	createsHooks := hooksDirErr != nil && writesUnder(st, "pb_hooks/")
+	needsRestart := restartNeeded(st, createsHooks)
 
 	var applied *applyResult
 	wasRunning := false
-	if needsRestart && mgr != nil {
+	if needsRestart && wantRestart && mgr != nil {
 		if _, known := mgr.InstanceDir(c.inst.ID); known {
 			wasRunning = mgr.Running(c.inst.ID)
 			err = mgr.WithInstanceStopped(ctx, c.inst.ID, func(string) error {
@@ -610,6 +655,8 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 			restarted = true
 		}
 	}
+	// the app only picks up these changes when it next starts; an instance that isn't running will on its own
+	pendingRestart := needsRestart && !restarted && startError == "" && (mgr == nil || mgr.Running(c.inst.ID))
 
 	id := "<none>"
 	if deployID != nil {
@@ -622,7 +669,7 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 		Written: first(applied.written, 500), Deleted: first(applied.deleted, 500),
 		WrittenCount: len(applied.written), DeletedCount: len(applied.deleted), Unchanged: applied.unchanged,
 		TotalBytes: applied.totalBytes, ReplacedNodeModules: applied.replacedNodeModule, NothingChanged: nothingChanged,
-		WasRunning: wasRunning, Restarted: restarted, StartError: startError,
+		WasRunning: wasRunning, Restarted: restarted, StartError: startError, RestartNeeded: pendingRestart,
 	})
 	return nil
 }

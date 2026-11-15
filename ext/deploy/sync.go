@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"github.com/pockethost/pocketone/ext/remotes"
 )
 
@@ -49,8 +50,7 @@ func (c *Client) Tree(ctx context.Context, p string, hashOnly bool) (*TreeNode, 
 	}
 	var n TreeNode
 	err := c.call(ctx, http.MethodGet, "/tree?"+q.Encode(), nil, &n)
-	var ae *remotes.APIError
-	if errors.As(err, &ae) && (ae.Status == http.StatusNotFound || ae.Status == http.StatusMethodNotAllowed) {
+	if isNotFound(err) {
 		return nil, ErrNoSyncAPI
 	}
 	return &n, err
@@ -70,6 +70,8 @@ type SyncOptions struct {
 	Ask     func(question string) string
 	Verbose bool
 	Log     func(string)
+	// RestartHint is printed after a push that wrote a migration or changed packages (default: how to restart).
+	RestartHint string
 }
 
 // Syncer keeps a project folder and a remote in step. Call Sync after a local change or on a timer; it's safe from
@@ -527,6 +529,9 @@ func (s *Syncer) push(ctx context.Context, paths, deletes []string, localFiles m
 		log("Restarted the app.")
 	case res.StartError != "":
 		log("The app failed to start: " + res.StartError)
+	case res.RestartNeeded:
+		log("Migrations or packages changed: " + orStr(s.opts.RestartHint,
+			"restart the app ('"+pluginkit.Command+" restart') to apply them."))
 	}
 	return nil
 }

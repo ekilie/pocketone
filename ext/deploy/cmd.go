@@ -16,13 +16,14 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"github.com/pockethost/pocketone/ext/remotes"
 	"github.com/spf13/cobra"
 )
 
 // Commands returns the client commands: deploy, dev, pull, logs.
 func Commands() []*cobra.Command {
-	return []*cobra.Command{deployCommand(), devCommand(), pullCommand(), logsCommand()}
+	return []*cobra.Command{deployCommand(), devCommand(), pullCommand(), logsCommand(), restartCommand()}
 }
 
 type setFlags struct {
@@ -96,13 +97,15 @@ func deployCommand() *cobra.Command {
 		message string
 		out     string
 		dryRun  bool
+		restart bool
 	)
 	c := &cobra.Command{
 		Use:   "deploy [remote]",
 		Short: "Deploys pb_hooks, pb_migrations, pb_pages, pb_public and packages to a remote",
 		Long: "Deploys the project's code set (pb_* folders except pb_data, package.json, bun.lock(b), patches/, and the " +
-			"production node_modules tree) to a remote. Only changed files are uploaded; the remote swaps them in and " +
-			"restarts the app when migrations or packages changed (hooks reload by themselves).",
+			"production node_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. " +
+			"Hooks, pages and public files take effect by themselves; migrations and packages apply when the app " +
+			"restarts: pass --restart, or run '" + pluginkit.Command + " restart' later.",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := printer(cmd.OutOrStdout())
@@ -141,7 +144,7 @@ func deployCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, err = Deploy(ctx, c, DeployOptions{CollectOptions: opts, Commit: commit, Message: message, Verbose: f.verbose, Log: log})
+			_, err = Deploy(ctx, c, DeployOptions{CollectOptions: opts, Commit: commit, Message: message, Verbose: f.verbose, Log: log, Restart: restart})
 			return err
 		},
 	}
@@ -150,7 +153,33 @@ func deployCommand() *cobra.Command {
 	c.Flags().StringVarP(&message, "message", "m", "", "note to record with this deploy")
 	c.Flags().StringVar(&out, "out", "", "write the deploy set to a local folder instead of deploying")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "list what would be deployed, deploy nothing")
+	c.Flags().BoolVar(&restart, "restart", false, "restart the app after deploying when migrations or packages changed")
 	return c
+}
+
+func restartCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "restart [remote]",
+		Short: "Restarts a remote's app so it applies new migrations and packages",
+		Args:  cobra.MaximumNArgs(1), SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			c, err := open(ctx, firstArg(args))
+			if err != nil {
+				return err
+			}
+			res, err := c.Restart(ctx)
+			if err != nil {
+				return err
+			}
+			printer(cmd.OutOrStdout())(res.Message())
+			if res.StartError != "" {
+				return fmt.Errorf("the app failed to start")
+			}
+			return nil
+		},
+	}
 }
 
 func devCommand() *cobra.Command {
@@ -167,9 +196,9 @@ func devCommand() *cobra.Command {
 		Long: "Syncs pb_hooks, pb_migrations, pb_pages, pb_public and the other pb_* folders, package.json, bun.lock(b) and " +
 			"patches/ both ways: edits here are uploaded half a second after you save, and changes on the remote (such " +
 			"as migrations the dashboard writes) are downloaded within seconds. node_modules is only uploaded, when " +
-			"package.json or the lockfile changes. pb_data is never synced. Only a new or changed migration (or " +
-			"packages) restarts the app; hooks reload by themselves. State is kept in .pocketone/; files to leave out " +
-			"go in .pocketoneignore.",
+			"package.json or the lockfile changes. pb_data is never synced. Hooks, pages and public files take effect " +
+			"by themselves; migrations and packages you upload apply when the app restarts: type r and Enter. State " +
+			"is kept in .pocketone/; files to leave out go in .pocketoneignore.",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
@@ -195,14 +224,16 @@ func devCommand() *cobra.Command {
 			if !noLogs {
 				go followLogs(ctx, c, 0, out)
 			}
+			hint := "type r and Enter to restart the app and apply them."
 			if pushOnly {
+				go restartKey(ctx, c, log)
 				return Watch(ctx, opts, 500*time.Millisecond, log, func() {
-					if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Message: "dev", Verbose: f.verbose, Log: log}); err != nil && ctx.Err() == nil {
+					if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Message: "dev", Verbose: f.verbose, Log: log, RestartHint: hint}); err != nil && ctx.Err() == nil {
 						log("Deploy failed: " + err.Error())
 					}
 				})
 			}
-			s, err := NewSyncer(c, SyncOptions{CollectOptions: opts, Prefer: prefer, Ask: terminalAsk(cmd), Verbose: f.verbose, Log: log})
+			s, err := NewSyncer(c, SyncOptions{CollectOptions: opts, Prefer: prefer, Ask: terminalAsk(cmd), Verbose: f.verbose, Log: log, RestartHint: hint})
 			if err != nil {
 				return err
 			}
@@ -211,6 +242,7 @@ func devCommand() *cobra.Command {
 			if err := s.Sync(ctx); err != nil {
 				return err
 			}
+			go restartKey(ctx, c, log)
 			go func() {
 				t := time.NewTicker(poll)
 				defer t.Stop()
@@ -247,6 +279,30 @@ func devCommand() *cobra.Command {
 	c.Flags().StringVar(&prefer, "prefer", "", "on the first sync, files that differ: local (upload yours) or remote (download theirs); default asks")
 	c.Flags().DurationVar(&poll, "poll", DefaultSyncPoll, "how often to check the remote for changes")
 	return c
+}
+
+// restartKey restarts the remote app when the user types r and Enter (dev). It reads stdin only when it's a terminal.
+func restartKey(ctx context.Context, c *Client, log func(string)) {
+	st, err := os.Stdin.Stat()
+	if err != nil || st.Mode()&os.ModeCharDevice == 0 {
+		return
+	}
+	log("Type r and Enter to restart the app (applies migrations and packages).")
+	sc := bufio.NewScanner(os.Stdin)
+	for sc.Scan() && ctx.Err() == nil {
+		if strings.TrimSpace(sc.Text()) != "r" {
+			continue
+		}
+		log("Restarting the app...")
+		res, err := c.Restart(ctx)
+		if err != nil {
+			if ctx.Err() == nil {
+				log("Restart failed: " + err.Error())
+			}
+			continue
+		}
+		log(res.Message())
+	}
 }
 
 // terminalAsk asks on stdin when it's a terminal; nil otherwise (then --prefer is needed).

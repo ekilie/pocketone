@@ -64,27 +64,55 @@ func TestWithPockerManager(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": hook("v2"), "pb_public/index.html": "one"}, nil)
-	if r.body["wasRunning"] != true || r.body["restarted"] != true || !mgr.Running("inst1") {
-		t.Fatalf("second: %s", r.raw)
-	}
-	if v := get("/v"); v != "v2" {
-		t.Fatalf("after deploy: %q", v)
+	waitFor := func(v string) {
+		t.Helper()
+		deadline := time.Now().Add(10 * time.Second)
+		for get("/v") != v {
+			if time.Now().After(deadline) {
+				t.Fatalf("%s never served (got %q)", v, get("/v"))
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
 	}
 
+	// hooks: deploy only swaps the files in; Pocker's watcher reloads the app
+	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": hook("v2"), "pb_public/index.html": "one"}, nil)
+	if r.status != 200 || r.body["restarted"] != false || r.body["restartNeeded"] != nil || !mgr.Running("inst1") {
+		t.Fatalf("second: %s", r.raw)
+	}
+	waitFor("v2")
+
 	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": hook("v2"), "pb_public/index.html": "two"}, nil)
-	if r.body["wasRunning"] != false || r.body["restarted"] != false || !mgr.Running("inst1") || get("/index.html") != "two" {
+	if r.body["restarted"] != false || !mgr.Running("inst1") || get("/index.html") != "two" {
 		t.Fatalf("pb_public only: %s", r.raw)
 	}
 
+	// a broken hook: the watcher keeps the last good code serving
 	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": "this is not js (", "pb_public/index.html": "two"}, nil)
-	if r.body["restarted"] != false || !strings.Contains(r.body["startError"].(string), "") || r.body["startError"] == "" {
+	if r.status != 200 || r.body["restarted"] != false {
 		t.Fatalf("broken: %s", r.raw)
 	}
-	t.Logf("startError: %v", r.body["startError"])
+	time.Sleep(500 * time.Millisecond)
+	if v := get("/v"); v != "v2" || !mgr.Running("inst1") {
+		t.Fatalf("broken hook took the app down: %q", v)
+	}
 
 	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": hook("v3"), "pb_public/index.html": "two"}, nil)
-	if r.status != 200 || get("/v") != "v3" {
+	if r.status != 200 {
 		t.Fatalf("fixed: %s", r.raw)
 	}
+	waitFor("v3")
+
+	// a migration waits for a restart, which the client asks for
+	files := map[string]string{"pb_hooks/main.pb.js": hook("v3"), "pb_public/index.html": "two",
+		"pb_migrations/1_posts.js": `migrate((app) => { app.save(new Collection({name: "posts", type: "base"})) })`}
+	r = f.deploy(files, nil)
+	if r.status != 200 || r.body["restartNeeded"] != true || r.body["restarted"] != false {
+		t.Fatalf("migration: %s", r.raw)
+	}
+	r = f.do("POST", Prefix+"/restart", map[string]any{})
+	if r.status != 200 || r.body["restarted"] != true || !mgr.Running("inst1") {
+		t.Fatalf("restart: %d %s", r.status, r.raw)
+	}
+	waitFor("v3")
 }
