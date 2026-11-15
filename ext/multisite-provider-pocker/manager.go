@@ -84,9 +84,9 @@ type ManagerOptions struct {
 	// Gate, if set, admits requests: a peer check before routing, and per-instance admission (e.g. rate limits)
 	// before an instance is served here or forwarded (see [Gate]).
 	Gate Gate
-	// Init runs host Go code for each app before it bootstraps (plugins implementing [AppIniter]).
+	// Init runs host Go code for each app before it bootstraps (extensions implementing [AppIniter]).
 	Init func(inst Instance, app core.App) error
-	// InitJS adds globals to each JS runtime after the sandbox set it up (plugins implementing [JSIniter]).
+	// InitJS adds globals to each JS runtime after the sandbox set it up (extensions implementing [JSIniter]).
 	InitJS func(inst Instance, app core.App, vm *goja.Runtime)
 	// Setup runs host Go code for each app after migrations and before it serves (see [Server.SetupApp]).
 	Setup func(inst Instance, app core.App) error
@@ -432,13 +432,13 @@ func (m *Manager) emit(e Event) {
 	}
 }
 
-// sameRuntime reports whether two versions of an instance can share a running app. Plugin settings count: plugins
+// sameRuntime reports whether two versions of an instance can share a running app. Extension settings count: extensions
 // read them once, when they're registered on the app.
 func sameRuntime(a, b Instance) bool {
 	return a.Remote == b.Remote && a.Dir == b.Dir && a.Dev == b.Dev && reflect.DeepEqual(a.Secrets, b.Secrets) && a.EncryptionKey == b.EncryptionKey &&
 		reflect.DeepEqual(a.Access, b.Access) && reflect.DeepEqual(a.Limits, b.Limits) &&
 		reflect.DeepEqual(a.Superusers, b.Superusers) && reflect.DeepEqual(a.Private, b.Private) &&
-		reflect.DeepEqual(a.Plugins, b.Plugins)
+		reflect.DeepEqual(a.Extensions, b.Extensions)
 }
 
 // retire stops an app that new requests no longer reach, after giving in-flight requests time to finish.
@@ -553,10 +553,10 @@ func (m *Manager) waitHeld(ctx context.Context, id string) error {
 	}
 }
 
-// catchRestart makes app.Restart() (PocketBase's backup restore, plugins) restart this one app instead of
+// catchRestart makes app.Restart() (PocketBase's backup restore, extensions) restart this one app instead of
 // re-executing the whole process, which would restart every instance. Two handlers: the innermost one replaces the
 // re-exec (close the databases, drop the slot); the outermost one starts a fresh app once every other OnTerminate
-// handler has finished (e.g. a plugin that detaches from the database after PocketBase closes it), so a start error
+// handler has finished (e.g. an extension that detaches from the database after PocketBase closes it), so a start error
 // is reported right away and the restored data is served next.
 func (m *Manager) catchRestart(id string, slot *appSlot) {
 	var caught bool

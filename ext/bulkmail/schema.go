@@ -9,7 +9,7 @@ import (
 )
 
 // The schema is a contract: these collection and field ids never change. The legacy PocketHost mothership creates
-// the same collections from a JS migration (see [LegacyJSMigration]) before this plugin ever runs there, and
+// the same collections from a JS migration (see [LegacyJSMigration]) before this extension ever runs there, and
 // [EnsureSchema] accepts collections that already exist with these ids.
 const (
 	CampaignsCollection    = "_bulkmail_campaigns"
@@ -47,7 +47,7 @@ const (
 	ReasonManual       = "manual"
 )
 
-// Collections returns the bulk mail collections as this version of the plugin defines them.
+// Collections returns the bulk mail collections as this version of the extension defines them.
 func Collections() []*core.Collection {
 	return []*core.Collection{campaignsCollection(), sendsCollection(), suppressionsCollection()}
 }
@@ -137,7 +137,7 @@ func suppressionsCollection() *core.Collection {
 
 // EnsureSchema creates the bulk mail collections that don't exist yet. A collection that already exists (created by
 // an earlier run, or by the legacy mothership's JS migration) must have the expected id and every expected field
-// with the expected id and type; fields the plugin doesn't know are left alone. It's safe to call on every start.
+// with the expected id and type; fields the extension doesn't know are left alone. It's safe to call on every start.
 func EnsureSchema(app core.App) error {
 	for _, want := range Collections() {
 		have, err := app.FindCollectionByNameOrId(want.Id)

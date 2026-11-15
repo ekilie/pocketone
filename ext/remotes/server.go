@@ -22,7 +22,7 @@ func featuresOf(app core.App) *features {
 	return app.Store().GetOrSet(featuresKey, func() any { return &features{m: map[string]string{}} }).(*features)
 }
 
-// Advertise lists a feature in app's whoami answer, e.g. Advertise(app, "deploy", "/_pocker/deploy/v1"). Plugins
+// Advertise lists a feature in app's whoami answer, e.g. Advertise(app, "deploy", "/_pocker/deploy/v1"). Extensions
 // call it when they register.
 func Advertise(app core.App, feature, path string) {
 	f := featuresOf(app)
@@ -65,7 +65,7 @@ func whoami(e *core.RequestEvent) map[string]any {
 		feats[k] = v
 	}
 	f.mu.RUnlock()
-	// the tokens plugin doesn't import this one: detect it by its store key
+	// the tokens extension doesn't import this one: detect it by its store key
 	if _, ok := feats["tokens"]; !ok && e.App.Store().Has("tokens") {
 		feats["tokens"] = "/api/tokens"
 	}

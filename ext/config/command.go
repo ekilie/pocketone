@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -24,7 +24,7 @@ func NewCommand(opts func() Options) *cobra.Command {
 				enc.SetIndent("", "  ")
 				return enc.Encode(Describe())
 			}
-			for _, s := range pluginkit.Sections() {
+			for _, s := range extkit.Sections() {
 				fmt.Fprintf(out, "# %s\n", strings.ReplaceAll(s.Doc, "\n", "\n# "))
 				b, _ := yaml.Marshal(map[string]any{s.Name: s.Default})
 				fmt.Fprintf(out, "%s\n", b)
@@ -32,7 +32,7 @@ func NewCommand(opts func() Options) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&asJSON, "json", false, "print the sections as JSON (name, doc, owning plugin, keys with types and defaults)")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print the sections as JSON (name, doc, owning extension, keys with types and defaults)")
 	cmd.AddCommand(&cobra.Command{
 		Use:   "check",
 		Short: "Checks the config file: every section known and valid, every $VAR set",

@@ -7,25 +7,25 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
-	"github.com/pockethost/pocketone/ext/pluginkit"
 )
 
-// The plugin under a multitenant pocker server:
+// The extension under a multitenant pocker server:
 //
-//	srv.Plugins = append(srv.Plugins, pitr.New(pitr.Config{}))
+//	srv.Extensions = append(srv.Extensions, pitr.New(pitr.Config{}))
 //
 // Process settings come from pocketone.yaml's `pitr` section (fields set in Go win), per-instance settings
-// from the instance's `plugins: {pitr: {enabled, retention}}` (pocker hosts it as a [pluginkit.Plugin]).
+// from the instance's `extensions: {pitr: {enabled, retention}}` (pocker hosts it as an [extkit.Extension]).
 var (
-	_ pocker.Plugin     = (*Plugin)(nil)
-	_ pocker.Configurer = (*Plugin)(nil)
-	_ pluginkit.Plugin  = (*Plugin)(nil)
-	_ pocker.Starter    = (*Plugin)(nil)
+	_ pocker.Extension  = (*Extension)(nil)
+	_ pocker.Configurer = (*Extension)(nil)
+	_ extkit.Extension  = (*Extension)(nil)
+	_ pocker.Starter    = (*Extension)(nil)
 )
 
 // Configure reads pocketone.yaml's `pitr` section. Fields already set in Go are kept; the section fills the rest.
-func (p *Plugin) Configure(pocker.Config) error {
+func (p *Extension) Configure(pocker.Config) error {
 	c, found := Section.Get()
 	if !found {
 		return nil
@@ -42,15 +42,15 @@ func (p *Plugin) Configure(pocker.Config) error {
 	return nil
 }
 
-// settings is the shape of an instance's `plugins.pitr`. Only `enabled` and `retention` are read per app.
+// settings is the shape of an instance's `extensions.pitr`. Only `enabled` and `retention` are read per app.
 type settings struct {
-	Enabled   *bool               `json:"enabled"`
-	Retention *pluginkit.Duration `json:"retention"`
+	Enabled   *bool            `json:"enabled"`
+	Retention *extkit.Duration `json:"retention"`
 }
 
-// Register implements [pluginkit.Plugin]: sets up app before it bootstraps. Where its history goes is decided per
+// Register implements [extkit.Extension]: sets up app before it bootstraps. Where its history goes is decided per
 // app: its own PITR S3 setting, else the server's storage (`litestream` kind), else its pb_data/litestream/.
-func (p *Plugin) Register(app core.App, layers pluginkit.Config) error {
+func (p *Extension) Register(app core.App, layers extkit.Config) error {
 	var s settings
 	if err := layers.Decode(&s); err != nil {
 		return fmt.Errorf("pitr: %w", err)
@@ -64,7 +64,7 @@ func (p *Plugin) Register(app core.App, layers pluginkit.Config) error {
 
 // Start waits for the server to stop, then for every app to flush and detach (the manager stops them), and closes
 // the Litestream stores.
-func (p *Plugin) Start(ctx context.Context, _ *pocker.Manager) {
+func (p *Extension) Start(ctx context.Context, _ *pocker.Manager) {
 	<-ctx.Done()
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
@@ -85,4 +85,4 @@ func (p *Plugin) Start(ctx context.Context, _ *pocker.Manager) {
 
 // Section is the key of the `pitr` section (pocketone.yaml): point-in-time restore defaults for a single app (the
 // pocketone binary reads it for its flag defaults) and for every instance on a pocker host.
-var Section = pluginkit.NewSection(Name, Config{}, "Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.")
+var Section = extkit.NewSection(Name, Config{}, "Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.")

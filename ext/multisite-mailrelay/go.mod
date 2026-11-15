@@ -8,7 +8,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/mailtrap v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite-provider-pocker v0.0.0-00010101000000-000000000000
 )
 
@@ -69,7 +69,7 @@ replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
 replace github.com/pockethost/pocketone/ext/mailtrap => ../mailtrap
 
-replace github.com/pockethost/pocketone/ext/pluginkit => ../pluginkit
+replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 

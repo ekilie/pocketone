@@ -59,7 +59,7 @@ func TestFirewallPeersAndClientIP(t *testing.T) {
 func TestRateLimitsTrustedWeightsConcurrency(t *testing.T) {
 	fw, _ := NewFirewall(Config{TrustedClients: []string{"198.51.100.0/24"}})
 	withLimits := func(id string, rl RateLimits, trusted ...string) multisite.Instance {
-		return multisite.Instance{ID: id, Plugins: map[string]any{"firewall": InstanceConfig{RateLimits: &rl, TrustedIPs: trusted}}}
+		return multisite.Instance{ID: id, Extensions: map[string]any{"firewall": InstanceConfig{RateLimits: &rl, TrustedIPs: trusted}}}
 	}
 	check := func(remote, path string, inst multisite.Instance) (int, func()) {
 		w := httptest.NewRecorder()
@@ -128,7 +128,7 @@ func TestRateLimitsTrustedWeightsConcurrency(t *testing.T) {
 	}
 }
 
-// The whole path: per-instance plugins.firewall from instances.yaml, header names, 429.
+// The whole path: per-instance extensions.firewall from instances.yaml, header names, 429.
 
 // A trusted client (an SSR proxy) names its end user in a trusted_client_headers header: each user gets their own
 // per-IP bucket with the trusted limits. The same header from an untrusted client is ignored (no spoofing).
@@ -139,7 +139,7 @@ func TestTrustedClientNamesEndUser(t *testing.T) {
 	}
 	inst := func(id string, trusted ...string) multisite.Instance {
 		rl := RateLimits{IPHourly: 1, InstanceHourly: 1000, Trusted: &RateLimitSet{IPHourly: 2, InstanceHourly: 1000}}
-		return multisite.Instance{ID: id, Plugins: map[string]any{"firewall": InstanceConfig{RateLimits: &rl, TrustedIPs: trusted}}}
+		return multisite.Instance{ID: id, Extensions: map[string]any{"firewall": InstanceConfig{RateLimits: &rl, TrustedIPs: trusted}}}
 	}
 	do := func(remote string, in multisite.Instance, hdr map[string]string) int {
 		w := httptest.NewRecorder()

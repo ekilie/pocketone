@@ -41,7 +41,7 @@ type Config struct {
 	EgressAllow []string
 
 	// TLS: certificate files for HTTPS, and an optional HTTP redirect listener. (Automatic certificates are the
-	// autotls plugin, with its own `autotls` section.)
+	// autotls extension, with its own `autotls` section.)
 	TLS TLSConfig
 }
 

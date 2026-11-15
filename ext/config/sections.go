@@ -3,13 +3,13 @@ package config
 import (
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // ServerConfig is the `server` section: how the binary listens.
 //
 // Single-app mode: http, https and origins are the serve command's --http, --https and --origins defaults (flags
-// still win). Multi-instance mode (a provider): https is the main address (TLS from tls or a TLS plugin), http then
+// still win). Multi-instance mode (a provider): https is the main address (TLS from tls or a TLS extension), http then
 // redirects plain HTTP to HTTPS (http alone serves plain HTTP), plain lists extra plain-HTTP addresses with no
 // redirect (e.g. a private network other edges forward on), and shutdown_timeout bounds in-flight requests at stop.
 //
@@ -61,7 +61,7 @@ type AppConfig struct {
 
 // Server, App and Provider are the sections this package owns.
 var (
-	Server   = pluginkit.NewSectionFunc("server", func() ServerConfig { return ServerConfig{} }, "How the binary listens: http, https and CORS origins (single-app mode: the serve command's defaults).")
-	App      = pluginkit.NewSectionFunc("app", func() AppConfig { return AppConfig{} }, "The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used when a provider runs many instances.")
-	Provider = pluginkit.NewSection("provider", "", "The runtime provider that runs many instances (pocker or docker). Omit for a single stock app.")
+	Server   = extkit.NewSectionFunc("server", func() ServerConfig { return ServerConfig{} }, "How the binary listens: http, https and CORS origins (single-app mode: the serve command's defaults).")
+	App      = extkit.NewSectionFunc("app", func() AppConfig { return AppConfig{} }, "The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used when a provider runs many instances.")
+	Provider = extkit.NewSection("provider", "", "The runtime provider that runs many instances (pocker or docker). Omit for a single stock app.")
 )

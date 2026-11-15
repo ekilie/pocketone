@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/remotes"
 )
 
@@ -531,7 +531,7 @@ func (s *Syncer) push(ctx context.Context, paths, deletes []string, localFiles m
 		log("The app failed to start: " + res.StartError)
 	case res.RestartNeeded:
 		log("Migrations or packages changed: " + orStr(s.opts.RestartHint,
-			"restart the app ('"+pluginkit.Command+" restart') to apply them."))
+			"restart the app ('"+extkit.Command+" restart') to apply them."))
 	}
 	return nil
 }

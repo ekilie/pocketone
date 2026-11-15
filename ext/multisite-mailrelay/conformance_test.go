@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/conformance"
 	"github.com/pockethost/pocketone/ext/multisite-mailrelay"
-	"github.com/pockethost/pocketone/ext/pluginkit"
-	"github.com/pockethost/pocketone/ext/pluginkit/conformance"
 )
 
 type nopUpstream struct{}
@@ -14,7 +14,7 @@ type nopUpstream struct{}
 func (nopUpstream) Send(context.Context, string, []string, []byte) error { return nil }
 
 func TestConformance(t *testing.T) {
-	conformance.Run(t, func() pluginkit.Plugin {
+	conformance.Run(t, func() extkit.Extension {
 		return mailrelay.New(mailrelay.Config{Domain: "mail.test", Upstream: nopUpstream{}})
 	})
 }

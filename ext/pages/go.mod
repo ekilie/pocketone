@@ -37,7 +37,7 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000 // indirect
@@ -69,7 +69,7 @@ replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
-replace github.com/pockethost/pocketone/ext/pluginkit => ../pluginkit
+replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 

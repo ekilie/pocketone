@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"log/slog"
 	"net/http"
 	"path/filepath"
@@ -21,7 +21,7 @@ import (
 	"github.com/pockethost/pocketone/ext/tokens"
 )
 
-// Scopes the server registers with the tokens plugin.
+// Scopes the server registers with the tokens extension.
 const (
 	ScopeDeploy = "deploy"      // deploy, upload, delete, read
 	ScopeRead   = "deploy:read" // whoami, list and download files, logs
@@ -159,7 +159,7 @@ func (b *AppBackend) Lookup(*http.Request) (Instance, bool) {
 func (b *AppBackend) Authenticate(r *http.Request, _ Instance) (Auth, error) {
 	ra, _ := r.Context().Value(requestAuthKey{}).(requestAuth)
 	if ra.record == nil {
-		return Auth{}, &AuthError{401, "Sign in first: " + pluginkit.Command + " login <this URL>, or send a superuser API token."}
+		return Auth{}, &AuthError{401, "Sign in first: " + extkit.Command + " login <this URL>, or send a superuser API token."}
 	}
 	if !ra.record.IsSuperuser() {
 		return Auth{}, &AuthError{403, "Only superusers can use the deploy API."}

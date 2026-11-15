@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 type testCfg struct {
@@ -18,7 +18,7 @@ type testCfg struct {
 	Secret  string        `yaml:"secret"`
 }
 
-var testSection = pluginkit.NewSection("cfgtest", testCfg{Port: 1, Name: "default"}, "a test section")
+var testSection = extkit.NewSection("cfgtest", testCfg{Port: 1, Name: "default"}, "a test section")
 
 func write(t *testing.T, dir, name, content string) string {
 	t.Helper()
@@ -30,7 +30,7 @@ func write(t *testing.T, dir, name, content string) string {
 }
 
 func TestLoad(t *testing.T) {
-	defer pluginkit.SetSectionSource(nil)
+	defer extkit.SetSectionSource(nil)
 	dir := t.TempDir()
 	write(t, dir, ".env", "# secrets\nexport CFG_TEST_SECRET=\"s3 cr\\\"et\"\nCFG_TEST_PORT=8090\nCFG_TEST_NAME='quoted name'\nCFG_TEST_TRAIL=abc # comment\n")
 	t.Setenv("CFG_TEST_FROM_PROCESS", "proc")
@@ -89,7 +89,7 @@ cfgtest:
 }
 
 func TestLoadErrors(t *testing.T) {
-	defer pluginkit.SetSectionSource(nil)
+	defer extkit.SetSectionSource(nil)
 	dir := t.TempDir()
 	cases := map[string]struct{ yaml, want string }{
 		"typo":        {"serverr: {http: x}\n", "unknown section(s) serverr"},
@@ -110,7 +110,7 @@ func TestLoadErrors(t *testing.T) {
 }
 
 func TestNoFiles(t *testing.T) {
-	defer pluginkit.SetSectionSource(nil)
+	defer extkit.SetSectionSource(nil)
 	t.Chdir(t.TempDir())
 	c, err := Load(Options{})
 	if err != nil || c.Path != "" || c.EnvPath != "" {
@@ -137,7 +137,7 @@ func TestFromArgs(t *testing.T) {
 }
 
 func TestCommand(t *testing.T) {
-	defer pluginkit.SetSectionSource(nil)
+	defer extkit.SetSectionSource(nil)
 	dir := t.TempDir()
 	p := write(t, dir, FileName, "cfgtest: {port: 2}\n")
 	cmd := NewCommand(func() Options { return Options{ConfigPath: p} })

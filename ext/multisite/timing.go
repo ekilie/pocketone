@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// TimingEntry is one Server-Timing metric (see the servertiming plugin).
+// TimingEntry is one Server-Timing metric (see the servertiming extension).
 type TimingEntry struct {
 	Name string
 	Dur  time.Duration
@@ -21,7 +21,7 @@ type timings struct {
 }
 
 // WithTimings returns a context that collects timing entries for one request, and the function that evaluates
-// them, innermost hop first (the last registered first). A plugin that reports timings (e.g. as a Server-Timing
+// them, innermost hop first (the last registered first). An extension that reports timings (e.g. as a Server-Timing
 // header) calls it at the start of a request and evaluates when the response headers go out.
 func WithTimings(ctx context.Context) (context.Context, func() []TimingEntry) {
 	t := &timings{}
@@ -37,8 +37,8 @@ func WithTimings(ctx context.Context) (context.Context, func() []TimingEntry) {
 	}
 }
 
-// Timing registers entries for the current request, computed when they are reported. It does nothing unless a
-// plugin collects timings (see [WithTimings]). A runtime registers `origin` (the instance's own handler) and
+// Timing registers entries for the current request, computed when they are reported. It does nothing unless an
+// extension collects timings (see [WithTimings]). A runtime registers `origin` (the instance's own handler) and
 // `wake` (starting the instance for this request).
 func Timing(ctx context.Context, fn func() []TimingEntry) {
 	t, _ := ctx.Value(timingsKey{}).(*timings)

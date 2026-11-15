@@ -5,7 +5,7 @@ go 1.27
 require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -50,5 +50,5 @@ require (
 replace (
 	ganigeorgiev.com/pocketbase/pocketbase => ../..
 	github.com/pockethost/pocketone/ext/config => ../config
-	github.com/pockethost/pocketone/ext/pluginkit => ../pluginkit
+	github.com/pockethost/pocketone/ext/extkit => ../extkit
 )

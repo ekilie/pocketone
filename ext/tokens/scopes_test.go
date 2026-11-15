@@ -28,7 +28,7 @@ func TestScopeNamesAndHeaders(t *testing.T) {
 	if err := tk.RegisterScope(Scope{Name: "notes_write"}); err == nil || !strings.Contains(err.Error(), "collides") {
 		t.Fatalf("collision: %v", err)
 	}
-	// the same name again merges (hooks reload, or two plugins sharing a scope)
+	// the same name again merges (hooks reload, or two extensions sharing a scope)
 	if err := tk.RegisterScope(Scope{Name: "notes:write", Paths: []string{"/a", "/b"}, Methods: []string{"post"}}); err != nil {
 		t.Fatal(err)
 	}

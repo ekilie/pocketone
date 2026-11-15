@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 type describeTestCfg struct {
@@ -17,7 +17,7 @@ type describeTestCfg struct {
 	Secret string `yaml:"-"`
 }
 
-var _ = pluginkit.NewSection("describe_test", describeTestCfg{Every: time.Hour}, "a test section")
+var _ = extkit.NewSection("describe_test", describeTestCfg{Every: time.Hour}, "a test section")
 
 func TestDescribe(t *testing.T) {
 	var got *SectionDoc
@@ -29,8 +29,8 @@ func TestDescribe(t *testing.T) {
 	if got == nil {
 		t.Fatal("section not described")
 	}
-	if got.Owner != "github.com/pockethost/pocketone/ext/config" || got.Plugin != "config" {
-		t.Errorf("owner %q plugin %q", got.Owner, got.Plugin)
+	if got.Owner != "github.com/pockethost/pocketone/ext/config" || got.Extension != "config" {
+		t.Errorf("owner %q extension %q", got.Owner, got.Extension)
 	}
 	want := []KeyDoc{
 		{Key: "enabled", Type: "bool", Doc: "on unless false"},
@@ -48,14 +48,14 @@ func TestDescribe(t *testing.T) {
 	}
 }
 
-func TestPluginOf(t *testing.T) {
+func TestExtensionOf(t *testing.T) {
 	for in, want := range map[string]string{
 		"github.com/pockethost/pocketone/ext/multisite-mothership/mirror": "multisite-mothership",
 		"github.com/pockethost/pocketone/ext/pitr":                        "pitr",
 		"main": "",
 	} {
-		if got := pluginOf(in); got != want {
-			t.Errorf("pluginOf(%q) = %q, want %q", in, got, want)
+		if got := extensionOf(in); got != want {
+			t.Errorf("extensionOf(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

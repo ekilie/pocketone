@@ -22,12 +22,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// HTTPClient is the subset of *http.Client the plugin uses (tests swap it).
+// HTTPClient is the subset of *http.Client the extension uses (tests swap it).
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// Config configures the plugin. Zero values pick PocketOne's own releases.
+// Config configures the extension. Zero values pick PocketOne's own releases.
 type Config struct {
 	// Owner and Repo of the GitHub repository with the releases (default pockethost/pocketone).
 	Owner, Repo string
@@ -78,12 +78,12 @@ func MustRegister(app core.App, rootCmd *cobra.Command, cfg Config) {
 // Register adds the `upgrade` command to rootCmd.
 func Register(app core.App, rootCmd *cobra.Command, cfg Config) error {
 	cfg.defaults()
-	p := &plugin{app: app, cfg: cfg, current: rootCmd.Version, executable: os.Executable}
+	p := &extension{app: app, cfg: cfg, current: rootCmd.Version, executable: os.Executable}
 	rootCmd.AddCommand(p.command())
 	return nil
 }
 
-type plugin struct {
+type extension struct {
 	app        core.App
 	cfg        Config
 	current    string
@@ -92,7 +92,7 @@ type plugin struct {
 	goarch     string
 }
 
-func (p *plugin) command() *cobra.Command {
+func (p *extension) command() *cobra.Command {
 	var backup bool
 	cmd := &cobra.Command{
 		Use:          "upgrade",
@@ -106,7 +106,7 @@ func (p *plugin) command() *cobra.Command {
 	return cmd
 }
 
-func (p *plugin) upgrade(backup bool) error {
+func (p *extension) upgrade(backup bool) error {
 	exe, err := p.executable()
 	if err != nil {
 		return err

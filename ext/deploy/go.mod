@@ -7,7 +7,7 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite-provider-pocker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
@@ -74,7 +74,7 @@ replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
-replace github.com/pockethost/pocketone/ext/pluginkit => ../pluginkit
+replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 

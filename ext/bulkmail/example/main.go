@@ -17,7 +17,7 @@ import (
 	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 func main() {
@@ -26,15 +26,15 @@ func main() {
 
 	registerDemoView(app) // a "newsletter_audience" view to use as a campaign audience (demo.go)
 
-	// the same plugin value pocker would host on every instance (srv.Plugins = append(srv.Plugins, mail))
+	// the same extension value pocker would host on every instance (srv.Extensions = append(srv.Extensions, mail))
 	mail := bulkmail.New(bulkmail.Config{
 		Rate:  5,    // messages per second
 		Daily: 5000, // messages per day; bulkmail.NoBulkMail forbids sending
 	})
-	pluginkit.MustRegister(app, mail)
+	extkit.MustRegister(app, mail)
 
 	jsvm.MustRegister(app, jsvm.Config{
-		OnInit: func(vm *goja.Runtime) { pluginkit.BindJS(app, vm, mail) }, // $bulkmail in JS hooks
+		OnInit: func(vm *goja.Runtime) { extkit.BindJS(app, vm, mail) }, // $bulkmail in JS hooks
 	})
 
 	if err := app.Start(); err != nil {

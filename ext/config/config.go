@@ -1,9 +1,9 @@
 // Package config is PocketOne's config file: pocketone.yaml, with secrets in a .env beside it.
 //
-// Each plugin owns one top-level section, declared with pluginkit.NewSection (a typed key the owner exports); a
-// plugin reads a section only through its owner's key. This package finds and parses the files, expands $VARS,
-// checks that every top-level key belongs to a linked plugin and that every section decodes, and hands sections to
-// their keys (pluginkit.SetSectionSource).
+// Each extension owns one top-level section, declared with extkit.NewSection (a typed key the owner exports); an
+// extension reads a section only through its owner's key. This package finds and parses the files, expands $VARS,
+// checks that every top-level key belongs to a linked extension and that every section decodes, and hands sections to
+// their keys (extkit.SetSectionSource).
 //
 // The .env stays private to the process: it is used only to expand $VAR references in pocketone.yaml. It is never
 // written to the process environment, so JS hooks ($os.getenv) and instances don't see it, except names an operator
@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,7 +41,7 @@ type Config struct {
 	env      map[string]string
 }
 
-var _ pluginkit.SectionSource = (*Config)(nil)
+var _ extkit.SectionSource = (*Config)(nil)
 
 // FromArgs reads --config and --env-file from command line arguments (before the full flag parse, which needs the
 // config's values as defaults).
@@ -74,7 +74,7 @@ func Load(o Options) (*Config, error) {
 	if err := c.Check(); err != nil {
 		return nil, err
 	}
-	pluginkit.SetSectionSource(c)
+	extkit.SetSectionSource(c)
 	return c, nil
 }
 
@@ -141,29 +141,29 @@ func Read(o Options) (*Config, error) {
 	return c, nil
 }
 
-// Check fails on top-level keys no linked plugin owns (typos) and on sections that don't decode.
+// Check fails on top-level keys no linked extension owns (typos) and on sections that don't decode.
 func (c *Config) Check() error {
 	var unknown []string
 	for k := range c.sections {
-		if !pluginkit.IsSection(k) {
+		if !extkit.IsSection(k) {
 			unknown = append(unknown, k)
 		}
 	}
 	if len(unknown) > 0 {
 		sort.Strings(unknown)
 		var known []string
-		for _, s := range pluginkit.Sections() {
+		for _, s := range extkit.Sections() {
 			known = append(known, s.Name)
 		}
 		return fmt.Errorf("%s: unknown section(s) %s (sections in this binary: %s)", c.Path, strings.Join(unknown, ", "), strings.Join(known, ", "))
 	}
-	if err := pluginkit.CheckSections(c); err != nil {
+	if err := extkit.CheckSections(c); err != nil {
 		return fmt.Errorf("%s: %w", c.Path, err)
 	}
 	return nil
 }
 
-// DecodeSection implements pluginkit.SectionSource.
+// DecodeSection implements extkit.SectionSource.
 func (c *Config) DecodeSection(name string, out any) (bool, error) {
 	n, ok := c.sections[name]
 	if !ok {

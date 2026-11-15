@@ -273,46 +273,46 @@ func TestTLSRedirectAndReload(t *testing.T) {
 
 }
 
-type initPlugin struct{ calls chan string }
+type initExtension struct{ calls chan string }
 
-func (initPlugin) Name() string { return "inittest" }
-func (p initPlugin) InitApp(inst Instance, app core.App) error {
+func (initExtension) Name() string { return "inittest" }
+func (p initExtension) InitApp(inst Instance, app core.App) error {
 	if app.IsBootstrapped() {
 		return errors.New("InitApp ran after bootstrap")
 	}
 	var cfg struct {
 		Greeting string `yaml:"greeting"`
 	}
-	if err := DecodePluginConfig(inst.PluginConfig("inittest"), &cfg); err != nil {
+	if err := DecodeExtensionConfig(inst.ExtensionConfig("inittest"), &cfg); err != nil {
 		return err
 	}
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-		e.Router.GET("/api/init-plugin", func(re *core.RequestEvent) error { return re.String(http.StatusOK, cfg.Greeting) })
+		e.Router.GET("/api/init-extension", func(re *core.RequestEvent) error { return re.String(http.StatusOK, cfg.Greeting) })
 		return e.Next()
 	})
 	p.calls <- inst.ID
 	return nil
 }
 
-// Server hands plugins implementing AppIniter every app before it bootstraps, with the instance's plugin settings.
-func TestServerAppIniterPlugin(t *testing.T) {
+// Server hands extensions implementing AppIniter every app before it bootstraps, with the instance's extension settings.
+func TestServerAppIniterExtension(t *testing.T) {
 	root := t.TempDir()
 	instances := filepath.Join(root, "instances.yaml")
-	if err := os.WriteFile(instances, []byte("instances:\n  - id: one\n    hosts: [one.test]\n    plugins: { inittest: { greeting: hi } }\n"), 0o644); err != nil {
+	if err := os.WriteFile(instances, []byte("instances:\n  - id: one\n    hosts: [one.test]\n    extensions: { inittest: { greeting: hi } }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	addr := freeAddr(t)
 	cfg := DefaultConfig()
 	cfg.Listen, cfg.PBRoot, cfg.InstancesFile = addr, root, instances
-	p := initPlugin{calls: make(chan string, 4)}
-	srv := &Server{Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Plugins: []Plugin{p}}
+	p := initExtension{calls: make(chan string, 4)}
+	srv := &Server{Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Extensions: []Extension{p}}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx) }()
 	defer func() { cancel(); <-done }()
 	base := "http://" + addr
 	waitHTTP(t, base+"/api/health", "one.test")
-	req, _ := http.NewRequest(http.MethodGet, base+"/api/init-plugin", nil)
+	req, _ := http.NewRequest(http.MethodGet, base+"/api/init-extension", nil)
 	req.Host = "one.test"
 	res, err := testClient.Do(req)
 	if err != nil {
@@ -321,7 +321,7 @@ func TestServerAppIniterPlugin(t *testing.T) {
 	body, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	if string(body) != "hi" {
-		t.Fatalf("plugin route: %d %q", res.StatusCode, body)
+		t.Fatalf("extension route: %d %q", res.StatusCode, body)
 	}
 	if id := <-p.calls; id != "one" {
 		t.Fatalf("InitApp got %q", id)

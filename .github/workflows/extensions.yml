@@ -1,11 +1,11 @@
-# PocketOne's plugin modules (ext/*, examples/pocketone): every module follows the plugin rules (a pluginkit plugin
+# PocketOne's extension modules (ext/*, examples/pocketone): every module follows the extension rules (an extkit extension
 # runs the conformance test), and each module a change affects builds, vets and passes its tests with -race.
 # Modules are affected by their own files or by any module they reach through a `replace`; a core change affects
-# all of them. See .github/plugins/main.go and docs/plugins.md.
+# all of them. See .github/extensions/main.go and docs/extensions.md.
 #
 # `plan` checks the rules and lists the affected modules; `test` builds, vets and tests each one in its own job, in
-# parallel (a change to core or to .github/plugins tests all ~30); `plugins` is the single overall result.
-name: plugins
+# parallel (a change to core or to .github/extensions tests all ~30); `extensions` is the single overall result.
+name: extensions
 
 on:
   push:
@@ -27,8 +27,8 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: "**/go.sum"
 
-      - name: Plugin rules
-        run: go run ./.github/plugins check
+      - name: Extension rules
+        run: go run ./.github/extensions check
 
       - name: Affected modules
         id: affected
@@ -41,7 +41,7 @@ jobs:
             mods=$(find ext examples -name go.mod -not -path '*/node_modules/*' -not -path '*/testdata/*' -exec dirname {} \; | sort)
           else
             base=$(git merge-base "$BEFORE" "$AFTER")
-            mods=$(go run ./.github/plugins affected "$base" "$AFTER")
+            mods=$(go run ./.github/extensions affected "$base" "$AFTER")
           fi
           echo "$mods" | sed '/^$/d;s/^/  /'
           echo "modules=$(echo "$mods" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
@@ -67,7 +67,7 @@ jobs:
         run: go build -o /dev/null ./... && go vet ./... && go test -race -count=1 -timeout 10m ./...
 
   # The one check to watch or require: fails if the rules failed or any module did.
-  plugins:
+  extensions:
     needs: [plan, test]
     if: always()
     runs-on: ubuntu-latest

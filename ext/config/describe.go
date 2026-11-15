@@ -6,18 +6,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"gopkg.in/yaml.v3"
 )
 
 // SectionDoc describes one config section for docs (`pocketone config --json`, used by pocketone.dev).
 type SectionDoc struct {
-	Name    string   `json:"name"`
-	Doc     string   `json:"doc"`
-	Owner   string   `json:"owner"`  // import path of the owning package
-	Plugin  string   `json:"plugin"` // the ext/<plugin> that owns it ("" for none)
-	Keys    []KeyDoc `json:"keys"`
-	Default string   `json:"default"` // the section's defaults as YAML
+	Name      string   `json:"name"`
+	Doc       string   `json:"doc"`
+	Owner     string   `json:"owner"`     // import path of the owning package
+	Extension string   `json:"extension"` // the ext/<extension> that owns it ("" for none)
+	Keys      []KeyDoc `json:"keys"`
+	Default   string   `json:"default"` // the section's defaults as YAML
 }
 
 // KeyDoc is one key of a section. Dotted for nested keys (dns.provider). Doc comes from an optional `doc:"…"` struct
@@ -32,17 +32,17 @@ type KeyDoc struct {
 // Describe lists every registered section with its keys.
 func Describe() []SectionDoc {
 	var out []SectionDoc
-	for _, s := range pluginkit.Sections() {
+	for _, s := range extkit.Sections() {
 		b, _ := yaml.Marshal(map[string]any{s.Name: s.Default})
-		d := SectionDoc{Name: s.Name, Doc: s.Doc, Owner: s.Owner, Plugin: pluginOf(s.Owner), Default: string(b), Keys: []KeyDoc{}}
+		d := SectionDoc{Name: s.Name, Doc: s.Doc, Owner: s.Owner, Extension: extensionOf(s.Owner), Default: string(b), Keys: []KeyDoc{}}
 		describeKeys(reflect.ValueOf(s.Default), "", &d.Keys)
 		out = append(out, d)
 	}
 	return out
 }
 
-// pluginOf turns ".../ext/multisite-mothership/mirror" into "multisite-mothership".
-func pluginOf(pkg string) string {
+// extensionOf turns ".../ext/multisite-mothership/mirror" into "multisite-mothership".
+func extensionOf(pkg string) string {
 	i := strings.Index(pkg, "/ext/")
 	if i < 0 {
 		return ""

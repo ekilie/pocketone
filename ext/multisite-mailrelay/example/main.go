@@ -50,7 +50,7 @@ func main() {
 
 	srv := &pocker.Server{
 		Config: cfg,
-		Plugins: []pocker.Plugin{
+		Extensions: []pocker.Extension{
 			mailrelay.New(mailrelay.Config{
 				Domain:   "mail.localhost",
 				Upstream: mailrelay.SMTPUpstream{Addr: inbox.SMTPAddr},

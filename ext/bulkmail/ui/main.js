@@ -1,5 +1,5 @@
 // Bulk mail screens for the PocketBase dashboard. Loaded by the dashboard as a UI extension
-// (/_/extensions/bulkmail/main.js). A thin view: every action calls the plugin's Go routes or the records API.
+// (/_/extensions/bulkmail/main.js). A thin view: every action calls the extension's Go routes or the records API.
 (() => {
     const C = "_bulkmail_campaigns";
     const S = "_bulkmail_sends";

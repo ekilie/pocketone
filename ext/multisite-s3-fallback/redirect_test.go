@@ -18,7 +18,7 @@ import (
 )
 
 // With ext/s3redirect on the same server, downloads of default-bucket files become signed redirects to the
-// instance's folder, without any wiring between the two plugins, and the signed URL serves the bytes.
+// instance's folder, without any wiring between the two extensions, and the signed URL serves the bytes.
 func TestS3RedirectSeesDefaultBucket(t *testing.T) {
 	b := startMinio(t)
 	st := New(Config{Bucket: b, Logger: quiet})
@@ -26,7 +26,7 @@ func TestS3RedirectSeesDefaultBucket(t *testing.T) {
 	var appA core.App
 	m := pocker.NewManager(fixedSource{{ID: "a", Hosts: []string{"a.test"}}}, pocker.ManagerOptions{
 		PBRoot: t.TempDir(), Logger: quiet,
-		Init:  pocker.InitPlugins(st, rd),
+		Init:  pocker.InitExtensions(st, rd),
 		Setup: func(_ pocker.Instance, app core.App) error { appA = app; return nil },
 	})
 	ctx, cancel := context.WithCancel(context.Background())

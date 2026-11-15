@@ -13,8 +13,8 @@ import (
 )
 
 // MustRegister adds point-in-time restore to a single PocketBase app (call before app.Start) and the `pitr`
-// command. It panics on error, like PocketBase's own plugins.
-func MustRegister(app *pocketbase.PocketBase, cfg Config) *Plugin {
+// command. It panics on error, like PocketBase's own extensions.
+func MustRegister(app *pocketbase.PocketBase, cfg Config) *Extension {
 	p, err := Register(app, cfg)
 	if err != nil {
 		panic(err)
@@ -23,7 +23,7 @@ func MustRegister(app *pocketbase.PocketBase, cfg Config) *Plugin {
 }
 
 // Register is [MustRegister] returning the error.
-func Register(app *pocketbase.PocketBase, cfg Config) (*Plugin, error) {
+func Register(app *pocketbase.PocketBase, cfg Config) (*Extension, error) {
 	p := New(cfg)
 	if err := p.SetupApp(app, AppConfig{}); err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func Register(app *pocketbase.PocketBase, cfg Config) (*Plugin, error) {
 }
 
 // Command returns the `pitr` command for a single app: status, and restore into a file or (server stopped) in place.
-func (p *Plugin) Command(app core.App) *cobra.Command {
+func (p *Extension) Command(app core.App) *cobra.Command {
 	cmd := &cobra.Command{Use: Name, Short: "Point-in-time restore of the database"}
 	a := func() *appPITR {
 		_, retention := p.resolve(AppConfig{})

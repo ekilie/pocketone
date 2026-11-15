@@ -1,4 +1,4 @@
-// Command pocketbase is the standard PocketOne binary: PocketBase's examples/base plus the PocketOne plugins that ship
+// Command pocketbase is the standard PocketOne binary: PocketBase's examples/base plus the PocketOne extensions that ship
 // by default (ext/pages, ext/s3redirect, ext/bulkmail, ext/tokens, ext/remotes, ext/oauth-server, ext/deploy, ext/mcp,
 // ext/pitr, ext/autotls). It's its
 // own module so core's go.mod stays upstream's.
@@ -25,6 +25,7 @@ import (
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/config"
 	"github.com/pockethost/pocketone/ext/deploy"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/jserrors"
 	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/mcp"
@@ -33,7 +34,6 @@ import (
 	oauthserver "github.com/pockethost/pocketone/ext/oauth-server"
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pitr"
-	"github.com/pockethost/pocketone/ext/pluginkit"
 	"github.com/pockethost/pocketone/ext/remotes"
 	"github.com/pockethost/pocketone/ext/s3redirect"
 	"github.com/pockethost/pocketone/ext/tokens"
@@ -44,7 +44,7 @@ import (
 var PoweredBy = "PocketOne " + pocker.Version()
 
 func main() {
-	// pocketone.yaml (and the .env beside it): each plugin's section, defaults for the flags below (flags win)
+	// pocketone.yaml (and the .env beside it): each extension's section, defaults for the flags below (flags win)
 	cfgOpts := config.FromArgs(os.Args[1:])
 	cfg, err := config.Load(cfgOpts)
 	if err != nil {
@@ -79,16 +79,16 @@ func main() {
 		return sc, cfg.ResolvePath
 	}))
 
-	// PocketOne plugins that ship in the standard binary and follow the plugin contract (pluginkit): Register
+	// PocketOne extensions that ship in the standard binary and follow the extension contract (extkit): Register
 	// here, and BindJS in the jsvm below. Bulk mail: campaigns to the app's own users (Mail in the dashboard, Bulk
 	// mail on Settings > Mail); nothing happens until someone starts a campaign. Defaults: 5/s, 5,000/day.
-	defaultPlugins := []pluginkit.Plugin{
+	defaultExtensions := []extkit.Extension{
 		bulkmail.New(bulkmail.Config{}),
 		mailtrap.New(), // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
 	}
 
 	// ---------------------------------------------------------------
-	// Optional plugin flags:
+	// Optional extension flags:
 	// ---------------------------------------------------------------
 
 	var hooksDir string
@@ -256,10 +256,10 @@ func main() {
 		}
 	}
 	// Auto TLS: off unless --autotls; then CertMagic serves the HTTPS certificates of `serve <domain>`
-	defaultPlugins = append(defaultPlugins, autotls.NewApp(autoTLSConfig))
+	defaultExtensions = append(defaultExtensions, autotls.NewApp(autoTLSConfig))
 
 	// ---------------------------------------------------------------
-	// Plugins and hooks:
+	// Extensions and hooks:
 	// ---------------------------------------------------------------
 
 	// load jsvm (pb_hooks and pb_migrations); hook errors name pb_hooks/<file>:<line>:<col> (ext/jserrors)
@@ -269,7 +269,7 @@ func main() {
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
 		OnInit: func(vm *goja.Runtime) {
-			pluginkit.BindJS(app, vm, defaultPlugins...) // e.g. $bulkmail in pb_hooks
+			extkit.BindJS(app, vm, defaultExtensions...) // e.g. $bulkmail in pb_hooks
 			mcp.BindJS(vm, app)                          // $mcp.addEndpoint in pb_hooks
 			tokens.BindJS(vm, app)                       // $tokens.registerScope / requireScope in pb_hooks
 		},
@@ -301,7 +301,7 @@ func main() {
 	// point-in-time restore: on by default (--pitr=false turns it off); history in pb_data/litestream/, restore from
 	// Settings → Backups or `pocketbase pitr restore`
 	pitr.MustRegister(app, pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention, SnapshotInterval: pitrCfg.SnapshotInterval})
-	pluginkit.MustRegister(app, defaultPlugins...)
+	extkit.MustRegister(app, defaultExtensions...)
 
 	// migrate command (with js templates)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{

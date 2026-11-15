@@ -4,7 +4,7 @@ go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -55,7 +55,7 @@ replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
-replace github.com/pockethost/pocketone/ext/pluginkit => ../pluginkit
+replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 

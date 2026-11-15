@@ -11,7 +11,7 @@ import (
 	"github.com/pockethost/pocketone/ext/sandbox"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // Server wires a [Config], an [InstanceSource] and a [Manager] into one HTTP server.
@@ -41,9 +41,9 @@ type Server struct {
 	// Background work run until shutdown (e.g. an edge provider's refresh).
 	Background []func(ctx context.Context)
 
-	// Plugins extend the server (see [Plugin]): their own settings, a request gate, TLS (e.g. the autotls plugin), handler wrappers and background work. Order matters for wrappers: the
+	// Extensions extend the server (see [Extension]): their own settings, a request gate, TLS (e.g. the autotls extension), handler wrappers and background work. Order matters for wrappers: the
 	// first listed is the outermost.
-	Plugins []Plugin
+	Extensions []Extension
 
 	// OnStart, if set, receives the Manager once Run has created it, before any request is served: the safe way for
 	// host code running in other goroutines (scheduled jobs, maintenance) to get it.
@@ -76,9 +76,9 @@ func (s *Server) Run(ctx context.Context) error {
 	return h.Run(ctx)
 }
 
-// prepare makes h run its instances in-process: plugins, the egress policy, the Manager as h's runtime, wrappers,
-// background work (plugin starters). h's Source, Gates, Forward, Dev, Listeners and Logger are
-// already set; plugin gates are added after h's.
+// prepare makes h run its instances in-process: extensions, the egress policy, the Manager as h's runtime, wrappers,
+// background work (extension starters). h's Source, Gates, Forward, Dev, Listeners and Logger are
+// already set; extension gates are added after h's.
 func (s *Server) prepare(h *multisite.Host) error {
 	log := h.Logger
 	if log == nil {
@@ -109,16 +109,16 @@ func (s *Server) prepare(h *multisite.Host) error {
 		initers   []AppIniter
 		jsIniters []JSIniter
 	)
-	for _, p := range s.Plugins {
+	for _, p := range s.Extensions {
 		if c, ok := p.(Configurer); ok {
 			if err := c.Configure(s.Config); err != nil {
-				return fmt.Errorf("plugin %s: %w", p.Name(), err)
+				return fmt.Errorf("extension %s: %w", p.Name(), err)
 			}
 		}
-		if cp, ok := p.(pluginkit.Plugin); ok {
-			// a PocketOne plugin: register it on every instance, with that instance's settings
+		if cp, ok := p.(extkit.Extension); ok {
+			// a PocketOne extension: register it on every instance, with that instance's settings
 			if _, own := p.(AppIniter); !own {
-				hp := hostPlugin(cp)
+				hp := hostExtension(cp)
 				initers = append(initers, hp)
 				jsIniters = append(jsIniters, hp)
 			}
@@ -128,7 +128,7 @@ func (s *Server) prepare(h *multisite.Host) error {
 		}
 		if t, ok := p.(TLSProvider); ok {
 			if tlsProv != nil {
-				return fmt.Errorf("plugin %s: another plugin already provides TLS", p.Name())
+				return fmt.Errorf("extension %s: another extension already provides TLS", p.Name())
 			}
 			tlsProv = t
 		}
@@ -170,7 +170,7 @@ func (s *Server) prepare(h *multisite.Host) error {
 		h.TLS = tlsProv
 	}
 
-	var wrap []func(http.Handler) http.Handler // outermost first: plugin wrappers, then the host application's
+	var wrap []func(http.Handler) http.Handler // outermost first: extension wrappers, then the host application's
 	for _, wr := range wrappers {
 		wrap = append(wrap, wr.Wrap)
 	}

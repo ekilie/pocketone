@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // Action is what a decision asks this host to do with an instance's data.
@@ -47,7 +47,7 @@ type SectionConfig struct {
 }
 
 // Section is the key of the `lifecycle` section.
-var Section = pluginkit.NewSection("lifecycle", SectionConfig{MeasureEvery: 24 * time.Hour, ReportEvery: time.Hour, Concurrency: 2},
+var Section = extkit.NewSection("lifecycle", SectionConfig{MeasureEvery: 24 * time.Hour, ReportEvery: time.Hour, Concurrency: 2},
 	"Instance data on this host: how often disk use is measured and last-request times are reported.")
 
 // YAMLPolicy decides on this host from the `lifecycle` section (or Config, when set): measure each instance when its

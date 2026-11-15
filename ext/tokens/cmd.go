@@ -162,7 +162,7 @@ func tokenRevokeCommand(t *Tokens) *cobra.Command {
 func tokenScopesCommand(t *Tokens) *cobra.Command {
 	return &cobra.Command{
 		Use:          "scopes",
-		Short:        "Lists the scopes plugins registered",
+		Short:        "Lists the scopes extensions registered",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
 			w := tabwriter.NewWriter(c.OutOrStdout(), 0, 4, 2, ' ', 0)

@@ -1,7 +1,7 @@
-package pluginkit
+package extkit
 
-// Typed config sections. A plugin owns one top-level section of the config file (pocketone.yaml, read by
-// ext/config) and exports its key; reading a section requires that key, so a plugin can only read the sections it
+// Typed config sections. An extension owns one top-level section of the config file (pocketone.yaml, read by
+// ext/config) and exports its key; reading a section requires that key, so an extension can only read the sections it
 // was built against (it imports their owners). There is no lookup by name and no access to the raw file. This
 // package only defines the keys; a config loader (ext/config) decodes them.
 
@@ -62,7 +62,7 @@ func NewSectionFunc[T any](name string, def func() T, doc string) *Section[T] {
 	secMu.Lock()
 	defer secMu.Unlock()
 	if _, dup := secInfos[name]; dup {
-		panic(fmt.Sprintf("pluginkit: config section %q is registered twice", name))
+		panic(fmt.Sprintf("extkit: config section %q is registered twice", name))
 	}
 	secInfos[name] = SectionInfo{Name: name, Doc: doc, Owner: callerPackage(), Default: def(), check: func(src SectionSource) error {
 		v := def()
@@ -133,7 +133,7 @@ func (s *Section[T]) Get() (T, bool) {
 	return v, found
 }
 
-// Require returns the section, or an error when the file doesn't have it or it doesn't decode: for plugins that
+// Require returns the section, or an error when the file doesn't have it or it doesn't decode: for extensions that
 // can't run without their settings.
 func (s *Section[T]) Require() (T, error) {
 	v, found, err := s.load()
@@ -175,7 +175,7 @@ func IsSection(name string) bool {
 }
 
 // CheckSections decodes every registered section from src and returns the first error (bad values fail at startup,
-// not when a plugin first reads its section).
+// not when an extension first reads its section).
 func CheckSections(src SectionSource) error {
 	for _, info := range Sections() {
 		if err := info.check(src); err != nil {

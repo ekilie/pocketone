@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 type fakeProvider struct{ prepared *Host }
@@ -46,7 +46,7 @@ func loadConfig(t *testing.T, yaml string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { pluginkit.SetSectionSource(nil) })
+	t.Cleanup(func() { extkit.SetSectionSource(nil) })
 	_ = c
 }
 

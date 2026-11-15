@@ -9,7 +9,7 @@ require (
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.58.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -63,7 +63,7 @@ replace github.com/pockethost/pocketone/ext/devusers => ../devusers
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
-replace github.com/pockethost/pocketone/ext/pluginkit => ../pluginkit
+replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 

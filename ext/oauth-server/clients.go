@@ -11,7 +11,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // Client is a registered OAuth client.
@@ -29,9 +29,9 @@ type Client struct {
 // CLIClient is the built-in client of `pocketone login`. Its Name is empty here; [CLIClientName] fills it in.
 var CLIClient = Client{Id: CLIClientId, Public: true, builtin: true}
 
-// CLIClientName is the built-in client's name on consent pages and tokens: "<command> CLI", from [pluginkit.Command]
+// CLIClientName is the built-in client's name on consent pages and tokens: "<command> CLI", from [extkit.Command]
 // (read when used, so a build that sets it in main gets its own name).
-func CLIClientName() string { return pluginkit.Command + " CLI" }
+func CLIClientName() string { return extkit.Command + " CLI" }
 
 // FindClient returns a client by id: the built-in CLI client, or one from _oauth_clients.
 func (s *Server) FindClient(id string) (*Client, error) {

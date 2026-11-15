@@ -112,7 +112,7 @@ func TestManagerServerTiming(t *testing.T) {
 	defer cancel()
 	go m.Run(ctx)
 	defer m.Shutdown()
-	h := New().Wrap(m) // the plugin collects the timings the Manager registers
+	h := New().Wrap(m) // the extension collects the timings the Manager registers
 
 	get := func() *httptest.ResponseRecorder {
 		w := httptest.NewRecorder()

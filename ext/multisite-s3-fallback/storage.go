@@ -1,10 +1,10 @@
 // Package storage is the operator's fall-through storage: named S3-compatible backends, and mounts that send each
-// filesystem kind (record uploads, backup zips, PITR history, any plugin's own kind) to one of them. To an app
+// filesystem kind (record uploads, backup zips, PITR history, any extension's own kind) to one of them. To an app
 // nothing is configured: Settings show S3 off, uploads and the Backups screen work as before, and the backends'
 // credentials never reach its settings, env or JS. Downloads stream through the server, or, with ext/s3redirect,
 // become signed redirects (to s3redirect a mount is just another S3 filesystem).
 //
-//	srv.Plugins = append(srv.Plugins, s3fallback.New(s3fallback.Config{}))
+//	srv.Extensions = append(srv.Extensions, s3fallback.New(s3fallback.Config{}))
 //
 //	storage:
 //	  backends:
@@ -15,10 +15,10 @@
 //	    litestream: r2-eu  # PITR history (ext/pitr asks for kind "litestream")
 //
 // Each app gets <backend prefix><root><kind>/ per mounted kind and can't reach anything outside it. The root is the
-// caller's choice and opaque to the plugin: under pocker, Register uses "instances/<id>/"; a single app passes "" (or
+// caller's choice and opaque to the extension: under pocker, Register uses "instances/<id>/"; a single app passes "" (or
 // any name). Several deployments sharing one bucket keep apart with their own backend prefix or roots. When an app turns on its own S3 for uploads
 // or backups, PocketBase's normal code takes over with the app's credentials. Other kinds are served whenever they're
-// mounted: the plugin asking for them (e.g. ext/pitr) checks its own app setting first. Without mounts the plugin
+// mounted: the extension asking for them (e.g. ext/pitr) checks its own app setting first. Without mounts the extension
 // does nothing. Files already on an app's local disk are not read or moved.
 //
 // The old shape (`bucket:` + `uploads:`/`backups:`) still works: it becomes one backend named "default" mounted for
@@ -33,19 +33,19 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
-	"github.com/pockethost/pocketone/ext/pluginkit"
 	"github.com/pockethost/pocketone/ext/s3redirect/sigv4"
 )
 
-// Name is the plugin's name and config key.
+// Name is the extension's name and config key.
 const Name = "storage"
 
 // Config is the process configuration.
 type Config struct {
-	// Enabled is the default for every instance: on unless false. An instance's `plugins.storage.enabled`
+	// Enabled is the default for every instance: on unless false. An instance's `extensions.storage.enabled`
 	// overrides it.
-	Enabled *bool `yaml:"enabled" doc:"On for every instance unless false; an instance's plugins.storage.enabled overrides it."`
+	Enabled *bool `yaml:"enabled" doc:"On for every instance unless false; an instance's extensions.storage.enabled overrides it."`
 
 	// Backends are the named S3-compatible destinations.
 	Backends map[string]*Bucket `yaml:"backends" doc:"Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style."`
@@ -73,35 +73,35 @@ type Bucket struct {
 	ForcePathStyle bool   `yaml:"force_path_style" doc:"Path-style addressing, for MinIO and similar servers."`
 }
 
-// Plugin is the pocker plugin.
-type Plugin struct {
+// Extension is the pocker extension.
+type Extension struct {
 	cfg Config
 	log *slog.Logger
 }
 
 var (
-	_ pocker.Plugin     = (*Plugin)(nil)
-	_ pocker.Configurer = (*Plugin)(nil)
-	_ pluginkit.Plugin  = (*Plugin)(nil)
+	_ pocker.Extension  = (*Extension)(nil)
+	_ pocker.Configurer = (*Extension)(nil)
+	_ extkit.Extension  = (*Extension)(nil)
 )
 
-// New returns the plugin for cfg.
-func New(cfg Config) *Plugin {
+// New returns the extension for cfg.
+func New(cfg Config) *Extension {
 	log := cfg.Logger
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Plugin{cfg: cfg, log: log.With("plugin", Name)}
+	return &Extension{cfg: cfg, log: log.With("extension", Name)}
 }
 
-// Name implements pocker.Plugin.
-func (p *Plugin) Name() string { return Name }
+// Name implements pocker.Extension.
+func (p *Extension) Name() string { return Name }
 
 // Config returns the effective configuration.
-func (p *Plugin) Config() Config { return p.cfg }
+func (p *Extension) Config() Config { return p.cfg }
 
 // Configure reads pocketone.yaml's `storage` section; fields set in Go are kept.
-func (p *Plugin) Configure(pocker.Config) error {
+func (p *Extension) Configure(pocker.Config) error {
 	c, found := Section.Get()
 	if !found {
 		return nil
@@ -130,7 +130,7 @@ func (p *Plugin) Configure(pocker.Config) error {
 func on(b *bool) bool { return b == nil || *b }
 
 // mounts returns kind → backend, with the deprecated single-bucket shape folded in and every mount checked.
-func (p *Plugin) mounts() (map[string]*Bucket, error) {
+func (p *Extension) mounts() (map[string]*Bucket, error) {
 	backends := map[string]*Bucket{}
 	for name, b := range p.cfg.Backends {
 		if b == nil {
@@ -173,7 +173,7 @@ func (p *Plugin) mounts() (map[string]*Bucket, error) {
 
 // FS returns the filesystem for kind under root, fenced to <backend prefix><root><kind>/. ok is false when the kind
 // isn't mounted. Close the result when done.
-func (p *Plugin) FS(root, kind string) (fsys *filesystem.System, ok bool, err error) {
+func (p *Extension) FS(root, kind string) (fsys *filesystem.System, ok bool, err error) {
 	mounts, err := p.mounts()
 	if err != nil {
 		return nil, false, err
@@ -197,7 +197,7 @@ func keyPrefix(b *Bucket, root, kind string) string {
 // Bind serves app's filesystems from the mounts under root (opaque, the caller's choice: "" for a single app,
 // "instances/<id>/" under pocker). Uploads and backups step aside when the app turned on its own S3 for them; any
 // other mounted kind is served whenever it's asked for.
-func (p *Plugin) Bind(app core.App, root string) error {
+func (p *Extension) Bind(app core.App, root string) error {
 	mounts, err := p.mounts()
 	if err != nil || len(mounts) == 0 {
 		return err
@@ -228,15 +228,15 @@ func (p *Plugin) Bind(app core.App, root string) error {
 	return nil
 }
 
-// settings is the shape of an app's settings layers (an instance's `plugins.storage`). Only `enabled` is read per
+// settings is the shape of an app's settings layers (an instance's `extensions.storage`). Only `enabled` is read per
 // app; backends and mounts are the operator's, from [Configure] or the Config given to [New].
 type settings struct {
 	Enabled *bool `json:"enabled"`
 }
 
-// Register implements [pluginkit.Plugin]: binds app to the mounts under "instances/<id>/" (its [pluginkit.AppID])
-// under pocker, or at the backends' roots on a single app, unless the app has the plugin off.
-func (p *Plugin) Register(app core.App, layers pluginkit.Config) error {
+// Register implements [extkit.Extension]: binds app to the mounts under "instances/<id>/" (its [extkit.AppID])
+// under pocker, or at the backends' roots on a single app, unless the app has the extension off.
+func (p *Extension) Register(app core.App, layers extkit.Config) error {
 	var s settings
 	if err := layers.Decode(&s); err != nil {
 		return err
@@ -249,7 +249,7 @@ func (p *Plugin) Register(app core.App, layers pluginkit.Config) error {
 		return nil
 	}
 	root := ""
-	if id := pluginkit.AppID(app); id != "" {
+	if id := extkit.AppID(app); id != "" {
 		root = "instances/" + id + "/"
 	}
 	return p.Bind(app, root)
@@ -267,4 +267,4 @@ func open(b *Bucket, prefix string) (*filesystem.System, error) {
 }
 
 // Section is the key of the `storage` section (pocketone.yaml): storage backends and mounts for a pocker host.
-var Section = pluginkit.NewSection(Name, Config{}, "S3 storage backends and mounts for a pocker host's instances: uploads, backups, PITR history.")
+var Section = extkit.NewSection(Name, Config{}, "S3 storage backends and mounts for a pocker host's instances: uploads, backups, PITR history.")

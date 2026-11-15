@@ -1,6 +1,6 @@
 // Package mothership is the control plane of a fleet of edges: a PocketBase app that records which edges exist and
 // which instances run where. Edges follow it with the [mirror] package. One operator, no users: owners, accounts
-// and plans are an extension (a multitenant plugin adds its collections and fields here, and a mirror extension on
+// and plans are an extension (a multitenant extension adds its collections and fields here, and a mirror extension on
 // the edges).
 package mothership
 
@@ -50,6 +50,8 @@ func EnsureCollections(app core.App) error {
 		&core.TextField{Name: "encryption_key", Hidden: true},
 		&core.JSONField{Name: "access"},
 		&core.JSONField{Name: "limits"},
+		// "plugins" holds per-instance extension settings (multisite.Instance.Extensions); the stored field keeps its
+		// old name so existing records and writers keep working.
 		&core.JSONField{Name: "plugins"},
 		&core.TextField{Name: "status"},
 		&core.AutodateField{Name: "created", OnCreate: true},

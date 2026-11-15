@@ -2,35 +2,35 @@ package tokens
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
-// Name is the plugin's key under an instance's `plugins:`.
+// Name is the extension's key under an instance's `extensions:`.
 const Name = "tokens"
 
-// Plugin is API tokens as a PocketOne plugin: on a single app with pluginkit.MustRegister, and under pocker every
+// Extension is API tokens as a PocketOne extension: on a single app with extkit.MustRegister, and under pocker every
 // instance gets its own _tokens, routes and screen.
 //
-//	srv.Plugins = append(srv.Plugins, tokens.New(tokens.Config{}))
+//	srv.Extensions = append(srv.Extensions, tokens.New(tokens.Config{}))
 //
-// Per instance, `plugins: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own
-// tokens. Scopes are registered per app by the plugins that own them (they call tokens.For(app).RegisterScope).
-type Plugin struct{ cfg Config }
+// Per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own
+// tokens. Scopes are registered per app by the extensions that own them (they call tokens.For(app).RegisterScope).
+type Extension struct{ cfg Config }
 
-var _ pluginkit.Plugin = (*Plugin)(nil)
+var _ extkit.Extension = (*Extension)(nil)
 
-// New returns the plugin. cfg holds the defaults for every app.
-func New(cfg Config) *Plugin { return &Plugin{cfg: cfg} }
+// New returns the extension. cfg holds the defaults for every app.
+func New(cfg Config) *Extension { return &Extension{cfg: cfg} }
 
-// Name implements [pluginkit.Plugin].
-func (p *Plugin) Name() string { return Name }
+// Name implements [extkit.Extension].
+func (p *Extension) Name() string { return Name }
 
 type settings struct {
 	Collections []string `json:"collections"`
 }
 
-// Register implements [pluginkit.Plugin].
-func (p *Plugin) Register(app core.App, layers pluginkit.Config) error {
+// Register implements [extkit.Extension].
+func (p *Extension) Register(app core.App, layers extkit.Config) error {
 	cfg := p.cfg
 	var s settings
 	if err := layers.Decode(&s); err != nil {

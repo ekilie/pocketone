@@ -10,7 +10,7 @@ import (
 )
 
 // TLSConfig enables HTTPS on Listen (pocketone.yaml `server.tls`), from certificate files (re-read when they change,
-// so a renewal needs no restart). Automatic certificates (ACME) are the autotls plugin (its `autotls` section).
+// so a renewal needs no restart). Automatic certificates (ACME) are the autotls extension (its `autotls` section).
 //
 //	tls:
 //	  cert: /etc/letsencrypt/live/example.com/fullchain.pem

@@ -8,7 +8,7 @@
 //
 //	mailtrap.MustRegister(app)
 //
-// Under pocker, add [New] to Server.Plugins; every dev instance's mail lands in the one inbox, labeled by instance.
+// Under pocker, add [New] to Server.Extensions; every dev instance's mail lands in the one inbox, labeled by instance.
 //
 // The inbox listens on 127.0.0.1:8025 (SMTP 127.0.0.1:1025); PB_MAILTRAP_HTTP and PB_MAILTRAP_SMTP move it.
 package mailtrap
@@ -16,25 +16,25 @@ package mailtrap
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
-// Name is the plugin's name (pluginkit / pocker config key).
+// Name is the extension's name (extkit / pocker config key).
 const Name = "mailtrap"
 
 const reason = "No SMTP configured"
 
-// Plugin is the pluginkit form, for pocker's Server.Plugins and pluginkit.MustRegister.
-type Plugin struct{}
+// Extension is the extkit form, for pocker's Server.Extensions and extkit.MustRegister.
+type Extension struct{}
 
-// New returns the plugin.
-func New() *Plugin { return &Plugin{} }
+// New returns the extension.
+func New() *Extension { return &Extension{} }
 
-// Name implements pluginkit.Plugin.
-func (p *Plugin) Name() string { return Name }
+// Name implements extkit.Extension.
+func (p *Extension) Name() string { return Name }
 
-// Register implements pluginkit.Plugin.
-func (p *Plugin) Register(app core.App, _ pluginkit.Config) error {
+// Register implements extkit.Extension.
+func (p *Extension) Register(app core.App, _ extkit.Config) error {
 	Register(app)
 	return nil
 }

@@ -2,12 +2,12 @@
 // streaming the file through the app, when the app's files filesystem can sign URLs (S3).
 //
 // It asks the filesystem PocketBase serves the download from (the event's Filesystem) to sign, so it works the same for an app's own S3 settings
-// and for any plugin that supplies the filesystem through OnFilesystemCreate (e.g. ext/multisite-s3-fallback's default bucket):
+// and for any extension that supplies the filesystem through OnFilesystemCreate (e.g. ext/multisite-s3-fallback's default bucket):
 // whatever the app's files live on, if it can sign, downloads redirect; if not (local disk), they stream as usual.
 //
 // PocketBase still does everything up to the point of sending bytes: it finds the record, checks protected-file
 // access (file tokens, view rules), and creates thumbnails on first request. Only then, in OnFileDownloadRequest,
-// this plugin replaces the stream with a 302 to a presigned GET URL. The browser fetches the file from the bucket, so
+// this extension replaces the stream with a 302 to a presigned GET URL. The browser fetches the file from the bucket, so
 // the app's bandwidth and memory stay free. With Cloudflare R2 there are no egress fees either.
 //
 // Single app:
@@ -16,7 +16,7 @@
 //	s3redirect.MustRegister(app, s3redirect.Config{TTL: 5 * time.Minute})
 //
 // The standard PocketOne binary (examples/pocketone) registers it by default. Many apps in one process: put New(cfg) in
-// pocker's Server.Plugins (it's a [pluginkit.Plugin]).
+// pocker's Server.Extensions (it's an [extkit.Extension]).
 package s3redirect
 
 import (
@@ -37,18 +37,18 @@ import (
 	"github.com/pockethost/pocketone/ext/s3redirect/sigv4"
 )
 
-// Name is the plugin's name: its config key (plugins.s3redirect).
+// Name is the extension's name: its config key (extensions.s3redirect).
 const Name = "s3redirect"
 
 // DefaultTTL is how long a signed URL stays valid when nothing else is configured.
 const DefaultTTL = 5 * time.Minute
 
-// HookID is the id of the plugin's OnFileDownloadRequest handler, so an app can unbind it.
+// HookID is the id of the extension's OnFileDownloadRequest handler, so an app can unbind it.
 const HookID = "__ext_s3redirect__"
 
 // Config is the process-wide configuration.
 type Config struct {
-	// Enabled is the default for every app: on unless set to false (including the plugin is the opt-in). An app's
+	// Enabled is the default for every app: on unless set to false (including the extension is the opt-in). An app's
 	// [AppConfig.Enabled] overrides it.
 	Enabled *bool `yaml:"enabled" doc:"On unless false (it only acts when S3 file storage is on). Flag: --s3Redirect."`
 
@@ -70,8 +70,8 @@ type AppConfig struct {
 	TTL time.Duration `yaml:"ttl"`
 }
 
-// Plugin signs download redirects for every app it is set up on.
-type Plugin struct {
+// Extension signs download redirects for every app it is set up on.
+type Extension struct {
 	cfg    Config
 	log    *slog.Logger
 	ttlSet bool // set in Go: the config file doesn't override it
@@ -79,8 +79,8 @@ type Plugin struct {
 	sectionOnce sync.Once
 }
 
-// New returns the plugin for cfg, filling defaults.
-func New(cfg Config) *Plugin {
+// New returns the extension for cfg, filling defaults.
+func New(cfg Config) *Extension {
 	ttlSet := cfg.TTL > 0
 	if cfg.TTL <= 0 {
 		cfg.TTL = DefaultTTL
@@ -92,16 +92,16 @@ func New(cfg Config) *Plugin {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Plugin{cfg: cfg, log: log.With("plugin", Name), ttlSet: ttlSet}
+	return &Extension{cfg: cfg, log: log.With("extension", Name), ttlSet: ttlSet}
 }
 
-// Name implements the plugin interface.
-func (p *Plugin) Name() string { return Name }
+// Name implements the extension interface.
+func (p *Extension) Name() string { return Name }
 
 // Config returns the effective process configuration.
-func (p *Plugin) Config() Config { return p.cfg }
+func (p *Extension) Config() Config { return p.cfg }
 
-func (p *Plugin) resolve(ac AppConfig) (enabled bool, ttl time.Duration) {
+func (p *Extension) resolve(ac AppConfig) (enabled bool, ttl time.Duration) {
 	enabled = p.cfg.Enabled == nil || *p.cfg.Enabled
 	if ac.Enabled != nil {
 		enabled = *ac.Enabled
@@ -114,8 +114,8 @@ func (p *Plugin) resolve(ac AppConfig) (enabled bool, ttl time.Duration) {
 }
 
 // SetupApp binds the redirect to app's file downloads. A single app calls it through the package's Register; the
-// plugin's Register method (pocker, pluginkit) calls it for each app.
-func (p *Plugin) SetupApp(app core.App, ac AppConfig) error {
+// extension's Register method (pocker, extkit) calls it for each app.
+func (p *Extension) SetupApp(app core.App, ac AppConfig) error {
 	enabled, ttl := p.resolve(ac)
 	if !enabled {
 		return nil
@@ -131,7 +131,7 @@ func (p *Plugin) SetupApp(app core.App, ac AppConfig) error {
 	return nil
 }
 
-func (p *Plugin) handle(e *core.FileDownloadRequestEvent, ttl time.Duration) error {
+func (p *Extension) handle(e *core.FileDownloadRequestEvent, ttl time.Duration) error {
 	if m := e.Request.Method; m != http.MethodGet && m != http.MethodHead {
 		return e.Next()
 	}
@@ -206,7 +206,7 @@ var extTypes = map[string]string{
 
 // responseHeaders decides Content-Disposition and (when PocketBase would force one) Content-Type the way
 // filesystem.System.Serve does. PocketBase decides inline vs attachment from the stored content type; without a HEAD
-// request to the bucket the plugin goes by extension, which matches for every file PocketBase names itself.
+// request to the bucket the extension goes by extension, which matches for every file PocketBase names itself.
 func responseHeaders(r *http.Request, servedPath, name string) (disposition, contentType string) {
 	ext := strings.ToLower(filepath.Ext(servedPath))
 	forceAttachment, _ := strconv.ParseBool(r.URL.Query().Get("download"))
@@ -232,7 +232,7 @@ func responseHeaders(r *http.Request, servedPath, name string) (disposition, con
 }
 
 // Signer is implemented by filesystem drivers that can hand out a time-limited direct URL for a key, such as
-// ext/multisite-s3-fallback's bucket driver. A plugin supplying its own S3 filesystem (OnFilesystemCreate) implements it on its
+// ext/multisite-s3-fallback's bucket driver. An extension supplying its own S3 filesystem (OnFilesystemCreate) implements it on its
 // driver so downloads from it can be redirected.
 type Signer interface {
 	SignedURL(key string, ttl time.Duration, now time.Time, overrides url.Values) (string, error)

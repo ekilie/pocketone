@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"io/fs"
 	"net/http"
@@ -310,7 +310,7 @@ func NewClient(ctx context.Context, rc *remotes.Client) (*Client, error) {
 	}
 	p := w.Features["deploy"]
 	if p == "" {
-		return nil, fmt.Errorf("%s doesn't offer a deploy API (no deploy plugin)", rc.Remote.URL)
+		return nil, fmt.Errorf("%s doesn't offer a deploy API (no deploy extension)", rc.Remote.URL)
 	}
 	return &Client{Client: rc, Prefix: strings.TrimSuffix(p, "/")}, nil
 }
@@ -413,7 +413,7 @@ func (r *RestartResult) Message() string {
 	case r.Restarted:
 		return "Restarted the app."
 	case r.StartError != "":
-		return "The app failed to start: " + r.StartError + " (see '" + pluginkit.Command + " logs')."
+		return "The app failed to start: " + r.StartError + " (see '" + extkit.Command + " logs')."
 	default:
 		return "The app isn't running; it applies the changes when it starts."
 	}
@@ -520,10 +520,10 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	case res.Restarted:
 		restart = " Restarted."
 	case res.StartError != "":
-		restart = " The app failed to start: " + res.StartError + " (see '" + pluginkit.Command + " logs')."
+		restart = " The app failed to start: " + res.StartError + " (see '" + extkit.Command + " logs')."
 	case res.RestartNeeded:
 		restart = " Migrations or packages changed: " + orStr(opts.RestartHint,
-			"run '"+pluginkit.Command+" restart' (or deploy with --restart) to apply them.")
+			"run '"+extkit.Command+" restart' (or deploy with --restart) to apply them.")
 	}
 	log(fmt.Sprintf("Deployed%s: %d changed, %d deleted, %d unchanged.%s", id, res.WrittenCount, res.DeletedCount, res.Unchanged, restart))
 	return res, nil

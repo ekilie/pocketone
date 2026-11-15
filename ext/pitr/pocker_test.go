@@ -12,8 +12,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
-	"github.com/pockethost/pocketone/ext/pluginkit"
 )
 
 type fixedSource []pocker.Instance
@@ -32,12 +32,12 @@ func TestPockerRestoreRestartsOnlyThatInstance(t *testing.T) {
 
 	var mu sync.Mutex
 	apps := map[string][]core.App{} // every app started, by instance
-	a := pocker.Instance{ID: "a", Hosts: []string{"a.test"}, Plugins: map[string]any{"pitr": map[string]any{"retention": "168h"}}}
-	b := pocker.Instance{ID: "b", Hosts: []string{"b.test"}, Plugins: map[string]any{"pitr": map[string]any{"enabled": false}}}
+	a := pocker.Instance{ID: "a", Hosts: []string{"a.test"}, Extensions: map[string]any{"pitr": map[string]any{"retention": "168h"}}}
+	b := pocker.Instance{ID: "b", Hosts: []string{"b.test"}, Extensions: map[string]any{"pitr": map[string]any{"enabled": false}}}
 	m := pocker.NewManager(fixedSource{a, b}, pocker.ManagerOptions{
 		PBRoot: t.TempDir(),
 		Logger: quiet,
-		Init:   pocker.InitPlugins(p), // what pocker.Server does for pluginkit plugins
+		Init:   pocker.InitExtensions(p), // what pocker.Server does for extkit extensions
 		Setup: func(inst pocker.Instance, app core.App) error {
 			mu.Lock()
 			apps[inst.ID] = append(apps[inst.ID], app)
@@ -68,10 +68,10 @@ func TestPockerRestoreRestartsOnlyThatInstance(t *testing.T) {
 	}
 	appA, appB := latest("a"), latest("b")
 	if p.appFor(appB) != nil {
-		t.Fatal("pitr enabled for b, whose plugins.pitr.enabled is false")
+		t.Fatal("pitr enabled for b, whose extensions.pitr.enabled is false")
 	}
 	if got := p.appFor(appA).retention; got != 168*time.Hour {
-		t.Fatalf("a's retention = %v, want its plugins.pitr.retention 168h", got)
+		t.Fatalf("a's retention = %v, want its extensions.pitr.retention 168h", got)
 	}
 	tok := superuserToken(t, appA) // before t1, so it survives the restore
 	notesCollection(t, appA)
@@ -160,8 +160,8 @@ func (s sectionSource) DecodeSection(name string, out any) (bool, error) {
 }
 
 func TestConfigureAndInstanceConfig(t *testing.T) {
-	pluginkit.SetSectionSource(sectionSource{"pitr": "enabled: false\nretention: 48h\n"})
-	t.Cleanup(func() { pluginkit.SetSectionSource(nil) })
+	extkit.SetSectionSource(sectionSource{"pitr": "enabled: false\nretention: 48h\n"})
+	t.Cleanup(func() { extkit.SetSectionSource(nil) })
 	p := New(Config{SnapshotInterval: time.Hour, Logger: quiet})
 	if err := p.Configure(pocker.Config{}); err != nil {
 		t.Fatal(err)
@@ -178,12 +178,12 @@ func TestConfigureAndInstanceConfig(t *testing.T) {
 	}
 	// an instance can't pick a bucket: the key isn't read per app (only enabled, retention)
 	if err := p.Register(core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir()}),
-		pluginkit.Config{{"bucket": map[string]any{"secret": "s"}}}); err != nil {
+		extkit.Config{{"bucket": map[string]any{"secret": "s"}}}); err != nil {
 		t.Fatalf("bucket in instance config: %v", err)
 	}
 	// a bad retention is an error, not a silent default
 	if err := p.Register(core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir()}),
-		pluginkit.Config{{"retention": "soon"}}); err == nil {
+		extkit.Config{{"retention": "soon"}}); err == nil {
 		t.Fatal("bad retention accepted")
 	}
 }

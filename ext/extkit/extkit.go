@@ -1,13 +1,13 @@
-// Package pluginkit is PocketOne's plugin contract: one plugin value that works on a single app and,
-// unchanged, on every instance under pocker (ext/multisite-provider-pocker hosts any [Plugin] in Server.Plugins).
+// Package extkit is PocketOne's extension contract: one extension value that works on a single app and,
+// unchanged, on every instance under pocker (ext/multisite-provider-pocker hosts any [Extension] in Server.Extensions).
 //
-// A plugin implements Name and Register, and optionally [JSBinder]:
+// An extension implements Name and Register, and optionally [JSBinder]:
 //
-//	type Plugin struct{ cfg Config }
+//	type Extension struct{ cfg Config }
 //
-//	func New(cfg Config) *Plugin { return &Plugin{cfg: cfg} }
-//	func (p *Plugin) Name() string { return "hello" }
-//	func (p *Plugin) Register(app core.App, cfg pluginkit.Config) error {
+//	func New(cfg Config) *Extension { return &Extension{cfg: cfg} }
+//	func (p *Extension) Name() string { return "hello" }
+//	func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 //		c := p.cfg
 //		if err := cfg.Decode(&c); err != nil { // settings for this app, over the defaults given to New
 //			return err
@@ -18,7 +18,7 @@
 //
 // A single app registers it with [MustRegister] (and [BindJS] from jsvm's OnInit). Pocker calls Register for every
 // instance with that instance's settings.
-package pluginkit
+package extkit
 
 import (
 	"context"
@@ -30,34 +30,34 @@ import (
 	"github.com/dop251/goja"
 )
 
-// Plugin is a PocketOne plugin.
-type Plugin interface {
-	// Name is the plugin's key: a top-level key in a pocker config file, an instance's `plugins.<name>` block, the
+// Extension is a PocketOne extension.
+type Extension interface {
+	// Name is the extension's key: a top-level key in a pocker config file, an instance's `extensions.<name>` block, the
 	// prefix of its collections (`_<name>_`) and its name in logs.
 	Name() string
 
-	// Register installs the plugin on app before it bootstraps: hooks, routes, collections, dashboard screens.
+	// Register installs the extension on app before it bootstraps: hooks, routes, collections, dashboard screens.
 	// cfg holds the settings for this app (empty on a plain single app). It runs on every start of the app.
 	Register(app core.App, cfg Config) error
 }
 
-// JSBinder is a plugin that exposes its Go API to the app's JS hooks (e.g. as a $name global). It's called for each
-// JS runtime of an app the plugin is registered on. Under pocker, what it exposes must be safe for a hostile tenant
+// JSBinder is an extension that exposes its Go API to the app's JS hooks (e.g. as a $name global). It's called for each
+// JS runtime of an app the extension is registered on. Under pocker, what it exposes must be safe for a hostile tenant
 // to call on its own app.
 type JSBinder interface {
 	BindJS(app core.App, vm *goja.Runtime)
 }
 
-// Closer is a plugin that holds process-wide resources shared by all its apps (a pool, a store, a connection) and
-// releases them once every app has stopped. A single app closes it from OnTerminate; under pocker the plugin closes
+// Closer is an extension that holds process-wide resources shared by all its apps (a pool, a store, a connection) and
+// releases them once every app has stopped. A single app closes it from OnTerminate; under pocker the extension closes
 // itself when the server stops (today through pocker.Starter, as ext/pitr does). The conformance test calls it
-// after stopping its apps, so a plugin that keeps goroutines across apps implements it.
+// after stopping its apps, so an extension that keeps goroutines across apps implements it.
 type Closer interface {
 	Close(ctx context.Context) error
 }
 
-// Config is a plugin's settings for one app, as layers applied in order (under pocker, one: the instance's
-// `plugins.<name>`). Each layer is a map from YAML or JSON. The plugin's own defaults, the ones given to its
+// Config is an extension's settings for one app, as layers applied in order (under pocker, one: the instance's
+// `extensions.<name>`). Each layer is a map from YAML or JSON. The extension's own defaults, the ones given to its
 // constructor (and its pocketone.yaml section, see [NewSection]), sit under all of them.
 type Config []map[string]any
 
@@ -80,8 +80,8 @@ func (c Config) Decode(out any) error {
 	return nil
 }
 
-// Enabled reports the `enabled` setting: the last layer that sets it wins, and a plugin is on unless a layer says
-// `enabled: false`. Hosts check it before calling Register, so plugins don't have to.
+// Enabled reports the `enabled` setting: the last layer that sets it wins, and an extension is on unless a layer says
+// `enabled: false`. Hosts check it before calling Register, so extensions don't have to.
 func (c Config) Enabled() bool {
 	enabled := true
 	for _, layer := range c {
@@ -109,31 +109,31 @@ func Layer(v any) (map[string]any, error) {
 	}
 	var m map[string]any
 	if err := json.Unmarshal(b, &m); err != nil {
-		return nil, fmt.Errorf("plugin settings must be a map: %w", err)
+		return nil, fmt.Errorf("extension settings must be a map: %w", err)
 	}
 	return m, nil
 }
 
-// MustRegister registers plugins on a single app, with no settings layers (each plugin uses its defaults). It
+// MustRegister registers extensions on a single app, with no settings layers (each extension uses its defaults). It
 // panics on error, like PocketBase's own MustRegister helpers.
-func MustRegister(app core.App, plugins ...Plugin) {
-	for _, p := range plugins {
+func MustRegister(app core.App, extensions ...Extension) {
+	for _, p := range extensions {
 		if err := p.Register(app, nil); err != nil {
-			panic(fmt.Errorf("plugin %s: %w", p.Name(), err))
+			panic(fmt.Errorf("extension %s: %w", p.Name(), err))
 		}
 	}
 }
 
-// BindJS calls BindJS on every plugin that implements [JSBinder]. Call it from jsvm's OnInit on a single app.
-func BindJS(app core.App, vm *goja.Runtime, plugins ...Plugin) {
-	for _, p := range plugins {
+// BindJS calls BindJS on every extension that implements [JSBinder]. Call it from jsvm's OnInit on a single app.
+func BindJS(app core.App, vm *goja.Runtime, extensions ...Extension) {
+	for _, p := range extensions {
 		if b, ok := p.(JSBinder); ok {
 			b.BindJS(app, vm)
 		}
 	}
 }
 
-const appIDKey = "pluginkit.appId"
+const appIDKey = "extkit.appId"
 
 // SetAppID records the host's identifier for app (under pocker, the instance id). Hosts call it before Register.
 func SetAppID(app core.App, id string) { app.Store().Set(appIDKey, id) }

@@ -26,7 +26,7 @@ func main() {
 	tk := tokens.MustRegister(app, tokens.Config{
 		Collections: []string{"_superusers", "users"}, // who may own tokens
 	})
-	// a plugin's scope: a token limited to "hello" only authenticates under /api/hello; a JWT or unscoped token
+	// an extension's scope: a token limited to "hello" only authenticates under /api/hello; a JWT or unscoped token
 	// holds it too, and every request that holds it carries X-Token-Scope-Hello: 1 for rules and hooks
 	tk.MustRegisterScope(tokens.Scope{Name: "hello", Description: "Say hello", Paths: []string{"/api/hello"}, Methods: []string{"GET"}})
 

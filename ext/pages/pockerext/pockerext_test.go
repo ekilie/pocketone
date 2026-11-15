@@ -1,4 +1,4 @@
-package pockerplugin
+package pockerext
 
 import (
 	"context"
@@ -56,7 +56,7 @@ func start(t *testing.T, insts []pocker.Instance, files map[string]map[string]st
 		PBRoot:   h.root,
 		Logger:   quiet,
 		Defaults: limits,
-		Init:     p.InitApp, // what pocker.Server wires for plugins implementing pocker.AppIniter
+		Init:     p.InitApp, // what pocker.Server wires for extensions implementing pocker.AppIniter
 		Setup: func(inst pocker.Instance, app core.App) error {
 			h.mu.Lock()
 			h.apps[inst.ID] = append(h.apps[inst.ID], app)
@@ -94,8 +94,8 @@ func (h *harness) latest(id string) core.App {
 	return l[len(l)-1]
 }
 
-func inst(id string, plugins map[string]any) pocker.Instance {
-	return pocker.Instance{ID: id, Hosts: []string{id + ".test"}, Plugins: plugins}
+func inst(id string, extensions map[string]any) pocker.Instance {
+	return pocker.Instance{ID: id, Hosts: []string{id + ".test"}, Extensions: extensions}
 }
 
 func TestInstancesAreIsolated(t *testing.T) {
@@ -121,7 +121,7 @@ func TestInstancesAreIsolated(t *testing.T) {
 		t.Fatalf("b served a's page: %d", code)
 	}
 	if code, body := h.get(t, "http://off.test/"); code == 200 || strings.Contains(body, "should not render") {
-		t.Fatalf("plugins.pages.enabled=false still served pages: %d %q", code, body)
+		t.Fatalf("extensions.pages.enabled=false still served pages: %d %q", code, body)
 	}
 	if pages.For(h.latest("off")) != nil {
 		t.Fatal("pages registered on an instance that turned it off")

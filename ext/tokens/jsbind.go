@@ -92,8 +92,8 @@ func pendingFor(app core.App) *registry {
 	return r
 }
 
-// BindJS implements pluginkit.JSBinder.
-func (p *Plugin) BindJS(app core.App, vm *goja.Runtime) { BindJS(vm, app) }
+// BindJS implements extkit.JSBinder.
+func (p *Extension) BindJS(app core.App, vm *goja.Runtime) { BindJS(vm, app) }
 
 func jsStr(v goja.Value) string {
 	if v == nil || goja.IsUndefined(v) || goja.IsNull(v) {

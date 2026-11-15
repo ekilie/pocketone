@@ -1,5 +1,5 @@
 // Package tokens adds API tokens to a PocketBase app: long-lived bearer secrets (pbt_...) owned by an auth record,
-// optionally limited to scopes that plugins register, listed and revoked one by one. A request with
+// optionally limited to scopes that extensions register, listed and revoked one by one. A request with
 // `Authorization: Bearer pbt_...` is authenticated as the token's owner; JWTs keep working unchanged.
 //
 //	app := pocketbase.New()
@@ -78,7 +78,7 @@ func MustRegister(app core.App, cfg Config) *Tokens {
 
 // Register adds API tokens to app: the _tokens collection (on bootstrap), the bearer middleware, routes and
 // dashboard screen (on serve), and on a *pocketbase.PocketBase the `token` command. Call it before app.Start(), or
-// from a pocker plugin's InitApp.
+// from a pocker extension's InitApp.
 func Register(app core.App, cfg Config) (*Tokens, error) {
 	if cfg.Now == nil {
 		cfg.Now = time.Now

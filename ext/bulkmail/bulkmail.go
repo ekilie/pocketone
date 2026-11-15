@@ -1,6 +1,6 @@
 // Package bulkmail adds bulk mail campaigns to a PocketBase app: audiences from the app's own collections, a paced
 // and restart-safe sender, a per-campaign ledger, signed one-click unsubscribe, bounce and complaint handling, and
-// dashboard screens. It's a native Go plugin; JS hooks can drive it through [BindJS].
+// dashboard screens. It's a native Go extension; JS hooks can drive it through [BindJS].
 //
 //	app := pocketbase.New()
 //	bulkmail.MustRegister(app, bulkmail.Config{})
@@ -71,7 +71,7 @@ type Settings struct {
 	WebhookSecret string `json:"webhookSecret"`
 }
 
-// Name is the plugin's name: its key under an instance's `plugins:`.
+// Name is the extension's name: its key under an instance's `extensions:`.
 const Name = "bulkmail"
 
 // BulkMail is the bulk mail service of one app. Get it with [For].

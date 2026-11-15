@@ -24,13 +24,13 @@ import (
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))
 
-// testApp is a single PocketBase app with the plugin, served in-process the way `pocketbase serve` builds its router.
+// testApp is a single PocketBase app with the extension, served in-process the way `pocketbase serve` builds its router.
 type testApp struct {
 	app     *core.BaseApp
 	handler http.Handler
 }
 
-func startTestApp(t *testing.T, p *Plugin, dir string) *testApp {
+func startTestApp(t *testing.T, p *Extension, dir string) *testApp {
 	t.Helper()
 	app := core.NewBaseApp(core.BaseAppConfig{DataDir: dir})
 	if err := p.SetupApp(app, AppConfig{}); err != nil {
@@ -162,7 +162,7 @@ func TestSingleAppLifecycleAndStagedRestore(t *testing.T) {
 	}
 	addNotes(t, ta.app, "b", 5)
 
-	// nothing of the plugin lands next to data.db (it would end up in backup zips)
+	// nothing of the extension lands next to data.db (it would end up in backup zips)
 	ents, _ := os.ReadDir(dir)
 	for _, e := range ents {
 		if strings.Contains(e.Name(), "litestream") && e.Name() != DirName {

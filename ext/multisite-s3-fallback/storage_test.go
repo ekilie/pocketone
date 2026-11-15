@@ -119,7 +119,7 @@ func TestDefaultBucketUnderPocker(t *testing.T) {
 	shared := raw(t, b, "shared")
 	pbRoot := t.TempDir()
 
-	// a file on instance a's local disk from before the plugin
+	// a file on instance a's local disk from before the extension
 	oldLocal := filepath.Join(pbRoot, "a", "pb_data", "storage", "x", "old.txt")
 	if err := os.MkdirAll(filepath.Dir(oldLocal), 0o755); err != nil {
 		t.Fatal(err)
@@ -132,12 +132,12 @@ func TestDefaultBucketUnderPocker(t *testing.T) {
 	insts := fixedSource{
 		{ID: "a", Hosts: []string{"a.test"}},
 		{ID: "b", Hosts: []string{"b.test"}},
-		{ID: "c", Hosts: []string{"c.test"}, Plugins: map[string]any{"storage": map[string]any{"enabled": false}}},
+		{ID: "c", Hosts: []string{"c.test"}, Extensions: map[string]any{"storage": map[string]any{"enabled": false}}},
 	}
 	var mu sync.Mutex
 	apps := map[string]core.App{}
 	m := pocker.NewManager(insts, pocker.ManagerOptions{
-		PBRoot: pbRoot, Logger: quiet, Init: pocker.InitPlugins(p),
+		PBRoot: pbRoot, Logger: quiet, Init: pocker.InitExtensions(p),
 		Setup: func(inst pocker.Instance, app core.App) error {
 			mu.Lock()
 			apps[inst.ID] = app
@@ -176,7 +176,7 @@ func TestDefaultBucketUnderPocker(t *testing.T) {
 		t.Fatal("upload also written to local disk")
 	}
 
-	// a file left on local disk is not served or moved: the plugin is for fresh instances
+	// a file left on local disk is not served or moved: the extension is for fresh instances
 	if ok, _ := fsA.Exists("x/old.txt"); ok {
 		t.Fatal("local file visible through the default bucket")
 	}
@@ -223,7 +223,7 @@ func TestDefaultBucketUnderPocker(t *testing.T) {
 
 	// settings still say S3 off
 	if appA.Settings().S3.Enabled || appA.Settings().Backups.S3.Enabled {
-		t.Fatal("plugin changed the app's S3 settings")
+		t.Fatal("extension changed the app's S3 settings")
 	}
 
 	// backups go to the bucket's backups folder

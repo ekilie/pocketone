@@ -135,7 +135,7 @@ func (p *Pages) dev() bool {
 	return p.app.IsDev()
 }
 
-func (p *Pages) logger() *slog.Logger { return p.app.Logger().With("plugin", "pages") }
+func (p *Pages) logger() *slog.Logger { return p.app.Logger().With("extension", "pages") }
 
 // refresh rebuilds the table when pb_pages changed. force skips the rate limit.
 func (p *Pages) refresh(force bool) {

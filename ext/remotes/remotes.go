@@ -7,7 +7,7 @@
 //
 // Remote names and URLs live in the project's .pocketbase/remotes.json (commit it); secrets live in the user's
 // ~/.config/pocketone/credentials.json (0600), keyed by URL. CI sets POCKETONE_TOKEN or POCKETONE_TOKEN_<REMOTE>.
-// The command name in these (pocketone) comes from [pluginkit.Command], so a build shipped under another name gets
+// The command name in these (pocketone) comes from [extkit.Command], so a build shipped under another name gets
 // its own folder and variables (~/.config/pockethost, POCKETHOST_TOKEN).
 //
 // The server half is GET /_pocker/whoami: who the request's token is, its scopes, and which features (deploy, OAuth,
@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -225,7 +225,7 @@ func (p *Project) Resolve(name string) (*Remote, error) {
 		return &Remote{Name: u, URL: u}, nil
 	}
 	if len(p.Remotes) == 0 {
-		return nil, fmt.Errorf("no remotes yet: run '%[1]s remote add %[2]s <url>' or '%[1]s link <url>'", pluginkit.Command, name)
+		return nil, fmt.Errorf("no remotes yet: run '%[1]s remote add %[2]s <url>' or '%[1]s link <url>'", extkit.Command, name)
 	}
 	return nil, fmt.Errorf("no remote %q (have: %s)", name, strings.Join(p.Names(), ", "))
 }
@@ -274,24 +274,24 @@ type Credentials struct {
 	ByURL map[string]*Credential `json:"credentials"`
 }
 
-// EnvVar is the environment variable for suffix, named after [pluginkit.Command]: EnvVar("TOKEN") is POCKETONE_TOKEN
+// EnvVar is the environment variable for suffix, named after [extkit.Command]: EnvVar("TOKEN") is POCKETONE_TOKEN
 // in pocketone.
-func EnvVar(suffix string) string { return envSuffix(pluginkit.Command) + "_" + suffix }
+func EnvVar(suffix string) string { return envSuffix(extkit.Command) + "_" + suffix }
 
-// ConfigDir is the user's config folder, named after [pluginkit.Command]: $POCKETONE_CONFIG_DIR, else
+// ConfigDir is the user's config folder, named after [extkit.Command]: $POCKETONE_CONFIG_DIR, else
 // $XDG_CONFIG_HOME/pocketone, else ~/.config/pocketone.
 func ConfigDir() (string, error) {
 	if d := os.Getenv(EnvVar("CONFIG_DIR")); d != "" {
 		return d, nil
 	}
 	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
-		return filepath.Join(d, pluginkit.Command), nil
+		return filepath.Join(d, extkit.Command), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", pluginkit.Command), nil
+	return filepath.Join(home, ".config", extkit.Command), nil
 }
 
 // LoadCredentials reads the credential store (empty if there's none).
@@ -337,7 +337,7 @@ func (c *Credentials) Save() error {
 func (c *Credentials) Path() string { return c.path }
 
 // EnvToken returns the CI token for a remote: POCKETONE_TOKEN_<NAME> (upper case, other characters as _), then
-// POCKETONE_TOKEN (named after [pluginkit.Command]); for the legacy pockethost remote, POCKETHOST_TOKEN too.
+// POCKETONE_TOKEN (named after [extkit.Command]); for the legacy pockethost remote, POCKETHOST_TOKEN too.
 func EnvToken(remoteName string) (token, source string) {
 	if remoteName != "" && !strings.Contains(remoteName, "://") {
 		key := EnvVar("TOKEN_" + envSuffix(remoteName))

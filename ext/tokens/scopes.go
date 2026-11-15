@@ -12,7 +12,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
 
-// Scope is a named slice of an owner's rights that a token can be limited to. Plugins and apps register their
+// Scope is a named slice of an owner's rights that a token can be limited to. Extensions and apps register their
 // scopes with [Tokens.RegisterScope] (JS: `$tokens.registerScope`); a token whose scopes are set authenticates only
 // on requests its scopes match (Paths + Methods, or Match), routes guard with [RequireScope], and collection rules
 // read `@request.headers.x_token_scope_<name>` (see [Scope.RuleField]).
@@ -105,7 +105,7 @@ func (r *registry) add(s Scope) error {
 		r.scopes = map[string]Scope{}
 	}
 	if old, ok := r.scopes[s.Name]; ok {
-		// several plugins may share a scope (deploy + logs under one name): merge their paths
+		// several extensions may share a scope (deploy + logs under one name): merge their paths
 		for _, p := range s.Paths {
 			if !slices.Contains(old.Paths, p) {
 				old.Paths = append(old.Paths, p)

@@ -16,7 +16,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/remotes"
 	"github.com/spf13/cobra"
 )
@@ -105,7 +105,7 @@ func deployCommand() *cobra.Command {
 		Long: "Deploys the project's code set (pb_* folders except pb_data, package.json, bun.lock(b), patches/, and the " +
 			"production node_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. " +
 			"Hooks, pages and public files take effect by themselves; migrations and packages apply when the app " +
-			"restarts: pass --restart, or run '" + pluginkit.Command + " restart' later.",
+			"restarts: pass --restart, or run '" + extkit.Command + " restart' later.",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := printer(cmd.OutOrStdout())

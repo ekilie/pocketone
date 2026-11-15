@@ -7,7 +7,7 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -59,7 +59,7 @@ replace github.com/pockethost/pocketone/ext/multisite-edge => ../multisite-edge
 
 replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
-replace github.com/pockethost/pocketone/ext/pluginkit => ../pluginkit
+replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 

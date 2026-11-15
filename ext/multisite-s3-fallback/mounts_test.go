@@ -9,7 +9,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 )
 
-// Named backends + mounts: each kind goes to its own backend and folder; a plugin's own kind (litestream) is served
+// Named backends + mounts: each kind goes to its own backend and folder; an extension's own kind (litestream) is served
 // by triggering OnFilesystemCreate with that kind (as ext/pitr does); instances can't see each other; a single app has no instances/ segment.
 func TestMountsPerKind(t *testing.T) {
 	b := startMinio(t)

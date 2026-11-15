@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"net"
 	"net/http"
@@ -76,11 +76,11 @@ func Open(dir, name string) (*Client, error) {
 			}
 		}
 		if !cr.Expires.IsZero() && time.Now().After(cr.Expires) {
-			return c, fmt.Errorf("the saved login for %s expired: run '%s login %s': %w", r.URL, pluginkit.Command, r.Name, ErrNotLoggedIn)
+			return c, fmt.Errorf("the saved login for %s expired: run '%s login %s': %w", r.URL, extkit.Command, r.Name, ErrNotLoggedIn)
 		}
 		return c, nil
 	}
-	return c, fmt.Errorf("%s (%s): run '%s login %s', or set %s: %w", r.Name, r.URL, pluginkit.Command, loginArg(r), EnvVar("TOKEN"), ErrNotLoggedIn)
+	return c, fmt.Errorf("%s (%s): run '%s login %s', or set %s: %w", r.Name, r.URL, extkit.Command, loginArg(r), EnvVar("TOKEN"), ErrNotLoggedIn)
 }
 
 func loginArg(r *Remote) string {
@@ -219,7 +219,7 @@ type Whoami struct {
 	} `json:"app"`
 }
 
-// ErrNoWhoami: the remote has no /_pocker/whoami (no remotes plugin, e.g. a PocketHost edge today).
+// ErrNoWhoami: the remote has no /_pocker/whoami (no remotes extension, e.g. a PocketHost edge today).
 var ErrNoWhoami = errors.New("the remote doesn't offer /_pocker/whoami")
 
 // Whoami asks the remote who this client is and what it offers.

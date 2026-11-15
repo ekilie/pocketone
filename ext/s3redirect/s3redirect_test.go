@@ -212,7 +212,7 @@ func TestProtectedFileWithTokenRedirects(t *testing.T) {
 	}).Test(t)
 }
 
-// On local disk with nothing supplying another filesystem, the plugin opens nothing and PocketBase streams as usual.
+// On local disk with nothing supplying another filesystem, the extension opens nothing and PocketBase streams as usual.
 func TestLocalDownloadStreams(t *testing.T) {
 	(&tests.ApiScenario{
 		Method: http.MethodGet,
@@ -226,7 +226,7 @@ func TestLocalDownloadStreams(t *testing.T) {
 	}).Test(t)
 }
 
-// signingDriver is how a plugin supplying its own S3 filesystem makes downloads from it redirect: its driver
+// signingDriver is how an extension supplying its own S3 filesystem makes downloads from it redirect: its driver
 // implements Signer (here through sigv4.Config's SignedURL).
 type signingDriver struct {
 	blob.Driver

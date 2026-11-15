@@ -1,0 +1,64 @@
+package bulkmail
+
+import (
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit"
+)
+
+// Extension is bulk mail as a PocketOne extension ([extkit.Extension]): the same value works on a single app and on
+// every instance under pocker.
+//
+//	extkit.MustRegister(app, bulkmail.New(bulkmail.Config{}))         // a single app
+//	srv.Extensions = append(srv.Extensions, bulkmail.New(bulkmail.Config{})) // every pocker instance
+//
+// An instance's `extensions.bulkmail` settings apply over the Config given to New: `rate`, `daily` (0 means this app may not send bulk mail; the screens say so) and
+// `enabled`, which the host checks.
+type Extension struct {
+	cfg Config
+}
+
+var (
+	_ extkit.Extension = (*Extension)(nil)
+	_ extkit.JSBinder  = (*Extension)(nil)
+)
+
+// New returns the extension. cfg holds the defaults for every app it's registered on.
+func New(cfg Config) *Extension { return &Extension{cfg: cfg} }
+
+// Name implements [extkit.Extension].
+func (p *Extension) Name() string { return Name }
+
+// settings is the shape of the extension's settings layers.
+type settings struct {
+	Rate  *float64 `json:"rate"`
+	Daily *int     `json:"daily"`
+}
+
+// Register implements [extkit.Extension].
+func (p *Extension) Register(app core.App, cfg extkit.Config) error {
+	var s settings
+	if err := cfg.Decode(&s); err != nil {
+		return err
+	}
+	c := p.cfg
+	if s.Rate != nil && *s.Rate > 0 {
+		c.Rate = *s.Rate
+	}
+	if s.Daily != nil {
+		c.Daily = *s.Daily
+		if *s.Daily <= 0 {
+			c.Daily = NoBulkMail
+		}
+	}
+	_, err := Register(app, c)
+	return err
+}
+
+// BindJS implements [extkit.JSBinder]: $bulkmail in the app's JS hooks. It only reaches the app's own data, mail
+// settings and limits, so it's safe for an untrusted tenant under pocker.
+func (p *Extension) BindJS(app core.App, vm *goja.Runtime) {
+	if For(app) != nil {
+		BindJS(vm, app)
+	}
+}

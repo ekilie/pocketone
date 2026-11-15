@@ -30,7 +30,7 @@ type Host struct {
 	Listeners  Listeners
 	HealthPath string // default [DefaultHealthPath]
 
-	// Background work run until shutdown (e.g. the edge provider's refresh, plugin jobs).
+	// Background work run until shutdown (e.g. the edge provider's refresh, extension jobs).
 	Background []func(ctx context.Context)
 	// OnListen is called for each address once it accepts connections.
 	OnListen func(addr string)

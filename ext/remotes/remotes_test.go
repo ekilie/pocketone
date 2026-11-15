@@ -15,7 +15,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
 
@@ -304,11 +304,11 @@ func runCmd(t *testing.T, dir string, args ...string) (string, error) {
 	return "", nil
 }
 
-// A build shipped under another command name (pluginkit.Command) gets its own variables and config folder.
+// A build shipped under another command name (extkit.Command) gets its own variables and config folder.
 func TestNamesFollowCommand(t *testing.T) {
-	old := pluginkit.Command
-	t.Cleanup(func() { pluginkit.Command = old })
-	pluginkit.Command = "my-tool"
+	old := extkit.Command
+	t.Cleanup(func() { extkit.Command = old })
+	extkit.Command = "my-tool"
 	home := t.TempDir()
 	t.Setenv("MY_TOOL_CONFIG_DIR", "")
 	t.Setenv("XDG_CONFIG_HOME", home)

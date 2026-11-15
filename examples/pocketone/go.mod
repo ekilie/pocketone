@@ -21,7 +21,7 @@ require (
 	github.com/pockethost/pocketone/ext/oauth-server v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pitr v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pluginkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite-provider-pocker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000
@@ -143,7 +143,7 @@ replace github.com/pockethost/pocketone/ext/multisite => ../../ext/multisite
 
 replace github.com/pockethost/pocketone/ext/mailtrap => ../../ext/mailtrap
 
-replace github.com/pockethost/pocketone/ext/pluginkit => ../../ext/pluginkit
+replace github.com/pockethost/pocketone/ext/extkit => ../../ext/extkit
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../../ext/jserrors
 

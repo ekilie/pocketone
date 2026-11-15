@@ -81,10 +81,10 @@ func fakeReleases(t *testing.T, body string, badSum bool) *httptest.Server {
 	return srv
 }
 
-func testPlugin(t *testing.T, srv *httptest.Server, current, exe string) *plugin {
+func testExtension(t *testing.T, srv *httptest.Server, current, exe string) *extension {
 	cfg := Config{BaseURL: srv.URL}
 	cfg.defaults()
-	return &plugin{cfg: cfg, current: current, executable: func() (string, error) { return exe, nil },
+	return &extension{cfg: cfg, current: current, executable: func() (string, error) { return exe, nil },
 		goos: "darwin", goarch: "arm64"}
 }
 
@@ -96,7 +96,7 @@ func TestUpgradeKeepsEveryOldVersion(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "pocketone-0.0.2"), []byte("older"), 0o755)
 	os.WriteFile(exe, []byte("old"), 0o755)
 
-	if err := testPlugin(t, srv, "0.0.3", exe).upgrade(false); err != nil {
+	if err := testExtension(t, srv, "0.0.3", exe).upgrade(false); err != nil {
 		t.Fatal(err)
 	}
 	for path, want := range map[string]string{exe: "new", exe + "-0.0.3": "old", exe + "-0.0.2": "older"} {
@@ -115,7 +115,7 @@ func TestUpgradeAlreadyLatest(t *testing.T) {
 	srv := fakeReleases(t, "new", false)
 	exe := filepath.Join(t.TempDir(), "pocketone")
 	os.WriteFile(exe, []byte("current"), 0o755)
-	if err := testPlugin(t, srv, "0.0.4", exe).upgrade(false); err != nil {
+	if err := testExtension(t, srv, "0.0.4", exe).upgrade(false); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := os.ReadFile(exe); string(got) != "current" {
@@ -128,7 +128,7 @@ func TestUpgradeRejectsBadChecksum(t *testing.T) {
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "pocketone")
 	os.WriteFile(exe, []byte("old"), 0o755)
-	err := testPlugin(t, srv, "0.0.3", exe).upgrade(false)
+	err := testExtension(t, srv, "0.0.3", exe).upgrade(false)
 	if err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
 		t.Fatalf("want checksum mismatch, got %v", err)
 	}
@@ -144,7 +144,7 @@ func TestUpgradeDevBuildKeptAsOld(t *testing.T) {
 	srv := fakeReleases(t, "new", false)
 	exe := filepath.Join(t.TempDir(), "pocketone")
 	os.WriteFile(exe, []byte("dev"), 0o755)
-	if err := testPlugin(t, srv, "(untracked)", exe).upgrade(false); err != nil {
+	if err := testExtension(t, srv, "(untracked)", exe).upgrade(false); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := os.ReadFile(exe + ".old"); string(got) != "dev" {

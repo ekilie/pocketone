@@ -6,14 +6,14 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // AppStorageDirName is the folder in pb_data where a single app keeps its certificates, unless Config.Storage
 // says otherwise. It's separate from PocketBase's own autocert cache (`.autocert_cache`).
 const AppStorageDirName = ".autotls"
 
-// App is the single-app plugin ([pluginkit.Plugin]). With Auto on, it swaps the certificate source of PocketBase's
+// App is the single-app extension ([extkit.Extension]). With Auto on, it swaps the certificate source of PocketBase's
 // HTTPS server for CertMagic. It only matters when the app serves HTTPS (`pocketbase serve example.com` or
 // `--https`); on plain HTTP it's idle. With Auto off it does nothing, and PocketBase's built-in autocert stays.
 //
@@ -22,20 +22,20 @@ const AppStorageDirName = ".autotls"
 // Challenges: TLS-ALPN-01 on the HTTPS port, or DNS-01 with a DNS provider. HTTP-01 is off, because port 80 is
 // PocketBase's redirect server.
 //
-// It's a separate type from [AutoTLS] on purpose: pocker runs every pluginkit.Plugin on each instance, and
+// It's a separate type from [AutoTLS] on purpose: pocker runs every extkit.Extension on each instance, and
 // certificates there belong to the pocker server, not to instances.
 type App struct {
 	cfg Config
 }
 
-// NewApp returns the single-app plugin with cfg as its defaults.
+// NewApp returns the single-app extension with cfg as its defaults.
 func NewApp(cfg Config) *App { return &App{cfg: cfg} }
 
-// Name is the plugin's name.
+// Name is the extension's name.
 func (a *App) Name() string { return "autotls" }
 
 // Register checks the settings and installs the OnServe hook that swaps the server's TLS config.
-func (a *App) Register(app core.App, layers pluginkit.Config) error {
+func (a *App) Register(app core.App, layers extkit.Config) error {
 	cfg := a.cfg
 	if err := layers.Decode(&cfg); err != nil {
 		return err

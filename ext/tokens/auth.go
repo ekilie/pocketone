@@ -12,7 +12,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 )
 
-// Request store keys set when a request is authenticated by an API token. Plugins that don't import this package
+// Request store keys set when a request is authenticated by an API token. Extensions that don't import this package
 // (remotes' whoami) read them by name.
 const (
 	RequestKeyInfo   = "tokens.info"   // *Info
@@ -34,7 +34,7 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 		Id:       MiddlewareId,
 		Priority: apis.DefaultLoadAuthTokenMiddlewarePriority - 1,
 		Func: func(e *core.RequestEvent) error {
-			// only this plugin sets scope headers: drop any the client sent, on every request
+			// only this extension sets scope headers: drop any the client sent, on every request
 			stripScopeHeaders(e.Request.Header)
 			// an in-process request made for a scoped connection (ext/mcp): checked like a scoped token's request
 			if limit, ok := ScopesFromContext(e.Request.Context()); ok && !t.registry.allowsLimit(limit, e) {

@@ -20,7 +20,7 @@ var BuiltinGroups = []string{"health", "records", "auth", "files", "collections"
 // superuserGroups map endpoints only superusers can use; their tools are hidden from other callers in tools/list.
 var superuserGroups = []string{"collections", "settings", "logs", "crons", "sql", "backups"}
 
-// builtinTools are the pb_* tools: each maps one stock PocketBase REST endpoint with the same public API plugins use
+// builtinTools are the pb_* tools: each maps one stock PocketBase REST endpoint with the same public API extensions use
 // ([Endpoint]), so they double as examples. The endpoints decide who may do what.
 func builtinTools(groups []string, readOnly bool, maxFile int) []Endpoint {
 	if len(groups) == 0 {

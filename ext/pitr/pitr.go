@@ -7,10 +7,10 @@
 //	app := pocketbase.New()
 //	pitr.MustRegister(app, pitr.Config{})
 //
-// Many apps in one process: add it to a pocker server's plugins; settings come from pocketone.yaml's `pitr`
-// section and each instance's `plugins.pitr`:
+// Many apps in one process: add it to a pocker server's extensions; settings come from pocketone.yaml's `pitr`
+// section and each instance's `extensions.pitr`:
 //
-//	srv.Plugins = append(srv.Plugins, pitr.New(pitr.Config{}))
+//	srv.Extensions = append(srv.Extensions, pitr.New(pitr.Config{}))
 package pitr
 
 import (
@@ -31,10 +31,10 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 )
 
-// Name is the plugin's name: its config key (plugins.pitr), route prefix (/api/pitr) and admin extension name.
+// Name is the extension's name: its config key (extensions.pitr), route prefix (/api/pitr) and admin extension name.
 const Name = "pitr"
 
-// DirName is the pb_data subfolder that holds everything this plugin writes. It is left out of backup zips.
+// DirName is the pb_data subfolder that holds everything this extension writes. It is left out of backup zips.
 const DirName = "litestream"
 
 const (
@@ -44,7 +44,7 @@ const (
 
 // Config is the process-wide configuration.
 type Config struct {
-	// Enabled is the default for every app: on unless set to false (including the plugin is the opt-in). An app's
+	// Enabled is the default for every app: on unless set to false (including the extension is the opt-in). An app's
 	// [AppConfig.Enabled] overrides it, e.g. off for a hosting plan without PITR. There is no admin switch.
 	Enabled *bool `yaml:"enabled" doc:"On unless false. The --pitr flag wins."`
 
@@ -67,8 +67,8 @@ type AppConfig struct {
 	Retention time.Duration `yaml:"retention"`
 }
 
-// Plugin is one process's point-in-time restore: one Litestream store per retention value, shared by every app.
-type Plugin struct {
+// Extension is one process's point-in-time restore: one Litestream store per retention value, shared by every app.
+type Extension struct {
 	cfg Config
 	log *slog.Logger
 
@@ -80,8 +80,8 @@ type Plugin struct {
 	retentionSet, intervalSet bool // set in Go: the config file doesn't override them
 }
 
-// New returns the plugin for cfg, filling defaults.
-func New(cfg Config) *Plugin {
+// New returns the extension for cfg, filling defaults.
+func New(cfg Config) *Extension {
 	retentionSet, intervalSet := cfg.Retention > 0, cfg.SnapshotInterval > 0
 	if cfg.Retention <= 0 {
 		cfg.Retention = DefaultRetention
@@ -93,19 +93,19 @@ func New(cfg Config) *Plugin {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Plugin{cfg: cfg, log: log.With("plugin", Name), stores: map[time.Duration]*litestream.Store{}, apps: map[core.App]*appPITR{},
+	return &Extension{cfg: cfg, log: log.With("extension", Name), stores: map[time.Duration]*litestream.Store{}, apps: map[core.App]*appPITR{},
 		retentionSet: retentionSet, intervalSet: intervalSet}
 }
 
-// Name implements the plugin interface.
-func (p *Plugin) Name() string { return Name }
+// Name implements the extension interface.
+func (p *Extension) Name() string { return Name }
 
 // Config returns the effective process configuration.
-func (p *Plugin) Config() Config { return p.cfg }
+func (p *Extension) Config() Config { return p.cfg }
 
 // store returns the Litestream store for a retention value, opening it on first use. Litestream applies snapshot
 // retention per store, so apps with different retention (hosting plans) get different stores.
-func (p *Plugin) store(retention time.Duration) (*litestream.Store, error) {
+func (p *Extension) store(retention time.Duration) (*litestream.Store, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
@@ -129,8 +129,8 @@ func (p *Plugin) store(retention time.Duration) (*litestream.Store, error) {
 	return s, nil
 }
 
-// Close flushes and closes every store ([pluginkit.Closer]). Apps should be terminated first.
-func (p *Plugin) Close(ctx context.Context) error {
+// Close flushes and closes every store ([extkit.Closer]). Apps should be terminated first.
+func (p *Extension) Close(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
@@ -145,7 +145,7 @@ func (p *Plugin) Close(ctx context.Context) error {
 }
 
 // resolve merges an app's config over the process config.
-func (p *Plugin) resolve(ac AppConfig) (enabled bool, retention time.Duration) {
+func (p *Extension) resolve(ac AppConfig) (enabled bool, retention time.Duration) {
 	enabled = p.cfg.Enabled == nil || *p.cfg.Enabled
 	if ac.Enabled != nil {
 		enabled = *ac.Enabled
@@ -191,9 +191,9 @@ func (a *appPITR) destination() (*destination, error) {
 }
 
 // SetupApp adds point-in-time restore to app. Call it before the app bootstraps (pocketbase.New → before Start;
-// under pocker the plugin's Register calls it). Replication starts when the app serves (OnServe), so CLI commands run in another
+// under pocker the extension's Register calls it). Replication starts when the app serves (OnServe), so CLI commands run in another
 // process never write to the history. With PITR disabled for the app it adds nothing.
-func (p *Plugin) SetupApp(app core.App, ac AppConfig) error {
+func (p *Extension) SetupApp(app core.App, ac AppConfig) error {
 	enabled, retention := p.resolve(ac)
 	if !enabled {
 		return nil
@@ -216,7 +216,7 @@ func (p *Plugin) SetupApp(app core.App, ac AppConfig) error {
 
 // appPITR is one app's replication.
 type appPITR struct {
-	p         *Plugin
+	p         *Extension
 	app       core.App
 	retention time.Duration
 
@@ -261,7 +261,7 @@ func (a *appPITR) onTerminate(e *core.TerminateEvent) error {
 	return err
 }
 
-func (p *Plugin) appFor(app core.App) *appPITR {
+func (p *Extension) appFor(app core.App) *appPITR {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.apps[app]
@@ -270,7 +270,7 @@ func (p *Plugin) appFor(app core.App) *appPITR {
 var errNotEnabled = errors.New("pitr: not enabled for this app")
 
 // Status reports an app's restorable window (for host code; the admin uses GET /api/pitr).
-func (p *Plugin) Status(ctx context.Context, app core.App) (*Status, error) {
+func (p *Extension) Status(ctx context.Context, app core.App) (*Status, error) {
 	a := p.appFor(app)
 	if a == nil {
 		return nil, errNotEnabled
@@ -279,7 +279,7 @@ func (p *Plugin) Status(ctx context.Context, app core.App) (*Status, error) {
 }
 
 // Restore puts an app's database back to `at`: staged while the app serves, swapped in by app.Restart().
-func (p *Plugin) Restore(ctx context.Context, app core.App, at time.Time) error {
+func (p *Extension) Restore(ctx context.Context, app core.App, at time.Time) error {
 	a := p.appFor(app)
 	if a == nil {
 		return errNotEnabled
@@ -288,7 +288,7 @@ func (p *Plugin) Restore(ctx context.Context, app core.App, at time.Time) error 
 }
 
 // storeSync flushes an app's pending changes to its history.
-func (p *Plugin) storeSync(app core.App) error {
+func (p *Extension) storeSync(app core.App) error {
 	a := p.appFor(app)
 	if a == nil {
 		return errNotEnabled

@@ -57,7 +57,7 @@ func msg(to ...string) *mailer.Message {
 	return m
 }
 
-func setup(t *testing.T, cfg Config, inst pocker.Instance) (*Plugin, core.App, *fakeUpstream) {
+func setup(t *testing.T, cfg Config, inst pocker.Instance) (*Extension, core.App, *fakeUpstream) {
 	t.Helper()
 	up := &fakeUpstream{}
 	if cfg.Upstream == nil {
@@ -68,7 +68,7 @@ func setup(t *testing.T, cfg Config, inst pocker.Instance) (*Plugin, core.App, *
 	}
 	p := New(cfg)
 	app := newApp(t)
-	if err := pocker.InitPlugins(p)(inst, app); err != nil {
+	if err := pocker.InitExtensions(p)(inst, app); err != nil {
 		t.Fatal(err)
 	}
 	return p, app, up
@@ -122,7 +122,7 @@ func TestOwnSMTPWins(t *testing.T) {
 }
 
 func TestSendOffForInstance(t *testing.T) {
-	inst := pocker.Instance{ID: "a", Plugins: map[string]any{Name: map[string]any{"send": false}}}
+	inst := pocker.Instance{ID: "a", Extensions: map[string]any{Name: map[string]any{"send": false}}}
 	_, app, up := setup(t, Config{}, inst)
 	if err := app.NewMailClient().Send(msg("a@example.org")); !errors.Is(err, ErrDisabled) {
 		t.Fatalf("err = %v, want ErrDisabled", err)
@@ -132,9 +132,9 @@ func TestSendOffForInstance(t *testing.T) {
 	}
 }
 
-// `enabled: false` is the host's switch: the plugin isn't registered on that instance at all.
+// `enabled: false` is the host's switch: the extension isn't registered on that instance at all.
 func TestEnabledFalseSkipsInstance(t *testing.T) {
-	inst := pocker.Instance{ID: "a", Plugins: map[string]any{Name: map[string]any{"enabled": false}}}
+	inst := pocker.Instance{ID: "a", Extensions: map[string]any{Name: map[string]any{"enabled": false}}}
 	_, app, _ := setup(t, Config{}, inst)
 	if app.OnMailerSend().Length() != 0 {
 		t.Fatal("mailrelay bound although enabled: false")
@@ -142,8 +142,8 @@ func TestEnabledFalseSkipsInstance(t *testing.T) {
 }
 
 func TestBadSettings(t *testing.T) {
-	inst := pocker.Instance{ID: "a", Plugins: map[string]any{Name: map[string]any{"daily": "lots"}}}
-	if err := pocker.InitPlugins(New(Config{Domain: "mail.test", Upstream: &fakeUpstream{}}))(inst, newApp(t)); err == nil {
+	inst := pocker.Instance{ID: "a", Extensions: map[string]any{Name: map[string]any{"daily": "lots"}}}
+	if err := pocker.InitExtensions(New(Config{Domain: "mail.test", Upstream: &fakeUpstream{}}))(inst, newApp(t)); err == nil {
 		t.Fatal("expected an error for daily: \"lots\"")
 	}
 }
@@ -151,7 +151,7 @@ func TestBadSettings(t *testing.T) {
 func TestLimits(t *testing.T) {
 	now := time.Date(2026, 11, 11, 10, 0, 0, 0, time.UTC)
 	clock := func() time.Time { return now }
-	inst := pocker.Instance{ID: "a", Plugins: map[string]any{Name: map[string]any{"per_minute": 2, "daily": 3}}}
+	inst := pocker.Instance{ID: "a", Extensions: map[string]any{Name: map[string]any{"per_minute": 2, "daily": 3}}}
 	_, app, up := setup(t, Config{Now: clock}, inst)
 	send := func() error { return app.NewMailClient().Send(msg("a@example.org")) }
 
@@ -210,7 +210,7 @@ func TestTrapCatchesEveryInstance(t *testing.T) {
 	p := New(Config{Domain: "mail.localhost", Upstream: SMTPUpstream{Addr: smtpAddr, Timeout: 5 * time.Second}})
 	for _, id := range []string{"alpha.localhost", "beta.localhost"} {
 		app := newApp(t)
-		if err := pocker.InitPlugins(p)(pocker.Instance{ID: id}, app); err != nil {
+		if err := pocker.InitExtensions(p)(pocker.Instance{ID: id}, app); err != nil {
 			t.Fatal(err)
 		}
 		if err := app.NewMailClient().Send(msg("user@example.com")); err != nil {

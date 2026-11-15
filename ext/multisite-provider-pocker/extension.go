@@ -9,28 +9,28 @@ import (
 	"github.com/dop251/goja"
 )
 
-// Plugin extends a Pocker server (see [Server.Plugins]). A plugin implements Name and any of the optional
+// Extension extends a Pocker server (see [Server.Extensions]). An extension implements Name and any of the optional
 // interfaces below; the server checks each one with a type assertion.
-type Plugin interface {
-	// Name identifies the plugin: its key under an instance's `plugins:` block, and in logs.
+type Extension interface {
+	// Name identifies the extension: its key under an instance's `extensions:` block, and in logs.
 	Name() string
 }
 
-// Configurer prepares a plugin before the server starts, once: a plugin reads its own pocketone.yaml section here
-// (a [pluginkit.Section] it owns); cfg is the server's config.
+// Configurer prepares an extension before the server starts, once: an extension reads its own pocketone.yaml section here
+// (an [extkit.Section] it owns); cfg is the server's config.
 type Configurer interface {
 	Configure(cfg Config) error
 }
 
 // AppIniter sets up each instance's app right after it is created, before its JS hooks load and before it
 // bootstraps (opens its databases): the place to bind OnBootstrap, OnServe and OnTerminate handlers (e.g. the pitr
-// plugin). It runs on every start of the app, including restarts. An error fails that start.
+// extension). It runs on every start of the app, including restarts. An error fails that start.
 type AppIniter interface {
 	InitApp(inst Instance, app core.App) error
 }
 
 // JSIniter adds globals to each JS runtime of an instance (hooks, routes, migrations), after the sandbox has set
-// the runtime up, e.g. a plugin exposing its Go API as $name. What it exposes is a sandbox decision: only expose
+// the runtime up, e.g. an extension exposing its Go API as $name. What it exposes is a sandbox decision: only expose
 // what is safe for a hostile tenant to call on its own app.
 type JSIniter interface {
 	InitJS(inst Instance, app core.App, vm *goja.Runtime)
@@ -66,5 +66,7 @@ type Starter interface {
 	Start(ctx context.Context, m *Manager)
 }
 
-// DecodePluginConfig is [multisite.DecodePluginConfig].
-func DecodePluginConfig[T any](v any, out *T) error { return multisite.DecodePluginConfig(v, out) }
+// DecodeExtensionConfig is [multisite.DecodeExtensionConfig].
+func DecodeExtensionConfig[T any](v any, out *T) error {
+	return multisite.DecodeExtensionConfig(v, out)
+}

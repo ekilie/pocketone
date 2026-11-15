@@ -1,15 +1,15 @@
-// Package autotls is a PocketOne plugin: automatic HTTPS certificates through ACME, with CertMagic (Caddy's
+// Package autotls is a PocketOne extension: automatic HTTPS certificates through ACME, with CertMagic (Caddy's
 // certificate engine). Two entry points:
 //
-//   - Under pocker, [New] is a server plugin that reads pocketone.yaml's `autotls` section; certificate files
+//   - Under pocker, [New] is a server extension that reads pocketone.yaml's `autotls` section; certificate files
 //     (`server.tls.cert`/`key`) stay a core feature.
 //
-//     srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{autotls.New()}}
+//     srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{autotls.New()}}
 //
-//   - On a single app, [NewApp] is a [pluginkit.Plugin] that replaces PocketBase's built-in autocert on
+//   - On a single app, [NewApp] is an [extkit.Extension] that replaces PocketBase's built-in autocert on
 //     `pocketbase serve example.com` (or `--https`) with CertMagic: wildcards through DNS-01, other CAs, extra domains.
 //
-//     pluginkit.MustRegister(app, autotls.NewApp(autotls.Config{Auto: true, Email: "ops@example.com"}))
+//     extkit.MustRegister(app, autotls.NewApp(autotls.Config{Auto: true, Email: "ops@example.com"}))
 package autotls
 
 import (
@@ -17,7 +17,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"net"
 	"net/http"
 	"os"
@@ -39,7 +39,7 @@ type Config struct {
 	DNS     *DNSConfig `yaml:"dns" json:"dns"`
 }
 
-// AutoTLS is the plugin ([pocker.Configurer], [pocker.TLSProvider]). It does nothing unless `autotls.auto` is true.
+// AutoTLS is the extension ([pocker.Configurer], [pocker.TLSProvider]). It does nothing unless `autotls.auto` is true.
 type AutoTLS struct {
 	// Config may be set before the server starts; the config file's `tls:` block is used when Auto is false here.
 	Config Config
@@ -48,10 +48,10 @@ type AutoTLS struct {
 	defaultStorage string // <pb_root>/.pocker-certs
 }
 
-// New returns the plugin.
+// New returns the extension.
 func New() *AutoTLS { return &AutoTLS{} }
 
-// Name is the plugin's name.
+// Name is the extension's name.
 func (a *AutoTLS) Name() string { return "autotls" }
 
 // Configure reads pocketone.yaml's `autotls` section (unless enabled in Go) and checks it without touching the
@@ -105,7 +105,7 @@ type DNSConfig struct {
 	APITokenEnv string `yaml:"api_token_env" json:"api_token_env" doc:"Or: the environment variable holding the token. Default CF_API_TOKEN. Flag: --autotlsDNSTokenEnv."`
 }
 
-// SupportedDNSProviders are the dns.provider values the plugin understands.
+// SupportedDNSProviders are the dns.provider values the extension understands.
 var SupportedDNSProviders = []string{"cloudflare"}
 
 func (d *DNSConfig) provider() (certmagic.DNSProvider, error) {
@@ -252,4 +252,4 @@ func normalizeHost(h string) string {
 }
 
 // Section is the key of the `autotls` section (pocketone.yaml): automatic certificates for a pocker host.
-var Section = pluginkit.NewSection("autotls", Config{}, "Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. The --autotls* flags win.")
+var Section = extkit.NewSection("autotls", Config{}, "Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. The --autotls* flags win.")

@@ -26,7 +26,7 @@ func (okRuntime) ServeInstance(w http.ResponseWriter, r *http.Request, _ multisi
 	_, _ = io.WriteString(w, "ok")
 }
 
-// The whole path on a host: the firewall as a gate, per-instance plugins.firewall from the instances file, header
+// The whole path on a host: the firewall as a gate, per-instance extensions.firewall from the instances file, header
 // names, 429.
 func TestHostWithFirewall(t *testing.T) {
 	root := t.TempDir()
@@ -35,7 +35,7 @@ func TestHostWithFirewall(t *testing.T) {
 instances:
   - id: limited
     hosts: [limited.test]
-    plugins: { firewall: { rate_limits: { ip_hourly: 3 } } }
+    extensions: { firewall: { rate_limits: { ip_hourly: 3 } } }
   - id: relaxed
     hosts: [relaxed.test]
 `), 0o644); err != nil {

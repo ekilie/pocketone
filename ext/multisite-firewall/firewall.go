@@ -1,7 +1,7 @@
 // Package firewall is PocketOne's request firewall for a multi-instance host (ext/multisite): an allowed-peers list, trusted
 // proxies and client IPs, and per-IP and per-instance rate limits (hourly budgets and concurrency caps, with higher
 // limits for trusted clients). It is a host [multisite.Gate]; settings come from the config's `firewall:` and
-// `rate_limits:` sections and, per instance, `plugins.firewall`. It works with or without ext/multisite-edge.
+// `rate_limits:` sections and, per instance, `extensions.firewall`. It works with or without ext/multisite-edge.
 package firewall
 
 import (
@@ -14,13 +14,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 
 	"github.com/pockethost/pocketone/ext/multisite"
 )
 
 // Config is the process-wide part of the firewall (the config file `firewall:`). Rate limits are `rate_limits:` (the
-// defaults, see [RateLimits]) and, per instance, `plugins.firewall` (see [InstanceConfig]).
+// defaults, see [RateLimits]) and, per instance, `extensions.firewall` (see [InstanceConfig]).
 //
 //	firewall:
 //	  allow_cidrs: []                 # peers allowed to connect (empty = everyone)
@@ -46,7 +46,7 @@ var DefaultTrustedClientHeaders = []string{"X-Client-IP"}
 // DefaultClientIPHeaders are read, in order, from trusted proxies.
 var DefaultClientIPHeaders = []string{"CF-Connecting-IP", "True-Client-IP", "X-Forwarded-For", "X-Real-IP"}
 
-// InstanceConfig is an instance's firewall settings (`plugins.firewall`): its own rate limits over the defaults,
+// InstanceConfig is an instance's firewall settings (`extensions.firewall`): its own rate limits over the defaults,
 // and client IPs/CIDRs that get the trusted limits on this instance (e.g. the owner's own list).
 type InstanceConfig struct {
 	RateLimits *RateLimits `yaml:"rate_limits,omitempty"`
@@ -95,7 +95,7 @@ func NewFirewall(cfg Config) (*Firewall, error) {
 	return f, f.setup()
 }
 
-// Name is the firewall's key under an instance's `plugins:`.
+// Name is the firewall's key under an instance's `extensions:`.
 func (f *Firewall) Name() string { return "firewall" }
 
 // apply adds the config file's sections to what was set before (lists add, other fields fill in), runs Adjust and
@@ -214,7 +214,7 @@ func (f *Firewall) AllowPeer(r *http.Request) bool {
 	return len(f.allow) == 0 || containsAddr(f.allow, multisite.PeerAddr(r))
 }
 
-// Admit applies the instance's rate limits (its `plugins.firewall` over the defaults). Over a limit it answers 429
+// Admit applies the instance's rate limits (its `extensions.firewall` over the defaults). Over a limit it answers 429
 // itself; otherwise the returned function frees the concurrency slots when the response ends.
 func (f *Firewall) Admit(w http.ResponseWriter, r *http.Request, inst multisite.Instance) (func(), bool) {
 	if err := f.setup(); err != nil {
@@ -222,7 +222,7 @@ func (f *Firewall) Admit(w http.ResponseWriter, r *http.Request, inst multisite.
 		return nil, false
 	}
 	var ic InstanceConfig
-	if err := multisite.DecodePluginConfig(inst.PluginConfig("firewall"), &ic); err != nil {
+	if err := multisite.DecodeExtensionConfig(inst.ExtensionConfig("firewall"), &ic); err != nil {
 		ic = InstanceConfig{}
 	}
 	rl := RateLimits{}
@@ -279,7 +279,7 @@ func (f *Firewall) rateCheck(w http.ResponseWriter, r *http.Request, instID stri
 	client := f.ClientIP(r)
 	trusted := containsAddr(f.trusted, client)
 	if !trusted && len(trustedIPs) > 0 {
-		if list, err := parsePrefixes("plugins.firewall.trusted_ips", trustedIPs); err == nil {
+		if list, err := parsePrefixes("extensions.firewall.trusted_ips", trustedIPs); err == nil {
 			trusted = containsAddr(list, client)
 		}
 	}
@@ -496,8 +496,8 @@ func (r RateLimits) merged(def RateLimits) RateLimits {
 
 // Section and RateLimitsSection are the firewall's pocketone.yaml sections (ext/config).
 var (
-	Section           = pluginkit.NewSection("firewall", Config{}, "Peers allowed to connect, trusted proxies and client-IP headers, trusted clients, the rate-limit header prefix. Turns the firewall on.")
-	RateLimitsSection = pluginkit.NewSection("rate_limits", RateLimits{}, "Default rate limits for every instance (per instance: plugins.firewall.rate_limits). Turns the firewall on.")
+	Section           = extkit.NewSection("firewall", Config{}, "Peers allowed to connect, trusted proxies and client-IP headers, trusted clients, the rate-limit header prefix. Turns the firewall on.")
+	RateLimitsSection = extkit.NewSection("rate_limits", RateLimits{}, "Default rate limits for every instance (per instance: extensions.firewall.rate_limits). Turns the firewall on.")
 )
 
 // SectionAdjust, if set, runs on a firewall built from config sections, like [Firewall.Adjust] (e.g. a host

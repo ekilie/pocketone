@@ -1,13 +1,13 @@
 // Package mailrelay is outgoing mail for Pocker instances that haven't set up SMTP.
 //
 // Stock PocketBase falls back to the host's `sendmail` when SMTP is off. Under Pocker that would run sendmail on the
-// shared host for every tenant. With this plugin, an instance's mail goes one of two ways:
+// shared host for every tenant. With this extension, an instance's mail goes one of two ways:
 //
 //   - SMTP on in its settings: PocketBase sends it as usual (bring your own SMTP always wins);
-//   - SMTP off: the plugin sends it through the operator's relay (an [Upstream]) as <local part>@<Domain>, within
+//   - SMTP off: the extension sends it through the operator's relay (an [Upstream]) as <local part>@<Domain>, within
 //     per-instance limits. sendmail never runs.
 //
-// It's a PocketOne plugin ([pluginkit.Plugin]): Pocker registers it on every instance. A single PocketBase app can
+// It's a PocketOne extension ([extkit.Extension]): Pocker registers it on every instance. A single PocketBase app can
 // simply configure its own SMTP, but registering it there works too.
 package mailrelay
 
@@ -30,11 +30,11 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"github.com/domodwyer/mailyak/v3"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite-provider-pocker"
-	"github.com/pockethost/pocketone/ext/pluginkit"
 )
 
-// Name is the plugin's section in pocketone.yaml and its key under an instance's `plugins:`.
+// Name is the extension's section in pocketone.yaml and its key under an instance's `extensions:`.
 const Name = "mailrelay"
 
 // Defaults for [Config] fields left at zero.
@@ -52,7 +52,7 @@ type Upstream interface {
 }
 
 // Config is the operator's relay. Domain and Upstream are set in Go; pocketone.yaml's `mailrelay` section fills limits
-// left at their defaults here, and an instance's `plugins: {mailrelay: {send, per_minute, daily}}` overrides both.
+// left at their defaults here, and an instance's `extensions: {mailrelay: {send, per_minute, daily}}` overrides both.
 type Config struct {
 	// Domain is the sending domain: every relayed message is From <local part>@Domain. Required.
 	Domain string
@@ -69,7 +69,7 @@ type Config struct {
 	MaxRecipients int
 	MaxSize       int
 
-	// LocalPart picks the address's local part from an app's id ([pluginkit.AppID]: under Pocker, the instance id).
+	// LocalPart picks the address's local part from an app's id ([extkit.AppID]: under Pocker, the instance id).
 	// Default: the first label of the id, lowercased, anything but a-z, 0-9 and "-" dropped.
 	LocalPart func(id string) string
 
@@ -123,10 +123,10 @@ var (
 	errNotConfigured = errors.New("mailrelay: Config.Domain and Config.Upstream are required")
 )
 
-// Plugin is the plugin. Include it with
+// Extension is the extension. Include it with
 //
-//	srv.Plugins = append(srv.Plugins, mailrelay.New(mailrelay.Config{Domain: "mail.example.com", Upstream: up}))
-type Plugin struct {
+//	srv.Extensions = append(srv.Extensions, mailrelay.New(mailrelay.Config{Domain: "mail.example.com", Upstream: up}))
+type Extension struct {
 	cfg  Config
 	send *bool // process default from the `mailrelay` section
 
@@ -137,22 +137,22 @@ type Plugin struct {
 }
 
 var (
-	_ pluginkit.Plugin  = (*Plugin)(nil)
-	_ pocker.Starter    = (*Plugin)(nil)
-	_ pocker.Configurer = (*Plugin)(nil)
+	_ extkit.Extension  = (*Extension)(nil)
+	_ pocker.Starter    = (*Extension)(nil)
+	_ pocker.Configurer = (*Extension)(nil)
 )
 
-// New returns the plugin. cfg holds the relay and the defaults for every instance.
-func New(cfg Config) *Plugin {
-	return &Plugin{cfg: cfg.withDefaults(), usage: map[string]*usage{}}
+// New returns the extension. cfg holds the relay and the defaults for every instance.
+func New(cfg Config) *Extension {
+	return &Extension{cfg: cfg.withDefaults(), usage: map[string]*usage{}}
 }
 
-// Name implements [pluginkit.Plugin].
-func (p *Plugin) Name() string { return Name }
+// Name implements [extkit.Extension].
+func (p *Extension) Name() string { return Name }
 
-// SectionConfig is the shape of the `mailrelay` section (pocketone.yaml) and of an instance's `plugins.mailrelay`.
+// SectionConfig is the shape of the `mailrelay` section (pocketone.yaml) and of an instance's `extensions.mailrelay`.
 //
-// `enabled` belongs to the host: `enabled: false` turns the plugin off, and an app with SMTP off then gets
+// `enabled` belongs to the host: `enabled: false` turns the extension off, and an app with SMTP off then gets
 // PocketBase's own fallback (sendmail). To keep the relay in charge and refuse an instance's mail, use `send: false`.
 type SectionConfig struct {
 	Send      *bool `yaml:"send" json:"send" doc:"Relay mail for instances with SMTP off unless false; false refuses their mail."`
@@ -161,7 +161,7 @@ type SectionConfig struct {
 }
 
 // Configure implements [pocker.Configurer]: pocketone.yaml's `mailrelay` section. Limits set in Go win.
-func (p *Plugin) Configure(pocker.Config) error {
+func (p *Extension) Configure(pocker.Config) error {
 	if p.cfg.Domain == "" || p.cfg.Upstream == nil {
 		return errNotConfigured
 	}
@@ -186,7 +186,7 @@ type limits struct {
 	daily     int
 }
 
-func (p *Plugin) limits(cfg pluginkit.Config) (limits, error) {
+func (p *Extension) limits(cfg extkit.Config) (limits, error) {
 	y := SectionConfig{Send: p.send}
 	if err := cfg.Decode(&y); err != nil {
 		return limits{}, fmt.Errorf("mailrelay: %w", err)
@@ -202,22 +202,22 @@ func (p *Plugin) limits(cfg pluginkit.Config) (limits, error) {
 }
 
 // Start implements [pocker.Starter]: keeps the manager so relayed mail shows up in the instance's own log.
-func (p *Plugin) Start(_ context.Context, m *pocker.Manager) { p.mgr.Store(m) }
+func (p *Extension) Start(_ context.Context, m *pocker.Manager) { p.mgr.Store(m) }
 
 // appRelay is the relay as one app sees it.
 type appRelay struct {
-	*Plugin
+	*Extension
 	id     string
 	limits limits
 }
 
-// Address is the From address the app with this id ([pluginkit.AppID]) sends as.
-func (p *Plugin) Address(id string) string {
+// Address is the From address the app with this id ([extkit.AppID]) sends as.
+func (p *Extension) Address(id string) string {
 	return p.cfg.LocalPart(id) + "@" + p.cfg.Domain
 }
 
-// Register implements [pluginkit.Plugin]: takes over the app's mail whenever its SMTP is off.
-func (p *Plugin) Register(app core.App, cfg pluginkit.Config) error {
+// Register implements [extkit.Extension]: takes over the app's mail whenever its SMTP is off.
+func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 	if p.cfg.Domain == "" || p.cfg.Upstream == nil {
 		return errNotConfigured
 	}
@@ -225,7 +225,7 @@ func (p *Plugin) Register(app core.App, cfg pluginkit.Config) error {
 	if err != nil {
 		return err
 	}
-	r := &appRelay{Plugin: p, id: pluginkit.AppID(app), limits: l}
+	r := &appRelay{Extension: p, id: extkit.AppID(app), limits: l}
 	app.OnMailerSend().Bind(&hook.Handler[*core.MailerEvent]{
 		Id:       "__mailrelay__",
 		Priority: 1 << 30, // last: the app's own onMailerSend hooks run (and may change the message) first
@@ -242,7 +242,7 @@ func (p *Plugin) Register(app core.App, cfg pluginkit.Config) error {
 }
 
 func (r *appRelay) relay(app core.App, m *mailer.Message) error {
-	p, l := r.Plugin, r.limits
+	p, l := r.Extension, r.limits
 	if !l.send {
 		r.log("mail refused: outgoing mail is off for this instance")
 		return ErrDisabled
@@ -298,7 +298,7 @@ type usage struct {
 	daily     int
 }
 
-func (p *Plugin) take(id string, l limits) bool {
+func (p *Extension) take(id string, l limits) bool {
 	now := p.cfg.Now().UTC()
 	minute, day := now.Truncate(time.Minute), now.Truncate(24*time.Hour)
 
@@ -324,7 +324,7 @@ func (p *Plugin) take(id string, l limits) bool {
 }
 
 // sentToday is the instance's count for the current UTC day.
-func (p *Plugin) sentToday(id string) int {
+func (p *Extension) sentToday(id string) int {
 	day := p.cfg.Now().UTC().Truncate(24 * time.Hour)
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -489,4 +489,4 @@ func maskList(list []string) string {
 }
 
 // Section is the key of the `mailrelay` section (pocketone.yaml): the shared mail relay on a pocker host.
-var Section = pluginkit.NewSection(Name, SectionConfig{}, "Shared mail relay on a pocker host: send, per-minute and daily limits per instance.")
+var Section = extkit.NewSection(Name, SectionConfig{}, "Shared mail relay on a pocker host: send, per-minute and daily limits per instance.")

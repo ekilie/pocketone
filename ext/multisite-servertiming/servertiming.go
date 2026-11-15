@@ -1,7 +1,7 @@
-// Package servertiming is a PocketOne plugin for the pocker host: a Server-Timing response header with the
-// timings the host and other plugins register for each request (see pocker.Timing).
+// Package servertiming is a PocketOne extension for the pocker host: a Server-Timing response header with the
+// timings the host and other extensions register for each request (see pocker.Timing).
 //
-//	srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{servertiming.New()}}
+//	srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{servertiming.New()}}
 package servertiming
 
 import (
@@ -23,26 +23,26 @@ import (
 //   - origin: the instance's own handler, from handing it the request until it sent its response headers
 //   - wake:   starting the instance for this request (0 when it was already running)
 //
-// Host code and plugins add their own entries with pocker.Timing (e.g. a total for the server).
+// Host code and extensions add their own entries with pocker.Timing (e.g. a total for the server).
 // A hop's own overhead is its dur minus the entry it wraps. Only names go in desc, never addresses.
 const Header = "Server-Timing"
 
 // TimingEntry is one Server-Timing metric.
 type TimingEntry = pocker.TimingEntry
 
-// Plugin adds the header ([pocker.Wrapper]). List it before plugins and host code whose timings it should include:
+// Extension adds the header ([pocker.Wrapper]). List it before extensions and host code whose timings it should include:
 // the first listed wrapper is the outermost.
-type Plugin struct{}
+type Extension struct{}
 
-// New returns the plugin.
-func New() *Plugin { return &Plugin{} }
+// New returns the extension.
+func New() *Extension { return &Extension{} }
 
-// Name is the plugin's name.
-func (*Plugin) Name() string { return "servertiming" }
+// Name is the extension's name.
+func (*Extension) Name() string { return "servertiming" }
 
 // Wrap collects the request's timings and appends them to the response's Server-Timing header just before the
 // headers go out, after any values an upstream hop already sent.
-func (*Plugin) Wrap(next http.Handler) http.Handler {
+func (*Extension) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, eval := pocker.WithTimings(r.Context())
 		next.ServeHTTP(WithServerTiming(w, eval), r.WithContext(ctx))

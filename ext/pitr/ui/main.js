@@ -121,7 +121,7 @@
         try {
             st = await app.pb.send("/api/pitr", { requestKey: null });
         } catch (err) {
-            section.remove(); // plugin not enabled for this app
+            section.remove(); // extension not enabled for this app
             return;
         }
 

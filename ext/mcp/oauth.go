@@ -76,7 +76,7 @@ func sameResource(a, b string) bool {
 	return strings.EqualFold(ua.Scheme, ub.Scheme) && strings.EqualFold(ua.Host, ub.Host) && ua.Path == ub.Path
 }
 
-// setupAuth runs on serve, after every plugin has registered: it picks the authenticator and turns on dynamic
+// setupAuth runs on serve, after every extension has registered: it picks the authenticator and turns on dynamic
 // client registration when OAuth signs MCP in.
 func (s *Server) setupAuth() {
 	osrv := oauthserver.For(s.app)

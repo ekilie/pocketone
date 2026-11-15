@@ -10,7 +10,7 @@
 //   - local:  full instance records (secrets, limits, plugins, ...) only where edge = this edge
 //
 // An instance moving away shows up in routes (its edge changes), which drops its local record; one moving here
-// arrives in local. Extensions (e.g. a multitenant plugin) add views of their own, adjust instances as they are built
+// arrives in local. Extensions (e.g. a multitenant extension) add views of their own, adjust instances as they are built
 // and name the instances a change in their views affects.
 //
 // Filters cut what each edge downloads and keeps; they are not a security boundary while edges log in as superusers.
@@ -96,7 +96,7 @@ const (
 )
 
 // Extension extends what the mirror follows and how it builds instances (e.g. owners, account status and plans
-// from a multitenant plugin). It runs on the mirror's goroutine; it reads other views through the [Mirror].
+// from a multitenant extension). It runs on the mirror's goroutine; it reads other views through the [Mirror].
 type Extension interface {
 	// Views are the extra views to follow.
 	Views() []View
@@ -612,7 +612,7 @@ func (m *Mirror) build(id string) (multisite.Instance, bool) {
 	_ = local.Decode("secrets", &inst.Secrets)
 	_ = local.Decode("access", &inst.Access)
 	_ = local.Decode("limits", &inst.Limits)
-	_ = local.Decode("plugins", &inst.Plugins)
+	_ = local.Decode("plugins", &inst.Extensions) // extension settings; the stored field is still named "plugins"
 	switch {
 	case local.String("suspension") != "":
 		inst.Blocked = &multisite.Blocked{Status: http.StatusForbidden, Message: local.String("suspension")}

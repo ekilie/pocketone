@@ -1,4 +1,4 @@
-package pluginkit
+package extkit
 
 import "ganigeorgiev.com/pocketbase/pocketbase/core"
 
@@ -11,12 +11,12 @@ type ToolInfo struct {
 }
 
 // ToolLister lists an app's MCP tools. The MCP server on an app (ext/mcp) records itself with [SetToolLister], so
-// checks such as the conformance test can see which tools a plugin added without importing it.
+// checks such as the conformance test can see which tools an extension added without importing it.
 type ToolLister interface {
 	ToolInfos() []ToolInfo
 }
 
-const toolListerKey = "pluginkit.mcpTools"
+const toolListerKey = "extkit.mcpTools"
 
 // SetToolLister records app's MCP server. ext/mcp calls it when it's registered on app.
 func SetToolLister(app core.App, l ToolLister) { app.Store().Set(toolListerKey, l) }

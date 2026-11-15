@@ -49,10 +49,10 @@ type Instance struct {
 	// Limits override the process defaults for this instance (zero fields keep the default).
 	Limits Limits `yaml:"limits,omitempty"`
 
-	// Plugins holds per-instance settings for plugins, by plugin name (e.g. `plugins: {firewall: {rate_limits:
-	// ...}}`). A host application's instance source may set typed values; see [DecodePluginConfig]. Plugins read
+	// Extensions holds per-instance settings for extensions, by extension name (e.g. `extensions: {firewall: {rate_limits:
+	// ...}}`). A host application's instance source may set typed values; see [DecodeExtensionConfig]. Extensions read
 	// them once, when registered, so pocker restarts the instance's app on its next request when they change.
-	Plugins map[string]any `yaml:"plugins,omitempty"`
+	Extensions map[string]any `yaml:"extensions,omitempty"`
 
 	// Blocked, when set, answers every request for this instance with the given status and message instead of
 	// serving it (e.g. suspended, unpaid). A running app is left running.
@@ -110,10 +110,10 @@ type InstanceSource interface {
 	Watch(ctx context.Context) (<-chan Change, error)
 }
 
-// PluginConfig returns an instance's settings for the named plugin (its `plugins.<name>` value), or nil.
-func (i Instance) PluginConfig(name string) any {
-	if i.Plugins == nil {
+// ExtensionConfig returns an instance's settings for the named extension (its `extensions.<name>` value), or nil.
+func (i Instance) ExtensionConfig(name string) any {
+	if i.Extensions == nil {
 		return nil
 	}
-	return i.Plugins[name]
+	return i.Extensions[name]
 }

@@ -37,7 +37,7 @@ func TestAppRestartRestartsOnlyThatApp(t *testing.T) {
 	ra, _ := m.app(a)
 	rb, _ := m.app(b)
 
-	// a plugin's OnTerminate handler must still see a normal terminate: DB closed after its e.Next()
+	// an extension's OnTerminate handler must still see a normal terminate: DB closed after its e.Next()
 	var closedAfterNext bool
 	ra.app.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
 		err := e.Next()
@@ -49,7 +49,7 @@ func TestAppRestartRestartsOnlyThatApp(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !closedAfterNext {
-		t.Error("plugin handler: databases still open after e.Next()")
+		t.Error("extension handler: databases still open after e.Next()")
 	}
 	deadline := time.Now().Add(10 * time.Second)
 	for {

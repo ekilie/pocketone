@@ -3,7 +3,7 @@
 //   - superuser admin@example.com / password (the dashboard)
 //   - user user@example.com / password, verified, in the "users" collection (the app itself)
 //
-// Every plugin's example/ registers it, so a fresh data dir is ready to log in to (no installer page, no CLI step)
+// Every extension's example/ registers it, so a fresh data dir is ready to log in to (no installer page, no CLI step)
 // and the passwords are put back if someone changed them. Never register it in a production build.
 package devusers
 

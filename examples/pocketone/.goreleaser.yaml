@@ -16,7 +16,7 @@ before:
 
 builds:
   - id: build_noncgo
-    # the standard PocketOne binary: examples/base + the default PocketOne plugins, in its own module
+    # the standard PocketOne binary: examples/base + the default PocketOne extensions, in its own module
     dir: examples/pocketone
     main: .
     binary: pocketone
@@ -73,7 +73,7 @@ brews:
       name: homebrew-tap
     directory: Formula
     homepage: https://github.com/pockethost/pocketone
-    description: PocketOne, a community fork of PocketBase with plugins (pages, pocker and more)
+    description: PocketOne, a community fork of PocketBase with extensions (pages, pocker and more)
     license: MIT
     commit_author:
       name: PocketHost

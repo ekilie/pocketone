@@ -1,7 +1,7 @@
 package mailtrap
 
 // The trap itself: a development mail catcher (like MailDev or Mailpit) that accepts mail over SMTP or in-process
-// and shows it in a small web inbox. The plugin that routes an app's mail here is in mailtrap.go.
+// and shows it in a small web inbox. The extension that routes an app's mail here is in mailtrap.go.
 
 import (
 	"bufio"

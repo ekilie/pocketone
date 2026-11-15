@@ -9,7 +9,7 @@
 // API rules, request hooks, middleware and rate limits apply because it is the REST request; ext/mcp makes no
 // permission decisions of its own.
 //
-// The built-in pb_* tools map the whole stock API. Plugins add tools for their own routes with [Server.AddEndpoint]
+// The built-in pb_* tools map the whole stock API. Extensions add tools for their own routes with [Server.AddEndpoint]
 // on [For](app); an app's pb_hooks add them with $mcp.addEndpoint (see [BindJS]). The shape is always the same:
 // write the REST endpoint, then the tool wrapper.
 //
@@ -29,7 +29,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 const (
@@ -60,7 +60,7 @@ type Config struct {
 	Description string
 	// Icons go to serverInfo.icons, e.g. [{"src": "https://…/logo.png", "mimeType": "image/png"}].
 	Icons []map[string]any
-	// Instructions are sent in initialize, before anything plugins and hooks add with [Server.AddInstructions].
+	// Instructions are sent in initialize, before anything extensions and hooks add with [Server.AddInstructions].
 	Instructions string
 
 	// PublicURL is the origin clients reach the app at, used for the resource URL in protected resource metadata
@@ -116,7 +116,7 @@ var (
 // "base64": …}`, or a list of them) makes the body multipart, the way PocketBase takes uploads. Request and Response
 // reshape the call when the default doesn't fit.
 type Endpoint struct {
-	// Name: lowercase `<plugin>_<verb>_<noun>`, 1–128 of A-Za-z0-9_.-, unique per app. `pb_` is the built-ins'.
+	// Name: lowercase `<extension>_<verb>_<noun>`, 1–128 of A-Za-z0-9_.-, unique per app. `pb_` is the built-ins'.
 	Name        string
 	Title       string
 	Description string
@@ -240,7 +240,7 @@ func MustRegister(app core.App, cfg Config) *Server {
 }
 
 // Register adds the MCP endpoint and protected resource metadata to app (on serve) and the built-in tools. Call it
-// before app.Start(), or from pocker's SetupApp. Plugins registered later add their tools through [For].
+// before app.Start(), or from pocker's SetupApp. Extensions registered later add their tools through [For].
 func Register(app core.App, cfg Config) (*Server, error) {
 	if cfg.Path == "" {
 		cfg.Path = DefaultPath
@@ -280,7 +280,7 @@ func Register(app core.App, cfg Config) (*Server, error) {
 		p.mu.Unlock()
 	}
 	app.Store().Set(storeKey, s)
-	pluginkit.SetToolLister(app, s) // lets checks such as the plugin conformance test see the tools
+	extkit.SetToolLister(app, s) // lets checks such as the extension conformance test see the tools
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		s.setupAuth()
@@ -348,7 +348,7 @@ func methodAnnotations(method string) *Annotations {
 	return Write
 }
 
-// Tools returns the registered tools: the app's and plugins' own first, then the pb_* built-ins, each by name.
+// Tools returns the registered tools: the app's and extensions' own first, then the pb_* built-ins, each by name.
 func (s *Server) Tools() []*Endpoint {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -368,12 +368,12 @@ func (s *Server) Tools() []*Endpoint {
 
 func isBuiltin(name string) bool { return strings.HasPrefix(name, "pb_") }
 
-// ToolInfos implements [pluginkit.ToolLister].
-func (s *Server) ToolInfos() []pluginkit.ToolInfo {
+// ToolInfos implements [extkit.ToolLister].
+func (s *Server) ToolInfos() []extkit.ToolInfo {
 	tools := s.Tools()
-	out := make([]pluginkit.ToolInfo, len(tools))
+	out := make([]extkit.ToolInfo, len(tools))
 	for i, t := range tools {
-		out[i] = pluginkit.ToolInfo{Name: t.Name, Description: t.Description, InputSchema: t.InputSchema}
+		out[i] = extkit.ToolInfo{Name: t.Name, Description: t.Description, InputSchema: t.InputSchema}
 	}
 	return out
 }
@@ -384,7 +384,7 @@ func (s *Server) tool(name string) *Endpoint {
 	return s.tools[name]
 }
 
-// AddInstructions appends a paragraph to the instructions sent in initialize (plugins describe their tools here).
+// AddInstructions appends a paragraph to the instructions sent in initialize (extensions describe their tools here).
 func (s *Server) AddInstructions(text string) {
 	if text = strings.TrimSpace(text); text == "" {
 		return

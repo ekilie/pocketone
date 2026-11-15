@@ -1,5 +1,5 @@
 // Command pocker-extension is a Pocker build with one extension: a Go route and an admin dashboard page,
-// added to every instance. See docs/plugins.md.
+// added to every instance. See docs/extensions.md.
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 package main

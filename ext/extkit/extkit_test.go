@@ -1,4 +1,4 @@
-package pluginkit
+package extkit
 
 import (
 	"testing"

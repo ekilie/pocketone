@@ -3,7 +3,7 @@
 //	jsvm.MustRegister(app, jsvm.Config{Extensions: []jsvm.Extension{jserrors.New()}})
 //
 // jsvm serializes hook handlers (fn.toString()) and recompiles each as its own program under <cwd>/pb.js
-// (jsvm.ScriptPath), which also anchors relative require() calls, so its errors say pb.js:1:40. This plugin remembers
+// (jsvm.ScriptPath), which also anchors relative require() calls, so its errors say pb.js:1:40. This extension remembers
 // where each handler sits in the hooks file being loaded and rewrites those positions to pb_hooks/<file>:<line>:<col>;
 // errors while a hooks file itself loads name the file too.
 //

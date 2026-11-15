@@ -9,7 +9,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 )
 
-// The plugin takes an app's mail only in dev mode with SMTP off, and then sendmail never runs.
+// The extension takes an app's mail only in dev mode with SMTP off, and then sendmail never runs.
 func TestRegisterRoutesDevMailToTrap(t *testing.T) {
 	t.Setenv("PB_MAILTRAP_HTTP", freeAddr(t))
 	t.Setenv("PB_MAILTRAP_SMTP", freeAddr(t))

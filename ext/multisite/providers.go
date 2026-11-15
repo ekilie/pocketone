@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // Provider is a runtime provider: it turns a host into a multi-instance server by supplying its one runtime
@@ -78,7 +78,7 @@ type InstancesConfig struct {
 }
 
 // Instances is the section key of InstancesConfig.
-var Instances = pluginkit.NewSection("instances", InstancesConfig{File: "instances.yaml"}, "Where a multi-instance host's instances come from (a YAML file), and dev mode (serve unknown hostnames).")
+var Instances = extkit.NewSection("instances", InstancesConfig{File: "instances.yaml"}, "Where a multi-instance host's instances come from (a YAML file), and dev mode (serve unknown hostnames).")
 
 // Options are what the binary adds to a host built from config.
 type Options struct {

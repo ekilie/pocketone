@@ -833,7 +833,7 @@ func (r *request) rtObject() *goja.Object {
 
 	set("log", func(level string, args []any) {
 		msg := strings.TrimSpace(fmt.Sprintln(args...))
-		l := r.p.app.Logger().With("plugin", "pages", "file", r.route.File)
+		l := r.p.app.Logger().With("extension", "pages", "file", r.route.File)
 		switch level {
 		case "debug":
 			if r.dev {

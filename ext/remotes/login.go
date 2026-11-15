@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/pluginkit"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"net/http"
 	"net/url"
 	"os"
@@ -55,7 +55,7 @@ type PasswordLogin struct {
 	Password   string
 	// OTP is asked for when the collection requires a second factor (MFA with OTP). Nil: MFA fails.
 	OTP func(email string) (string, error)
-	// TokenName names the API token minted on remotes with the tokens plugin.
+	// TokenName names the API token minted on remotes with the tokens extension.
 	TokenName string
 }
 
@@ -67,11 +67,11 @@ type authResponse struct {
 	} `json:"record"`
 }
 
-// ErrNoTokens: the remote has no tokens plugin, so a password sign-in can't become a revocable API token.
-var ErrNoTokens = errors.New("the remote has no API tokens plugin")
+// ErrNoTokens: the remote has no tokens extension, so a password sign-in can't become a revocable API token.
+var ErrNoTokens = errors.New("the remote has no API tokens extension")
 
 // LoginWithPassword signs in with email + password, then mints an API token on the remote (named after this
-// machine; logout revokes it). The remote must have the tokens plugin: the session itself is never saved, since
+// machine; logout revokes it). The remote must have the tokens extension: the session itself is never saved, since
 // it expires and can't be revoked on its own.
 func LoginWithPassword(ctx context.Context, c *Client, in PasswordLogin) (*LoginResult, error) {
 	if in.Collection == "" {
@@ -123,7 +123,7 @@ func LoginWithPassword(ctx context.Context, c *Client, in PasswordLogin) (*Login
 	name := in.TokenName
 	if name == "" {
 		host, _ := os.Hostname()
-		name = pluginkit.Command + " CLI on " + host
+		name = extkit.Command + " CLI on " + host
 	}
 	var created struct {
 		Token  string `json:"token"`

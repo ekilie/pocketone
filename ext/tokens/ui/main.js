@@ -1,5 +1,5 @@
 // API tokens screen for the PocketBase dashboard (Settings → API tokens). Loaded as a UI extension
-// (/_/extensions/tokens/main.js). A thin view over the plugin's /api/tokens routes.
+// (/_/extensions/tokens/main.js). A thin view over the extension's /api/tokens routes.
 (() => {
     app.store.settingsNavGroups["Access"] = [
         ...(app.store.settingsNavGroups["Access"] || []),

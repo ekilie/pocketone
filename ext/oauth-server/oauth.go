@@ -72,7 +72,7 @@ type Config struct {
 	AccessTTL  time.Duration
 	RefreshTTL time.Duration
 
-	// DynamicRegistration turns on POST /oauth/register (RFC 7591), e.g. for MCP connectors. A plugin can also turn
+	// DynamicRegistration turns on POST /oauth/register (RFC 7591), e.g. for MCP connectors. An extension can also turn
 	// it on later with [Server.EnableDynamicRegistration].
 	DynamicRegistration bool
 

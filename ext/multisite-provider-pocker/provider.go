@@ -4,8 +4,8 @@ import (
 	"log/slog"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/pluginkit"
 )
 
 // SectionConfig is the `pocker` section (pocketone.yaml, ext/config): settings for running instances in-process.
@@ -23,7 +23,7 @@ type SectionConfig struct {
 }
 
 // Section is the key of the `pocker` section.
-var Section = pluginkit.NewSectionFunc("pocker", func() SectionConfig {
+var Section = extkit.NewSectionFunc("pocker", func() SectionConfig {
 	d := DefaultConfig()
 	return SectionConfig{Root: d.PBRoot, HooksPoolSize: d.HooksPoolSize, Limits: d.Limits}
 }, "Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).")
@@ -31,10 +31,10 @@ var Section = pluginkit.NewSectionFunc("pocker", func() SectionConfig {
 // Provider is pocker as a runtime provider for ext/multisite (`provider: pocker`). The fields are the host application's
 // extensions, as on [Server].
 type Provider struct {
-	Plugins  []Plugin
-	SetupApp func(inst Instance, app core.App) error
-	OnEvent  func(Event)
-	OnStart  func(m *Manager)
+	Extensions []Extension
+	SetupApp   func(inst Instance, app core.App) error
+	OnEvent    func(Event)
+	OnStart    func(m *Manager)
 	// Resolve makes relative paths in the section absolute (e.g. ext/config's Config.ResolvePath, relative to the
 	// config file); nil = as written (relative to the working directory).
 	Resolve func(string) string
@@ -61,6 +61,6 @@ func (p *Provider) Prepare(h *multisite.Host) error {
 	if h.Logger == nil {
 		h.Logger = slog.Default()
 	}
-	s := &Server{Config: cfg, Plugins: p.Plugins, SetupApp: p.SetupApp, OnEvent: p.OnEvent, OnStart: p.OnStart, Logger: h.Logger}
+	s := &Server{Config: cfg, Extensions: p.Extensions, SetupApp: p.SetupApp, OnEvent: p.OnEvent, OnStart: p.OnStart, Logger: h.Logger}
 	return s.prepare(h)
 }

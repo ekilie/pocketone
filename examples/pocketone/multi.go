@@ -28,7 +28,7 @@ import (
 // pocker (in-process) or docker (containers); other edges from the `edges` section and the mothership. It reports
 // false when no provider is configured, so main serves a single app as stock PocketBase does.
 func serveMany(cfg *config.Config) (handled bool, err error) {
-	multisite.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Plugins: []pocker.Plugin{
+	multisite.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Extensions: []pocker.Extension{
 		servertiming.New(), // outermost, so its header includes everything below
 		autotls.New(),      // `autotls` section
 		mailtrap.New(),     // dev instances with SMTP off: mail goes to the inbox at http://127.0.0.1:8025

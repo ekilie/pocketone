@@ -1,19 +1,19 @@
-// Command plugins is CI for PocketOne's plugin modules (ext/*, examples/pocketone): which modules a change affects,
-// and the rules every plugin module follows. Run it from the repository root:
+// Command extensions is CI for PocketOne's extension modules (ext/*, examples/pocketone): which modules a change affects,
+// and the rules every extension module follows. Run it from the repository root:
 //
-//	go run ./.github/plugins affected <base> <head>   # module dirs to build and test, one per line
-//	go run ./.github/plugins check [dir...]            # plugin rules (default: every module)
-//	go run ./.github/plugins examples                  # copy each example/main.go into its README's ## Example
+//	go run ./.github/extensions affected <base> <head>   # module dirs to build and test, one per line
+//	go run ./.github/extensions check [dir...]            # extension rules (default: every module)
+//	go run ./.github/extensions examples                  # copy each example/main.go into its README's ## Example
 //
 // A module is affected when a file in it changes (Markdown aside), or when a module it reaches through a `replace`
 // is affected. A change to core (the root module) or to this tool affects every module.
 //
 // The rules (`check`), per module:
-//   - a module with a pluginkit plugin (a `Register(app core.App, _ pluginkit.Config) error` method) has a test
-//     that calls conformance.Run (docs/plugins.md).
-//   - every plugin (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use`, `## Integrations` and
-//     `## Example` sections, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md). When the
-//     plugin has example/main.go, the Example section shows it exactly, in a ```go block (`examples` writes it).
+//   - a module with an extkit extension (a `Register(app core.App, _ extkit.Config) error` method) has a test
+//     that calls conformance.Run (docs/extensions.md).
+//   - every extension (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use`, `## Integrations` and
+//     `## Example` sections, in that order; it is the extension's page on pocketone.dev (docs/extensions.md). When the
+//     extension has example/main.go, the Example section shows it exactly, in a ```go block (`examples` writes it).
 package main
 
 import (
@@ -59,7 +59,7 @@ func main() {
 			}
 			os.Exit(1)
 		}
-		fmt.Printf("ok: %d modules follow the plugin rules\n", len(dirs))
+		fmt.Printf("ok: %d modules follow the extension rules\n", len(dirs))
 	case "examples":
 		changed, err := syncExamples()
 		if err != nil {
@@ -75,16 +75,16 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: plugins affected <base> <head> | plugins check [dir...] | plugins examples")
+	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples")
 	os.Exit(2)
 }
 
 func fail(err error) {
-	fmt.Fprintln(os.Stderr, "plugins:", err)
+	fmt.Fprintln(os.Stderr, "extensions:", err)
 	os.Exit(1)
 }
 
-// modules lists the plugin-side module dirs (relative, slash-separated): every go.mod under ext/ and examples/.
+// modules lists the extension-side module dirs (relative, slash-separated): every go.mod under ext/ and examples/.
 func modules() ([]string, error) {
 	var out []string
 	for _, root := range []string{"ext", "examples"} {
@@ -171,7 +171,7 @@ func affected(base, head string) ([]string, error) {
 			continue
 		}
 		// the root module: core code, or this CI. Root-level files that aren't code (docs, .claude/) don't count.
-		if strings.HasPrefix(f, ".github/plugins/") || f == ".github/workflows/plugins.yml" || isCore(f) {
+		if strings.HasPrefix(f, ".github/extensions/") || f == ".github/workflows/extensions.yml" || isCore(f) {
 			all = true
 		}
 	}
@@ -223,17 +223,17 @@ func isCore(f string) bool {
 }
 
 var (
-	pluginMethod = regexp.MustCompile(`(?m)^func \(\w+ \*?\w+\) Register\(\w+ core\.App, \w+ pluginkit\.Config\) error`)
-	conformance  = regexp.MustCompile(`conformance\.(Run|CheckLifecycle)\(`)
+	extensionMethod = regexp.MustCompile(`(?m)^func \(\w+ \*?\w+\) Register\(\w+ core\.App, \w+ extkit\.Config\) error`)
+	conformance     = regexp.MustCompile(`conformance\.(Run|CheckLifecycle)\(`)
 )
 
-// check applies the plugin rules to each module dir.
+// check applies the extension rules to each module dir.
 func check(dirs []string) []string {
 	mods, _ := modules()
 	var problems []string
 	for _, dir := range dirs {
 		dir = strings.TrimSuffix(filepath.ToSlash(dir), "/")
-		var plugins []string
+		var extensions []string
 		tested := false
 		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -255,8 +255,8 @@ func check(dirs []string) []string {
 			}
 			if strings.HasSuffix(p, "_test.go") {
 				tested = tested || conformance.Match(src)
-			} else if pluginMethod.Match(src) {
-				plugins = append(plugins, p)
+			} else if extensionMethod.Match(src) {
+				extensions = append(extensions, p)
 			}
 			return nil
 		})
@@ -264,12 +264,12 @@ func check(dirs []string) []string {
 			problems = append(problems, fmt.Sprintf("%s: %v", dir, err))
 			continue
 		}
-		if len(plugins) > 0 && !tested {
-			problems = append(problems, fmt.Sprintf("%s: implements pluginkit.Plugin (%s) but has no test calling conformance.Run; add conformance_test.go (docs/plugins.md)", dir, strings.Join(plugins, ", ")))
+		if len(extensions) > 0 && !tested {
+			problems = append(problems, fmt.Sprintf("%s: implements extkit.Extension (%s) but has no test calling conformance.Run; add conformance_test.go (docs/extensions.md)", dir, strings.Join(extensions, ", ")))
 		}
 		problems = append(problems, checkDocs(dir)...)
 	}
-	// Plugin folders with no Go module yet (a README for a planned plugin) get the docs rules too.
+	// Extension folders with no Go module yet (a README for a planned extension) get the docs rules too.
 	entries, _ := os.ReadDir("ext")
 	for _, e := range entries {
 		dir := "ext/" + e.Name()
@@ -280,20 +280,20 @@ func check(dirs []string) []string {
 	return problems
 }
 
-// docsExempt are plugin folders that aren't something a user installs, configures or uses, with the reason.
+// docsExempt are extension folders that aren't something a user installs, configures or uses, with the reason.
 var docsExempt = map[string]string{
-	"pluginkit": "the plugin contract, a library for plugin authors (docs/plugins.md covers it)",
-	"devusers":  "test users for examples and tests only; never in a production build",
+	"extkit":   "the extension contract, a library for extension authors (docs/extensions.md covers it)",
+	"devusers": "test users for examples and tests only; never in a production build",
 }
 
-// docsPending are plugins written before the README sections were required; remove each when its README has them.
-// New plugins don't go here.
+// docsPending are extensions written before the README sections were required; remove each when its README has them.
+// New extensions don't go here.
 var docsPending = map[string]bool{}
 
-// requiredSections are the README sections every plugin has, in this order.
+// requiredSections are the README sections every extension has, in this order.
 var requiredSections = []string{"Install", "Configure", "Use", "Integrations", "Example"}
 
-// licensedMIT: the README's last H2 is "License" and its body is exactly "MIT". Every plugin in this repo is MIT,
+// licensedMIT: the README's last H2 is "License" and its body is exactly "MIT". Every extension in this repo is MIT,
 // pending docs or not.
 func licensedMIT(src string, h2 []string) bool {
 	if len(h2) == 0 || h2[len(h2)-1] != "License" {
@@ -303,18 +303,18 @@ func licensedMIT(src string, h2 []string) bool {
 	return i >= 0 && strings.TrimSpace(src[i+len("\n## License"):]) == "MIT"
 }
 
-// checkDocs: a plugin folder (ext/<name>) has a README with the required sections, in order.
+// checkDocs: an extension folder (ext/<name>) has a README with the required sections, in order.
 func checkDocs(dir string) []string {
 	name, ok := strings.CutPrefix(dir, "ext/")
 	if !ok || strings.Contains(name, "/") {
-		return nil // not a plugin folder (examples/pocketone, or a module inside a plugin)
+		return nil // not an extension folder (examples/pocketone, or a module inside an extension)
 	}
 	if _, ok := docsExempt[name]; ok {
 		return nil
 	}
 	src, err := os.ReadFile(dir + "/README.md")
 	if err != nil {
-		return []string{dir + "/README.md: missing (docs/plugins.md)"}
+		return []string{dir + "/README.md: missing (docs/extensions.md)"}
 	}
 	var h2 []string
 	fence := false
@@ -334,18 +334,18 @@ func checkDocs(dir string) []string {
 	}
 	complete := next == len(requiredSections)
 	if !licensedMIT(string(src), h2) {
-		return []string{dir + "/README.md: must end with a `## License` section that says `MIT`; plugins in this repo are MIT (host another license in your own repo) (docs/plugins.md)"}
+		return []string{dir + "/README.md: must end with a `## License` section that says `MIT`; extensions in this repo are MIT (host another license in your own repo) (docs/extensions.md)"}
 	}
 	switch {
 	case !complete && !docsPending[name]:
-		return []string{fmt.Sprintf("%s/README.md: needs the sections ## %s, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md)",
+		return []string{fmt.Sprintf("%s/README.md: needs the sections ## %s, in that order; it is the extension's page on pocketone.dev (docs/extensions.md)",
 			dir, strings.Join(requiredSections, ", ## "))}
 	case complete && docsPending[name]:
-		return []string{fmt.Sprintf("%s: its README has the required sections now; remove %q from docsPending in .github/plugins/main.go", dir, name)}
+		return []string{fmt.Sprintf("%s: its README has the required sections now; remove %q from docsPending in .github/extensions/main.go", dir, name)}
 	case complete:
 		if want, err := os.ReadFile(dir + "/example/main.go"); err == nil {
 			if _, got, ok := exampleBlock(string(src)); !ok || got != string(want) {
-				return []string{dir + "/README.md: its ## Example section must show example/main.go exactly, in a ```go block; run `go run ./.github/plugins examples` (docs/plugins.md)"}
+				return []string{dir + "/README.md: its ## Example section must show example/main.go exactly, in a ```go block; run `go run ./.github/extensions examples` (docs/extensions.md)"}
 			}
 		}
 	}
@@ -376,7 +376,7 @@ func exampleBlock(src string) (span [2]int, body string, ok bool) {
 	return [2]int{start, start + m + 1}, src[start : start+m+1], true
 }
 
-// syncExamples copies each plugin's example/main.go into its README's ## Example section (replacing the section's
+// syncExamples copies each extension's example/main.go into its README's ## Example section (replacing the section's
 // first ```go block, or adding one at the end of the section) and returns the READMEs it changed.
 func syncExamples() ([]string, error) {
 	dirs, err := filepath.Glob("ext/*/example/main.go")
