@@ -8,6 +8,7 @@
 #   git fetch upstream && git fetch origin
 #   .github/core-audit/core-changes-branch.sh            # defaults: upstream/develop, origin/main
 #   git push --force origin core-changes
+#   (and commit README.md if the script repinned its audit link)
 #
 # The core patch is taken from the fork point (merge-base of main and upstream) to main, then applied three-way onto
 # upstream develop. Conflicts resolved on an earlier run are replayed (git rerere); a new one stops the script and
@@ -33,6 +34,11 @@ MSG
   echo "$branch = $(git -C "$root" rev-parse --short "$branch") on upstream ${up_sha:0:10}"
   echo "review: https://github.com/pockethost/pocketone/compare/${up_sha}...$branch"
   echo "push:   git push --force origin $branch"
+  # The README's audit link pins the upstream sha; point it at the new base.
+  if grep -qE "compare/[0-9a-f]{40}\.\.\.$branch" "$root/README.md"; then
+    sed -E -i.bak "s#compare/[0-9a-f]{40}\.\.\.$branch#compare/${up_sha}...$branch#g" "$root/README.md" && rm -f "$root/README.md.bak"
+    if ! git -C "$root" diff --quiet -- README.md; then echo "README.md: audit link now pins ${up_sha:0:10}; commit it on main"; fi
+  fi
 }
 
 # After resolving conflicts by hand: core-changes-branch.sh --continue <worktree> <upstream sha> <source sha>

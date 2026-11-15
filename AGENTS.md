@@ -17,6 +17,8 @@ context from the change's session, or a human), and must record the result in a 
      seams such as `OnFilesystemCreate`, `jsvm.Config.Extensions`, `BaseAppConfig.AppMigrations`/`OnLog`)?
    - **Minimal:** is it the smallest seam that works, with no feature logic, policy or plugin-specific names in core?
    - **Sensible:** marked `// PocketOne:`, documented on the hook, upstream behavior unchanged when nothing uses it, tested?
+   - **Listed:** a new or changed hook has its row in the README's "Changes we made to PocketBase" Hooks table (what it
+     lets extensions do, which extensions use it); a bug fix has its row in the Bugfixes table.
 3. Pass: add the trailer and push. Fail: move the logic to `ext/` or shrink the seam, then audit again.
 
 Trailer forms (the last line of the commit message, after a blank line):
@@ -34,7 +36,7 @@ PocketOne change the merge forced.
 `core-changes` is upstream `develop` plus one commit holding every core change on `main` (no `ext/` or other
 PocketOne-owned paths), so anyone can audit our core changes against current upstream in one diff. It is rebuilt, never
 merged: after every upstream pull run `git fetch upstream origin && .github/core-audit/core-changes-branch.sh`, then
-`git push --force origin core-changes`. A conflict stops the script with the worktree left to resolve
+`git push --force origin core-changes`, and commit `README.md` if the script repinned its audit link. A conflict stops the script with the worktree left to resolve
 (`--continue` finishes); resolutions are remembered (rerere) for later runs.
 
 ## Core changes that aren't hooks

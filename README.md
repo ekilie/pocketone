@@ -100,7 +100,28 @@ Plugins are welcome. Read [Create your own plugin](docs/plugins.md), then open a
 every level: on a single app and on every instance under pocker. Keep changes to PocketBase's own code to the minimum hook your plugin needs, and include a small
 `example/main.go` that builds and shows the feature.
 
-## Core Bugfixes
+## Changes we made to PocketBase
+
+We change PocketBase's own code as little as possible: only the hooks our extensions need, and fixes for bugs we hit in
+production. The [`core-changes` branch](https://github.com/pockethost/pocketone/compare/7b9ab7ccce7a0e5c9d96796a6bf804f3dd5e4c77...core-changes) is current
+upstream `develop` plus every one of those changes and nothing else, so you can audit them in one diff. It is rebuilt
+after each upstream pull.
+
+### Hooks
+
+| Hook | What it lets extensions do | Used by |
+|---|---|---|
+| [`OnFilesystemCreate`](https://github.com/pockethost/pocketone/blob/core-changes/core/events.go) | Supply or wrap the storage and backups filesystems. | multisite-s3-fallback, pitr, s3redirect |
+| [`filesystem.New` / `Driver()`](https://github.com/pockethost/pocketone/blob/core-changes/tools/filesystem/filesystem.go) | Wrap a filesystem's blob driver (a key prefix, a fallback). | multisite-s3-fallback, s3redirect, sandbox |
+| [`BaseAppConfig.AppMigrations`](https://github.com/pockethost/pocketone/blob/core-changes/core/base.go) | Give an app its own migrations list, so several apps can share one process. | multisite-provider-pocker, sandbox |
+| [`BaseAppConfig.OnLog`](https://github.com/pockethost/pocketone/blob/core-changes/core/base.go) | Receive every log entry the app writes, e.g. for per-instance logs. | multisite-provider-pocker |
+| [jsvm `OnInit` / `OnCall`](https://github.com/pockethost/pocketone/blob/core-changes/plugins/jsvm/extension.go) | Set up each JS VM and wrap every call into JS (limits, sandboxing). | sandbox |
+| [jsvm `OnLoad` / `OnCompile`](https://github.com/pockethost/pocketone/blob/core-changes/plugins/jsvm/extension.go) | Wrap loading a hook file and compiling a handler (error locations, skipping a broken file). | jserrors, multisite-provider-pocker |
+| [jsvm `HTTPClient`](https://github.com/pockethost/pocketone/blob/core-changes/plugins/jsvm/extension.go) | Choose the `*http.Client` that `$http.send` uses. | sandbox |
+| [jsvm `HookFiles` / `MigrationFiles` / `Require`](https://github.com/pockethost/pocketone/blob/core-changes/plugins/jsvm/extension.go) | Load hooks, migrations and modules from somewhere other than `pb_hooks`, e.g. embedded in the binary. | jsembed |
+| [`jsvm.Run`](https://github.com/pockethost/pocketone/blob/core-changes/plugins/jsvm/run.go) | Run JS from Go on the app's VM pool; VMs are created only when first needed. | pages |
+
+### Bugfixes
 
 *Bugs tracked here were found and fixed through production incidents and have not yet been fixed in upstream.*
 
