@@ -31,6 +31,36 @@ h.Background = append(h.Background, lc.Run) // measures and reports on the polic
 
 It knows nothing about plans, payments or tenants: that belongs to whichever policy provider is configured.
 
+## Rules: criteria an app can replace
+
+`rules` (package `github.com/pockethost/pocketone/ext/lifecycle/rules`, standard library only) is the engine policies
+are built from, on an edge or a mothership:
+
+- **Criteria** answer one question about a subject (stale? orphaned? over its plan?) and say why. They live in a
+  `Registry` by name: an app registers its own or replaces a built-in one (`Register("stale", ...)`), and every rule
+  that refers to the name (`Ref("stale")`) follows, so what "stale" means is the app's to decide.
+- **Where they come from** is pluggable too: code, or definitions from config (`Load`) built from kinds the app
+  registered (`RegisterKind("idle", ...)`) and combined with `all`, `any` and `not`. A YAML section and a mothership
+  are both just sources of definitions.
+- **Rules** lead from a criterion to an action, with named vetoes that always win and a budget per run.
+- **Reports** list each decision with its reasons, what was vetoed and by what, what the budget held back and what
+  failed. Evaluating does nothing by itself: acting on the decisions, or only logging them in a dry run, is the
+  caller's.
+
+```go
+r := rules.NewRegistry[Facts]()
+r.RegisterKind("idle", idleFor)                       // params: { after: 8760h }
+_ = r.Load(map[string]rules.Def{
+	"stale":      {Kind: "idle", Params: map[string]any{"after": "8760h"}},
+	"archivable": {Kind: "all", Of: []string{"stale", "free_plan"}},
+})
+e := rules.Engine[Facts]{Key: id, Rules: []rules.Rule[Facts]{{
+	Name: "archive-stale", Action: "archive", When: r.Ref("archivable"),
+	Unless: []rules.Veto[Facts]{{Name: "pinned", If: r.Ref("pinned")}}, Budget: 200,
+}}}
+report := e.Evaluate(ctx, facts)
+```
+
 ## License
 
 MIT
