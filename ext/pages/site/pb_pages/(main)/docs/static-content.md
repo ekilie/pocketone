@@ -5,7 +5,7 @@ description: Files in pb_pages that aren't pages or framework files are served a
 
 # Serving Static Content in PocketPages
 
-Any file in `pb_pages` that isn't a page (`.ejs`, `.md`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
+Any file in `pb_pages` that isn't a page (`.ejs`, `.md`, `.jsx`, `.tsx`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
 
 ```
 pb_pages/

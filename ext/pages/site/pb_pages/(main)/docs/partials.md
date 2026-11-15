@@ -15,7 +15,7 @@ Partials are reusable templates that you include from other templates. They live
 ```
 
 - `include(name, locals?)` renders a template from a `_private/` folder and returns its text. Use `<%%-` so its HTML isn't escaped.
-- `name` may omit the extension; `.ejs` then `.md` are tried.
+- `name` may omit the extension; `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
 - The partial sees the same `ctx`, plus `locals` as top-level variables.
 - Including more than 64 levels deep is an error.
 

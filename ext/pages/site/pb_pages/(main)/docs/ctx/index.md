@@ -39,8 +39,10 @@ In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`,
 | [`ctx.log`](/docs/ctx/log) | `debug`, `info`, `warn`, `error` |
 | [`ctx.meta(key, value?)`](/docs/ctx/meta) | Per-request page metadata |
 | [`ctx.asset(path)`](/docs/ctx/asset) | Fingerprinted URL for a static file |
+| [`ctx.include(name, locals?)`](/docs/partials) | Render a `_private/` partial from JS and get its text (same lookup as `include`, from the route's folder) |
 | [`ctx.resolve(name, { mode }?)`](/docs/ctx/resolve) | Load a module from `_private/` |
 | [`ctx.store(name, value?)`](/docs/ctx/store) | The app's in-memory store |
+| `ctx.pagesDir` | Absolute path of the app's `pb_pages` folder (read-only), e.g. for `$os.readDir` |
 | `ctx.dev` | `true` in dev mode |
 | [`ctx.httpError(status, message)`](/docs/errors) | An error to throw for a specific status |
 | [`ctx.error`](/docs/errors) | `{ status, message }`, in `+error.ejs` |

@@ -231,7 +231,7 @@ A template returns its text. There is no `echo`; anything you want in the output
 - Lookup: `_private/` in the current template's folder, then each parent folder up to `pb_pages/`. For a template
   that is itself inside a `_private/` folder, the search starts at the folder containing that `_private/` (so its
   siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`. `..` is not allowed.
-- `name` may include its extension; without one, `.ejs` then `.md` are tried.
+- `name` may include its extension; without one, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
 - The partial sees the same `ctx`, plus `locals` as top-level variables.
 - Including more than 64 levels deep is an error (recursion guard).
 

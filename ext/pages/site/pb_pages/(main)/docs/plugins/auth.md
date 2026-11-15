@@ -24,7 +24,7 @@ It reads the `pb_auth` cookie, validates the token and sets `ctx.auth` to the au
 
 | Method | |
 |---|---|
-| `register(email, password, { collection = 'users', data }?)` | Create an auth record and sign in. `data` holds extra fields. |
+| `register(email, password, { collection = 'users', data, verify = true, signIn = true }?)` | Create an auth record. `data` holds extra fields. `verify` sends the verification email; `signIn` signs the new account in (returns `{ token: '', record }` when `false`). |
 | `signInWithPassword(email, password, { collection }?)` | Sign in with a password. |
 | `requestOTP(email, { collection }?)` | Send a one-time password. Returns the `otpId`. |
 | `signInWithOTP(otpId, code, { collection }?)` | Sign in with a one-time password. |
