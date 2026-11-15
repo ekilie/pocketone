@@ -34,4 +34,4 @@ module.exports = (s) => String(s).toUpperCase()
 
 ## Modules from `node_modules`
 
-Page code can also `require()` packages from `pb_pages/node_modules`, then from the app's usual module paths. See [JavaScript Runtime](/docs/jsvm).
+Page code can also `require()` by name: `_private/` folders first (nearest first, like `ctx.resolve`), then packages from `pb_pages/node_modules`, then the app's usual module paths. See [JavaScript Runtime](/docs/jsvm).

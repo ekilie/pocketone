@@ -49,14 +49,14 @@ Settings for your pages live in the folder itself, in `pb_pages/+config.js`:
 
 ```js
 module.exports = {
-  plugins: ['auth', 'realtime', require('./_private/datastar.js')],
+  plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
 }
 ```
 
 | Key | Default | What it does |
 |---|---|---|
-| `plugins` | `[]` | Module names (a `node_modules` package or a `pb_pages` file, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
 `+config.js` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page

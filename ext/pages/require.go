@@ -12,8 +12,9 @@ import (
 // require for page code (SPEC 1, 3.2): modules, JSX components and templates all resolve names the same way.
 //
 //   - "./x", "../x": a file in pb_pages, relative to the requiring file (never above pb_pages).
-//   - "pkg", "pkg/sub", "@scope/pkg": the nearest node_modules folder from the requiring file's folder up to the top
-//     of pb_pages; a package resolves through its package.json ("exports" or "main"), then index.js.
+//   - "pkg", "pkg/sub", "@scope/pkg": first a _private folder, from the requiring file's folder up to the top of
+//     pb_pages (the include lookup, SPEC 4.2); then the nearest node_modules folder, the same way up; a package
+//     resolves through its package.json ("exports" or "main"), then index.js.
 //   - anything not found there: the app's own module loader (pb_hooks paths; sandboxed under pocker).
 //
 // Every pb_pages lookup goes through the request's os.Root, so a name can't reach outside pb_pages.
@@ -37,12 +38,22 @@ func (r *request) requireFrom(from, name string) goja.Value {
 		}
 		panic(r.vm.NewGoError(fmt.Errorf("%s: require(%q): not found", from, name)))
 	}
-	if !strings.HasPrefix(name, "/") && !strings.Contains(name, "\\") && !hasDotDotSegment(name) {
-		if file, ok := r.resolvePackage(dir, name); ok {
-			return r.load(file)
-		}
+	if file, ok := r.resolveBare(from, name); ok {
+		return r.load(file)
 	}
 	return r.globalRequire(name)
+}
+
+// resolveBare finds a bare name in pb_pages: a _private folder from from's folder up, then node_modules from the same
+// folder up. It doesn't try the app's own module loader.
+func (r *request) resolveBare(from, name string) (string, bool) {
+	if strings.HasPrefix(name, "/") || strings.Contains(name, "\\") || hasDotDotSegment(name) {
+		return "", false
+	}
+	if file, err := r.lookupPrivate(from, name, fileExts); err == nil {
+		return file, true
+	}
+	return r.resolvePackage(path.Dir(from), name)
 }
 
 func hasDotDotSegment(name string) bool {

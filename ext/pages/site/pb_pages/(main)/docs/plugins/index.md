@@ -10,19 +10,22 @@ Plugins add features to `ctx` and hook into each request. Turn them on in `+conf
 ```js
 // pb_pages/+config.js
 module.exports = {
-  plugins: ['auth', 'realtime', './_private/datastar.js'],
+  plugins: ['auth', 'realtime', 'datastar'],
 }
 ```
 
 Each entry is one of:
 
-- **A module name in quotes.** It's loaded with `require`, so it can be a package from your `package.json`
-  (`'my-plugin'`, found in `pb_pages/node_modules`) or a file in your app (`'./_private/my-plugin.js'`).
-- **A built-in name**, `'auth'` or `'realtime'`. A string is a built-in only when no module by that name is found.
+- **A name in quotes.** It's loaded with `require`, which looks in this order:
+  1. a `_private/` folder in `pb_pages` (`'datastar'` finds `_private/datastar.js`)
+  2. `pb_pages/node_modules`, for a package from your `package.json`
+  3. the built-in plugins, `'auth'` and `'realtime'`
+
+  A path such as `'./plugins/my-plugin.js'` works too.
 - **A plugin factory**, usually `require('./_private/my-plugin.js')`. Writing the `require` yourself and writing just
   the string do the same thing.
 
-Datastar isn't built in. It's an add-on file you copy into `pb_pages/_private/` and list by path.
+Datastar isn't built in. It's an add-on file you copy into `pb_pages/_private/` and list by name.
 
 EJS and Markdown are always on; they aren't plugins.
 

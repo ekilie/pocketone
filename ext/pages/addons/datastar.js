@@ -1,8 +1,8 @@
 // Datastar add-on for PocketPages v1 (ext/pages). https://data-star.dev
 //
-// Copy this file into pb_pages (for example pb_pages/_private/datastar.js) and list it in +config.js:
+// Copy this file into pb_pages/_private/datastar.js and list it in +config.js by name:
 //
-//   module.exports = { plugins: ['realtime', require('./_private/datastar.js')] }
+//   module.exports = { plugins: ['realtime', 'datastar'] }
 //
 // It adds ctx.datastar (see the PocketPages docs). The realtime helpers need the built-in 'realtime' plugin.
 // Maintained in ext/pages/addons/datastar.js; starter kits carry a copy.

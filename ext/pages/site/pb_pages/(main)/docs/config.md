@@ -10,7 +10,7 @@ Create `pb_pages/+config.js` to configure PocketPages for the app:
 ```js
 // pb_pages/+config.js
 module.exports = {
-  plugins: ['auth', 'realtime', require('./_private/datastar.js')],
+  plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
 }
 ```
@@ -28,11 +28,10 @@ Unknown keys, names that are neither a module nor a built-in, and duplicates are
 
 Each entry in `plugins` is one of:
 
-- **A module name**: a package in `node_modules` (`'my-plugin'`) or a file (`'./_private/my-plugin.js'`), loaded with
-  `require`. It must export a plugin factory.
-- **A built-in name**: `'auth'` or `'realtime'`, used when no module by that name is found. See [Plugins](/docs/plugins).
-- **A JS plugin factory**: a function that returns hooks, such as `require('./_private/datastar.js')` for the
-  [Datastar add-on](/docs/plugins/datastar).
+- **A name**, loaded with `require`: a `_private/` file (`'datastar'` for the [Datastar add-on](/docs/plugins/datastar)),
+  then a package in `node_modules`, then a built-in (`'auth'` or `'realtime'`). It must export a plugin factory. See
+  [Plugins](/docs/plugins).
+- **A JS plugin factory**: a function that returns hooks, such as `require('./_private/my-plugin.js')`.
 - **An object with a factory and options**: `{ factory, ...options }`. The object is passed to the factory as its `config`.
 
 ```js

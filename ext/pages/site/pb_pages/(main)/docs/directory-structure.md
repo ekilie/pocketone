@@ -48,6 +48,7 @@ A folder named `(name)` groups files without adding a URL segment: `(marketing)/
 ## What else
 
 - Every other file is a [static file](/docs/static-content), served as-is.
-- Page code can `require()` modules from `pb_pages/node_modules`, then from the app's usual module paths.
+- Page code can `require()` modules by name from `_private/` folders (nearest first), then `pb_pages/node_modules`, then
+  the app's usual module paths.
 - Pages' own file access (routes, static files, includes, assets) never leaves `pb_pages`.
 - A `pb_pages/api/` folder is an error at startup, because `/api/` belongs to PocketBase.

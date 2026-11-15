@@ -2,7 +2,6 @@ package pages
 
 import (
 	"fmt"
-	"path"
 
 	"github.com/dop251/goja"
 )
@@ -41,9 +40,9 @@ func (r *request) loadConfig(file string) (pagesConfig, []goja.Value, error) {
 			arr := obj.Get(key).ToObject(r.vm)
 			for i := range list {
 				item := arr.Get(fmt.Sprint(i))
-				// A string is a module name, required from +config.js (SPEC 9.1): a package.json dependency or a
-				// pb_pages file. Only when no module by that name exists in pb_pages is it a built-in.
-				if name, ok := item.Export().(string); ok && (!builtinPlugins[name] || r.packageExists(file, name)) {
+				// A string is a module name, required from +config.js (SPEC 7): a _private file, a node_modules
+				// package or a path. Only when no module by that name exists in pb_pages is it a built-in.
+				if name, ok := item.Export().(string); ok && (!builtinPlugins[name] || r.moduleExists(file, name)) {
 					v, err := r.requirePlugin(file, name)
 					if err != nil {
 						return cfg, nil, err
@@ -121,9 +120,9 @@ func (r *request) requirePlugin(file, name string) (v goja.Value, err error) {
 	return v, nil
 }
 
-// packageExists reports whether a built-in's name is also a module in pb_pages (node_modules from +config.js's
-// folder up), which then wins over the built-in.
-func (r *request) packageExists(file, name string) bool {
-	_, ok := r.resolvePackage(path.Dir(file), name)
+// moduleExists reports whether a built-in's name is also a module in pb_pages (a _private file or a node_modules
+// package, SPEC 3.2), which then wins over the built-in.
+func (r *request) moduleExists(file, name string) bool {
+	_, ok := r.resolveBare(file, name)
 	return ok
 }

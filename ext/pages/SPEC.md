@@ -24,12 +24,13 @@ myapp/
   exists (it starts serving if the folder appears later). There is no on/off switch; no folder, no pages.
 - Under the multitenant host every instance has its own `pb_pages`.
 - If the folder doesn't exist, the extension does nothing for that app.
-- Page code can `require()` modules from `pb_pages/node_modules`, then from the app's usual module paths. The same
-  `require` works in modules, JSX/TSX components and EJS templates:
+- Page code can `require()` modules from `pb_pages` (`_private/` folders, then `node_modules`), then from the app's
+  usual module paths. The same `require` works in modules, JSX/TSX components and EJS templates:
   - `./x` and `../x` are files in `pb_pages`, relative to the requiring file, never above `pb_pages`. Without an
     extension, `.js`, `.ts`, `.tsx`, `.jsx`, `.json` and `.cjs` are tried, then a folder's `package.json` or `index`.
-  - A bare name (`pkg`, `pkg/sub`, `@scope/pkg`) is looked up in the nearest `node_modules` folder from the requiring
-    file's folder up to the top of `pb_pages`. A package resolves through its `package.json`: `exports` (a string,
+  - A bare name (`pkg`, `pkg/sub`, `@scope/pkg`) is looked up first in `_private/` folders, from the requiring file's
+    folder up to the top of `pb_pages`, the same lookup as `include` (4.2; the extensions above are tried). Then it's
+    looked up in the nearest `node_modules` folder, the same way up. A package resolves through its `package.json`: `exports` (a string,
     or conditions, where `require`, then `node`, then `default` are used), else `main`, else `index.js`. With
     `exports`, only what it lists can be required, and no entry may point outside the package.
   - Anything not found that way goes to the app's own module loader.
@@ -397,7 +398,7 @@ Fingerprinted asset names carry the first 12 hex characters of the file's SHA-25
 ```js
 // pb_pages/+config.js
 module.exports = {
-  plugins: ['auth', 'realtime', require('./_private/datastar.js')],
+  plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
 }
 ```
@@ -407,10 +408,10 @@ module.exports = {
 | `plugins` | `[]` | Module names, built-in names (`auth`, `realtime`), or JS plugin factories such as add-ons (9). EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-A string in `plugins` is a module name, required from `+config.js` (3.2): a package in `node_modules`
-(`'my-plugin'`) or a `pb_pages` file (`'./_private/my-plugin.js'`). Its export, or its `default` export, must be a
-plugin factory (9.2). Only when no module by that name is found is the string a built-in (9.1), so a package named
-`auth` would replace the built-in `auth`. A module that is found but fails to load is an error; it never falls back to
+A string in `plugins` is a module name, required from `+config.js` (1): a `_private/` file (`'datastar'` finds
+`_private/datastar.js`), a package in `node_modules` (`'my-plugin'`) or a path (`'./plugins/my-plugin.js'`). Its export, or its `default` export, must be a
+plugin factory (9.2). Only when no module by that name is found is the string a built-in (9.1), so a
+`_private/auth.js` or a package named `auth` would replace the built-in `auth`. A module that is found but fails to load is an error; it never falls back to
 the built-in.
 
 Unknown keys, names that are neither a module nor a built-in, and duplicates are startup errors.
@@ -497,7 +498,7 @@ module.exports = (config) => ({
 ### 9.3 Add-ons
 
 Plugins for third-party libraries ship as JS files in `ext/pages/addons/`, not built into `ext/pages`. Copy one into
-`pb_pages` (usually `_private/`) and list it in `+config.js` with `require`.
+`pb_pages/_private/` and list it in `+config.js` by name (`'datastar'`).
 
 **`datastar.js`** ([Datastar](https://data-star.dev)) adds `ctx.datastar`:
 - `ctx.datastar.scripts({ spa: { scope, selector }, realtime }?)` returns the script tags (`spa` turns on
