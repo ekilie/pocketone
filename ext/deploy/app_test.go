@@ -50,7 +50,10 @@ type p1Remote struct {
 	tk       *tokens.Tokens
 }
 
-func newP1Remote(t *testing.T) *p1Remote {
+func newP1Remote(t *testing.T) *p1Remote { return newP1RemoteWith(t, nil) }
+
+// newP1RemoteWith lets a test adjust the deploy Config (Dir and Restart are set first).
+func newP1RemoteWith(t *testing.T, adjust func(*Config)) *p1Remote {
 	t.Helper()
 	app, err := tests.NewTestApp()
 	if err != nil {
@@ -60,7 +63,11 @@ func newP1Remote(t *testing.T) *p1Remote {
 	r := &p1Remote{app: app, dir: t.TempDir()}
 	r.tk = tokens.MustRegister(app, tokens.Config{Collections: []string{"_superusers", "users"}})
 	remotes.MustRegister(app, remotes.Config{})
-	MustRegister(app, Config{Dir: r.dir, Restart: func(core.App) error { r.restarts.Add(1); return nil }})
+	cfg := Config{Dir: r.dir, Restart: func(core.App) error { r.restarts.Add(1); return nil }}
+	if adjust != nil {
+		adjust(&cfg)
+	}
+	MustRegister(app, cfg)
 	// the test app is already bootstrapped: run what OnBootstrap would
 	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(e *core.BootstrapEvent) error { return nil }); err != nil {
 		t.Fatal(err)

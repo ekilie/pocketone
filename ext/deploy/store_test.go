@@ -75,7 +75,7 @@ func (f *storeFixture) manifestOf(files map[string]string) Manifest {
 }
 
 func (f *storeFixture) deploy(m Manifest, nodeModules bool) (*applyResult, error) {
-	st, err := f.store.stage(m, nodeModules)
+	st, err := f.store.stage(m, nodeModules, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func TestStoreFileDirSwap(t *testing.T) {
 func TestStoreMissingBlobs(t *testing.T) {
 	f := newFixture(t)
 	f.put("pb_hooks/a.pb.js", "A")
-	_, err := f.store.stage(Manifest{"pb_hooks/b.pb.js": sha("B")}, false)
+	_, err := f.store.stage(Manifest{"pb_hooks/b.pb.js": sha("B")}, false, nil)
 	var mb *MissingBlobsError
 	if !errors.As(err, &mb) || !reflect.DeepEqual(mb.Missing, []string{sha("B")}) {
 		t.Fatal(err)

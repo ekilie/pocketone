@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
 	"github.com/pockethost/pocketone/ext/deploy/nodemodules"
@@ -65,6 +66,43 @@ type CollectOptions struct {
 	// NodeModules: ship the production node_modules tree and let the remote manage its root node_modules. Nil:
 	// when the project has a package.json.
 	NodeModules *bool
+	// Hashes, if set, caches file hashes across calls (by path, size and mtime), so repeated collects only re-hash
+	// files that changed.
+	Hashes *HashCache
+}
+
+// HashCache remembers local file hashes by path, size and mtime. The zero value is ready to use; a nil cache hashes
+// every time.
+type HashCache struct {
+	mu sync.Mutex
+	m  map[string]hashEntry
+}
+
+func (c *HashCache) hash(p string) (string, int64, error) {
+	if c == nil {
+		return hashFile(p)
+	}
+	st, err := os.Stat(p)
+	if err != nil {
+		return "", 0, err
+	}
+	c.mu.Lock()
+	e, ok := c.m[p]
+	c.mu.Unlock()
+	if ok && e.size == st.Size() && e.mtime == st.ModTime().UnixNano() {
+		return e.hash, e.size, nil
+	}
+	h, n, err := hashFile(p)
+	if err != nil {
+		return "", 0, err
+	}
+	c.mu.Lock()
+	if c.m == nil {
+		c.m = map[string]hashEntry{}
+	}
+	c.m[p] = hashEntry{st.Size(), st.ModTime().UnixNano(), h}
+	c.mu.Unlock()
+	return h, n, nil
 }
 
 // Collect lists and hashes the deploy set: files matching the include patterns and not the exclude patterns,
@@ -112,7 +150,7 @@ func Collect(opts CollectOptions) (*DeploySet, error) {
 			set.Skipped = append(set.Skipped, rel)
 			return nil
 		}
-		h, size, err := hashFile(abs)
+		h, size, err := opts.Hashes.hash(abs)
 		if err != nil {
 			return err
 		}
@@ -136,7 +174,7 @@ func Collect(opts CollectOptions) (*DeploySet, error) {
 		}
 		set.NodeModules = nm
 		for _, f := range nm.Files {
-			h, size, err := hashFile(f.Source)
+			h, size, err := opts.Hashes.hash(f.Source)
 			if err != nil {
 				return nil, err
 			}
@@ -395,59 +433,13 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	}
 	log(fmt.Sprintf("Deploying %d files to %s (%s)", len(set.Files), c.Remote.URL, orStr(c.TokenSource, "no login")))
 
-	uploadedCount, uploadedBytes := 0, int64(0)
-	upload := func(hashes []string) error {
-		var send []LocalFile
-		seen := map[string]bool{}
-		var bytesTotal int64
-		for _, h := range hashes {
-			if f, ok := byHash[h]; ok && !seen[h] {
-				seen[h] = true
-				send = append(send, f)
-				bytesTotal += f.Size
-			}
-		}
-		if len(send) == 0 {
-			return nil
-		}
-		log(fmt.Sprintf("Uploading %d file(s) (%s)", len(send), humanBytes(bytesTotal)))
-		for _, batch := range BatchBySize(send, UploadBatchBytes) {
-			entries := make([][]byte, len(batch))
-			for i, f := range batch {
-				b, err := os.ReadFile(f.Source)
-				if err != nil {
-					return err
-				}
-				sum := sha256.Sum256(b)
-				if hex.EncodeToString(sum[:]) != f.Hash {
-					return fmt.Errorf("%s changed during deploy; run it again", f.Path)
-				}
-				entries[i] = b
-			}
-			var gz bytes.Buffer
-			zw := gzip.NewWriter(&gz)
-			zw.Write(EncodeBundle(entries))
-			zw.Close()
-			if err := c.Upload(ctx, gz.Bytes()); err != nil {
-				return err
-			}
-			if opts.Verbose {
-				for _, f := range batch {
-					log("   " + f.Path)
-				}
-			}
-		}
-		uploadedCount += len(send)
-		uploadedBytes += bytesTotal
-		return nil
-	}
-
+	up := &uploader{c: c, byHash: byHash, verbose: opts.Verbose, log: log}
 	managesNM := set.NodeModules != nil
 	missing, err := c.Check(ctx, manifest, managesNM)
 	if err != nil {
 		return nil, err
 	}
-	if err := upload(missing); err != nil {
+	if err := up.send(ctx, missing); err != nil {
 		return nil, err
 	}
 	dir := opts.Dir
@@ -457,26 +449,9 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	body := map[string]any{
 		"files": manifest, "nodeModules": managesNM,
 		"commit": orStr(opts.Commit, detectCommit(dir)), "message": opts.Message,
-		"source": orStr(opts.Source, detectSource()), "uploadedCount": uploadedCount, "uploadedBytes": uploadedBytes,
+		"source": orStr(opts.Source, detectSource()),
 	}
-	res, err := c.Commit(ctx, body)
-	var ae *remotes.APIError
-	// blobs can be garbage-collected by a concurrent deploy between upload and commit: upload again once
-	if errors.As(err, &ae) && ae.Status == http.StatusConflict {
-		if raw, ok := ae.Body["missing"].([]any); ok {
-			var again []string
-			for _, h := range raw {
-				if s, ok := h.(string); ok {
-					again = append(again, s)
-				}
-			}
-			if err := upload(again); err != nil {
-				return nil, err
-			}
-			body["uploadedCount"], body["uploadedBytes"] = uploadedCount, uploadedBytes
-			res, err = c.Commit(ctx, body)
-		}
-	}
+	res, err := up.commit(ctx, body)
 	if err != nil {
 		return nil, err
 	}
@@ -505,6 +480,86 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	}
 	log(fmt.Sprintf("Deployed%s: %d changed, %d deleted, %d unchanged.%s", id, res.WrittenCount, res.DeletedCount, res.Unchanged, restart))
 	return res, nil
+}
+
+// uploader sends the files a remote lacks, in gzipped bundles, and commits (uploading again once if blobs were
+// garbage-collected in between).
+type uploader struct {
+	c       *Client
+	byHash  map[string]LocalFile
+	verbose bool
+	log     func(string)
+	count   int
+	bytes   int64
+}
+
+func (u *uploader) send(ctx context.Context, hashes []string) error {
+	var send []LocalFile
+	seen := map[string]bool{}
+	var bytesTotal int64
+	for _, h := range hashes {
+		if f, ok := u.byHash[h]; ok && !seen[h] {
+			seen[h] = true
+			send = append(send, f)
+			bytesTotal += f.Size
+		}
+	}
+	if len(send) == 0 {
+		return nil
+	}
+	u.log(fmt.Sprintf("Uploading %d file(s) (%s)", len(send), humanBytes(bytesTotal)))
+	for _, batch := range BatchBySize(send, UploadBatchBytes) {
+		entries := make([][]byte, len(batch))
+		for i, f := range batch {
+			b, err := os.ReadFile(f.Source)
+			if err != nil {
+				return err
+			}
+			sum := sha256.Sum256(b)
+			if hex.EncodeToString(sum[:]) != f.Hash {
+				return fmt.Errorf("%s changed during deploy; run it again", f.Path)
+			}
+			entries[i] = b
+		}
+		var gz bytes.Buffer
+		zw := gzip.NewWriter(&gz)
+		zw.Write(EncodeBundle(entries))
+		zw.Close()
+		if err := u.c.Upload(ctx, gz.Bytes()); err != nil {
+			return err
+		}
+		if u.verbose {
+			for _, f := range batch {
+				u.log("   " + f.Path)
+			}
+		}
+	}
+	u.count += len(send)
+	u.bytes += bytesTotal
+	return nil
+}
+
+func (u *uploader) commit(ctx context.Context, body map[string]any) (*CommitResult, error) {
+	body["uploadedCount"], body["uploadedBytes"] = u.count, u.bytes
+	res, err := u.c.Commit(ctx, body)
+	var ae *remotes.APIError
+	// blobs can be garbage-collected by a concurrent deploy between upload and commit: upload again once
+	if errors.As(err, &ae) && ae.Status == http.StatusConflict {
+		if raw, ok := ae.Body["missing"].([]any); ok {
+			var again []string
+			for _, h := range raw {
+				if s, ok := h.(string); ok {
+					again = append(again, s)
+				}
+			}
+			if err := u.send(ctx, again); err != nil {
+				return nil, err
+			}
+			body["uploadedCount"], body["uploadedBytes"] = u.count, u.bytes
+			res, err = u.c.Commit(ctx, body)
+		}
+	}
+	return res, err
 }
 
 func detectCommit(dir string) string {

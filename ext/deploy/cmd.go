@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -98,10 +99,10 @@ func deployCommand() *cobra.Command {
 	)
 	c := &cobra.Command{
 		Use:   "deploy [remote]",
-		Short: "Deploys pb_hooks, pb_migrations, pb_public and packages to a remote",
+		Short: "Deploys pb_hooks, pb_migrations, pb_pages, pb_public and packages to a remote",
 		Long: "Deploys the project's code set (pb_* folders except pb_data, package.json, bun.lock(b), patches/, and the " +
 			"production node_modules tree) to a remote. Only changed files are uploaded; the remote swaps them in and " +
-			"restarts the app when hooks, migrations or packages changed.",
+			"restarts the app when migrations or packages changed (hooks reload by themselves).",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := printer(cmd.OutOrStdout())
@@ -154,13 +155,22 @@ func deployCommand() *cobra.Command {
 
 func devCommand() *cobra.Command {
 	var (
-		f      setFlags
-		noLogs bool
+		f        setFlags
+		noLogs   bool
+		pushOnly bool
+		prefer   string
+		poll     time.Duration
 	)
 	c := &cobra.Command{
 		Use:   "dev [remote]",
-		Short: "Deploys now, then again on every change (and streams the remote's logs)",
-		Args:  cobra.MaximumNArgs(1), SilenceUsage: true,
+		Short: "Keeps the project's code and a remote in step both ways (and streams the remote's logs)",
+		Long: "Syncs pb_hooks, pb_migrations, pb_pages, pb_public and the other pb_* folders, package.json, bun.lock(b) and " +
+			"patches/ both ways: edits here are uploaded half a second after you save, and changes on the remote (such " +
+			"as migrations the dashboard writes) are downloaded within seconds. node_modules is only uploaded, when " +
+			"package.json or the lockfile changes. pb_data is never synced. Only a new or changed migration (or " +
+			"packages) restarts the app; hooks reload by themselves. State is kept in .pocketone/; files to leave out " +
+			"go in .pocketoneignore.",
+		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
@@ -171,19 +181,85 @@ func devCommand() *cobra.Command {
 				return err
 			}
 			opts := f.collect(projectRoot())
+			if prefer != "" && prefer != "local" && prefer != "remote" {
+				return fmt.Errorf("--prefer must be local or remote")
+			}
+			if !pushOnly {
+				if _, err := c.Tree(ctx, "", true); errors.Is(err, ErrNoSyncAPI) {
+					log(c.Remote.URL + " doesn't support two-way sync yet; uploading changes only.")
+					pushOnly = true
+				} else if err != nil {
+					return err
+				}
+			}
 			if !noLogs {
 				go followLogs(ctx, c, 0, out)
 			}
+			if pushOnly {
+				return Watch(ctx, opts, 500*time.Millisecond, log, func() {
+					if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Message: "dev", Verbose: f.verbose, Log: log}); err != nil && ctx.Err() == nil {
+						log("Deploy failed: " + err.Error())
+					}
+				})
+			}
+			s, err := NewSyncer(c, SyncOptions{CollectOptions: opts, Prefer: prefer, Ask: terminalAsk(cmd), Verbose: f.verbose, Log: log})
+			if err != nil {
+				return err
+			}
+			log("Syncing code with " + c.Remote.URL + ": pb_* folders, package.json, lockfile, patches/ (node_modules: upload only)")
+			log("Not synced: pb_data (the app's live data)")
+			if err := s.Sync(ctx); err != nil {
+				return err
+			}
+			go func() {
+				t := time.NewTicker(poll)
+				defer t.Stop()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-t.C:
+						changed, err := s.RemoteChanged(ctx)
+						if err == nil && changed {
+							err = s.Sync(ctx)
+						}
+						if err != nil && ctx.Err() == nil {
+							log("Sync failed: " + err.Error())
+						}
+					}
+				}
+			}()
+			first := true
 			return Watch(ctx, opts, 500*time.Millisecond, log, func() {
-				if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Message: "dev", Verbose: f.verbose, Log: log}); err != nil && ctx.Err() == nil {
-					log("Deploy failed: " + err.Error())
+				if first { // Watch runs this once at start; the first sync already happened
+					first = false
+					return
+				}
+				if err := s.Sync(ctx); err != nil && ctx.Err() == nil {
+					log("Sync failed: " + err.Error())
 				}
 			})
 		},
 	}
 	f.bind(c)
 	c.Flags().BoolVar(&noLogs, "no-logs", false, "don't stream the remote's logs")
+	c.Flags().BoolVar(&pushOnly, "push-only", false, "only upload changes (the old one-way dev); never download")
+	c.Flags().StringVar(&prefer, "prefer", "", "on the first sync, files that differ: local (upload yours) or remote (download theirs); default asks")
+	c.Flags().DurationVar(&poll, "poll", DefaultSyncPoll, "how often to check the remote for changes")
 	return c
+}
+
+// terminalAsk asks on stdin when it's a terminal; nil otherwise (then --prefer is needed).
+func terminalAsk(cmd *cobra.Command) func(string) string {
+	st, err := os.Stdin.Stat()
+	if err != nil || st.Mode()&os.ModeCharDevice == 0 {
+		return nil
+	}
+	return func(q string) string {
+		fmt.Fprint(cmd.OutOrStdout(), q)
+		line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		return line
+	}
 }
 
 // Watch calls deploy once, then again (debounced) whenever a file of the deploy set changes, until ctx ends.
@@ -276,7 +352,7 @@ func pullCommand() *cobra.Command {
 	var dryRun bool
 	c := &cobra.Command{
 		Use:          "pull [remote] [paths...]",
-		Short:        "Downloads files from a remote into the project (default: pb_hooks, pb_migrations, pb_public, package.json)",
+		Short:        "Downloads files from a remote into the project (default: pb_hooks, pb_migrations, pb_pages, pb_public, package.json)",
 		Example:      "pull prod\npull prod pb_hooks pb_public/index.html",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

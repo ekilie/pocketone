@@ -1,8 +1,9 @@
 # Deploy
 
-Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_public`, packages
-and the production `node_modules` tree. Only changed files are uploaded, the app swaps them in and restarts when it
-needs to. `pocketone dev` redeploys on every save and streams the app's logs; `pull` and `logs` work the other way.
+Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
+`pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded, the app swaps them in
+and restarts when it needs to. `pocketone dev` keeps your folder and the app in step both ways and streams the app's
+logs; `pull` and `logs` work the other way.
 
 ```bash
 pocketone link https://myapp.example.com   # add the remote and sign in (Remotes)
@@ -81,22 +82,56 @@ You'll see how many files are deployed and how many are uploaded, then a line li
 npm and bun, pnpm's store, workspace links; never devDependencies) and shipped as plain files, so plain JS hooks can
 `require` npm packages. The remote then owns its root `node_modules`: packages you no longer ship are removed there.
 
-**Restarts:** a deploy that changes anything outside `pb_public` restarts the app about a second after it answers.
-Files are swapped in while the app runs, each rename atomic. A deploy that only touches `pb_public` doesn't restart.
+**Restarts:** files are swapped in while the app runs, each rename atomic. A deploy restarts the app (about a second
+after it answers) only when it adds or changes a migration, changes packages, or changes `pb_hooks`; then it can tell
+you if the app fails to start. `pb_public`, `pb_pages` and the other folders are read from disk, so changing only them
+never restarts, and a deploy with nothing changed never restarts.
 
 ### `dev`
 
 ```bash
 pocketone dev
+pocketone dev prod --prefer local   # first sync: upload yours where both sides differ
 ```
 
-Deploys now, then again on every change (half a second after the last save), and streams the remote's logs.
-`--no-logs` turns the log stream off. It takes the same file flags as `deploy`. Stop it with Ctrl+C.
+Keeps the project folder and the remote in step, both ways, and streams the remote's logs. Stop it with Ctrl+C.
+
+| What | Direction |
+|---|---|
+| `pb_hooks`, `pb_migrations`, `pb_pages`, `pb_public` and other `pb_*` folders | both ways |
+| `package.json`, `bun.lock(b)`, `patches/` | both ways |
+| `node_modules` | uploaded only, when `package.json` or the lockfile changes |
+| `pb_data` | never (it's the app's live data) |
+
+- **Your edits** go up half a second after you save.
+- **Changes on the remote**, such as the migrations the dashboard writes when you edit a collection, come down within
+  a few seconds (`--poll`, default 5s). `dev` asks the remote for one hash and only looks further when it changed, so
+  a large `pb_public` costs nothing while it's quiet.
+- **Restarts:** only a migration you upload, or new packages, restart the app. Hooks you upload reload by themselves
+  (PocketBase's `--hooksWatch`, or Pocker's watcher); pages and public files never restart. Migrations that come down
+  are already applied on the remote.
+- **Deletes** go both ways too.
+- **Changed on both sides:** your copy wins and is uploaded; the remote's is saved in `.pocketone/conflicts/` and
+  `dev` says so.
+- **First run:** files that exist on only one side are copied to the other. If a file differs on both sides, `dev`
+  lists them and asks whether to keep yours or take the remote's; `--prefer local|remote` answers in advance.
+
+`dev` keeps what it last synced in `.pocketone/sync.json` (add `.pocketone/` to `.gitignore`). List files to leave
+out, such as ones your hooks generate, in `.pocketoneignore`, one gitignore-style pattern per line.
+
+| Flag | What it does |
+|---|---|
+| `--prefer local\|remote` | First sync: who wins where both sides differ (default: ask). |
+| `--poll <duration>` | How often to check the remote (default 5s). |
+| `--push-only` | Only upload, the way `dev` used to work. Also used by itself for remotes without two-way sync. |
+| `--no-logs` | Don't stream the remote's logs. |
+
+It takes the same file flags as `deploy`.
 
 ### `pull`
 
 ```bash
-pocketone pull prod                              # pb_hooks, pb_migrations, pb_public, package.json
+pocketone pull prod                              # pb_hooks, pb_migrations, pb_pages, pb_public, package.json
 pocketone pull prod pb_hooks pb_public/index.html
 pocketone pull prod --dry-run
 ```
@@ -135,13 +170,17 @@ message, source, token name, superuser and any error. Superusers can browse it i
 ### Building on Deploy
 
 - **Go client.** `deploy.NewClient(ctx, rc)` takes a [Remotes](../remotes/README.md) client and finds its deploy API.
-  `Deploy`, `Pull`, `Collect` and `Watch` are the commands' building blocks.
+  `Deploy`, `Pull`, `Collect`, `Watch` and `NewSyncer` (two-way sync: `Sync`, `RemoteChanged`) are the commands'
+  building blocks.
 - **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths, Logs})`
   builds the API; mount `api.Wrap(next)`. `Backend` decides which instance a request is for (`Lookup(r)`), who it
   acts as (`Authenticate(r, inst)` → `Auth{UserID, Scopes, Via, TokenLabel}`, an `*AuthError`, or `ErrNoAccess` for a
   404) and records history. `Instances` is pocker's Manager (stop, swap, start). The default `FileLogs` tails each
   instance's `logs/exec.log`, which pocker writes. PocketHost composes it with its own token backend and keeps
   `/_ph/deploy/v1`.
+- **Hooks reload.** If your `Instances` restarts an instance by itself when its `pb_hooks` change, implement
+  `WatchesHooks(id) bool` (`deploy.HooksWatcher`; pocker's Manager does), and `dev` won't restart it for hook
+  changes. On a single app, `Config.HooksWatch` says the same (default: the `--hooksWatch` flag).
 - **Discovery.** Deploy advertises itself as the `deploy` feature of `/_pocker/whoami`, so clients find its path.
 
 ## Example
@@ -196,9 +235,10 @@ func main() {
 | `GET /whoami` | Who the request acts as, on which instance. |
 | `POST /check` | Takes a manifest, returns the hashes the server is missing. |
 | `POST /blobs` | Gzipped `PHB1` bundles: `[sha256][uint32 length][bytes]`…, every hash verified, 64 MB per request. |
-| `POST /commit` | Stage, swap in, record, restart. |
+| `POST /commit` | Stage, swap in, record, restart. With `"partial": true` only the listed files (and `"delete"`) change. |
 | `GET`/`DELETE /files` | List or delete files. |
 | `GET`/`PUT /files/raw` | Download or upload one file. |
+| `GET /tree` | One folder of the code set (`?path=`, default the root) with a hash over everything below it; `hashOnly=1` for just the hash. |
 | `GET /logs` | The app's logs as server-sent events. |
 
 The protocol is the pockethost npm CLI's, so the same client deploys to PocketOne apps and PocketHost.

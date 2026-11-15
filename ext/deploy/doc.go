@@ -1,4 +1,4 @@
-// Package deploy deploys a project's code to a PocketBase remote: pb_hooks, pb_migrations, pb_public, packages and
+// Package deploy deploys a project's code to a PocketBase remote: pb_hooks, pb_migrations, pb_pages, pb_public, packages and
 // the production node_modules tree, as a hash diff (manifest → upload only missing files in gzipped PHB1 bundles →
 // commit, swapped in safely).
 //

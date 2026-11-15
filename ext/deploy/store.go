@@ -296,6 +296,44 @@ func planDeploy(m Manifest, current map[string]currentFile) plan {
 	return p
 }
 
+// Partial makes a commit change only the files it names, for two-way sync: Delete lists code-set paths to remove.
+type Partial struct {
+	Delete []string
+}
+
+// planPartial: write the manifest's files that differ, delete the named paths that exist. When the deploy manages
+// node_modules, files there that the manifest doesn't list go too, as in a full deploy.
+func planPartial(m Manifest, current map[string]currentFile, del []string, managesNM bool) plan {
+	p := plan{toWrite: []string{}, toDelete: []string{}}
+	for path, hash := range m {
+		if c, ok := current[path]; ok && c.hash == hash {
+			p.unchanged++
+		} else {
+			p.toWrite = append(p.toWrite, path)
+		}
+	}
+	seen := map[string]bool{}
+	for _, path := range del {
+		if _, inM := m[path]; inM || seen[path] {
+			continue
+		}
+		if _, ok := current[path]; ok {
+			seen[path] = true
+			p.toDelete = append(p.toDelete, path)
+		}
+	}
+	if managesNM {
+		for path := range current {
+			if _, ok := m[path]; !ok && isNodeModulesPath(path) && !seen[path] {
+				p.toDelete = append(p.toDelete, path)
+			}
+		}
+	}
+	sort.Strings(p.toWrite)
+	sort.Strings(p.toDelete)
+	return p
+}
+
 // findMissing: hashes the client must upload (not in the blob store and not anywhere in the current code set).
 func (s *Store) findMissing(m Manifest, nodeModules bool) ([]string, error) {
 	current, _, err := s.scan(managesNodeModules(m, nodeModules))
@@ -335,7 +373,10 @@ type staged struct {
 
 // stage copies every file that must change into a staging dir and verifies its hash. Nothing in the instance folder
 // is touched. Returns *MissingBlobsError if a needed file is neither uploaded nor on disk.
-func (s *Store) stage(m Manifest, nodeModules bool) (*staged, error) {
+//
+// With partial set, only the manifest's files and partial.Delete are touched: files on the server that the manifest
+// doesn't list stay (except in node_modules when the deploy manages it, which is always replaced as a whole tree).
+func (s *Store) stage(m Manifest, nodeModules bool, partial *Partial) (*staged, error) {
 	onDisk, replaceNM, err := s.scan(managesNodeModules(m, nodeModules))
 	if err != nil {
 		return nil, err
@@ -350,7 +391,12 @@ func (s *Store) stage(m Manifest, nodeModules bool) (*staged, error) {
 			}
 		}
 	}
-	p := planDeploy(m, current)
+	var p plan
+	if partial != nil {
+		p = planPartial(m, current, partial.Delete, managesNodeModules(m, nodeModules))
+	} else {
+		p = planDeploy(m, current)
+	}
 	byHash := map[string]string{}
 	for _, f := range onDisk {
 		byHash[f.hash] = f.path
