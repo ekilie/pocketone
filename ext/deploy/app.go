@@ -47,6 +47,10 @@ type Config struct {
 	// shortly after the response is sent (re-executes the process; not on Windows).
 	Restart func(app core.App) error
 
+	// HooksWatch reports whether the app restarts by itself when a pb_hooks file changes; deploys that change only
+	// hooks then don't restart it. Default: the value of the --hooksWatch flag when the app has one, else false.
+	HooksWatch func() bool
+
 	// DisableServer leaves only the client commands (e.g. a binary that deploys elsewhere but must not accept
 	// deploys).
 	DisableServer bool
@@ -86,6 +90,9 @@ func Register(app core.App, cfg Config) (*API, error) {
 			}()
 			return nil
 		}
+	}
+	if cfg.HooksWatch == nil {
+		cfg.HooksWatch = func() bool { return hooksWatchFlag(app) }
 	}
 	insts := &appInstances{app: app, cfg: &cfg}
 	api := New(Options{
@@ -224,6 +231,21 @@ func (a *appInstances) WithInstanceStopped(_ context.Context, _ string, fn func(
 }
 
 func (a *appInstances) StartInstance(context.Context, string) error { return a.cfg.Restart(a.app) }
+
+func (a *appInstances) WatchesHooks(string) bool { return a.cfg.HooksWatch() }
+
+// hooksWatchFlag reads the --hooksWatch flag PocketBase's jsvm setup adds (on by default in pocketone).
+func hooksWatchFlag(app core.App) bool {
+	pb, ok := app.(*pocketbase.PocketBase)
+	if !ok {
+		return false
+	}
+	f := pb.RootCmd.PersistentFlags().Lookup("hooksWatch")
+	if f == nil {
+		f = pb.RootCmd.Flags().Lookup("hooksWatch")
+	}
+	return f != nil && f.Value.String() == "true"
+}
 
 // DBLogs is a [LogSource] over the app's own logs (the _logs table: requests and app.Logger()). Entries at error
 // level and above come through as stderr. PocketBase writes logs in batches, so new lines show up a few seconds

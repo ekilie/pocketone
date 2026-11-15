@@ -73,7 +73,7 @@ func (c *Client) Download(ctx context.Context, path, dest string) error {
 }
 
 // DefaultPullPaths are pulled when `pull` names none: the code set's folders and root files.
-var DefaultPullPaths = []string{"pb_hooks", "pb_migrations", "pb_public", "package.json"}
+var DefaultPullPaths = []string{"pb_hooks", "pb_migrations", "pb_pages", "pb_public", "package.json"}
 
 // PullOptions configure [Pull].
 type PullOptions struct {

@@ -301,6 +301,10 @@ func (m *Manager) watchHooks(inst Instance, slot *appSlot) {
 	})
 }
 
+// WatchesHooks reports whether the Manager restarts instances when their pb_hooks change (so a deploy that only
+// changes hooks needn't restart; deploy's HooksWatcher).
+func (m *Manager) WatchesHooks(string) bool { return m.hooks != nil }
+
 // hooksChanged restarts the instance's running app (app.Restart, caught by catchRestart: only this app restarts).
 func (m *Manager) hooksChanged(id string) {
 	m.mu.RLock()

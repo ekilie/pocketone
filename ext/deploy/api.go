@@ -348,6 +348,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.readFile(w, r)
 	case path == "/files/raw" && r.Method == http.MethodPut:
 		err = a.writeFile(w, r)
+	case path == "/tree" && r.Method == http.MethodGet:
+		err = a.tree(w, r)
 	case path == "/logs" && r.Method == http.MethodGet:
 		err = a.logs(w, r)
 	default:
@@ -429,6 +431,53 @@ func (a *API) blobs(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// HooksWatcher is implemented by an [Instances] that restarts an instance by itself when its pb_hooks change (Pocker's
+// shared watcher, PocketBase's HooksWatch on a single app). Deploys that only change hooks then skip the restart.
+type HooksWatcher interface {
+	WatchesHooks(id string) bool
+}
+
+// restartNeeded: files are swapped in while the app runs (each rename is atomic), so only changes the running app
+// can't pick up restart it: a new or changed migration (migrations run at boot), packages (require caches them), and
+// hooks unless hooksReload (something watches them and the caller doesn't need the start result). pb_public and pb_pages are read from disk on each request; deleting a migration
+// doesn't undo it, so neither restarts.
+func restartNeeded(st *staged, hooksReload bool) bool {
+	if st.replaceNodeModules {
+		return true
+	}
+	for _, p := range st.plan.toWrite {
+		if strings.HasPrefix(p, "pb_migrations/") || isNodeModulesPath(p) || (!hooksReload && strings.HasPrefix(p, "pb_hooks/")) {
+			return true
+		}
+	}
+	for _, p := range st.plan.toDelete {
+		if isNodeModulesPath(p) || (!hooksReload && strings.HasPrefix(p, "pb_hooks/")) {
+			return true
+		}
+	}
+	return false
+}
+
+// parsePartial reads {"partial": true, "delete": [paths]} from a commit body (nil for a full deploy).
+func parsePartial(body map[string]any) (*Partial, error) {
+	if body["partial"] != true {
+		return nil, nil
+	}
+	p := &Partial{}
+	raw, _ := body["delete"].([]any)
+	if len(raw) > maxManifestFiles {
+		return nil, &ManifestError{fmt.Sprintf("Too many deletes (%d); at most %d.", len(raw), maxManifestFiles)}
+	}
+	for _, v := range raw {
+		path, _ := v.(string)
+		if !isCodePath(path) || isNodeModulesPath(path) {
+			return nil, &ManifestError{fmt.Sprintf("delete: %q is outside the deployable set", path)}
+		}
+		p.Delete = append(p.Delete, path)
+	}
+	return p, nil
+}
+
 type commitResult struct {
 	DeployID            *string        `json:"deployId"`
 	Instance            map[string]any `json:"instance"`
@@ -467,6 +516,10 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	nodeModules := body["nodeModules"] == true
+	partial, err := parsePartial(body)
+	if err != nil {
+		return err
+	}
 	base := DeployRecord{
 		Instance: c.inst.ID, User: c.auth.UserID, FileCount: len(m), TokenLabel: c.auth.TokenLabel,
 		Commit: clip(body["commit"], 100), Message: clip(body["message"], 500), Source: clip(body["source"], 100),
@@ -485,7 +538,7 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 
 	_ = c.store.cleanTmp()
 	// slow work (copying, hashing) happens here, before the instance is touched
-	st, err := c.store.stage(m, nodeModules)
+	st, err := c.store.stage(m, nodeModules, partial)
 	if err != nil {
 		return err
 	}
@@ -494,18 +547,19 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 		changed = append(changed, nodeModulesDir)
 	}
 	nothingChanged := len(changed) == 0
-	// static files are served from disk and each rename is atomic, so pb_public-only deploys skip the restart
-	needsRestart := false
-	for _, p := range changed {
-		if !strings.HasPrefix(p, "pb_public/") {
-			needsRestart = true
-			break
-		}
+	mgr := a.instances()
+	hooksWatched := false
+	if hw, ok := mgr.(HooksWatcher); ok && mgr != nil {
+		hooksWatched = hw.WatchesHooks(c.inst.ID)
 	}
+	// a full deploy still restarts for hooks, so it can report a start error; dev's partial commits leave hooks to
+	// the watcher
+	// a watcher only sees pb_hooks if it existed when the app started, so a commit that creates it restarts
+	_, hooksDirErr := os.Stat(filepath.Join(c.dir, "pb_hooks"))
+	needsRestart := restartNeeded(st, hooksWatched && partial != nil && hooksDirErr == nil)
 
 	var applied *applyResult
 	wasRunning := false
-	mgr := a.instances()
 	if needsRestart && mgr != nil {
 		if _, known := mgr.InstanceDir(c.inst.ID); known {
 			wasRunning = mgr.Running(c.inst.ID)
