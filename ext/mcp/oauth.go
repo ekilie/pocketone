@@ -13,15 +13,15 @@ import (
 // OAuth signs MCP requests in with access tokens from ext/oauth-server (API tokens from ext/tokens), the way Claude
 // connectors and Claude Code expect: the client follows the 401 to the protected resource metadata, registers itself
 // (CIMD or dynamic registration), signs the user in in a browser with PKCE, and gets a token bound to this endpoint
-// (RFC 8707 audience). The token carries the account's rights, like a PocketBase auth token; tool calls run as that
-// account. Pasted PocketBase auth tokens work too, as on the REST API.
+// (RFC 8707 audience). The token carries the account's rights, like a PocketBase auth token, or only the scopes the
+// user ticked on the consent page; tool calls run as that account, limited to those scopes. Pasted PocketBase auth
+// tokens work too, as on the REST API.
 //
 // It's the default [Authenticator] when oauth-server is registered on the app.
 type OAuth struct {
 	// Issuer overrides the authorization server listed in the protected resource metadata (default: oauth-server's
 	// own issuer, i.e. its Config.Issuer or the request's scheme and host).
 	Issuer string
-
 }
 
 // Authenticate implements [Authenticator].
@@ -41,13 +41,14 @@ func (a OAuth) Authenticate(e *core.RequestEvent, resource string) (*Grant, erro
 	if !sameResource(info.Audience, resource) {
 		return nil, fmt.Errorf("%w: the token was issued for %s", ErrInvalidToken, info.Audience)
 	}
-	// Tool calls run with the account's full rights, so a token limited to some scopes can't be one.
+	// a token limited to some scopes limits the connection: tool calls are checked against them
+	var scopes []string
 	for _, sc := range info.Scopes {
-		if sc != "offline_access" {
-			return nil, fmt.Errorf("%w: MCP tokens carry the account's rights; this one is limited to %q", ErrInvalidToken, sc)
+		if sc != oauthserver.OfflineAccess {
+			scopes = append(scopes, sc)
 		}
 	}
-	return &Grant{Auth: info.Owner, ClientID: info.Token.GetString("client_id")}, nil
+	return &Grant{Auth: info.Owner, ClientID: info.Token.GetString("client_id"), Scopes: scopes}, nil
 }
 
 // AuthorizationServers implements [Authenticator].

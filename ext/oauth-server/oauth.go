@@ -263,6 +263,8 @@ func hashSecret(v string) string {
 type ScopeInfo struct {
 	Name        string
 	Description string
+	// Checked: on the consent page, the scope's box starts ticked (the client asked for it).
+	Checked bool
 }
 
 // resolveScopes checks a space-separated scope request against the registered scopes the owner collection may
@@ -290,6 +292,56 @@ func (s *Server) resolveScopes(raw string, owner *core.Collection) ([]ScopeInfo,
 		out = append(out, ScopeInfo{Name: sc.Name, Description: sc.Description})
 	}
 	return out, nil
+}
+
+// scopeChoices are the scopes the consent page lets the user pick from: the ones the client asked for (ticked), then
+// every other registered scope the account may hold, except infrastructure ones ([tokens.Scope.Infrastructure]).
+func (s *Server) scopeChoices(requested []ScopeInfo, owner *core.Collection) []ScopeInfo {
+	out := make([]ScopeInfo, 0, len(requested))
+	seen := map[string]bool{}
+	for _, r := range requested {
+		r.Checked = true
+		out = append(out, r)
+		seen[r.Name] = true
+	}
+	for _, sc := range s.tokens().Scopes() {
+		if seen[sc.Name] || sc.Infrastructure() {
+			continue
+		}
+		if owner != nil && len(sc.Collections) > 0 && !slices.Contains(sc.Collections, owner.Name) {
+			continue
+		}
+		out = append(out, ScopeInfo{Name: sc.Name, Description: sc.Description})
+	}
+	return out
+}
+
+// chosenScopes reads the consent form: "access" is "full" (no scopes: the account's full rights) or "limited" with
+// the ticked "grant" boxes, each one of choices. A form without "access" (a custom page that offers no choice)
+// grants what the client asked for.
+func chosenScopes(e *core.RequestEvent, requested, choices []ScopeInfo) ([]ScopeInfo, error) {
+	switch e.Request.PostFormValue("access") {
+	case "":
+		return requested, nil
+	case "full":
+		return nil, nil
+	case "limited":
+		var out []ScopeInfo
+		for _, name := range e.Request.PostForm["grant"] {
+			i := slices.IndexFunc(choices, func(c ScopeInfo) bool { return c.Name == name })
+			if i < 0 {
+				return nil, fmt.Errorf("unknown scope %q", name)
+			}
+			if !slices.ContainsFunc(out, func(c ScopeInfo) bool { return c.Name == name }) {
+				out = append(out, choices[i])
+			}
+		}
+		if len(out) == 0 {
+			return nil, errors.New("Tick at least one permission, or choose Full access.")
+		}
+		return out, nil
+	}
+	return nil, errors.New("unknown access choice")
 }
 
 func scopeNames(in []ScopeInfo) []string {

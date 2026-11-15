@@ -1,6 +1,7 @@
 package tokens
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"slices"
@@ -35,6 +36,10 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 		Func: func(e *core.RequestEvent) error {
 			// only this plugin sets scope headers: drop any the client sent, on every request
 			stripScopeHeaders(e.Request.Header)
+			// an in-process request made for a scoped connection (ext/mcp): checked like a scoped token's request
+			if limit, ok := ScopesFromContext(e.Request.Context()); ok && !t.registry.allowsLimit(limit, e) {
+				return e.ForbiddenError("This connection's scopes ("+strings.Join(limit, ", ")+") don't allow this request.", nil)
+			}
 			secret := bearer(e)
 			if !strings.HasPrefix(secret, Prefix) {
 				return e.Next()
@@ -52,7 +57,9 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 			if !audienceAllows(info.Audience, path) {
 				return e.ForbiddenError("This API token is bound to another resource ("+info.Audience+").", nil)
 			}
-			if !t.registry.allows(info.Scopes, e) {
+			// a token bound to a resource authenticates there whatever its scopes: they limit what the resource does
+			// on its behalf (ext/mcp passes them on with WithScopes), not the resource's own endpoint
+			if !boundHere(info.Audience, path) && !t.registry.allows(info.Scopes, e) {
 				return e.ForbiddenError("This API token's scopes ("+strings.Join(info.Scopes, ", ")+") don't allow this request.", nil)
 			}
 			e.Auth = info.Owner
@@ -85,10 +92,19 @@ func (t *Tokens) scopeHeadersMiddleware() *hook.Handler[*core.RequestEvent] {
 	}
 }
 
-// heldScopes: the scopes a signed-in request holds (see scopeHeadersMiddleware).
+// heldScopes: the scopes a signed-in request holds (see scopeHeadersMiddleware), narrowed to the context's scopes
+// when the request was made for a scoped connection.
 func (t *Tokens) heldScopes(e *core.RequestEvent) []string {
+	held := t.ownScopes(e)
+	if limit, ok := requestLimit(e); ok {
+		held = slices.DeleteFunc(held, func(n string) bool { return !slices.Contains(limit, n) })
+	}
+	return held
+}
+
+func (t *Tokens) ownScopes(e *core.RequestEvent) []string {
 	if i := FromRequest(e); i != nil && len(i.Scopes) > 0 {
-		return i.Scopes
+		return slices.Clone(i.Scopes)
 	}
 	all := t.registry.list()
 	out := make([]string, 0, len(all))
@@ -127,6 +143,20 @@ func audienceAllows(audience, path string) bool {
 	return ap == "" || pathUnder(path, ap)
 }
 
+// boundHere: the token is bound to a resource with a path (e.g. https://host/mcp) and the request is under it. A
+// resource without a path (the whole host) doesn't count: there the token's scopes still decide.
+func boundHere(audience, path string) bool {
+	if audience == "" {
+		return false
+	}
+	u, err := url.Parse(audience)
+	if err != nil {
+		return false
+	}
+	ap := strings.TrimSuffix(u.Path, "/")
+	return ap != "" && pathUnder(path, ap)
+}
+
 func bearer(e *core.RequestEvent) string {
 	h := e.Request.Header.Get("Authorization")
 	if len(h) > 7 && strings.EqualFold(h[:7], "Bearer ") {
@@ -152,9 +182,12 @@ func FromRequest(e *core.RequestEvent) *Info {
 }
 
 // HasScope reports whether an authenticated request may act with scope: JWT auth and unscoped tokens have every
-// scope; a scoped token only its own.
+// scope; a scoped token only its own; a request made for a scoped connection (WithScopes) only the connection's.
 func HasScope(e *core.RequestEvent, scope string) bool {
 	if e.Auth == nil {
+		return false
+	}
+	if limit, ok := requestLimit(e); ok && !slices.Contains(limit, scope) {
 		return false
 	}
 	if i := FromRequest(e); i != nil {
@@ -178,4 +211,36 @@ func RequireScope(scope string) *hook.Handler[*core.RequestEvent] {
 			return e.Next()
 		},
 	}
+}
+
+type scopesKey struct{}
+
+// WithScopes limits in-process requests made with ctx to these scopes, the way a token limited to them would be:
+// the tokens middleware refuses requests the scopes don't match (403) and sets the X-Token-Scope-* headers to only
+// these (and only those the signed-in account holds). ext/mcp uses it for tool calls on a scoped connection.
+// Requests made inside such a request with its context inherit the limit; a nested WithScopes can only narrow it.
+// No HTTP header or client value reaches it. An empty (or nil) list allows nothing but AnyTokenPaths, so call it
+// only for a scoped connection.
+func WithScopes(ctx context.Context, scopes []string) context.Context {
+	next := slices.Clone(scopes)
+	if prev, ok := ScopesFromContext(ctx); ok {
+		next = slices.DeleteFunc(next, func(n string) bool { return !slices.Contains(prev, n) })
+	}
+	if next == nil {
+		next = []string{}
+	}
+	return context.WithValue(ctx, scopesKey{}, next)
+}
+
+// ScopesFromContext returns the scopes set with WithScopes, and whether there are any limits.
+func ScopesFromContext(ctx context.Context) ([]string, bool) {
+	s, ok := ctx.Value(scopesKey{}).([]string)
+	return s, ok
+}
+
+func requestLimit(e *core.RequestEvent) ([]string, bool) {
+	if e.Request == nil {
+		return nil, false
+	}
+	return ScopesFromContext(e.Request.Context())
 }

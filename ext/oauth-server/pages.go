@@ -35,8 +35,12 @@ type PageData struct {
 	ClientName string
 	ClientHost string
 	Scopes     []ScopeInfo
-	// FullAccess: no scopes requested, so the token gets the account's full rights.
+	// FullAccess: no scopes requested, so the token gets the account's full rights. With ScopeChoices, it's
+	// whether "Full access" starts selected.
 	FullAccess bool
+	// ScopeChoices, when not empty, let the user choose on consent: post "access" = "full", or "limited" with a
+	// "grant" checkbox per ticked scope (Checked: ticked at first). A form that posts no "access" grants Scopes.
+	ScopeChoices []ScopeInfo
 
 	// Email is the signed-in account (consent, mfa), or the address a code went to (otp).
 	Email string
@@ -124,6 +128,10 @@ func pageMap(d PageData) map[string]any {
 	for _, s := range d.Scopes {
 		scopes = append(scopes, map[string]string{"name": s.Name, "description": s.Description})
 	}
+	choices := make([]map[string]any, 0, len(d.ScopeChoices))
+	for _, s := range d.ScopeChoices {
+		choices = append(choices, map[string]any{"name": s.Name, "description": s.Description, "checked": s.Checked})
+	}
 	providers := make([]map[string]string, 0, len(d.Providers))
 	for _, p := range d.Providers {
 		providers = append(providers, map[string]string{"name": p.Name, "displayName": p.DisplayName})
@@ -131,7 +139,7 @@ func pageMap(d PageData) map[string]any {
 	return map[string]any{
 		"page": d.Page, "appName": d.AppName, "logoUrl": d.LogoURL, "accent": d.Accent, "footer": d.Footer,
 		"action": d.Action, "hidden": d.Hidden, "csrf": d.CSRF, "clientName": d.ClientName, "clientHost": d.ClientHost,
-		"scopes": scopes, "fullAccess": d.FullAccess, "email": d.Email, "collection": d.Collection,
+		"scopes": scopes, "fullAccess": d.FullAccess, "scopeChoices": choices, "email": d.Email, "collection": d.Collection,
 		"collections": d.Collections, "superuser": d.Superuser, "accountKind": d.AccountKind,
 		"superuserLink": d.SuperuserLink, "userLink": d.UserLink, "passwordEnabled": d.PasswordEnabled,
 		"otpEnabled": d.OTPEnabled, "identityLabel": d.IdentityLabel, "providers": providers, "otpId": d.OTPId,
@@ -163,6 +171,8 @@ font:inherit;font-weight:600;cursor:pointer}.btn.secondary{background:transparen
 ul.scopes{list-style:none;padding:0;margin:12px 0;border:1px solid var(--line);border-radius:8px}
 ul.scopes li{padding:10px 12px;border-top:1px solid var(--line)}ul.scopes li:first-child{border-top:0}
 ul.scopes b{display:block}ul.scopes span{color:var(--muted);font-size:13px}
+ul.choose label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}ul.choose label>span{color:inherit;font-size:inherit}
+ul.choose input{width:auto;margin:3px 0 0}ul.choose ul{list-style:none;padding:0 0 0 24px;margin:8px 0 0}ul.choose ul li{padding:6px 0;border:0}
 .code{font:600 22px ui-monospace,Menlo,monospace;letter-spacing:3px;text-align:center;text-transform:uppercase}
 .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
 .tabs{display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:9px}
@@ -228,10 +238,16 @@ body.su{--accent:#c2410c;--bg:#fde8d7}body.su .card{border:2px solid var(--accen
 <h1>{{.ClientName}}</h1><p class="sub">wants to access {{.AppName}} as <b>{{.Email}}</b></p>
 {{if .Superuser}}<p class="warn"><b>Superuser account.</b> {{.ClientName}} will act as a superuser, with full control of {{.AppName}}: every record, collection and setting.</p>
 {{else}}<p class="msg">User account ({{.Collection}}). {{.ClientName}} can do what this user can.</p>{{end}}
-{{if .FullAccess}}<ul class="scopes"><li><b>Full access</b><span>Everything this account can do.</span></li></ul>
+{{if .Error}}<p class="err">{{.Error}}</p>{{end}}
+<form method="post" action="{{.Action}}">{{template "hidden" .}}
+{{if .ScopeChoices}}<ul class="scopes choose">
+<li><label><input type="radio" name="access" value="full"{{if .FullAccess}} checked{{end}}><span><b>Full access</b><span>Everything this account can do.</span></span></label></li>
+<li><label><input type="radio" name="access" value="limited"{{if not .FullAccess}} checked{{end}}><span><b>Only these</b><span>Tick what {{.ClientName}} may do:</span></span></label>
+<ul>{{range .ScopeChoices}}<li><label><input type="checkbox" name="grant" value="{{.Name}}"{{if .Checked}} checked{{end}}><span><b>{{.Name}}</b><span>{{.Description}}</span></span></label></li>{{end}}</ul></li>
+</ul>
+{{else if .FullAccess}}<ul class="scopes"><li><b>Full access</b><span>Everything this account can do.</span></li></ul>
 {{else}}<ul class="scopes">{{range .Scopes}}<li><b>{{.Name}}</b><span>{{.Description}}</span></li>{{end}}</ul>{{end}}
 {{if .ClientHost}}<p class="msg">You'll be sent back to {{.ClientHost}}.</p>{{end}}
-<form method="post" action="{{.Action}}">{{template "hidden" .}}
 <button class="btn" name="step" value="allow">Allow</button>
 <button class="btn secondary" name="step" value="deny">Deny</button>
 <button class="link" name="step" value="switch">Not {{.Email}}? Use another account</button></form>{{template "foot" .}}{{end}}

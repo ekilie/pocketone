@@ -268,6 +268,14 @@ func TestAudienceBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	scopedMcp, _, err := tk.Create(su, CreateOptions{Audience: "https://app.example.com/mcp", Scopes: []string{"deploy"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hostTok, _, err := tk.Create(su, CreateOptions{Audience: "https://app.example.com", Scopes: []string{"deploy"}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/mcp", func(e *core.RequestEvent) error { return e.String(200, "mcp "+e.Auth.Email()) })
 		return se.Next()
@@ -280,6 +288,12 @@ func TestAudienceBinding(t *testing.T) {
 			ExpectedStatus: 403, ExpectedContent: []string{"bound to another resource"}},
 		{Name: "bound token on deploy", Method: http.MethodGet, URL: "/api/deploytest/ping", Headers: authHeader(mcpTok),
 			ExpectedStatus: 403, ExpectedContent: []string{"bound to another resource"}},
+		{Name: "a scoped bound token works on its resource, whatever its scopes", Method: http.MethodGet, URL: "/mcp",
+			Headers: authHeader(scopedMcp), ExpectedStatus: 200, ExpectedContent: []string{"mcp test@example.com"}},
+		{Name: "its scopes still don't open other resources", Method: http.MethodGet, URL: "/api/deploytest/ping",
+			Headers: authHeader(scopedMcp), ExpectedStatus: 403, ExpectedContent: []string{"bound to another resource"}},
+		{Name: "a token bound to the whole host is held to its scopes", Method: http.MethodGet, URL: "/mcp",
+			Headers: authHeader(hostTok), ExpectedStatus: 403, ExpectedContent: []string{"scopes (deploy)"}},
 		{Name: "bound token may ask who it is", Method: http.MethodGet, URL: "/_pocker/whoami", Headers: authHeader(mcpTok),
 			ExpectedStatus: 200, ExpectedContent: []string{"me test@example.com"}},
 	} {

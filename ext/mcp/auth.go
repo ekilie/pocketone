@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 // Grant is who a valid credential signs in, and how tool calls forward it.
@@ -20,6 +21,10 @@ type Grant struct {
 	// PocketBase token). Empty: each MCP request makes a PocketBase token for Auth, as ext/pages' ctx.pb() does
 	// (an OAuth token bound to /mcp isn't accepted on the REST API).
 	Credential string
+	// Scopes, when not empty, limit the connection like an API token limited to them (ext/tokens): tool calls
+	// run with [tokens.WithScopes], so requests the scopes don't allow are refused, and tools/list hides tools
+	// none of them reaches.
+	Scopes []string
 }
 
 var (
@@ -86,7 +91,22 @@ func (s *Server) ProtectedResourceMetadata(e *core.RequestEvent) map[string]any 
 		"authorization_servers":    s.cfg.Auth.AuthorizationServers(e, s),
 		"bearer_methods_supported": []string{"header"},
 		"resource_name":            name + " MCP",
+		"scopes_supported":         s.offeredScopes(),
 	}
+}
+
+// offeredScopes are the app's ext/tokens scopes a connection can be limited to (infrastructure scopes, which no
+// tool reaches, aren't offered).
+func (s *Server) offeredScopes() []string {
+	out := []string{}
+	if tk := tokens.For(s.app); tk != nil {
+		for _, sc := range tk.Scopes() {
+			if !sc.Infrastructure() {
+				out = append(out, sc.Name)
+			}
+		}
+	}
+	return out
 }
 
 // challenge answers 401 with the WWW-Authenticate header MCP clients (Claude) need to find the sign-in.

@@ -469,3 +469,57 @@ func TestEnsureSchemaAddsNewFields(t *testing.T) {
 		t.Fatal("field not added back")
 	}
 }
+
+// The consent page lets the user narrow or pick scopes; the token gets exactly what was ticked.
+func TestConsentScopeChoices(t *testing.T) {
+	e := newEnv(t, Config{})
+	e.tk.MustRegisterScope(tokens.Scope{Name: "notes:read", Description: "Read notes", Paths: []string{"/api/collections/notes/records"}, Methods: []string{"GET"}})
+	e.tk.MustRegisterScope(tokens.Scope{Name: "notes:write", Description: "Change notes", Paths: []string{"/api/collections/notes/records"}})
+	verifier, challenge := pkce()
+	redirect := "http://127.0.0.1:43123/callback"
+	q := url.Values{"response_type": {"code"}, "client_id": {CLIClientId}, "redirect_uri": {redirect},
+		"code_challenge": {challenge}, "code_challenge_method": {"S256"}, "scope": {"notes:read"}}
+	b := newBrowser(t)
+	b.get(e.url + "/oauth/authorize?" + q.Encode())
+	b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "1234567890"})
+	if !b.has(`name="grant" value="notes:read" checked`) || !b.has(`name="grant" value="notes:write">`) ||
+		!b.has(`name="access" value="limited" checked`) || b.has(`value="deploy"`) {
+		t.Fatalf("consent choices: %s", b.page)
+	}
+	exchange := func(res *http.Response) map[string]any {
+		t.Helper()
+		loc, _ := url.Parse(res.Header.Get("Location"))
+		st, tok := postToken(t, e.url, url.Values{"grant_type": {"authorization_code"}, "code": {loc.Query().Get("code")},
+			"redirect_uri": {redirect}, "client_id": {CLIClientId}, "code_verifier": {verifier}})
+		if st != 200 {
+			t.Fatalf("token: %d %v (%s)", st, tok, loc)
+		}
+		return tok
+	}
+
+	if tok := exchange(b.submit("allow", map[string]string{"access": "limited", "grant": "notes:write"})); tok["scope"] != "notes:write" {
+		t.Fatalf("picked another scope: %v", tok)
+	}
+	b.get(e.url + "/oauth/authorize?" + q.Encode())
+	if b.submit("allow", map[string]string{"access": "limited"}); b.status != 200 || !b.has("Tick at least one") ||
+		!b.has(`name="grant" value="notes:read">`) {
+		t.Fatalf("nothing ticked: %d %s", b.status, b.page)
+	}
+	if b.submit("allow", map[string]string{"access": "limited", "grant": "deploy"}); !b.has("unknown scope") {
+		t.Fatalf("a scope that wasn't offered: %s", b.page)
+	}
+	tok := exchange(b.submit("allow", map[string]string{"access": "full"}))
+	if info, err := e.tk.Verify(tok["access_token"].(string)); err != nil || tok["scope"] != "" || len(info.Scopes) != 0 {
+		t.Fatalf("full access: %v %v", tok, err)
+	}
+
+	// no scope asked: Full access starts selected, the app's scopes can still be picked
+	q.Del("scope")
+	b.get(e.url + "/oauth/authorize?" + q.Encode())
+	if !b.has(`name="access" value="full" checked`) || !b.has(`name="grant" value="notes:read">`) {
+		t.Fatalf("no scope asked: %s", b.page)
+	}
+	if tok := exchange(b.submit("allow", map[string]string{"access": "limited", "grant": "notes:read"})); tok["scope"] != "notes:read" {
+		t.Fatalf("picked a scope: %v", tok)
+	}
+}

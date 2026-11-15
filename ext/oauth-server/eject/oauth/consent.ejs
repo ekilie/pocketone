@@ -3,12 +3,19 @@
 <h1><%= data.clientName %></h1><p class="sub">wants to access <%= data.appName %> as <b><%= data.email %></b></p>
 <% if (data.superuser) { %><p class="warn"><b>Superuser account.</b> <%= data.clientName %> will act as a superuser, with full control of <%= data.appName %>: every record, collection and setting.</p>
 <% } else { %><p class="msg">User account (<%= data.collection %>). <%= data.clientName %> can do what this user can.</p><% } %>
-<ul class="scopes">
+<% if (data.error) { %><p class="err"><%= data.error %></p><% } %>
+<form method="post" action="<%= data.action %>"><%- include('/oauth/hidden') %>
+<%# With scopeChoices, the user picks: access = full, or limited with a "grant" box per scope. %>
+<% if (data.scopeChoices.length) { %><ul class="scopes choose">
+<li><label><input type="radio" name="access" value="full"<%= data.fullAccess ? ' checked' : '' %>><span><b>Full access</b><span>Everything this account can do.</span></span></label></li>
+<li><label><input type="radio" name="access" value="limited"<%= data.fullAccess ? '' : ' checked' %>><span><b>Only these</b><span>Tick what <%= data.clientName %> may do:</span></span></label>
+<ul><% for (const s of data.scopeChoices) { %><li><label><input type="checkbox" name="grant" value="<%= s.name %>"<%= s.checked ? ' checked' : '' %>><span><b><%= s.name %></b><span><%= s.description %></span></span></label></li><% } %></ul></li>
+</ul>
+<% } else { %><ul class="scopes">
 <% if (data.fullAccess) { %><li><b>Full access</b><span>Everything this account can do.</span></li>
 <% } else { for (const s of data.scopes) { %><li><b><%= s.name %></b><span><%= s.description %></span></li><% } } %>
-</ul>
+</ul><% } %>
 <% if (data.clientHost) { %><p class="msg">You'll be sent back to <%= data.clientHost %>.</p><% } %>
-<form method="post" action="<%= data.action %>"><%- include('/oauth/hidden') %>
 <button class="btn" name="step" value="allow">Allow</button>
 <button class="btn secondary" name="step" value="deny">Deny</button>
 <button class="link" name="step" value="switch">Not <%= data.email %>? Use another account</button></form>

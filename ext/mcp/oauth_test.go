@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 	"html"
 	"io"
 	"net/http"
@@ -329,14 +330,14 @@ func TestOAuthTokens(t *testing.T) {
 		t.Fatal("token for another resource accepted")
 	}
 
-	// a token bound to /mcp but limited to some scope can't run tools with the account's full rights
-	o.tk.RegisterScope(tokens.Scope{Name: "notes:read", Description: "x", Paths: []string{"/mcp"}})
+	// a token bound to /mcp but limited to some scope signs in there (its scopes limit the tool calls)
+	o.tk.RegisterScope(tokens.Scope{Name: "notes:read", Description: "x", Paths: []string{"/api/collections/notes/records"}})
 	scoped, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "scoped", Audience: o.url + "/mcp", Scopes: []string{"notes:read"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res, _ := o.mcp(scoped, "ping", nil); res.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("scoped token bound to /mcp: want 401, got %d", res.StatusCode)
+	if res, _ := o.mcp(scoped, "ping", nil); res.StatusCode != http.StatusOK {
+		t.Fatalf("scoped token bound to /mcp: want 200, got %d", res.StatusCode)
 	}
 
 	// a token bound to /mcp works there, and tool calls reach the REST API as its owner
@@ -380,5 +381,88 @@ func TestOAuthIssuerFromOAuthServer(t *testing.T) {
 	r := h.do(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", "", "")
 	if as := r.body["authorization_servers"].([]any); len(as) != 1 || as[0] != "https://auth.example.com" {
 		t.Fatalf("authorization_servers should be oauth-server's issuer: %s", r.raw)
+	}
+}
+
+// A connection limited to some scopes on the consent page: tools/list shows what those scopes reach, and each tool
+// call is checked like a request with an API token limited to them.
+func TestScopedConnection(t *testing.T) {
+	o := newOAuthEnv(t)
+	notes := core.NewBaseCollection("notes")
+	notes.Fields.Add(&core.TextField{Name: "title"})
+	notes.ListRule = types.Pointer(`@request.auth.id != ""`)
+	notes.CreateRule = types.Pointer(`@request.auth.id != "" && ` + tokens.ScopeRuleField("notes:write") + ` = "1"`)
+	if err := o.app.Save(notes); err != nil {
+		t.Fatal(err)
+	}
+	n := core.NewRecord(notes)
+	n.Set("title", "first")
+	if err := o.app.Save(n); err != nil {
+		t.Fatal(err)
+	}
+	recs := "/api/collections/notes/records"
+	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:read", Description: "Read notes", Paths: []string{recs}, Methods: []string{"GET"}})
+	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:write", Description: "Add notes", Paths: []string{recs}, Methods: []string{"POST"}})
+	o.tk.MustRegisterScope(tokens.Scope{Name: "deploy", Description: "Deploy", Paths: []string{"/_pocker/deploy/"}})
+	s := For(o.app)
+	s.MustAddEndpoint(Endpoint{Name: "notes_list", Description: "List notes.", Method: "GET", Path: recs})
+	s.MustAddEndpoint(Endpoint{Name: "notes_add", Description: "Add a note.", Method: "POST", Path: recs,
+		InputSchema: map[string]any{"type": "object", "properties": map[string]any{"title": map[string]any{"type": "string"}}}})
+
+	res, _ := o.mcp("", "initialize", map[string]any{})
+	m := regexp.MustCompile(`resource_metadata="([^"]+)"`).FindStringSubmatch(res.Header.Get("WWW-Authenticate"))
+	prm := o.getJSON(m[1])
+	if got := toStrings(prm["scopes_supported"]); strings.Join(got, ",") != "notes:read,notes:write" {
+		t.Fatalf("scopes_supported (no infrastructure scopes): %v", got)
+	}
+
+	tok := o.connect("notes:read offline_access")
+	if tok["scope"] != "notes:read" {
+		t.Fatalf("token scope: %v", tok["scope"])
+	}
+	access := tok["access_token"].(string)
+
+	_, init := o.mcp(access, "initialize", map[string]any{"protocolVersion": "2025-11-25"})
+	if !strings.Contains(init["result"].(map[string]any)["instructions"].(string), "limited to these scopes: notes:read") {
+		t.Fatalf("instructions: %v", init)
+	}
+	_, list := o.mcp(access, "tools/list", nil)
+	tools := strings.Join(toolsOf(list), ",")
+	for _, want := range []string{"notes_list", "pb_list_records", "pb_get_record"} {
+		if !strings.Contains(tools, want) {
+			t.Errorf("%s missing from %s", want, tools)
+		}
+	}
+	for _, hidden := range []string{"notes_add", "pb_create_record", "pb_list_collections", "pb_check_health"} {
+		if strings.Contains(tools, hidden+",") || strings.HasSuffix(tools, hidden) {
+			t.Errorf("%s listed on a read-only connection: %s", hidden, tools)
+		}
+	}
+
+	call := func(name string, args map[string]any) (bool, string) {
+		t.Helper()
+		_, m := o.mcp(access, "tools/call", map[string]any{"name": name, "arguments": args})
+		r := m["result"].(map[string]any)
+		b, _ := json.Marshal(r["content"])
+		return r["isError"] == true, string(b)
+	}
+	if isErr, out := call("notes_list", map[string]any{}); isErr || !strings.Contains(out, "first") {
+		t.Fatalf("notes_list: %v %s", isErr, out)
+	}
+	if isErr, out := call("notes_add", map[string]any{"title": "x"}); !isErr || !strings.Contains(out, "scopes (notes:read)") {
+		t.Fatalf("notes_add on a read-only connection: %v %s", isErr, out)
+	}
+	if isErr, out := call("pb_list_records", map[string]any{"collection": "users"}); !isErr || !strings.Contains(out, "403") && !strings.Contains(out, "scopes") {
+		t.Fatalf("another collection: %v %s", isErr, out)
+	}
+	if isErr, _ := call("pb_list_collections", map[string]any{}); !isErr {
+		t.Fatal("a superuser tool outside the scopes ran")
+	}
+
+	// the same account with full access lists and runs everything
+	full := o.connect("offline_access")["access_token"].(string)
+	_, list = o.mcp(full, "tools/list", nil)
+	if !strings.Contains(strings.Join(toolsOf(list), ","), "notes_add") {
+		t.Fatal("full connection misses notes_add")
 	}
 }

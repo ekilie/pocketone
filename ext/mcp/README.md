@@ -46,11 +46,20 @@ A Go build can change the path, the tools, the caps and the sign-in (see [Go con
 
 ### Scopes
 
-MCP registers no scopes. A token issued for `/mcp` carries the account's full rights, like a PocketBase auth token,
-and works only on `/mcp`. A token for `/mcp` that is limited to scopes is refused, since tool calls run with the
-account's full rights. To limit what an agent can do, sign it in as an account with fewer rights, and use
-your collection rules. Your own [token scopes](../tokens/README.md#your-own-scopes) still apply inside tool calls (see
-[Integrations](#integrations)).
+MCP registers no scopes of its own. When an agent connects, the consent page offers **Full access** (the account's
+rights, like a PocketBase auth token) or **Only these**, with a box for each of your
+[token scopes](../tokens/README.md#your-own-scopes) (scopes that only reach `/_pocker/` routes, like `deploy`, aren't
+offered unless the client asks for them). The protected resource metadata lists the same scopes in
+`scopes_supported`, so a client can ask for some up front; the user can still change the ticks.
+
+A connection limited to scopes is held to them exactly like an API token with those scopes on the REST API:
+
+- Each tool call is checked against the scopes' paths and methods (or `Match` guards). A request they don't cover is
+  refused with `403`, and the tool returns that as an error.
+- Collection rules see only those scopes in `@request.headers.x_token_scope_<name>`.
+- `tools/list` hides tools none of the scopes reaches, and the instructions name the scopes.
+
+The token itself still works only on `/mcp`. To limit an agent further, sign it in as an account with fewer rights.
 
 ### Behind a proxy
 
@@ -82,7 +91,8 @@ register themselves with your app first.
 ### Paste a token instead
 
 A PocketBase auth token, or an API token not bound to any resource, works on `/mcp` as it does on the REST API, and
-tool calls forward it unchanged. A scoped API token works only if one of its scopes covers `/mcp`.
+tool calls forward it unchanged. A scoped API token works only if one of its scopes covers `/mcp`; to limit an agent
+to scopes, connect it through the consent page instead (see [Scopes](#scopes)).
 
 ### Who a tool call runs as
 
@@ -172,7 +182,7 @@ In `pocketone` it always is.
 |---|---|
 | [OAuth Server](../oauth-server/README.md) | Signs MCP clients in. MCP points clients at it from the protected resource metadata, turns on its client self-registration, and makes tokens bound to `/mcp` never expire. Who may sign in comes from its `Collections` (default: superusers and every auth collection). |
 | [Tokens](../tokens/README.md) | The access tokens are API tokens bound to `https://<host>/mcp` (RFC 8707): they work nowhere else, and are listed and revoked under Settings → API tokens. |
-| Your token scopes | A tool call reaches the REST API with a PocketBase auth token for the signed-in account, so it holds every scope you registered (except ones its collection can't hold): `$tokens.requireScope` guards pass, and `@request.headers.x_token_scope_<name>` is `"1"` in collection rules. |
+| Your token scopes | On a full-access connection a tool call holds every scope you registered (except ones its collection can't hold): `$tokens.requireScope` guards pass, and `@request.headers.x_token_scope_<name>` is `"1"` in collection rules. On a connection limited to scopes it holds only those, and requests they don't cover are refused (see [Scopes](#scopes)). |
 | [Pages](../pages/README.md) | A `pb_pages` `+api.js` route is a REST endpoint like any other; declare its tool with `$mcp.addEndpoint`. |
 | [S3 Redirect](../s3redirect/README.md) | `pb_download_file` follows its one redirect to storage. |
 | JS hooks | `$mcp` in `pb_hooks` (above). |
@@ -255,7 +265,8 @@ With Tokens and OAuth Server on the app, `/mcp` uses OAuth the way Claude connec
    registration), and the user signs in in a browser.
 4. The access token is an API token bound to `https://<host>/mcp`. It carries the account's rights but works only on
    `/mcp`. Each MCP request makes a PocketBase auth token for the same account, and tool calls reach the REST API
-   with it (as Pages' `ctx.pb()` does). A token bound to `/mcp` but limited to scopes is refused.
+   with it (as Pages' `ctx.pb()` does). For a token limited to scopes, those requests carry the scopes
+   (`tokens.WithScopes`), and Tokens checks them as it would a scoped token's request.
 
 Without OAuth Server, `/mcp` falls back to `PocketBaseTokenAuth`: pasted PocketBase auth tokens (`Collections` limits
 which auth collections, default any), and the warning above. `Config.Auth` overrides the choice; `mcp.OAuth{Issuer}`

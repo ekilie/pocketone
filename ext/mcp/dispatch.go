@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/tokens"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -254,7 +255,12 @@ func (s *Server) send(c *Call, req *Request, max int) (*Response, error) {
 		target += "?" + req.Query.Encode()
 	}
 	orig := c.Event.Request
-	r := httptest.NewRequestWithContext(orig.Context(), method, target, body)
+	ctx := orig.Context()
+	if c.Grant != nil && len(c.Grant.Scopes) > 0 {
+		// a scoped connection: ext/tokens checks this request like a scoped token's
+		ctx = tokens.WithScopes(ctx, c.Grant.Scopes)
+	}
+	r := httptest.NewRequestWithContext(ctx, method, target, body)
 	r.Host = orig.Host
 	r.RemoteAddr = orig.RemoteAddr
 	for _, k := range []string{"X-Forwarded-For", "X-Real-IP", "CF-Connecting-IP", "X-Forwarded-Proto", "User-Agent", "Accept-Language"} {

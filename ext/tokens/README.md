@@ -146,7 +146,7 @@ curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collection
 | Plugin | How they fit |
 |---|---|
 | [OAuth Server](../oauth-server/README.md) | Its access tokens are API tokens, issued with the client's id, the granted scopes and, when asked for, an audience. They show up under Settings → API tokens and can be revoked there. OAuth Server needs Tokens on the app. |
-| [MCP](../mcp/README.md) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner with a PocketBase auth token, so they hold every registered scope in collection rules. |
+| [MCP](../mcp/README.md) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner. A full-access token's calls hold every registered scope; a token limited to scopes on the consent page has its calls checked like requests with those scopes (`WithScopes`). |
 | [Deploy](../deploy/README.md) | Registers `deploy` and `deploy:read`; a `deploy` token is what CI uses. |
 | [Remotes](../remotes/README.md) | A password `pocketone login` creates an API token and `logout` deletes it. In CI, put a token in `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`). `/_pocker/whoami` reports a token's id and scopes, whatever its scopes. |
 | [Pocker](../pocker/README.md) | Add `tokens.New(tokens.Config{})` to the host's plugins and every instance gets its own tokens, routes and screen. Per instance, `plugins: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
@@ -177,7 +177,15 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
 - **Without importing this package.** Read the request store keys `tokens.scopes` and `tokens.id`, or the
   `X-Token-Scope-*` headers.
 - **Audience.** A token created with `CreateOptions.Audience` (OAuth Server sets it from the RFC 8707 `resource`
-  parameter) only works under that URL's path, plus `/_pocker/whoami`; elsewhere it gets `403`.
+  parameter) only works under that URL's path, plus `/_pocker/whoami`; elsewhere it gets `403`. When the audience has
+  a path (like `https://host/mcp`), the token works there whatever its scopes: the scopes limit what that endpoint
+  does on the token's behalf (MCP passes them on with `WithScopes`), not the endpoint itself.
+- **Limit in-process requests.** `tokens.WithScopes(ctx, scopes)` returns a context whose requests are checked like a
+  token limited to `scopes`, whatever credential they carry: `403` where the scopes don't reach, and only those
+  scopes in the `X-Token-Scope-*` headers and `HasScope`. Requests made inside them with the same context inherit
+  the limit, and a nested `WithScopes` only narrows it. No client value can set it. `tokens.ScopesFromContext(ctx)`
+  reads it. `Reaches(scopes, method, pattern)` says whether scopes could cover a route pattern (`{name}` segments
+  match anything), and `Scope.Infrastructure()` whether a scope only reaches `/_pocker/` routes.
 
 **Go API.** `tokens.For(app)` returns the service: `Create(owner, CreateOptions{Name, Scopes, Expires, ClientId,
 Audience})` returns the secret and record; also `Verify(secret)`, `List(owner)`, `Get(id)`, `Revoke(id)`,

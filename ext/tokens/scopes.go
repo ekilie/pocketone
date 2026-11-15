@@ -41,6 +41,20 @@ type Scope struct {
 	Collections []string `json:"collections,omitempty"`
 }
 
+// Infrastructure reports whether the scope only reaches PocketOne's own /_pocker/ routes (deploy, logs): a client
+// that needs one asks for it; consent pages and MCP don't offer it otherwise.
+func (s Scope) Infrastructure() bool {
+	if s.Match != nil || len(s.Paths) == 0 {
+		return false
+	}
+	for _, p := range s.Paths {
+		if !strings.HasPrefix(p, "/_pocker/") {
+			return false
+		}
+	}
+	return true
+}
+
 // HeaderPrefix starts the request headers that tell rules and hooks which scopes a request holds.
 const HeaderPrefix = "X-Token-Scope-"
 
@@ -169,6 +183,19 @@ func (r *registry) allows(scopes []string, e *core.RequestEvent) bool {
 	return false
 }
 
+// allowsLimit is allows for a WithScopes limit, where no scopes means nothing (not full rights).
+func (r *registry) allowsLimit(limit []string, e *core.RequestEvent) bool {
+	if len(limit) == 0 {
+		for _, p := range AnyTokenPaths {
+			if pathUnder(e.Request.URL.Path, p) {
+				return true
+			}
+		}
+		return false
+	}
+	return r.allows(limit, e)
+}
+
 // matches: the request is under one of the scope's paths with an allowed method, or its Match guard says yes.
 func (s Scope) matches(e *core.RequestEvent) bool {
 	if s.methodAllowed(e.Request.Method) {
@@ -197,4 +224,52 @@ func pathUnder(path, prefix string) bool {
 		return strings.HasPrefix(path, prefix) || path == strings.TrimSuffix(prefix, "/")
 	}
 	return path == prefix || strings.HasPrefix(path, prefix+"/")
+}
+
+// Reaches reports whether a request limited to scopes could get through on method + path pattern, where a "{name}"
+// segment stands for any one segment (e.g. "/api/collections/{collection}/records"). A scope with a Match guard
+// might allow anything, so it counts as reaching. It's for listing (ext/mcp hides tools a connection can't use);
+// the middleware's check on the real request is what enforces.
+func (t *Tokens) Reaches(scopes []string, method, pattern string) bool {
+	for _, p := range AnyTokenPaths {
+		if pathUnder(pattern, p) {
+			return true
+		}
+	}
+	for _, name := range scopes {
+		s, ok := t.registry.get(name)
+		if !ok {
+			continue
+		}
+		if s.Match != nil {
+			return true
+		}
+		if !s.methodAllowed(method) {
+			continue
+		}
+		for _, p := range s.Paths {
+			if patternUnder(pattern, p) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// patternUnder is pathUnder for a pattern whose "{name}" segments match any segment of prefix.
+func patternUnder(pattern, prefix string) bool {
+	if prefix == "" {
+		return false
+	}
+	ps := strings.Split(strings.Trim(pattern, "/"), "/")
+	full := strings.Split(strings.Trim(prefix, "/"), "/")
+	if len(ps) < len(full) {
+		return false
+	}
+	for i, seg := range full {
+		if ps[i] != seg && !(strings.HasPrefix(ps[i], "{") && strings.HasSuffix(ps[i], "}")) {
+			return false
+		}
+	}
+	return true
 }

@@ -1,7 +1,11 @@
 package tokens
 
 import (
+	"fmt"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -143,7 +147,7 @@ func TestScopeHeadersRulesAndMethods(t *testing.T) {
 		{Name: "anonymous sees none, even when it sends some", Method: http.MethodGet, URL: "/api/echo",
 			Headers: map[string]string{"X-Token-Scope-Echo": "1"}, ExpectedStatus: 200, ExpectedContent: []string{`"held":""`, `"auth":false`}},
 		{Name: "a scoped token can't add scopes by sending headers", Method: http.MethodGet, URL: "/api/echo",
-			Headers: map[string]string{"Authorization": "Bearer " + echo, "X-Token-Scope-Notes-Write": "1"},
+			Headers:        map[string]string{"Authorization": "Bearer " + echo, "X-Token-Scope-Notes-Write": "1"},
 			ExpectedStatus: 200, ExpectedContent: []string{`"held":"echo,notes_read"`}},
 
 		// Go guard
@@ -202,5 +206,102 @@ func TestBindJS(t *testing.T) {
 	}
 	if _, err := vm.RunString(`$tokens.registerScope({ name: "x", paths: "nope" })`); err == nil {
 		t.Fatal("paths as a string accepted")
+	}
+}
+
+// An in-process request made with WithScopes is checked like a scoped token's request, whatever credential it carries.
+func TestWithScopes(t *testing.T) {
+	app, tk := newNotesApp(t)
+	user, _ := app.FindAuthRecordByEmail("users", "test@example.com")
+	jwt, err := user.NewAuthToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	echo, _, _ := tk.Create(user, CreateOptions{Name: "e", Scopes: []string{"echo", "notes:read"}})
+	var router *router.Router[*core.RequestEvent]
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		router = se.Router
+		// /api/echo/inner?scopes=a,b&method=GET&path=/x replays a request in process, limited to scopes ("-" = none)
+		se.Router.Any("/api/echo/inner", func(e *core.RequestEvent) error {
+			q := e.Request.URL.Query()
+			ctx := e.Request.Context()
+			for _, list := range q["scopes"] {
+				var scopes []string
+				if list != "-" {
+					scopes = strings.Split(list, ",")
+				}
+				ctx = WithScopes(ctx, scopes)
+			}
+			mux, err := router.BuildMux()
+			if err != nil {
+				return err
+			}
+			r := httptest.NewRequestWithContext(ctx, q.Get("method"), q.Get("path"), strings.NewReader(`{"title":"x"}`))
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Authorization", e.Request.Header.Get("Authorization"))
+			r.Header.Set("X-Token-Scope-Notes-Write", "1") // can't widen
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, r)
+			return e.String(http.StatusOK, fmt.Sprintf("%d %s", w.Code, w.Body.String()))
+		})
+		return se.Next()
+	})
+	recs := "/api/collections/notes/records"
+	inner := func(scopes, method, path string) string {
+		return "/api/echo/inner?scopes=" + scopes + "&method=" + method + "&path=" + url.QueryEscape(path)
+	}
+	jwtH := map[string]string{"Authorization": jwt}
+	factory := func(testing.TB) *tests.TestApp { return app }
+	for _, s := range []tests.ApiScenario{
+		{Name: "no limit: a JWT holds every scope", Method: http.MethodGet, URL: "/api/echo/inner?method=GET&path=/api/echo", Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"deploy,echo,guarded,notes_path_only,notes_read,notes_write","auth":true}`}},
+		{Name: "limited JWT sees only the limit", Method: http.MethodGet, URL: inner("echo", "GET", "/api/echo"), Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"echo","auth":true}`}},
+		{Name: "limited JWT reads notes", Method: http.MethodGet, URL: inner("notes:read", "GET", recs), Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"totalItems":1`}},
+		{Name: "read limit can't write", Method: http.MethodGet, URL: inner("notes:read", "POST", recs), Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`403 `, `connection's scopes (notes:read)`}},
+		{Name: "a limit off the path is refused", Method: http.MethodGet, URL: inner("notes:read", "GET", "/api/echo"), Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`403 `}},
+		{Name: "a nested limit only narrows", Method: http.MethodGet, URL: inner("echo", "GET", "/api/echo") + "&scopes=echo,notes:write", Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"echo","auth":true}`}},
+		{Name: "a nested limit outside the first allows nothing", Method: http.MethodGet, URL: inner("echo", "POST", recs) + "&scopes=notes:write", Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`403 `}},
+		{Name: "an empty limit allows nothing", Method: http.MethodGet, URL: inner("-", "GET", "/api/echo"), Headers: jwtH,
+			ExpectedStatus: 200, ExpectedContent: []string{`403 `}},
+		{Name: "a scoped token under a limit holds the overlap", Method: http.MethodGet, URL: inner("echo,notes:write", "GET", "/api/echo"),
+			Headers: authHeader(echo), ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"echo","auth":true}`}},
+	} {
+		s.TestAppFactory = factory
+		s.DisableTestAppCleanup = true
+		s.Test(t)
+	}
+}
+
+func TestReachesAndInfrastructure(t *testing.T) {
+	_, tk := newNotesApp(t)
+	for _, c := range []struct {
+		scopes          []string
+		method, pattern string
+		want            bool
+	}{
+		{[]string{"notes:read"}, "GET", "/api/collections/notes/records", true},
+		{[]string{"notes:read"}, "GET", "/api/collections/notes/records/{id}", true},
+		{[]string{"notes:read"}, "GET", "/api/collections/{collection}/records", true},
+		{[]string{"notes:read"}, "PATCH", "/api/collections/notes/records/{id}", false},
+		{[]string{"notes:read"}, "GET", "/api/collections/other/records", false},
+		{[]string{"notes:read"}, "GET", "/api/collections", false},
+		{[]string{"notes:read"}, "GET", "/api/health", false},
+		{[]string{"notes:write"}, "PATCH", "/api/collections/{collection}/records/{id}", true},
+		{[]string{"guarded"}, "DELETE", "/anything", true},
+		{nil, "GET", "/_pocker/whoami", true},
+	} {
+		if got := tk.Reaches(c.scopes, c.method, c.pattern); got != c.want {
+			t.Errorf("Reaches(%v, %s %s) = %v", c.scopes, c.method, c.pattern, got)
+		}
+	}
+	if !(Scope{Paths: []string{"/_pocker/deploy/"}}).Infrastructure() || (Scope{Paths: []string{"/api/x"}}).Infrastructure() ||
+		(Scope{}).Infrastructure() {
+		t.Fatal("Infrastructure")
 	}
 }

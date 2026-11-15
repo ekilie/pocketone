@@ -3,6 +3,7 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/pockethost/pocketone/ext/tokens"
 	"io"
 	"net/http"
 	"net/url"
@@ -141,7 +142,7 @@ func (s *Server) dispatch(e *core.RequestEvent, grant *Grant, msg *rpcRequest) e
 			"protocolVersion": version,
 			"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
 			"serverInfo":      s.serverInfo(e),
-			"instructions":    s.instructionsText(),
+			"instructions":    s.instructionsFor(grant),
 		}))
 
 	case "ping":
@@ -152,6 +153,9 @@ func (s *Server) dispatch(e *core.RequestEvent, grant *Grant, msg *rpcRequest) e
 		super := grant.Auth != nil && grant.Auth.IsSuperuser()
 		for _, t := range s.Tools() {
 			if t.SuperuserOnly && !super {
+				continue
+			}
+			if !s.reaches(grant, t) {
 				continue
 			}
 			list = append(list, toolDef(t))
@@ -241,3 +245,29 @@ func toolDef(t *Endpoint) map[string]any {
 	return def
 }
 
+// reaches: the tool can work on this connection. A scoped connection doesn't list tools none of its scopes reaches
+// (method + path, "{name}" segments matching anything); the check on each real request is what enforces.
+func (s *Server) reaches(g *Grant, t *Endpoint) bool {
+	if g == nil || len(g.Scopes) == 0 || t.Path == "" {
+		return true
+	}
+	tk := tokens.For(s.app)
+	if tk == nil {
+		return true
+	}
+	method := t.Method
+	if method == "" {
+		method = http.MethodGet
+	}
+	return tk.Reaches(g.Scopes, method, t.Path)
+}
+
+// instructionsFor adds, for a scoped connection, which scopes it's limited to.
+func (s *Server) instructionsFor(g *Grant) string {
+	text := s.instructionsText()
+	if g == nil || len(g.Scopes) == 0 {
+		return text
+	}
+	return text + "\n\nThis connection is limited to these scopes: " + strings.Join(g.Scopes, ", ") + ". Tools " +
+		"outside them aren't listed, and requests they don't allow are refused; the user can reconnect with more access."
+}

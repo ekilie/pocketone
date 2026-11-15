@@ -57,8 +57,13 @@ provider callback URL stay stable.
 ### Scopes
 
 A client may ask for any scope registered with [Tokens](../tokens/README.md#scopes), including your own from
-`$tokens.registerScope`, and the consent page lists them with their descriptions. No scope means the account's full
-rights, and the consent page says **Full access**. `offline_access` is accepted (refresh tokens are always issued).
+`$tokens.registerScope`. `offline_access` is accepted (refresh tokens are always issued).
+
+The consent page lets the user decide: **Full access** (no scopes: the account's full rights) or **Only these**, with a
+box for each scope. The scopes the client asked for start ticked; the others the account may hold are there to tick,
+except ones that only reach `/_pocker/` routes (like `deploy`), which appear only when asked for. With no scopes
+asked, **Full access** starts selected. The token gets exactly what was ticked, and the token response's `scope` says
+which.
 
 ### Your own sign-in pages
 
@@ -88,7 +93,8 @@ Whenever a client sends someone to your app (`pocketone login`, Claude, an app o
    the only method left, it's sent right away.
 3. **Check your email** for an emailed code.
 4. The consent page: the client's name, the account, whether the client will act as a user (and which collection) or
-   as a superuser, and the scopes. Click **Allow** or **Deny**, or **Not <email>? Use another account**.
+   as a superuser, and the access: **Full access** or **Only these** scopes (see [Scopes](#scopes)). Click **Allow** or
+   **Deny**, or **Not <email>? Use another account**.
 
 With no user collection allowed, the superuser form is the only one. A browser stays signed in to these pages for 15
 minutes. Failed attempts are limited to 10 per IP in 5 minutes.
@@ -231,11 +237,13 @@ oauthserver.MustRegister(app, oauthserver.Config{
 ## Custom page templates
 
 Ejected templates get `ctx.data`: `PageData` in camelCase (`data.appName`, `data.action`, `data.hidden`,
-`data.csrf`, `data.clientName`, `data.scopes`, `data.superuser`, `data.providers`, `data.error`, …).
+`data.csrf`, `data.clientName`, `data.scopes`, `data.scopeChoices`, `data.superuser`, `data.providers`, `data.error`, …).
 - Every POST form must include `include('/oauth/hidden')` and a `step` button.
 - Steps: `password`, `request_otp`, `otp`, `oauth2:<provider>`, `use:<collection>` (switch forms; `use:` is the
   default user form), `allow`, `deny`, `switch`.
 - Sign-in forms post `collection`; the MFA and code pages also post `mfa_id` / `otp_id`.
+- Consent posts `access` = `full`, or `limited` with a `grant` field per ticked scope (from `data.scopeChoices`:
+  `name`, `description`, `checked`). A consent form without `access` grants what the client asked for.
 
 ## Example
 

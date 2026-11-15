@@ -305,18 +305,34 @@ func (s *Server) consentPage(e *core.RequestEvent, ar *authRequest, d PageData, 
 		return s.render(e, http.StatusForbidden, d)
 	}
 	d.Page, d.Email, d.Scopes, d.FullAccess = PageConsent, accountName(user), scopes, len(scopes) == 0
+	d.ScopeChoices = s.scopeChoices(scopes, user.Collection())
+	if d.Error != "" && e.Request.PostFormValue("access") == "limited" {
+		// keep what the user ticked when the form comes back with an error
+		d.FullAccess = false
+		for i := range d.ScopeChoices {
+			d.ScopeChoices[i].Checked = slices.Contains(e.Request.PostForm["grant"], d.ScopeChoices[i].Name)
+		}
+	}
 	s.fillAccount(&d, user.Collection())
 	return s.render(e, http.StatusOK, d)
 }
 
 func (s *Server) decide(e *core.RequestEvent, ar *authRequest, d PageData, user *core.Record, allow bool) error {
-	scopes, err := s.resolveScopes(ar.scope, user.Collection())
+	requested, err := s.resolveScopes(ar.scope, user.Collection())
 	if err != nil {
 		return s.consentPage(e, ar, d, user)
+	}
+	scopes := requested
+	if allow {
+		if scopes, err = chosenScopes(e, requested, s.scopeChoices(requested, user.Collection())); err != nil {
+			d.Error = err.Error()
+			return s.consentPage(e, ar, d, user)
+		}
 	}
 	if ar.device != nil {
 		dev := ar.device
 		if allow {
+			dev.Set("scopes", scopeNames(scopes))
 			dev.Set("status", StatusApproved)
 			dev.Set("owner_collection", user.Collection().Id)
 			dev.Set("owner", user.Id)
