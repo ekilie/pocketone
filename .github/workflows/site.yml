@@ -2,6 +2,7 @@
 # (site/sync), plus the search index of every page. Fail when a page or the index is out of date, or an extension folder
 # isn't listed in site/extensions.json.
 # On main, once the check passes, deploy site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev).
+# Also on main, deploy ext/pages/site/pb_pages to the `pocketpages` instance (pocketpages.dev).
 # The deploy needs the POCKETHOST_TOKEN repository secret (a PocketHost personal access token that can write to
 # that instance); without it the job says so and skips.
 name: site
@@ -53,3 +54,28 @@ jobs:
             exit 0
           fi
           npx -y pockethost@latest deploy pocketone --no-node-modules -y -m "site.yml ${GITHUB_SHA::8}"
+
+  # pocketpages.dev is ext/pages/site/pb_pages, deployed to the `pocketpages` instance with the same token. No -y yet:
+  # if a deploy would delete files on the instance, it lists them and stops instead.
+  deploy-pocketpages:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: pocketpages-dev-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy ext/pages/site/pb_pages to pocketpages.dev
+        working-directory: ext/pages/site
+        env:
+          POCKETHOST_TOKEN: ${{ secrets.POCKETHOST_TOKEN }}
+        run: |
+          if [ -z "$POCKETHOST_TOKEN" ]; then
+            echo "::notice::POCKETHOST_TOKEN is not set; skipping the pocketpages.dev deploy"
+            exit 0
+          fi
+          npx -y pockethost@latest deploy pocketpages --no-node-modules -m "site.yml ${GITHUB_SHA::8}"
