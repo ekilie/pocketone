@@ -11,6 +11,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 )
 
 // Client is a registered OAuth client.
@@ -21,17 +22,22 @@ type Client struct {
 	Public       bool     `json:"public"`
 	Dynamic      bool     `json:"dynamic"`
 	secretHash   string
-	// builtin: the pocketbase CLI (any loopback redirect, device flow)
+	// builtin: the command-line client (any loopback redirect, device flow)
 	builtin bool
 }
 
-// CLIClient is the built-in client of `pocketbase login`.
-var CLIClient = Client{Id: CLIClientId, Name: "PocketBase CLI", Public: true, builtin: true}
+// CLIClient is the built-in client of `pocketone login`. Its Name is empty here; [CLIClientName] fills it in.
+var CLIClient = Client{Id: CLIClientId, Public: true, builtin: true}
+
+// CLIClientName is the built-in client's name on consent pages and tokens: "<command> CLI", from [pluginkit.Command]
+// (read when used, so a build that sets it in main gets its own name).
+func CLIClientName() string { return pluginkit.Command + " CLI" }
 
 // FindClient returns a client by id: the built-in CLI client, or one from _oauth_clients.
 func (s *Server) FindClient(id string) (*Client, error) {
 	if id == CLIClientId {
 		c := CLIClient
+		c.Name = CLIClientName()
 		return &c, nil
 	}
 	if strings.HasPrefix(id, "https://") {

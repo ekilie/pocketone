@@ -2,7 +2,7 @@
 
 PocketOne is PocketBase plus plugins. **PocketBase's own code ("core") changes only for hooks that let `ext/`
 extend or override behavior; the features themselves live in `ext/`.** Core is every path outside what PocketOne owns:
-`ext/`, `examples/pocketone/`, `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.claude/`. Each core change is marked
+`ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.claude/`. Each core change is marked
 `// PocketOne:` so upstream merges stay easy.
 
 ## Every core change gets an independent audit before it reaches main
@@ -37,6 +37,8 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 - `apis/realtime.go` `realtimeCanAccessRecord`: a superuser's subscription filter may use hidden fields, as in the
   list API (`TestRealtimeSuperuserFilterOnHiddenField`).
 - `core/notify_watcher.go`: keeps the notify file until the next write, so macOS (kqueue) sees the change.
+- `core/notify_watcher.go`: stops the watcher goroutine (and waits for it) before `ClearBootstrap`, which it raced
+  (`TestNotifyWatcher_StoppedBeforeClearBootstrap`, `TestNotifyWatcher_QueuedReloadAfterClearBootstrap`).
 
 ## Other rules
 
@@ -45,6 +47,8 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 - Plugin CI (`.github/workflows/plugins.yml`, tool in `.github/plugins/`): every `pluginkit.Plugin` module has a
   conformance test, and each module a change affects builds, vets and passes `go test -race`. Check locally with
   `go run ./.github/plugins check` and `go run ./.github/plugins affected origin/main HEAD`.
+- pocketone.dev (`site/`) copies plugin READMEs and `docs/plugins.md`. A new plugin gets an entry in
+  `site/plugins.json`; after changing a README or `docs/plugins.md`, run `cd site/sync && go run .` (CI checks it).
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.
 - Plans and internal notes go in a private maintainer repo, never here.

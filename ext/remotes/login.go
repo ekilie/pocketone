@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"net/http"
 	"net/url"
 	"os"
@@ -122,7 +123,7 @@ func LoginWithPassword(ctx context.Context, c *Client, in PasswordLogin) (*Login
 	name := in.TokenName
 	if name == "" {
 		host, _ := os.Hostname()
-		name = "pocketbase CLI on " + host
+		name = pluginkit.Command + " CLI on " + host
 	}
 	var created struct {
 		Token  string `json:"token"`

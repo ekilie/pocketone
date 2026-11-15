@@ -23,7 +23,7 @@ func NewCommand(s *Server) *cobra.Command {
 			}
 			w := tabwriter.NewWriter(c.OutOrStdout(), 0, 4, 2, ' ', 0)
 			fmt.Fprintln(w, "CLIENT ID\tNAME\tTYPE\tREDIRECT URIS")
-			fmt.Fprintf(w, "%s\t%s\tbuilt-in\tany loopback, device codes\n", CLIClient.Id, CLIClient.Name)
+			fmt.Fprintf(w, "%s\t%s\tbuilt-in\tany loopback, device codes\n", CLIClient.Id, CLIClientName())
 			for _, x := range cl {
 				kind := "confidential"
 				if x.Public {

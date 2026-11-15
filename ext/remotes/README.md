@@ -1,53 +1,138 @@
-# remotes
+# Remotes
 
-Named remotes for the `pocketone` command: the instances a project deploys to, signed in once.
+Named remotes for the `pocketone` command: the apps a project deploys to, each signed in to once. Give an app a name
+like `prod`, log in, and commands such as `pocketone deploy prod` know where to go and who you are.
 
+```bash
+pocketone remote add prod https://myapp.example.com
+pocketone login prod
+pocketone deploy prod          # Deploy
 ```
-pocketbase remote add prod https://myapp.example.com
-pocketbase login prod
-pocketbase deploy prod          # ext/deploy
-```
 
-**Runs on:** the `pocketone` command (client) and any app (server half: `GET /_pocker/whoami`).
+## Install
+
+Remotes is built into `pocketone` and **on**: the `remote`, `login`, `logout` and `link` commands are always there, and
+every app it serves answers `GET /_pocker/whoami` so other machines can sign in to it. There's nothing to install.
+
+In your own Go build, register it before the app starts:
 
 ```go
+app := pocketbase.New()
 remotes.MustRegister(app, remotes.Config{}) // whoami route; on *pocketbase.PocketBase also the commands
+app.Start()
 ```
 
-Try it: `go run ./example serve` (logins from [devusers](../devusers/devusers.go): admin@example.com / password).
+The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](../tokens/README.md) so a password login
+can create a revocable API token, and [OAuth Server](../oauth-server/README.md) for browser login.
 
-## Commands
+## Configure
 
-- `remote add <name> <url> [--default]`, `remote list`, `remote rm <name>`, `remote default <name>`,
-  `remote whoami [name]`.
-- `login [remote]`: in the browser when the remote offers OAuth (`--device` for a code on another device,
-  `--no-browser` to print the URL), else a pasted token (`--token`, `--token-stdin`), else email + password
-  (`--email`, `--collection`; `POCKETBASE_PASSWORD` skips the prompt; a one-time code is asked for when the account has
-  MFA). A password sign-in mints an API token named "pocketbase CLI on <host>" (logout revokes it), so the remote
-  needs [tokens](../tokens/README.md); the session itself is never saved.
-- `logout [remote]`, `link <url> [token] [--name default]` (= `remote add` + `login`).
+There is no `pocketone.yaml` section, flag or settings screen. Remotes keeps two files and reads a few environment
+variables.
 
-Browser login runs the OAuth client against [oauth-server](../oauth-server/README.md): a loopback listener on
-127.0.0.1 with PKCE, or a device code when there's no browser here (SSH, no display) or with `--device`. The login
-keeps a refresh token and renews itself a day before it expires; `logout` revokes it on the remote.
+### The project's remotes
 
-A remote name can also be a URL (`pocketbase deploy https://other.example.com`).
+`.pocketbase/remotes.json` in the project holds names and URLs only, so commit it:
 
-## Files
+```json
+{"default": "prod", "remotes": {"prod": {"url": "https://myapp.example.com"}}}
+```
 
-- `.pocketbase/remotes.json` in the project (commit it): names and URLs only.
-  `{"default": "prod", "remotes": {"prod": {"url": "https://myapp.example.com"}}}`. Commands find it by walking up
-  from the current folder. Not a `pb_*` name, since `pb_*` folders are deployed.
-- An existing `.pockethostconfig` (`{"instanceName": "myapp"}`, from `npx pockethost link`) reads as the remote
-  `pockethost` → `https://myapp.pockethost.io`.
-- `~/.config/pocketbase/credentials.json` (0600; `$POCKETBASE_CONFIG_DIR` or `$XDG_CONFIG_HOME` move it): tokens
-  keyed by URL.
-- CI: `POCKETBASE_TOKEN_<REMOTE>` (upper case, other characters as `_`), then `POCKETBASE_TOKEN`; for the
-  `pockethost` remote also `POCKETHOST_TOKEN`. The environment wins over a saved login.
+Commands find it by walking up from the current folder. It isn't a `pb_*` name, since `pb_*` folders are deployed.
 
-## Server half: `GET /_pocker/whoami`
+A project linked with `npx pockethost link` has a `.pockethostconfig` (`{"instanceName": "myapp"}`). It reads as the
+remote `pockethost` → `https://myapp.pockethost.io` (a name with a dot is taken as a custom domain).
 
-Answers who the request's credential is and what the instance offers, so clients can discover features:
+### Saved logins
+
+Logins are saved per user, keyed by URL, in `~/.config/pocketone/credentials.json` (mode 0600). Set
+`POCKETONE_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
+
+### Environment variables
+
+| Variable | What it does |
+|---|---|
+| `POCKETONE_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`POCKETONE_TOKEN_PROD`). |
+| `POCKETONE_TOKEN` | A token for any remote. |
+| `POCKETHOST_TOKEN` | A token for the `pockethost` remote. |
+| `POCKETONE_PASSWORD` | The password for `login --email`, so it isn't asked for. |
+
+A token in the environment wins over a saved login. The `POCKETONE` in these names and the `pocketone` folder come
+from the command's name, so a build shipped under another name uses its own (`POCKETHOST_TOKEN`, `~/.config/pockethost`).
+
+## Use
+
+### Manage remotes
+
+```bash
+pocketone remote add prod https://myapp.example.com --default
+pocketone remote list            # names, URLs and who you're logged in as; * marks the default
+pocketone remote default prod
+pocketone remote rm staging      # the saved login stays; see logout
+pocketone remote whoami prod     # who you are there, your token's scopes, and what the app offers
+```
+
+A URL without a scheme gets `https://`. The first remote you add becomes the default. A command that names no remote
+uses the default, else the only remote, else the one called `default`. Any command also takes a URL in place of a
+name: `pocketone deploy https://other.example.com`.
+
+### Log in
+
+```bash
+pocketone login prod
+```
+
+`login` tries, in order:
+
+1. **The browser**, when the remote runs [OAuth Server](../oauth-server/README.md). Your browser opens, you sign in
+   and approve, and the command finishes. Over SSH or without a display it shows a code to enter on another device
+   instead; `--device` asks for that, and `--no-browser` prints the URL without opening it.
+2. **A pasted token** (`pbt_...`, a PocketHost token, or a PocketBase auth token). At the prompt, paste it, or pass
+   `--token <token>` or `--token-stdin`.
+3. **Email and password.** Type a superuser email at the prompt, or pass `--email` (or `--password` to skip the
+   browser). `--collection` picks another auth collection (default `_superusers`). If the account has MFA, a one-time
+   code is sent and asked for.
+
+A password login creates an API token named "pocketone CLI on <host>" and saves that, never the session, so the
+remote needs [Tokens](../tokens/README.md). A browser login keeps a refresh token and renews itself when it's within a
+day of expiring.
+
+You'll see `Logged in to https://myapp.example.com as admin@example.com (oauth).`
+
+### Link in one step
+
+```bash
+pocketone link https://myapp.example.com
+pocketone link https://myapp.pockethost.io ph_pat_...
+```
+
+`link` adds the remote (named `default`, or `--name`), makes it the default if there's none yet, and logs in. It takes
+the same login flags.
+
+### Log out
+
+```bash
+pocketone logout prod
+```
+
+Forgets the saved login. It also revokes it on the remote: the API token a password login created, or the browser
+login's refresh token. If the remote can't be reached, it tells you to revoke it in the dashboard.
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Deploy](../deploy/README.md) | `deploy`, `dev`, `pull` and `logs` resolve their remote and login through Remotes, and find the deploy API through `/_pocker/whoami`. |
+| [OAuth Server](../oauth-server/README.md) | Advertises itself as the `oauth` feature in `/_pocker/whoami`; `login` then signs in through the browser (loopback redirect on 127.0.0.1 with PKCE) or a device code. |
+| [Tokens](../tokens/README.md) | Password logins create an API token, and `logout` deletes it. Whoami reports a token's id and scopes. |
+| PocketHost | `.pockethostconfig` and `POCKETHOST_TOKEN` work as the `pockethost` remote. A remote without `/_pocker/whoami` takes a pasted token as is. |
+
+### `GET /_pocker/whoami`
+
+Every app with Remotes answers who the request's credential is and what the app offers, so clients can discover
+features:
 
 ```json
 {"auth": {"collection": "_superusers", "id": "…", "email": "admin@example.com"}, "via": "token",
@@ -55,14 +140,19 @@ Answers who the request's credential is and what the instance offers, so clients
  "app": {"name": "Acme", "url": "https://myapp.example.com"}}
 ```
 
-Every API token may call it, whatever its scopes. Plugins list themselves with `remotes.Advertise(app, "deploy",
-"/_pocker/deploy/v1")`; the tokens plugin is detected without importing it.
+`via` is `token` for an API token, `jwt` for a PocketBase auth token, and empty with no credential (`auth` is then
+`null`). Every API token may call it, whatever its scopes.
 
-## Go API
+### Building on Remotes
 
-`remotes.Open(dir, name)` resolves a remote and its credential and returns a `*remotes.Client` (base URL, bearer
-token, HTTP client with short connect timeouts; `JSON`, `NewRequest`, `Do`, `Whoami`). Other client commands
-([deploy](../deploy/README.md)) build on it. `remotes.BrowserLogin` is the hook the OAuth client fills in.
+- **Advertise a feature.** `remotes.Advertise(app, "deploy", "/_pocker/deploy/v1")` lists it in whoami. Deploy and
+  OAuth Server do this; Tokens is detected without importing it.
+- **Go client.** `remotes.Open(dir, name)` resolves a remote and its credential (environment first, then the saved
+  login, renewing a browser login when due) and returns a `*remotes.Client`: base URL, bearer token, an HTTP client
+  with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`. Deploy's commands build on it.
+- **Commands.** `remotes.Commands()` returns the `remote`, `login`, `logout` and `link` commands, for a binary that
+  isn't a `*pocketbase.PocketBase`.
+- **Login.** `remotes.BrowserLogin` is the hook `login` tries first; this package fills it with its OAuth client.
 
 ## License
 

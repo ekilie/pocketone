@@ -10,6 +10,8 @@
 // The rules (`check`), per module:
 //   - a module with a pluginkit plugin (a `Register(app core.App, _ pluginkit.Config) error` method) has a test
 //     that calls conformance.Run (docs/plugins.md).
+//   - every plugin (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use` and `## Integrations`
+//     sections, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md).
 package main
 
 import (
@@ -197,7 +199,7 @@ func affected(base, head string) ([]string, error) {
 
 // isCore matches .github/core-audit/core-diff.sh: everything PocketOne doesn't own.
 func isCore(f string) bool {
-	for _, p := range []string{"ext/", "examples/pocketone/", "docs/", ".github/", ".claude/"} {
+	for _, p := range []string{"ext/", "site/", "examples/pocketone/", "docs/", ".github/", ".claude/"} {
 		if strings.HasPrefix(f, p) {
 			return false
 		}
@@ -254,6 +256,85 @@ func check(dirs []string) []string {
 		if len(plugins) > 0 && !tested {
 			problems = append(problems, fmt.Sprintf("%s: implements pluginkit.Plugin (%s) but has no test calling conformance.Run; add conformance_test.go (docs/plugins.md)", dir, strings.Join(plugins, ", ")))
 		}
+		problems = append(problems, checkDocs(dir)...)
+	}
+	// Plugin folders with no Go module yet (a README for a planned plugin) get the docs rules too.
+	entries, _ := os.ReadDir("ext")
+	for _, e := range entries {
+		dir := "ext/" + e.Name()
+		if _, err := os.Stat(dir + "/go.mod"); e.IsDir() && err != nil {
+			problems = append(problems, checkDocs(dir)...)
+		}
 	}
 	return problems
+}
+
+// docsExempt are plugin folders that aren't something a user installs, configures or uses, with the reason.
+var docsExempt = map[string]string{
+	"pluginkit": "the plugin contract, a library for plugin authors (docs/plugins.md covers it)",
+	"devusers":  "test users for examples and tests only; never in a production build",
+}
+
+// docsPending are plugins written before the README sections were required; remove each when its README has them.
+// New plugins don't go here.
+var docsPending = map[string]bool{
+	"docker": true, "edge": true, "firewall": true, "host": true, "jsembed": true, "mailrelay": true, "mailtrap": true,
+	"mothership": true, "pocker": true, "sandbox": true, "schedules": true, "servertiming": true, "storage": true,
+	"tenant-billing": true, "tenant-billing-ls": true, "tenants": true,
+}
+
+// requiredSections are the README sections every plugin has, in this order.
+var requiredSections = []string{"Install", "Configure", "Use", "Integrations"}
+
+// licensedMIT: the README's last H2 is "License" and its body is exactly "MIT". Every plugin in this repo is MIT,
+// pending docs or not.
+func licensedMIT(src string, h2 []string) bool {
+	if len(h2) == 0 || h2[len(h2)-1] != "License" {
+		return false
+	}
+	i := strings.LastIndex(src, "\n## License")
+	return i >= 0 && strings.TrimSpace(src[i+len("\n## License"):]) == "MIT"
+}
+
+// checkDocs: a plugin folder (ext/<name>) has a README with the required sections, in order.
+func checkDocs(dir string) []string {
+	name, ok := strings.CutPrefix(dir, "ext/")
+	if !ok || strings.Contains(name, "/") {
+		return nil // not a plugin folder (examples/pocketone, or a module inside a plugin)
+	}
+	if _, ok := docsExempt[name]; ok {
+		return nil
+	}
+	src, err := os.ReadFile(dir + "/README.md")
+	if err != nil {
+		return []string{dir + "/README.md: missing (docs/plugins.md)"}
+	}
+	var h2 []string
+	fence := false
+	for _, line := range strings.Split(string(src), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			fence = !fence
+		}
+		if !fence && strings.HasPrefix(line, "## ") {
+			h2 = append(h2, strings.TrimSpace(line[3:]))
+		}
+	}
+	next := 0
+	for _, h := range h2 {
+		if next < len(requiredSections) && h == requiredSections[next] {
+			next++
+		}
+	}
+	complete := next == len(requiredSections)
+	if !licensedMIT(string(src), h2) {
+		return []string{dir + "/README.md: must end with a `## License` section that says `MIT`; plugins in this repo are MIT (host another license in your own repo) (docs/plugins.md)"}
+	}
+	switch {
+	case !complete && !docsPending[name]:
+		return []string{fmt.Sprintf("%s/README.md: needs the sections ## %s, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md)",
+			dir, strings.Join(requiredSections, ", ## "))}
+	case complete && docsPending[name]:
+		return []string{fmt.Sprintf("%s: its README has the required sections now; remove %q from docsPending in .github/plugins/main.go", dir, name)}
+	}
+	return nil
 }

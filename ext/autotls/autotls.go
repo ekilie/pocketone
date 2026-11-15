@@ -31,11 +31,11 @@ import (
 
 // Config is the `autotls` section (pocketone.yaml), or the settings given in Go.
 type Config struct {
-	Auto    bool       `yaml:"auto" json:"auto"`
-	Email   string     `yaml:"email" json:"email"`
-	CA      string     `yaml:"ca" json:"ca"`
-	Storage string     `yaml:"storage" json:"storage"`
-	Domains []string   `yaml:"domains" json:"domains"`
+	Auto    bool       `yaml:"auto" json:"auto" doc:"Get certificates through ACME (CertMagic). Flag: --autotls."`
+	Email   string     `yaml:"email" json:"email" doc:"ACME account email, for expiry notices from the CA. Flag: --autotlsEmail."`
+	CA      string     `yaml:"ca" json:"ca" doc:"letsencrypt (default), letsencrypt-staging, zerossl, or an ACME directory URL. Flag: --autotlsCA."`
+	Storage string     `yaml:"storage" json:"storage" doc:"Where certificates are kept. Default pb_data/.autotls."`
+	Domains []string   `yaml:"domains" json:"domains" doc:"Extra domains to get at start; wildcards (*.example.com) need dns. Flag: --autotlsDomains."`
 	DNS     *DNSConfig `yaml:"dns" json:"dns"`
 }
 
@@ -100,9 +100,9 @@ func (a *AutoTLS) TLS(ctx context.Context, served func(host string) bool) (*tls.
 //     dns: { provider: cloudflare, api_token_env: CF_API_TOKEN }
 //     http_listen: ":80"         # HTTP-01 challenges + redirect to HTTPS
 type DNSConfig struct {
-	Provider    string `yaml:"provider" json:"provider"`           // "cloudflare"
-	APIToken    string `yaml:"api_token" json:"api_token"`         // prefer api_token_env so the token stays out of the file
-	APITokenEnv string `yaml:"api_token_env" json:"api_token_env"` // name of the environment variable holding the token
+	Provider    string `yaml:"provider" json:"provider" doc:"DNS provider for DNS-01 challenges (needed for wildcards): cloudflare. Flag: --autotlsDNS."`
+	APIToken    string `yaml:"api_token" json:"api_token" doc:"The provider's API token. Write $VAR to read it from the .env beside the file."`
+	APITokenEnv string `yaml:"api_token_env" json:"api_token_env" doc:"Or: the environment variable holding the token. Default CF_API_TOKEN. Flag: --autotlsDNSTokenEnv."`
 }
 
 // SupportedDNSProviders are the dns.provider values the plugin understands.
@@ -252,4 +252,4 @@ func normalizeHost(h string) string {
 }
 
 // Section is the key of the `autotls` section (pocketone.yaml): automatic certificates for a pocker host.
-var Section = pluginkit.NewSection("autotls", Config{}, "Automatic HTTPS certificates (ACME) for a pocker host: auto, email, CA, domains, DNS-01.")
+var Section = pluginkit.NewSection("autotls", Config{}, "Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. The --autotls* flags win.")

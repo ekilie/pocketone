@@ -1,0 +1,8 @@
+<div class="mockup-browser">
+  <div class="toolbar">
+    <div class="url"><%= `http://localhost:8090` %></div>
+  </div>
+  <div class="page" <%- typeof bodyTags !== 'undefined' ? bodyTags : '' %>>
+    <%- content||`This page is empty.`%>
+  </div>
+</div>

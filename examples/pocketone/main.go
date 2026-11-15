@@ -155,11 +155,13 @@ func main() {
 		"the directory with the PocketPages app (default pb_pages next to pb_data); served when it exists",
 	)
 
+	// pocketone.yaml's s3redirect section sets the defaults for --s3Redirect and --s3RedirectTTL
+	s3Cfg, _ := s3redirect.Section.Get()
 	var s3Redirect bool
 	app.RootCmd.PersistentFlags().BoolVar(
 		&s3Redirect,
 		"s3Redirect",
-		true,
+		or(s3Cfg.Enabled, true),
 		"answer file downloads with a short-lived signed redirect to the bucket when S3 file storage is on",
 	)
 
@@ -167,15 +169,17 @@ func main() {
 	app.RootCmd.PersistentFlags().DurationVar(
 		&s3RedirectTTL,
 		"s3RedirectTTL",
-		s3redirect.DefaultTTL,
+		orDur(s3Cfg.TTL, s3redirect.DefaultTTL),
 		"how long each signed file download URL stays valid",
 	)
 
+	// pocketone.yaml's pitr section sets the defaults for --pitr and --pitrRetention, and the snapshot interval
+	pitrCfg, _ := pitr.Section.Get()
 	var pitrEnabled bool
 	app.RootCmd.PersistentFlags().BoolVar(
 		&pitrEnabled,
 		"pitr",
-		true,
+		or(pitrCfg.Enabled, true),
 		"point-in-time restore: replicate data.db into pb_data/litestream/ while serving",
 	)
 
@@ -183,15 +187,21 @@ func main() {
 	app.RootCmd.PersistentFlags().DurationVar(
 		&pitrRetention,
 		"pitrRetention",
-		72*time.Hour,
+		orDur(pitrCfg.Retention, pitr.DefaultRetention),
 		"how far back a point-in-time restore can go",
 	)
 
+	// pocketone.yaml's autotls section sets the defaults for the --autotls* flags (and the certificate storage)
+	tlsCfg, _ := autotls.Section.Get()
+	tlsDNS := autotls.DNSConfig{APITokenEnv: "CF_API_TOKEN"}
+	if tlsCfg.DNS != nil {
+		tlsDNS = *tlsCfg.DNS
+	}
 	var autoTLS bool
 	app.RootCmd.PersistentFlags().BoolVar(
 		&autoTLS,
 		"autotls",
-		false,
+		tlsCfg.Auto,
 		"HTTPS certificates through CertMagic instead of the built-in autocert (with serve <domain> or --https):\nother CAs, extra domains, wildcards through DNS-01",
 	)
 
@@ -199,7 +209,7 @@ func main() {
 	app.RootCmd.PersistentFlags().StringVar(
 		&autoTLSEmail,
 		"autotlsEmail",
-		"",
+		tlsCfg.Email,
 		"ACME account email for --autotls (expiry notices from the CA)",
 	)
 
@@ -207,7 +217,7 @@ func main() {
 	app.RootCmd.PersistentFlags().StringVar(
 		&autoTLSCA,
 		"autotlsCA",
-		"",
+		tlsCfg.CA,
 		"certificate authority for --autotls: letsencrypt (default), letsencrypt-staging, zerossl, or an ACME directory URL",
 	)
 
@@ -215,7 +225,7 @@ func main() {
 	app.RootCmd.PersistentFlags().StringSliceVar(
 		&autoTLSDomains,
 		"autotlsDomains",
-		nil,
+		tlsCfg.Domains,
 		"extra domains for --autotls, obtained at start (comma separated; wildcards like *.example.com need --autotlsDNS)",
 	)
 
@@ -223,7 +233,7 @@ func main() {
 	app.RootCmd.PersistentFlags().StringVar(
 		&autoTLSDNS,
 		"autotlsDNS",
-		"",
+		tlsDNS.Provider,
 		"DNS provider for DNS-01 challenges with --autotls (supported: "+strings.Join(autotls.SupportedDNSProviders, ", ")+")",
 	)
 
@@ -231,15 +241,19 @@ func main() {
 	app.RootCmd.PersistentFlags().StringVar(
 		&autoTLSDNSTokenEnv,
 		"autotlsDNSTokenEnv",
-		"CF_API_TOKEN",
+		orStr(tlsDNS.APITokenEnv, "CF_API_TOKEN"),
 		"environment variable holding the DNS provider's API token for --autotlsDNS",
 	)
 
 	app.RootCmd.ParseFlags(os.Args[1:])
 
-	autoTLSConfig := autotls.Config{Auto: autoTLS, Email: autoTLSEmail, CA: autoTLSCA, Domains: autoTLSDomains}
+	autoTLSConfig := autotls.Config{Auto: autoTLS, Email: autoTLSEmail, CA: autoTLSCA, Domains: autoTLSDomains,
+		Storage: cfg.ResolvePath(tlsCfg.Storage)}
 	if autoTLSDNS != "" {
 		autoTLSConfig.DNS = &autotls.DNSConfig{Provider: autoTLSDNS, APITokenEnv: autoTLSDNSTokenEnv}
+		if autoTLSDNS == tlsDNS.Provider {
+			autoTLSConfig.DNS.APIToken = tlsDNS.APIToken // api_token: $VAR, from the .env (never in the process environment)
+		}
 	}
 	// Auto TLS: off unless --autotls; then CertMagic serves the HTTPS certificates of `serve <domain>`
 	defaultPlugins = append(defaultPlugins, autotls.NewApp(autoTLSConfig))
@@ -264,7 +278,7 @@ func main() {
 
 	// PocketPages: serves pb_pages when the folder exists (page code runs in the jsvm above)
 	pages.MustRegister(app, pages.Config{Dir: pagesDir})
-	pages.RegisterCommand(app.RootCmd) // `pocketbase pages create <name> [--starter kit]`, `pocketbase pages starters`
+	pages.RegisterCommand(app.RootCmd) // `pocketone pages create <name> [--starter kit]`, `pocketone pages starters`
 
 	// S3 redirects: with S3 file storage on, downloads redirect to a signed bucket URL after the access check
 	s3redirect.MustRegister(app, s3redirect.Config{Enabled: &s3Redirect, TTL: s3RedirectTTL})
@@ -275,7 +289,7 @@ func main() {
 	// remotes: remote/login/logout/link commands and GET /_pocker/whoami
 	remotes.MustRegister(app, remotes.Config{})
 
-	// OAuth server: browser sign-in for `pocketbase login` (superusers) and OAuth clients
+	// OAuth server: browser sign-in for `pocketone login` and OAuth clients
 	oauthserver.MustRegister(app, oauthserver.Config{})
 
 	// deploys: deploy/dev/pull/logs commands and the deploy API (/_pocker/deploy/v1, superusers)
@@ -286,7 +300,7 @@ func main() {
 
 	// point-in-time restore: on by default (--pitr=false turns it off); history in pb_data/litestream/, restore from
 	// Settings → Backups or `pocketbase pitr restore`
-	pitr.MustRegister(app, pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention})
+	pitr.MustRegister(app, pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention, SnapshotInterval: pitrCfg.SnapshotInterval})
 	pluginkit.MustRegister(app, defaultPlugins...)
 
 	// migrate command (with js templates)
@@ -377,4 +391,11 @@ func defaultPublicDir() string {
 	}
 
 	return filepath.Join(os.Args[0], "../pb_public")
+}
+
+func orDur(v, def time.Duration) time.Duration {
+	if v > 0 {
+		return v
+	}
+	return def
 }

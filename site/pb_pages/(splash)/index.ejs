@@ -1,0 +1,115 @@
+<%
+  meta('title', 'PocketOne · A community fork of PocketBase')
+%>
+<div class="splash">
+  <section class="hero">
+    <div>
+      <div class="hero-brand rise">
+        <span class="avatar">
+          <img src="<%=asset('/logo.svg')%>" alt="PocketOne logo" />
+        </span>
+        <h1 class="hero-title">PocketOne</h1>
+        <pre><code class="language-bash">brew install pockethost/tap/pocketone
+pocketone serve</code></pre>
+      </div>
+
+      <h2 class="hero-tagline rise" style="--delay: 0.2s; --rise: 30px">
+        A community fork of <span>PocketBase</span>
+      </h2>
+
+      <p class="lead rise" style="--delay: 0.3s; --rise: 30px; max-width: 40rem; text-align: center">
+        PocketOne is a 100% backward compatible fork of PocketBase and ships with popular goodies like point-in-time
+        restore, server-rendered pages, deploys, MCP for agents and more. Check out our growing
+        <a href="/docs/plugins">list of plugins</a> and
+        <a href="/docs/writing-a-plugin">contribute one of your own</a>.
+      </p>
+
+      <div class="cta-row rise" style="--delay: 0.4s; --rise: 30px">
+        <a href="/docs/installation" class="btn btn-accent">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          Install
+        </a>
+        <a href="/docs/overview" class="btn btn-outline">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z"></path>
+          </svg>
+          Read the Docs
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">How PocketOne is built</h2>
+        <p class="lead">
+          PocketOne tracks upstream PocketBase. Its own changes to the core are only the hooks plugins need.
+        </p>
+      </div>
+
+      <div class="grid">
+        <div class="card center accent">
+          <h3>A small core</h3>
+          <p>Core changes are hooks only: marked in the source, reviewed by someone who didn't write them, and kept small so upstream releases merge cleanly.</p>
+        </div>
+        <div class="card center secondary">
+          <h3>Everything is a plugin</h3>
+          <p>Each feature is its own Go module with a README and an example. Plugins you don't use add no work to your app.</p>
+        </div>
+        <div class="card center success">
+          <h3>One app or hundreds</h3>
+          <p>The same plugin runs on a single app and on every instance of a multi-instance host. PocketHost runs it in production.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">What you get</h2>
+        <p class="lead">In every <code>pocketone</code> binary, off until you use it (point-in-time restore is on by default).</p>
+      </div>
+
+      <div class="grid two">
+        <div class="card glass">
+          <ul class="checklist">
+            <li><span><strong>Point-in-time restore:</strong> restore your database to any moment, from the dashboard</span></li>
+            <li><span><strong>Pages:</strong> server-rendered sites from a <code>pb_pages</code> folder, no build step</span></li>
+            <li><span><strong>Deploys:</strong> <code>pocketone deploy</code>, <code>dev</code>, <code>pull</code> and <code>logs</code></span></li>
+            <li><span><strong>MCP:</strong> an endpoint for agents to manage your app</span></li>
+          </ul>
+        </div>
+        <div class="card glass">
+          <ul class="checklist">
+            <li><span><strong>API tokens:</strong> long-lived, scoped tokens for scripts</span></li>
+            <li><span><strong>Auto TLS:</strong> certificates on demand, wildcards too</span></li>
+            <li><span><strong>Bulk mail:</strong> campaigns to your own users</span></li>
+            <li><span><strong>A config file:</strong> <code>pocketone.yaml</code>, with secrets kept out of your hooks</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="cta-row" style="margin-top: 2rem">
+        <a href="/docs/plugins" class="btn btn-outline">All plugins</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Built in the open</h2>
+        <p class="lead">
+          Ask questions and share ideas in
+          <a href="https://github.com/pockethost/pocketone/discussions">Discussions</a>, report bugs in
+          <a href="https://github.com/pockethost/pocketone/issues">Issues</a>, and send your plugins as pull requests.
+          Start with <a href="/docs/writing-a-plugin">Writing a plugin</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>

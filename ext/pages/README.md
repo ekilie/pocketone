@@ -1,22 +1,179 @@
-# pages
+# Pages
 
-Server-rendered multi-page apps from a `pb_pages` folder (PocketPages v1), with routing, static files and templates
-in Go and page code in the app's JS VM.
+Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
+JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it
+can use your data directly. This is PocketPages v1, formerly the npm PocketPages package.
 
-**Runs on:** Single app, or many under [pocker](../pocker/README.md).
+## Install
 
-> **In progress.** Working: the `pb_pages` route table, static files with ETags and fingerprints, live rescans,
-> rendering (middleware, `+page.js` / `+api.js`, EJS compiled in Go, JSX/TSX and TypeScript via built-in esbuild, includes, slots, layouts, Markdown, `ctx`,
-> `+error.ejs`, `+404.ejs`, Markdown images through `asset()`), JS plugins, `ctx.res.sse()`, the built-in `realtime` and `auth` plugins (password, OTP, anonymous,
-> register, OAuth2, email flows, cookie sessions), `ctx.pb()` (the bundled JS SDK, in-process, as the visitor) and the
-> Datastar add-on. Every starter kit and the site render. Not yet:
-> MFA in `ctx.session`.
+Pages is built into `pocketone` and **on whenever a `pb_pages` folder exists** next to `pb_data`. There's no switch:
+no folder, no pages. If the folder appears while the app runs, it starts serving it.
 
-- Under pocker: [pockerplugin](pockerplugin/pockerplugin.go), with an [example](pockerplugin/example/main.go) that
-  serves many sites from one process.
-- The contract: [SPEC.md](SPEC.md).
-- Test fixtures: [fixtures/](fixtures) (`go test ./...` runs every request case).
-- Starter kits: [starters/](starters). Add-ons: [addons/](addons). The PocketPages site: [site/](site).
+In your own Go build, register it after the JS VM, since page code runs there:
+
+```go
+app := pocketbase.New()
+jsvm.MustRegister(app, jsvm.Config{})   // page code runs in the app's JS VM
+pages.MustRegister(app, pages.Config{}) // serves pb_pages next to pb_data
+pages.RegisterCommand(app.RootCmd)      // the `pages create` and `pages starters` commands
+app.Start()
+```
+
+The module is `github.com/pockethost/pocketone/ext/pages`. See [example/main.go](example/main.go) and
+[Create your own plugin](../../docs/plugins.md).
+
+## Configure
+
+### Where the folder is
+
+By default the folder is `pb_pages` next to `pb_data`. To use another one:
+
+```bash
+pocketone serve --pagesDir /path/to/pb_pages
+```
+
+A relative path resolves against the working directory, like `--hooksDir`. Pages has no `pocketone.yaml` section.
+
+### +config.js
+
+Settings for your pages live in the folder itself, in `pb_pages/+config.js`:
+
+```js
+module.exports = {
+  plugins: ['auth', 'realtime', require('./_private/datastar.js')],
+  debug: false,
+}
+```
+
+| Key | Default | What it does |
+|---|---|---|
+| `plugins` | `[]` | Built-in plugins by name (`auth`, `realtime`), or JS plugins such as the [add-ons](addons/README.md). EJS and Markdown are always on. |
+| `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
+
+`+config.js` runs on each page request. Unknown keys, unknown built-in names or a plugin listed twice make every page
+answer with an error, and the reason goes to the log.
+
+### Dev mode
+
+When the app runs in dev mode (`--dev`, or `app.dev` in `pocketone.yaml`), or `+config.js` sets `debug: true`, you
+get detailed error pages with the file and line, and `ctx.log.debug` output. Otherwise visitors see a plain
+"Something went wrong" page and the full error goes to the log.
+
+## Use
+
+### Start from a starter kit
+
+```bash
+pocketone pages starters                         # list the kits
+pocketone pages create myapp --starter daisyui-docs
+cd myapp
+pocketone serve --dir ./pb_data
+```
+
+Then open http://127.0.0.1:8090. `pages create` makes a new folder (it must not exist yet) with `pb_pages` and
+anything the kit needs beside it, such as `pb_migrations`. Without `--starter` you get `minimal`.
+
+| Kit | What it is |
+|---|---|
+| [minimal](starters/minimal/README.md) | One page, no layout, no build step (the default). |
+| [mvp](starters/mvp/README.md) | One page styled with MVP.css. |
+| [htmx](starters/htmx/README.md) | A realtime chat and counter with htmx and the `realtime` plugin. |
+| [daisyui](starters/daisyui/README.md) | A navbar and drawer layout with Tailwind CSS and DaisyUI. |
+| [daisyui-docs](starters/daisyui-docs/README.md) | A docs site from Markdown pages. |
+| [datastar](starters/datastar/README.md) | A realtime chat with rooms, with Datastar. |
+| [auth](starters/auth/README.md) | Sign-up, sign-in (password, OTP, OAuth2, anonymous), email flows and a protected account page. |
+
+### Write pages
+
+Add or edit files in `pb_pages` and reload the browser; no restart is needed. A few examples of what the folder holds:
+
+```
+pb_pages/
+  +config.js         settings (above)
+  +layout.ejs        wraps every page
+  +error.ejs         your error page
+  index.ejs          /
+  about.md           /about
+  blog/[slug].ejs    /blog/anything
+  feeds/rss/+api.js  /feeds/rss, a route without a template
+  _private/          partials, never served
+  assets/app.css     a static file
+```
+
+The full contract is in [SPEC.md](SPEC.md): routes and precedence, middleware, `+page.js` and `+api.js`, EJS,
+partials, slots and layouts, Markdown, JSX and TSX, the `ctx` object, errors, the built-in `auth` and `realtime`
+plugins, JS plugins, add-ons and the changes from 0.x.
+
+Highlights:
+
+- Static files get ETags and fingerprinted URLs through `asset()`.
+- `ctx.pb()` is the bundled PocketBase JS SDK, called in-process as the visitor.
+- `ctx.res.sse()` streams server-sent events.
+- The `auth` plugin gives cookie sessions on PocketBase auth: password, OTP, anonymous, register, OAuth2 and the email
+  flows (verification, password reset, email change). Accounts that need MFA can't sign in through pages yet.
+
+### What you'll see in the log
+
+Problems in the folder (a bad file name, two files claiming the same route) are logged as `pages: ...` errors. If the
+site served cleanly before, pages keeps the previous routes until the folder builds cleanly again. Errors thrown by
+page code are logged in full.
+
+### Try the demo
+
+[`example/`](example) is a demo app with EJS, Markdown, JSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
+speed check at `/speed`.
+
+```bash
+cd example && go run . serve --dir=./pb_data
+```
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Pocker](../pocker/README.md) | `pockerplugin` serves each instance's own `pb_pages` (below). |
+| [OAuth Server](../oauth-server/README.md) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
+| [Deploy](../deploy/README.md) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
+| [JS Errors](../jserrors/README.md) | Both run in the same JS VM; JS Errors covers `pb_hooks`, pages report their own file and line. |
+
+### Under pocker
+
+`pockerplugin.New(pages.Config{})` serves every instance's `<instance dir>/pb_pages`:
+
+```go
+srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{pockerplugin.New(pages.Config{})}}
+```
+
+- The stock `pocketone` binary doesn't add it in multi-instance mode yet; a custom build does, as above.
+- Each start of an instance's app gets its own route table, compiled templates and caches. An instance that sleeps
+  drops them; nothing is shared between instances.
+- Page code runs in the instance's own sandboxed JS runtimes, under its limits (execution time, single allocations,
+  call stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
+  `pb_pages`; `$os` file access stays inside the instance folder. Tests:
+  [pockerplugin_test.go](pockerplugin/pockerplugin_test.go).
+- An instance turns pages off in its settings with `plugins: { pages: { enabled: false } }`.
+- It's its own package ([pockerplugin](pockerplugin/pockerplugin.go)), so single-app builds don't link pocker.
+
+Measured (same machine as [Speed](#speed), docs kit): each awake instance adds about **2.3 MB** (50 instances: 41 MB
+idle to 155 MB). One instance under pocker serves about **4,000 requests/s** (p50 5.6 ms, p99 80 ms at 50
+concurrent): less than a single app because pocker keeps 2 prewarmed JS runtimes per instance (`hooks_pool_size`; a
+single app has 15) and every call goes through the sandbox.
+
+To try it: copy sites into `pockerplugin/example/pb_root/<name>.localhost/pb_pages`, run
+`go run ./pockerplugin/example`, and open `http://<name>.localhost:8791`.
+
+### Building on pages
+
+- **Render a template from Go.** `pages.For(app).RenderTemplate(e, "oauth/signin", status, data)` renders
+  `pb_pages/_private/oauth/signin.ejs` (or `.md`, `.jsx`, `.tsx`) as the whole response, with `data` as `ctx.data`
+  and no middleware, layouts or `+page.js`, for any method. It returns `handled=false` when the project has no such
+  template. OAuth Server uses it.
+- **Read the routes.** `pages.For(app)` returns the service: `Dir()` is the folder, `Table()` the current route
+  table, `Errors()` the problems from the last build.
+- **JS plugins.** A factory in `+config.js` can add to `ctx`, run on each request and transform rendered HTML
+  ([SPEC.md](SPEC.md), section 9.2). [Add-ons](addons/README.md) are built this way.
 
 ## Speed
 
@@ -45,65 +202,16 @@ links `app.css`. Rerun it with [`bench/run.sh`](bench/run.sh):
 
 ```bash
 cp -R starters/daisyui-docs /tmp/v1-docs
-pocketbase superuser upsert admin@example.com password --dir=/tmp/v1-docs/pb_data  # the PocketOne binary
-bench/run.sh v1-docs 8804 /docs/overview "$(which pocketbase)" /tmp/v1-docs
+pocketone superuser upsert admin@example.com password --dir=/tmp/v1-docs/pb_data
+bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 ```
 
-The demo in [`example/`](example) has a live speed check at `/speed`, which loads its own pages from your browser.
+## More in this folder
 
-## For Go plugins
-
-`pages.For(app).RenderTemplate(e, "oauth/signin", status, data)` renders `pb_pages/_private/oauth/signin.ejs` (or
-`.md`, `.jsx`, `.tsx`) as the whole response, with `data` as `ctx.data` and no middleware, layouts or `+page.js`, for
-any method; it returns `handled=false` when the project has no such template. [oauth-server](../oauth-server/README.md)
-uses it for `pocketbase oauth eject`.
-
-## Use it
-
-Start an app from a starter kit (`pocketbase pages starters` lists them):
-
-```bash
-pocketbase pages create myapp --starter daisyui-docs
-cd myapp
-pocketbase serve --dir ./pb_data
-```
-
-The standard PocketOne binary ([`examples/pocketone`](../../examples/pocketone/main.go)) includes pages: put a `pb_pages` folder next
-to `pb_data` and run `pocketbase serve`. `--pagesDir` points it somewhere else. In your own Go build:
-
-```go
-app := pocketbase.New()
-jsvm.MustRegister(app, jsvm.Config{})    // page code runs in the app's JS VM
-pages.MustRegister(app, pages.Config{}) // serves pb_pages next to pb_data
-app.Start()
-```
-
-Module `github.com/pockethost/pocketone/ext/pages`. See [example/main.go](example/main.go) and
-[Create your own plugin](../../docs/plugins.md).
-
-## Under pocker
-
-`pockerplugin.New(pages.Config{})` serves every instance's `<instance dir>/pb_pages`:
-
-```go
-srv := &pocker.Server{Config: cfg, Plugins: []pocker.Plugin{pockerplugin.New(pages.Config{})}}
-```
-
-- Each start of an instance's app gets its own route table, compiled templates and caches. An instance that sleeps
-  drops them; nothing is shared between instances.
-- Page code runs in the instance's own sandboxed JS runtimes, under its limits (execution time, single allocations,
-  call stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
-  `pb_pages`; `$os` file access stays inside the instance folder. Tests: [pockerplugin_test.go](pockerplugin/pockerplugin_test.go).
-- An instance turns pages off with `plugins: { pages: { enabled: false } }`.
-- It's its own package, so single-app builds (like the standard PocketOne binary) don't link pocker.
-
-Measured (same machine as above, docs kit): each awake instance adds about **2.3 MB** (50 instances: 41 MB idle to
-155 MB). One instance under pocker serves about **4,000 requests/s** (p50 5.6 ms, p99 80 ms at 50 concurrent): less
-than a single app because pocker keeps 2 prewarmed JS runtimes per instance (`hooks_pool_size`; a single app has 15)
-and every call goes through the sandbox.
-
-To try it: copy sites into `pockerplugin/example/pb_root/<name>.localhost/pb_pages`, run
-`go run ./pockerplugin/example`, and open `http://<name>.localhost:8791`.
+- [SPEC.md](SPEC.md): the full PocketPages v1 contract.
+- [fixtures/](fixtures/README.md): the request test cases (`go test ./...` runs them all).
+- [starters/](starters): the starter kits. [addons/](addons/README.md): JS add-ons such as Datastar.
+- [site/](site/README.md): the PocketPages website, itself a PocketPages app.
 
 ## License
 

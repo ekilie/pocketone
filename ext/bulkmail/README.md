@@ -1,100 +1,225 @@
-# bulkmail
+# Bulk Mail
 
-Bulk mail: campaigns to an app's own users with one-click unsubscribe, bounce and complaint handling, and a dashboard page.
+Campaigns to your app's own users, from the dashboard. You pick who gets the mail with a collection, a view or SQL,
+write the message, and Bulk Mail sends it at a steady pace through your app's mail settings. It adds one-click
+unsubscribe, keeps a list of addresses that must never be mailed again, and handles bounces and spam complaints.
 
-**Runs on:** every level. It's in the standard `pocketone` binary, and the same plugin value runs on every
-instance under [pocker](../pocker/README.md) (so the mothership and multitenant levels get it too). It follows the
-PocketOne plugin contract ([`pluginkit`](../pluginkit/pluginkit.go)).
+## Install
 
-## Use it
+Bulk Mail is built into `pocketone` and **on** for every app. Nothing is sent until a superuser starts a campaign.
+
+In your own Go build, register the plugin before the app starts. Bind it into the JS runtime too if you want
+`$bulkmail` in `pb_hooks`:
 
 ```go
 mail := bulkmail.New(bulkmail.Config{Rate: 5, Daily: 5000})
 
-// a single app
 app := pocketbase.New()
 pluginkit.MustRegister(app, mail)
-jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { pluginkit.BindJS(app, vm, mail) }}) // $bulkmail
-
-// or every pocker instance
-srv.Plugins = append(srv.Plugins, mail)
+jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { pluginkit.BindJS(app, vm, mail) }})
+app.Start()
 ```
 
-Under pocker, settings come from the config file's top-level `bulkmail:` key, then each instance's
-`plugins: {bulkmail: {enabled, rate, daily}}`, over the Config given to `New`; `daily: 0` means the instance may
-not send bulk mail, `enabled: false` turns it off.
+The module is `github.com/pockethost/pocketone/ext/bulkmail`.
 
-```sh
-go run ./example serve --dev  # test mail shows in the dev mail trap at http://127.0.0.1:8025
+## Configure
+
+There is no `pocketone.yaml` section or command-line flag. The limits are fixed in the binary; `pocketone` uses the
+defaults:
+
+| Limit | Default | What it does |
+|---|---|---|
+| Per second | 5 | The most messages this app sends per second. A campaign can only lower it. |
+| Per day | 5,000 | The most messages this app sends per UTC day, across all campaigns. |
+
+In a custom build, set them with `bulkmail.Config{Rate, Daily}`. `Daily: bulkmail.NoBulkMail` forbids sending; the
+screens then say so.
+
+### Settings → Mail
+
+Campaigns send through the app's own mail settings and from its sender, both set on **Settings → Mail**. Below that
+form there's a **Bulk mail** section:
+
+- **Postal address**: shown in every campaign footer. Anti-spam laws require one.
+- **Unsubscribe mailbox**: optional. Adds a `mailto:` alternative to the `List-Unsubscribe` header.
+- **Bounces and complaints** (click to open):
+  - **Amazon SES (SNS) endpoint**: the URL to subscribe to the SNS topic your SES identity sends bounce and complaint
+    notifications to.
+  - **Allowed SNS topic ARNs**: comma separated. Empty accepts any topic with a valid AWS signature.
+  - **Generic webhook** and **Webhook secret**: for other providers. The webhook is off until you set a secret.
+
+The section also shows this app's limits and how many messages it sent today. Click **Save bulk mail settings**.
+
+Unsubscribe links and the feedback URLs are built from **Settings → Application → Application URL**, so set it to
+the address people reach your app on.
+
+The settings are stored in the app's database (a `_params` row), so they go along with its backups. Secrets are
+never shown again after saving.
+
+## Use
+
+The dashboard gets a **Mail** link in its menu, with two pages: **Campaigns** and **Suppressions**. Only superusers see
+them.
+
+### Write a campaign
+
+1. Open **Mail** and click **New campaign**. It starts as a draft for verified users of `users`.
+2. Fill in **Name**, **Subject** and **Body**.
+3. Under **Audience**, choose who gets it:
+   - **Filter**: a **Collection** (or a view), an optional **Filter** in the same syntax as API rules, and the
+     **Email field** that holds the address (an email or text field, or a view's computed column).
+   - **SQL**: a read-only `SELECT` that returns an `email` column. Every other column is available to the message.
+
+   Click **Count recipients** to see how many match, how many are suppressed, and a few sample addresses.
+4. Optional: **Vars (JSON)** for values used in the message, a **Schedule (UTC)**, and **Max per second** to send
+   slower than the app's limit.
+5. Click **Save changes**. **Preview** shows the message for one recipient; **Send test** mails it to the
+   **Test address**.
+
+A view is the easy way to build a dynamic audience: it picks who gets mail and computes the columns the message
+uses. The [example](example/demo.go) creates one called `newsletter_audience`.
+
+### Placeholders
+
+In the subject and body:
+
+- `{{record.field}}`: a field or column of the recipient's row, for example `{{record.name}}`.
+- `{{email}}`, `{{campaign.name}}` and `{{unsubscribe_url}}`.
+- Campaign vars: `{"promo": "X"}` gives `{{promo}}`. A var can be computed once when sending starts:
+  `{"count": {"sql": "SELECT COUNT(*) AS value FROM users"}}`.
+- `{{if record.field}}…{{else}}…{{end}}` blocks, and `{{if !record.field}}` for the opposite.
+
+Values are HTML-escaped in the body. An unsubscribe footer with your postal address is always added.
+
+### Send
+
+Click **Send** (or **Schedule** when a time is set) and confirm. The campaign page shows its status and progress
+(sent, queued, skipped, failed), and a **Recipients** table you can filter by status. While it runs you can
+**Pause**, **Resume** or **Cancel** it.
+
+- Every address is queued once per campaign. Sending a finished campaign again mails only new matches.
+- A message counts as sent only once the mail server accepts it, so a restart doesn't send twice or skip anyone.
+- A permanent error (SMTP 5xx) fails that recipient. Other errors are retried, up to three attempts.
+- A campaign pauses itself when more than 5% of its sends fail after the first 100, or when spam complaints pass
+  0.3% of its sends (at least 3). The reason shows next to its status.
+
+### Suppressions
+
+**Mail → Suppressions** lists the addresses that never receive campaign mail, whatever the audience says.
+Unsubscribes, permanent bounces and complaints are added automatically. Click **Add address** to add one by hand, a
+row to edit or delete it, or **Export CSV** to download the list.
+
+### Unsubscribing
+
+Every message has a signed unsubscribe link and the `List-Unsubscribe` and `List-Unsubscribe-Post: One-Click`
+headers that Gmail and Yahoo require for bulk senders. Opening the link shows a confirm button, so link scanners
+can't unsubscribe anyone. The one-click request from a mail provider unsubscribes directly.
+
+### Try it locally
+
+In dev mode with SMTP off, `pocketone` catches every mail, bulk mail included, in an inbox at
+http://127.0.0.1:8025:
+
+```bash
+pocketone serve --dev
 ```
 
-The dashboard gets a **Mail** page (campaigns, recipients, suppressions) and a **Bulk mail** section on Settings >
-Mail (postal address, unsubscribe mailbox, bounce and complaint feedback). Campaigns send from the app's sender in
-Settings > Mail. A campaign's `from_name` / `from_address` fields override it, but only through the records API, JS
-or Go (the dashboard doesn't show them): the app's SMTP account can usually send only as identities it has verified.
+## Integrations
 
-## What it does
+### Works with
 
-- **Audience** from the app's own data, resolved when sending starts: a collection or view plus a filter (the same
-  syntax as API rules) and the field that holds the address (email or text, or a view's computed json column), or a
-  read-only SQL `SELECT` that returns an `email` column. A view is the easy way to build a dynamic audience: it
-  picks who gets mail and computes the columns templates use (`{{record.column}}`); the example creates one
-  (`newsletter_audience`). SQL runs with SQLite's `query_only` on,
-  inside a transaction that is always rolled back.
-- **Templates:** `{{record.field}}` per recipient, `{{campaign.name}}`, `{{unsubscribe_url}}`, campaign vars (fixed
-  values or `{"sql": "SELECT … AS value"}` computed once), and `{{if path}}…{{else}}…{{end}}` blocks. Values are
-  HTML-escaped. An unsubscribe footer with the postal address is always added.
-- **Headers:** `List-Unsubscribe` (signed HTTPS link, optional mailto) and `List-Unsubscribe-Post: One-Click`, as
-  Gmail and Yahoo require for bulk senders.
-- **Sending:** the audience is queued into a ledger first (one row per campaign and address, unique), then a
-  background sender mails one message at a time through the app's mail client, at the lower of the app's rate and the
-  campaign's. Restart-safe: a row becomes `sent` only after the server accepts it. SMTP 5xx fails the row; other
-  errors retry three times with backoff. Starting a finished campaign again mails only new matches.
-- **Limits and brakes:** per-second and per-day caps per app (`NoBulkMail` forbids sending). A campaign pauses itself
-  when more than 5% of sends fail after the first 100, or on a spike of spam complaints.
-- **Pause, resume, cancel, schedule, preview, test send** from the dashboard, the API or JS.
-- **Unsubscribe:** signed links (HMAC with a per-app secret). Opening the link shows a confirm button, so link
-  scanners can't unsubscribe anyone; the one-click POST from mail providers unsubscribes directly.
-- **Bounces and complaints:** an Amazon SES endpoint for SNS (signatures verified, certificates only from
-  `sns.<region>.amazonaws.com`, optional topic allow-list) and a generic webhook with a shared secret. Permanent
-  bounces and complaints go on the suppression list, which wins over every audience.
+| Plugin | How they fit |
+|---|---|
+| [Pocker](../pocker/README.md) | Add the same plugin value to `srv.Plugins` and every instance gets Bulk Mail. Each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
+| [Mailtrap](../mailtrap/README.md) | In dev mode with SMTP off, campaign mail lands in the local inbox instead of being sent. |
 
-## Data
+### Per-instance settings (pocker)
+
+Each instance's `plugins.bulkmail` settings apply over the `Config` given to `bulkmail.New`:
+
+```yaml
+instances:
+  - id: abc
+    plugins: { bulkmail: { rate: 2, daily: 1000 } }
+  - id: free-plan-app
+    plugins: { bulkmail: { daily: 0 } }      # may not send bulk mail
+  - id: other
+    plugins: { bulkmail: { enabled: false } } # no Bulk Mail at all
+```
+
+### Go API
+
+`bulkmail.For(app)` returns the app's service: `Start`, `StartLimit`, `Pause`, `Resume`, `Cancel`, `Preview`, `Test`,
+`CountAudience`, `Suppress`, `Unsuppress`, `IsSuppressed`, `Unsubscribe`, `UnsubscribeURL`, `Limits`, and the hooks:
+
+- `OnSend` fires before every campaign message (not test sends). Change the message, or return an error to fail that
+  recipient.
+- `OnUnsubscribe` fires when someone unsubscribes through a link or the one-click header.
+- `OnFeedback` fires for each bounce or complaint a provider reports.
+
+`Config.Mailer` swaps the mail client, for example for a platform relay. `Config.PublicURL` sets the base of
+unsubscribe links instead of the Application URL.
+
+### JS API
+
+`$bulkmail` in `pb_hooks`:
+
+```js
+$bulkmail.start(id, [limit])     // limit: queue only the next N new recipients
+$bulkmail.pause(id); $bulkmail.resume(id); $bulkmail.cancel(id)
+$bulkmail.test(id, [to]); $bulkmail.preview(id, [email])
+$bulkmail.count({collection, filter, email_field} | {sql})   // {count, suppressed, sample}
+$bulkmail.suppress(email, [reason]); $bulkmail.unsuppress(email); $bulkmail.isSuppressed(email)
+$bulkmail.unsubscribe(email, [campaignId]); $bulkmail.unsubscribeURL(email, [campaignId])
+$bulkmail.limits()               // {rate, daily, sentToday}
+```
+
+React to activity with record hooks on the collections below, for example
+`onRecordAfterCreateSuccess((e) => { … }, "_bulkmail_suppressions")`.
+
+### REST API
+
+Superusers only:
+
+| Route | What it does |
+|---|---|
+| `GET`/`PATCH /api/bulkmail/settings` | Settings (secrets are never returned), limits and feedback endpoint URLs. |
+| `POST /api/bulkmail/audience/count` | `{"audience": {...}}` → count, suppressed, sample. |
+| `POST /api/bulkmail/campaigns/{id}/start\|pause\|resume\|cancel` | Campaign actions. `start` takes an optional `{"limit": N}` to queue only the next N new recipients. |
+| `POST /api/bulkmail/campaigns/{id}/preview` | The rendered message for one recipient. |
+| `POST /api/bulkmail/campaigns/{id}/test` | Send to `test_to` (no ledger rows). |
+
+Campaigns and suppressions are created and edited through the regular records API. A campaign's `from_name` and
+`from_address` override the app's sender, but only through the records API, JS or Go (the dashboard doesn't show
+them), since the app's mail account can usually send only as identities it has verified.
+
+Public routes: `GET`/`POST /api/bulkmail/unsubscribe?t=…`, `POST /api/bulkmail/feedback/ses` and
+`POST /api/bulkmail/feedback/webhook`. The webhook takes `{"type": "bounce|complaint|unsubscribe", "email": "…"}`
+with an `X-Bulkmail-Secret` header.
+
+## How it works
+
+- Go module `github.com/pockethost/pocketone/ext/bulkmail`, a [`pluginkit`](../pluginkit/pluginkit.go) plugin.
+  [`example/main.go`](example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
+- The audience is resolved when sending starts and queued into a ledger first (one row per campaign and address,
+  unique). A background sender then mails one message at a time through the app's mail client, at the lower of the
+  app's rate and the campaign's.
+- SQL audiences and SQL vars run with SQLite's `query_only` on, inside a transaction that is always rolled back.
+- Unsubscribe links are signed with HMAC and a per-app secret, generated on first use.
+- SES feedback: SNS signatures are verified, and signing certificates are fetched only from
+  `sns.<region>.amazonaws.com`. Permanent bounces and complaints go on the suppression list.
+
+### Data
 
 | Collection | What |
 |---|---|
-| `_bulkmail_campaigns` | content, audience, vars, status, counters, schedule |
-| `_bulkmail_sends` | the ledger: campaign, email, status (`queued`, `sent`, `skipped`, `failed`), reason, attempts |
-| `_bulkmail_suppressions` | addresses that never receive campaign mail, with the reason |
+| `_bulkmail_campaigns` | Content, audience, vars, status, counters, schedule. |
+| `_bulkmail_sends` | The ledger: campaign, email, status (`queued`, `sent`, `skipped`, `failed`), reason, attempts. |
+| `_bulkmail_suppressions` | Addresses that never receive campaign mail, with the reason. |
 
-All are superuser-only system collections with fixed collection and field ids (`schema.go`). Settings are a `_params`
-row (`bulkmail`). `LegacyJSMigration()` emits a PocketBase JS migration that creates the same collections, for apps
-that move onto this schema before they run this plugin.
-
-## API (superuser)
-
-| Route | |
-|---|---|
-| `GET`/`PATCH /api/bulkmail/settings` | settings (secrets are never returned), limits, feedback endpoint URLs |
-| `POST /api/bulkmail/audience/count` | `{"audience": {...}}` → count, suppressed, sample |
-| `POST /api/bulkmail/campaigns/{id}/start\|pause\|resume\|cancel` | campaign actions; `start` takes an optional `{"limit": N}` to queue only the next N new recipients |
-| `POST /api/bulkmail/campaigns/{id}/preview` | rendered message for one recipient |
-| `POST /api/bulkmail/campaigns/{id}/test` | send to `test_to` (no ledger rows) |
-
-Campaigns and suppressions are created and edited through the regular records API.
-
-Public: `GET`/`POST /api/bulkmail/unsubscribe?t=…`, `POST /api/bulkmail/feedback/ses`,
-`POST /api/bulkmail/feedback/webhook`.
-
-## Go and JS
-
-- **Go:** `bulkmail.For(app)` returns the service: `Start`, `Pause`, `Resume`, `Cancel`, `Preview`, `Test`,
-  `CountAudience`, `Suppress`, `Unsubscribe`, `UnsubscribeURL`, and the hooks `OnSend`, `OnUnsubscribe` and
-  `OnFeedback`. `Config.Mailer` swaps the mail client, for example for a platform relay.
-- **JS:** `$bulkmail.start(id, [limit])`, `.pause`, `.resume`, `.cancel`, `.test(id, [to])`, `.preview(id, [email])`,
-  `.count(audience)`, `.suppress(email, [reason])`, `.unsuppress`, `.isSuppressed`, `.unsubscribe`, `.unsubscribeURL`,
-  `.limits()`. React to activity with record hooks on the collections above, for example
-  `onRecordAfterCreateSuccess((e) => { … }, "_bulkmail_suppressions")`.
+All are superuser-only system collections with fixed collection and field ids ([`schema.go`](schema.go)).
+`LegacyJSMigration()` emits a PocketBase JS migration that creates the same collections, for apps that move onto this
+schema before they run this plugin.
 
 ## License
 

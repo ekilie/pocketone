@@ -41,6 +41,9 @@ func (p *Plugin) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello", ..
   are never called for that instance.
 - **No pocker import:** a contract plugin doesn't depend on ext/pocker, so single-app builds don't link it. Reach for
   the host interfaces below only for what's process-wide (a request gate, TLS, background jobs).
+- **Name the command with `pluginkit.Command`:** when a message tells people what to run ("run 'pocketone login
+  prod'"), build it from `pluginkit.Command` (default `pocketone`), never a literal. A build shipped under another name
+  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/pluginkit.Command=pockethost"`.
 - [bulkmail](../ext/bulkmail/plugin.go) is the reference implementation.
 
 > **Status.** `pluginkit` covers per-app plugins. The process-wide host interfaces below (`pocker.Server` fields and
@@ -198,7 +201,7 @@ core doesn't offer yet:
 ```
 ext/<name>/
   go.mod            module github.com/pockethost/pocketone/ext/<name>
-  README.md         what it does, runs on (single app, pocker or both), config
+  README.md         the plugin's docs, and its page on pocketone.dev (below)
   <name>.go         the plugin
   <name>_test.go
   conformance_test.go  the shared plugin test (below)
@@ -230,8 +233,24 @@ ext/<name>/
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
   feature.
-- **CI enforces both.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a module that
-  implements `pluginkit.Plugin` has no conformance test, then builds, vets and runs `go test -race` on every module the
+- **The README has four required sections**, in this order. It is also your plugin's page on pocketone.dev.
+  - `## Install`: how to get it (built into `pocketone`, or the lines to add to a Go build).
+  - `## Configure`: the `pocketone.yaml` section, flags and settings screens. The site adds a table of your section's
+    keys, generated from your `pluginkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag.
+  - `## Use`: day to day: the admin screens and what to click, the commands.
+  - `## Integrations`: the plugins yours works with and how (pocker and multi-instance hosting go here, not in the
+    sections above), and how other plugins can build on yours (hooks, filesystem kinds, per-instance settings, Go
+    and REST APIs).
+
+  Write the first three for someone running one PocketOne app, not for a Go developer. Anything else (how it works,
+  limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
+- **Plugins here are MIT.** The README ends with `## License` and the single line `MIT`. A plugin under another
+  license lives in its author's own repository, not here.
+  Add your plugin to [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
+  [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
+- **CI enforces all of this.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
+  README is missing one of the four sections or its MIT `## License`, or when a module that implements `pluginkit.Plugin` has no conformance
+  test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
   for a core change. Run the same checks locally from the repository root:
 

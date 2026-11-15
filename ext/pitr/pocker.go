@@ -83,5 +83,6 @@ func (p *Plugin) Start(ctx context.Context, _ *pocker.Manager) {
 	}
 }
 
-// Section is the key of the `pitr` section (pocketone.yaml): point-in-time restore defaults on a pocker host.
-var Section = pluginkit.NewSection(Name, Config{}, "Point-in-time restore on a pocker host: on by default, retention, snapshot interval (instances may override).")
+// Section is the key of the `pitr` section (pocketone.yaml): point-in-time restore defaults for a single app (the
+// pocketone binary reads it for its flag defaults) and for every instance on a pocker host.
+var Section = pluginkit.NewSection(Name, Config{}, "Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.")

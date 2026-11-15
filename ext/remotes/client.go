@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/pluginkit"
 	"io"
 	"net"
 	"net/http"
@@ -34,7 +35,7 @@ type Client struct {
 	Remote *Remote
 	// Token is sent as "Authorization: Bearer <token>" (empty: anonymous).
 	Token string
-	// TokenSource says where Token came from, for messages ("POCKETBASE_TOKEN", "saved login", ...).
+	// TokenSource says where Token came from, for messages ("POCKETONE_TOKEN", "saved login", ...).
 	TokenSource string
 	HTTP        *http.Client
 }
@@ -75,11 +76,11 @@ func Open(dir, name string) (*Client, error) {
 			}
 		}
 		if !cr.Expires.IsZero() && time.Now().After(cr.Expires) {
-			return c, fmt.Errorf("the saved login for %s expired: run 'pocketbase login %s': %w", r.URL, r.Name, ErrNotLoggedIn)
+			return c, fmt.Errorf("the saved login for %s expired: run '%s login %s': %w", r.URL, pluginkit.Command, r.Name, ErrNotLoggedIn)
 		}
 		return c, nil
 	}
-	return c, fmt.Errorf("%s (%s): run 'pocketbase login %s', or set POCKETBASE_TOKEN: %w", r.Name, r.URL, loginArg(r), ErrNotLoggedIn)
+	return c, fmt.Errorf("%s (%s): run '%s login %s', or set %s: %w", r.Name, r.URL, pluginkit.Command, loginArg(r), EnvVar("TOKEN"), ErrNotLoggedIn)
 }
 
 func loginArg(r *Remote) string {

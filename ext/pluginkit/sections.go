@@ -7,7 +7,9 @@ package pluginkit
 
 import (
 	"fmt"
+	"runtime"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -21,7 +23,8 @@ type SectionSource interface {
 type SectionInfo struct {
 	Name    string
 	Doc     string
-	Default any // a fresh copy of the defaults
+	Owner   string // import path of the package that registered it, e.g. github.com/pockethost/pocketone/ext/pitr
+	Default any    // a fresh copy of the defaults
 	check   func(SectionSource) error
 }
 
@@ -61,12 +64,40 @@ func NewSectionFunc[T any](name string, def func() T, doc string) *Section[T] {
 	if _, dup := secInfos[name]; dup {
 		panic(fmt.Sprintf("pluginkit: config section %q is registered twice", name))
 	}
-	secInfos[name] = SectionInfo{Name: name, Doc: doc, Default: def(), check: func(src SectionSource) error {
+	secInfos[name] = SectionInfo{Name: name, Doc: doc, Owner: callerPackage(), Default: def(), check: func(src SectionSource) error {
 		v := def()
 		_, err := src.DecodeSection(name, &v)
 		return err
 	}}
 	return s
+}
+
+// callerPackage is the import path of the first caller outside this package (the section's owner).
+func callerPackage() string {
+	pcs := make([]uintptr, 16)
+	frames := runtime.CallersFrames(pcs[:runtime.Callers(2, pcs)])
+	self := ""
+	for {
+		f, more := frames.Next()
+		pkg := packageOf(f.Function)
+		if self == "" {
+			self = pkg // this package
+		} else if pkg != self {
+			return pkg
+		}
+		if !more {
+			return ""
+		}
+	}
+}
+
+// packageOf turns a runtime function name ("github.com/a/b/ext/pitr.init.func1") into its package path.
+func packageOf(fn string) string {
+	slash := strings.LastIndex(fn, "/")
+	if dot := strings.Index(fn[slash+1:], "."); dot >= 0 {
+		return fn[:slash+1+dot]
+	}
+	return fn
 }
 
 // Name is the section's top-level key.
