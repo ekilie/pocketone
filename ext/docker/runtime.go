@@ -45,6 +45,13 @@ type Spec struct {
 	Binds  []string          // extra host:container[:ro] mounts, e.g. platform hooks
 	Env    map[string]string // extra environment, applied over the instance's secrets
 	Labels map[string]string
+	// Cmd, if set, adjusts the container's command. It gets the default (./pocketbase serve --http 0.0.0.0:8090
+	// --hooksWatch=false, plus --dev and --encryptionEnv when they apply), e.g. to start a release that predates a flag.
+	Cmd func(defaults []string) []string
+	// HealthPath is what is polled until the instance is ready (default /api/health); with HealthAnyStatus, any HTTP
+	// answer counts, not only 200 (for releases without a health endpoint).
+	HealthPath      string
+	HealthAnyStatus bool
 }
 
 // Config configures a [Runtime].
@@ -57,6 +64,9 @@ type Config struct {
 	Versions VersionsSource // the releases this host serves (required); missing ones are seeded in the background
 
 	DefaultVersion string // for instances without a Version (e.g. "pb:0.36.*" or "p1:0.0.*"); empty = such instances fail
+	// MinUpstream is the oldest upstream PocketBase release this host serves (default [MinUpstream]). A host that keeps
+	// older releases in its binary cache and lists them in Versions can lower it.
+	MinUpstream string
 
 	IdleTTL             time.Duration // stop after this long without requests (default 10m)
 	MaxConcurrentStarts int           // containers starting at once (default 4)
@@ -498,7 +508,7 @@ func (rt *Runtime) containerConfig(ctx context.Context, inst host.Instance) (con
 	if want == "" {
 		return containerConfig{}, "", errors.New("no PocketBase version")
 	}
-	rel, err := Pick(rt.Releases(), want)
+	rel, err := PickMin(rt.Releases(), want, rt.cfg.MinUpstream)
 	if err != nil {
 		return containerConfig{}, "", err
 	}
@@ -535,6 +545,9 @@ func (rt *Runtime) containerConfig(ctx context.Context, inst host.Instance) (con
 	if spec.Env["PB_ENCRYPTION_KEY"] != "" {
 		cmd = append(cmd, "--encryptionEnv=PB_ENCRYPTION_KEY")
 	}
+	if spec.Cmd != nil {
+		cmd = spec.Cmd(cmd)
+	}
 	env := make([]string, 0, len(spec.Env))
 	for k, v := range spec.Env {
 		env = append(env, k+"="+v)
@@ -564,6 +577,8 @@ func (rt *Runtime) containerConfig(ctx context.Context, inst host.Instance) (con
 		WorkingDir:   rt.cfg.Home,
 		ExposedPorts: map[string]struct{}{"8090/tcp": {}},
 		HostConfig:   hc,
+		healthPath:   spec.HealthPath,
+		healthAny:    spec.HealthAnyStatus,
 	}
 	labels := map[string]string{}
 	for k, v := range spec.Labels {
@@ -608,7 +623,7 @@ func (rt *Runtime) startLocked(ctx context.Context, c *ctr, inst host.Instance, 
 		return 0, fmt.Errorf("no published port (running %v, ports %v, err %v)", info.State.Running, info.NetworkSettings.Ports, err)
 	}
 	port := info.hostPort()
-	if err := rt.waitHealthy(ctx, id, port); err != nil {
+	if err := rt.waitHealthy(ctx, id, port, cfg.healthPath, cfg.healthAny); err != nil {
 		_ = rt.e.remove(context.Background(), id)
 		return 0, err
 	}
@@ -622,15 +637,19 @@ func (rt *Runtime) startLocked(ctx context.Context, c *ctr, inst host.Instance, 
 	return port, nil
 }
 
-// waitHealthy polls /api/health until it answers 200, the container exits or StartTimeout passes.
-func (rt *Runtime) waitHealthy(ctx context.Context, id string, port int) error {
+// waitHealthy polls path (default /api/health) until it answers 200 (with anyStatus: anything), the container exits or
+// StartTimeout passes.
+func (rt *Runtime) waitHealthy(ctx context.Context, id string, port int, path string, anyStatus bool) error {
 	deadline := time.Now().Add(rt.cfg.StartTimeout)
-	url := "http://127.0.0.1:" + strconv.Itoa(port) + "/api/health"
+	if path == "" {
+		path = "/api/health"
+	}
+	url := "http://127.0.0.1:" + strconv.Itoa(port) + path
 	for i := 0; ; i++ {
 		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if res, err := rt.http.Do(req); err == nil {
 			res.Body.Close()
-			if res.StatusCode == http.StatusOK {
+			if res.StatusCode == http.StatusOK || anyStatus {
 				return nil
 			}
 		}

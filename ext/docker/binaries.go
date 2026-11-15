@@ -72,7 +72,18 @@ func ParseVersion(v string) (line, want string, err error) {
 // Pick returns the newest release in rs that satisfies want: "pb:0.36.*", "p1:0.0.1", or an upstream version without
 // a prefix; exact versions and ranges ("0.36.*", "~0.36", "^0.30") both work. It is the one place that decides which
 // release an instance runs.
-func Pick(rs []Release, want string) (Release, error) {
+func Pick(rs []Release, want string) (Release, error) { return PickMin(rs, want, MinUpstream) }
+
+// PickMin is [Pick] with another floor for upstream releases (e.g. a host that still serves older ones); empty means
+// [MinUpstream].
+func PickMin(rs []Release, want, minUpstream string) (Release, error) {
+	if minUpstream == "" {
+		minUpstream = MinUpstream
+	}
+	floor, err := semver.NewVersion(minUpstream)
+	if err != nil {
+		return Release{}, fmt.Errorf("min upstream %q: %w", minUpstream, err)
+	}
 	line, rng, err := ParseVersion(want)
 	if err != nil {
 		return Release{}, err
@@ -88,7 +99,7 @@ func Pick(rs []Release, want string) (Release, error) {
 			continue
 		}
 		v, err := semver.StrictNewVersion(r.Version)
-		if err != nil || v.Prerelease() != "" || !c.Check(v) || (line == LinePB && v.LessThan(semver.MustParse(MinUpstream))) {
+		if err != nil || v.Prerelease() != "" || !c.Check(v) || (line == LinePB && v.LessThan(floor)) {
 			continue // pre-releases are never served
 		}
 		if best == nil || v.GreaterThan(best) {
@@ -99,8 +110,8 @@ func Pick(rs []Release, want string) (Release, error) {
 		return pick, nil
 	}
 	if line == LinePB {
-		if sv, err := semver.NewVersion(strings.TrimSuffix(strings.TrimSuffix(rng, ".*"), ".x")); err == nil && sv.LessThan(semver.MustParse(MinUpstream)) {
-			return Release{}, fmt.Errorf("PocketBase %s is no longer supported (0.22 and older are sunset; use 0.23 or newer)", rng)
+		if sv, err := semver.NewVersion(strings.TrimSuffix(strings.TrimSuffix(rng, ".*"), ".x")); err == nil && sv.LessThan(floor) {
+			return Release{}, fmt.Errorf("PocketBase %s is no longer supported on this host (the oldest served is %s)", rng, minUpstream)
 		}
 	}
 	return Release{}, fmt.Errorf("PocketBase %q is not offered on this host", want)

@@ -163,6 +163,10 @@ type containerConfig struct {
 	ExposedPorts map[string]struct{} `json:"ExposedPorts,omitempty"`
 	Tty          bool                `json:"Tty"`
 	HostConfig   hostConfig          `json:"HostConfig"`
+
+	// readiness check (see Spec.HealthPath); not sent to Docker
+	healthPath string
+	healthAny  bool
 }
 
 type hostConfig struct {
