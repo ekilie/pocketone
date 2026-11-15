@@ -1,9 +1,6 @@
 <p align="center">
     <a href="https://pocketone.dev" target="_blank" rel="noopener">
-        <picture>
-            <source media="(prefers-color-scheme: dark)" srcset="docs/images/pocketone-lockup-dark.png" />
-            <img src="docs/images/pocketone-lockup-light.png" width="500" alt="PocketOne - a community fork of PocketBase" />
-        </picture>
+        <img src="docs/images/pocketone-lockup-light.png" width="500" alt="PocketOne - a community fork of PocketBase" />
     </a>
 </p>
 
