@@ -24,7 +24,7 @@ CHANGELOG_8_15.html
 # binaries built inside a module folder (go build ./... in a single-main module)
 /examples/pocketone/pocketone
 /examples/pocketone/pocketbase
-/ext/pocker/cmd/pocker/pocker
+/ext/core/multisite-provider-pocker/cmd/pocker/pocker
 
 # Agent worktrees (local only)
 .claude/worktrees/

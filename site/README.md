@@ -1,7 +1,7 @@
 # pocketone.dev
 
-The PocketOne website: what PocketOne is, how to install it, and its plugins. A PocketPages v1 app (`ext/pages`),
-started from the pocketpages.dev site in [`../ext/pages/site`](../ext/pages/site).
+The PocketOne website: what PocketOne is, how to install it, and its plugins. A PocketPages v1 app (`ext/core/pages`),
+started from the pocketpages.dev site in [`../ext/core/pages/site`](../ext/core/pages/site).
 
 ## Layout
 
@@ -23,8 +23,8 @@ Plugin pages are copies of the READMEs in `ext/`, made by `sync/`. Don't edit th
 cd site/sync && go run .
 ```
 
-- `plugins.json` lists every plugin: title, one-line summary and group. Every `ext/<name>` folder must be in it.
-- Each `ext/<name>/README.md` becomes `/docs/plugins/<name>`, with the plugin's `pocketone.yaml` keys (from
+- `plugins.json` lists every plugin: title, one-line summary and group. Every `ext/core/<name>` and `ext/community/<name>` folder must be in it.
+- Each `ext/<tier>/<name>/README.md` becomes `/docs/plugins/<name>`, with the plugin's `pocketone.yaml` keys (from
   `pocketone config --json`, so it builds `examples/pocketone`) added to its `## Configure` section. Other `.md` files
   in the plugin folder become guides under it; `docs/plugins.md` becomes `/docs/writing-a-plugin`.
 - It also writes `/docs/config-reference`: every `pocketone.yaml` section.

@@ -11,7 +11,7 @@
 // It owns: pb_pages/(main)/docs/plugins/**, pb_pages/(main)/docs/config-reference.md, pb_pages/(main)/docs/writing-a-plugin.md (from docs/plugins.md), the region of
 // pb_pages/(main)/_private/toc.md between the plugins markers, and pb_pages/assets/search-index.json (the search box's
 // index of every docs and blog page, hand-written ones included, so editing any page means running sync). The plugin list, titles and groups come from
-// site/plugins.json; every ext/<name> folder must be in it.
+// site/plugins.json; every ext/core/<name> and ext/community/<name> folder must be in it.
 package main
 
 import (
@@ -46,7 +46,22 @@ type group struct {
 type plugin struct {
 	Name, Title, Group, Summary string
 	Link                        string // no README: point here (repo path) instead
+	dir                         string // repo path of the plugin folder: ext/core/<name> or ext/community/<name>
 	guides                      []guide
+}
+
+// tiers are the extension folders under ext/: core (shipped and maintained by PocketOne) and community.
+var tiers = []string{"core", "community"}
+
+// pluginDir finds a plugin's folder (repo path) in either tier, or "" if there is none.
+func pluginDir(root, name string) string {
+	for _, t := range tiers {
+		d := path.Join("ext", t, name)
+		if st, err := os.Stat(filepath.Join(root, d)); err == nil && st.IsDir() {
+			return d
+		}
+	}
+	return ""
 }
 
 type guide struct {
@@ -136,15 +151,16 @@ func loadManifest(root string) (*manifest, error) {
 		if !groups[p.Group] {
 			problems = append(problems, fmt.Sprintf("%s: unknown group %q", p.Name, p.Group))
 		}
-		dir := filepath.Join(root, "ext", p.Name)
+		p.dir = pluginDir(root, p.Name)
+		dir := filepath.Join(root, p.dir)
 		if p.Link != "" {
 			if _, err := os.Stat(filepath.Join(root, p.Link)); err != nil {
 				problems = append(problems, fmt.Sprintf("%s: link %s doesn't exist", p.Name, p.Link))
 			}
 			continue
 		}
-		if _, err := os.Stat(filepath.Join(dir, "README.md")); err != nil {
-			problems = append(problems, fmt.Sprintf("%s: no ext/%s/README.md (give it a \"link\" instead)", p.Name, p.Name))
+		if _, err := os.Stat(filepath.Join(dir, "README.md")); p.dir == "" || err != nil {
+			problems = append(problems, fmt.Sprintf("%s: no ext/core/%s/README.md or ext/community/%s/README.md (give it a \"link\" instead)", p.Name, p.Name, p.Name))
 			continue
 		}
 		entries, err := os.ReadDir(dir)
@@ -157,18 +173,20 @@ func loadManifest(root string) (*manifest, error) {
 				continue
 			}
 			p.guides = append(p.guides, guide{
-				src:  path.Join("ext", p.Name, n),
+				src:  path.Join(p.dir, n),
 				slug: strings.ToLower(strings.TrimSuffix(n, ".md")),
 			})
 		}
 	}
-	exts, err := os.ReadDir(filepath.Join(root, "ext"))
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range exts {
-		if e.IsDir() && !listed[e.Name()] {
-			problems = append(problems, fmt.Sprintf("ext/%s isn't in site/plugins.json", e.Name()))
+	for _, t := range tiers {
+		exts, err := os.ReadDir(filepath.Join(root, "ext", t))
+		if err != nil && !os.IsNotExist(err) {
+			return nil, err
+		}
+		for _, e := range exts {
+			if e.IsDir() && !listed[e.Name()] {
+				problems = append(problems, fmt.Sprintf("ext/%s/%s isn't in site/plugins.json", t, e.Name()))
+			}
 		}
 	}
 	if len(problems) > 0 {
@@ -185,8 +203,8 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		if p.Link != "" {
 			continue
 		}
-		pages["ext/"+p.Name+"/README.md"] = "/docs/plugins/" + p.Name
-		pages["ext/"+p.Name] = "/docs/plugins/" + p.Name
+		pages[p.dir+"/README.md"] = "/docs/plugins/" + p.Name
+		pages[p.dir] = "/docs/plugins/" + p.Name
 		for _, g := range p.guides {
 			pages[g.src] = "/docs/plugins/" + p.Name + "/" + g.slug
 		}
@@ -248,7 +266,7 @@ func link(p *plugin) string {
 func index(m *manifest) string {
 	var b strings.Builder
 	b.WriteString(frontMatter("Plugins", "Every plugin in PocketOne, grouped by what it's for.", ""))
-	b.WriteString("# Plugins\n\nEach plugin is a Go module in [`ext/`](" + repoURL + "/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing a plugin](/docs/writing-a-plugin).\n")
+	b.WriteString("# Plugins\n\nEach plugin is a Go module in [`ext/core/`](" + repoURL + "/tree/main/ext/core) (shipped with PocketOne) or `ext/community/` (contributed) with its own README; the pages here are those READMEs. Want to add one? Read [Writing a plugin](/docs/writing-a-plugin).\n")
 	for _, g := range m.Groups {
 		fmt.Fprintf(&b, "\n## %s\n\n%s\n\n| Plugin | What it does |\n|---|---|\n", g.Title, g.Intro)
 		for _, p := range m.Plugins {

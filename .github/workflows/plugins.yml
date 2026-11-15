@@ -1,4 +1,4 @@
-# PocketOne's plugin modules (ext/*, examples/pocketone): every module follows the plugin rules (a pluginkit plugin
+# PocketOne's plugin modules (ext/core/*, ext/community/*, examples/pocketone): every module follows the plugin rules (a pluginkit plugin
 # runs the conformance test), and each module a change affects builds, vets and passes its tests with -race.
 # Modules are affected by their own files or by any module they reach through a `replace`; a core change affects
 # all of them. See .github/plugins/main.go and docs/plugins.md.

@@ -1,0 +1,32 @@
+# Vacuum
+
+Scheduled database compaction: online SQLite `VACUUM` for a single app; under pocker, one stopped instance at a time.
+
+> **Planned.** Nothing is published here yet. This folder will hold the plugin's Go module
+> (`github.com/pockethost/pocketone/ext/core/vacuum`), its tests and a minimal `example/main.go` that builds and shows the
+> feature. See [Create your own plugin](../../../docs/plugins.md).
+
+## Install
+
+Not available yet: Vacuum isn't in `pocketone` and has no Go module to add to a custom build.
+
+## Configure
+
+Nothing to configure yet. Its settings will be documented here when it ships.
+
+## Use
+
+Nothing to use yet.
+
+## Integrations
+
+Nothing yet. It is planned to run on a single app and, under [pocker](../multisite-provider-pocker/README.md), on many instances, one
+stopped instance at a time.
+
+## Example
+
+No example yet; it will come with the plugin.
+
+## License
+
+MIT

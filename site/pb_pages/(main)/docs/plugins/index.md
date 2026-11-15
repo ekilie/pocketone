@@ -6,7 +6,7 @@ description: "Every plugin in PocketOne, grouped by what it's for."
 
 # Plugins
 
-Each plugin is a Go module in [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing a plugin](/docs/writing-a-plugin).
+Each plugin is a Go module in [`ext/core/`](https://github.com/pockethost/pocketone/tree/main/ext/core) (shipped with PocketOne) or `ext/community/` (contributed) with its own README; the pages here are those READMEs. Want to add one? Read [Writing a plugin](/docs/writing-a-plugin).
 
 ## In every binary
 
@@ -35,15 +35,15 @@ Host hundreds of PocketBase instances in one process, across regions.
 
 | Plugin | What it does |
 |---|---|
-| [Pocker](/docs/plugins/pocker) | Hundreds of PocketBase instances in one Go process, routed by hostname. |
-| [Host](/docs/plugins/host) | Many instances behind one listener, routed by hostname, run by one provider. |
-| [Docker](/docs/plugins/docker) | A host provider that runs each instance in its own container. |
+| [Pocker](/docs/plugins/multisite-provider-pocker) | Hundreds of PocketBase instances in one Go process, routed by hostname. |
+| [Multisite](/docs/plugins/multisite) | Many instances behind one listener, routed by hostname, run by one provider. |
+| [Docker](/docs/plugins/multisite-provider-docker) | A host provider that runs each instance in its own container. |
 | [Sandbox](/docs/plugins/sandbox) | Confines untrusted JS hooks, SQL and outbound network. |
-| [Firewall](/docs/plugins/firewall) | Peer allow-lists, trusted proxies and rate limits for a host. |
-| [Edge](/docs/plugins/edge) | Forwards each request to the edge that owns the instance. |
-| [Mothership](/docs/plugins/mothership) | A control plane and its edges, across regions. |
-| [Schedules](/docs/plugins/schedules) | Scheduled webhooks that wake sleeping instances. |
-| [Lifecycle](/docs/plugins/lifecycle) | Measures disk use and last request for each instance a host serves. |
+| [Firewall](/docs/plugins/multisite-firewall) | Peer allow-lists, trusted proxies and rate limits for a host. |
+| [Edge](/docs/plugins/multisite-edge) | Forwards each request to the edge that owns the instance. |
+| [Mothership](/docs/plugins/multisite-mothership) | A control plane and its edges, across regions. |
+| [Schedules](/docs/plugins/multisite-schedules) | Scheduled webhooks that wake sleeping instances. |
+| [Stats](/docs/plugins/multisite-stats) | Measures disk use and last request for each instance a host serves. |
 
 ## Services for your instances
 
@@ -51,9 +51,9 @@ Shared services a host gives every instance it runs.
 
 | Plugin | What it does |
 |---|---|
-| [Mail Relay](/docs/plugins/mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
-| [S3 Fallback](/docs/plugins/storage) | A default bucket for uploads and backups when an instance has no S3 of its own. |
-| [Server Timing](/docs/plugins/servertiming) | Server-Timing headers for each step of a request. |
+| [Mail Relay](/docs/plugins/multisite-mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
+| [S3 Fallback](/docs/plugins/multisite-s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
+| [Server Timing](/docs/plugins/multisite-servertiming) | Server-Timing headers for each step of a request. |
 
 ## Sell it as a service
 
@@ -61,9 +61,9 @@ Accounts, quotas and billing, for running PocketBase as a service.
 
 | Plugin | What it does |
 |---|---|
-| [Multitenant](/docs/plugins/tenants) | Accounts that own instances: quotas, owner logins, tokens and an API. |
-| [Multitenant Billing](/docs/plugins/tenant-billing) | Plans, quotas and the billing provider hook for Multitenant. |
-| [Lemon Squeezy Adapter](/docs/plugins/tenant-billing-ls) | Lemon Squeezy as the billing provider. |
+| [Multitenant](/docs/plugins/multisite-tenants) | Accounts that own instances: quotas, owner logins, tokens and an API. |
+| [Multitenant Billing](/docs/plugins/multisite-tenant-billing) | Plans, quotas and the billing provider hook for Multitenant. |
+| [Lemon Squeezy Adapter](/docs/plugins/multisite-tenant-billing-ls) | Lemon Squeezy as the billing provider. |
 
 ## For plugin authors
 
@@ -71,7 +71,7 @@ The plugin contract and tools for building and testing plugins.
 
 | Plugin | What it does |
 |---|---|
-| [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/pluginkit/pluginkit.go) | The plugin contract: one plugin works on a single app and under pocker. |
+| [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/core/pluginkit/pluginkit.go) | The plugin contract: one plugin works on a single app and under pocker. |
 | [Mail Trap](/docs/plugins/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
-| [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
+| [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/core/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
 | [JS Embed](/docs/plugins/jsembed) | JS hooks and migrations embedded in the binary. |

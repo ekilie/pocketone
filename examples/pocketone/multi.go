@@ -10,17 +10,17 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/autotls"
-	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/edge"
-	_ "github.com/pockethost/pocketone/ext/firewall" // turns on with a firewall / rate_limits section
-	"github.com/pockethost/pocketone/ext/host"
-	"github.com/pockethost/pocketone/ext/lifecycle"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/mothership/mirror"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/servertiming"
+	"github.com/pockethost/pocketone/ext/core/autotls"
+	"github.com/pockethost/pocketone/ext/core/config"
+	"github.com/pockethost/pocketone/ext/core/mailtrap"
+	"github.com/pockethost/pocketone/ext/core/multisite"
+	"github.com/pockethost/pocketone/ext/core/multisite-edge"
+	_ "github.com/pockethost/pocketone/ext/core/multisite-firewall" // turns on with a firewall / rate_limits section
+	"github.com/pockethost/pocketone/ext/core/multisite-mothership/mirror"
+	"github.com/pockethost/pocketone/ext/core/multisite-provider-docker"
+	"github.com/pockethost/pocketone/ext/core/multisite-provider-pocker"
+	"github.com/pockethost/pocketone/ext/core/multisite-servertiming"
+	"github.com/pockethost/pocketone/ext/core/multisite-stats"
 )
 
 // serveMany runs the binary as a multi-instance host when pocketone.yaml names a provider: instances from the
@@ -28,15 +28,15 @@ import (
 // pocker (in-process) or docker (containers); other edges from the `edges` section and the mothership. It reports
 // false when no provider is configured, so main serves a single app as stock PocketBase does.
 func serveMany(cfg *config.Config) (handled bool, err error) {
-	host.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Plugins: []pocker.Plugin{
+	multisite.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Plugins: []pocker.Plugin{
 		servertiming.New(), // outermost, so its header includes everything below
 		autotls.New(),      // `autotls` section
 		mailtrap.New(),     // dev instances with SMTP off: mail goes to the inbox at http://127.0.0.1:8025
 	}})
-	host.RegisterProvider(&docker.Provider{Resolve: cfg.ResolvePath})
+	multisite.RegisterProvider(&docker.Provider{Resolve: cfg.ResolvePath})
 
 	log := slog.Default()
-	opts := host.Options{Resolve: cfg.ResolvePath, Logger: log}
+	opts := multisite.Options{Resolve: cfg.ResolvePath, Logger: log}
 	if p, _ := config.Provider.Get(); p == "pocker" {
 		// pocker serves every instance in this process: it names itself (docker names each container's release)
 		poweredBy := "Pocker " + pocker.Version()
@@ -70,8 +70,8 @@ func serveMany(cfg *config.Config) (handled bool, err error) {
 			background = append(background, r.Run)
 		}
 	}
-	h, err := host.FromConfig(opts)
-	if errors.Is(err, host.ErrNoProvider) {
+	h, err := multisite.FromConfig(opts)
+	if errors.Is(err, multisite.ErrNoProvider) {
 		return false, nil
 	}
 	if err != nil {
@@ -81,7 +81,7 @@ func serveMany(cfg *config.Config) (handled bool, err error) {
 
 	// instance data: disk used and last request, measured and logged on the `lifecycle` section's schedule
 	if root := instanceRoot(cfg); root != "" {
-		lc := &lifecycle.Lifecycle{Directory: h.Directory, Folder: func(i host.Instance) string {
+		lc := &stats.Lifecycle{Directory: h.Directory, Folder: func(i multisite.Instance) string {
 			if i.Dir != "" {
 				return cfg.ResolvePath(i.Dir)
 			}

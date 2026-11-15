@@ -1,0 +1,121 @@
+package docker
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"time"
+
+	"github.com/pockethost/pocketone/ext/core/multisite"
+	"github.com/pockethost/pocketone/ext/core/pluginkit"
+)
+
+// SectionConfig is the `docker` section (pocketone.yaml, ext/core/config): settings for running each instance in its
+// own container. Listeners, instances and the firewall are the host's sections.
+//
+//	docker:
+//	  image: alpine:3.20                    # base image the binaries run in
+//	  binaries: /var/lib/pocketbase         # cache: <binaries>/<version>/linux_amd64/pocketbase; PocketOne under p1/
+//	  versions: ["pb:0.36", "p1:0.0"]       # minors this host serves (latest patch each, via docker update)
+//	  root: /var/lib/instances              # one folder per instance: <root>/<id>
+//	  default_version: "p1:0.0.*"           # for instances without one (pb: upstream, p1: PocketOne)
+//	  min_upstream: "0.23.0"                # oldest upstream release served (lower it only for releases you cache)
+//	  idle_ttl: 10m
+//	  max_concurrent_starts: 4
+//	  pids_limit: 256
+//	  nofile: [4096, 8192]
+//	  cap_drop: [ALL]
+//	  no_new_privileges: true
+//	  adopt_image: ""                       # also adopt unlabeled containers of this image (migrations)
+type SectionConfig struct {
+	Socket              string        `yaml:"socket" doc:"The Docker socket. Default $DOCKER_HOST when it is unix://, else /var/run/docker.sock."`
+	Image               string        `yaml:"image" doc:"Base image the binaries run in, such as alpine:3.20. Required; pulled when missing."`
+	Binaries            string        `yaml:"binaries" doc:"Folder of the release binary cache and its releases.json. Required."`
+	Versions            []string      `yaml:"versions" doc:"The minors this host serves, such as pb:0.36 or p1:0.0 (latest patch of each, from docker update)."`
+	Root                string        `yaml:"root" doc:"Folder with one folder per instance (<root>/<id>). Required."`
+	Home                string        `yaml:"home" doc:"The instance folder inside the container. Default /home/pockethost."`
+	DefaultVersion      string        `yaml:"default_version" doc:"Version for instances that name none, such as p1:0.0.*. Empty: such instances fail."`
+	MinUpstream         string        `yaml:"min_upstream" doc:"Oldest upstream PocketBase release served. Default 0.23.0; lower it only for releases you cache yourself."`
+	IdleTTL             time.Duration `yaml:"idle_ttl" doc:"Stop a container after this long without requests. Default 10m."`
+	MaxConcurrentStarts int           `yaml:"max_concurrent_starts" doc:"Containers starting at once. Default 4."`
+	StartTimeout        time.Duration `yaml:"start_timeout" doc:"How long a container gets to answer its health check. Default 60s."`
+	NanoCPUs            int64         `yaml:"nano_cpus" doc:"CPU limit per container in billionths of a CPU (1000000000 = one CPU). 0: no limit."`
+	PidsLimit           int64         `yaml:"pids_limit" doc:"Process limit per container. 0: Docker's default."`
+	Nofile              []int64       `yaml:"nofile" doc:"Open-file limit per container: [soft, hard]. Empty: Docker's default."`
+	CapDrop             []string      `yaml:"cap_drop" doc:"Linux capabilities to drop, such as [ALL]."`
+	NoNewPrivileges     bool          `yaml:"no_new_privileges" doc:"Set no-new-privileges on every container."`
+	Network             string        `yaml:"network" doc:"Docker network for the containers. Default the bridge."`
+	AdoptImage          string        `yaml:"adopt_image" doc:"Also adopt running unlabeled containers of this image named after an instance id (taking over from another manager)."`
+}
+
+// Section is the key of the `docker` section.
+var Section = pluginkit.NewSectionFunc("docker", func() SectionConfig { return SectionConfig{} },
+	"Runtime provider docker: each instance in its own container with the PocketBase (pb:) or PocketOne (p1:) binary of its version (image, binary cache and manifest, instance root, default version, idle stop, limits).")
+
+// ConfigFromSection builds a Config from a `docker` section. resolve makes relative paths absolute (nil = as is).
+func ConfigFromSection(sc SectionConfig, resolve func(string) string, log *slog.Logger) (Config, error) {
+	if resolve == nil {
+		resolve = func(s string) string { return s }
+	}
+	if sc.Image == "" || sc.Binaries == "" || sc.Root == "" {
+		return Config{}, errors.New("docker: image, binaries and root are required")
+	}
+	b := &Binaries{Root: resolve(sc.Binaries)}
+	cfg := Config{
+		Socket: sc.Socket, Image: sc.Image, DataRoot: resolve(sc.Root), Home: sc.Home, Binaries: b,
+		Versions:       YAMLVersions{Tracked: sc.Versions, Root: b.Root},
+		DefaultVersion: sc.DefaultVersion, MinUpstream: sc.MinUpstream, IdleTTL: sc.IdleTTL, MaxConcurrentStarts: sc.MaxConcurrentStarts,
+		StartTimeout: sc.StartTimeout, NanoCPUs: sc.NanoCPUs, PidsLimit: sc.PidsLimit,
+		CapDrop: sc.CapDrop, NoNewPrivileges: sc.NoNewPrivileges, Network: sc.Network, AdoptImage: sc.AdoptImage,
+		Logger: log,
+	}
+	if len(sc.Nofile) > 0 {
+		cfg.NofileSoft, cfg.NofileHard = sc.Nofile[0], sc.Nofile[len(sc.Nofile)-1]
+	}
+	return cfg, nil
+}
+
+// Provider is docker as a runtime provider for ext/core/multisite (`provider: docker`). Its fields are the host
+// application's extensions.
+type Provider struct {
+	// Container adds host-specific mounts, environment and labels to each container (see [Config.Prepare]).
+	Container func(ctx context.Context, inst multisite.Instance, version string, spec *Spec) error
+	// Version, if set, rewrites an instance's version before the binary is picked (e.g. a host's rule for which
+	// release line its instances run).
+	Version func(inst multisite.Instance) string
+	// OnLog receives container output (see [Config.OnLog]).
+	OnLog func(instanceID string, stderr bool, line string)
+	// Resolve makes relative paths in the section absolute (e.g. ext/core/config's Config.ResolvePath).
+	Resolve func(string) string
+	// Versions, if set, replaces the section's `versions` list (e.g. a fleet's list from a mothership).
+	Versions VersionsSource
+	// MinUpstream, if set, replaces the section's `min_upstream` (see [Config.MinUpstream]).
+	MinUpstream string
+}
+
+var _ multisite.Provider = (*Provider)(nil)
+
+// Name implements multisite.Provider.
+func (p *Provider) Name() string { return "docker" }
+
+// Prepare implements multisite.Provider: it reads the `docker` section and makes h run each instance in a container.
+func (p *Provider) Prepare(h *multisite.Host) error {
+	sc, _ := Section.Get()
+	cfg, err := ConfigFromSection(sc, p.Resolve, h.Logger)
+	if err != nil {
+		return err
+	}
+	cfg.Prepare, cfg.OnLog, cfg.Version = p.Container, p.OnLog, p.Version
+	if p.Versions != nil {
+		cfg.Versions = p.Versions
+	}
+	if p.MinUpstream != "" {
+		cfg.MinUpstream = p.MinUpstream
+	}
+	rt, err := New(cfg)
+	if err != nil {
+		return err
+	}
+	h.Runtime = rt
+	return nil
+}

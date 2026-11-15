@@ -55,7 +55,7 @@ var requiredSections = []string{"Install", "Configure", "Use", "Integrations", "
 // pluginPage is /docs/plugins/<name>: the plugin's README, with a jump line before its Install section and its
 // pocketone.yaml sections (from the binary) added at the end of its Configure section.
 func pluginPage(rw *rewriter, p *plugin, secs []section) (string, error) {
-	src := "ext/" + p.Name + "/README.md"
+	src := p.dir + "/README.md"
 	body, _, err := rw.page(src, p.Title)
 	if err != nil {
 		return "", err

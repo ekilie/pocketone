@@ -1,0 +1,120 @@
+# JS Errors
+
+JS hook errors that point at the `.pb.js` file they come from. When a hook in `pb_hooks` throws, the error says
+`pb_hooks/main.pb.js:12:3` instead of `/your/cwd/pb.js:1:40`, so you can go straight to the line.
+
+## Install
+
+JS Errors is built into `pocketone` and **always on**. There's nothing to install or turn on.
+
+In your own Go build, list it in the JS VM's extensions:
+
+```go
+app := pocketbase.New()
+jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", Extensions: []jsvm.Extension{jserrors.New()}})
+app.Start()
+```
+
+The module is `github.com/pockethost/pocketone/ext/core/jserrors`.
+
+## Configure
+
+There is nothing to configure. It works on whatever hooks folder the app uses (`--hooksDir`, or `app.hooks_dir` in
+`pocketone.yaml`).
+
+## Use
+
+Write hooks as usual. When one fails, the error in the log names the hooks file, line and column. For example, this hook:
+
+```js
+// pb_hooks/main.pb.js
+routerAdd("GET", "/boom", (e) => {
+  const order = null
+  return e.json(200, { total: order.total })
+})
+```
+
+logs an error at `pb_hooks/main.pb.js:4:...` when you open `/boom`, not at `pb.js:1:...`.
+
+What it covers:
+
+- errors thrown by handlers you register in a hooks file: hooks, routes, middlewares and cron jobs;
+- errors while a hooks file itself runs at startup (the file is named in the startup error).
+
+The file is named after your hooks folder: with `--hooksDir ./hooks`, errors say `hooks/main.pb.js:4:3`.
+
+A handler it can't place, such as one built from a string or registered at runtime, keeps the original message.
+
+To try it, run the [example](example/main.go):
+
+```bash
+cd example && go run . serve --dev
+curl http://127.0.0.1:8090/boom
+```
+
+and read the log.
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Pocker](../multisite-provider-pocker/README.md) | Built in for every instance: hook errors in each instance's log name `pb_hooks/<file>:<line>:<col>`. |
+| [jsembed](../jsembed/README.md) | Combine the two, for example `Extensions: []jsvm.Extension{jsembed.Hooks(hooks), jserrors.New()}`. Embedded files are named `pb_hooks/<file>`. |
+
+### Building on JS Errors
+
+It's a plain JS VM extension, so it sits next to any other extension in `jsvm.Config.Extensions`. The errors it
+rewrites still unwrap to the original error, so Go code that checks for a `*goja.Exception` with `errors.As` keeps
+working. It has no Go API beyond `jserrors.New()`.
+
+## Example
+
+[`example/main.go`](example/main.go) runs an app next to `example/pb_hooks`; request `/boom` in dev mode and the logged error names `pb_hooks/main.pb.js:4`.
+
+```go
+// Command example shows hook errors pointing at the .pb.js file: run it in dev mode next to example/pb_hooks and
+// request /boom; the logged error names pb_hooks/main.pb.js:4:... instead of <cwd>/pb.js:1:...
+//
+//	cd example && go run . serve --dev
+//	curl http://127.0.0.1:8090/boom
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
+	"github.com/pockethost/pocketone/ext/core/devusers"
+	"github.com/pockethost/pocketone/ext/core/jserrors"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app)
+	jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", Extensions: []jsvm.Extension{jserrors.New()}})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## How it works
+
+The JS VM turns each hook handler back into source (`fn.toString()`) and compiles it again as its own program under
+`<cwd>/pb.js`. That name also anchors relative `require()` calls, so it can't change, and errors carry it. This
+plugin:
+
+- remembers each hooks file while it loads, and where each handler sits in it;
+- rewrites `pb.js:<line>:<col>` in errors those handlers throw to `pb_hooks/<file>:<line>:<col>` (the wrapped error
+  still unwraps to the original);
+- names the file in errors raised while a hooks file itself runs.
+
+It's a jsvm extension (`jsvm.Config.Extensions`) with `OnLoad` and `OnCompile` methods, plus `jsvm.ScriptPath()`,
+PocketOne's small seam in the JS VM. With no extensions, the JS VM behaves like PocketBase's. It used to live inside
+the JS VM (`hooksource.go`) and moved here on 2026-11-13.
+
+## License
+
+MIT

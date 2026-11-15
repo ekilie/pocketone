@@ -69,7 +69,7 @@ Runtime provider docker: each instance in its own container with the PocketBase 
 | `network` | string |  | Docker network for the containers. Default the bridge. |
 | `adopt_image` | string |  | Also adopt running unlabeled containers of this image named after an instance id (taking over from another manager). |
 
-Owned by [Docker](/docs/plugins/docker).
+Owned by [Docker](/docs/plugins/multisite-provider-docker).
 
 #### `edges:`
 
@@ -80,7 +80,7 @@ The fleet: this edge's id and a fixed list of the other edges (id, internal_url,
 | `self` | string |  | This edge's id, such as lax-1. |
 | `list` | list of object |  | The other edges: id, internal_url (where this edge reaches it) and optional region. |
 
-Owned by [Edge](/docs/plugins/edge).
+Owned by [Edge](/docs/plugins/multisite-edge).
 
 #### `firewall:`
 
@@ -95,7 +95,7 @@ Peers allowed to connect, trusted proxies and client-IP headers, trusted clients
 | `trusted_client_headers` | list of string |  | Headers a trusted client uses to name its end user's IP, so each user gets their own limits. Default X-Client-IP. |
 | `rate_limit_header_prefix` | string |  | Prefix of the rate-limit response headers. Default X-RateLimit. |
 
-Owned by [Firewall](/docs/plugins/firewall).
+Owned by [Firewall](/docs/plugins/multisite-firewall).
 
 #### `instances:`
 
@@ -106,7 +106,7 @@ Where a multi-instance host's instances come from (a YAML file), and dev mode (s
 | `file` | string | `instances.yaml` | The instances file (id, hosts and settings for each instance), reloaded when it changes. |
 | `dev` | bool |  | Also serve unknown hostnames: each becomes an instance named after it, in dev mode, with its folder made on first use. |
 
-Owned by [Host](/docs/plugins/host).
+Owned by [Multisite](/docs/plugins/multisite).
 
 #### `lifecycle:`
 
@@ -118,7 +118,7 @@ Instance data on this host: how often disk use is measured and last-request time
 | `report_every` | duration | `1h0m0s` | How often changed last-request times are reported to the sink. Default 1h. |
 | `concurrency` | int | `2` | How many instances are measured at once. Default 2. |
 
-Owned by [Lifecycle](/docs/plugins/lifecycle).
+Owned by [Stats](/docs/plugins/multisite-stats).
 
 #### `mothership:`
 
@@ -136,7 +136,7 @@ A community mothership to mirror instances and edges from: url, login, this edge
 | `heartbeat` | duration |  | How often this edge marks itself online. Default 15s; negative: never. |
 | `resync` | duration |  | How often everything is reloaded, in case a change was missed. Default 10m. |
 
-Owned by [Mothership](/docs/plugins/mothership).
+Owned by [Mothership](/docs/plugins/multisite-mothership).
 
 #### `pitr:`
 
@@ -168,7 +168,7 @@ Runtime provider pocker: instances run in-process (root folder, hooks pool, egre
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
 
-Owned by [Pocker](/docs/plugins/pocker).
+Owned by [Pocker](/docs/plugins/multisite-provider-pocker).
 
 #### `provider:`
 
@@ -191,7 +191,7 @@ Default rate limits for every instance (per instance: plugins.firewall.rate_limi
 | `trusted.instance_concurrent` | int |  | Requests one instance may have open at once. |
 | `off` | bool |  | No rate limiting. The default in dev mode unless rate_limits is set. |
 
-Owned by [Firewall](/docs/plugins/firewall).
+Owned by [Firewall](/docs/plugins/multisite-firewall).
 
 #### `s3redirect:`
 

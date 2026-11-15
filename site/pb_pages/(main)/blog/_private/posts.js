@@ -3,7 +3,7 @@
  * frontmatter (title, description, date, author, tags) drives the listing.
  * Drop in a new file and it shows up. No build, no registry.
  */
-// ctx.pagesDir is the pb_pages folder; hosts on an older ext/pages lack it, and there pb_pages sits next to pb_hooks
+// ctx.pagesDir is the pb_pages folder; hosts on an older ext/core/pages lack it, and there pb_pages sits next to pb_hooks
 const blogDir = (ctx) => `${ctx.pagesDir || `${__hooks}/../pb_pages`}/(main)/blog`
 
 const MONTHS = [

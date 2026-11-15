@@ -31,34 +31,34 @@
 
 # Plugins: many instances
 
-- [Pocker](/docs/plugins/pocker)
-- [Pocker: Pocker](/docs/plugins/pocker/pocker)
-- [Host](/docs/plugins/host)
-- [Docker](/docs/plugins/docker)
+- [Pocker](/docs/plugins/multisite-provider-pocker)
+- [Pocker: Pocker](/docs/plugins/multisite-provider-pocker/pocker)
+- [Multisite](/docs/plugins/multisite)
+- [Docker](/docs/plugins/multisite-provider-docker)
 - [Sandbox](/docs/plugins/sandbox)
-- [Firewall](/docs/plugins/firewall)
-- [Edge](/docs/plugins/edge)
-- [Mothership](/docs/plugins/mothership)
-- [Schedules](/docs/plugins/schedules)
-- [Lifecycle](/docs/plugins/lifecycle)
+- [Firewall](/docs/plugins/multisite-firewall)
+- [Edge](/docs/plugins/multisite-edge)
+- [Mothership](/docs/plugins/multisite-mothership)
+- [Schedules](/docs/plugins/multisite-schedules)
+- [Stats](/docs/plugins/multisite-stats)
 
 # Plugins: services
 
-- [Mail Relay](/docs/plugins/mailrelay)
-- [S3 Fallback](/docs/plugins/storage)
-- [Server Timing](/docs/plugins/servertiming)
+- [Mail Relay](/docs/plugins/multisite-mailrelay)
+- [S3 Fallback](/docs/plugins/multisite-s3-fallback)
+- [Server Timing](/docs/plugins/multisite-servertiming)
 
 # Plugins: sell it
 
-- [Multitenant](/docs/plugins/tenants)
-- [Multitenant Billing](/docs/plugins/tenant-billing)
-- [Lemon Squeezy Adapter](/docs/plugins/tenant-billing-ls)
+- [Multitenant](/docs/plugins/multisite-tenants)
+- [Multitenant Billing](/docs/plugins/multisite-tenant-billing)
+- [Lemon Squeezy Adapter](/docs/plugins/multisite-tenant-billing-ls)
 
 # Plugins: for authors
 
-- [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/pluginkit/pluginkit.go)
+- [Plugin Kit](https://github.com/pockethost/pocketone/blob/main/ext/core/pluginkit/pluginkit.go)
 - [Mail Trap](/docs/plugins/mailtrap)
-- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
+- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/core/devusers/devusers.go)
 - [JS Embed](/docs/plugins/jsembed)
 
 <!-- plugins:end -->
