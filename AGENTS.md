@@ -29,6 +29,14 @@ Core-Audit: upstream-merge v0.x.y
 `upstream-merge` is only for merging a PocketBase release; resolve conflicts in the `// PocketOne:` spots and audit any
 PocketOne change the merge forced.
 
+## The `core-changes` branch
+
+`core-changes` is upstream `develop` plus one commit holding every core change on `main` (no `ext/` or other
+PocketOne-owned paths), so anyone can audit our core changes against current upstream in one diff. It is rebuilt, never
+merged: after every upstream pull run `git fetch upstream origin && .github/core-audit/core-changes-branch.sh`, then
+`git push --force origin core-changes`. A conflict stops the script with the worktree left to resolve
+(`--continue` finishes); resolutions are remembered (rerere) for later runs.
+
 ## Core changes that aren't hooks
 
 Bug fixes to upstream behavior, each tested and meant for upstream; drop each one once upstream has it:
