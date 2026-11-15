@@ -8,8 +8,9 @@
 // `pocketone config --json`) added to Configure. Other top-level .md files in the plugin folder become guides under
 // the page.
 //
-// It owns: pb_pages/(main)/docs/plugins/**, pb_pages/(main)/docs/config-reference.md, pb_pages/(main)/docs/writing-a-plugin.md (from docs/plugins.md), and the region of
-// pb_pages/(main)/_private/toc.md between the plugins markers. The plugin list, titles and groups come from
+// It owns: pb_pages/(main)/docs/plugins/**, pb_pages/(main)/docs/config-reference.md, pb_pages/(main)/docs/writing-a-plugin.md (from docs/plugins.md), the region of
+// pb_pages/(main)/_private/toc.md between the plugins markers, and pb_pages/assets/search-index.json (the search box's
+// index of every docs and blog page, hand-written ones included, so editing any page means running sync). The plugin list, titles and groups come from
 // site/plugins.json; every ext/<name> folder must be in it.
 package main
 
@@ -230,6 +231,10 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		return nil, fmt.Errorf("%s: missing the plugins markers", tocFile)
 	}
 	out[tocFile] = t[:i+len(tocStart)] + "\n\n" + nav(m) + "\n" + t[j:]
+
+	if out[searchOut], err = searchIndex(root, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

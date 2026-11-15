@@ -47,8 +47,9 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 - Plugin CI (`.github/workflows/plugins.yml`, tool in `.github/plugins/`): every `pluginkit.Plugin` module has a
   conformance test, and each module a change affects builds, vets and passes `go test -race`. Check locally with
   `go run ./.github/plugins check` and `go run ./.github/plugins affected origin/main HEAD`.
-- pocketone.dev (`site/`) copies plugin READMEs and `docs/plugins.md`. A new plugin gets an entry in
-  `site/plugins.json`; after changing a README or `docs/plugins.md`, run `cd site/sync && go run .` (CI checks it).
+- pocketone.dev (`site/`) copies plugin READMEs and `docs/plugins.md`, and indexes every page for search. A new plugin
+  gets an entry in `site/plugins.json`; after changing a README, `docs/plugins.md` or any site page, run
+  `cd site/sync && go run .` (CI checks it).
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.
 - Plans and internal notes go in a private maintainer repo, never here.

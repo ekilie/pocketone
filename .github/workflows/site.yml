@@ -1,5 +1,6 @@
 # pocketone.dev builds each plugin's page from ext/<name>/README.md and the pocketone binary's config sections
-# (site/sync). Fail when a page is out of date or a plugin folder isn't listed in site/plugins.json.
+# (site/sync), plus the search index of every page. Fail when a page or the index is out of date, or a plugin folder
+# isn't listed in site/plugins.json.
 # On main, once the check passes, deploy site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev).
 # The deploy needs the POCKETHOST_TOKEN repository secret (a PocketHost personal access token that can write to
 # that instance); without it the job says so and skips.
@@ -22,7 +23,10 @@ jobs:
         with:
           go-version-file: site/sync/go.mod
           cache-dependency-path: "**/go.sum"
-      - name: Site is in sync with ext/ and docs/
+      - name: site/sync tests
+        working-directory: site/sync
+        run: go test .
+      - name: Site is in sync with ext/, docs/ and its own pages
         working-directory: site/sync
         run: go run . --check
 

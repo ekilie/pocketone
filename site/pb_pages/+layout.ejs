@@ -59,7 +59,12 @@
         </ul>
       </nav>
       <div class="header-tools">
-        <%# Search (MiniSearch over a built index) arrives in a later step. Icons are CSS masks so they take the theme's text color %>
+        <%# Icons are CSS masks so they take the theme's text color. Search: assets/search.js, over the index site/sync builds %>
+        <button class="search-btn" type="button" data-search-open aria-label="Search (press /)" aria-haspopup="dialog">
+          <span class="icon" style="--icon: url(https://api.iconify.design/lucide/search.svg)"></span>
+          <span class="search-label">Search</span>
+          <kbd>/</kbd>
+        </button>
         <a class="icon-link" href="https://github.com/pockethost/pocketone" target="_blank" aria-label="GitHub">
           <span class="icon" style="--icon: url(https://api.iconify.design/simple-icons/github.svg)"></span>
         </a>
@@ -68,6 +73,22 @@
         </a>
       </div>
     </header>
+    <dialog id="search" class="search-dialog" aria-label="Search" data-index="<%=asset('/assets/search-index.json')%>">
+      <form method="dialog" role="search" class="search-form">
+        <span class="icon" style="--icon: url(https://api.iconify.design/lucide/search.svg)"></span>
+        <input
+          type="search"
+          placeholder="Search the docs"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Search the docs"
+          aria-controls="search-results"
+        />
+        <kbd>Esc</kbd>
+      </form>
+      <ul id="search-results" class="search-results" role="listbox" aria-label="Results"></ul>
+      <p class="search-status" aria-live="polite"></p>
+    </dialog>
     <%- slot() %>
     <footer class="site-footer">
       <p>
@@ -77,5 +98,7 @@
       </p>
     </footer>
     <script src="<%=asset('/assets/prism.js')%>" defer></script>
+    <script src="<%=asset('/assets/docs.js')%>" defer></script>
+    <script src="<%=asset('/assets/search.js')%>" defer></script>
   </body>
 </html>

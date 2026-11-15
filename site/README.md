@@ -31,7 +31,23 @@ cd site/sync && go run .
 - Links between plugins and docs point at the site pages; links to source files point at GitHub.
 - It also writes the plugin index (`/docs/plugins`) and the plugin part of the docs nav (between the markers in
   `pb_pages/(main)/_private/toc.md`).
-- CI (`.github/workflows/site.yml`) runs `go run . --check` and fails when a page is out of date.
+- It also writes the search index, `pb_pages/assets/search-index.json`: every docs and blog page, hand-written ones
+  included, one entry per H2-H4 section. **So after editing any page, run sync too.**
+- CI (`.github/workflows/site.yml`) runs `go test .` and `go run . --check`, and fails when a page or the index is out
+  of date.
+
+## Search and comments
+
+- **Search** (`pb_pages/assets/search.js`): the header button, `/` or Cmd/Ctrl-K opens a dialog that loads
+  [MiniSearch](https://lucaong.github.io/minisearch/) and the index the first time it's used. No external service.
+- **Comments** (`pb_pages/_private/docs-footer.js`, `pb_pages/assets/docs.js`): each docs page ends with a
+  [giscus](https://giscus.app) box backed by GitHub Discussions (the Q&A category of pockethost/pocketone). A page's
+  thread is found by an exact term, not its URL: `pocketone.dev/docs/plugins/<name>` for a plugin and all its guides,
+  `pocketone.dev/<path>` for other pages. Front matter `discussion: <term>` picks another term (keep it when a page
+  moves, so its thread follows); `discussion: false` turns comments off. The docs home and the plugin index have none.
+  A thread is created on the first comment or reaction.
+- Docs links swap only the page body (Datastar, scoped to the nav). A swap gets the page without its layouts, so
+  `docs-footer.js` sends the footer (edit link, comments, tab title) along with it.
 
 ## Run it
 
