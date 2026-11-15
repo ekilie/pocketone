@@ -27,7 +27,8 @@ PocketBase (or PocketOne) binary of the version it asks for, so one host serves 
   to the latest patch per minor and one (`Pick`) matches an instance's version, for every caller. A fleet's list can
   come from a mothership instead (a bridge implements `VersionsSource`).
 - **Binary:** two release lines, picked by a prefix in the instance's `version`: `pb:` = upstream PocketBase (0.23
-  and newer; 0.22 and older are sunset and refused), `p1:` = PocketOne; no prefix = `pb:`. The newest listed release
+  and newer by default; 0.22 and older are refused unless the host lowers `MinUpstream` and lists releases it keeps in
+  its own cache), `p1:` = PocketOne; no prefix = `pb:`. The newest listed release
   that matches wins; anything not listed gets a clear 503. Cache: `<binaries>/<version>/<platform>/pocketbase`
   (PocketHost's existing layout) and `<binaries>/p1/<version>/<platform>/pocketone`. Listed releases missing from the
   cache are seeded in the background; there are no downloads at request time.
@@ -35,7 +36,8 @@ PocketBase (or PocketOne) binary of the version it asks for, so one host serves 
   `./pocketbase serve --http 0.0.0.0:8090` (plus `--dev`, and `--encryptionEnv=PB_ENCRYPTION_KEY` when the instance
   has an encryption key), the instance's secrets as environment, published on a loopback port the edge proxies to.
   Same layout as PocketHost's Node edge, so its instance folders move as they are. A host adds its own mounts,
-  environment and labels with `Prepare`.
+  environment and labels with `Prepare`, and can adjust a release's command (`Spec.Cmd`, e.g. drop a flag an old
+  release lacks) and readiness check (`Spec.HealthPath`, `Spec.HealthAnyStatus`).
 - **pb_hooks:** a change restarts just that container (PocketBase's HooksWatch, from the host, one watcher for all).
   Migrations run when a container boots.
 - **Lifecycle:** starts on the first request (ready when `/api/health` answers), at most `max_concurrent_starts` at

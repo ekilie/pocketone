@@ -57,6 +57,7 @@ Runtime provider docker: each instance in its own container with the PocketBase 
 | `root` | string |  |  |
 | `home` | string |  |  |
 | `default_version` | string |  |  |
+| `min_upstream` | string |  |  |
 | `idle_ttl` | duration |  |  |
 | `max_concurrent_starts` | int |  |  |
 | `start_timeout` | duration |  |  |
