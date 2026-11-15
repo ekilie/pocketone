@@ -11,7 +11,7 @@ description: The response - status, headers, cookies, redirects with flash messa
 | `header(name, value)` | Set a response header. `header(name)` reads it back. |
 | `cookie(name, value, options?)` | Set a cookie. |
 | `clearCookie(name, options?)` | Expire a cookie (same `path` / `domain` as when set). |
-| `redirect(location, { status = 302, flash }?)` | Send a redirect. `flash` sets a [one-time message](/docs/ctx/flash). |
+| `redirect(location, { status = 302, flash }?)` or `redirect(location, status)` | Send a redirect. `status` must be a 3xx code. `flash` sets a [one-time message](/docs/ctx/flash). |
 | `json(data)` / `json(status, data)` | Send JSON. |
 | `html(html)` / `html(status, html)` | Send HTML as-is (no layouts). |
 | `text(text)` / `text(status, text)` | Send plain text. |
@@ -33,7 +33,7 @@ Once a response is sent, the later steps of the request (handlers, template, lay
 ```js
 return ctx.res.redirect('/login')
 return ctx.res.redirect('/account', { flash: 'Saved' })
-return ctx.res.redirect('/new-home', { status: 301 })
+return ctx.res.redirect('/new-home', 301) // or { status: 301 }
 ```
 
 ## Cookies

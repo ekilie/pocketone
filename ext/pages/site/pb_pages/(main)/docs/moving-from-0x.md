@@ -27,6 +27,7 @@ Delete the `.pb.js` boot file and the `pocketpages` dependencies, and move the c
 | `request`, `response` | `ctx.req`, `ctx.res` |
 | `body()`, `formData` | `ctx.req.body()` |
 | `redirect(path)` | `ctx.res.redirect(path)` |
+| `response.redirect(path, status)` | `ctx.res.redirect(path, status)` (unchanged) |
 | `env()`, `store()`, `dbg()`, `info()`, `warn()`, `error()` | `ctx.env()`, `ctx.store()`, `ctx.log.debug()` / `info()` / `warn()` / `error()` |
 | `auth`, `request.auth` | `ctx.auth` |
 

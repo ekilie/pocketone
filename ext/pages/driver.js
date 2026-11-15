@@ -93,9 +93,15 @@
       return ctx.res
     },
     redirect: function (location, opts) {
+      // redirect(location, 301) as in 0.x, or redirect(location, { status, flash })
+      if (typeof opts === 'number') opts = { status: opts }
       opts = opts || {}
+      var status = opts.status === undefined ? 302 : opts.status
+      if (typeof status !== 'number' || status < 300 || status > 399 || status % 1 !== 0) {
+        throw new Error('ctx.res.redirect: status must be a 3xx code, got ' + status)
+      }
       if (opts.flash !== undefined) rt.setCookie('pp_flash', JSON.stringify(opts.flash), { maxAge: 300 })
-      rt.redirect(opts.status || 302, String(location))
+      rt.redirect(status, String(location))
       return ctx.res
     },
     json: function (a, b) {

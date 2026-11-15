@@ -356,7 +356,7 @@ Query values and cookies are strings unless you ask for JSON. Nothing is parsed 
 | `header(name, value)` | Set a response header; returns `ctx.res`. `header(name)` reads it back. |
 | `cookie(name, value, options?)` | Set a cookie. Non-string values are `JSON.stringify`'d; the value is then percent-encoded (`encodeURIComponent`), and `ctx.req.cookie` decodes it. Defaults: `path=/`, `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS. Options: `path`, `domain`, `maxAge` (seconds), `expires` (a `Date`, milliseconds since the epoch, or a date string; with `maxAge` too, browsers use `maxAge`), `httpOnly`, `secure`, `sameSite`. |
 | `clearCookie(name, options?)` | Expire a cookie (same `path`/`domain` as when set). |
-| `redirect(location, { status = 302, flash }?)` | Send a redirect. `flash` sets a one-time message (6.4). |
+| `redirect(location, { status = 302, flash }?)` or `redirect(location, status)` | Send a redirect. `status` must be a 3xx code. `flash` sets a one-time message (6.4). |
 | `json(data)` / `json(status, data)` | Send JSON. |
 | `html(html)` / `html(status, html)` | Send HTML as-is (no layouts). |
 | `text(text)` / `text(status, text)` | Send plain text. |
