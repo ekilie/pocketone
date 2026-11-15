@@ -1,7 +1,9 @@
 package tokens
 
 import (
+	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
@@ -20,6 +22,10 @@ const (
 // MiddlewareId is the id of the bearer middleware bound on every route.
 const MiddlewareId = "pbTokensAuth"
 
+// ScopeHeadersMiddlewareId is the id of the middleware that sets the X-Token-Scope-* headers, right after
+// PocketBase loads a JWT.
+const ScopeHeadersMiddlewareId = "pbTokensScopeHeaders"
+
 // middleware resolves `Authorization: Bearer pbt_...` to the token's owner before PocketBase's own JWT middleware
 // runs (which then sees e.Auth set and does nothing).
 func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
@@ -27,6 +33,8 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 		Id:       MiddlewareId,
 		Priority: apis.DefaultLoadAuthTokenMiddlewarePriority - 1,
 		Func: func(e *core.RequestEvent) error {
+			// only this plugin sets scope headers: drop any the client sent, on every request
+			stripScopeHeaders(e.Request.Header)
 			secret := bearer(e)
 			if !strings.HasPrefix(secret, Prefix) {
 				return e.Next()
@@ -44,7 +52,7 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 			if !audienceAllows(info.Audience, path) {
 				return e.ForbiddenError("This API token is bound to another resource ("+info.Audience+").", nil)
 			}
-			if !t.registry.allows(info.Scopes, path) {
+			if !t.registry.allows(info.Scopes, e) {
 				return e.ForbiddenError("This API token's scopes ("+strings.Join(info.Scopes, ", ")+") don't allow this request.", nil)
 			}
 			e.Auth = info.Owner
@@ -54,6 +62,50 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 			t.touch(info.Token, e.RealIP())
 			return e.Next()
 		},
+	}
+}
+
+// scopeHeadersMiddleware sets `X-Token-Scope-<Name>: 1` for each scope a signed-in request holds, so collection
+// rules can read them (`@request.headers.x_token_scope_notes_write = "1"`) and hooks can see them. A JWT or an
+// unscoped token holds every registered scope; a scoped token only its own; an anonymous request none. It runs
+// after PocketBase's JWT middleware and before anything builds the request info that rules read.
+func (t *Tokens) scopeHeadersMiddleware() *hook.Handler[*core.RequestEvent] {
+	return &hook.Handler[*core.RequestEvent]{
+		Id:       ScopeHeadersMiddlewareId,
+		Priority: apis.DefaultLoadAuthTokenMiddlewarePriority + 1,
+		Func: func(e *core.RequestEvent) error {
+			if e.Auth != nil {
+				held := t.heldScopes(e)
+				for _, name := range held {
+					e.Request.Header.Set(ScopeHeader(name), "1")
+				}
+			}
+			return e.Next()
+		},
+	}
+}
+
+// heldScopes: the scopes a signed-in request holds (see scopeHeadersMiddleware).
+func (t *Tokens) heldScopes(e *core.RequestEvent) []string {
+	if i := FromRequest(e); i != nil && len(i.Scopes) > 0 {
+		return i.Scopes
+	}
+	all := t.registry.list()
+	out := make([]string, 0, len(all))
+	for _, s := range all {
+		if len(s.Collections) > 0 && !slices.Contains(s.Collections, e.Auth.Collection().Name) {
+			continue // this account could never hold the scope
+		}
+		out = append(out, s.Name)
+	}
+	return out
+}
+
+func stripScopeHeaders(h http.Header) {
+	for k := range h {
+		if len(k) >= len(HeaderPrefix) && strings.EqualFold(k[:len(HeaderPrefix)], HeaderPrefix) {
+			delete(h, k)
+		}
 	}
 }
 

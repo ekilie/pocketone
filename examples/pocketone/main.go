@@ -257,6 +257,7 @@ func main() {
 		OnInit: func(vm *goja.Runtime) {
 			pluginkit.BindJS(app, vm, defaultPlugins...) // e.g. $bulkmail in pb_hooks
 			mcp.BindJS(vm, app)                          // $mcp.addTool in pb_hooks
+			tokens.BindJS(vm, app)                       // $tokens.registerScope / requireScope in pb_hooks
 		},
 		Extensions: []jsvm.Extension{jserrors.New()},
 	})

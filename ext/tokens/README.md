@@ -34,17 +34,44 @@ Try it: `go run ./example serve` (logins from [devusers](../devusers/devusers.go
 
 ## Scopes
 
-A token without scopes has its owner's full rights. Plugins register scopes; a scoped token authenticates only on its
-scopes' paths (elsewhere: 403), plus `/_pocker/whoami`:
+A token without scopes has its owner's full rights. Scopes come from plugins and from the app itself, in Go or in
+`pb_hooks`, and every registered scope appears with its description in Settings → API tokens and on the OAuth consent
+page.
 
 ```go
-tk.RegisterScope(tokens.Scope{Name: "deploy", Description: "Deploy code", Paths: []string{"/_pocker/deploy/"}})
-se.Router.POST("/_pocker/deploy/v1/commit", h).Bind(apis.RequireSuperuserAuth(), tokens.RequireScope("deploy"))
+tk.MustRegisterScope(tokens.Scope{
+    Name:        "notes:read",                                 // lower-case letters, digits, ":" and "_"
+    Description: "Read notes",                                 // shown in the token screen and on the consent page
+    Paths:       []string{"/api/collections/notes/records"},  // URL prefixes where a token holding it authenticates
+    Methods:     []string{"GET"},                              // optional: only these methods (GET covers HEAD)
+})
+se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireScope("notes:write"))
 ```
 
-`tokens.FromRequest(e)` returns the token a request used (nil for a JWT); `tokens.HasScope(e, "deploy")` is true for
-JWTs and unscoped tokens. Plugins that don't import this package can read the request store keys `tokens.scopes` and
-`tokens.id`.
+```js
+// pb_hooks (the standard binary binds $tokens)
+$tokens.registerScope({ name: "notes:write", description: "Change notes", paths: ["/api/collections/notes/records"] })
+routerAdd("POST", "/api/notes/archive", (e) => { /* ... */ }, $apis.requireAuth(), $tokens.requireScope("notes:write"))
+$tokens.hasScope(e, "notes:write")  // in a handler
+$tokens.ruleField("notes:write")    // "@request.headers.x_token_scope_notes_write"
+$tokens.scopes()                    // every registered scope, with its header and rule field
+```
+
+- **Where a scoped token works:** on the paths (and methods) of its scopes, plus `/_pocker/whoami`. Elsewhere: 403.
+  A Go plugin can add a `Match func(*core.RequestEvent) bool` guard for requests that paths can't describe.
+- **Guards:** `tokens.RequireScope("x")` (JS: `$tokens.requireScope("x")`) refuses an anonymous request and a token
+  without the scope. `tokens.HasScope(e, "x")` is true for JWTs and unscoped tokens.
+- **Collection rules:** every signed-in request carries `X-Token-Scope-<Name>: 1` for each scope it holds (a JWT or
+  an unscoped token: every registered scope; a scoped token: only its own; anonymous: none). Headers a client sends
+  with that prefix are always dropped. Rules read them as `@request.headers.x_token_scope_<name>`, with `:` as `_`:
+
+  ```
+  @request.auth.id = owner && @request.headers.x_token_scope_notes_write = "1"
+  ```
+
+  Names whose headers would collide (`notes:write` and `notes_write`) can't both be registered.
+- Registering a name again merges its paths, methods and guards (two plugins sharing a scope, or hooks reloading).
+- Plugins that don't import this package can read the request store keys `tokens.scopes` and `tokens.id`.
 
 ## Audience
 
@@ -56,7 +83,8 @@ tells a route what the token was issued for.
 
 `tokens.For(app)` returns the service: `Create(owner, CreateOptions{Name, Scopes, Expires, ClientId})` → secret +
 record, `Verify(secret)`, `List(owner)`, `Revoke(id)`, `RevokeAll(owner)`, `DeleteExpired()`, `RegisterScope`,
-`Scopes()`. [oauth-server](../oauth-server/README.md) issues its access tokens through `Create`.
+`Scopes()`, `MustRegisterScope`, `BindJS(vm, app)` (the `$tokens` global; the plugin also implements
+`pluginkit.JSBinder`). [oauth-server](../oauth-server/README.md) issues its access tokens through `Create`.
 
 ## License
 

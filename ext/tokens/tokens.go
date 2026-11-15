@@ -96,7 +96,7 @@ func Register(app core.App, cfg Config) (*Tokens, error) {
 	})
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		se.Router.Bind(t.middleware())
+		se.Router.Bind(t.middleware(), t.scopeHeadersMiddleware())
 		t.bindRoutes(se)
 		ui, err := fs.Sub(uiFiles, "ui")
 		if err != nil {
@@ -139,8 +139,16 @@ func For(app core.App) *Tokens {
 // App returns the app this service belongs to.
 func (t *Tokens) App() core.App { return t.app }
 
-// RegisterScope adds a scope tokens can be limited to (see [Scope]). Registering a name again merges its paths.
-func (t *Tokens) RegisterScope(s Scope) { t.registry.add(s) }
+// RegisterScope adds a scope tokens can be limited to (see [Scope]). Registering a name again merges its paths,
+// methods and guards. It fails for an invalid name or one whose header collides with another scope's.
+func (t *Tokens) RegisterScope(s Scope) error { return t.registry.add(s) }
+
+// MustRegisterScope is [Tokens.RegisterScope] that panics on error.
+func (t *Tokens) MustRegisterScope(s Scope) {
+	if err := t.RegisterScope(s); err != nil {
+		panic(err)
+	}
+}
 
 // Scopes returns the registered scopes, sorted by name.
 func (t *Tokens) Scopes() []Scope { return t.registry.list() }

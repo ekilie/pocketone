@@ -1,16 +1,23 @@
 package tokens
 
 import (
+	"fmt"
+	"net/http"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
+
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
 
-// Scope is a named slice of an owner's rights that a token can be limited to. Plugins register their scopes with
-// [Tokens.RegisterScope]; a token whose scopes are set authenticates only on the paths of those scopes, and routes
-// can double-check with [RequireScope].
+// Scope is a named slice of an owner's rights that a token can be limited to. Plugins and apps register their
+// scopes with [Tokens.RegisterScope] (JS: `$tokens.registerScope`); a token whose scopes are set authenticates only
+// on requests its scopes match (Paths + Methods, or Match), routes guard with [RequireScope], and collection rules
+// read `@request.headers.x_token_scope_<name>` (see [Scope.RuleField]).
 type Scope struct {
-	// Name, e.g. "deploy" or "files:read". Lower case, no spaces.
+	// Name, e.g. "deploy" or "notes:write": lower-case letters, digits, ":" and "_", starting with a letter or digit.
 	Name string `json:"name"`
 
 	// Description is shown on the consent page and in the token screens.
@@ -20,9 +27,44 @@ type Scope struct {
 	// owner. Elsewhere a scoped token is refused.
 	Paths []string `json:"paths,omitempty"`
 
+	// Methods, when not empty, limits Paths to these HTTP methods (e.g. GET for a read scope; GET also covers HEAD),
+	// so a read and a write scope can share a path. Empty: every method.
+	Methods []string `json:"methods,omitempty"`
+
+	// Match is an optional Go guard: a token with this scope also authenticates on any request Match returns true
+	// for (e.g. one collection's records API with method rules of your own). It runs before the owner is loaded,
+	// so it may look only at the request, not at e.Auth.
+	Match func(e *core.RequestEvent) bool `json:"-"`
+
 	// Collections, when not empty, limits which auth collections may hold a token with this scope (collection
 	// names, e.g. "_superusers"). Empty: any collection that may hold tokens.
 	Collections []string `json:"collections,omitempty"`
+}
+
+// HeaderPrefix starts the request headers that tell rules and hooks which scopes a request holds.
+const HeaderPrefix = "X-Token-Scope-"
+
+var scopeNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9:_]*$`)
+
+// ValidScopeName reports whether name may be registered as a scope.
+func ValidScopeName(name string) bool { return len(name) <= 64 && scopeNameRe.MatchString(name) }
+
+// Header is the request header set to "1" on a signed-in request that holds this scope, e.g. notes:write →
+// X-Token-Scope-Notes-Write.
+func (s Scope) Header() string { return ScopeHeader(s.Name) }
+
+// RuleField is how a collection API rule reads the scope, e.g. @request.headers.x_token_scope_notes_write
+// (PocketBase lowercases header names and turns "-" into "_"). Compare it with "1".
+func (s Scope) RuleField() string { return ScopeRuleField(s.Name) }
+
+// ScopeHeader is [Scope.Header] for a scope name.
+func ScopeHeader(name string) string {
+	return http.CanonicalHeaderKey(HeaderPrefix + strings.NewReplacer(":", "-", "_", "-").Replace(name))
+}
+
+// ScopeRuleField is [Scope.RuleField] for a scope name.
+func ScopeRuleField(name string) string {
+	return "@request.headers." + strings.ReplaceAll(strings.ToLower(ScopeHeader(name)), "-", "_")
 }
 
 // AnyTokenPaths authenticate every token, whatever its scopes: discovery routes that only tell the caller who it is.
@@ -33,7 +75,16 @@ type registry struct {
 	scopes map[string]Scope
 }
 
-func (r *registry) add(s Scope) {
+func (r *registry) add(s Scope) error {
+	s.Name = strings.TrimSpace(s.Name)
+	if !ValidScopeName(s.Name) {
+		return fmt.Errorf("tokens: invalid scope name %q (lower-case letters, digits, \":\" and \"_\")", s.Name)
+	}
+	methods := make([]string, 0, len(s.Methods))
+	for _, m := range s.Methods {
+		methods = append(methods, strings.ToUpper(strings.TrimSpace(m)))
+	}
+	s.Methods = methods
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.scopes == nil {
@@ -41,14 +92,43 @@ func (r *registry) add(s Scope) {
 	}
 	if old, ok := r.scopes[s.Name]; ok {
 		// several plugins may share a scope (deploy + logs under one name): merge their paths
-		old.Paths = append(old.Paths, s.Paths...)
+		for _, p := range s.Paths {
+			if !slices.Contains(old.Paths, p) {
+				old.Paths = append(old.Paths, p)
+			}
+		}
+		for _, m := range s.Methods {
+			if !slices.Contains(old.Methods, m) {
+				old.Methods = append(old.Methods, m)
+			}
+		}
 		if old.Description == "" {
 			old.Description = s.Description
 		}
-		old.Collections = append(old.Collections, s.Collections...)
+		if s.Match != nil {
+			prev, next := old.Match, s.Match
+			if prev == nil {
+				old.Match = next
+			} else {
+				old.Match = func(e *core.RequestEvent) bool { return prev(e) || next(e) }
+			}
+		}
+		for _, c := range s.Collections {
+			if !slices.Contains(old.Collections, c) {
+				old.Collections = append(old.Collections, c)
+			}
+		}
 		s = old
+	} else {
+		// notes:write and notes_write would share a header: refuse the second
+		for _, o := range r.scopes {
+			if o.Header() == s.Header() {
+				return fmt.Errorf("tokens: scope %q collides with %q (both use the %s header)", s.Name, o.Name, s.Header())
+			}
+		}
 	}
 	r.scopes[s.Name] = s
+	return nil
 }
 
 func (r *registry) get(name string) (Scope, bool) {
@@ -69,11 +149,12 @@ func (r *registry) list() []Scope {
 	return out
 }
 
-// allows reports whether a token with these scopes may authenticate on path. No scopes: everywhere.
-func (r *registry) allows(scopes []string, path string) bool {
+// allows reports whether a token with these scopes may authenticate on this request. No scopes: everywhere.
+func (r *registry) allows(scopes []string, e *core.RequestEvent) bool {
 	if len(scopes) == 0 {
 		return true
 	}
+	path := e.Request.URL.Path
 	for _, p := range AnyTokenPaths {
 		if pathUnder(path, p) {
 			return true
@@ -81,16 +162,31 @@ func (r *registry) allows(scopes []string, path string) bool {
 	}
 	for _, name := range scopes {
 		s, ok := r.get(name)
-		if !ok {
-			continue
+		if ok && s.matches(e) {
+			return true
 		}
+	}
+	return false
+}
+
+// matches: the request is under one of the scope's paths with an allowed method, or its Match guard says yes.
+func (s Scope) matches(e *core.RequestEvent) bool {
+	if s.methodAllowed(e.Request.Method) {
 		for _, p := range s.Paths {
-			if pathUnder(path, p) {
+			if pathUnder(e.Request.URL.Path, p) {
 				return true
 			}
 		}
 	}
-	return false
+	return s.Match != nil && s.Match(e)
+}
+
+func (s Scope) methodAllowed(m string) bool {
+	if len(s.Methods) == 0 {
+		return true
+	}
+	m = strings.ToUpper(m)
+	return slices.Contains(s.Methods, m) || (m == http.MethodHead && slices.Contains(s.Methods, http.MethodGet))
 }
 
 func pathUnder(path, prefix string) bool {
