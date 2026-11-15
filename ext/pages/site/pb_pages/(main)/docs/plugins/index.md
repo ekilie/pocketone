@@ -10,16 +10,19 @@ Plugins add features to `ctx` and hook into each request. Turn them on in `+conf
 ```js
 // pb_pages/+config.js
 module.exports = {
-  plugins: ['auth', 'realtime', require('./_private/datastar.js')],
+  plugins: ['auth', 'realtime', './_private/datastar.js'],
 }
 ```
 
-There are two kinds of entry:
+Each entry is one of:
 
-- **A name in quotes** (`'auth'`, `'realtime'`) turns on a plugin built into PocketPages. Only these two exist; any other
-  name is a startup error.
-- **`require('./_private/some-plugin.js')`** loads a JS plugin from a file in your app. Datastar works this way: it's an
-  add-on file you copy into `pb_pages/_private/`, not a built-in.
+- **A module name in quotes.** It's loaded with `require`, so it can be a package from your `package.json`
+  (`'my-plugin'`, found in `pb_pages/node_modules`) or a file in your app (`'./_private/my-plugin.js'`).
+- **A built-in name**, `'auth'` or `'realtime'`. A string is a built-in only when no module by that name is found.
+- **A plugin factory**, usually `require('./_private/my-plugin.js')`. Writing the `require` yourself and writing just
+  the string do the same thing.
+
+Datastar isn't built in. It's an add-on file you copy into `pb_pages/_private/` and list by path.
 
 EJS and Markdown are always on; they aren't plugins.
 
@@ -32,12 +35,12 @@ EJS and Markdown are always on; they aren't plugins.
 
 ## JS plugins
 
-A JS plugin is a file that exports a factory returning hooks. `require()` it and add it to `plugins` directly, or as
-`{ factory, ...options }`:
+A JS plugin is a module that exports a factory returning hooks. List it by name, or `require()` it yourself, which you
+need for options (`{ factory, ...options }`):
 
 ```js
 module.exports = {
-  plugins: ['auth', require('./_private/my-plugin.js')],
+  plugins: ['auth', 'my-plugin', { factory: require('./_private/other-plugin.js'), color: 'blue' }],
 }
 ```
 

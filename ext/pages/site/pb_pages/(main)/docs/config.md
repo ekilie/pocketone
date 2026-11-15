@@ -22,15 +22,17 @@ module.exports = {
 | `plugins` | `[]` | Built-in plugins by name, or JS plugin factories. EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-Unknown keys, unknown built-in names and duplicates are startup errors.
+Unknown keys, names that are neither a module nor a built-in, and duplicates are startup errors.
 
 ## Plugins
 
 Each entry in `plugins` is one of:
 
-- **A built-in name**: `'auth'` or `'realtime'`. See [Plugins](/docs/plugins).
-- **A JS plugin factory**: a function that returns hooks, usually loaded with `require('./_private/some-plugin.js')`. The
-  [Datastar add-on](/docs/plugins/datastar) is one.
+- **A module name**: a package in `node_modules` (`'my-plugin'`) or a file (`'./_private/my-plugin.js'`), loaded with
+  `require`. It must export a plugin factory.
+- **A built-in name**: `'auth'` or `'realtime'`, used when no module by that name is found. See [Plugins](/docs/plugins).
+- **A JS plugin factory**: a function that returns hooks, such as `require('./_private/datastar.js')` for the
+  [Datastar add-on](/docs/plugins/datastar).
 - **An object with a factory and options**: `{ factory, ...options }`. The object is passed to the factory as its `config`.
 
 ```js

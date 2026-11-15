@@ -2,6 +2,7 @@ package pages
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/dop251/goja"
 )
@@ -40,10 +41,15 @@ func (r *request) loadConfig(file string) (pagesConfig, []goja.Value, error) {
 			arr := obj.Get(key).ToObject(r.vm)
 			for i := range list {
 				item := arr.Get(fmt.Sprint(i))
-				if name, ok := item.Export().(string); ok {
-					if !builtinPlugins[name] {
-						return cfg, nil, fmt.Errorf("%s: unknown plugin %q", file, name)
+				// A string is a module name, required from +config.js (SPEC 9.1): a package.json dependency or a
+				// pb_pages file. Only when no module by that name exists in pb_pages is it a built-in.
+				if name, ok := item.Export().(string); ok && (!builtinPlugins[name] || r.packageExists(file, name)) {
+					v, err := r.requirePlugin(file, name)
+					if err != nil {
+						return cfg, nil, err
 					}
+					item = v
+				} else if ok {
 					if seen[name] {
 						return cfg, nil, fmt.Errorf("%s: plugin %q listed twice", file, name)
 					}
@@ -67,7 +73,7 @@ func (r *request) loadConfig(file string) (pagesConfig, []goja.Value, error) {
 				}
 				fn, ok := goja.AssertFunction(factory)
 				if !ok {
-					return cfg, nil, fmt.Errorf("%s: plugins[%d] must be a built-in name or a plugin factory", file, i)
+					return cfg, nil, fmt.Errorf("%s: plugins[%d] must be a built-in name, a module name or a plugin factory", file, i)
 				}
 				p, err := fn(goja.Undefined(), options)
 				if err != nil {
@@ -92,4 +98,32 @@ func (r *request) loadConfig(file string) (pagesConfig, []goja.Value, error) {
 		}
 	}
 	return cfg, plugins, nil
+}
+
+// requirePlugin loads a plugin listed by module name in +config.js. The module's export (or its `default`, for a
+// module compiled from ESM) must be a plugin factory; loadConfig checks that.
+func (r *request) requirePlugin(file, name string) (v goja.Value, err error) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			err = fmt.Errorf("%s: plugin %q: require failed (built-in plugins: auth, realtime): %w", file, name, panicErr(rec))
+		}
+	}()
+	v = r.requireFrom(file, name)
+	if o, ok := v.(*goja.Object); ok {
+		if _, isFn := goja.AssertFunction(v); !isFn {
+			if d := o.Get("default"); d != nil {
+				if _, isFn := goja.AssertFunction(d); isFn {
+					return d, nil
+				}
+			}
+		}
+	}
+	return v, nil
+}
+
+// packageExists reports whether a built-in's name is also a module in pb_pages (node_modules from +config.js's
+// folder up), which then wins over the built-in.
+func (r *request) packageExists(file, name string) bool {
+	_, ok := r.resolvePackage(path.Dir(file), name)
+	return ok
 }

@@ -56,10 +56,10 @@ module.exports = {
 
 | Key | Default | What it does |
 |---|---|---|
-| `plugins` | `[]` | Built-in plugins by name (`auth`, `realtime`), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names (a `node_modules` package or a `pb_pages` file, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-`+config.js` runs on each page request. Unknown keys, unknown built-in names or a plugin listed twice make every page
+`+config.js` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
 answer with an error, and the reason goes to the log.
 
 ### Dev mode

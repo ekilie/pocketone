@@ -101,8 +101,9 @@ Read it on the next request with `ctx.flash()`. See [flash](/docs/ctx/flash).
 
 ## Configuration and plugins
 
-- `+config.js` lists built-in plugins by name (`auth`, `realtime`) or JS plugin factories. Datastar is a JS plugin: copy
-  the [Datastar add-on](/docs/plugins/datastar) into `pb_pages/_private/` and `require()` it. npm plugin package names and EJS options are gone.
+- `+config.js` still takes plugin package names, which are loaded with `require` as before, but the packages must be
+  v1 plugins: the 0.x `pocketpages-plugin-*` packages don't run on v1. `auth` and `realtime` are built in, EJS and
+  Markdown are always on, and Datastar is an [add-on](/docs/plugins/datastar) you copy into `pb_pages/_private/`. npm plugin package names and EJS options are gone.
 - EJS and Markdown are always on. `pocketpages-plugin-ejs` and `pocketpages-plugin-marked` have no v1 equivalent because they aren't needed.
 - The auth plugin no longer goes through the JS SDK over HTTP (`api.pb()`). Use `ctx.session.*`, which calls the app directly. See [Authentication](/docs/plugins/auth).
 

@@ -404,10 +404,16 @@ module.exports = {
 
 | Key | Default | |
 |---|---|---|
-| `plugins` | `[]` | Built-ins by name (`auth`, `realtime`), or JS plugin factories such as add-ons (9). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names, built-in names (`auth`, `realtime`), or JS plugin factories such as add-ons (9). EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-Unknown keys, unknown built-in names and duplicates are startup errors.
+A string in `plugins` is a module name, required from `+config.js` (3.2): a package in `node_modules`
+(`'my-plugin'`) or a `pb_pages` file (`'./_private/my-plugin.js'`). Its export, or its `default` export, must be a
+plugin factory (9.2). Only when no module by that name is found is the string a built-in (9.1), so a package named
+`auth` would replace the built-in `auth`. A module that is found but fails to load is an error; it never falls back to
+the built-in.
+
+Unknown keys, names that are neither a module nor a built-in, and duplicates are startup errors.
 
 ## 8. Errors
 
@@ -424,7 +430,7 @@ Unknown keys, unknown built-in names and duplicates are startup errors.
 
 ### 9.1 Built-in
 
-Turned on by name in `+config.js`.
+Turned on by name in `+config.js` when no module by that name is found (7).
 
 **`auth`:** cookie sessions on PocketBase auth, without calling the app over HTTP.
 - Every request: reads the `pb_auth` cookie, validates the token, sets `ctx.auth` (or clears a bad cookie).
