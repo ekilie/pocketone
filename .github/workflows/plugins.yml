@@ -2,6 +2,9 @@
 # runs the conformance test), and each module a change affects builds, vets and passes its tests with -race.
 # Modules are affected by their own files or by any module they reach through a `replace`; a core change affects
 # all of them. See .github/plugins/main.go and docs/plugins.md.
+#
+# `plan` checks the rules and lists the affected modules; `test` builds, vets and tests each one in its own job, in
+# parallel (a change to core or to .github/plugins tests all ~30); `plugins` is the single overall result.
 name: plugins
 
 on:
@@ -10,9 +13,11 @@ on:
   pull_request:
 
 jobs:
-  plugins:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
+    outputs:
+      modules: ${{ steps.affected.outputs.modules }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,26 +44,38 @@ jobs:
             mods=$(go run ./.github/plugins affected "$base" "$AFTER")
           fi
           echo "$mods" | sed '/^$/d;s/^/  /'
-          { echo 'modules<<EOF'; echo "$mods"; echo EOF; } >> "$GITHUB_OUTPUT"
+          echo "modules=$(echo "$mods" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
 
+  test:
+    needs: plan
+    if: needs.plan.outputs.modules != '[]'
+    name: test ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.plan.outputs.modules) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
       - name: Build, vet and test
-        if: steps.affected.outputs.modules != ''
+        working-directory: ${{ matrix.module }}
+        run: go build -o /dev/null ./... && go vet ./... && go test -race -count=1 -timeout 10m ./...
+
+  # The one check to watch or require: fails if the rules failed or any module did.
+  plugins:
+    needs: [plan, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Result
         env:
-          MODULES: ${{ steps.affected.outputs.modules }}
+          PLAN: ${{ needs.plan.result }}
+          TEST: ${{ needs.test.result }}
         run: |
-          set -uo pipefail
-          failed=()
-          for m in $MODULES; do
-            echo "::group::$m"
-            ok=1
-            (cd "$m" && go build -o /dev/null ./... && go vet ./... && go test -race -count=1 -timeout 10m ./...) || ok=0
-            echo "::endgroup::"
-            if [ $ok = 0 ]; then
-              echo "::error::$m failed"
-              failed+=("$m")
-            fi
-          done
-          if [ ${#failed[@]} -gt 0 ]; then
-            echo "failed: ${failed[*]}"
-            exit 1
-          fi
+          echo "plan: $PLAN, test: $TEST"
+          [ "$PLAN" = success ] && { [ "$TEST" = success ] || [ "$TEST" = skipped ]; }
