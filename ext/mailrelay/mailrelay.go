@@ -155,9 +155,9 @@ func (p *Plugin) Name() string { return Name }
 // `enabled` belongs to the host: `enabled: false` turns the plugin off, and an app with SMTP off then gets
 // PocketBase's own fallback (sendmail). To keep the relay in charge and refuse an instance's mail, use `send: false`.
 type SectionConfig struct {
-	Send      *bool `yaml:"send" json:"send"`
-	PerMinute *int  `yaml:"per_minute" json:"per_minute"`
-	Daily     *int  `yaml:"daily" json:"daily"`
+	Send      *bool `yaml:"send" json:"send" doc:"Relay mail for instances with SMTP off unless false; false refuses their mail."`
+	PerMinute *int  `yaml:"per_minute" json:"per_minute" doc:"Messages per instance per minute. Default 20. A limit set in Go wins."`
+	Daily     *int  `yaml:"daily" json:"daily" doc:"Messages per instance per UTC day. Default 200. A limit set in Go wins."`
 }
 
 // Configure implements [pocker.Configurer]: pocketone.yaml's `mailrelay` section. Limits set in Go win.

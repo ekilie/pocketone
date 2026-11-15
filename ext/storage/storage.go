@@ -45,32 +45,32 @@ const Name = "storage"
 type Config struct {
 	// Enabled is the default for every instance: on unless false. An instance's `plugins.storage.enabled`
 	// overrides it.
-	Enabled *bool `yaml:"enabled"`
+	Enabled *bool `yaml:"enabled" doc:"On for every instance unless false; an instance's plugins.storage.enabled overrides it."`
 
 	// Backends are the named S3-compatible destinations.
-	Backends map[string]*Bucket `yaml:"backends"`
+	Backends map[string]*Bucket `yaml:"backends" doc:"Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style."`
 
 	// Mounts maps a filesystem kind ("storage", "backups", "litestream", …) to a backend name.
-	Mounts map[string]string `yaml:"mounts"`
+	Mounts map[string]string `yaml:"mounts" doc:"Filesystem kind (storage, backups, litestream, ...) to backend name."`
 
 	// Deprecated: the old single-bucket shape. Bucket becomes backend "default", mounted for storage (unless
 	// Uploads is false) and backups (unless Backups is false).
-	Bucket  *Bucket `yaml:"bucket"`
-	Uploads *bool   `yaml:"uploads"`
-	Backups *bool   `yaml:"backups"`
+	Bucket  *Bucket `yaml:"bucket" doc:"Deprecated: one bucket, becomes backend default. Use backends and mounts."`
+	Uploads *bool   `yaml:"uploads" doc:"Deprecated: with bucket, false keeps uploads off it."`
+	Backups *bool   `yaml:"backups" doc:"Deprecated: with bucket, false keeps backups off it."`
 
 	Logger *slog.Logger `yaml:"-"`
 }
 
 // Bucket is an S3-compatible destination.
 type Bucket struct {
-	Endpoint       string `yaml:"endpoint"`
-	Bucket         string `yaml:"bucket"`
-	Region         string `yaml:"region"`
-	AccessKey      string `yaml:"access_key"`
-	Secret         string `yaml:"secret"`
-	Prefix         string `yaml:"prefix"` // prepended to every key
-	ForcePathStyle bool   `yaml:"force_path_style"`
+	Endpoint       string `yaml:"endpoint" doc:"S3 endpoint URL."`
+	Bucket         string `yaml:"bucket" doc:"Bucket name."`
+	Region         string `yaml:"region" doc:"Bucket region (auto for R2)."`
+	AccessKey      string `yaml:"access_key" doc:"Access key id."`
+	Secret         string `yaml:"secret" doc:"Secret key; use a $VAR from the .env."`
+	Prefix         string `yaml:"prefix" doc:"Prepended to every key, to share a bucket."` // prepended to every key
+	ForcePathStyle bool   `yaml:"force_path_style" doc:"Path-style addressing, for MinIO and similar servers."`
 }
 
 // Plugin is the pocker plugin.
@@ -267,4 +267,4 @@ func open(b *Bucket, prefix string) (*filesystem.System, error) {
 }
 
 // Section is the key of the `storage` section (pocketone.yaml): storage backends and mounts for a pocker host.
-var Section = pluginkit.NewSection(Name, Config{}, "Storage backends and mounts (S3, local) for a pocker host's instances: uploads, backups, PITR history.")
+var Section = pluginkit.NewSection(Name, Config{}, "S3 storage backends and mounts for a pocker host's instances: uploads, backups, PITR history.")

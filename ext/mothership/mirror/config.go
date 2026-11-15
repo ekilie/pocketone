@@ -23,15 +23,15 @@ import (
 //	  heartbeat: 15s
 //	  resync: 10m
 type FileConfig struct {
-	URL         string        `yaml:"url"`
-	Email       string        `yaml:"email"`
-	Password    string        `yaml:"password"`
-	Self        string        `yaml:"self"`
-	InternalURL string        `yaml:"internal_url"`
-	Region      string        `yaml:"region"`
-	Apex        string        `yaml:"apex"`
-	Heartbeat   time.Duration `yaml:"heartbeat"`
-	Resync      time.Duration `yaml:"resync"`
+	URL         string        `yaml:"url" doc:"The mothership's URL. Required."`
+	Email       string        `yaml:"email" doc:"Superuser email this edge logs in with; use a $VAR from the .env."`
+	Password    string        `yaml:"password" doc:"Superuser password; use a $VAR from the .env."`
+	Self        string        `yaml:"self" doc:"This edge's edge_id, such as lax-1. Default: the edges section's self. Required."`
+	InternalURL string        `yaml:"internal_url" doc:"Where other edges reach this one. Set: the edge registers itself when the mothership has no record for it."`
+	Region      string        `yaml:"region" doc:"Region recorded when the edge registers itself."`
+	Apex        string        `yaml:"apex" doc:"Makes <name>.<apex> a hostname of every instance. Empty: hosts only."`
+	Heartbeat   time.Duration `yaml:"heartbeat" doc:"How often this edge marks itself online. Default 15s; negative: never."`
+	Resync      time.Duration `yaml:"resync" doc:"How often everything is reloaded, in case a change was missed. Default 10m."`
 }
 
 // Section is the key of the `mothership` section (pocketone.yaml): a community mothership this host mirrors its

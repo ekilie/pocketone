@@ -14,7 +14,7 @@ and streams it to the browser. With S3 Redirect, `/api/files/...` answers **302*
 and the browser fetches the file straight from the bucket. The app's bandwidth, memory and connections stay free.
 With Cloudflare R2 the downloads cost no egress either.
 
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
@@ -154,6 +154,55 @@ instance; it doesn't link pocker.
 - **Your own download handlers run first.** The plugin binds `OnFileDownloadRequest` last (priority 1000, id
   `s3redirect.HookID`, `__ext_s3redirect__`), so your Go or JS handlers can still change the served file or answer
   themselves without calling `e.Next()`. Unbind the id to turn it off for one app.
+
+## Example
+
+[`example/main.go`](example/main.go) starts its own in-process S3 bucket, points the app's file storage at it and seeds a record, so every download redirect works with nothing to set up. Run `go run . serve` in `example/` and open the URLs it prints.
+
+```go
+// Command example runs one PocketBase app whose file downloads redirect to an S3 bucket, with nothing to set up:
+// it starts its own S3-compatible bucket in-process (gofakes3, stored in pb_data/demo-s3.bolt), points the app's
+// Files storage at it, and seeds a "demo_files" record with an image and a protected document.
+//
+//	go run . serve
+//
+// Open the URLs it prints. Each answers 302 with a signed URL; the bucket logs every fetch and only serves it if the
+// signature is valid and unexpired, checked independently with the AWS SDK's SigV4 signer.
+//
+// Set S3REDIRECT_DEMO=0 to skip the demo bucket and use whatever Files storage you configure in the dashboard.
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
+package main
+
+import (
+	"log"
+	"os"
+	"time"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/s3redirect"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+
+	s3redirect.MustRegister(app, s3redirect.Config{TTL: 5 * time.Minute})
+
+	if os.Getenv("S3REDIRECT_DEMO") != "0" {
+		addr := os.Getenv("S3REDIRECT_DEMO_ADDR")
+		if addr == "" {
+			addr = "127.0.0.1:9199"
+		}
+		registerDemo(app, addr)
+	}
+
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## How it works
 

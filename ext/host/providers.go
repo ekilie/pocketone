@@ -73,8 +73,8 @@ func RegisterSectionGate(g SectionGate) {
 //	  file: instances.yaml   # instances: [{id, hosts, version, …}]
 //	  dev: false             # also serve unknown hostnames (folder created on first use)
 type InstancesConfig struct {
-	File string `yaml:"file"`
-	Dev  bool   `yaml:"dev"`
+	File string `yaml:"file" doc:"The instances file (id, hosts and settings for each instance), reloaded when it changes."`
+	Dev  bool   `yaml:"dev" doc:"Also serve unknown hostnames: each becomes an instance named after it, in dev mode, with its folder made on first use."`
 }
 
 // Instances is the section key of InstancesConfig.

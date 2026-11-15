@@ -7,30 +7,111 @@ source: "ext/pocker/README.md"
 
 # Pocker
 
-Many PocketBase instances in one process (like Docker, but for PocketBase), routed by hostname, each started on its first request. Instances come from a YAML file or any provider.
+Many PocketBase instances in one process (like Docker, but for PocketBase), routed by hostname. Each instance is a
+normal PocketBase folder and starts on its first request, in tens of milliseconds. Pocker is a runtime provider for
+[Host](/docs/plugins/host); its peer [Docker](/docs/plugins/docker) runs each instance in a container instead.
 
-**Runs on:** it is the multi-instance host; [mothership](/docs/plugins/mothership) and other host-level plugins
-register on it.
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
-> **Status.** Working: this folder is the Go module `github.com/pockethost/pocketone/ext/pocker` (runnable
-> [`example/`](example), configuration and API in [POCKER.md](/docs/plugins/pocker/pocker)). Pocker is a runtime provider on
-> [ext/host](/docs/plugins/host) (routing, listeners), run by the stock `pocketone` binary with `provider: pocker`; the
-> firewall is [ext/firewall](/docs/plugins/firewall) and forwarding to other edges [ext/edge](/docs/plugins/edge); auto TLS
-> and Server-Timing are plugins of their own ([autotls](/docs/plugins/autotls), [servertiming](/docs/plugins/servertiming)).
+## Install
 
-## As a runtime provider
+Pocker is built into `pocketone`. Name it as the provider in `pocketone.yaml` and `pocketone serve` hosts many
+instances instead of one app:
 
-`provider: pocker` in pocketone.yaml: `pocker.Provider` reads the `pocker` section (`root`,
-`egress_allow`, `hooks_pool_size`, instance limit defaults) and runs every instance of an [ext/host](/docs/plugins/host)
-in-process. Instance versions are ignored: every instance runs the PocketOne code in the binary. Plugins read their own
-sections (`autotls`, `pitr`, `storage`, `s3redirect`, `mailrelay`).
+```yaml
+provider: pocker
+```
 
-## Untrusted instances
+In your own Go build, register it as a provider ([`examples/pocketone/multi.go`](../../examples/pocketone/multi.go)
+is the stock binary's version), or run a `pocker.Server` on its own as [the example](#example) does:
 
-Pocker runs every instance's JS hooks in the [sandbox](/docs/plugins/sandbox). For why that's safe enough to host code
-from people you don't know, and where it isn't, see [How is this safe?](/docs/plugins/sandbox#how-is-this-safe).
+```go
+host.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Plugins: []pocker.Plugin{
+	pitr.New(pitr.Config{}), // any PocketOne plugin, on every instance
+}})
+```
 
-## Broken hook files
+The module is `github.com/pockethost/pocketone/ext/pocker`.
+
+## Configure
+
+The `pocker` section sets where instances live, the JS pool, outbound network and the default limits for every
+instance (keys below). Listeners, instances and the firewall are the [Host](/docs/plugins/host) sections (`server`,
+`instances`, `firewall`).
+
+```yaml
+provider: pocker
+instances: { file: ./instances.yaml }
+pocker:
+  root: ./pb_root           # one folder per instance: <root>/<id>
+  hooks_pool_size: 2
+  egress_allow: []          # private networks instances may still reach
+  max_js_execution: 30s     # default limits; each instance can override them
+  max_js_allocation: 64MiB
+```
+
+An instance overrides any limit in its own `limits` (missing fields keep the default):
+
+```yaml
+instances:
+  - id: shop
+    hosts: [shop.example.com]
+    limits: { max_js_execution: 60s, max_concurrent_js: 32 }
+```
+
+Every instance runs the PocketOne code in the binary; an instance's `version` is ignored.
+
+### pocketone.yaml reference
+
+#### `pocker:`
+
+Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `root` | string | `./pb_root` | The folder holding one folder per instance: <root>/<id>. |
+| `hooks_pool_size` | int | `2` | JS runtimes kept ready per instance (0: a new one for each hook run). |
+| `max_js_execution` | duration | `30s` | Longest any single JS call (hook, route, cron job, migration) may run. |
+| `max_js_allocation` | int | `67108864` | Largest result a JS built-in may allocate in one step, such as 64MiB. |
+| `max_call_stack_size` | int | `2000` | Deepest JS recursion allowed. |
+| `max_sleep` | duration | `10s` | Longest a JS sleep() call may wait. |
+| `max_query_duration` | duration | `30s` | Longest an SQL statement without its own deadline may run. |
+| `http_send_max_timeout` | duration | `1m0s` | Longest timeout a JS $http.send call may use. |
+| `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
+| `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
+| `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
+
+## Use
+
+### Try it with any hostname
+
+```yaml
+# pocketone.yaml
+server: { http: "127.0.0.1:8090" }
+provider: pocker
+instances: { dev: true }
+pocker: { root: ./pb_root }
+```
+
+```sh
+pocketone serve
+curl -H 'Host: blog.localhost' http://127.0.0.1:8090/api/health   # creates and serves ./pb_root/blog.localhost
+```
+
+In dev mode a hostname no instance maps becomes an instance named after it, its folder is made on first use, and it
+runs in PocketBase dev mode. In production only the hostnames in the instances file are served (see
+[Host](/docs/plugins/host#the-instances-file)).
+
+### Each instance
+
+- A normal PocketBase folder, `<root>/<id>`: `pb_data`, `pb_hooks`, `pb_migrations`, `pb_public`. Its dashboard is at
+  `https://<its hostname>/_/`.
+- Its JS hooks see only its own `secrets`, through `$os.getenv` and `process.env`.
+- A change to its `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private`, `plugins` or `remote`
+  restarts its app on the next request, after in-flight requests finish. A hostname change doesn't restart it.
+- A change in `pb_hooks` restarts just that instance. A broken hooks file affects only that instance (below).
+
+### Broken hook files
 
 In dev mode, a `pb_hooks` file that fails to load is logged and skipped, and the rest of the instance runs, so you can
 fix it live. Otherwise an instance doesn't start with a broken file.
@@ -38,6 +119,119 @@ fix it live. Otherwise an instance doesn't start with a broken file.
 When a running instance's `pb_hooks` change, the new code starts beside the running app and takes over only once it
 has started. If it fails to load, the previous code keeps serving and the error goes to the instance log, so a bad
 edit never takes a working instance down.
+
+### Logs
+
+PocketBase's own logs (the dashboard's Logs) are per instance, in its `pb_data`. `console.*` from JS hooks goes to
+`<instance>/logs/exec.log` as JSON lines (`message`, `stream`, `time`), rotated to `exec.log.1` at 10 MiB. A start
+failure is written there too.
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Host](/docs/plugins/host) | Routing, listeners, instances file and gates. Pocker is one of its runtime providers. |
+| [Sandbox](/docs/plugins/sandbox) | Every instance's JS hooks, SQL and outbound network run in it, so one instance can't reach another or the host. |
+| [Firewall](/docs/plugins/firewall) | Peer allow-list and rate limits in front of every instance; per-instance limits in `plugins.firewall`. |
+| [Auto TLS](/docs/plugins/autotls) | In the stock binary: certificates for the hostnames instances map (`autotls` section). |
+| [Server Timing](/docs/plugins/servertiming) | In the stock binary: Server-Timing headers on every response. |
+| [Mailtrap](/docs/plugins/mailtrap) | In the stock binary: dev instances with SMTP off send mail to a local inbox. |
+| [Edge](/docs/plugins/edge) | Instances another edge runs are forwarded there instead of started here. |
+| [Lifecycle](/docs/plugins/lifecycle) | Measures disk use and last request for each instance under `root`. |
+| PocketOne plugins | In your own build, any plugin such as [PITR](/docs/plugins/pitr), [S3 Fallback](/docs/plugins/storage) or [Mail Relay](/docs/plugins/mailrelay) runs on every instance, and an instance's `plugins.<name>` settings override the plugin's defaults. `enabled: false` turns it off for that instance. |
+
+### Building on Pocker
+
+- **Plugins.** `pocker.Provider.Plugins` (or `pocker.Server.Plugins`) takes any `pluginkit.Plugin`, registered on each
+  instance's app before it starts with that instance's `plugins.<name>` settings. Host-level code can implement
+  `Configurer`, `AppIniter`, `JSIniter`, `Starter`, or a host `Gate`, `Wrapper` or `TLSProvider`. See
+  [POCKER.md](/docs/plugins/pocker/pocker#plugins).
+- **Setup per instance.** `SetupApp(inst, app)` runs after migrations and before the app serves, e.g. to add a route
+  checked against `inst.Private`.
+- **Manager.** `OnStart` hands host code the `Manager`: `WithInstanceStopped(ctx, id, fn)` changes an instance's files
+  while it's stopped (deploys, restores), `StartInstance`, `Running`, `InstanceDir`, `LogInstance`.
+- **Restarts.** `app.Restart()` (PocketBase's backup restore, PITR) restarts only that instance.
+
+## Example
+
+A Pocker build with one extension: a Go route and an admin dashboard page on every instance, in dev mode. Run it from
+this folder with `go run ./example`, then open `http://blog.localhost:8090/_/` (login `admin@example.com` /
+`password`).
+
+```go
+// Command pocker-extension is a Pocker build with one extension: a Go route and an admin dashboard page,
+// added to every instance. See docs/plugins.md.
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
+package main
+
+import (
+	"context"
+	"embed"
+	"io/fs"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+
+	"ganigeorgiev.com/pocketbase/pocketbase/apis"
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/pocker"
+)
+
+//go:embed ui
+var uiFiles embed.FS
+
+func main() {
+	cfg := pocker.DefaultConfig()
+	cfg.Dev = true // any hostname; drop this for production (instances.yaml required)
+
+	ui, _ := fs.Sub(uiFiles, "ui")
+
+	srv := &pocker.Server{
+		Config: cfg,
+		// Runs for every instance's app after its migrations, before it serves.
+		SetupApp: func(inst pocker.Instance, app core.App) error {
+			// local testing: every instance gets superuser admin@example.com and user user@example.com, password "password"
+			if err := devusers.Ensure(app); err != nil {
+				return err
+			}
+			app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+				// a Go route, superuser only
+				se.Router.GET("/api/hello", func(e *core.RequestEvent) error {
+					return e.JSON(http.StatusOK, map[string]string{"instance": inst.ID})
+				}).Bind(apis.RequireSuperuserAuth())
+
+				// an admin dashboard extension: ui/main.js is loaded by the dashboard before its router starts
+				se.UIExtensions = append(se.UIExtensions, core.UIExtension{Name: "hello", FS: ui})
+				return se.Next()
+			})
+			return nil
+		},
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	if err := srv.Run(ctx); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## Untrusted instances
+
+Pocker runs every instance's JS hooks in the [sandbox](/docs/plugins/sandbox). For why that's safe enough to host code
+from people you don't know, and where it isn't, see [How is this safe?](/docs/plugins/sandbox#how-is-this-safe).
+Memory is the main limit: only one-shot allocations are capped, so a hook that grows memory slowly affects the whole
+process. [POCKER.md](/docs/plugins/pocker/pocker#sandbox) lists what the sandbox covers.
+
+## Reference
+
+[POCKER.md](/docs/plugins/pocker/pocker) is the full guide: production `pocketone.yaml`, every instance field, plugin interfaces, the
+sandbox, PocketBase changes and versions.
 
 ## License
 

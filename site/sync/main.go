@@ -3,7 +3,7 @@
 //	cd site/sync && go run .          # write the generated pages
 //	cd site/sync && go run . --check  # fail if the site is out of date (CI)
 //
-// Each plugin gets one page, /docs/plugins/<name>: its README, which has Install, Configure, Use and Integrations
+// Each plugin gets one page, /docs/plugins/<name>: its README, which has Install, Configure, Use, Integrations and Example
 // sections (.github/plugins checks them), with the pocketone.yaml sections the plugin owns (read from
 // `pocketone config --json`) added to Configure. Other top-level .md files in the plugin folder become guides under
 // the page.

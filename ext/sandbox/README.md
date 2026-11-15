@@ -1,13 +1,134 @@
-# sandbox
+# Sandbox
 
-The JS sandbox for untrusted instances: file access confined to the instance folder, host primitives removed, CPU and memory caps, SQLite authorizer, public-only outbound network.
+Confines one PocketBase app's JS hooks and migrations, so apps from people you don't know can share one process.
+File access stays inside the app's folder, host primitives are gone, every JS call has a time limit, raw SQL can't
+leave the app's own database files, and outbound connections reach public addresses only.
 
-**Runs on:** Any app; required by pocker for untrusted tenants.
+## Install
 
-> **Status.** Working: Go module `github.com/pockethost/pocketone/ext/sandbox`. It plugs into PocketBase's JS plugin
-> as a jsvm extension, `jsvm.Config{Extensions: []jsvm.Extension{sb}}` (its `OnInit`, `OnCall` and `HTTPClient`); [`example/main.go`](example/main.go) runs
-> one sandboxed app. [pocker](../pocker/README.md) uses it for every instance; its attack tests live there. The SQL
-> guard and outbound network rules live here too.
+Sandbox isn't a switch in `pocketone`: [Pocker](../pocker/README.md) applies it to every instance it runs. With
+`provider: pocker` in `pocketone.yaml`, every instance is sandboxed and there's nothing to install. A single app
+served by `pocketone` without a provider is not sandboxed.
+
+In your own Go build, give it to PocketBase's JS plugin as an extension:
+
+```go
+sb := &sandbox.Sandbox{Dir: dir, Env: map[string]string{"GREETING": "hi"}}
+jsvm.MustRegister(app, jsvm.Config{
+	HooksDir:   filepath.Join(dir, "pb_hooks"),
+	Extensions: []jsvm.Extension{sb},
+})
+```
+
+The module is `github.com/pockethost/pocketone/ext/sandbox`. The SQL guard and the outbound network rules are
+separate calls (see Integrations).
+
+## Configure
+
+Sandbox has no `pocketone.yaml` section of its own. Under Pocker its limits are set in the `pocker` section, as
+defaults for every instance, and each instance can override them in its own `limits`:
+
+```yaml
+pocker:
+  max_js_execution: 30s       # each JS call (hook, route, cron, migration) is interrupted after this
+  max_js_allocation: 64MiB    # biggest single allocation JS can ask for
+  max_call_stack_size: 2000   # JS recursion depth
+  max_sleep: 10s              # cap on sleep()
+  max_query_duration: 30s     # deadline for SQL statements that have none
+  http_send_max_timeout: 60s  # cap on $http.send timeouts
+  http_send_max_body: 10MiB   # cap on $http.send response size
+  max_concurrent_js: 16       # JS calls one instance runs at once
+  egress_allow: []            # private networks apps may still reach, such as an internal SMTP relay
+```
+
+The values shown are Pocker's defaults. An instance gets only its own `secrets` as environment.
+
+In a Go build, the same settings are `Sandbox` fields: `Dir` (required), `Env`, `MaxExecution` (default 30 s,
+negative turns it off), `MaxSleep`, `MaxAllocation`, `MaxCallStackSize`, `MaxConcurrent`, `HTTPSendMaxTimeout`,
+`HTTPSendMaxBody`, and `Console` to send `console.*` output somewhere other than the process's stdout and stderr.
+
+## Use
+
+There's nothing to operate day to day. Hooks that stick to normal app code (`routerAdd`, `onRecord*`, `cronAdd`,
+`$app.findRecordById` and the rest) run unchanged. What changes for a hook author:
+
+- `$os.cmd`, `$os.exec`, `$os.exit` and `$filesystem.local` fail with "not available on this host (sandboxed)";
+  `$os.args` is empty; process-wide Go methods such as `$app.restart` read as `undefined`.
+- Files outside the app's folder can't be read or written, by any API, including through `..` or symlinks.
+- `$os.getenv` and `process.env` see only the app's own environment.
+- A JS call that runs past its time limit is interrupted with an error; so is one that asks for a huge allocation.
+- `$http.send` to a private or loopback address is refused.
+
+Under Pocker, `console.*` output and hook errors go to the instance's own `logs/exec.log`.
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Pocker](../pocker/README.md) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](../pocker/sandbox_test.go). |
+| [Host](../host/README.md) | Carries the per-instance `limits` from `instances.yaml` or a mothership. |
+| [Firewall](../firewall/README.md) | Rate and concurrency limits in front of every request. |
+| [Docker](../docker/README.md) | The alternative for untrusted apps: a container per instance instead of checks inside one process. Docker doesn't use the sandbox. |
+
+### Building on Sandbox
+
+- **`Sandbox`** is a `jsvm.Extension` (`OnInit`, `OnCall`, `HTTPClient`); add it to `jsvm.Config.Extensions`.
+- **`GuardedDBConnect(maxQuery)`** is a `core.DBConnectFunc`: set it as the app's `DBConnect` to open the databases
+  through SQLite's authorizer, with a deadline for statements that have none.
+- **`InstallEgressPolicy(sandbox.EgressPolicy{Allow: ...})`** routes Go's default HTTP transport through the
+  public-only dialer, for the whole process. `EgressPolicy.Dialer()` gives the same check for your own connections.
+- **`BindMail(app)`** sends the app's own SMTP through that dialer.
+- **`ErrSandboxed`** is the error disabled bindings return.
+
+## Example
+
+One app whose JS hooks are sandboxed: file access confined to the app folder, host primitives disabled, and a 5 s
+limit per JS call. Run it from this folder with `go run ./example serve`.
+
+```go
+// Command example runs one PocketBase app whose JS hooks are sandboxed: file access is confined to the app folder,
+// host primitives ($os.exec, $os.exit, ...) are disabled, and every JS call has a time limit.
+//
+//	go run ./example serve
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
+package main
+
+import (
+	"log"
+	"os"
+	"path/filepath"
+	"time"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/sandbox"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+
+	dir, _ := os.Getwd()
+	sb := &sandbox.Sandbox{
+		Dir:          dir,                                 // JS may only touch this folder
+		Env:          map[string]string{"GREETING": "hi"}, // the only environment JS sees
+		MaxExecution: 5 * time.Second,
+	}
+
+	jsvm.MustRegister(app, jsvm.Config{
+		HooksDir:   filepath.Join(dir, "pb_hooks"),
+		Extensions: []jsvm.Extension{sb}, // OnInit, OnCall and HTTPClient
+	})
+
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## How is this safe?
 

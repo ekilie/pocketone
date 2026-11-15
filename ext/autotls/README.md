@@ -126,6 +126,10 @@ autotls:
   there.
 - `autotls.SupportedDNSProviders` lists the `dns.provider` values it understands.
 
+## Example
+
+Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) registers it with the other default plugins.
+
 ## How it works
 
 - Go module `github.com/pockethost/pocketone/ext/autotls`.

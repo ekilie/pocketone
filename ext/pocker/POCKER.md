@@ -170,7 +170,7 @@ pocker with [servertiming](../servertiming/README.md), [autotls](../autotls/READ
 - **Access** (`access: {cors_origins}`) is the owner's say over which browser origins may call the instance
   (PocketBase matching: exact, `*`, wildcards; empty = any). Client IPs that get the trusted rate limits are the
   firewall's `plugins.firewall.trusted_ips` (on top of the process-wide `firewall.trusted_clients`).
-- **Plugins** (`plugins: {<name>: ...}`) are per-instance settings for plugins; changing them doesn't restart the app.
+- **Plugins** (`plugins: {<name>: ...}`) are per-instance settings for plugins; plugins read them once, so changing them restarts the app on its next request.
 - **Logs:** PocketBase's own logs (the dashboard's Logs) are per instance in its `pb_data`. `console.*` from JS hooks
   goes to `<instance>/logs/exec.log` as JSON lines `{message, stream, time}` (`stdout` for log/info/debug, `stderr`
   for warn/error), rotated to `exec.log.1` at 10 MiB. A start failure (e.g. a broken hooks file) is written there too,

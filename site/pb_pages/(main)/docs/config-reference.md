@@ -50,24 +50,24 @@ Runtime provider docker: each instance in its own container with the PocketBase 
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `socket` | string |  |  |
-| `image` | string |  |  |
-| `binaries` | string |  |  |
-| `versions` | list of string |  |  |
-| `root` | string |  |  |
-| `home` | string |  |  |
-| `default_version` | string |  |  |
-| `min_upstream` | string |  |  |
-| `idle_ttl` | duration |  |  |
-| `max_concurrent_starts` | int |  |  |
-| `start_timeout` | duration |  |  |
-| `nano_cpus` | int |  |  |
-| `pids_limit` | int |  |  |
-| `nofile` | list of int |  |  |
-| `cap_drop` | list of string |  |  |
-| `no_new_privileges` | bool |  |  |
-| `network` | string |  |  |
-| `adopt_image` | string |  |  |
+| `socket` | string |  | The Docker socket. Default $DOCKER_HOST when it is unix://, else /var/run/docker.sock. |
+| `image` | string |  | Base image the binaries run in, such as alpine:3.20. Required; pulled when missing. |
+| `binaries` | string |  | Folder of the release binary cache and its releases.json. Required. |
+| `versions` | list of string |  | The minors this host serves, such as pb:0.36 or p1:0.0 (latest patch of each, from docker update). |
+| `root` | string |  | Folder with one folder per instance (<root>/<id>). Required. |
+| `home` | string |  | The instance folder inside the container. Default /home/pockethost. |
+| `default_version` | string |  | Version for instances that name none, such as p1:0.0.*. Empty: such instances fail. |
+| `min_upstream` | string |  | Oldest upstream PocketBase release served. Default 0.23.0; lower it only for releases you cache yourself. |
+| `idle_ttl` | duration |  | Stop a container after this long without requests. Default 10m. |
+| `max_concurrent_starts` | int |  | Containers starting at once. Default 4. |
+| `start_timeout` | duration |  | How long a container gets to answer its health check. Default 60s. |
+| `nano_cpus` | int |  | CPU limit per container in billionths of a CPU (1000000000 = one CPU). 0: no limit. |
+| `pids_limit` | int |  | Process limit per container. 0: Docker's default. |
+| `nofile` | list of int |  | Open-file limit per container: [soft, hard]. Empty: Docker's default. |
+| `cap_drop` | list of string |  | Linux capabilities to drop, such as [ALL]. |
+| `no_new_privileges` | bool |  | Set no-new-privileges on every container. |
+| `network` | string |  | Docker network for the containers. Default the bridge. |
+| `adopt_image` | string |  | Also adopt running unlabeled containers of this image named after an instance id (taking over from another manager). |
 
 Owned by [Docker](/docs/plugins/docker).
 
@@ -77,8 +77,8 @@ The fleet: this edge's id and a fixed list of the other edges (id, internal_url,
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `self` | string |  |  |
-| `list` | list of object |  |  |
+| `self` | string |  | This edge's id, such as lax-1. |
+| `list` | list of object |  | The other edges: id, internal_url (where this edge reaches it) and optional region. |
 
 Owned by [Edge](/docs/plugins/edge).
 
@@ -88,12 +88,12 @@ Peers allowed to connect, trusted proxies and client-IP headers, trusted clients
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `allow_cidrs` | list of string |  |  |
-| `trusted_proxies` | list of string |  |  |
-| `client_ip_headers` | list of string |  |  |
-| `trusted_clients` | list of string |  |  |
-| `trusted_client_headers` | list of string |  |  |
-| `rate_limit_header_prefix` | string |  |  |
+| `allow_cidrs` | list of string |  | Peers (IPs or CIDRs) allowed to connect; others get 403. Empty: everyone. |
+| `trusted_proxies` | list of string |  | Peers whose client-IP headers are believed. |
+| `client_ip_headers` | list of string |  | Headers read, in order, for the client IP from a trusted proxy. Default CF-Connecting-IP, True-Client-IP, X-Forwarded-For, X-Real-IP. |
+| `trusted_clients` | list of string |  | Client IPs or CIDRs that get the trusted rate limits on every instance. |
+| `trusted_client_headers` | list of string |  | Headers a trusted client uses to name its end user's IP, so each user gets their own limits. Default X-Client-IP. |
+| `rate_limit_header_prefix` | string |  | Prefix of the rate-limit response headers. Default X-RateLimit. |
 
 Owned by [Firewall](/docs/plugins/firewall).
 
@@ -103,8 +103,8 @@ Where a multi-instance host's instances come from (a YAML file), and dev mode (s
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `file` | string | `instances.yaml` |  |
-| `dev` | bool |  |  |
+| `file` | string | `instances.yaml` | The instances file (id, hosts and settings for each instance), reloaded when it changes. |
+| `dev` | bool |  | Also serve unknown hostnames: each becomes an instance named after it, in dev mode, with its folder made on first use. |
 
 Owned by [Host](/docs/plugins/host).
 
@@ -126,15 +126,15 @@ A community mothership to mirror instances and edges from: url, login, this edge
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `url` | string |  |  |
-| `email` | string |  |  |
-| `password` | string |  |  |
-| `self` | string |  |  |
-| `internal_url` | string |  |  |
-| `region` | string |  |  |
-| `apex` | string |  |  |
-| `heartbeat` | duration |  |  |
-| `resync` | duration |  |  |
+| `url` | string |  | The mothership's URL. Required. |
+| `email` | string |  | Superuser email this edge logs in with; use a $VAR from the .env. |
+| `password` | string |  | Superuser password; use a $VAR from the .env. |
+| `self` | string |  | This edge's edge_id, such as lax-1. Default: the edges section's self. Required. |
+| `internal_url` | string |  | Where other edges reach this one. Set: the edge registers itself when the mothership has no record for it. |
+| `region` | string |  | Region recorded when the edge registers itself. |
+| `apex` | string |  | Makes <name>.<apex> a hostname of every instance. Empty: hosts only. |
+| `heartbeat` | duration |  | How often this edge marks itself online. Default 15s; negative: never. |
+| `resync` | duration |  | How often everything is reloaded, in case a change was missed. Default 10m. |
 
 Owned by [Mothership](/docs/plugins/mothership).
 
@@ -156,17 +156,17 @@ Runtime provider pocker: instances run in-process (root folder, hooks pool, egre
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `root` | string | `./pb_root` |  |
-| `hooks_pool_size` | int | `2` |  |
-| `max_js_execution` | duration | `30s` |  |
-| `max_js_allocation` | int | `67108864` |  |
-| `max_call_stack_size` | int | `2000` |  |
-| `max_sleep` | duration | `10s` |  |
-| `max_query_duration` | duration | `30s` |  |
-| `http_send_max_timeout` | duration | `1m0s` |  |
-| `http_send_max_body` | int | `10485760` |  |
-| `max_concurrent_js` | int | `16` |  |
-| `egress_allow` | list of string |  |  |
+| `root` | string | `./pb_root` | The folder holding one folder per instance: <root>/<id>. |
+| `hooks_pool_size` | int | `2` | JS runtimes kept ready per instance (0: a new one for each hook run). |
+| `max_js_execution` | duration | `30s` | Longest any single JS call (hook, route, cron job, migration) may run. |
+| `max_js_allocation` | int | `67108864` | Largest result a JS built-in may allocate in one step, such as 64MiB. |
+| `max_call_stack_size` | int | `2000` | Deepest JS recursion allowed. |
+| `max_sleep` | duration | `10s` | Longest a JS sleep() call may wait. |
+| `max_query_duration` | duration | `30s` | Longest an SQL statement without its own deadline may run. |
+| `http_send_max_timeout` | duration | `1m0s` | Longest timeout a JS $http.send call may use. |
+| `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
+| `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
+| `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
 
 Owned by [Pocker](/docs/plugins/pocker).
 
@@ -180,16 +180,16 @@ Default rate limits for every instance (per instance: plugins.firewall.rate_limi
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `ip_hourly` | int |  |  |
-| `instance_hourly` | int |  |  |
-| `ip_concurrent` | int |  |  |
-| `instance_concurrent` | int |  |  |
-| `file_weight` | number |  |  |
-| `trusted.ip_hourly` | int |  |  |
-| `trusted.instance_hourly` | int |  |  |
-| `trusted.ip_concurrent` | int |  |  |
-| `trusted.instance_concurrent` | int |  |  |
-| `off` | bool |  |  |
+| `ip_hourly` | int |  | Requests per hour from one client IP to one instance. Default 1000. |
+| `instance_hourly` | int |  | Requests per hour to one instance from everyone. Default 10000. |
+| `ip_concurrent` | int |  | Requests one client IP may have open on one instance at once. Default 15. |
+| `instance_concurrent` | int |  | Requests one instance may have open at once. Default 250. |
+| `file_weight` | number |  | What a /api/files request costs, as a share of a request. Default 0.1. |
+| `trusted.ip_hourly` | int |  | Requests per hour from one trusted client IP to one instance. |
+| `trusted.instance_hourly` | int |  | Requests per hour to one instance. |
+| `trusted.ip_concurrent` | int |  | Requests one trusted client IP may have open on one instance at once. |
+| `trusted.instance_concurrent` | int |  | Requests one instance may have open at once. |
+| `off` | bool |  | No rate limiting. The default in dev mode unless rate_limits is set. |
 
 Owned by [Firewall](/docs/plugins/firewall).
 

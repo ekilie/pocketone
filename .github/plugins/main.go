@@ -3,6 +3,7 @@
 //
 //	go run ./.github/plugins affected <base> <head>   # module dirs to build and test, one per line
 //	go run ./.github/plugins check [dir...]            # plugin rules (default: every module)
+//	go run ./.github/plugins examples                  # copy each example/main.go into its README's ## Example
 //
 // A module is affected when a file in it changes (Markdown aside), or when a module it reaches through a `replace`
 // is affected. A change to core (the root module) or to this tool affects every module.
@@ -10,8 +11,9 @@
 // The rules (`check`), per module:
 //   - a module with a pluginkit plugin (a `Register(app core.App, _ pluginkit.Config) error` method) has a test
 //     that calls conformance.Run (docs/plugins.md).
-//   - every plugin (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use` and `## Integrations`
-//     sections, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md).
+//   - every plugin (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use`, `## Integrations` and
+//     `## Example` sections, in that order; it is the plugin's page on pocketone.dev (docs/plugins.md). When the
+//     plugin has example/main.go, the Example section shows it exactly, in a ```go block (`examples` writes it).
 package main
 
 import (
@@ -58,13 +60,22 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("ok: %d modules follow the plugin rules\n", len(dirs))
+	case "examples":
+		changed, err := syncExamples()
+		if err != nil {
+			fail(err)
+		}
+		for _, f := range changed {
+			fmt.Println("wrote", f)
+		}
+		fmt.Printf("ok: %d READMEs updated\n", len(changed))
 	default:
 		usage()
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: plugins affected <base> <head> | plugins check [dir...]")
+	fmt.Fprintln(os.Stderr, "usage: plugins affected <base> <head> | plugins check [dir...] | plugins examples")
 	os.Exit(2)
 }
 
@@ -277,14 +288,10 @@ var docsExempt = map[string]string{
 
 // docsPending are plugins written before the README sections were required; remove each when its README has them.
 // New plugins don't go here.
-var docsPending = map[string]bool{
-	"docker": true, "edge": true, "firewall": true, "host": true, "jsembed": true, "mailrelay": true, "mailtrap": true,
-	"mothership": true, "pocker": true, "sandbox": true, "schedules": true, "servertiming": true, "storage": true,
-	"tenant-billing": true, "tenant-billing-ls": true, "tenants": true,
-}
+var docsPending = map[string]bool{}
 
 // requiredSections are the README sections every plugin has, in this order.
-var requiredSections = []string{"Install", "Configure", "Use", "Integrations"}
+var requiredSections = []string{"Install", "Configure", "Use", "Integrations", "Example"}
 
 // licensedMIT: the README's last H2 is "License" and its body is exactly "MIT". Every plugin in this repo is MIT,
 // pending docs or not.
@@ -335,6 +342,82 @@ func checkDocs(dir string) []string {
 			dir, strings.Join(requiredSections, ", ## "))}
 	case complete && docsPending[name]:
 		return []string{fmt.Sprintf("%s: its README has the required sections now; remove %q from docsPending in .github/plugins/main.go", dir, name)}
+	case complete:
+		if want, err := os.ReadFile(dir + "/example/main.go"); err == nil {
+			if _, got, ok := exampleBlock(string(src)); !ok || got != string(want) {
+				return []string{dir + "/README.md: its ## Example section must show example/main.go exactly, in a ```go block; run `go run ./.github/plugins examples` (docs/plugins.md)"}
+			}
+		}
 	}
 	return nil
+}
+
+// exampleBlock finds the first ```go block in the README's "## Example" section: where its body starts and ends in src
+// (start, end), and the body.
+func exampleBlock(src string) (span [2]int, body string, ok bool) {
+	i := strings.Index(src, "\n## Example\n")
+	if i < 0 {
+		return span, "", false
+	}
+	sec := i + len("\n## Example\n")
+	end := len(src)
+	if j := strings.Index(src[sec:], "\n## "); j >= 0 {
+		end = sec + j
+	}
+	k := strings.Index(src[sec:end], "```go\n")
+	if k < 0 {
+		return span, "", false
+	}
+	start := sec + k + len("```go\n")
+	m := strings.Index(src[start:end], "\n```")
+	if m < 0 {
+		return span, "", false
+	}
+	return [2]int{start, start + m + 1}, src[start : start+m+1], true
+}
+
+// syncExamples copies each plugin's example/main.go into its README's ## Example section (replacing the section's
+// first ```go block, or adding one at the end of the section) and returns the READMEs it changed.
+func syncExamples() ([]string, error) {
+	dirs, err := filepath.Glob("ext/*/example/main.go")
+	if err != nil {
+		return nil, err
+	}
+	var changed []string
+	for _, f := range dirs {
+		dir := filepath.ToSlash(filepath.Dir(filepath.Dir(f)))
+		readme := dir + "/README.md"
+		raw, err := os.ReadFile(readme)
+		if err != nil {
+			continue
+		}
+		code, err := os.ReadFile(f)
+		if err != nil {
+			return nil, err
+		}
+		src := string(raw)
+		var out string
+		if span, body, ok := exampleBlock(src); ok {
+			if body == string(code) {
+				continue
+			}
+			out = src[:span[0]] + string(code) + src[span[1]:]
+		} else {
+			i := strings.Index(src, "\n## Example\n")
+			if i < 0 {
+				continue // no section yet: checkDocs reports it
+			}
+			sec := i + len("\n## Example\n")
+			end := len(src)
+			if j := strings.Index(src[sec:], "\n## "); j >= 0 {
+				end = sec + j
+			}
+			out = strings.TrimRight(src[:end], "\n") + "\n\n```go\n" + string(code) + "```\n" + src[end:]
+		}
+		if err := os.WriteFile(readme, []byte(out), 0o644); err != nil {
+			return nil, err
+		}
+		changed = append(changed, readme)
+	}
+	return changed, nil
 }

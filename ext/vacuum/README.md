@@ -23,6 +23,10 @@ Nothing to use yet.
 Nothing yet. It is planned to run on a single app and, under [pocker](../pocker/README.md), on many instances, one
 stopped instance at a time.
 
+## Example
+
+No example yet; it will come with the plugin.
+
 ## License
 
 MIT

@@ -19,17 +19,17 @@ import (
 //	  http_send_max_timeout: 30s
 //	  http_send_max_body: 20MiB
 type Limits struct {
-	MaxJSExecution     time.Duration `yaml:"max_js_execution,omitempty"`
-	MaxJSAllocation    ByteSize      `yaml:"max_js_allocation,omitempty"`
-	MaxCallStackSize   int           `yaml:"max_call_stack_size,omitempty"`
-	MaxSleep           time.Duration `yaml:"max_sleep,omitempty"`
-	MaxQueryDuration   time.Duration `yaml:"max_query_duration,omitempty"`
-	HTTPSendMaxTimeout time.Duration `yaml:"http_send_max_timeout,omitempty"`
-	HTTPSendMaxBody    ByteSize      `yaml:"http_send_max_body,omitempty"`
+	MaxJSExecution     time.Duration `yaml:"max_js_execution,omitempty" doc:"Longest any single JS call (hook, route, cron job, migration) may run."`
+	MaxJSAllocation    ByteSize      `yaml:"max_js_allocation,omitempty" doc:"Largest result a JS built-in may allocate in one step, such as 64MiB."`
+	MaxCallStackSize   int           `yaml:"max_call_stack_size,omitempty" doc:"Deepest JS recursion allowed."`
+	MaxSleep           time.Duration `yaml:"max_sleep,omitempty" doc:"Longest a JS sleep() call may wait."`
+	MaxQueryDuration   time.Duration `yaml:"max_query_duration,omitempty" doc:"Longest an SQL statement without its own deadline may run."`
+	HTTPSendMaxTimeout time.Duration `yaml:"http_send_max_timeout,omitempty" doc:"Longest timeout a JS $http.send call may use."`
+	HTTPSendMaxBody    ByteSize      `yaml:"http_send_max_body,omitempty" doc:"Largest response body a JS $http.send call may read, such as 10MiB."`
 
 	// MaxConcurrentJS caps how many JS calls (hooks, routes, cron jobs) the instance runs at once; further calls
 	// wait up to max_js_execution for a slot, then fail.
-	MaxConcurrentJS int `yaml:"max_concurrent_js,omitempty"`
+	MaxConcurrentJS int `yaml:"max_concurrent_js,omitempty" doc:"JS calls an instance runs at once; more wait up to max_js_execution, then fail."`
 }
 
 // over returns l with zero fields taken from def.

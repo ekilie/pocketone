@@ -13,7 +13,7 @@ Scheduled database compaction: online SQLite `VACUUM` for a single app; under po
 > (`github.com/pockethost/pocketone/ext/vacuum`), its tests and a minimal `example/main.go` that builds and shows the
 > feature. See [Create your own plugin](/docs/writing-a-plugin).
 
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
@@ -31,6 +31,10 @@ Nothing to use yet.
 
 Nothing yet. It is planned to run on a single app and, under [pocker](/docs/plugins/pocker), on many instances, one
 stopped instance at a time.
+
+## Example
+
+No example yet; it will come with the plugin.
 
 ## License
 

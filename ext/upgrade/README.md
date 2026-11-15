@@ -67,6 +67,33 @@ Nothing integrates with it yet. Other tools can reuse its release code:
   `Config.DownloadArchive(ctx, release, goos, goarch, dir)` downloads and checks a platform's archive.
   `upgrade.KeptName(exe, version)` is the name an old executable is kept under.
 
+## Example
+
+[`example/main.go`](example/main.go) is PocketBase plus the `upgrade` command. Try it with `go run ./example upgrade`.
+
+```go
+// Command example is PocketBase with the upgrade command. A local build has no release version, so it is kept as
+// "example.old"; release builds are kept as "<name>-<version>".
+//
+//	go run ./example upgrade
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/upgrade"
+)
+
+func main() {
+	app := pocketbase.New()
+	upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
 ## License
 
 MIT

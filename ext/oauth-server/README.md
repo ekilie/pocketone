@@ -175,6 +175,57 @@ deploy token can't drive MCP. Refreshed tokens keep it.
 - **Render the pages yourself.** `Config.Render(e, page, data)` renders any page (return `handled=false` to fall
   back), with `PageData`. It wins over ejected templates.
 
+## Example
+
+```bash
+go run ./example serve --http=127.0.0.1:8090
+go run ./example login http://127.0.0.1:8090    # opens the browser; --device for a code
+```
+
+[`example/main.go`](example/main.go), below, registers Tokens, Remotes and OAuth Server with self-registration on and some
+branding. Logins from [devusers](../devusers/devusers.go): user@example.com / password on the default form,
+admin@example.com / password after **Sign in as a superuser**.
+
+```go
+// Command example is a PocketBase that is an OAuth server: `pocketbase login` signs in to it in the browser, and MCP
+// clients can register themselves (dynamic registration is on here).
+//
+//	go run ./example serve --http=127.0.0.1:8090
+//	go run ./example login http://127.0.0.1:8090              # opens the browser; --device for a code
+//	go run ./example remote whoami http://127.0.0.1:8090
+//
+// Logins (ext/devusers, local testing only): app user user@example.com / password (the default form), superuser
+// admin@example.com / password ("Sign in as a superuser").
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/devusers"
+	oauthserver "github.com/pockethost/pocketone/ext/oauth-server"
+	"github.com/pockethost/pocketone/ext/remotes"
+	"github.com/pockethost/pocketone/ext/tokens"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+
+	// OAuth access tokens are API tokens, owned by whoever signed in: superusers and app users
+	tokens.MustRegister(app, tokens.Config{})   // any auth record may own tokens (the default)
+	remotes.MustRegister(app, remotes.Config{}) // whoami discovery + login/remote commands
+	oauthserver.MustRegister(app, oauthserver.Config{
+		DynamicRegistration: true, // MCP connectors register themselves
+		Branding:            oauthserver.Branding{Accent: "#4f46e5", Footer: "Example OAuth server"},
+	})
+
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
 ## Endpoints
 
 | Path | What |
@@ -244,17 +295,6 @@ Ejected templates get `ctx.data`: `PageData` in camelCase (`data.appName`, `data
 - Sign-in forms post `collection`; the MFA and code pages also post `mfa_id` / `otp_id`.
 - Consent posts `access` = `full`, or `limited` with a `grant` field per ticked scope (from `data.scopeChoices`:
   `name`, `description`, `checked`). A consent form without `access` grants what the client asked for.
-
-## Example
-
-```bash
-go run ./example serve --http=127.0.0.1:8090
-go run ./example login http://127.0.0.1:8090    # opens the browser; --device for a code
-```
-
-[`example/main.go`](example/main.go) registers Tokens, Remotes and OAuth Server with self-registration on and some
-branding. Logins from [devusers](../devusers/devusers.go): user@example.com / password on the default form,
-admin@example.com / password after **Sign in as a superuser**.
 
 ## License
 

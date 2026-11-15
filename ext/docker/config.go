@@ -28,24 +28,24 @@ import (
 //	  no_new_privileges: true
 //	  adopt_image: ""                       # also adopt unlabeled containers of this image (migrations)
 type SectionConfig struct {
-	Socket              string        `yaml:"socket"`
-	Image               string        `yaml:"image"`
-	Binaries            string        `yaml:"binaries"`
-	Versions            []string      `yaml:"versions"`
-	Root                string        `yaml:"root"`
-	Home                string        `yaml:"home"`
-	DefaultVersion      string        `yaml:"default_version"`
-	MinUpstream         string        `yaml:"min_upstream"`
-	IdleTTL             time.Duration `yaml:"idle_ttl"`
-	MaxConcurrentStarts int           `yaml:"max_concurrent_starts"`
-	StartTimeout        time.Duration `yaml:"start_timeout"`
-	NanoCPUs            int64         `yaml:"nano_cpus"`
-	PidsLimit           int64         `yaml:"pids_limit"`
-	Nofile              []int64       `yaml:"nofile"`
-	CapDrop             []string      `yaml:"cap_drop"`
-	NoNewPrivileges     bool          `yaml:"no_new_privileges"`
-	Network             string        `yaml:"network"`
-	AdoptImage          string        `yaml:"adopt_image"`
+	Socket              string        `yaml:"socket" doc:"The Docker socket. Default $DOCKER_HOST when it is unix://, else /var/run/docker.sock."`
+	Image               string        `yaml:"image" doc:"Base image the binaries run in, such as alpine:3.20. Required; pulled when missing."`
+	Binaries            string        `yaml:"binaries" doc:"Folder of the release binary cache and its releases.json. Required."`
+	Versions            []string      `yaml:"versions" doc:"The minors this host serves, such as pb:0.36 or p1:0.0 (latest patch of each, from docker update)."`
+	Root                string        `yaml:"root" doc:"Folder with one folder per instance (<root>/<id>). Required."`
+	Home                string        `yaml:"home" doc:"The instance folder inside the container. Default /home/pockethost."`
+	DefaultVersion      string        `yaml:"default_version" doc:"Version for instances that name none, such as p1:0.0.*. Empty: such instances fail."`
+	MinUpstream         string        `yaml:"min_upstream" doc:"Oldest upstream PocketBase release served. Default 0.23.0; lower it only for releases you cache yourself."`
+	IdleTTL             time.Duration `yaml:"idle_ttl" doc:"Stop a container after this long without requests. Default 10m."`
+	MaxConcurrentStarts int           `yaml:"max_concurrent_starts" doc:"Containers starting at once. Default 4."`
+	StartTimeout        time.Duration `yaml:"start_timeout" doc:"How long a container gets to answer its health check. Default 60s."`
+	NanoCPUs            int64         `yaml:"nano_cpus" doc:"CPU limit per container in billionths of a CPU (1000000000 = one CPU). 0: no limit."`
+	PidsLimit           int64         `yaml:"pids_limit" doc:"Process limit per container. 0: Docker's default."`
+	Nofile              []int64       `yaml:"nofile" doc:"Open-file limit per container: [soft, hard]. Empty: Docker's default."`
+	CapDrop             []string      `yaml:"cap_drop" doc:"Linux capabilities to drop, such as [ALL]."`
+	NoNewPrivileges     bool          `yaml:"no_new_privileges" doc:"Set no-new-privileges on every container."`
+	Network             string        `yaml:"network" doc:"Docker network for the containers. Default the bridge."`
+	AdoptImage          string        `yaml:"adopt_image" doc:"Also adopt running unlabeled containers of this image named after an instance id (taking over from another manager)."`
 }
 
 // Section is the key of the `docker` section.

@@ -50,7 +50,7 @@ func loadSections(root string) ([]section, error) {
 }
 
 // requiredSections are the README sections every plugin has, in this order (.github/plugins checks them).
-var requiredSections = []string{"Install", "Configure", "Use", "Integrations"}
+var requiredSections = []string{"Install", "Configure", "Use", "Integrations", "Example"}
 
 // pluginPage is /docs/plugins/<name>: the plugin's README, with a jump line before its Install section and its
 // pocketone.yaml sections (from the binary) added at the end of its Configure section.

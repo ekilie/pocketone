@@ -233,7 +233,7 @@ ext/<name>/
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
   feature.
-- **The README has four required sections**, in this order. It is also your plugin's page on pocketone.dev.
+- **The README has five required sections**, in this order. It is also your plugin's page on pocketone.dev.
   - `## Install`: how to get it (built into `pocketone`, or the lines to add to a Go build).
   - `## Configure`: the `pocketone.yaml` section, flags and settings screens. The site adds a table of your section's
     keys, generated from your `pluginkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag.
@@ -241,6 +241,9 @@ ext/<name>/
   - `## Integrations`: the plugins yours works with and how (pocker and multi-instance hosting go here, not in the
     sections above), and how other plugins can build on yours (hooks, filesystem kinds, per-instance settings, Go
     and REST APIs).
+  - `## Example`: the code that uses it. A sentence on what your `example/main.go` runs, then the whole file in a
+    ```` ```go ```` block, exactly as it is; `go run ./.github/plugins examples` copies it in, and CI fails when the two
+    differ. Without an example (a plugin built into `pocketone`), say where to see it used.
 
   Write the first three for someone running one PocketOne app, not for a Go developer. Anything else (how it works,
   limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
@@ -249,7 +252,7 @@ ext/<name>/
   Add your plugin to [`site/plugins.json`](../site/plugins.json) and run `cd site/sync && go run .` to build its page.
   [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
 - **CI enforces all of this.** [`.github/workflows/plugins.yml`](../.github/workflows/plugins.yml) fails when a plugin
-  README is missing one of the four sections or its MIT `## License`, or when a module that implements `pluginkit.Plugin` has no conformance
+  README is missing one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, or when a module that implements `pluginkit.Plugin` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
   for a core change. Run the same checks locally from the repository root:

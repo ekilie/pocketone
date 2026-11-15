@@ -50,8 +50,8 @@ type Instance struct {
 	Limits Limits `yaml:"limits,omitempty"`
 
 	// Plugins holds per-instance settings for plugins, by plugin name (e.g. `plugins: {firewall: {rate_limits:
-	// ...}}`). A host application's instance source may set typed values; see [DecodePluginConfig]. Changes apply
-	// without restarting the instance's app.
+	// ...}}`). A host application's instance source may set typed values; see [DecodePluginConfig]. Plugins read
+	// them once, when registered, so pocker restarts the instance's app on its next request when they change.
 	Plugins map[string]any `yaml:"plugins,omitempty"`
 
 	// Blocked, when set, answers every request for this instance with the given status and message instead of

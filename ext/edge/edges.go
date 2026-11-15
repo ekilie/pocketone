@@ -44,8 +44,8 @@ type Runner interface {
 //	  list:
 //	    - { id: sgp-1, internal_url: "http://10.88.0.4:8080", region: sgp }
 type EdgesConfig struct {
-	Self string       `yaml:"self"`
-	List []StaticEdge `yaml:"list"`
+	Self string       `yaml:"self" doc:"This edge's id, such as lax-1."`
+	List []StaticEdge `yaml:"list" doc:"The other edges: id, internal_url (where this edge reaches it) and optional region."`
 }
 
 // Build returns the [YAMLProvider] c describes.

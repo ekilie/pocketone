@@ -30,12 +30,12 @@ import (
 //	  trusted_client_headers: [X-Client-IP] # a trusted client (e.g. an SSR proxy) names its end user here
 //	  rate_limit_header_prefix: X-RateLimit
 type Config struct {
-	AllowCIDRs            []string `yaml:"allow_cidrs"`
-	TrustedProxies        []string `yaml:"trusted_proxies"`
-	ClientIPHeaders       []string `yaml:"client_ip_headers"`
-	TrustedClients        []string `yaml:"trusted_clients"`
-	TrustedClientHeaders  []string `yaml:"trusted_client_headers"`
-	RateLimitHeaderPrefix string   `yaml:"rate_limit_header_prefix"`
+	AllowCIDRs            []string `yaml:"allow_cidrs" doc:"Peers (IPs or CIDRs) allowed to connect; others get 403. Empty: everyone."`
+	TrustedProxies        []string `yaml:"trusted_proxies" doc:"Peers whose client-IP headers are believed."`
+	ClientIPHeaders       []string `yaml:"client_ip_headers" doc:"Headers read, in order, for the client IP from a trusted proxy. Default CF-Connecting-IP, True-Client-IP, X-Forwarded-For, X-Real-IP."`
+	TrustedClients        []string `yaml:"trusted_clients" doc:"Client IPs or CIDRs that get the trusted rate limits on every instance."`
+	TrustedClientHeaders  []string `yaml:"trusted_client_headers" doc:"Headers a trusted client uses to name its end user's IP, so each user gets their own limits. Default X-Client-IP."`
+	RateLimitHeaderPrefix string   `yaml:"rate_limit_header_prefix" doc:"Prefix of the rate-limit response headers. Default X-RateLimit."`
 }
 
 // DefaultTrustedClientHeaders are read, in order, from trusted clients (process-wide or the instance's trusted_ips):
@@ -425,23 +425,23 @@ func (f *Firewall) sweepLocked(now time.Time) {
 // RateLimits are request limits per client IP and per instance: an hourly budget and a concurrency cap, each with a
 // higher value for trusted clients. Requests to /api/files cost FileWeight of a request.
 type RateLimits struct {
-	IPHourly           int     `yaml:"ip_hourly,omitempty"`
-	InstanceHourly     int     `yaml:"instance_hourly,omitempty"`
-	IPConcurrent       int     `yaml:"ip_concurrent,omitempty"`
-	InstanceConcurrent int     `yaml:"instance_concurrent,omitempty"`
-	FileWeight         float64 `yaml:"file_weight,omitempty"`
+	IPHourly           int     `yaml:"ip_hourly,omitempty" doc:"Requests per hour from one client IP to one instance. Default 1000."`
+	InstanceHourly     int     `yaml:"instance_hourly,omitempty" doc:"Requests per hour to one instance from everyone. Default 10000."`
+	IPConcurrent       int     `yaml:"ip_concurrent,omitempty" doc:"Requests one client IP may have open on one instance at once. Default 15."`
+	InstanceConcurrent int     `yaml:"instance_concurrent,omitempty" doc:"Requests one instance may have open at once. Default 250."`
+	FileWeight         float64 `yaml:"file_weight,omitempty" doc:"What a /api/files request costs, as a share of a request. Default 0.1."`
 	// Trusted are the limits for trusted clients; zero fields fall back to the defaults' trusted values.
-	Trusted *RateLimitSet `yaml:"trusted,omitempty"`
+	Trusted *RateLimitSet `yaml:"trusted,omitempty" doc:"The limits for trusted clients. Defaults 5000, 20000, 50 and 250."`
 	// Off disables rate limiting for the instance.
-	Off bool `yaml:"off,omitempty"`
+	Off bool `yaml:"off,omitempty" doc:"No rate limiting. The default in dev mode unless rate_limits is set."`
 }
 
 // RateLimitSet is one set of the four limits.
 type RateLimitSet struct {
-	IPHourly           int `yaml:"ip_hourly,omitempty"`
-	InstanceHourly     int `yaml:"instance_hourly,omitempty"`
-	IPConcurrent       int `yaml:"ip_concurrent,omitempty"`
-	InstanceConcurrent int `yaml:"instance_concurrent,omitempty"`
+	IPHourly           int `yaml:"ip_hourly,omitempty" doc:"Requests per hour from one trusted client IP to one instance."`
+	InstanceHourly     int `yaml:"instance_hourly,omitempty" doc:"Requests per hour to one instance."`
+	IPConcurrent       int `yaml:"ip_concurrent,omitempty" doc:"Requests one trusted client IP may have open on one instance at once."`
+	InstanceConcurrent int `yaml:"instance_concurrent,omitempty" doc:"Requests one instance may have open at once."`
 }
 
 // DefaultRateLimits match the PocketHost edge firewall.

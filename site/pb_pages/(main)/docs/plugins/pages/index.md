@@ -11,7 +11,7 @@ Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each fil
 JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it
 can use your data directly. This is PocketPages v1, formerly the npm PocketPages package.
 
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
@@ -183,6 +183,45 @@ To try it: copy sites into `pockerplugin/example/pb_root/<name>.localhost/pb_pag
   table, `Errors()` the problems from the last build.
 - **JS plugins.** A factory in `+config.js` can add to `ctx`, run on each request and transform rendered HTML
   ([SPEC.md](/docs/plugins/pages/spec), section 9.2). [Add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md) are built this way.
+
+## Example
+
+[`example/main.go`](example/main.go) serves the demo in [`example/pb_pages`](example/pb_pages): EJS, Markdown, JSX/TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
+
+```go
+// Command example runs one PocketBase app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
+// ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection
+// with three seed notes. From this folder:
+//
+//	go run . serve --dir=./pb_data
+//
+// Then open http://127.0.0.1:8090. Edit anything in pb_pages and reload; no restart needed.
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com /
+// password.
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/pages"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+
+	jsvm.MustRegister(app, jsvm.Config{}) // page code runs in the app's JS VM
+	pages.MustRegister(app, pages.Config{})
+
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## Speed
 

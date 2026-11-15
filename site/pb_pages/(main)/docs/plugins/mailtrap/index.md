@@ -7,43 +7,111 @@ source: "ext/mailtrap/README.md"
 
 # Mail Trap
 
-A development mail catcher (like MailDev or Mailpit): in dev mode, an app whose SMTP is off sends its mail here
-instead of the host's `sendmail`, and you read it at http://127.0.0.1:8025.
+A development mail catcher (like MailDev or Mailpit) for testing a plugin or app that sends mail. In dev mode, an
+app whose SMTP is off sends its mail here instead of the host's `sendmail`, and you read it at http://127.0.0.1:8025.
 
-**Runs on:** Single app, or many under [pocker](/docs/plugins/pocker) (one inbox for every dev instance, labeled by
-instance). Ships in the standard `pocketone` binary.
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
-## What it does
+## Install
 
-- Only in dev mode (`serve --dev`, or a dev instance under pocker) and only while the app's SMTP is off. With SMTP on,
-  or outside dev mode, it does nothing.
-- Catches every message the app sends (verification, password reset, `$app.newMailClient()`, bulk mail) after the
-  app's own `onMailerSend` hooks, and never calls the next handler, so `sendmail` never runs.
-- A web inbox at http://127.0.0.1:8025 (HTML, text, raw source), and an SMTP listener at 127.0.0.1:1025 that accepts
-  anything, for other tools (for example [mailrelay](/docs/plugins/mailrelay)'s example uses it as the relay).
-- Prints the inbox address at startup and one line per caught message.
-- Keeps the last 500 messages in memory. If its ports are taken, it still catches mail and prints each one.
+Mail Trap is built into `pocketone`, for a single app and for every instance under `provider: pocker`. There's
+nothing to install: run `pocketone serve --dev` with SMTP off and it's active.
 
-Never expose its ports: anyone who can reach them can read the mail.
-
-## Use
+In your own Go build, register it before the app starts:
 
 ```go
 app := pocketbase.New()
 mailtrap.MustRegister(app)
+app.Start()
 ```
 
-Under pocker, add `mailtrap.New()` to `Server.Plugins`.
+Under Pocker, add `mailtrap.New()` to the plugins. The module is `github.com/pockethost/pocketone/ext/mailtrap`.
+
+## Configure
+
+There is no `pocketone.yaml` section or settings screen. It turns itself on only when both are true:
+
+- the app is in dev mode (`serve --dev`, or a dev instance under Pocker), and
+- the app's SMTP is off (Settings → Mail).
+
+Turn SMTP on, or run without `--dev`, and it does nothing. Two environment variables move its ports:
 
 | Variable | Default |
 |---|---|
-| `PB_MAILTRAP_HTTP` | `127.0.0.1:8025` |
-| `PB_MAILTRAP_SMTP` | `127.0.0.1:1025` |
+| `PB_MAILTRAP_HTTP` | `127.0.0.1:8025` (the web inbox) |
+| `PB_MAILTRAP_SMTP` | `127.0.0.1:1025` (SMTP) |
 
-## No change to PocketBase
+Never expose these ports: anyone who can reach them can read the mail.
 
-It's built on PocketBase's own `OnMailerSend` hook (the same way [mailrelay](/docs/plugins/mailrelay) takes over an
-instance's mail), so core is unchanged. It used to live in core (`tools/mailer/trap.go`); it moved here on 2026-11-13.
+## Use
+
+1. Start the app with `--dev`. It prints the inbox address once it's active.
+2. Make your plugin or app send mail: a verification, a password reset, `$app.newMailClient()`, a bulk mail campaign.
+   Each caught message is also printed as one line in the terminal.
+3. Open http://127.0.0.1:8025. The list refreshes every 2 seconds. Click a message to see it as **HTML**, **Text** or
+   **Raw** source. **Clear** empties the inbox.
+
+It keeps the last 500 messages, in memory only; they're gone when the process exits. If its ports are taken, it still
+catches mail and prints each message in the terminal.
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [Pocker](/docs/plugins/pocker) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
+| [Mail Relay](/docs/plugins/mailrelay) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |
+| [Bulk Mail](/docs/plugins/bulkmail) | In dev mode with SMTP off, campaign mail lands in the inbox instead of being sent. |
+
+### Building on Mail Trap
+
+- **Its hook runs last.** It binds `OnMailerSend` after the app's own hooks, so your `onMailerSend` hooks still run
+  and can change the message first. When it takes a message it never calls the next handler, so `sendmail` never runs.
+- **SMTP for other tools.** The SMTP listener accepts any message (and any AUTH), so anything that speaks SMTP can
+  send to it.
+- **Go API.** `mailtrap.Default(reason)` returns the process-wide trap, starting it on first use. A `Trap` has
+  `Messages()`, `Clear()`, `Add(from, to, raw, label)` and `AddMessage(msg, label)`, and `Handler()` serves the inbox.
+  `Trap{SMTPAddr, HTTPAddr}.Start(ctx)` runs a separate trap, for example in a test.
+- **Inbox API.** `GET /api/messages` (newest first, without bodies), `GET /api/messages/{id}`,
+  `GET /api/messages/{id}/raw` (.eml) and `DELETE /api/messages`, on the inbox address.
+
+## Example
+
+[`example/main.go`](example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
+this folder, request a password reset for `user@example.com` (password `password`) from the dashboard (log in as
+`admin@example.com` / `password`), and read the mail at http://127.0.0.1:8025.
+
+```go
+// Command example runs one app in dev mode with the dev mail trap: request a password reset for user@example.com
+// in the dashboard and read the mail at http://127.0.0.1:8025.
+//
+//	go run ./example serve --dev
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/mailtrap"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app)
+	mailtrap.MustRegister(app)
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## How it works
+
+It's built on PocketBase's own `OnMailerSend` hook (the same way [Mail Relay](/docs/plugins/mailrelay) takes over an
+instance's mail), so PocketBase is unchanged. It used to live in core (`tools/mailer/trap.go`); it moved here on
+2026-11-13.
 
 ## License
 

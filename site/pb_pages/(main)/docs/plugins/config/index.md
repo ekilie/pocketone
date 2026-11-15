@@ -10,7 +10,7 @@ source: "ext/config/README.md"
 PocketOne's config file: `pocketone.yaml`, with secrets in a `.env` beside it. Put your app's settings in one file
 instead of a long line of flags. Each plugin has its own section in the file.
 
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
@@ -216,6 +216,10 @@ cfg, err := firewall.Section.Require() // fails when the file doesn't have the s
 - The `doc:"…"` tag on each field describes the key in `pocketone config --json` and in the key table on
   pocketone.dev.
 - `config.Load` checks every section when the app starts, so a bad value fails early.
+
+## Example
+
+Config is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
 
 ## Go API
 

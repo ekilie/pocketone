@@ -69,6 +69,37 @@ It's a plain JS VM extension, so it sits next to any other extension in `jsvm.Co
 rewrites still unwrap to the original error, so Go code that checks for a `*goja.Exception` with `errors.As` keeps
 working. It has no Go API beyond `jserrors.New()`.
 
+## Example
+
+[`example/main.go`](example/main.go) runs an app next to `example/pb_hooks`; request `/boom` in dev mode and the logged error names `pb_hooks/main.pb.js:4`.
+
+```go
+// Command example shows hook errors pointing at the .pb.js file: run it in dev mode next to example/pb_hooks and
+// request /boom; the logged error names pb_hooks/main.pb.js:4:... instead of <cwd>/pb.js:1:...
+//
+//	cd example && go run . serve --dev
+//	curl http://127.0.0.1:8090/boom
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/jserrors"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app)
+	jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", Extensions: []jsvm.Extension{jserrors.New()}})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
 ## How it works
 
 The JS VM turns each hook handler back into source (`fn.toString()`) and compiles it again as its own program under

@@ -13,7 +13,7 @@ that job and adds other certificate authorities, extra domains and wildcard cert
 
 Status: stable under pocker, beta on a single app.
 
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
@@ -151,6 +151,10 @@ autotls:
 - `AutoTLS.Config` can be set in Go before the server starts; the `autotls` section is read only when `Auto` is false
   there.
 - `autotls.SupportedDNSProviders` lists the `dns.provider` values it understands.
+
+## Example
+
+Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) registers it with the other default plugins.
 
 ## How it works
 

@@ -10,7 +10,7 @@ source: "ext/upgrade/README.md"
 `pocketone upgrade` replaces the `pocketone` executable with the latest PocketOne release and keeps the old one beside
 it as `<name>-<version>` (for example `pocketone-0.0.3`), so a project can keep running the engine it was built with.
 
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
@@ -75,6 +75,33 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 - **Go API.** `Config.FetchRelease(ctx, tag)` fetches the latest release (tag `""`) or a given one;
   `Config.DownloadArchive(ctx, release, goos, goarch, dir)` downloads and checks a platform's archive.
   `upgrade.KeptName(exe, version)` is the name an old executable is kept under.
+
+## Example
+
+[`example/main.go`](example/main.go) is PocketBase plus the `upgrade` command. Try it with `go run ./example upgrade`.
+
+```go
+// Command example is PocketBase with the upgrade command. A local build has no release version, so it is kept as
+// "example.old"; release builds are kept as "<name>-<version>".
+//
+//	go run ./example upgrade
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/upgrade"
+)
+
+func main() {
+	app := pocketbase.New()
+	upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## License
 

@@ -154,6 +154,44 @@ features:
   isn't a `*pocketbase.PocketBase`.
 - **Login.** `remotes.BrowserLogin` is the hook `login` tries first; this package fills it with its OAuth client.
 
+## Example
+
+[`example/main.go`](example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
+
+```go
+// Command example is a PocketBase with remotes and API tokens: run two copies, add one as a remote of the other's
+// project and sign in.
+//
+//	go run ./example serve --http=127.0.0.1:8090                # the "remote"
+//	go run ./example remote add local http://127.0.0.1:8090    # in a project folder
+//	go run ./example login local --email admin@example.com     # password: password; mints a pbt_ token
+//	go run ./example remote whoami
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/remotes"
+	"github.com/pockethost/pocketone/ext/tokens"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+
+	tokens.MustRegister(app, tokens.Config{})   // so login can mint a revocable API token
+	remotes.MustRegister(app, remotes.Config{}) // GET /_pocker/whoami + remote/login/logout/link commands
+
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
 ## License
 
 MIT

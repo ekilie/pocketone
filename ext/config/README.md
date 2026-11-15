@@ -169,6 +169,10 @@ cfg, err := firewall.Section.Require() // fails when the file doesn't have the s
   pocketone.dev.
 - `config.Load` checks every section when the app starts, so a bad value fails early.
 
+## Example
+
+Config is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
+
 ## Go API
 
 - `config.FromArgs(args)` reads `--config` and `--env-file` before the full flag parse.

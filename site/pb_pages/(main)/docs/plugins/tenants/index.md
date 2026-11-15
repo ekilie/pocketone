@@ -14,7 +14,25 @@ get API tokens for the CLI and deploys; and an API your own tenant dashboard tal
 **Runs on:** [mothership](/docs/plugins/mothership) (level 3) and [pocker](/docs/plugins/pocker); requires the
 [sandbox](/docs/plugins/sandbox), since tenants run code you don't control.
 
-**How it fits with other plugins:**
+> **Planned.** Nothing is published here yet. See [Create your own plugin](/docs/writing-a-plugin).
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+Not available yet: Multitenant isn't in `pocketone` and has no Go module to add to a custom build.
+
+## Configure
+
+Nothing to configure yet. Its settings will be documented here when it ships.
+
+## Use
+
+Nothing to use yet. It is planned to give each instance an owner account, with quotas, suspension, dashboard sign-in for owners and API tokens for the CLI and deploys.
+
+## Integrations
+
+It is planned to work with these plugins:
 
 - **Mothership:** adds an `owner` to instances and an accounts table through the mothership's schema hooks, and adds
   owner-derived values (superusers, blocked status, plugin settings) to what edges receive through its feed hooks.
@@ -24,7 +42,9 @@ get API tokens for the CLI and deploys; and an API your own tenant dashboard tal
 - **Deploy:** supplies the tenant-token backend for the [deploy](/docs/plugins/deploy) API.
 - **Billing:** a billing provider hook; [tenant-billing-ls](/docs/plugins/tenant-billing-ls) is the Lemon Squeezy one.
 
-> **Planned.** Nothing is published here yet. See [Create your own plugin](/docs/writing-a-plugin).
+## Example
+
+No example yet; it will come with the plugin.
 
 ## License
 

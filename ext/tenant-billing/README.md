@@ -10,6 +10,26 @@ subscription's plan to an account, and a reconcile job that compares accounts wi
 > **Build it.** Nothing is published here yet. PocketHost's own billing (in its legacy Node mothership) is split
 > between this plugin and the Lemon Squeezy adapter. See [Create your own plugin](../../docs/plugins.md).
 
+## Install
+
+Not available yet: Multitenant Billing isn't in `pocketone` and has no Go module to add to a custom build.
+
+## Configure
+
+Nothing to configure yet. Plans and their quotas will be set here when it ships.
+
+## Use
+
+Nothing to use yet. It is planned to apply each subscription's plan to its account and to check accounts against the payment provider on a schedule.
+
+## Integrations
+
+It is planned to run on [tenants](../tenants/README.md). Payment providers plug in through its provider hook as separate plugins; [tenant-billing-ls](../tenant-billing-ls/README.md) is the Lemon Squeezy one.
+
+## Example
+
+No example yet; it will come with the plugin.
+
 ## License
 
 MIT

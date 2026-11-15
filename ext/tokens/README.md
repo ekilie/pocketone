@@ -209,6 +209,56 @@ Any signed-in account; superusers see and manage everyone's.
 
 Owners can also list, view and delete their own tokens through the records API of `_tokens`.
 
+## Example
+
+[`example/main.go`](example/main.go) runs one app with API tokens: Settings → API tokens, the `/api/tokens` routes and the `token` command.
+
+```go
+// Command example runs one PocketBase app with API tokens: Settings → API tokens in the dashboard, the /api/tokens
+// routes, and the `token` command.
+//
+//	go run ./example serve
+//	go run ./example token create --superuser admin@example.com --name ci
+//	curl -H "Authorization: Bearer pbt_..." http://127.0.0.1:8090/api/collections
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/apis"
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/tokens"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+
+	tk := tokens.MustRegister(app, tokens.Config{
+		Collections: []string{"_superusers", "users"}, // who may own tokens
+	})
+	// a plugin's scope: a token limited to "hello" only authenticates under /api/hello; a JWT or unscoped token
+	// holds it too, and every request that holds it carries X-Token-Scope-Hello: 1 for rules and hooks
+	tk.MustRegisterScope(tokens.Scope{Name: "hello", Description: "Say hello", Paths: []string{"/api/hello"}, Methods: []string{"GET"}})
+
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		se.Router.GET("/api/hello", func(e *core.RequestEvent) error {
+			return e.JSON(http.StatusOK, map[string]any{"hello": e.Auth.Email()})
+		}).Bind(apis.RequireAuth(), tokens.RequireScope("hello"))
+		return se.Next()
+	})
+
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
 ## Go config
 
 ```go
