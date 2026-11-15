@@ -9,7 +9,7 @@ Middleware, handlers, templates and plugins run in PocketBase's JavaScript runti
 
 Each request runs as one unit under the app's usual JS limits (execution time, memory). Under a multitenant host, that's the instance's sandbox.
 
-## Talking to PocketBase
+## Talking to the app
 
 Use [`ctx.app`](/docs/ctx/app), which is `$app`. PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/) cover [database operations](https://pocketbase.io/docs/js-database/) and [record operations](https://pocketbase.io/docs/js-records/):
 

@@ -1,4 +1,4 @@
-// Command example runs one PocketBase app whose JS hooks are sandboxed: file access is confined to the app folder,
+// Command example runs one PocketOne app whose JS hooks are sandboxed: file access is confined to the app folder,
 // host primitives ($os.exec, $os.exit, ...) are disabled, and every JS call has a time limit.
 //
 //	go run ./example serve

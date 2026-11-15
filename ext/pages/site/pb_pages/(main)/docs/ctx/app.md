@@ -1,6 +1,6 @@
 ---
 title: ctx.app
-description: The PocketBase app - records, collections and settings.
+description: The app - records, collections and settings.
 ---
 
 # `ctx.app`

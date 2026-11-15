@@ -1,4 +1,4 @@
-// Command example runs one PocketBase app with point-in-time restore: Litestream copies data.db continuously into
+// Command example runs one PocketOne app with point-in-time restore: Litestream copies data.db continuously into
 // pb_data/litestream/, and Settings → Backups gets a "Point-in-time restore" section.
 //
 //	go run ./example serve

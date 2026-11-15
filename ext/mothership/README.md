@@ -1,6 +1,6 @@
 # Mothership
 
-A control plane for a fleet of edges. The mothership is a PocketBase app that records which edges exist and which
+A control plane for a fleet of edges. The mothership is a PocketOne app that records which edges exist and which
 instances run where. Each edge follows it, serves its own instances and forwards requests for the rest to the edge
 that runs them.
 
@@ -14,7 +14,7 @@ The edge side (the `mirror` package) is built into `pocketone`. It turns on when
 and has a `mothership` section (below); `pocketone serve` then takes its instances and the other edges from the
 mothership.
 
-The mothership side has no switch yet. In the Go code of the PocketBase app that will be the mothership, create its
+The mothership side has no switch yet. In the Go code of the PocketOne app that will be the mothership, create its
 collections once the app has bootstrapped:
 
 ```go

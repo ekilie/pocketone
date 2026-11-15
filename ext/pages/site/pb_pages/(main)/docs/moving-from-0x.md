@@ -7,14 +7,14 @@ description: What changed between the PocketPages npm package (0.x) and PocketPa
 
 PocketPages v1 is part of PocketOne (the `pages` plugin). It keeps the ideas of the npm package (a folder of files that become routes, EJS, layouts, middleware, private partials) and changes the shapes. Apps written for 0.x don't run unchanged.
 
-There is no migration tool. Start a new app with `pocketbase pages create <name>`, then move your pages over using the list below. The npm package is being retired.
+There is no migration tool. Start a new app with `pocketone pages create <name>`, then move your pages over using the list below. The npm package is being retired.
 
 ## Folder and boot
 
 | 0.x | v1 |
 |---|---|
 | `pb_hooks/pages/`, booted by `require('pocketpages')` in a `.pb.js` file | `pb_pages/` next to `pb_data`. No boot file, no npm install. |
-| `create-pocketpages` | `pocketbase pages create <name> [--starter <kit>]` |
+| `create-pocketpages` | `pocketone pages create <name> [--starter <kit>]` |
 
 Delete the `.pb.js` boot file and the `pocketpages` dependencies, and move the contents of `pb_hooks/pages/` to `pb_pages/`.
 

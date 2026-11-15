@@ -53,16 +53,16 @@ If you haven't set up a consent screen before, you'll need to configure it:
 ![Downloading credentials](2025-02-08-06-58-27.png)
 ![Credentials JSON format](2025-02-08-06-58-37.png)
 
-## 3. Configure PocketBase OAuth2
+## 3. Configure OAuth2 in the dashboard
 
-1. Open your PocketBase Admin UI
+1. Open your app's dashboard (`/_/`)
 2. Make sure your site URL is set correctly. It must match the `redirect URL` domain you configured in the Google Cloud Console.
 3. Navigate to Settings > Auth Providers
 4. Enable OAuth2 authentication
 5. Add Google as a new provider
 
-![PocketBase site URL](2025-02-08-15-28-44.png)
-![PocketBase user settings](2025-02-08-06-59-00.png)
+![Application URL in the dashboard settings](2025-02-08-15-28-44.png)
+![OAuth2 settings for the users collection](2025-02-08-06-59-00.png)
 ![OAuth2 providers section](2025-02-08-06-59-09.png)
 ![Adding new provider](2025-02-08-06-59-17.png)
 ![Selecting Google provider](2025-02-08-06-59-24.png)
@@ -208,7 +208,7 @@ Common issues and solutions:
 
 - **Invalid redirect URI**: Ensure your redirect URI exactly matches what's configured in Google Cloud Console
 - **Consent screen not showing**: Make sure you've properly configured the OAuth consent screen
-- **Authentication failed**: Verify your client ID and secret are correctly copied to PocketBase
+- **Authentication failed**: Verify your client ID and secret are correctly copied to the dashboard
 
 ## Security Considerations
 

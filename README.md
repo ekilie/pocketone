@@ -47,13 +47,13 @@ choose not to use them.
 ## Community Plugins
 
 These plugins are maintained by PocketHost and the community and are MIT. You can mix and match them to create your
-own custom PocketBase experience.
+own custom PocketOne experience.
 
 **Run many instances**
 
 | Plugin | Description |
 |---|---|
-| **[Pocker](ext/pocker/README.md)** | Hundreds of PocketBase instances in one Go process, routed by hostname. |
+| **[Pocker](ext/pocker/README.md)** | Hundreds of PocketOne instances in one Go process, routed by hostname. |
 | **[Schedules](ext/schedules/README.md)** | Scheduled webhooks that wake sleeping instances (headed into Pocker). |
 | **[Mothership](ext/mothership/README.md)** | A control plane and its edges, across regions. Needs Pocker. |
 | **[Sandbox](ext/sandbox/README.md)** | Confines untrusted JS hooks, SQL and outbound network ([how is this safe?](ext/sandbox/README.md#how-is-this-safe)). Required for Multitenant. |

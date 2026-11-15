@@ -41,7 +41,7 @@ module.exports = {
 ```bash
 # Shell
 export STRIPE_SECRET_KEY=sk_test_...
-pocketbase serve
+pocketone serve
 ```
 
 ```dockerfile

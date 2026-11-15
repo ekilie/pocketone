@@ -107,7 +107,7 @@ srv := &pocker.Server{
 
 ## Admin screens: `UIExtensions`
 
-The PocketBase dashboard loads extensions before it starts its router:
+The dashboard loads extensions before it starts its router:
 - Each extension is a named file system served at `/_/extensions/<name>/`.
 - Every extension's `main.js` is bundled into `/_/extensions.js`.
 
@@ -264,7 +264,7 @@ ext/<name>/
 
   Tests that need an external tool (MinIO, Docker) skip themselves when it isn't installed, so they don't block CI.
 - **Dependencies stay in your module.** Heavy libraries go in your plugin's `go.mod`, never in core's.
-- **Single app first.** Where it makes sense, a plugin should work on one PocketBase app, and add more under the
+- **Single app first.** Where it makes sense, a plugin should work on one app, and add more under the
   pocker (multitenant) host.
 - **MIT**, like PocketBase and the rest of this repo.
 

@@ -143,7 +143,7 @@ A bucket in an instance's settings is refused, so credentials never sit in insta
 [`example/main.go`](example/main.go) runs one app with point-in-time restore on, keeping three days. Run it with `go run ./example serve` from this folder.
 
 ```go
-// Command example runs one PocketBase app with point-in-time restore: Litestream copies data.db continuously into
+// Command example runs one PocketOne app with point-in-time restore: Litestream copies data.db continuously into
 // pb_data/litestream/, and Settings → Backups gets a "Point-in-time restore" section.
 //
 //	go run ./example serve

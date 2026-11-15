@@ -1,4 +1,4 @@
-// Command example is a PocketBase that accepts deploys and can deploy: the deploy API (/_pocker/deploy/v1), API
+// Command example is a PocketOne app that accepts deploys and can deploy: the deploy API (/_pocker/deploy/v1), API
 // tokens, remotes, and the deploy/dev/pull/logs commands.
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote

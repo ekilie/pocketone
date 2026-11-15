@@ -168,7 +168,7 @@ features:
 [`example/main.go`](example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
 
 ```go
-// Command example is a PocketBase with remotes and API tokens: run two copies, add one as a remote of the other's
+// Command example is a PocketOne app with remotes and API tokens: run two copies, add one as a remote of the other's
 // project and sign in.
 //
 //	go run ./example serve --http=127.0.0.1:8090                # the "remote"

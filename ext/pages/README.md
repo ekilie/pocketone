@@ -180,7 +180,7 @@ To try it: copy sites into `pockerplugin/example/pb_root/<name>.localhost/pb_pag
 [`example/main.go`](example/main.go) serves the demo in [`example/pb_pages`](example/pb_pages): EJS, Markdown, JSX/TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
 
 ```go
-// Command example runs one PocketBase app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
+// Command example runs one PocketOne app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
 // ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection
 // with three seed notes. From this folder:
 //

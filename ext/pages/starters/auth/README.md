@@ -3,9 +3,9 @@
 Multi-page app (MPA) auth with the built-in `auth` plugin: register, password, anonymous, OTP and OAuth2 login, logout, email verification (with a resend page), password reset by email, email change with confirmation, and a protected `/account` section (`account/+middleware.js`). Sessions are a `pb_auth` cookie managed through `ctx.session.*`; the logged-in user is `ctx.auth`. The included migrations point PocketBase's mail at a local maildev and its email templates at this app's `/auth/confirm/{TOKEN}/...` pages.
 
 ```bash
-pocketbase pages create myapp --starter auth
+pocketone pages create myapp --starter auth
 cd myapp
-pocketbase serve --dir ./pb_data
+pocketone serve --dir ./pb_data
 ```
 
 Then open http://127.0.0.1:8090.

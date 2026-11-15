@@ -16,13 +16,13 @@ The PocketPages website and docs, written as a PocketPages v1 app. It runs on Po
 With a PocketOne binary that includes `ext/pages`, from this folder:
 
 ```bash
-pocketbase serve --dev --dir ./pb_data
+pocketone serve --dev --dir ./pb_data
 ```
 
 PocketPages finds `pb_pages` next to `pb_data`. Or point at it from anywhere:
 
 ```bash
-pocketbase serve --dev --dir /path/to/pb_data --pagesDir /path/to/site/pb_pages
+pocketone serve --dev --dir /path/to/pb_data --pagesDir /path/to/site/pb_pages
 ```
 
 Open http://localhost:8090.

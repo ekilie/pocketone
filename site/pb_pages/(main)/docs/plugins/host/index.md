@@ -7,7 +7,7 @@ source: "ext/host/README.md"
 
 # Host
 
-Many PocketBase instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
+Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](/docs/plugins/firewall)), and one runtime provider serves it:
 [pocker](/docs/plugins/pocker) runs instances in-process, [docker](/docs/plugins/docker) runs each in its own container.
 
@@ -83,7 +83,7 @@ instances:
   - id: shop
     hosts: [shop.example.com]
     secrets: { STRIPE_KEY: sk_live_... }               # the app's environment, seen by its JS hooks
-    encryption_key: 0123456789abcdef0123456789abcdef   # encrypts PocketBase's stored settings
+    encryption_key: 0123456789abcdef0123456789abcdef   # encrypts the app's stored settings
     access: { cors_origins: [https://shop.example.com] }
     limits: { max_js_execution: 60s }                  # over the provider's defaults
     plugins: { firewall: { trusted_ips: [203.0.113.0/24] } }   # settings for plugins, by name
@@ -100,7 +100,7 @@ letters, digits, dots and dashes. Other fields: `version` and `runtime` (which r
 ### What a request gets
 
 - A hostname no instance maps gets 404, and no folder is created. In dev mode it becomes a new instance named after
-  the hostname, in PocketBase dev mode.
+  the hostname, in dev mode.
 - A `blocked` instance answers every request with its status and message.
 - An instance with `remote` set is forwarded there after the gates (a plain proxy to the URL, or
   [Edge](/docs/plugins/edge) for a fleet).
@@ -111,7 +111,7 @@ letters, digits, dots and dashes. Other fields: `version` and `runtime` (which r
 
 Switching between pocker and docker is a config change: both keep instances in `<root>/<id>`. Stop the containers
 first when leaving docker (they keep running across a host restart on purpose). Data only moves forward: an instance
-started on a newer PocketBase than wrote its data is upgraded.
+started on a newer version than wrote its data is upgraded.
 
 ## Integrations
 

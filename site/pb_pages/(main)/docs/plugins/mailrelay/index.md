@@ -12,7 +12,7 @@ Outgoing mail for [Pocker](/docs/plugins/pocker) instances that haven't set up S
 Stock PocketBase falls back to the host's `sendmail` when SMTP is off. Under Pocker that would run `sendmail` on the
 shared host for every tenant. With this plugin:
 
-- **SMTP on** in an instance's Settings → Mail: PocketBase sends the mail itself. Bring your own SMTP always wins.
+- **SMTP on** in an instance's Settings → Mail: the app sends the mail itself. Bring your own SMTP always wins.
 - **SMTP off:** the mail goes through your relay as `<instance>@<Domain>`, within per-instance limits. `sendmail`
   never runs.
 

@@ -214,7 +214,7 @@ Owners can also list, view and delete their own tokens through the records API o
 [`example/main.go`](example/main.go) runs one app with API tokens: Settings → API tokens, the `/api/tokens` routes and the `token` command.
 
 ```go
-// Command example runs one PocketBase app with API tokens: Settings → API tokens in the dashboard, the /api/tokens
+// Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the /api/tokens
 // routes, and the `token` command.
 //
 //	go run ./example serve

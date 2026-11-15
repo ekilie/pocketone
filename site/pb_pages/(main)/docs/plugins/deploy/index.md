@@ -158,7 +158,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 [`example/main.go`](example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
 
 ```go
-// Command example is a PocketBase that accepts deploys and can deploy: the deploy API (/_pocker/deploy/v1), API
+// Command example is a PocketOne app that accepts deploys and can deploy: the deploy API (/_pocker/deploy/v1), API
 // tokens, remotes, and the deploy/dev/pull/logs commands.
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote

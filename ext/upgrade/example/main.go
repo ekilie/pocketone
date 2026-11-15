@@ -1,5 +1,5 @@
-// Command example is PocketBase with the upgrade command. A local build has no release version, so it is kept as
-// "example.old"; release builds are kept as "<name>-<version>".
+// Command example is a PocketOne app with just the upgrade command. A local build has no release version, so it is
+// kept as "example.old"; release builds are kept as "<name>-<version>".
 //
 //	go run ./example upgrade
 package main

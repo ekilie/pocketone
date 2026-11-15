@@ -1,11 +1,11 @@
 # Pocker
 
-Pocker hosts many PocketBase instances in one process. It is PocketBase itself (this repo tracks
+Pocker hosts many PocketOne instances in one process. It is PocketOne itself (this repo tracks
 [upstream PocketBase](https://ganigeorgiev.com/git/pocketbase/pocketbase) and shares its history) plus a small engine in
 this folder, run by the stock `pocketone` binary as a runtime provider (`provider: pocker` in pocketone.yaml).
 
 - One port, many instances. Each request's hostname maps to a canonical instance id.
-- Each instance is a normal PocketBase folder, `<root>/<id>` (`pb_data`, `pb_hooks`, `pb_migrations`, `pb_public`),
+- Each instance is a normal app folder, `<root>/<id>` (`pb_data`, `pb_hooks`, `pb_migrations`, `pb_public`),
   with its own environment for JS hooks (`$os.getenv`, `process.env`), its own JS migrations and its own settings
   encryption key.
 - An instance's app starts on its first request (tens of milliseconds) and keeps running.
@@ -26,7 +26,7 @@ curl -H 'Host: blog.localhost' http://127.0.0.1:8090/api/health   # creates and 
 ```
 
 A hostname the instance source doesn't map uses the hostname itself as its id (lowercase, no port, no trailing dot;
-anything that isn't a safe folder name gets 400), its folder is created on first use, and apps run in PocketBase dev
+anything that isn't a safe folder name gets 400), its folder is created on first use, and apps run in dev
 mode. The instances file (or another source) is optional in dev mode; hosts it maps keep their own ids.
 
 ## Production: mapped hostnames only
@@ -42,7 +42,7 @@ instances:
   - id: shop
     hosts: [shop.example.com]
     secrets: { STRIPE_KEY: sk_live_... }               # the app's environment
-    encryption_key: 0123456789abcdef0123456789abcdef   # encrypts PocketBase's stored settings; not visible to JS
+    encryption_key: 0123456789abcdef0123456789abcdef   # encrypts the app's stored settings; not visible to JS
     access: { cors_origins: [https://shop.example.com] }
     plugins: { firewall: { trusted_ips: [203.0.113.0/24] } }   # settings for plugins, by name
   - id: old
@@ -152,7 +152,7 @@ any of:
 | `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Plugins use `pluginkit.Plugin` instead, so they run on a single app too and pass the [conformance test](../pluginkit/conformance/conformance.go). |
 
 Per-instance settings for a plugin go under the instance's `plugins.<name>` (read them with `pocker.DecodePluginConfig`).
-`app.Restart()` (PocketBase's backup restore, pitr) restarts only that instance, not the process.
+`app.Restart()` (a backup restore, pitr) restarts only that instance, not the process.
 Timings for the Server-Timing header are registered with `pocker.Timing(ctx, fn)`. The stock `pocketone` binary runs
 pocker with [servertiming](../servertiming/README.md), [autotls](../autotls/README.md) and
 [mailtrap](../mailtrap/README.md); the [firewall](../firewall/README.md) turns on from its sections.
@@ -166,12 +166,12 @@ pocker with [servertiming](../servertiming/README.md), [autotls](../autotls/READ
   example a backup route checked against `inst.Private["backup_token"]`).
 - **Secrets** (`secrets: {...}`) are the instance's environment: what its JS sees through `$os.getenv` /
   `process.env`, and nothing else. No names are reserved; platform settings are explicit fields.
-- **Encryption key** (`encryption_key`) encrypts PocketBase's stored settings (like `--encryptionEnv`). JS never sees it.
+- **Encryption key** (`encryption_key`) encrypts the app's stored settings (like `--encryptionEnv`). JS never sees it.
 - **Access** (`access: {cors_origins}`) is the owner's say over which browser origins may call the instance
   (PocketBase matching: exact, `*`, wildcards; empty = any). Client IPs that get the trusted rate limits are the
   firewall's `plugins.firewall.trusted_ips` (on top of the process-wide `firewall.trusted_clients`).
 - **Plugins** (`plugins: {<name>: ...}`) are per-instance settings for plugins; plugins read them once, so changing them restarts the app on its next request.
-- **Logs:** PocketBase's own logs (the dashboard's Logs) are per instance in its `pb_data`. `console.*` from JS hooks
+- **Logs:** the app's own logs (the dashboard's Logs) are per instance in its `pb_data`. `console.*` from JS hooks
   goes to `<instance>/logs/exec.log` as JSON lines `{message, stream, time}` (`stdout` for log/info/debug, `stderr`
   for warn/error), rotated to `exec.log.1` at 10 MiB. A start failure (e.g. a broken hooks file) is written there too,
   and only that instance fails.

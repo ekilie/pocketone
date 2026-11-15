@@ -7,8 +7,8 @@ source: "ext/pocker/README.md"
 
 # Pocker
 
-Many PocketBase instances in one process (like Docker, but for PocketBase), routed by hostname. Each instance is a
-normal PocketBase folder and starts on its first request, in tens of milliseconds. Pocker is a runtime provider for
+Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
+normal app folder and starts on its first request, in tens of milliseconds. Pocker is a runtime provider for
 [Host](/docs/plugins/host); its peer [Docker](/docs/plugins/docker) runs each instance in a container instead.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
@@ -99,12 +99,12 @@ curl -H 'Host: blog.localhost' http://127.0.0.1:8090/api/health   # creates and 
 ```
 
 In dev mode a hostname no instance maps becomes an instance named after it, its folder is made on first use, and it
-runs in PocketBase dev mode. In production only the hostnames in the instances file are served (see
+runs in dev mode. In production only the hostnames in the instances file are served (see
 [Host](/docs/plugins/host#the-instances-file)).
 
 ### Each instance
 
-- A normal PocketBase folder, `<root>/<id>`: `pb_data`, `pb_hooks`, `pb_migrations`, `pb_public`. Its dashboard is at
+- A normal app folder, `<root>/<id>`: `pb_data`, `pb_hooks`, `pb_migrations`, `pb_public`. Its dashboard is at
   `https://<its hostname>/_/`.
 - Its JS hooks see only its own `secrets`, through `$os.getenv` and `process.env`.
 - A change to its `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private`, `plugins` or `remote`
@@ -122,7 +122,7 @@ edit never takes a working instance down.
 
 ### Logs
 
-PocketBase's own logs (the dashboard's Logs) are per instance, in its `pb_data`. `console.*` from JS hooks goes to
+The app's own logs (the dashboard's Logs) are per instance, in its `pb_data`. `console.*` from JS hooks goes to
 `<instance>/logs/exec.log` as JSON lines (`message`, `stream`, `time`), rotated to `exec.log.1` at 10 MiB. A start
 failure is written there too.
 
@@ -152,7 +152,7 @@ failure is written there too.
   checked against `inst.Private`.
 - **Manager.** `OnStart` hands host code the `Manager`: `WithInstanceStopped(ctx, id, fn)` changes an instance's files
   while it's stopped (deploys, restores), `StartInstance`, `Running`, `InstanceDir`, `LogInstance`.
-- **Restarts.** `app.Restart()` (PocketBase's backup restore, PITR) restarts only that instance.
+- **Restarts.** `app.Restart()` (a backup restore, PITR) restarts only that instance.
 
 ## Example
 

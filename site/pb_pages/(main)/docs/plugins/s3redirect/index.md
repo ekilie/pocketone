@@ -160,7 +160,7 @@ instance; it doesn't link pocker.
 [`example/main.go`](example/main.go) starts its own in-process S3 bucket, points the app's file storage at it and seeds a record, so every download redirect works with nothing to set up. Run `go run . serve` in `example/` and open the URLs it prints.
 
 ```go
-// Command example runs one PocketBase app whose file downloads redirect to an S3 bucket, with nothing to set up:
+// Command example runs one PocketOne app whose file downloads redirect to an S3 bucket, with nothing to set up:
 // it starts its own S3-compatible bucket in-process (gofakes3, stored in pb_data/demo-s3.bolt), points the app's
 // Files storage at it, and seeds a "demo_files" record with an image and a protected document.
 //

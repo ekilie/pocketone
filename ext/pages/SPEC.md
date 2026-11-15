@@ -519,9 +519,9 @@ On when the app runs in dev mode (`--dev`) or `+config.js` sets `debug: true`:
 
 ## 11. Starter kits
 
-`pocketbase pages create <name> [--starter <kit>]` creates the folder `<name>` (it must not exist) and copies the
-whole kit into it. Run it with `cd <name> && pocketbase serve --dir ./pb_data` (PocketBase keeps `pb_data` next to its
-executable by default; `pb_pages` and `pb_migrations` are found next to `pb_data`). `pocketbase pages starters` lists
+`pocketone pages create <name> [--starter <kit>]` creates the folder `<name>` (it must not exist) and copies the
+whole kit into it. Run it with `cd <name> && pocketone serve --dir ./pb_data` (`pocketone` keeps `pb_data` next to its
+executable by default; `pb_pages` and `pb_migrations` are found next to `pb_data`). `pocketone pages starters` lists
 the kits. Kits: `minimal` (default), `mvp`, `htmx`,
 `daisyui`, `daisyui-docs`, `datastar`, `auth`. The command needs a build that includes `ext/pages`. It copies
 `pb_pages/` plus anything beside it (`pb_migrations/`, `README.md`, a `package.json` for CSS tooling). Kits ship
@@ -547,4 +547,4 @@ inside `ext/pages` (`starters/`).
 | `url()`, `stringify()`, micro-dash globals | Removed: use `ctx.req.url`, `JSON.stringify`, plain JS |
 | `pb()` (js-sdk plugin over HTTP to `localhost:8090`) | `ctx.pb()`: same SDK, built in, in-process, as the signed-in user |
 | Route with fewer segments could match a longer URL | Segment counts must match |
-| `create-pocketpages` | `pocketbase pages create <name> [--starter <kit>]` |
+| `create-pocketpages` | `pocketone pages create <name> [--starter <kit>]` |

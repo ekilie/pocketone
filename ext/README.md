@@ -6,7 +6,7 @@ Each folder here will be one plugin, with its own Go module (`github.com/pocketh
 
 | Plugin | What it will do | Runs on |
 |---|---|---|
-| [`pocker`](pocker/README.md) | Many instances in one process (level 2), the engine: many PocketBase apps in one process, routed by hostname, each started on its first request. Instances come from a YAML file or any provider. | the multi-instance host; the other host-level plugins register on it |
+| [`pocker`](pocker/README.md) | Many instances in one process (level 2), the engine: many PocketOne apps in one process, routed by hostname, each started on its first request. Instances come from a YAML file or any provider. | the multi-instance host; the other host-level plugins register on it |
 | [`sandbox`](sandbox/README.md) | The JS sandbox for untrusted instances: file access confined to the instance folder, host primitives removed, CPU and memory caps, SQLite authorizer, public-only outbound network. | Any app; required by pocker for untrusted tenants |
 | [`pitr`](pitr/README.md) | Point-in-time restore: Litestream replication of each app's database (local or a bucket) and in-place restore from the Backups screen. | Single app, or many under pocker |
 | [`bulkmail`](bulkmail/README.md) | Bulk mail: campaigns to an app's own users (audiences from a collection, a view or SQL) with one-click unsubscribe, bounce and complaint handling, and a dashboard page. In the standard binary. | Single app, or many under pocker |
@@ -23,7 +23,7 @@ Each folder here will be one plugin, with its own Go module (`github.com/pocketh
 | [`oauth-server`](oauth-server/README.md) | OAuth 2.1 authorization server issuing API tokens: sign-in + consent pages (brandable), code + PKCE, refresh, device codes, revocation, dynamic client registration; `pocketbase login` and MCP connectors use it. | Single app; requires tokens |
 | [`remotes`](remotes/README.md) | Named remotes for the `pocketone` command (`remote`, `login`, `logout`, `link`), saved logins, and `GET /_pocker/whoami` for discovery. | The `pocketbase` command; any app (whoami) |
 | [`deploy`](deploy/README.md) | Deploys: `pocketone deploy | dev | pull | logs` (also to PocketHost edges) and the deploy API (hash diff, safe swap, history, logs), with pluggable auth. | The `pocketbase` command; single app, or many under pocker with your own backend |
-| [`config`](config/README.md) | `pocketone.yaml` with sections owned by plugins (typed keys; read only through the owner's key) and a private `.env` for secrets; `pocketbase config`. | Every binary (stock in `pocketbase`) |
+| [`config`](config/README.md) | `pocketone.yaml` with sections owned by plugins (typed keys; read only through the owner's key) and a private `.env` for secrets; `pocketone config`. | Every binary (stock in `pocketbase`) |
 | [`docker`](docker/README.md) | Runtime provider for a host: each instance in its own container with an official PocketBase or PocketOne binary of its version (`pb:`/`ce:`), idle stop, adoption across restarts. | Host (one provider per process), Docker |
 | [`host`](host/README.md) | The multi-instance host: instances by hostname, the request front, listeners/TLS, gates, and the runtime contract; exactly one provider (pocker or docker). | Many-instance binaries |
 | [`lifecycle`](lifecycle/README.md) | Instance data on a host: facts (disk used, last request served) reported to a sink, and decisions from a policy provider (local YAML rules, or a control plane's). First step: measuring. | Any host |

@@ -1,6 +1,6 @@
 # Sandbox
 
-Confines one PocketBase app's JS hooks and migrations, so apps from people you don't know can share one process.
+Confines one PocketOne app's JS hooks and migrations, so apps from people you don't know can share one process.
 File access stays inside the app's folder, host primitives are gone, every JS call has a time limit, raw SQL can't
 leave the app's own database files, and outbound connections reach public addresses only.
 
@@ -88,7 +88,7 @@ One app whose JS hooks are sandboxed: file access confined to the app folder, ho
 limit per JS call. Run it from this folder with `go run ./example serve`.
 
 ```go
-// Command example runs one PocketBase app whose JS hooks are sandboxed: file access is confined to the app folder,
+// Command example runs one PocketOne app whose JS hooks are sandboxed: file access is confined to the app folder,
 // host primitives ($os.exec, $os.exit, ...) are disabled, and every JS call has a time limit.
 //
 //	go run ./example serve
@@ -132,7 +132,7 @@ func main() {
 
 ## How is this safe?
 
-With [pocker](../pocker/README.md), PocketOne can serve hundreds of PocketBase instances from one Go process, each with its own owner, hooks and data.
+With [pocker](../pocker/README.md), PocketOne can serve hundreds of instances from one Go process, each with its own owner, hooks and data.
 This section explains why that's safe enough to run code from people you don't know, and where it isn't.
 
 Configuration and the engine API are in [POCKER.md](../pocker/POCKER.md). The attack tests are in [`sandbox_test.go`](../pocker/sandbox_test.go).
@@ -161,7 +161,7 @@ They must not be able to:
 
 ### The layers
 
-#### 1. Each instance is its own PocketBase app
+#### 1. Each instance is its own app
 
 - Every instance has its own `core.App`, database, settings, JS VMs, migrations list, settings encryption key and
   log.

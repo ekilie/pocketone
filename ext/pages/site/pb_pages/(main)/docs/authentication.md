@@ -89,7 +89,7 @@ module.exports = {
 
 ## One-time passwords
 
-A two-step form: request a code, then sign in with it. Turn on OTP for the collection in the PocketBase dashboard and set up mail (Settings > Mail settings).
+A two-step form: request a code, then sign in with it. Turn on OTP for the collection in the dashboard and set up mail (Settings > Mail settings).
 
 ```js
 // pb_pages/login/otp/+page.js
@@ -132,7 +132,7 @@ module.exports = {
 
 ## OAuth2
 
-Configure the provider in the PocketBase dashboard (Collections > users > Options > OAuth2). Then start the flow from a form:
+Configure the provider in the dashboard (Collections > users > Options > OAuth2). Then start the flow from a form:
 
 ```html
 <form method="post" action="/auth/oauth">

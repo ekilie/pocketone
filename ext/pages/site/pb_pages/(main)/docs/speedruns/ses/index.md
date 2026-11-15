@@ -17,7 +17,7 @@ description: 'Step-by-step configuration of AWS Simple Email Service (SES) with 
 - [Verifying the Setup](#verifying-the-setup)
 - [Submit for Approval](#submit-for-approval)
 - [Creating SMTP Credentials](#creating-smtp-credentials)
-- [Configure SMTP in PocketBase](#configure-smtp-in-pocketbase)
+- [Configure SMTP in the dashboard](#configure-smtp-in-the-dashboard)
 
 <!-- /code_chunk_output -->
 
@@ -89,14 +89,14 @@ If you have previously had a domain approved, you may be able to skip this step.
 
 ## Creating SMTP Credentials
 
-Create SMTP credentials in the AWS SES console. These credentials will be used in your PocketBase admin panel for sending emails.
+Create SMTP credentials in the AWS SES console. These credentials will be used in your app's dashboard for sending emails.
 
 ![](2024-09-08-22-48-53.png)
 
-## Configure SMTP in PocketBase
+## Configure SMTP in the dashboard
 
-Once you have your SMTP credentials, head over to the PocketBase admin.
+Once you have your SMTP credentials, head over to the dashboard (Settings → Mail).
 
-Enter the SMTP credentials in PocketBase's admin panel, and ensure the **SENDER** address is correctly set. If SES hasn't verified your email yet, you can test it by sending an email to `test@<yourdomain>`, which should go through if the domain is the same.
+Enter the SMTP credentials in the dashboard, and ensure the **SENDER** address is correctly set. If SES hasn't verified your email yet, you can test it by sending an email to `test@<yourdomain>`, which should go through if the domain is the same.
 
 ![](2024-09-08-22-53-02.png)

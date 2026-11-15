@@ -26,7 +26,7 @@ module.exports = {
   client is authenticated as them; otherwise it's a guest. Your collections' API rules, `expand` and hidden fields
   apply exactly as they would in the browser.
 - **It's synchronous.** Calls return their result directly; no `await`.
-- **No network.** Requests go straight to your app's own API inside PocketBase. There's no host or port to set, and
+- **No network.** Requests go straight to your app's own API, in-process. There's no host or port to set, and
   it works the same on any server.
 - **Errors** throw the SDK's `ClientResponseError`:
 

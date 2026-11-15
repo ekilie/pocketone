@@ -78,11 +78,11 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 
 ## Example
 
-[`example/main.go`](example/main.go) is PocketBase plus the `upgrade` command. Try it with `go run ./example upgrade`.
+[`example/main.go`](example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
 
 ```go
-// Command example is PocketBase with the upgrade command. A local build has no release version, so it is kept as
-// "example.old"; release builds are kept as "<name>-<version>".
+// Command example is a PocketOne app with just the upgrade command. A local build has no release version, so it is
+// kept as "example.old"; release builds are kept as "<name>-<version>".
 //
 //	go run ./example upgrade
 package main

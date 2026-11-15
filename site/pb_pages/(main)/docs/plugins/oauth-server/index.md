@@ -196,8 +196,8 @@ branding. Logins from [devusers](https://github.com/pockethost/pocketone/blob/ma
 admin@example.com / password after **Sign in as a superuser**.
 
 ```go
-// Command example is a PocketBase that is an OAuth server: `pocketbase login` signs in to it in the browser, and MCP
-// clients can register themselves (dynamic registration is on here).
+// Command example is a PocketOne app that is an OAuth server: its `login` command signs in to it in the browser, and
+// MCP clients can register themselves (dynamic registration is on here).
 //
 //	go run ./example serve --http=127.0.0.1:8090
 //	go run ./example login http://127.0.0.1:8090              # opens the browser; --device for a code

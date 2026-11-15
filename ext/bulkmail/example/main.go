@@ -1,4 +1,4 @@
-// Command example runs one PocketBase app with bulk mail: a "Mail" page in the dashboard, campaigns to the app's
+// Command example runs one PocketOne app with bulk mail: a "Mail" page in the dashboard, campaigns to the app's
 // own users, and $bulkmail in JS hooks.
 //
 // Run it in dev mode: while SMTP is off, PocketOne's dev mail trap catches every mail (bulk mail included) and

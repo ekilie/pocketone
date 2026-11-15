@@ -292,7 +292,7 @@ claude mcp login pb-example
 ```
 
 ```go
-// Command example runs one PocketBase app with an MCP endpoint at /mcp: the built-in pb_* tools (the whole stock REST
+// Command example runs one PocketOne app with an MCP endpoint at /mcp: the built-in pb_* tools (the whole stock REST
 // API), a tool over a Go route, and a tool over a JS route from pb_hooks/mcp.pb.js.
 //
 //	cd ext/mcp/example && go run . serve
@@ -332,7 +332,7 @@ func main() {
 
 	server := mcp.MustRegister(app, mcp.Config{
 		Name:        "pb-example",
-		Description: "Example PocketBase app with ext/mcp.",
+		Description: "Example PocketOne app with ext/mcp.",
 	})
 
 	// A tool from Go: write the REST endpoint, then the tool wrapper. The tool runs the request as the caller, so

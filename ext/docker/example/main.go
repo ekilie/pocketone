@@ -1,5 +1,5 @@
-// A minimal docker host: instances from a YAML file, each in its own container with the PocketBase version it asks
-// for, routed by hostname on one listener.
+// A minimal docker host: instances from a YAML file, each in its own container with the PocketBase or PocketOne
+// version it asks for, routed by hostname on one listener.
 //
 //	go run ./example --instances instances.yaml --data ./instances --binaries ./bin --versions pb:0.23,p1:0.0
 //
@@ -26,7 +26,7 @@ import (
 func main() {
 	instances := flag.String("instances", "instances.yaml", "instances file")
 	data := flag.String("data", "./instances", "folder with one folder per instance")
-	binaries := flag.String("binaries", "./bin", "PocketBase binary cache")
+	binaries := flag.String("binaries", "./bin", "PocketBase and PocketOne binary cache")
 	versions := flag.String("versions", "pb:0.23,p1:0.0", "minors to serve (latest patch each; fetched at start)")
 	image := flag.String("image", "alpine:3.20", "base image")
 	listen := flag.String("listen", "127.0.0.1:8090", "listen address")

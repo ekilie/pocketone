@@ -15,7 +15,7 @@ pb_public/
 pb_pages/
 ```
 
-Or point PocketBase at it with `--pagesDir`.
+Or point `pocketone` at it with `--pagesDir`.
 
 ## Updating
 

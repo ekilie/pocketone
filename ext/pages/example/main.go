@@ -1,4 +1,4 @@
-// Command example runs one PocketBase app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
+// Command example runs one PocketOne app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
 // ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection
 // with three seed notes. From this folder:
 //

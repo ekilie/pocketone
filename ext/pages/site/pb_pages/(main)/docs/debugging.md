@@ -7,10 +7,10 @@ description: Dev mode, debug in +config.js, and logging with ctx.log.
 
 ## Dev mode
 
-Run PocketBase with `--dev`:
+Run `pocketone` with `--dev`:
 
 ```bash
-pocketbase serve --dev
+pocketone serve --dev
 ```
 
 Dev mode turns on:
