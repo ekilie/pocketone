@@ -289,7 +289,7 @@ func main() {
 	// remotes: remote/login/logout/link commands and GET /_pocker/whoami
 	remotes.MustRegister(app, remotes.Config{})
 
-	// OAuth server: browser sign-in for `pocketbase login` (superusers) and OAuth clients
+	// OAuth server: browser sign-in for `pocketone login` and OAuth clients
 	oauthserver.MustRegister(app, oauthserver.Config{})
 
 	// deploys: deploy/dev/pull/logs commands and the deploy API (/_pocker/deploy/v1, superusers)

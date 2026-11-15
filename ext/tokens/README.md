@@ -1,90 +1,229 @@
-# tokens
+# Tokens
 
-API tokens for PocketBase: long-lived bearer secrets (`pbt_…`) owned by an auth record, optionally limited to scopes,
-listed and revoked one by one. Send one as `Authorization: Bearer pbt_…` and the request runs as the token's owner.
-JWTs keep working unchanged.
+Long-lived API tokens for your app: secrets that start with `pbt_`, for CI, deploys, scripts and agents. Each token
+belongs to an account and acts as that account. It can be limited to scopes, given an expiry, and revoked on its own.
+Send one as `Authorization: Bearer pbt_…`. Ordinary PocketBase auth tokens keep working unchanged.
 
-**Runs on:** Single app, or many under [pocker](../pocker/README.md).
+## Install
+
+Tokens is built into `pocketone` and always on. There's nothing to install or turn on.
+
+In your own Go build, register it before the app starts:
 
 ```go
 app := pocketbase.New()
-tk := tokens.MustRegister(app, tokens.Config{
+tokens.MustRegister(app, tokens.Config{})
+app.Start()
+```
+
+To use `$tokens` in `pb_hooks`, bind it in jsvm's `OnInit` (the stock binary does):
+
+```go
+jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { tokens.BindJS(vm, app) }})
+```
+
+The module is `github.com/pockethost/pocketone/ext/tokens`.
+
+## Configure
+
+There is no `pocketone.yaml` section, flag or environment variable for Tokens. In `pocketone`:
+- any account (a superuser, or a record of any auth collection) can own tokens;
+- a token never expires unless you give it an expiry.
+
+A Go build can narrow both (see [Go config](#go-config)).
+
+### Scopes
+
+A token without scopes has its owner's full rights. A token with scopes works only on the requests its scopes cover,
+plus `/_pocker/whoami`; anywhere else it gets `403`. Plugins and your own `pb_hooks` register the scopes. In
+`pocketone` the built-in ones are:
+
+| Scope | From | Allows | Who can hold it |
+|---|---|---|---|
+| `deploy` | [Deploy](../deploy/README.md) | Deploy code (hooks, migrations, public files, packages), read files and logs | superusers |
+| `deploy:read` | [Deploy](../deploy/README.md) | Read deployed files and stream logs | superusers |
+
+`pocketone token scopes` lists every scope your app has, with its paths.
+
+### Your own scopes
+
+Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on the
+[OAuth Server](../oauth-server/README.md) consent page:
+
+```js
+// pb_hooks/scopes.pb.js
+$tokens.registerScope({
+  name: 'notes:read',                        // lower-case letters, digits, ":" and "_"
+  description: 'Read notes',                 // shown in the token screen and on the consent page
+  paths: ['/api/collections/notes/records'], // URL prefixes where a token holding it works
+  methods: ['GET'],                          // optional: only these methods (GET covers HEAD)
+})
+$tokens.registerScope({ name: 'notes:write', description: 'Change notes', paths: ['/api/collections/notes/records'] })
+```
+
+- `collections: ['users']` limits which accounts may hold the scope.
+- Registering a name again merges its paths, methods and collections, so reloading hooks is safe.
+- Two names whose headers would be the same (`notes:write` and `notes_write`) can't both be registered.
+
+Check a scope on your own route:
+
+```js
+routerAdd('POST', '/api/notes/archive', (e) => { /* ... */ }, $apis.requireAuth(), $tokens.requireScope('notes:write'))
+```
+
+`$tokens.requireScope` refuses a signed-out request, and a token that doesn't hold the scope. Inside a handler,
+`$tokens.hasScope(e, 'notes:write')` tells you the same.
+
+Check a scope in a collection API rule. Every signed-in request carries `X-Token-Scope-<Name>: 1` for each scope it
+holds, and rules read it as `@request.headers.x_token_scope_<name>` (`:` becomes `_`):
+
+```
+@request.auth.id = owner && @request.headers.x_token_scope_notes_write = "1"
+```
+
+- A PocketBase auth token or an unscoped API token holds every registered scope (except ones its collection can't
+  hold).
+- A scoped token holds only its own scopes. A signed-out request holds none.
+- Headers a client sends with that prefix are always dropped, so they can't be forged.
+
+`$tokens.ruleField('notes:write')` returns the rule field for a name, and `$tokens.scopes()` lists every registered
+scope with its header and rule field.
+
+## Use
+
+### From the dashboard
+
+1. Open **Settings → API tokens** (under **Access**). Only superusers see this screen.
+2. Fill in a **Name**. Optionally set **Expires in (days)**, and tick any **Scopes** (none means full rights).
+3. By default the token is yours. To make one for another account, fill in **Owner collection** (default
+   `_superusers`) and **Owner (id or email)**.
+4. Click **Create token**. Copy the token now: it's shown only once and never stored.
+
+The list shows each token's name, its first characters, owner, scopes, expiry and when it was last used (time and IP).
+Tokens issued by [OAuth Server](../oauth-server/README.md) carry an `oauth: <client id>` label. Click **Revoke** and
+confirm to delete one; anything using it stops working at once.
+
+App users who aren't superusers manage their own tokens through the [REST API](#rest-api).
+
+### From the command line
+
+The `token` command works on the local data dir, like `superuser`, so you can set up tokens before the first serve:
+
+```bash
+pocketone token create --superuser admin@example.com --name ci --scope deploy --ttl 720h   # prints the secret
+pocketone token create --collection users --record user@example.com --name script
+pocketone token list                                    # every token, or one owner's with an owner flag
+pocketone token revoke <id> [<id>...]
+pocketone token revoke --all --superuser admin@example.com
+pocketone token scopes
+```
+
+Pick the owner with `--superuser <email>`, or `--collection <name> --record <id or email>`. `--scope` can be repeated;
+without `--ttl` the token never expires.
+
+### Using a token
+
+```bash
+curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collections/notes/records
+```
+
+- An invalid, revoked or expired token leaves the request signed out, like an invalid PocketBase token.
+- A scoped token used outside its scopes gets `403` ("This API token's scopes (…) don't allow this request.").
+- A token can't be exchanged for a PocketBase auth token (`auth-refresh` and `impersonate` refuse it), so revoking a
+  token really ends its access.
+- Expired tokens are deleted once a day. Deleting an account deletes its tokens.
+
+### In the logs
+
+- A rejected token is logged at debug level: `tokens: rejected API token`.
+- The daily cleanup logs `tokens: deleted expired tokens` with a count when it deletes any, and
+  `tokens: delete expired` as a warning if it fails.
+
+## Integrations
+
+### Works with
+
+| Plugin | How they fit |
+|---|---|
+| [OAuth Server](../oauth-server/README.md) | Its access tokens are API tokens, issued with the client's id, the granted scopes and, when asked for, an audience. They show up under Settings → API tokens and can be revoked there. OAuth Server needs Tokens on the app. |
+| [MCP](../mcp/README.md) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner with a PocketBase auth token, so they hold every registered scope in collection rules. |
+| [Deploy](../deploy/README.md) | Registers `deploy` and `deploy:read`; a `deploy` token is what CI uses. |
+| [Remotes](../remotes/README.md) | A password `pocketone login` creates an API token and `logout` deletes it. In CI, put a token in `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`). `/_pocker/whoami` reports a token's id and scopes, whatever its scopes. |
+| [Pocker](../pocker/README.md) | Add `tokens.New(tokens.Config{})` to the host's plugins and every instance gets its own tokens, routes and screen. Per instance, `plugins: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
+
+### Building on Tokens
+
+**Register a scope from Go.** Plugins register their scopes on the app, usually on bootstrap, and guard their routes:
+
+```go
+tk := tokens.For(app)
+tk.MustRegisterScope(tokens.Scope{
+    Name:        "notes:write",
+    Description: "Change notes",
+    Paths:       []string{"/api/collections/notes/records"},
+    Methods:     []string{"POST", "PATCH", "DELETE"}, // optional
+    Collections: []string{"users"},                   // optional: who may hold it
+})
+se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireScope("notes:write"))
+```
+
+- **Guards.** A Go scope can add `Match func(*core.RequestEvent) bool`: a token with the scope also works on any
+  request it returns true for. It runs before the owner is loaded, so it may look only at the request.
+- **Shared scopes.** Registering a name again merges its paths, methods, guards and collections, so several plugins
+  can share one scope.
+- **Read the token on a request.** `tokens.FromRequest(e)` returns the token a request used (nil for a PocketBase
+  auth token), with its `Owner`, `Scopes` and `Audience`. `tokens.HasScope(e, "x")` is true for PocketBase auth
+  tokens and unscoped API tokens.
+- **Without importing this package.** Read the request store keys `tokens.scopes` and `tokens.id`, or the
+  `X-Token-Scope-*` headers.
+- **Audience.** A token created with `CreateOptions.Audience` (OAuth Server sets it from the RFC 8707 `resource`
+  parameter) only works under that URL's path, plus `/_pocker/whoami`; elsewhere it gets `403`.
+
+**Go API.** `tokens.For(app)` returns the service: `Create(owner, CreateOptions{Name, Scopes, Expires, ClientId,
+Audience})` returns the secret and record; also `Verify(secret)`, `List(owner)`, `Get(id)`, `Revoke(id)`,
+`RevokeAll(owner)`, `DeleteExpired()`, `RegisterScope`, `MustRegisterScope`, `Scopes()`, `Collections()` and
+`AllowedCollection(c)`. `tokens.BindJS(vm, app)` adds `$tokens`; the pluginkit plugin (`tokens.New`) also binds it.
+
+**JS.** `$tokens.registerScope({name, description, paths, methods, collections})`, `$tokens.requireScope(name)`,
+`$tokens.hasScope(e, name)`, `$tokens.ruleField(name)` and `$tokens.scopes()`.
+
+### REST API
+
+Any signed-in account; superusers see and manage everyone's.
+
+| Route | What |
+|---|---|
+| `GET /api/tokens` | Your tokens. Superusers see all, or one owner's with `?ownerCollection=&owner=`. |
+| `POST /api/tokens` | `{name, scopes, ttl \| expires}` (`ttl` in seconds, `expires` RFC 3339); superusers may add `ownerCollection` and `owner`. Returns the secret once. A scoped token can only create tokens within its own scopes. |
+| `DELETE /api/tokens/{id}` | Revoke one. |
+| `POST /api/tokens/revoke-all` | Revoke all of yours (superusers: `{ownerCollection, owner}`). |
+| `GET /api/tokens/scopes` | The registered scopes, who may own tokens, and whether you can. |
+
+Owners can also list, view and delete their own tokens through the records API of `_tokens`.
+
+## Go config
+
+```go
+tokens.MustRegister(app, tokens.Config{
     Collections: []string{"_superusers", "users"}, // who may own tokens (default: every auth collection)
     MaxTTL:      0,                                // cap on a token's lifetime (0: none)
 })
 ```
 
-Try it: `go run ./example serve` (logins from [devusers](../devusers/devusers.go): admin@example.com / password).
+With `MaxTTL` set, a token asked for with no expiry or a later one gets the cap instead. If you narrow `Collections`,
+OAuth Server can only sign in accounts of those collections.
 
-## What it adds
+## How it works
 
-- **`_tokens` collection:** owner (collection id + record id), name, `hash` (sha256 of the secret; the secret is
-  never stored), display prefix, scopes, expiry, last use (time + IP), OAuth client id. Owners can list, view and
-  delete their own tokens through the records API.
-- **Bearer auth:** a middleware just before PocketBase's JWT middleware. Invalid or expired tokens leave the request
-  unauthenticated, like an invalid JWT. A token can't be exchanged for a JWT (`auth-refresh` and `impersonate`
-  refuse it), so revoking a token really ends its access.
-- **Routes:** `GET /api/tokens` (yours; superusers see all, `?ownerCollection=&owner=` filters), `POST /api/tokens`
-  (`{name, scopes, ttl | expires}`; superusers may add `ownerCollection` + `owner`), `DELETE /api/tokens/{id}`,
-  `POST /api/tokens/revoke-all`, `GET /api/tokens/scopes`. The secret is returned once, on create.
-- **Dashboard:** Settings → API tokens (create, see last use, revoke).
-- **CLI** (on a `*pocketbase.PocketBase`): `token create --superuser admin@example.com --name ci --scope deploy
-  [--ttl 720h]` prints the secret; `token list`, `token revoke <id>… | --all --superuser <email>`, `token scopes`.
-- A daily cron deletes expired tokens; deleting an owner deletes its tokens.
-
-## Scopes
-
-A token without scopes has its owner's full rights. Scopes come from plugins and from the app itself, in Go or in
-`pb_hooks`, and every registered scope appears with its description in Settings → API tokens and on the OAuth consent
-page.
-
-```go
-tk.MustRegisterScope(tokens.Scope{
-    Name:        "notes:read",                                 // lower-case letters, digits, ":" and "_"
-    Description: "Read notes",                                 // shown in the token screen and on the consent page
-    Paths:       []string{"/api/collections/notes/records"},  // URL prefixes where a token holding it authenticates
-    Methods:     []string{"GET"},                              // optional: only these methods (GET covers HEAD)
-})
-se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireScope("notes:write"))
-```
-
-```js
-// pb_hooks (the standard binary binds $tokens)
-$tokens.registerScope({ name: "notes:write", description: "Change notes", paths: ["/api/collections/notes/records"] })
-routerAdd("POST", "/api/notes/archive", (e) => { /* ... */ }, $apis.requireAuth(), $tokens.requireScope("notes:write"))
-$tokens.hasScope(e, "notes:write")  // in a handler
-$tokens.ruleField("notes:write")    // "@request.headers.x_token_scope_notes_write"
-$tokens.scopes()                    // every registered scope, with its header and rule field
-```
-
-- **Where a scoped token works:** on the paths (and methods) of its scopes, plus `/_pocker/whoami`. Elsewhere: 403.
-  A Go plugin can add a `Match func(*core.RequestEvent) bool` guard for requests that paths can't describe.
-- **Guards:** `tokens.RequireScope("x")` (JS: `$tokens.requireScope("x")`) refuses an anonymous request and a token
-  without the scope. `tokens.HasScope(e, "x")` is true for JWTs and unscoped tokens.
-- **Collection rules:** every signed-in request carries `X-Token-Scope-<Name>: 1` for each scope it holds (a JWT or
-  an unscoped token: every registered scope; a scoped token: only its own; anonymous: none). Headers a client sends
-  with that prefix are always dropped. Rules read them as `@request.headers.x_token_scope_<name>`, with `:` as `_`:
-
-  ```
-  @request.auth.id = owner && @request.headers.x_token_scope_notes_write = "1"
-  ```
-
-  Names whose headers would collide (`notes:write` and `notes_write`) can't both be registered.
-- Registering a name again merges its paths, methods and guards (two plugins sharing a scope, or hooks reloading).
-- Plugins that don't import this package can read the request store keys `tokens.scopes` and `tokens.id`.
-
-## Audience
-
-A token created with `CreateOptions.Audience` (oauth-server sets it from the RFC 8707 `resource` parameter) only
-authenticates under that URL's path, plus `/_pocker/whoami`; elsewhere it gets 403. `tokens.FromRequest(e).Audience`
-tells a route what the token was issued for.
-
-## Go API
-
-`tokens.For(app)` returns the service: `Create(owner, CreateOptions{Name, Scopes, Expires, ClientId})` → secret +
-record, `Verify(secret)`, `List(owner)`, `Revoke(id)`, `RevokeAll(owner)`, `DeleteExpired()`, `RegisterScope`,
-`Scopes()`, `MustRegisterScope`, `BindJS(vm, app)` (the `$tokens` global; the plugin also implements
-`pluginkit.JSBinder`). [oauth-server](../oauth-server/README.md) issues its access tokens through `Create`.
+- Tokens live in the `_tokens` collection: owner (collection id and record id), name, `hash` (SHA-256 of the secret;
+  the secret itself is never stored), display prefix, scopes, expiry, last use (time and IP), OAuth client id and
+  audience.
+- The bearer check is a middleware that runs just before PocketBase's own auth middleware; a second one, right after
+  it, sets the scope headers. Last use is written at most once a minute per token.
+- [`example/main.go`](example/main.go) runs one app where superusers and users may own tokens, with a `hello` scope
+  for `GET /api/hello`. Try it with `go run ./example serve` and
+  `go run ./example token create --superuser admin@example.com --name ci` (logins from
+  [devusers](../devusers/devusers.go): admin@example.com / password, user@example.com / password).
 
 ## License
 

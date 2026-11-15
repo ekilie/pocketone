@@ -206,7 +206,7 @@ func TestAuthorizeCodeFlow(t *testing.T) {
 	}
 
 	b.get(e.url + "/oauth/authorize?" + q.Encode())
-	if b.status != 200 || !b.has("Sign in to") || !b.has("PocketBase CLI") {
+	if b.status != 200 || !b.has("Sign in to") || !b.has("pocketone CLI") {
 		t.Fatalf("sign-in page: %d %s", b.status, b.page)
 	}
 	b.submit("password", map[string]string{"collection": "_superusers", "email": "test@example.com", "password": "wrong"})
@@ -445,7 +445,7 @@ func TestPagesRendererHook(t *testing.T) {
 	_, challenge := pkce()
 	b.get(e.url + "/oauth/authorize?" + url.Values{"response_type": {"code"}, "client_id": {CLIClientId}, "redirect_uri": {"http://127.0.0.1:1/cb"},
 		"code_challenge": {challenge}, "code_challenge_method": {"S256"}}.Encode())
-	if !b.has("custom signin PocketBase CLI csrf=") {
+	if !b.has("custom signin pocketone CLI csrf=") {
 		t.Fatal(b.page)
 	}
 	b.get(e.url + "/oauth/device/verify")

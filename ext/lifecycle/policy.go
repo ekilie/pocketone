@@ -41,9 +41,9 @@ type PolicyProvider interface {
 //	  report_every: 1h     # how often changed last-request times are reported
 //	  concurrency: 2       # instances measured at once
 type SectionConfig struct {
-	MeasureEvery time.Duration `yaml:"measure_every"`
-	ReportEvery  time.Duration `yaml:"report_every"`
-	Concurrency  int           `yaml:"concurrency"`
+	MeasureEvery time.Duration `yaml:"measure_every" doc:"How old an instance's disk measurement may get before it is measured again. Default 24h."`
+	ReportEvery  time.Duration `yaml:"report_every" doc:"How often changed last-request times are reported to the sink. Default 1h."`
+	Concurrency  int           `yaml:"concurrency" doc:"How many instances are measured at once. Default 2."`
 }
 
 // Section is the key of the `lifecycle` section.

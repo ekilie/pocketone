@@ -30,6 +30,7 @@
     { "name": "edge", "title": "Edge", "group": "many", "summary": "Forwards each request to the edge that owns the instance." },
     { "name": "mothership", "title": "Mothership", "group": "many", "summary": "A control plane and its edges, across regions." },
     { "name": "schedules", "title": "Schedules", "group": "many", "summary": "Scheduled webhooks that wake sleeping instances." },
+    { "name": "lifecycle", "title": "Lifecycle", "group": "many", "summary": "Measures disk use and last request for each instance a host serves." },
     { "name": "mailrelay", "title": "Mail Relay", "group": "services", "summary": "Outgoing mail for instances without SMTP, through your relay, with limits." },
     { "name": "storage", "title": "S3 Fallback", "group": "services", "summary": "A default bucket for uploads and backups when an instance has no S3 of its own." },
     { "name": "servertiming", "title": "Server Timing", "group": "services", "summary": "Server-Timing headers for each step of a request." },

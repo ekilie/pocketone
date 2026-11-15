@@ -7,114 +7,144 @@ source: "ext/oauth-server/README.md"
 
 # OAuth Server
 
-Makes your app an OAuth 2.1 sign-in server. `pocketone login` signs in to your app in the browser (or with a code on
-another device), and MCP clients such as Claude Code or Claude and ChatGPT connectors can register themselves and
-connect. The access tokens it hands out are [API tokens](/docs/plugins/tokens), so you can see and revoke every one.
+Makes your app an OAuth 2.1 authorization server whose access tokens are [API tokens](/docs/plugins/tokens).
+`pocketone login` signs in to it in the browser (or with a code on another device), and MCP clients such as Claude
+or ChatGPT connectors register themselves and connect. Superusers and app users sign in on your app's own pages,
+through PocketBase's own auth endpoints.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations)
 
 ## Install
 
-OAuth Server is built into `pocketone` and always on. There's nothing to install or turn on.
+OAuth Server is built into `pocketone` and always on, with [Tokens](/docs/plugins/tokens). There's nothing to install
+or turn on.
 
-In your own Go build, register it with [Tokens](/docs/plugins/tokens), which it needs, before the app starts:
+In your own Go build, register Tokens and OAuth Server before the app starts:
 
 ```go
 app := pocketbase.New()
-tokens.MustRegister(app, tokens.Config{})
-remotes.MustRegister(app, remotes.Config{}) // optional: advertises "oauth" in /_pocker/whoami so login finds it
+tokens.MustRegister(app, tokens.Config{})                // required: access tokens are API tokens
+remotes.MustRegister(app, remotes.Config{})              // optional: lists "oauth" in /_pocker/whoami so login finds it
 oauthserver.MustRegister(app, oauthserver.Config{})
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/oauth-server`, package `oauthserver`.
+Without Tokens the app refuses to start ("oauth-server needs ext/tokens"). The module is
+`github.com/pockethost/pocketone/ext/oauth-server`.
 
 ## Configure
 
-In `pocketone` there is no `pocketone.yaml` section, flag or environment variable for it. It uses these defaults:
+There is no `pocketone.yaml` section, flag or environment variable for OAuth Server. In `pocketone`:
+- superusers and every auth collection may sign in;
+- access tokens last 30 days, refresh tokens 180 days (renewed on each refresh);
+- tokens for [MCP](/docs/plugins/mcp) never expire, since MCP turns that on for `/mcp`;
+- client self-registration (`POST /oauth/register`) is on, since MCP turns it on;
+- Claude and Claude Code connect without registering (their client metadata documents from `claude.ai` and
+  `claude.com` are trusted).
 
-- Only superusers can sign in.
-- Access tokens last 30 days; refresh tokens last 180 days and are renewed each time they're used.
-- Claude (`claude.ai`, `claude.com`) is trusted to identify itself with a client metadata document, so Claude and
-  Claude Code connect without registering first.
-- Client self-registration (`/oauth/register`) is off, unless [MCP](/docs/plugins/mcp) turns it on. In `pocketone` it
-  does.
-- The pages show **Settings → Application name**.
+A Go build can change these (see [Go config](#go-config)).
 
-### Clients
+### Sign-in methods
 
-The `pocketone` command line is a built-in client (`pocketbase-cli`). Other apps need registering:
+The pages offer exactly the methods each auth collection has on, so you set them where you always do: the
+collection's options in the dashboard (**Collections →** the collection **→ Options**).
+- **Password**, **One-time password** (an emailed code) and **OAuth2** providers each get their own form or button.
+- **Multi-factor authentication** adds a second step.
+- The collection's auth rule (for example `verified = true`) applies.
+
+OAuth2 providers (Google, GitHub, …) are offered to app users only; PocketBase doesn't allow them for superusers.
+**Register `<your app's URL>/oauth/provider/callback` as a redirect URI with each provider.**
+
+The pages show **Settings → Application → Application name**.
+
+### Behind a proxy
+
+The server names itself (the issuer) after the scheme and host the browser used, with `https` when the request is TLS
+or `X-Forwarded-Proto` says so. If a proxy rewrites the host, set `Config.Issuer` in a Go build so the issuer and the
+provider callback URL stay stable.
+
+### Scopes
+
+A client may ask for any scope registered with [Tokens](/docs/plugins/tokens#scopes), including your own from
+`$tokens.registerScope`, and the consent page lists them with their descriptions. No scope means the account's full
+rights, and the consent page says **Full access**. `offline_access` is accepted (refresh tokens are always issued).
+
+### Your own sign-in pages
+
+The built-in pages (sign-in, second step, one-time code, consent, device code, done, error) follow the system's light
+or dark mode and work on phones. To change them, eject them as [PocketPages](/docs/plugins/pages) templates:
 
 ```bash
-pocketone oauth clients add --name "My app" --redirect https://myapp.example.com/callback   # prints the client id, and the secret once
-pocketone oauth clients add --name "Desktop app" --redirect http://127.0.0.1/callback --public  # no secret, PKCE only
+pocketone oauth eject           # --force overwrites files you already have
+```
+
+It writes `signin.ejs`, `mfa.ejs`, `otp.ejs`, `consent.ejs`, `device.ejs`, `done.ejs`, `error.ejs` and the shared
+`head.ejs`, `foot.ejs` and `hidden.ejs` (with the CSS) to `pb_pages/_private/oauth/`, and prints each file. From then
+on the server renders your templates; a missing one falls back to the built-in page, so delete them to go back.
+`_private` keeps them from being served as routes. See [Custom page templates](#custom-page-templates) for the data
+they get.
+
+## Use
+
+### Signing in
+
+Whenever a client sends someone to your app (`pocketone login`, Claude, an app of yours), they see:
+
+1. **Sign in to <app name>**: the form for app users (`users` first; with several user collections, a tab for
+   each). At the bottom, **Sign in as a superuser** switches to the superuser form, which looks clearly different:
+   a **Superuser** badge, **Superuser sign-in**, its own colors and a warning. **Sign in as a user instead** goes back.
+2. **One more step** when the account has MFA, offering its other methods. After a password, when an emailed code is
+   the only method left, it's sent right away.
+3. **Check your email** for an emailed code.
+4. The consent page: the client's name, the account, whether the client will act as a user (and which collection) or
+   as a superuser, and the scopes. Click **Allow** or **Deny**, or **Not <email>? Use another account**.
+
+With no user collection allowed, the superuser form is the only one. A browser stays signed in to these pages for 15
+minutes. Failed attempts are limited to 10 per IP in 5 minutes.
+
+On another device (over SSH, say), the client shows a code like `WDJB-MJHT`. Open
+`https://<your app>/oauth/device/verify`, enter it under **Connect a device**, sign in and allow. Codes last 10 minutes.
+
+### Log in from the command line
+
+```bash
+pocketone login prod
+```
+
+With OAuth Server on the remote, [Remotes](/docs/plugins/remotes) opens your browser on the pages above, or shows a
+device code when there's no browser (`--device` asks for one). The client is the built-in `pocketbase-cli`, named
+**pocketone CLI** on the consent page (the name follows the command, so another build shows its own).
+
+### See and revoke what's connected
+
+Every sign-in creates an API token named "<client> (OAuth)". They're listed under **Settings → API tokens** with an
+`oauth: <client id>` label; click **Revoke** to disconnect a client. Revoking the access token also ends its refresh
+token. A client can revoke its own tokens at `POST /oauth/revoke`, which `pocketone logout` does.
+
+### Register clients
+
+Claude and the CLI need no registration, and MCP clients register themselves. For your own app:
+
+```bash
+pocketone oauth clients add --name "My app" --redirect https://myapp.example.com/callback
+pocketone oauth clients add --name "Desktop" --redirect http://127.0.0.1/callback --public
 pocketone oauth clients list
 pocketone oauth clients rm <client_id>
 ```
 
-`--redirect` can be repeated. Loopback redirects (`127.0.0.1`, `[::1]`) match any port; other redirects must match
-exactly, and plain `http` is allowed only for loopback.
+`add` prints the client id, and the secret once for a confidential client. `--public` makes a client with no secret
+(PKCE only), for desktop and mobile apps. `--redirect` can be repeated.
 
-### Scopes
-
-A client can ask for any scope a plugin registered with [Tokens](/docs/plugins/tokens) (`pocketone token scopes` lists
-them), plus `offline_access`. A client that asks for no scope gets the account's full rights, and the consent page says
-so.
-
-### Custom pages
-
-The built-in pages follow the system's light or dark mode and work on phones. To change them, eject them as
-[Pages](/docs/plugins/pages) templates:
-
-```bash
-pocketone oauth eject           # --force overwrites files you already ejected
-```
-
-This writes `signin.ejs`, `otp.ejs`, `consent.ejs`, `device.ejs`, `done.ejs`, `error.ejs` and the shared `head.ejs`,
-`foot.ejs` and `hidden.ejs` (with the CSS) to `pb_pages/_private/oauth/`, and prints each file. From then on the
-server renders those templates; a missing one falls back to the built-in page, so delete them to go back. `_private`
-keeps them from being served as routes.
-
-The templates get the page data as `ctx.data` (`data.appName`, `data.action`, `data.hidden`, `data.csrf`,
-`data.clientName`, `data.scopes`, `data.error` and the rest of `PageData`, in camelCase). Every POST form must include
-`include('/oauth/hidden')` and a `step` button.
-
-## Use
-
-### Signing in from the command line
-
-```bash
-pocketone login https://myapp.example.com            # opens the browser
-pocketone login https://myapp.example.com --device   # a code to enter on another device
-```
-
-See [Remotes](/docs/plugins/remotes) for saved logins. In the browser you'll see:
-
-1. **Sign in to <your app>**: email and password, or **Email me a sign-in code** when the collection has one-time
-   codes on. With MFA on, you need both.
-2. The consent page: the client's name, the account, and the scopes it asks for. Click **Allow** or **Deny**, or
-   **Use another account**.
-3. **All set**, and you can close the tab.
-
-With `--device`, open the link the command prints, sign in, and enter the code (like `WDJB-MJHT`) on **Connect a
-device**. A code is valid for 10 minutes.
-
-### Seeing and revoking access
-
-Every access token shows up under **Settings → API tokens** with an `oauth: <client>` label. Click **Revoke** to cut
-the client off. Clients can also revoke their own tokens: revoking either the access token or the refresh token revokes
-both.
-
-### Limits
-
-- Failed sign-ins are limited to 10 per 5 minutes per IP.
-- The sign-in session is a 15-minute cookie on `/oauth`; forms carry a CSRF token.
-- Sign-in with OAuth2 providers (Google, GitHub) isn't offered yet.
+Redirect URIs must be `https`, `http` on a loopback address, or an app's custom scheme. Loopback URIs match any port
+(RFC 8252); others must match exactly.
 
 ### In the logs
 
-`oauth-server: send OTP` (error) when a sign-in code email fails to send, and `oauth-server: cleanup` (warning) when
-the half-hourly cleanup of expired codes fails.
+- `oauth-server: this collection may sign in but can't own API tokens; add it to tokens.Config.Collections`, once per
+  collection, when Tokens is narrowed in a Go build. The page then says signing in with that account type "isn't set
+  up on this server yet".
+- `oauth-server: auth methods` (error) when a collection's sign-in methods can't be read.
+- `oauth-server: cleanup` (warning) when the half-hourly removal of expired codes fails.
 
 ## Integrations
 
@@ -122,76 +152,110 @@ the half-hourly cleanup of expired codes fails.
 
 | Plugin | How they fit |
 |---|---|
-| [Tokens](/docs/plugins/tokens) | Required. Access tokens are API tokens with the client's id and the granted scopes; the sign-in collections must also be allowed to own tokens. |
-| [MCP](/docs/plugins/mcp) | `/mcp` signs clients in through OAuth Server. MCP turns on client self-registration and serves the protected resource metadata (`/.well-known/oauth-protected-resource`), which points clients here. |
-| [Remotes](/docs/plugins/remotes) | `pocketone login` runs the OAuth client against this server: a loopback listener with PKCE, or a device code. OAuth Server advertises itself as `oauth` in `/_pocker/whoami`, which is how login finds it. |
-| [Pages](/docs/plugins/pages) | `pocketone oauth eject` writes the pages as templates you can edit. |
-| [Deploy](/docs/plugins/deploy) | A client that asks for the `deploy` scope gets a token CI or the CLI can deploy with. |
+| [Tokens](/docs/plugins/tokens) | Required. Access tokens are API tokens owned by whoever signed in, with the client's id, the granted scopes and the audience. Every scope registered with Tokens can be requested. |
+| [Remotes](/docs/plugins/remotes) | OAuth Server lists itself as the `oauth` feature in `/_pocker/whoami`; `pocketone login` then signs in in the browser (loopback redirect with PKCE) or with a device code, and renews through the refresh token. |
+| [MCP](/docs/plugins/mcp) | MCP points clients here from its protected resource metadata, turns on self-registration, and makes tokens bound to `/mcp` never expire. Tool calls run as whoever signed in. |
+| [Deploy](/docs/plugins/deploy) | `pocketone login` gives the deploy commands a token for the account that signed in. |
+| [Pages](/docs/plugins/pages) | `pocketone oauth eject` writes the pages as PocketPages templates, rendered from then on. |
+
+Under [Pocker](/docs/plugins/pocker), a Go build registers OAuth Server (and Tokens) in each instance's `SetupApp`;
+there's no pluginkit plugin for it yet. The stock `pocketone` binary doesn't add it to pocker instances.
+
+### Audience (RFC 8707)
+
+A `resource` parameter on `/oauth/authorize`, `/oauth/device` or `/oauth/token` (a URL on this server) binds the
+access token to it: the token then only works under that URL's path. So a token issued for `/mcp` can't deploy, and a
+deploy token can't drive MCP. Refreshed tokens keep it.
 
 ### Building on OAuth Server
 
-- **Your own scopes.** Register a scope with Tokens and clients can ask for it; the consent page shows its description.
-- **Audience (RFC 8707).** A `resource` parameter on `/oauth/authorize`, `/oauth/device` or `/oauth/token` (a URL on
-  this server) binds the access token to it: the token then works only under that URL's path, so a token issued for
-  `/mcp` can't deploy and a deploy token can't drive MCP. Refreshed tokens keep it.
-- **Go API.** `oauthserver.For(app)` returns the server. `EnableDynamicRegistration()` turns on `/oauth/register`
-  (MCP calls it); `Issuer(e)` is the issuer URL for a request; `PagesDir()` is where eject writes.
-- **Render the pages yourself.** `Config.Render(e, page, data)` renders any page (return `handled=false` to fall back)
-  with `PageData`. It wins over ejected templates.
-
-## Go config
-
-| Field | Default | What it does |
-|---|---|---|
-| `Collections` | `_superusers` | Auth collections whose records may sign in. They must also be in `tokens.Config.Collections`. |
-| `AccessTTL` | 30 days | Access token lifetime. |
-| `RefreshTTL` | 180 days | Refresh token lifetime, renewed on each refresh. |
-| `DynamicRegistration` | `false` | Turns on `POST /oauth/register`. |
-| `CIMDHosts` | `claude.ai`, `claude.com` | Hosts trusted for client metadata documents. An empty, non-nil slice turns them off. |
-| `HTTPClient` | 5 s timeout | Fetches client metadata documents. |
-| `Issuer` | the request's scheme and host | The public base URL in the metadata. |
-| `Branding` | none | `Name`, `LogoURL`, `Accent` (button color) and `Footer` for the built-in pages. |
-| `Render` | none | Renders pages yourself (above). |
-
-```go
-oauthserver.MustRegister(app, oauthserver.Config{
-    Collections: []string{"_superusers", "users"},
-    Branding:    oauthserver.Branding{LogoURL: "/logo.svg", Accent: "#4f46e5", Footer: "Acme Inc."},
-})
-```
+- **Go API.** `oauthserver.For(app)` returns the server. `Issuer(e)` is its public base URL;
+  `EnableDynamicRegistration()` turns on `POST /oauth/register`; `SetAccessTTL("/mcp", 0)` sets the lifetime of
+  tokens bound to a resource (0: never expire). `FindClient`, `ListClients`, `AddClient` and `RemoveClient` manage
+  clients.
+- **Scopes.** Register a scope with Tokens (Go or `$tokens.registerScope`) and clients can ask for it; nothing else
+  is needed.
+- **Render the pages yourself.** `Config.Render(e, page, data)` renders any page (return `handled=false` to fall
+  back), with `PageData`. It wins over ejected templates.
 
 ## Endpoints
 
 | Path | What |
 |---|---|
-| `GET /.well-known/oauth-authorization-server` | Metadata (RFC 8414). The issuer is `Config.Issuer`, else the request's scheme and host. |
+| `GET /.well-known/oauth-authorization-server` | Metadata (RFC 8414). The issuer is `Config.Issuer`, else the request's own scheme and host. |
 | `GET/POST /oauth/authorize` | Sign-in and consent pages. Authorization code with PKCE (S256 only; required). |
-| `POST /oauth/token` | `authorization_code`, `refresh_token` (rotated; the old access token is revoked), `urn:ietf:params:oauth:grant-type:device_code`. |
-| `POST /oauth/device` + `/oauth/device/verify` | Device flow (RFC 8628): codes like `WDJB-MJHT`, valid 10 minutes. |
+| `POST /oauth/token` | `authorization_code`, `refresh_token` and `urn:ietf:params:oauth:grant-type:device_code`. Refresh rotates without logouts: the old access token lives out its time, and the old refresh token works again for 2 minutes, so two processes refreshing at once both succeed. |
+| `POST /oauth/device`, `GET/POST /oauth/device/verify` | Device flow (RFC 8628): codes like `WDJB-MJHT`, valid 10 minutes. |
 | `POST /oauth/revoke` | Revocation (RFC 7009): an access token or a refresh token (revokes both). |
-| `POST /oauth/register` | Dynamic client registration (RFC 7591), when `DynamicRegistration` is on or a plugin called `EnableDynamicRegistration()`. Public clients by default. |
+| `GET/POST /oauth/provider/callback` | Where OAuth2 providers send the browser back after sign-in. |
+| `POST /oauth/register` | Dynamic client registration (RFC 7591), when `DynamicRegistration` is on or a plugin called `EnableDynamicRegistration()` (MCP does). Public clients by default. |
 
-`offline_access` is accepted in `scope` and listed in `scopes_supported`; refresh tokens are always issued.
+Protected resource metadata (RFC 9728) belongs to the resource: MCP serves `/.well-known/oauth-protected-resource`.
 
 ## Clients
 
-- **`pocketbase-cli`** is built in: public, any `http://127.0.0.1:<port>/…` or `[::1]` redirect, device codes.
+- **`pocketbase-cli`** is built in: public, any `http://127.0.0.1:<port>/…` or `[::1]` redirect, device codes. It's
+  what `pocketone login` uses.
 - **Client ID metadata documents (CIMD):** an `https://` client id is fetched as a JSON document (`client_id` must
-  equal the URL; its `client_name` and `redirect_uris` are used; cached 10 minutes). Only `Config.CIMDHosts` are
-  trusted. The metadata says `client_id_metadata_document_supported`.
-- Registered clients live in the `_oauth_clients` collection.
+  equal the URL; its `client_name` and `redirect_uris` are used; public clients only; cached 10 minutes). Only
+  `Config.CIMDHosts` are trusted (default `claude.ai`, `claude.com`); the metadata says
+  `client_id_metadata_document_supported`.
+- Registered clients live in `_oauth_clients`; codes, device codes and refresh tokens in `_oauth_codes`.
+
+## How sign-in works
+
+The pages never check passwords or codes themselves. Each step calls PocketBase's own auth endpoint in-process,
+through the app's router, so the collection's auth rule, MFA, rate limits, superuser IP limits and every
+`onRecordAuth*Request` hook apply as for the REST API, and the record the endpoint returns is the one signed in:
+
+- password: `POST /api/collections/{c}/auth-with-password`;
+- emailed code: `POST …/request-otp`, then `POST …/auth-with-otp`;
+- OAuth2: the browser goes to the provider with the state and PKCE from `GET …/auth-methods`, comes back to
+  `/oauth/provider/callback`, and `POST …/auth-with-oauth2` completes it (account linking and sign-up are
+  PocketBase's);
+- MFA: when an auth call answers 401 with an `mfaId`, the second page passes it along.
+
+Only collections with a sign-in method on are offered. Access tokens are owned by the signed-in record, so every
+collection that may sign in must also be allowed by Tokens (its default is every auth collection). The session is a
+15-minute HttpOnly cookie on `/oauth`; forms carry a CSRF token; a provider round trip keeps its state in a signed
+10-minute cookie.
+
+## Go config
+
+```go
+oauthserver.MustRegister(app, oauthserver.Config{
+    Collections:         nil,                  // who may sign in; default: _superusers + every auth collection
+    AccessTTL:           30 * 24 * time.Hour,  // default; per resource with srv.SetAccessTTL("/mcp", 0)
+    RefreshTTL:          180 * 24 * time.Hour, // default, renewed on each refresh
+    DynamicRegistration: false,                // POST /oauth/register (MCP turns it on)
+    CIMDHosts:           nil,                  // default claude.ai, claude.com; an empty non-nil slice turns CIMD off
+    Issuer:              "",                   // public base URL; default: the request's scheme and host
+    Branding:            oauthserver.Branding{LogoURL: "/logo.svg", Accent: "#4f46e5", Footer: "Acme Inc."},
+})
+```
+
+`Branding` also takes a `Name` (default: Settings → Application name). `Accent` is the button color (default
+`#16161a`).
+
+## Custom page templates
+
+Ejected templates get `ctx.data`: `PageData` in camelCase (`data.appName`, `data.action`, `data.hidden`,
+`data.csrf`, `data.clientName`, `data.scopes`, `data.superuser`, `data.providers`, `data.error`, …).
+- Every POST form must include `include('/oauth/hidden')` and a `step` button.
+- Steps: `password`, `request_otp`, `otp`, `oauth2:<provider>`, `use:<collection>` (switch forms; `use:` is the
+  default user form), `allow`, `deny`, `switch`.
+- Sign-in forms post `collection`; the MFA and code pages also post `mfa_id` / `otp_id`.
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app with Tokens, Remotes and OAuth Server, with self-registration on:
-
 ```bash
 go run ./example serve --http=127.0.0.1:8090
-go run ./example login http://127.0.0.1:8090        # opens the browser; --device for a code
-go run ./example remote whoami http://127.0.0.1:8090
+go run ./example login http://127.0.0.1:8090    # opens the browser; --device for a code
 ```
 
-Logins come from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password.
+[`example/main.go`](example/main.go) registers Tokens, Remotes and OAuth Server with self-registration on and some
+branding. Logins from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): user@example.com / password on the default form,
+admin@example.com / password after **Sign in as a superuser**.
 
 ## License
 

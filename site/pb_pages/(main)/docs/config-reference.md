@@ -107,6 +107,18 @@ Where a multi-instance host's instances come from (a YAML file), and dev mode (s
 
 Owned by [Host](/docs/plugins/host).
 
+#### `lifecycle:`
+
+Instance data on this host: how often disk use is measured and last-request times are reported.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `measure_every` | duration | `24h0m0s` | How old an instance's disk measurement may get before it is measured again. Default 24h. |
+| `report_every` | duration | `1h0m0s` | How often changed last-request times are reported to the sink. Default 1h. |
+| `concurrency` | int | `2` | How many instances are measured at once. Default 2. |
+
+Owned by [Lifecycle](/docs/plugins/lifecycle).
+
 #### `mothership:`
 
 A community mothership to mirror instances and edges from: url, login, this edge's id, internal URL, region, apex.

@@ -1,5 +1,5 @@
 // Package oauthserver makes a PocketBase app an OAuth 2.1 authorization server whose access tokens are API tokens
-// from ext/tokens. `pocketbase login` signs in through it in the browser (loopback redirect + PKCE) or with a device
+// from ext/tokens. `pocketone login` signs in through it in the browser (loopback redirect + PKCE) or with a device
 // code, and MCP clients (Claude, ChatGPT connectors) can register themselves and connect.
 //
 //	tokens.MustRegister(app, tokens.Config{})
@@ -38,7 +38,7 @@ const (
 	storeKey = "oauthServer"
 	paramKey = "oauth_server"
 
-	// CLIClientId is the built-in public client `pocketbase login` uses: loopback redirects and device codes.
+	// CLIClientId is the built-in public client `pocketone login` uses: loopback redirects and device codes.
 	CLIClientId = "pocketbase-cli"
 
 	// MetadataPath is advertised in /_pocker/whoami as the "oauth" feature.
@@ -62,8 +62,9 @@ type Config struct {
 	// Collections are the auth collections (names) whose records may sign in and authorize clients. Default (empty):
 	// _superusers and every auth collection, resolved on each request. The sign-in page signs in app users (the
 	// collections other than _superusers) by default and _superusers behind a "Sign in as a superuser" link. Their
-	// records must also be allowed to own API tokens: list them in tokens.Config.Collections too (its default is
-	// _superusers only); a collection that can't hold tokens shows an error on the page and logs a warning.
+	// records must also be allowed to own API tokens: when tokens.Config.Collections is narrowed, list them
+	// there too (its default is every auth collection). A collection that can't hold tokens shows an error on the
+	// page and logs a warning.
 	Collections []string
 
 	// AccessTTL is an access token's lifetime (default 30 days); RefreshTTL a refresh token's (default 180 days,

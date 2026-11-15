@@ -43,6 +43,7 @@ Host hundreds of PocketBase instances in one process, across regions.
 | [Edge](/docs/plugins/edge) | Forwards each request to the edge that owns the instance. |
 | [Mothership](/docs/plugins/mothership) | A control plane and its edges, across regions. |
 | [Schedules](/docs/plugins/schedules) | Scheduled webhooks that wake sleeping instances. |
+| [Lifecycle](/docs/plugins/lifecycle) | Measures disk use and last request for each instance a host serves. |
 
 ## Services for your instances
 

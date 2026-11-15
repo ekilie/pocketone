@@ -40,6 +40,7 @@
 - [Edge](/docs/plugins/edge)
 - [Mothership](/docs/plugins/mothership)
 - [Schedules](/docs/plugins/schedules)
+- [Lifecycle](/docs/plugins/lifecycle)
 
 # Plugins: services
 

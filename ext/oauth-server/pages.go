@@ -73,7 +73,7 @@ type Provider struct {
 }
 
 // pagesRenderer is what ext/pages offers (duck-typed, so this module doesn't depend on it): render
-// pb_pages/_private/<name> with data as ctx.data, or report there's no such template. `pocketbase oauth eject`
+// pb_pages/_private/<name> with data as ctx.data, or report there's no such template. `pocketone oauth eject`
 // writes the built-in pages there.
 type pagesRenderer interface {
 	RenderTemplate(e *core.RequestEvent, name string, status int, data map[string]any) (handled bool, err error)

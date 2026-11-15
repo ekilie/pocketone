@@ -236,7 +236,9 @@ ext/<name>/
   It checks that the plugin registers, migrates, serves and shuts down on a fresh app with no goroutines left
   behind; that PocketBase's own collections are unchanged and every collection it adds is named `_<name>` or `_<name>_…`; and
   that one plugin value serves several apps at once (as under pocker) without registering on one app touching
-  another's hooks. Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
+  another's hooks. A plugin that adds MCP tools ([`ext/mcp`](../ext/mcp/README.md#tools-from-a-plugin)) also passes
+  `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
+  `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every plugin passes; your own tests cover the
   feature.
 - **The README has four required sections**, in this order. It is also your plugin's page on pocketone.dev.
   - `## Install`: how to get it (built into `pocketone`, or the lines to add to a Go build).
