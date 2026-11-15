@@ -23,6 +23,15 @@ sections (`autotls`, `pitr`, `storage`, `s3redirect`, `mailrelay`).
 Pocker runs every instance's JS hooks in the [sandbox](../sandbox/README.md). For why that's safe enough to host code
 from people you don't know, and where it isn't, see [How is this safe?](../sandbox/README.md#how-is-this-safe).
 
+## Broken hook files
+
+In dev mode, a `pb_hooks` file that fails to load is logged and skipped, and the rest of the instance runs, so you can
+fix it live. Otherwise an instance doesn't start with a broken file.
+
+When a running instance's `pb_hooks` change, the new code starts beside the running app and takes over only once it
+has started. If it fails to load, the previous code keeps serving and the error goes to the instance log, so a bad
+edit never takes a working instance down.
+
 ## License
 
 MIT

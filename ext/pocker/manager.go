@@ -46,6 +46,9 @@ type Manager struct {
 
 	held map[string]chan struct{} // by ID: instances under maintenance; requests wait for the channel to close
 
+	reloadMu  sync.Mutex
+	reloading map[string]bool // by ID: a pb_hooks reload is running; true = another change arrived meanwhile
+
 	mu   sync.RWMutex
 	apps map[string]*appSlot // by ID
 }
@@ -104,15 +107,16 @@ func NewManager(source InstanceSource, opts ManagerOptions) *Manager {
 	}
 	defaults := opts.Defaults.Over(DefaultLimits())
 	m := &Manager{
-		source:   source,
-		opts:     appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup},
-		defaults: defaults,
-		onEvent:  opts.OnEvent,
-		gate:     opts.Gate,
-		held:     map[string]chan struct{}{},
-		log:      opts.Logger,
-		apps:     map[string]*appSlot{},
-		dir:      opts.Directory,
+		source:    source,
+		opts:      appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup},
+		defaults:  defaults,
+		onEvent:   opts.OnEvent,
+		gate:      opts.Gate,
+		held:      map[string]chan struct{}{},
+		log:       opts.Logger,
+		apps:      map[string]*appSlot{},
+		reloading: map[string]bool{},
+		dir:       opts.Directory,
 	}
 	if m.dir == nil {
 		m.dir = host.NewDirectory(opts.Logger)
@@ -301,7 +305,10 @@ func (m *Manager) watchHooks(inst Instance, slot *appSlot) {
 	})
 }
 
-// hooksChanged restarts the instance's running app (app.Restart, caught by catchRestart: only this app restarts).
+// hooksChanged reloads the instance's running app after its pb_hooks change. The new app starts beside the running
+// one, which keeps serving; only once the new one has started does it take over (the old one is retired like a
+// settings change). If the new code fails to load, the previous app keeps serving and the error goes to the instance
+// log, so a bad edit never takes a working instance down. Changes that arrive during a reload trigger one more.
 func (m *Manager) hooksChanged(id string) {
 	m.mu.RLock()
 	slot := m.apps[id]
@@ -317,15 +324,68 @@ func (m *Manager) hooksChanged(id string) {
 	if slot.app == nil {
 		return
 	}
-	m.log.Info("pocker: pb_hooks changed, restarting", "id", id)
-	if inst, ok := m.dir.Get(id); ok {
-		openInstanceLog(instanceDir(m.opts, inst)).Write("stdout", "pb_hooks changed, restarting")
+	m.reloadMu.Lock()
+	if _, running := m.reloading[id]; running {
+		m.reloading[id] = true
+		m.reloadMu.Unlock()
+		return
 	}
-	go func() {
-		if err := slot.app.app.Restart(); err != nil {
-			m.log.Error("pocker: restart after pb_hooks change failed", "id", id, "error", err)
+	m.reloading[id] = false
+	m.reloadMu.Unlock()
+	go m.reloadHooks(id)
+}
+
+// reloadHooks runs reloads for one instance until no change arrived during the last one.
+func (m *Manager) reloadHooks(id string) {
+	for {
+		m.reloadOnce(id)
+		m.reloadMu.Lock()
+		if !m.reloading[id] {
+			delete(m.reloading, id)
+			m.reloadMu.Unlock()
+			return
 		}
-	}()
+		m.reloading[id] = false
+		m.reloadMu.Unlock()
+	}
+}
+
+func (m *Manager) reloadOnce(id string) {
+	m.mu.RLock()
+	old := m.apps[id]
+	inst, ok := m.dir.Get(id)
+	m.mu.RUnlock()
+	if old == nil || !ok || inst.Blocked != nil {
+		return // stopped or blocked meanwhile: the next start reads the current files
+	}
+	ilog := openInstanceLog(instanceDir(m.opts, inst))
+	m.log.Info("pocker: pb_hooks changed, starting the new code", "id", id)
+	ilog.Write("stdout", "pb_hooks changed, starting the new code")
+
+	t := time.Now()
+	next := &appSlot{done: make(chan struct{})}
+	next.app, next.err = startApp(m.opts, inst)
+	close(next.done)
+	if next.err != nil {
+		m.log.Error("pocker: pb_hooks change failed to load; still serving the previous code", "id", id, "error", next.err)
+		ilog.Write("stderr", "pb_hooks change failed to load; still serving the previous code: "+next.err.Error())
+		m.emit(Event{Kind: EventFailed, InstanceID: id, Reason: "pb_hooks change failed to load: " + next.err.Error()})
+		return
+	}
+
+	m.mu.Lock()
+	if m.apps[id] != old {
+		m.mu.Unlock()
+		stopApp(next.app) // settings changed, stopped or restarted meanwhile: that path owns the instance now
+		return
+	}
+	m.apps[id] = next
+	m.mu.Unlock()
+	m.catchRestart(id, next)
+	m.watchHooks(inst, next)
+	m.log.Info("pocker: new pb_hooks code is serving", "id", id, "ms", time.Since(t).Milliseconds())
+	m.emit(Event{Kind: EventRestarted, InstanceID: id, Reason: "pb_hooks changed"})
+	go retire(old)
 }
 
 // Shutdown stops every running app.

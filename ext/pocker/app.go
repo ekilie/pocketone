@@ -19,7 +19,6 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/ui"
 	"github.com/dop251/goja"
-	"github.com/pockethost/pocketone/ext/jserrors"
 	"github.com/pockethost/pocketone/ext/sandbox"
 )
 
@@ -77,11 +76,12 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 	}
 
 	lim := inst.Limits.Over(opts.Defaults)
+	dev := inst.Dev || opts.ForceDev
 
 	app := core.NewBaseApp(core.BaseAppConfig{
 		DBConnect:     sandbox.GuardedDBConnect(lim.MaxQueryDuration), // SQL stays inside this app's files
 		DataDir:       filepath.Join(dir, "pb_data"),
-		IsDev:         inst.Dev || opts.ForceDev,
+		IsDev:         dev,
 		EncryptionEnv: encryptionEnv(inst),
 		AppMigrations: &core.MigrationsList{}, // this app's JS migrations only
 		OnLog:         appLogToInstanceLog(openInstanceLog(dir)),
@@ -128,7 +128,7 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 		HooksWatch:    false, // PocketBase's watcher would open an inotify instance per app; the Manager's shared watcher restarts just this app
 		HooksPoolSize: opts.HooksPoolSize,
 		// the sandbox (OnInit, OnCall, HTTPClient); hook errors name pb_hooks/<file>:<line>:<col> in the instance log
-		Extensions: []jsvm.Extension{sb, jserrors.New()},
+		Extensions: hookExtensions(sb, dev, openInstanceLog(dir)),
 		OnInit: func(vm *goja.Runtime) {
 			if opts.InitJS != nil {
 				opts.InitJS(inst, app, vm)
