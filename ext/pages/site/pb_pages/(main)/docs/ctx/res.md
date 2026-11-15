@@ -46,7 +46,7 @@ ctx.res.clearCookie('theme')
 
 - Non-string values are `JSON.stringify`'d. The value is then percent-encoded (`encodeURIComponent`), and `ctx.req.cookie` decodes it.
 - Defaults: `path=/`, `HttpOnly`, `SameSite=Lax`, and `Secure` when the request is HTTPS.
-- Options: `path`, `domain`, `maxAge` (seconds), `expires` (Date), `httpOnly`, `secure`, `sameSite`.
+- Options: `path`, `domain`, `maxAge` (seconds), `expires` (a `Date`, milliseconds since the epoch, or a date string; with `maxAge` too, browsers use `maxAge`), `httpOnly`, `secure`, `sameSite`.
 
 ## JSON, HTML, text and files
 

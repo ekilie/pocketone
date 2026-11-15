@@ -15,6 +15,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
@@ -504,6 +505,10 @@ func applyCookieOpts(c *http.Cookie, opts map[string]any) {
 					c.MaxAge = n
 				}
 			}
+		case "expires":
+			if t, ok := toTime(v); ok {
+				c.Expires = t.UTC()
+			}
 		case "httpOnly":
 			c.HttpOnly, _ = v.(bool)
 		case "secure":
@@ -519,6 +524,29 @@ func applyCookieOpts(c *http.Cookie, opts map[string]any) {
 			}
 		}
 	}
+}
+
+// toTime reads a cookie's expires option: a JS Date (exported as time.Time), milliseconds since the epoch (as
+// Date.now() gives), or a date string (RFC 3339 or an HTTP date).
+func toTime(v any) (time.Time, bool) {
+	switch t := v.(type) {
+	case time.Time:
+		return t, !t.IsZero()
+	case int64:
+		return time.UnixMilli(t), true
+	case int:
+		return time.UnixMilli(int64(t)), true
+	case float64:
+		return time.UnixMilli(int64(t)), true
+	case string:
+		if p, err := time.Parse(time.RFC3339, t); err == nil {
+			return p, true
+		}
+		if p, err := http.ParseTime(t); err == nil {
+			return p, true
+		}
+	}
+	return time.Time{}, false
 }
 
 func toInt(v any) (int, bool) {
