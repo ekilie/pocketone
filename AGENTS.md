@@ -34,17 +34,17 @@ PocketOne change the merge forced.
 
 ## Branches that show our core changes
 
-Three kinds, all on upstream `develop`, rebuilt and force-pushed (never merged) by
+Three kinds, all on upstream `develop` and code only (no `_test.go` files), rebuilt and force-pushed (never merged) by
 `.github/core-audit/core-changes-branch.sh` after every upstream pull and after a core change lands on main:
 
 - `core-changes`: upstream `develop` plus one commit holding every core change on `main` (no `ext/` or other
   PocketOne-owned paths), to audit all of it in one diff.
 - `core-hook/<name>`: one hook each, stacked in the script's `HOOK_STACK` order (each on the one before), so its diff
   against the previous branch shows just that hook.
-- `core-bugfix/<name>`: one upstream bug fix each, written for upstream (no `// PocketOne:` markers, upstream-only tests).
+- `core-bugfix/<name>`: one upstream bug fix each, written for upstream (no `// PocketOne:` markers).
 
 The script ends with a sum check: the hook stack plus every bugfix branch must match `core-changes` in code (comments
-and tests may differ), so a core change on `main` without its branch fails it. Run
+may differ), so a core change on `main` without its branch fails it. Run
 `git fetch upstream origin && .github/core-audit/core-changes-branch.sh`, then
 `git push --force origin core-changes 'refs/heads/core-hook/*' 'refs/heads/core-bugfix/*'`, and commit `README.md` if
 the script repinned its compare links. Conflicts stop the script with the worktree left to resolve; resolutions are

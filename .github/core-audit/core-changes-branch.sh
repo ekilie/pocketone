@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Rebuilds the branches that show PocketOne's changes to PocketBase core against upstream `develop`:
+# Rebuilds the branches that show PocketOne's changes to PocketBase core against upstream `develop`, code only (no
+# _test.go files):
 #
 #   core-changes        upstream develop + one commit holding every core change on main (no ext/, site/, docs or other
 #                       PocketOne-owned paths; see core-diff.sh). Audit everything in one diff.
@@ -16,7 +17,7 @@
 # core-changes is rebuilt from main's core diff (fork point..main) applied three-way onto upstream develop. The hook and
 # bugfix branches are rebased onto it. Conflicts resolved on an earlier run are replayed (git rerere); a new one stops
 # the script and leaves the worktree. Finally the hook stack plus the bugfix branches is checked against core-changes:
-# the code must match (comments and tests may differ, since the bugfix branches are written for upstream).
+# the code must match (comments may differ, since the bugfix branches are written for upstream).
 set -euo pipefail
 
 HOOK_STACK=(filesystem-driver on-filesystem-create app-migrations on-log jsvm-extensions jsvm-run)
@@ -83,7 +84,7 @@ rebase_branches() { # $1 upstream sha
   done
 }
 
-# The hook stack plus every bugfix branch must equal core-changes, ignoring comments and tests.
+# The hook stack plus every bugfix branch must equal core-changes, ignoring comments.
 check_sum() {
   local top="core-hook/${HOOK_STACK[${#HOOK_STACK[@]}-1]}" wt b residual
   git -C "$root" rev-parse -q --verify "$top" >/dev/null || { echo "no $top: skipping the sum check"; return 0; }
@@ -123,9 +124,9 @@ fi
 upstream=${1:-upstream/develop}
 source=${2:-origin/main}
 
-# Core per core-diff.sh, minus files that only list PocketOne paths or are contributor prose, not code.
+# Core per core-diff.sh, minus tests and files that only list PocketOne paths or are contributor prose: code only.
 pathspec=(. ':!ext' ':!site' ':!examples/pocketone' ':!examples/ce' ':!docs' ':!README.md' ':!AGENTS.md' ':!CLAUDE.md'
-  ':!.github' ':!.claude' ':!.gitignore' ':!CONTRIBUTING.md')
+  ':!.github' ':!.claude' ':!.gitignore' ':!CONTRIBUTING.md' ':!*_test.go')
 
 up_sha=$(git rev-parse "$upstream^{commit}")
 src_sha=$(git rev-parse "$source^{commit}")
