@@ -1,5 +1,6 @@
 // Docs pages swap #content and #page-footer without a reload (Datastar; see
-// _private/docs-footer.js). This keeps up with each swap: it sets the tab
+// _private/docs-footer.js). This keeps up with each swap: it highlights the
+// new page's code blocks (Prism only runs once, on page load), sets the tab
 // title from #page-footer's data-title, and loads giscus into the footer's
 // <section data-giscus-term> slot whenever it comes back empty or its term
 // changes.
@@ -19,7 +20,18 @@
     loading: 'lazy',
   }
 
+  const highlight = () => {
+    if (!window.Prism) return
+    document.querySelectorAll('#content pre > code[class*="language-"]:not([data-highlighted])').forEach((code) => {
+      code.dataset.highlighted = ''
+      // Prism's own load-time pass did this one (it wraps the block in its copy toolbar)
+      if (code.parentElement.parentElement?.classList.contains('code-toolbar')) return
+      window.Prism.highlightElement(code)
+    })
+  }
+
   const load = () => {
+    highlight()
     const title = document.getElementById('page-footer')?.dataset.title
     if (title && document.title !== title) document.title = title
     const slot = document.querySelector('[data-giscus-term]')
