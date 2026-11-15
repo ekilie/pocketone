@@ -14,7 +14,7 @@ PocketOne is an open community fork of PocketBase that strongly encourages contr
 
 ### PocketBase core changes
 
-"Core" is upstream PocketBase's own code: every path outside `ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `.github/` and `.claude/`.
+"Core" is upstream PocketBase's own code: every path outside `ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `.github/` and `.claude/`.
 
 We are going to try our best to maintain upstream parity with Gani's great core work. Therefore, modifications to the core PocketBase code will undergo a more careful review before being accepted. Hooks to extend functionality are preferred over features so future merges from upstream are clean and easy. 
 
