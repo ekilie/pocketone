@@ -45,7 +45,11 @@ func BindJS(vm *goja.Runtime, app core.App) {
 			Methods:     jsStrings(vm, def.Get("methods"), "methods"),
 			Collections: jsStrings(vm, def.Get("collections"), "collections"),
 		}
-		if err := get().RegisterScope(s); err != nil {
+		register := func(s Scope) error { return pendingFor(app).add(s) } // pb_hooks loaded before tokens.Register
+		if t := For(app); t != nil {
+			register = t.RegisterScope
+		}
+		if err := register(s); err != nil {
 			panic(vm.NewTypeError("$tokens.registerScope: " + err.Error()))
 		}
 		return goja.Undefined()
@@ -69,6 +73,23 @@ func BindJS(vm *goja.Runtime, app core.App) {
 	})
 
 	_ = vm.Set("$tokens", obj)
+}
+
+const pendingKey = "tokens.pending"
+
+// pendingFor holds the scopes pb_hooks registered before tokens.Register ran (the stock binary loads the jsvm
+// first); Register takes them over.
+func pendingFor(app core.App) *registry {
+	var r *registry
+	app.Store().SetFunc(pendingKey, func(old any) any {
+		if p, ok := old.(*registry); ok {
+			r = p
+			return p
+		}
+		r = &registry{}
+		return r
+	})
+	return r
 }
 
 // BindJS implements pluginkit.JSBinder.

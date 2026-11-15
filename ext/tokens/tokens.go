@@ -84,6 +84,14 @@ func Register(app core.App, cfg Config) (*Tokens, error) {
 		cfg.Now = time.Now
 	}
 	t := &Tokens{app: app, cfg: cfg}
+	if p, ok := app.Store().Get(pendingKey).(*registry); ok { // registered by pb_hooks before Register
+		for _, s := range p.list() {
+			if err := t.registry.add(s); err != nil {
+				return nil, err
+			}
+		}
+		app.Store().Remove(pendingKey)
+	}
 	app.Store().Set(storeKey, t)
 
 	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {

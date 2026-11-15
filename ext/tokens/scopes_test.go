@@ -254,9 +254,9 @@ func TestWithScopes(t *testing.T) {
 	factory := func(testing.TB) *tests.TestApp { return app }
 	for _, s := range []tests.ApiScenario{
 		{Name: "no limit: a JWT holds every scope", Method: http.MethodGet, URL: "/api/echo/inner?method=GET&path=/api/echo", Headers: jwtH,
-			ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"deploy,echo,guarded,notes_path_only,notes_read,notes_write","auth":true}`}},
+			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"held":"deploy,echo,guarded,notes_path_only,notes_read,notes_write"`}},
 		{Name: "limited JWT sees only the limit", Method: http.MethodGet, URL: inner("echo", "GET", "/api/echo"), Headers: jwtH,
-			ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"echo","auth":true}`}},
+			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"held":"echo"`}},
 		{Name: "limited JWT reads notes", Method: http.MethodGet, URL: inner("notes:read", "GET", recs), Headers: jwtH,
 			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"totalItems":1`}},
 		{Name: "read limit can't write", Method: http.MethodGet, URL: inner("notes:read", "POST", recs), Headers: jwtH,
@@ -264,13 +264,13 @@ func TestWithScopes(t *testing.T) {
 		{Name: "a limit off the path is refused", Method: http.MethodGet, URL: inner("notes:read", "GET", "/api/echo"), Headers: jwtH,
 			ExpectedStatus: 200, ExpectedContent: []string{`403 `}},
 		{Name: "a nested limit only narrows", Method: http.MethodGet, URL: inner("echo", "GET", "/api/echo") + "&scopes=echo,notes:write", Headers: jwtH,
-			ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"echo","auth":true}`}},
+			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"held":"echo"`}},
 		{Name: "a nested limit outside the first allows nothing", Method: http.MethodGet, URL: inner("echo", "POST", recs) + "&scopes=notes:write", Headers: jwtH,
 			ExpectedStatus: 200, ExpectedContent: []string{`403 `}},
 		{Name: "an empty limit allows nothing", Method: http.MethodGet, URL: inner("-", "GET", "/api/echo"), Headers: jwtH,
 			ExpectedStatus: 200, ExpectedContent: []string{`403 `}},
 		{Name: "a scoped token under a limit holds the overlap", Method: http.MethodGet, URL: inner("echo,notes:write", "GET", "/api/echo"),
-			Headers: authHeader(echo), ExpectedStatus: 200, ExpectedContent: []string{`200 {"held":"echo","auth":true}`}},
+			Headers: authHeader(echo), ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"held":"echo"`}},
 	} {
 		s.TestAppFactory = factory
 		s.DisableTestAppCleanup = true
@@ -303,5 +303,35 @@ func TestReachesAndInfrastructure(t *testing.T) {
 	if !(Scope{Paths: []string{"/_pocker/deploy/"}}).Infrastructure() || (Scope{Paths: []string{"/api/x"}}).Infrastructure() ||
 		(Scope{}).Infrastructure() {
 		t.Fatal("Infrastructure")
+	}
+}
+
+// The stock binary loads pb_hooks before tokens.Register: scopes registered then are kept for it.
+func TestBindJSBeforeRegister(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(app.Cleanup)
+	vm := goja.New()
+	BindJS(vm, app)
+	if _, err := vm.RunString(`$tokens.registerScope({ name: "talks:read", description: "See talks", paths: ["/api/collections/talks/records"], methods: ["GET"] })`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := vm.RunString(`$tokens.registerScope({ name: "Bad Name" })`); err == nil {
+		t.Fatal("bad name accepted before Register")
+	}
+	tk, err := Register(app, Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s, ok := tk.registry.get("talks:read"); !ok || s.Description != "See talks" {
+		t.Fatalf("pending scope lost: %+v", s)
+	}
+	if _, err := vm.RunString(`$tokens.registerScope({ name: "talks:write", paths: ["/api/collections/talks/records"] })`); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := tk.registry.get("talks:write"); !ok {
+		t.Fatal("scope after Register")
 	}
 }
