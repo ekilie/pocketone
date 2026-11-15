@@ -455,6 +455,11 @@ Turned on by name in `+config.js` when no module by that name is found (7).
 - The cookie holds `{ token, record }` as JSON (the JS SDK's cookie format), `HttpOnly`, `SameSite=Lax`, `Secure` on
   HTTPS, lasting as long as the collection's auth token.
 - `identity` arguments accept any of the collection's identity fields (email by default).
+- **MFA:** pages has no second sign-in step yet, so every sign-in method (password, OTP, anonymous, OAuth2, and
+  `register`'s sign-in) refuses an account that needs MFA, as PocketBase decides it: the collection has MFA on and its
+  MFA rule matches the record (an empty rule matches everyone; a rule that can't be checked counts as a match). The
+  error says so; nothing is signed in and an OTP isn't used up. A wrong password still says only that the credentials
+  are invalid. `ctx.session.signIn(record)` is the exception: it signs in a record the app authenticated itself.
 - `ctx.session.authMethods({ collection })` → `{ password: { enabled, identityFields }, otp: { enabled }, mfa:
   { enabled }, oauth2: { enabled, providers: [{ name, displayName }] } }`, as PocketBase's auth-methods API.
 - `ctx.session.register(email, password, { collection = 'users', data, verify = true, signIn = true })`: creates the

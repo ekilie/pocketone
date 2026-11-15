@@ -31,8 +31,15 @@ It reads the `pb_auth` cookie, validates the token and sets `ctx.auth` to the au
 | `signInAnonymously({ collection }?)` | Sign in as a new anonymous user. |
 | `requestOAuth2(provider, { collection, redirectPath = '/auth/oauth/confirm' }?)` | Store state in a cookie and redirect to the provider. |
 | `signInWithOAuth2(state, code, { createData }?)` | Complete an OAuth2 sign-in on the redirect path. Returns `{ token, record, meta }`; `meta.isNew` is `true` for a new account. |
-| `signIn(record)` | Set the cookie for a record you authenticated yourself. |
+| `signIn(record)` | Set the cookie for a record you authenticated yourself. It skips the MFA check below. |
 | `signOut()` | Sign out. |
+
+### MFA
+
+Pages doesn't have a second sign-in step yet. If a collection has MFA turned on (Collections → `users` → Options →
+Multi-factor authentication) and its MFA rule matches the account, every sign-in method above refuses it with "This
+account needs a second sign-in step (MFA), which pages doesn't support yet." An empty rule matches every account. To
+use pages sign-in, turn MFA off for the collection, or give it a rule that leaves out the accounts that sign in here.
 
 Every sign-in method sets `ctx.auth` for the rest of the request and returns `{ token, record }`.
 

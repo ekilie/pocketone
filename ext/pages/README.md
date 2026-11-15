@@ -110,7 +110,7 @@ Highlights:
 - `ctx.pb()` is the bundled PocketBase JS SDK, called in-process as the visitor.
 - `ctx.res.sse()` streams server-sent events.
 - The `auth` plugin gives cookie sessions on PocketBase auth: password, OTP, anonymous, register, OAuth2 and the email
-  flows (verification, password reset, email change). Accounts that need MFA can't sign in through pages yet.
+  flows (verification, password reset, email change). Accounts that need MFA (the collection's MFA is on and its rule matches) are refused by every pages sign-in method; pages has no second sign-in step yet.
 
 ### What you'll see in the log
 

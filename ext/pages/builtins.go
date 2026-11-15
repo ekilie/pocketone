@@ -10,10 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/ozzo-validation/v4/is"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/mails"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/routine"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/search"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/subscriptions"
 	"github.com/dop251/goja"
@@ -180,6 +182,49 @@ func (r *request) fail400(msg string) {
 	panic(r.vm.NewGoError(errors.New(msg)))
 }
 
+// mfaMessage is the error every pages sign-in gives an account that needs MFA (the OAuth2 flow says the same).
+const mfaMessage = "This account needs a second sign-in step (MFA), which pages doesn't support yet."
+
+// needsMFA reports whether signing rec in takes a second factor, as PocketBase's own auth endpoints decide it: the
+// collection has MFA on and its MFA rule matches rec (an empty rule matches everyone). A rule that can't be checked
+// counts as yes, as in PocketBase.
+func (r *request) needsMFA(rec *core.Record) bool {
+	col := rec.Collection()
+	if !col.MFA.Enabled {
+		return false
+	}
+	if col.MFA.Rule == "" {
+		return true
+	}
+	info, err := r.e.RequestInfo()
+	if err != nil {
+		return true
+	}
+	resolver := core.NewRecordFieldResolver(r.p.app, col, info, true)
+	expr, err := search.FilterData(col.MFA.Rule).BuildExpr(resolver)
+	if err != nil {
+		return true
+	}
+	query := r.p.app.RecordQuery(col).Select("(1)").AndWhere(dbx.HashExp{col.Name + ".id": rec.Id})
+	if err := resolver.UpdateQuery(query); err != nil {
+		return true
+	}
+	var exists int
+	if err := query.AndWhere(expr).Limit(1).Row(&exists); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return true
+	}
+	return exists > 0
+}
+
+// signInChecked is signIn for pages' own sign-in methods: it refuses an account that needs MFA, since pages has no
+// second step yet. ctx.session.signIn(record), for records the app authenticated itself, doesn't go through it.
+func (r *request) signInChecked(rec *core.Record) map[string]any {
+	if r.needsMFA(rec) {
+		r.fail400(mfaMessage)
+	}
+	return r.signIn(rec)
+}
+
 // signIn sets the session cookie for record and returns { token, record }.
 func (r *request) signIn(rec *core.Record) map[string]any {
 	token, err := rec.NewAuthToken()
@@ -254,7 +299,7 @@ func (r *request) sessionObject() *goja.Object {
 		if rec == nil || !rec.ValidatePassword(password) {
 			r.fail400("Invalid login credentials.")
 		}
-		return r.signIn(rec)
+		return r.signInChecked(rec)
 	})
 
 	set("register", func(email, password string, opts map[string]any) map[string]any {
@@ -276,18 +321,25 @@ func (r *request) sessionObject() *goja.Object {
 			}
 		}
 		if v, ok := opts["signIn"].(bool); !ok || v {
-			return r.signIn(rec)
+			return r.signInChecked(rec)
 		}
 		return map[string]any{"token": "", "record": rec}
 	})
 
 	set("signInAnonymously", func(opts map[string]any) map[string]any {
 		col := r.authCollection(opts)
+		if col.MFA.Enabled && col.MFA.Rule == "" {
+			r.fail400(mfaMessage) // every account needs MFA: don't create one that can't sign in
+		}
 		rec := core.NewRecord(col)
 		rec.SetEmail("anon-" + strings.ToLower(security.RandomString(16)) + "@anonymous.invalid")
 		rec.SetPassword(security.RandomString(32))
 		if err := app.Save(rec); err != nil {
 			panic(vm.NewGoError(err))
+		}
+		if r.needsMFA(rec) {
+			_ = app.Delete(rec)
+			r.fail400(mfaMessage)
 		}
 		return r.signIn(rec)
 	})
@@ -339,12 +391,15 @@ func (r *request) sessionObject() *goja.Object {
 		if err != nil {
 			r.fail400("Invalid or expired one-time password.")
 		}
+		if r.needsMFA(rec) {
+			r.fail400(mfaMessage)
+		}
 		_ = app.Delete(otp)
 		if !rec.Verified() && otp.SentTo() != "" && strings.EqualFold(otp.SentTo(), rec.Email()) {
 			rec.SetVerified(true)
 			_ = app.Save(rec)
 		}
-		return r.signIn(rec)
+		return r.signInChecked(rec)
 	})
 
 	set("signOut", func() {

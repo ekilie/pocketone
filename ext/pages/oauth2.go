@@ -147,7 +147,7 @@ func (r *request) signInWithOAuth2(state, code string, opts map[string]any) map[
 			msg = "Failed to authenticate."
 		}
 		if _, mfa := parsed["mfaId"]; mfa {
-			msg = "This account needs a second sign-in step (MFA), which pages doesn't support yet."
+			msg = mfaMessage
 		}
 		r.fail400(msg)
 	}
