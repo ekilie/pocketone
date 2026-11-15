@@ -17,8 +17,9 @@ context from the change's session, or a human), and must record the result in a 
      seams such as `OnFilesystemCreate`, `jsvm.Config.Extensions`, `BaseAppConfig.AppMigrations`/`OnLog`)?
    - **Minimal:** is it the smallest seam that works, with no feature logic, policy or plugin-specific names in core?
    - **Sensible:** marked `// PocketOne:`, documented on the hook, upstream behavior unchanged when nothing uses it, tested?
-   - **Listed:** a new or changed hook has its row in the README's "Changes we made to PocketBase" Hooks table (what it
-     lets extensions do, which extensions use it); a bug fix has its row in the Bugfixes table.
+   - **Listed:** a new or changed hook is on its `core-hook/<name>` branch (a new one is added to `HOOK_STACK`) and has
+     its row in the README's "Changes we made to PocketBase" Hooks table (what it lets extensions do, which extensions
+     use it, its diff); a bug fix has its `core-bugfix/<name>` branch and its row in the Bugfixes table.
 3. Pass: add the trailer and push. Fail: move the logic to `ext/` or shrink the seam, then audit again.
 
 Trailer forms (the last line of the commit message, after a blank line):
@@ -31,13 +32,23 @@ Core-Audit: upstream-merge v0.x.y
 `upstream-merge` is only for merging a PocketBase release; resolve conflicts in the `// PocketOne:` spots and audit any
 PocketOne change the merge forced.
 
-## The `core-changes` branch
+## Branches that show our core changes
 
-`core-changes` is upstream `develop` plus one commit holding every core change on `main` (no `ext/` or other
-PocketOne-owned paths), so anyone can audit our core changes against current upstream in one diff. It is rebuilt, never
-merged: after every upstream pull run `git fetch upstream origin && .github/core-audit/core-changes-branch.sh`, then
-`git push --force origin core-changes`, and commit `README.md` if the script repinned its audit link. A conflict stops the script with the worktree left to resolve
-(`--continue` finishes); resolutions are remembered (rerere) for later runs.
+Three kinds, all on upstream `develop`, rebuilt and force-pushed (never merged) by
+`.github/core-audit/core-changes-branch.sh` after every upstream pull and after a core change lands on main:
+
+- `core-changes`: upstream `develop` plus one commit holding every core change on `main` (no `ext/` or other
+  PocketOne-owned paths), to audit all of it in one diff.
+- `core-hook/<name>`: one hook each, stacked in the script's `HOOK_STACK` order (each on the one before), so its diff
+  against the previous branch shows just that hook.
+- `core-bugfix/<name>`: one upstream bug fix each, written for upstream (no `// PocketOne:` markers, upstream-only tests).
+
+The script ends with a sum check: the hook stack plus every bugfix branch must match `core-changes` in code (comments
+and tests may differ), so a core change on `main` without its branch fails it. Run
+`git fetch upstream origin && .github/core-audit/core-changes-branch.sh`, then
+`git push --force origin core-changes 'refs/heads/core-hook/*' 'refs/heads/core-bugfix/*'`, and commit `README.md` if
+the script repinned its compare links. Conflicts stop the script with the worktree left to resolve; resolutions are
+remembered (rerere) for later runs.
 
 ## Core changes that aren't hooks
 
