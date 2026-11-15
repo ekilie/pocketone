@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -27,6 +28,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/pockethost/pocketone/ext/host"
@@ -45,8 +47,8 @@ type Spec struct {
 	Binds  []string          // extra host:container[:ro] mounts, e.g. platform hooks
 	Env    map[string]string // extra environment, applied over the instance's secrets
 	Labels map[string]string
-	// Cmd, if set, adjusts the container's command. It gets the default (./pocketbase serve --http 0.0.0.0:8090
-	// --hooksWatch=false, plus --dev and --encryptionEnv when they apply), e.g. to start a release that predates a flag.
+	// Cmd, if set, adjusts the container's command. It gets the default (./pocketbase serve --http 0.0.0.0:8090, plus
+	// --dev and --encryptionEnv when they apply), e.g. to start a release that predates a flag.
 	Cmd func(defaults []string) []string
 	// HealthPath is what is polled until the instance is ready (default /api/health); with HealthAnyStatus, any HTTP
 	// answer counts, not only 200 (for releases without a health endpoint).
@@ -136,7 +138,8 @@ type ctr struct {
 
 	poweredBy atomic.Value // string: the X-Powered-By for responses that carry none ("PocketBase 0.36.9")
 
-	running  atomic.Bool // container != "" (readable without mu, which a start holds for seconds)
+	running  atomic.Bool  // container != "" (readable without mu, which a start holds for seconds)
+	portNow  atomic.Int64 // port, readable without mu (a request waiting out a restart stops if it changes)
 	inflight atomic.Int64
 	lastUsed atomic.Int64 // unix nanos
 }
@@ -188,8 +191,59 @@ func New(cfg Config) (*Runtime, error) {
 	bg, cancel := context.WithCancel(context.Background())
 	rt := &Runtime{cfg: cfg, e: newEngine(cfg.Socket), log: log, sem: make(chan struct{}, cfg.MaxConcurrentStarts),
 		http: &http.Client{Transport: tr, Timeout: 3 * time.Second}, tr: tr, ctrs: map[string]*ctr{}, bg: bg, cancel: cancel}
+	tr.DialContext = rt.dial
 	rt.watch = host.NewScriptWatcher(log, rt.scriptsChanged)
 	return rt, nil
+}
+
+// proxiedInstance carries the container a proxied request is for, so dial can wait out a restart.
+type proxiedInstance struct{}
+
+type proxied struct {
+	c    *ctr
+	port int
+}
+
+// stillServing: the instance's container is the one on port and still runs (inspected when check is set).
+func (rt *Runtime) stillServing(ctx context.Context, p proxied, check bool) bool {
+	if p.c.portNow.Load() != int64(p.port) {
+		return false // stopped, or replaced by a new container on another port
+	}
+	if !check {
+		return true
+	}
+	info, err := rt.e.inspect(ctx, p.c.inst)
+	return err == nil && info.State.Running
+}
+
+// dial connects to an instance's port. PocketBase restarts itself in place when its pb_hooks change (its hooks
+// watcher is on): the container keeps running and the port is closed for a moment. A proxied request then waits,
+// as it does while the runtime restarts a container, instead of failing. It stops waiting when the container is
+// gone (inspected every second) or after StartTimeout. Nothing has been sent yet, so this is safe for any request.
+func (rt *Runtime) dial(ctx context.Context, network, addr string) (net.Conn, error) {
+	d := net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}
+	conn, err := d.DialContext(ctx, network, addr)
+	px, ok := ctx.Value(proxiedInstance{}).(proxied)
+	if err == nil || !ok || !errors.Is(err, syscall.ECONNREFUSED) {
+		return conn, err
+	}
+	deadline := time.Now().Add(rt.cfg.StartTimeout)
+	for i := 0; ; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+		if conn, err = d.DialContext(ctx, network, addr); err == nil || !errors.Is(err, syscall.ECONNREFUSED) {
+			return conn, err
+		}
+		if !rt.stillServing(ctx, px, i%10 == 9) {
+			return nil, err
+		}
+		if time.Now().After(deadline) {
+			return nil, err
+		}
+	}
 }
 
 // Name implements [host.Runtime].
@@ -326,6 +380,7 @@ func (rt *Runtime) adopt(ctx context.Context) error {
 		}
 		c := rt.get(id)
 		c.container, c.port, c.hash = s.ID, info.hostPort(), hash
+		c.portNow.Store(int64(c.port))
 		c.poweredBy.Store(PoweredBy(s.Labels[LabelVersion]))
 		c.running.Store(true)
 		c.lastUsed.Store(time.Now().UnixNano())
@@ -359,13 +414,23 @@ func (rt *Runtime) ServeInstance(w http.ResponseWriter, r *http.Request, inst ho
 		c.lastUsed.Store(time.Now().UnixNano())
 		c.inflight.Add(-1)
 	}()
+	// a request that is safe to repeat, dropped without an answer while the instance restarted (PocketBase's hooks
+	// watcher restarting it in place, or the runtime replacing the container), goes once more
+	if rt.proxy(w, r, c, inst, false) {
+		rt.proxy(w, r, c, inst, true)
+	}
+}
+
+// proxy starts the instance if needed and proxies r to it. True: nothing was written and r should go again.
+func (rt *Runtime) proxy(w http.ResponseWriter, r *http.Request, c *ctr, inst host.Instance, last bool) (again bool) {
 	port, err := rt.ensure(r.Context(), c, inst)
 	if err != nil {
 		rt.log.Warn("docker: instance failed to start", "instance", inst.ID, "error", err)
 		http.Error(w, "instance failed to start: "+err.Error(), http.StatusServiceUnavailable)
-		return
+		return false
 	}
 	target := "127.0.0.1:" + strconv.Itoa(port)
+	px := proxied{c: c, port: port}
 	p := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			pr.Out.URL.Scheme, pr.Out.URL.Host = "http", target
@@ -388,14 +453,62 @@ func (rt *Runtime) ServeInstance(w http.ResponseWriter, r *http.Request, inst ho
 				return
 			}
 			var op *net.OpError
-			if errors.As(err, &op) && op.Op == "dial" {
+			dialErr := errors.As(err, &op) && op.Op == "dial"
+			if !last && (errors.Is(err, io.EOF) || dialErr) && safeToRepeat(r) {
+				// wait until this container answers again; if it was stopped or replaced meanwhile, ensure (on the
+				// next try) finds or starts the current one
+				if !rt.waitAnswering(r.Context(), px) && dialErr {
+					rt.forget(c, port)
+				}
+				if r.Context().Err() == nil {
+					again = true
+					return
+				}
+			}
+			if dialErr {
 				rt.forget(c, port) // the container went away; the next request starts it again
 			}
 			rt.log.Debug("docker: proxy error", "instance", inst.ID, "error", err)
 			http.Error(w, "instance unavailable", http.StatusBadGateway)
 		},
 	}
-	p.ServeHTTP(w, r)
+	p.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), proxiedInstance{}, px)))
+	return again
+}
+
+// safeToRepeat: requests that can be sent again after the instance dropped them without an answer.
+func safeToRepeat(r *http.Request) bool {
+	switch r.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return r.Body == nil || r.Body == http.NoBody || r.ContentLength == 0
+	}
+	return false
+}
+
+// waitAnswering waits until the instance's port answers HTTP again (any status), while the same container runs, for
+// up to StartTimeout. False: the container is gone or was replaced (the caller's 502 then starts a fresh one), or it
+// didn't come back.
+func (rt *Runtime) waitAnswering(ctx context.Context, p proxied) bool {
+	url := "http://127.0.0.1:" + strconv.Itoa(p.port) + "/"
+	deadline := time.Now().Add(rt.cfg.StartTimeout)
+	for i := 0; ; i++ {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(100 * time.Millisecond):
+		}
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if res, err := rt.http.Do(req); err == nil {
+			res.Body.Close()
+			return true
+		}
+		if !rt.stillServing(ctx, p, i%10 == 9) {
+			return false
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+	}
 }
 
 // PoweredBy names a release for X-Powered-By: "pb:0.23.8" → "PocketBase 0.23.8", "p1:0.0.1" → "PocketOne 0.0.1"
@@ -420,6 +533,7 @@ func (rt *Runtime) forget(c *ctr, port int) {
 	defer c.mu.Unlock()
 	if c.port == port {
 		c.container, c.port, c.hash = "", 0, ""
+		c.portNow.Store(0)
 		c.running.Store(false)
 	}
 }
@@ -536,9 +650,10 @@ func (rt *Runtime) containerConfig(ctx context.Context, inst host.Instance) (con
 			return containerConfig{}, "", fmt.Errorf("prepare: %w", err)
 		}
 	}
-	// --hooksWatch=false: the runtime watches pb_hooks from the host (one watcher for all containers) and restarts the
-	// container, so PocketBase's own watcher would only restart it a second time
-	cmd := []string{"./pocketbase", "serve", "--http", "0.0.0.0:8090", "--hooksWatch=false"}
+	// PocketBase's hooks watcher stays on (its default). Besides restarting on changes (the runtime's host watcher
+	// restarts the container too, which is harmless), it decides what a pb_hooks file that fails to load does: with
+	// the watcher on, PocketBase logs it and runs without it; with it off (--hooksWatch=false), the instance won't boot.
+	cmd := []string{"./pocketbase", "serve", "--http", "0.0.0.0:8090"}
 	if inst.Dev {
 		cmd = append(cmd, "--dev")
 	}
@@ -628,6 +743,7 @@ func (rt *Runtime) startLocked(ctx context.Context, c *ctr, inst host.Instance, 
 		return 0, err
 	}
 	c.container, c.port, c.hash, c.dirty = id, port, cfg.Labels[LabelSpec], false
+	c.portNow.Store(int64(port))
 	c.poweredBy.Store(PoweredBy(version))
 	c.running.Store(true)
 	started := inst
@@ -689,6 +805,7 @@ func (rt *Runtime) stopLocked(ctx context.Context, c *ctr) {
 	}
 	_ = rt.e.remove(ctx, c.container)
 	c.container, c.port, c.hash, c.dirty = "", 0, "", false
+	c.portNow.Store(0)
 	c.running.Store(false)
 	rt.watch.Remove(c.inst)
 }

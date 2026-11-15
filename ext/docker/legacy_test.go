@@ -51,7 +51,7 @@ func TestSpecCmdAndHealth(t *testing.T) {
 			spec.Cmd = func(def []string) []string {
 				out := def[:0:0]
 				for _, a := range def {
-					if a != "--hooksWatch=false" {
+					if a != "--dev" {
 						out = append(out, a)
 					}
 				}
@@ -70,7 +70,7 @@ func TestSpecCmdAndHealth(t *testing.T) {
 	if err != nil || version != "pb:0.8.0" {
 		t.Fatalf("old: %s %v", version, err)
 	}
-	if want := []string{"./pocketbase", "serve", "--http", "0.0.0.0:8090", "--dev"}; !reflect.DeepEqual(old.Cmd, want) {
+	if want := []string{"./pocketbase", "serve", "--http", "0.0.0.0:8090"}; !reflect.DeepEqual(old.Cmd, want) {
 		t.Fatalf("old cmd %v", old.Cmd)
 	}
 	if old.healthPath != "/" || !old.healthAny {
@@ -81,7 +81,8 @@ func TestSpecCmdAndHealth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := []string{"./pocketbase", "serve", "--http", "0.0.0.0:8090", "--hooksWatch=false"}; !reflect.DeepEqual(cur.Cmd, want) {
+	if want := []string{"./pocketbase", "serve", "--http", "0.0.0.0:8090"}; !reflect.DeepEqual(cur.Cmd, want) { // hooks watcher on
+
 		t.Fatalf("current cmd %v", cur.Cmd)
 	}
 	if cur.healthPath != "" || cur.healthAny {

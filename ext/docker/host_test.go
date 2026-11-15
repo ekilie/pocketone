@@ -169,7 +169,8 @@ func TestMaintenance(t *testing.T) {
 	}
 }
 
-// Changing a running instance's pb_hooks restarts its container, which then serves the new code.
+// Changing a running instance's pb_hooks serves the new code (PocketBase restarts itself, and the runtime restarts
+// the container), and requests during the restart wait instead of failing.
 func TestHooksChangeRestartsContainer(t *testing.T) {
 	socket := dockerSocket(t)
 	tb := testBinaries(t)
@@ -214,7 +215,39 @@ func TestHooksChangeRestartsContainer(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if rt.get(inst.ID).container == before {
-		t.Fatal("served v2 without a new container")
+	_ = before // PocketBase's own hooks watcher may serve v2 before the runtime restarts the container
+}
+
+// A pb_hooks file that fails to load doesn't stop the instance (PocketBase's hooks watcher is on): it boots without
+// that file and the other hooks work, as on the Node edge.
+func TestBrokenHookFileStillBoots(t *testing.T) {
+	socket := dockerSocket(t)
+	tb := testBinaries(t)
+	data := dataDir(t)
+	rt, err := New(Config{Socket: socket, Image: "alpine:3.20", DataRoot: data, Binaries: tb, Versions: testVersions(t, tb),
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	t.Cleanup(func() { _ = rt.e.remove(context.Background(), "p4broken") })
+	if err := rt.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer rt.Shutdown()
+	inst := host.Instance{ID: "p4broken", Version: "p1:0.0.*"}
+	hooks := filepath.Join(data, inst.ID, "pb_hooks")
+	_ = os.MkdirAll(hooks, 0o755)
+	files := map[string]string{
+		"good.pb.js":   `routerAdd("GET", "/good", (e) => e.string(200, "ok"))`,
+		"broken.pb.js": `onRecordAfterCreateRequest((e) => {})`, // removed in PocketBase 0.23
+	}
+	for name, src := range files {
+		if err := os.WriteFile(filepath.Join(hooks, name), []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if code, body := get(t, rt, inst, "/good"); code != 200 || body != "ok" {
+		t.Fatalf("with a broken hook file: %d %q (should boot and serve the other hooks)", code, body)
 	}
 }
