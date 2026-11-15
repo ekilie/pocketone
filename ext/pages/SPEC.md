@@ -422,7 +422,9 @@ plugin factory (9.2). Only when no module by that name is found is the string a 
 file, list `require('./path')` instead of the name: a `./` path is never looked up in `_private/` or `node_modules`. A module that is found but fails to load is an error; it never falls back to
 the built-in.
 
-Unknown keys, names that are neither a module nor a built-in, and duplicates are startup errors.
+`+config.js` runs on each page request, so these aren't caught at startup: unknown keys, names that are neither a
+module nor a built-in, or a plugin listed twice make every page answer with an error (a 500; dev mode shows the
+reason on the page), and the reason goes to the log.
 
 ## 8. Errors
 

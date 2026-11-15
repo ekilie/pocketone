@@ -22,7 +22,9 @@ module.exports = {
 | `plugins` | `[]` | Built-in plugins by name, or JS plugin factories. EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-Unknown keys, names that are neither a module nor a built-in, and duplicates are startup errors.
+`+config.js` runs on each page request, so these aren't caught at startup: unknown keys, names that are neither a
+module nor a built-in, or a plugin listed twice make every page answer with an error (a 500; dev mode shows the
+reason on the page), and the reason goes to the log.
 
 ## Plugins
 
