@@ -5,7 +5,7 @@ description: Wrap pages with +layout.ejs files, and pass content between pages a
 
 # Layouts and Slots
 
-`+layout.ejs` files wrap pages. A page's layouts are every `+layout.ejs` from its own folder up to `pb_pages/`, applied innermost first. A folder may have one layout.
+`+layout.ejs` files wrap pages. A page's layouts are every `+layout` from its own folder up to `pb_pages/`, applied innermost first. A folder may have one layout, written as `+layout.ejs`, `+layout.jsx` or `+layout.tsx`. A layout can't be Markdown: `+layout.md` is an error at startup.
 
 ```plaintext
 pb_pages/

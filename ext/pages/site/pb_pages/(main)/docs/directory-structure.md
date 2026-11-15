@@ -34,7 +34,7 @@ A file or folder name starting with one of these characters is never a URL:
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+config.js`, `+layout.ejs`, `+middleware.js`, `+page.js`, `+api.js`. Any other `+` name is an error at startup. |
+| `+` | Framework file: `+config.js`, `+layout.ejs` (or `.jsx`, `.tsx`), `+middleware.js`, `+page.js`, `+api.js`. Any other `+` name, and any other extension (such as `+layout.md`), is an error at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
 | `.` | Ignored (dotfiles). |

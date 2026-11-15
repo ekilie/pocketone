@@ -54,4 +54,5 @@ A `.md` file in a `_private/` folder can be included from EJS with `include()`. 
 
 ## Notes
 
-- Layouts are always `+layout.ejs`. A layout can't be Markdown.
+- Layouts are `+layout.ejs`, `+layout.jsx` or `+layout.tsx`. A layout can't be Markdown: `+layout.md` is an error at
+  startup. A Markdown page is still wrapped by the layouts above it.
