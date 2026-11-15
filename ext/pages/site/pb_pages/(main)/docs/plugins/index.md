@@ -22,8 +22,9 @@ Each entry is one of:
   3. the built-in plugins, `'auth'` and `'realtime'`
 
   A path such as `'./plugins/my-plugin.js'` works too.
-- **A plugin factory**, usually `require('./_private/my-plugin.js')`. Writing the `require` yourself and writing just
-  the string do the same thing.
+- **A plugin factory**, usually `require('./_private/my-plugin.js')`. Writing the `require` yourself with a path skips
+  the lookup above and loads exactly that file, which is how you pick one copy over another: `'datastar'` would find
+  `_private/datastar.js` first, while `require('./node_modules/datastar')` always loads the package.
 
 Datastar isn't built in. It's an add-on file you copy into `pb_pages/_private/` and list by name.
 

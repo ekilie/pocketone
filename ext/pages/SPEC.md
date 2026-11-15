@@ -411,7 +411,8 @@ module.exports = {
 A string in `plugins` is a module name, required from `+config.js` (1): a `_private/` file (`'datastar'` finds
 `_private/datastar.js`), a package in `node_modules` (`'my-plugin'`) or a path (`'./plugins/my-plugin.js'`). Its export, or its `default` export, must be a
 plugin factory (9.2). Only when no module by that name is found is the string a built-in (9.1), so a
-`_private/auth.js` or a package named `auth` would replace the built-in `auth`. A module that is found but fails to load is an error; it never falls back to
+`_private/auth.js` or a package named `auth` would replace the built-in `auth`. To skip that order and load one exact
+file, list `require('./path')` instead of the name: a `./` path is never looked up in `_private/` or `node_modules`. A module that is found but fails to load is an error; it never falls back to
 the built-in.
 
 Unknown keys, names that are neither a module nor a built-in, and duplicates are startup errors.

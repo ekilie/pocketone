@@ -31,7 +31,8 @@ Each entry in `plugins` is one of:
 - **A name**, loaded with `require`: a `_private/` file (`'datastar'` for the [Datastar add-on](/docs/plugins/datastar)),
   then a package in `node_modules`, then a built-in (`'auth'` or `'realtime'`). It must export a plugin factory. See
   [Plugins](/docs/plugins).
-- **A JS plugin factory**: a function that returns hooks, such as `require('./_private/my-plugin.js')`.
+- **A JS plugin factory**: a function that returns hooks, such as `require('./_private/my-plugin.js')`. A `require`
+  with a path loads exactly that file, skipping the name lookup, so it's how you choose one copy over another.
 - **An object with a factory and options**: `{ factory, ...options }`. The object is passed to the factory as its `config`.
 
 ```js
