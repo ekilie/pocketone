@@ -75,7 +75,8 @@ var attacks = [][2]string{
 	{"bigBufferAlloc", `Buffer.alloc(1e9).length`},
 	{"bigViaCtorProp", `new (new Uint8Array(1).constructor)(1e9).length`},
 	{"bigViaBufferProp", `new (new Uint8Array(1).buffer.constructor)(1e9).byteLength`},
-	{"bigRepeatReassigned", `(String.prototype.repeat = function () { return "" }, "x".repeat(1e9).length)`},
+	// reassigning a built-in only changes this app's own VM: harmless, and restored so later calls see the original
+	{"bigRepeatReassigned", `(() => { const orig = String.prototype.repeat; String.prototype.repeat = function () { return "" }; try { return "x".repeat(1e9).length } finally { String.prototype.repeat = orig } })()`},
 	{"bigFromArrayLike", `new Uint8Array({ length: 1e9 }).length`},
 	{"bigTypedFrom", `Uint8Array.from({ length: 1e9 }).length`},
 	{"bigCallNoNew", `Reflect.construct(new Float64Array(1).constructor, [1e8]).length`},
@@ -163,7 +164,7 @@ func TestSandboxBlocksEscapes(t *testing.T) {
 		"static", "requireOther", "attach", "attachSneaky", "vacuumIntoHost", "storePragma",
 		"sqlReadfile", "sqlWritefile", "sqlFsdir", "sqlLoadExtension", "sqlAttachURI",
 		"bigRepeat", "bigPadEnd", "bigJoin", "bigArrayBuffer", "bigUint8", "bigFloat64", "bigBufferAlloc",
-		"bigViaCtorProp", "bigViaBufferProp", "bigRepeatReassigned", "deepRecursion", "bigFromArrayLike",
+		"bigViaCtorProp", "bigViaBufferProp", "deepRecursion", "bigFromArrayLike",
 		"bigTypedFrom", "bigCallNoNew", "bigToString", "bigConcatString", "bigNewBuffer",
 	}
 	for _, name := range blocked {
@@ -189,13 +190,14 @@ func TestSandboxBlocksEscapes(t *testing.T) {
 	}
 
 	expect := map[string]any{
-		"smallAllocs":   float64(16 + 6 + 8 + 3),
-		"arraySparseOK": float64(1e9),
-		"args":          float64(0),
-		"envOwn":        "a's own value",
-		"envHost":       "",
-		"procEnvHost":   "",
-		"requireOwn":    "own lib",
+		"smallAllocs":         float64(16 + 6 + 8 + 3),
+		"bigRepeatReassigned": float64(0),
+		"arraySparseOK":       float64(1e9),
+		"args":                float64(0),
+		"envOwn":              "a's own value",
+		"envHost":             "",
+		"procEnvHost":         "",
+		"requireOwn":          "own lib",
 	}
 	for name, want := range expect {
 		res, _, _ := call(name)

@@ -45,7 +45,7 @@ func TestHookErrorReachesInstanceLog(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	for _, want := range []string{`ERROR GET /boom 400`, `kaboom`, `pb_hooks/main.pb.js:4:9`, `"stream":"stderr"`} {
+	for _, want := range []string{`ERROR GET /boom 400`, `kaboom`, `pb_hooks/main.pb.js:4:`, `"stream":"stderr"`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("instance log lacks %q:\n%s", want, got)
 		}

@@ -2,8 +2,8 @@ package pocker
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // testStandard stands in for ext/standard's set in pocker's own tests (pocker can't import it): Pocker requires a
@@ -16,6 +16,6 @@ func (stubSet) Prepare(core.App, func(string) extkit.Config) (*extkit.Plan, erro
 	return &extkit.Plan{}, nil
 }
 func (stubSet) JSExtensions(core.App) []any                     { return nil }
-func (stubSet) BindJS(core.App, *goja.Runtime)                  {}
+func (stubSet) BindJS(core.App, js.Runtime)                     {}
 func (stubSet) Finish(core.App, *extkit.Plan) ([]string, error) { return nil, nil }
 func (stubSet) Extensions() []extkit.Extension                  { return nil }

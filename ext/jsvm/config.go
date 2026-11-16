@@ -54,6 +54,9 @@ type VMConfig struct {
 	// other tasks meanwhile, nested on the same stack, up to MaxPumpDepth deep.
 	// TaskWall caps one top-level task's wall time, Go calls included (a loop over Go calls never hits TaskBudget).
 	TaskWall time.Duration
+	// MaxConcurrent caps the JS calls (hooks, routes, cron jobs) an app has in flight at once; 0 = no cap. A call waits
+	// for a slot, at most TaskWall, then fails with ErrTooBusy. Calls in flight overlap at Go calls and awaits.
+	MaxConcurrent int
 	// MaxSleep caps sleep() (default 10 s).
 	MaxSleep time.Duration
 	// MaxAsync caps async Go calls in flight per VM.

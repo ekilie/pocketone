@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
@@ -45,13 +45,13 @@ func (h *hostedExtension) InitApp(inst Instance, app core.App) error {
 }
 
 // InitJS implements [JSIniter].
-func (h *hostedExtension) InitJS(inst Instance, app core.App, vm *goja.Runtime) {
+func (h *hostedExtension) InitJS(inst Instance, app core.App, rt js.Runtime) {
 	b, ok := h.p.(extkit.JSBinder)
 	if !ok {
 		return
 	}
 	if cfg, err := h.config(inst); err == nil && cfg.Enabled() {
-		b.BindJS(app, vm)
+		b.BindJS(app, rt)
 	}
 }
 

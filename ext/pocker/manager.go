@@ -15,7 +15,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
@@ -76,7 +76,7 @@ type ManagerOptions struct {
 	// Dev serves any hostname: a host the source doesn't map gets [DevID] as its id and its folder is created on
 	// first use. Apps run in PocketBase dev mode.
 	Dev bool
-	// HooksPoolSize is the number of prewarmed JS runtimes per app (0 = create one per hook run).
+	// HooksPoolSize is kept for compatibility and ignored: each app has one JS VM (ext/jsvm).
 	HooksPoolSize int
 	// Defaults are the per-instance limits used where an instance doesn't set its own (zero = DefaultLimits).
 	Defaults Limits
@@ -88,7 +88,7 @@ type ManagerOptions struct {
 	// Init runs host Go code for each app before it bootstraps (extensions implementing [AppIniter]).
 	Init func(inst Instance, app core.App) error
 	// InitJS adds globals to each JS runtime after the sandbox set it up (extensions implementing [JSIniter]).
-	InitJS func(inst Instance, app core.App, vm *goja.Runtime)
+	InitJS func(inst Instance, app core.App, rt js.Runtime)
 	// Setup runs host Go code for each app after migrations and before it serves (see [Server.SetupApp]).
 	Setup func(inst Instance, app core.App) error
 	// Forward serves requests for instances with [Instance.Remote] set, after the firewall checks. Nil = a plain

@@ -6,7 +6,7 @@ import (
 	"github.com/pockethost/pocketone/ext/multisite"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // Extension extends a Pocker server (see [Server.Extensions]). An extension implements Name and any of the optional
@@ -27,16 +27,16 @@ type AppIniter interface {
 // the runtime up, e.g. an extension exposing its Go API as $name. What it exposes is a sandbox decision: only expose
 // what is safe for a hostile tenant to call on its own app.
 type JSIniter interface {
-	InitJS(inst Instance, app core.App, vm *goja.Runtime)
+	InitJS(inst Instance, app core.App, rt js.Runtime)
 }
 
-func chainJSIniters(in []JSIniter) func(Instance, core.App, *goja.Runtime) {
+func chainJSIniters(in []JSIniter) func(Instance, core.App, js.Runtime) {
 	if len(in) == 0 {
 		return nil
 	}
-	return func(inst Instance, app core.App, vm *goja.Runtime) {
+	return func(inst Instance, app core.App, rt js.Runtime) {
 		for _, i := range in {
-			i.InitJS(inst, app, vm)
+			i.InitJS(inst, app, rt)
 		}
 	}
 }

@@ -14,12 +14,12 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	_ "ganigeorgiev.com/pocketbase/pocketbase/migrations" // registers PocketBase's system migrations, as pocketbase.go does
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/ui"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/sandbox"
 )
 
@@ -44,7 +44,7 @@ type appOptions struct {
 	// (opens its databases): the place to bind OnBootstrap/OnTerminate handlers.
 	Init func(inst Instance, app core.App) error
 	// InitJS, if set, adds globals to each JS runtime after the sandbox set it up.
-	InitJS func(inst Instance, app core.App, vm *goja.Runtime)
+	InitJS func(inst Instance, app core.App, rt js.Runtime)
 	// Setup, if set, runs for each app after migrations and before it serves (host application Go code).
 	Setup func(inst Instance, app core.App) error
 	// Standard, if set, is registered on every app (ext/standard's Set): before its hooks load, with the instance's
@@ -122,11 +122,9 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 		Env:                env,
 		MaxExecution:       lim.MaxJSExecution,
 		MaxAllocation:      int64(lim.MaxJSAllocation),
-		MaxCallStackSize:   lim.MaxCallStackSize,
 		MaxSleep:           lim.MaxSleep,
 		HTTPSendMaxTimeout: int(lim.HTTPSendMaxTimeout / time.Second),
 		HTTPSendMaxBody:    int64(lim.HTTPSendMaxBody),
-		MaxConcurrent:      lim.MaxConcurrentJS,
 		Console:            openInstanceLog(dir).Write,
 	}
 	if opts.Host != nil {
@@ -143,21 +141,20 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("standard: %w", err)
 	}
-	jsExt := hookExtensions(sb, dev, openInstanceLog(dir))
-	for _, e := range opts.Standard.JSExtensions(app) {
-		jsExt = append(jsExt, e)
-	}
+	jsExt := append(hookExtensions(sb, dev, openInstanceLog(dir)), opts.Standard.JSExtensions(app)...)
+	execLimit, sleepLimit := sb.Limits()
 	err = jsvm.Register(app, jsvm.Config{
 		HooksDir:      filepath.Join(dir, "pb_hooks"),
 		MigrationsDir: filepath.Join(dir, "pb_migrations"),
 		HooksWatch:    false, // PocketBase's watcher would open an inotify instance per app; the Manager's shared watcher restarts just this app
-		HooksPoolSize: opts.HooksPoolSize,
-		// the sandbox (OnInit, OnCall, HTTPClient); hook errors name pb_hooks/<file>:<line>:<col> in the instance log
+		// the sandbox (OnInit, Modules, HTTPClient, hidden members)
 		Extensions: jsExt,
-		OnInit: func(vm *goja.Runtime) {
-			opts.Standard.BindJS(app, vm)
+		// one JS VM per instance, with hard limits: memory (JS heap plus Go objects JS holds), wall time per call
+		VM: jsvm.VMConfig{TaskWall: execLimit, MaxSleep: sleepLimit, MaxConcurrent: lim.MaxConcurrentJS},
+		OnInit: func(rt js.Runtime) {
+			opts.Standard.BindJS(app, rt)
 			if opts.InitJS != nil {
-				opts.InitJS(inst, app, vm)
+				opts.InitJS(inst, app, rt)
 			}
 		},
 	})

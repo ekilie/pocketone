@@ -61,6 +61,11 @@ var errType = reflect.TypeOf((*error)(nil)).Elem()
 // runHandler calls a JS handler with a Go event and waits for it (and its promise). While the synchronous part
 // runs, $app is the event's app (the transaction's app inside a transaction), as in plugins/jsvm.
 func (vm *VM) runHandler(h *jsRef, app core.App, args ...any) error {
+	release, err := vm.acquire()
+	if err != nil {
+		return err
+	}
+	defer release()
 	var ch chan settled
 	var imm *settled
 	derr := vm.Do(func() {

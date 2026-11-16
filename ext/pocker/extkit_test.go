@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 type fakeExtension struct {
@@ -28,7 +28,7 @@ func (f *fakeExtension) Register(app core.App, cfg extkit.Config) error {
 	return nil
 }
 
-func (f *fakeExtension) BindJS(app core.App, _ *goja.Runtime) {
+func (f *fakeExtension) BindJS(app core.App, _ js.Runtime) {
 	f.bound[app.Settings().Meta.AppName] = true
 }
 
@@ -43,7 +43,7 @@ func TestHostedExtension(t *testing.T) {
 		if err := h.InitApp(inst, app); err != nil {
 			t.Fatal(err)
 		}
-		h.InitJS(inst, app, goja.New())
+		h.InitJS(inst, app, nil)
 	}
 
 	run(Instance{ID: "plain"})                                                                     // the extension's own defaults

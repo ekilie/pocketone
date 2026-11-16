@@ -16,6 +16,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"sync"
 
 	"github.com/pockethost/pocketone/ext/extkit/js"
 	"reflect"
@@ -30,6 +32,8 @@ var (
 	ErrBusy    = errors.New("asyncvm: too many queued tasks")
 	ErrTimeout = errors.New("asyncvm: timed out waiting for JS")
 	ErrClosed  = errors.New("asyncvm: closed")
+	// ErrTooBusy: the app already has MaxConcurrent calls in flight and no slot freed up in time.
+	ErrTooBusy = errors.New("too many concurrent JS calls for this app; retry shortly")
 )
 
 type kind uint8
@@ -92,6 +96,9 @@ type VM struct {
 	Hider js.Hider
 
 	sliceProto C.JSValue // prototype of Go slices: Array methods
+
+	slotsOnce sync.Once
+	slots     chan struct{} // MaxConcurrent
 
 	// OnTask, when set, wraps every JS handler call (hooks, routes, cron, migrations): an error refuses the call.
 	OnTask func() (done func(), err error)
@@ -480,7 +487,26 @@ type JSError struct {
 	Value any
 }
 
-func (e *JSError) Error() string { return e.Message }
+// Error is the message, then where it was thrown (the top stack frame's file:line:col), like goja's exceptions.
+func (e *JSError) Error() string {
+	if at := topFrame(e.Stack); at != "" {
+		return e.Message + " at " + at
+	}
+	return e.Message
+}
+
+// topFrame is the location of a stack's first frame: "pb_hooks/main.pb.js:4:9" from "    at <anonymous> (...)".
+func topFrame(stack string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(stack), "\n")
+	line = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "at "))
+	if i := strings.LastIndex(line, "("); i >= 0 && strings.HasSuffix(line, ")") {
+		line = line[i+1 : len(line)-1]
+	}
+	if line == "" || line == "native" || !strings.Contains(line, ":") {
+		return ""
+	}
+	return line
+}
 
 // ThrownValue implements extkit/js's Thrown.
 func (e *JSError) ThrownValue() any { return e.Value }
@@ -604,4 +630,22 @@ func (vm *VM) RunString(code string) (Result, error) {
 		return res, derr
 	}
 	return res, err
+}
+
+// acquire takes a call slot (MaxConcurrent) on the caller's goroutine; the returned func gives it back.
+func (vm *VM) acquire() (func(), error) {
+	if vm.cfg.MaxConcurrent <= 0 || vm.onLoop() {
+		return func() {}, nil
+	}
+	vm.slotsOnce.Do(func() { vm.slots = make(chan struct{}, vm.cfg.MaxConcurrent) })
+	t := time.NewTimer(vm.cfg.TaskWall)
+	defer t.Stop()
+	select {
+	case vm.slots <- struct{}{}:
+		return func() { <-vm.slots }, nil
+	case <-t.C:
+		return nil, ErrTooBusy
+	case <-vm.quit:
+		return nil, ErrClosed
+	}
 }
