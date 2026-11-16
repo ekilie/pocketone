@@ -1,16 +1,10 @@
 package jsvm
 
-/*
-#include "bridge.h"
-*/
-import "C"
-
 import (
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
-	"unsafe"
 )
 
 const preludeJS = `
@@ -43,13 +37,13 @@ const preludeJS = `
 func (vm *VM) installPrelude() error {
 	hidden := func(name string, fn nativeFn) {
 		h, _ := vm.newHandle(entry{kind: kindNative, native: fn})
-		vm.setHidden(name, C.avm_new_func(vm.a, C.uint32_t(h), 0))
+		vm.setHidden(name, C.avm_new_func(vm.a, uint32(h), 0))
 	}
 	hidden("__done", nativeDone)
 	hidden("__goAsync", nativeAsync)
 	hidden("__goJSON", nativeJSON)
 	hidden("__goString", nativeString)
-	hidden("__goPrim", func(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+	hidden("__goPrim", func(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 		if h := C.avm_handle_of(vm.a, args[0]); h != 0 {
 			d := deref(vm.handles[h].v)
 			switch d.Kind() {
@@ -64,7 +58,7 @@ func (vm *VM) installPrelude() error {
 		}
 		return nativeString(vm, this, args, ctor)
 	})
-	hidden("__isGoSlice", func(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+	hidden("__isGoSlice", func(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 		if len(args) > 0 {
 			if h := C.avm_handle_of(vm.a, args[0]); h != 0 && vm.handles[h].kind == kindObj {
 				if d := deref(vm.handles[h].v); d.Kind() == reflect.Slice || d.Kind() == reflect.Array {
@@ -74,7 +68,7 @@ func (vm *VM) installPrelude() error {
 		}
 		return C.avm_bool(0)
 	})
-	hidden("__log", func(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+	hidden("__log", func(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 		parts := make([]string, len(args))
 		for i, a := range args {
 			parts[i] = vm.goString(a)
@@ -88,7 +82,7 @@ func (vm *VM) installPrelude() error {
 	g := C.JS_GetGlobalObject(vm.ctx)
 	cs := C.CString("__protos")
 	arr := C.JS_GetPropertyStr(vm.ctx, g, cs)
-	C.free(unsafe.Pointer(cs))
+	C.free(cs)
 	vm.free_(g)
 	objP := C.avm_array_get(vm.ctx, arr, 0)
 	fnP := C.avm_array_get(vm.ctx, arr, 1)
@@ -98,13 +92,13 @@ func (vm *VM) installPrelude() error {
 	return nil
 }
 
-func numArg(vm *VM, v C.JSValue) uint64 {
-	var f C.double
+func numArg(vm *VM, v JSValue) uint64 {
+	var f float64
 	C.JS_ToFloat64(vm.ctx, &f, v)
 	return uint64(f)
 }
 
-func nativeDone(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+func nativeDone(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 	id := numArg(vm, args[0])
 	ch, ok := vm.settles[id]
 	if !ok {
@@ -126,19 +120,19 @@ func nativeDone(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
 
 // nativeAsync runs a Go function on its own goroutine and returns a promise. Arguments are converted on the loop;
 // the result is converted back on the loop when it is done.
-func nativeAsync(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+func nativeAsync(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 	h := C.avm_handle_of(vm.a, args[0])
 	if h == 0 || vm.handles[h].kind != kindFn {
-		return C.avm_throw_type(vm.ctx, C.CString("async: not a Go function"))
+		return C.throwType(vm.ctx, "async: not a Go function")
 	}
 	if vm.asyncInFlight >= vm.cfg.MaxAsync {
 		return vm.throw(fmt.Errorf("too many async Go calls in flight (%d)", vm.cfg.MaxAsync))
 	}
 	fn := vm.handles[h].v
 	n := int(C.avm_length(vm.ctx, args[1]))
-	jsArgs := make([]C.JSValue, n)
+	jsArgs := make([]JSValue, n)
 	for i := range jsArgs {
-		jsArgs[i] = C.avm_array_get(vm.ctx, args[1], C.uint32_t(i))
+		jsArgs[i] = C.avm_array_get(vm.ctx, args[1], uint32(i))
 	}
 	in, err := vm.goArgs(fn.Type(), jsArgs)
 	for _, a := range jsArgs {
@@ -147,7 +141,7 @@ func nativeAsync(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue 
 	if err != nil {
 		return vm.throw(err)
 	}
-	funcs := make([]C.JSValue, 2)
+	funcs := make([]JSValue, 2)
 	p := C.avm_new_promise(vm.ctx, &funcs[0])
 	resolve, reject := funcs[0], funcs[1]
 	vm.asyncInFlight++
@@ -166,7 +160,7 @@ func nativeAsync(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue 
 			vm.asyncInFlight--
 			defer vm.free_(resolve)
 			defer vm.free_(reject)
-			var v C.JSValue
+			var v JSValue
 			if perr != nil {
 				v = vm.throw(perr)
 			} else {
@@ -185,7 +179,7 @@ func nativeAsync(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue 
 	return p
 }
 
-func nativeJSON(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+func nativeJSON(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 	h := C.avm_handle_of(vm.a, args[0])
 	if h == 0 {
 		return C.avm_undefined()
@@ -195,11 +189,11 @@ func nativeJSON(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
 		return vm.throw(err)
 	}
 	cs := C.CString(string(b))
-	defer C.free(unsafe.Pointer(cs))
-	return C.avm_parse_json(vm.ctx, cs, C.size_t(len(b)))
+	defer C.free(cs)
+	return C.avm_parse_json(vm.ctx, cs, uint64(len(b)))
 }
 
-func nativeString(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+func nativeString(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 	h := C.avm_handle_of(vm.a, args[0])
 	if h == 0 {
 		return vm.str("[object]")

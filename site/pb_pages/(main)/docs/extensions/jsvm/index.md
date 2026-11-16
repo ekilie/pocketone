@@ -22,19 +22,21 @@ PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS AP
 
 The `pocketone` binary and every Pocker instance run on it. PocketBase's own `plugins/jsvm` (goja) is for pure
 PocketBase compatibility only: `jsvm: goja` under `app:` in `pocketone.yaml` (or `--jsvm goja`) runs a single app on it,
-with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off. A build without cgo has only goja.
+with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
-JSVM needs a build with cgo (QuickJS is C). In your own Go build, register it where you'd register `plugins/jsvm`:
+The engine is pure Go (QuickJS translated to Go by [modernc.org/libquickjs](https://pkg.go.dev/modernc.org/libquickjs),
+the way PocketBase uses modernc.org/sqlite), so it needs no cgo: `CGO_ENABLED=0` builds and cross-compiles work as with
+stock PocketBase. In your own Go build, register it where you'd register `plugins/jsvm`:
 
 ```go
 jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", MigrationsDir: "pb_migrations"})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/jsvm`. Without cgo, `Register` returns an error saying so.
+The module is `github.com/pockethost/pocketone/ext/jsvm`.
 
 ## Configure
 
@@ -118,13 +120,16 @@ func main() {
 
 ## How it works
 
-- Each app's VM is owned by one goroutine locked to its OS thread; everything that touches the VM runs there. Go code
+- Each app's VM is owned by one goroutine, its loop; everything that touches the VM runs there. Go code
   elsewhere posts tasks and waits. A Go call made from JS that fires a hook runs it inline, so Go → JS → Go → JS works.
 - Go values cross live through two QuickJS classes: `GoObject` (property get/set/has/keys go to Go by reflection, with
   PocketBase's JS names) and `GoFunc` (calls go to Go). Each holds a handle into the VM's table; QuickJS's refcounting
   frees it as soon as JS drops it.
 - Memory: QuickJS caps its own heap. Go objects JS holds are charged to the same budget: a per-type estimate, and a
   reachability walk for fresh results of Go calls.
+- QuickJS is [modernc.org/libquickjs](https://pkg.go.dev/modernc.org/libquickjs), Bellard's QuickJS translated to Go,
+  so there is no cgo. It runs about as fast as goja; deep recursion stops at `VM.StackSize` (QuickJS stack slots,
+  about one per call; default 5000) with "InternalError: stack overflow".
 - Benchmarks and the red team (27 attacks against 50 VMs in one process) are in the package's tests
   (`ASYNCVM_BENCH=1`, `ASYNCVM_REDTEAM=1`).
 

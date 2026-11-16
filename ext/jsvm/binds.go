@@ -1,10 +1,5 @@
 package jsvm
 
-/*
-#include "bridge.h"
-*/
-import "C"
-
 import (
 	"bytes"
 	"context"
@@ -23,7 +18,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"unsafe"
 
 	"ganigeorgiev.com/pocketbase/dbx"
 	validation "ganigeorgiev.com/pocketbase/ozzo-validation/v4"
@@ -51,8 +45,8 @@ import (
 // call is one call of a native function.
 type call struct {
 	vm   *VM
-	this C.JSValue
-	args []C.JSValue
+	this JSValue
+	args []JSValue
 	ctor bool
 }
 
@@ -104,12 +98,12 @@ func (c *call) goValue(i int) (reflect.Value, bool) {
 type nativeGo func(c *call) (any, error)
 
 func (vm *VM) wrapNative(fn nativeGo) nativeFn {
-	return func(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue {
+	return func(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 		res, err := fn(&call{vm: vm, this: this, args: args, ctor: ctor})
 		if err != nil {
 			return vm.throw(err)
 		}
-		if jv, ok := res.(C.JSValue); ok {
+		if jv, ok := res.(JSValue); ok {
 			return jv
 		}
 		jv, err := vm.toJS(reflect.ValueOf(res))
@@ -121,13 +115,13 @@ func (vm *VM) wrapNative(fn nativeGo) nativeFn {
 }
 
 // nativeValue makes a JS function (optionally a constructor) from fn.
-func (vm *VM) nativeValue(fn nativeGo, ctor bool) C.JSValue {
+func (vm *VM) nativeValue(fn nativeGo, ctor bool) JSValue {
 	h, _ := vm.newHandle(entry{kind: kindNative, native: vm.wrapNative(fn)})
 	ctorBit := 0
 	if ctor {
 		ctorBit = 1
 	}
-	return C.avm_new_func(vm.a, C.uint32_t(h), C.int(ctorBit))
+	return C.avm_new_func(vm.a, uint32(h), int32(ctorBit))
 }
 
 // setGo sets a global to a Go value, enumerable like goja's vm.Set.
@@ -143,11 +137,11 @@ func (vm *VM) setFunc(name string, fn nativeGo) { vm.setGlobal(name, vm.nativeVa
 func (vm *VM) setCtor(name string, fn nativeGo) { vm.setGlobal(name, vm.nativeValue(fn, true)) }
 
 // setHidden sets a non-enumerable global (engine internals, not counted as binds).
-func (vm *VM) setHidden(name string, v C.JSValue) {
+func (vm *VM) setHidden(name string, v JSValue) {
 	g := C.JS_GetGlobalObject(vm.ctx)
 	cs := C.CString(name)
 	C.avm_define_hidden(vm.ctx, g, cs, v)
-	C.free(unsafe.Pointer(cs))
+	C.free(cs)
 	vm.free_(g)
 }
 
@@ -155,7 +149,7 @@ func (vm *VM) setHidden(name string, v C.JSValue) {
 func (vm *VM) namespace(name string, members map[string]any) { vm.setGo(name, members) }
 
 // loadInto sets each property of a plain JS object argument on a Go object (goja's structConstructor).
-func (vm *VM) loadInto(target C.JSValue, src C.JSValue) {
+func (vm *VM) loadInto(target JSValue, src JSValue) {
 	if C.avm_tag(src) != C.JS_TAG_OBJECT || C.avm_handle_of(vm.a, src) != 0 {
 		return
 	}
@@ -167,13 +161,13 @@ func (vm *VM) loadInto(target C.JSValue, src C.JSValue) {
 	defer vm.free_(keys)
 	n := int(C.avm_length(vm.ctx, keys))
 	for i := 0; i < n; i++ {
-		kv := C.avm_array_get(vm.ctx, keys, C.uint32_t(i))
+		kv := C.avm_array_get(vm.ctx, keys, uint32(i))
 		k := vm.goString(kv)
 		vm.free_(kv)
 		ck := C.CString(k)
 		val := C.avm_get_str(vm.ctx, src, ck)
 		C.JS_SetPropertyStr(vm.ctx, target, ck, val) // takes val
-		C.free(unsafe.Pointer(ck))
+		C.free(ck)
 		if C.JS_HasException(vm.ctx) {
 			vm.free_(C.JS_GetException(vm.ctx))
 		}
@@ -300,7 +294,7 @@ func BindCore(vm *VM) {
 		}
 		time.Sleep(d)
 	}), kind: kindFn, bytes: handleBase, blocking: true})
-	vm.setGlobal("sleep", C.avm_new_func(vm.a, C.uint32_t(sh), 0))
+	vm.setGlobal("sleep", C.avm_new_func(vm.a, uint32(sh), 0))
 
 	vm.setFunc("arrayOf", func(c *call) (any, error) {
 		mv, ok := c.goValue(0)
@@ -812,8 +806,8 @@ func BindHTTP(vm *VM) {
 	ns := map[string]any{}
 	nsV, _ := vm.toJS(reflect.ValueOf(ns))
 	cs := C.CString("send")
-	C.JS_SetPropertyStr(vm.ctx, nsV, cs, C.avm_new_func(vm.a, C.uint32_t(sendH), 0))
-	C.free(unsafe.Pointer(cs))
+	C.JS_SetPropertyStr(vm.ctx, nsV, cs, C.avm_new_func(vm.a, uint32(sendH), 0))
+	C.free(cs)
 	vm.setGlobal("$http", nsV)
 }
 

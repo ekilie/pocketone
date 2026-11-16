@@ -1,16 +1,11 @@
 // Package jsvm is PocketOne's JS engine: one async QuickJS VM per app, with a generic reflection bridge to Go values.
 //
-// Each VM is owned by one goroutine locked to its OS thread. Everything that touches the VM runs on that thread:
-// Go code elsewhere posts jobs (Do) and waits. Code already on the thread (a Go call made from JS that triggers a
-// hook) runs inline, which is what makes Go → JS → Go → JS re-entrancy work.
+// QuickJS here is modernc.org/libquickjs, QuickJS translated to pure Go: no cgo (see capi.go).
+//
+// Each VM is owned by one goroutine, its loop. Everything that touches the VM runs on that goroutine: Go code elsewhere
+// posts jobs (Do) and waits. Code already on the loop (a Go call made from JS that triggers a hook) runs inline, which
+// is what makes Go → JS → Go → JS re-entrancy work.
 package jsvm
-
-/*
-#cgo CFLAGS: -I${SRCDIR}/deps/quickjs -D_GNU_SOURCE -DNDEBUG -O2 -w
-#cgo LDFLAGS: -lm
-#include "bridge.h"
-*/
-import "C"
 
 import (
 	"errors"
@@ -21,11 +16,8 @@ import (
 
 	"github.com/pockethost/pocketone/ext/extkit/js"
 	"reflect"
-	"runtime"
-	"runtime/cgo"
 	"sync/atomic"
 	"time"
-	"unsafe"
 )
 
 var (
@@ -44,7 +36,7 @@ const (
 	kindNative
 )
 
-type nativeFn func(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue
+type nativeFn func(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue
 
 type entry struct {
 	blocking bool
@@ -57,9 +49,9 @@ type entry struct {
 
 type VM struct {
 	cfg  VMConfig
-	a    *C.AVM
-	ctx  *C.JSContext
-	self cgo.Handle
+	a    *AVM
+	ctx  *JSContext
+	self uintptr // id in vmRegistry
 
 	jobs  chan *task
 	posts chan func() // completions from async Go calls; never refused
@@ -95,7 +87,7 @@ type VM struct {
 	// Hider, when set, hides Go members from JS (an extension's js.Hider, e.g. the sandbox's).
 	Hider js.Hider
 
-	sliceProto C.JSValue // prototype of Go slices: Array methods
+	sliceProto JSValue // prototype of Go slices: Array methods
 
 	slotsOnce sync.Once
 	slots     chan struct{} // MaxConcurrent
@@ -131,7 +123,7 @@ func New(cfg VMConfig, setup func(vm *VM) error) (*VM, error) {
 		refs:        map[*jsRef]struct{}{},
 		Log:         func(args ...any) { fmt.Println(args...) },
 	}
-	vm.self = cgo.NewHandle(vm)
+	vm.self = registerVM(vm)
 	ready := make(chan error, 1)
 	go vm.loop(setup, ready)
 	if err := <-ready; err != nil {
@@ -142,9 +134,8 @@ func New(cfg VMConfig, setup func(vm *VM) error) (*VM, error) {
 }
 
 func (vm *VM) loop(setup func(*VM) error, ready chan error) {
-	runtime.LockOSThread() // never unlocked: the thread exits with the goroutine
 	defer close(vm.done)
-	vm.a = C.avm_new(C.uintptr_t(vm.self), C.size_t(vm.cfg.MemoryLimit), C.size_t(vm.cfg.StackSize))
+	vm.a = C.avm_new(vm.self, uint64(vm.cfg.MemoryLimit), uint64(vm.cfg.StackSize))
 	vm.ctx = vm.a.ctx
 	err := vm.installPrelude()
 	if err == nil && setup != nil {
@@ -175,10 +166,10 @@ func (vm *VM) teardown() {
 		vm.free_(r.v)
 	}
 	vm.refs = nil
-	C.JS_RunGC(vm.a.rt)
+	C.JS_RunGC(vm.a)
 	C.avm_free(vm.a)
 	vm.a = nil
-	vm.self.Delete()
+	unregisterVM(vm.self)
 }
 
 func (vm *VM) Close() {
@@ -195,9 +186,9 @@ func (vm *VM) guard(f func() error) (err error) {
 	prev := vm.a.deadline_ns
 	prevWall := vm.a.wall_ns
 	now := C.avm_now_ns()
-	vm.a.deadline_ns = now + C.int64_t(vm.cfg.TaskBudget)
+	vm.a.deadline_ns = now + int64(vm.cfg.TaskBudget)
 	if prevWall == 0 {
-		vm.a.wall_ns = now + C.int64_t(vm.cfg.TaskWall)
+		vm.a.wall_ns = now + int64(vm.cfg.TaskWall)
 	}
 	defer func() {
 		vm.a.deadline_ns = prev
@@ -367,16 +358,24 @@ func (vm *VM) newHandle(e entry) (uint32, error) {
 func (vm *VM) charge(n int64) {
 	vm.goBytes += n
 	vm.statGoBytes.Store(vm.goBytes)
+	C.JS_SetMemoryLimit(vm.a, uint64(vm.jsLimit()))
+}
+
+// jsLimit is the QuickJS heap cap: the memory limit less what Go objects held by JS are charged.
+func (vm *VM) jsLimit() int64 {
 	limit := vm.cfg.MemoryLimit - vm.goBytes
 	if limit < 1<<20 {
 		limit = 1 << 20
 	}
-	C.JS_SetMemoryLimit(vm.a.rt, C.size_t(limit))
+	return limit
 }
 
-//export avmGoFinalize
-func avmGoFinalize(id C.uintptr_t, h C.uint32_t) {
-	vm := cgo.Handle(id).Value().(*VM)
+// avmGoFinalize releases handle h when QuickJS frees its object.
+func avmGoFinalize(id uintptr, h uint32) {
+	vm := lookupVM(id)
+	if vm == nil {
+		return
+	}
 	e := vm.handles[h]
 	vm.handles[h] = entry{}
 	vm.free = append(vm.free, uint32(h))
@@ -386,34 +385,17 @@ func avmGoFinalize(id C.uintptr_t, h C.uint32_t) {
 	}
 }
 
-func vmOf(ctx *C.JSContext) *VM {
-	a := (*C.AVM)(C.JS_GetContextOpaque(ctx))
-	return cgo.Handle(a.id).Value().(*VM)
-}
+func vmOf(ctx *JSContext) *VM { return lookupVM(ctx.a.id) }
 
 // ---- small helpers ----
 
-func (vm *VM) free_(v C.JSValue) { C.JS_FreeValue(vm.ctx, v) }
+func (vm *VM) free_(v JSValue) { C.JS_FreeValue(vm.ctx, v) }
 
-func (vm *VM) str(s string) C.JSValue {
-	if len(s) == 0 {
-		return C.JS_NewStringLen(vm.ctx, nil, 0)
-	}
-	return C.JS_NewStringLen(vm.ctx, (*C.char)(unsafe.Pointer(unsafe.StringData(s))), C.size_t(len(s)))
-}
+func (vm *VM) str(s string) JSValue { return C.JS_NewStringLen(vm.ctx, s) }
 
-func (vm *VM) goString(v C.JSValue) string {
-	var n C.size_t
-	p := C.JS_ToCStringLen2(vm.ctx, &n, v, false)
-	if p == nil {
-		return ""
-	}
-	s := C.GoStringN(p, C.int(n))
-	C.JS_FreeCString(vm.ctx, p)
-	return s
-}
+func (vm *VM) goString(v JSValue) string { return C.goString(vm.ctx, v) }
 
-func (vm *VM) throw(err error) C.JSValue {
+func (vm *VM) throw(err error) JSValue {
 	// A Go error stays reachable from JS as e.value, and comes back to Go unchanged if rethrown.
 	msg := err.Error()
 	ex := C.JS_NewError(vm.ctx)
@@ -423,9 +405,9 @@ func (vm *VM) throw(err error) C.JSValue {
 	if gv, e2 := vm.toJS(reflect.ValueOf(err)); e2 == nil {
 		cv := C.CString("value")
 		C.JS_SetPropertyStr(vm.ctx, ex, cv, gv)
-		C.free(unsafe.Pointer(cv))
+		C.free(cv)
 	}
-	C.free(unsafe.Pointer(cs))
+	C.free(cs)
 	return C.JS_Throw(vm.ctx, ex)
 }
 
@@ -433,6 +415,9 @@ func (vm *VM) throw(err error) C.JSValue {
 func (vm *VM) exception() error {
 	ex := C.JS_GetException(vm.ctx)
 	defer vm.free_(ex)
+	// Reading an out-of-memory error (its message, stack) allocates: give it 1 MiB above the cap while we do.
+	C.JS_SetMemoryLimit(vm.a, uint64(vm.jsLimit()+1<<20))
+	defer C.JS_SetMemoryLimit(vm.a, uint64(vm.jsLimit()))
 	if C.avm_tag(ex) == C.JS_TAG_OBJECT {
 		if h := C.avm_handle_of(vm.a, ex); h != 0 {
 			if err, ok := vm.handles[h].v.Interface().(error); ok {
@@ -441,7 +426,7 @@ func (vm *VM) exception() error {
 		}
 		cv := C.CString("value")
 		val := C.JS_GetPropertyStr(vm.ctx, ex, cv)
-		C.free(unsafe.Pointer(cv))
+		C.free(cv)
 		if h := C.avm_handle_of(vm.a, val); h != 0 {
 			if err, ok := vm.handles[h].v.Interface().(error); ok {
 				vm.free_(val)
@@ -451,15 +436,21 @@ func (vm *VM) exception() error {
 		vm.free_(val)
 		cs := C.CString("stack")
 		stack := C.JS_GetPropertyStr(vm.ctx, ex, cs)
-		C.free(unsafe.Pointer(cs))
+		C.free(cs)
 		defer vm.free_(stack)
 		msg := vm.goString(ex)
 		cm := C.CString("message")
 		mv := C.JS_GetPropertyStr(vm.ctx, ex, cm)
-		C.free(unsafe.Pointer(cm))
+		C.free(cm)
 		short := ""
 		if C.avm_tag(mv) == C.JS_TAG_STRING {
 			short = vm.goString(mv)
+		} else if C.avm_is_exception(mv) != 0 && !C.JS_HasException(vm.ctx) {
+			// QuickJS stores JS_EXCEPTION as the message when it couldn't allocate the message string (out of memory)
+			short = "out of memory"
+			if msg == "" {
+				msg = "InternalError: out of memory"
+			}
 		}
 		vm.free_(mv)
 		var thrown any
@@ -534,9 +525,9 @@ func (vm *VM) Eval(code, file string) error {
 func (vm *VM) evalHere(code, file string) error {
 	cc := C.CString(code)
 	cf := C.CString(file)
-	defer C.free(unsafe.Pointer(cc))
-	defer C.free(unsafe.Pointer(cf))
-	r := C.avm_eval(vm.ctx, cc, C.size_t(len(code)), cf)
+	defer C.free(cc)
+	defer C.free(cf)
+	r := C.avm_eval(vm.ctx, cc, uint64(len(code)), cf)
 	if C.avm_is_exception(r) != 0 {
 		return vm.exception()
 	}
@@ -545,11 +536,11 @@ func (vm *VM) evalHere(code, file string) error {
 	return nil
 }
 
-func (vm *VM) setGlobal(name string, v C.JSValue) {
+func (vm *VM) setGlobal(name string, v JSValue) {
 	g := C.JS_GetGlobalObject(vm.ctx)
 	cs := C.CString(name)
 	C.JS_SetPropertyStr(vm.ctx, g, cs, v)
-	C.free(unsafe.Pointer(cs))
+	C.free(cs)
 	vm.free_(g)
 }
 
@@ -557,7 +548,7 @@ func (vm *VM) setGlobal(name string, v C.JSValue) {
 func (vm *VM) Set(name string, v any) error {
 	var err error
 	derr := vm.Do(func() {
-		var jv C.JSValue
+		var jv JSValue
 		jv, err = vm.toJS(reflect.ValueOf(v))
 		if err == nil {
 			vm.setGlobal(name, jv)
@@ -572,7 +563,7 @@ func (vm *VM) Set(name string, v any) error {
 // SetNative exposes a raw native function as a global.
 func (vm *VM) setNative(name string, fn nativeFn) {
 	h, _ := vm.newHandle(entry{kind: kindNative, native: fn})
-	vm.setGlobal(name, C.avm_new_func(vm.a, C.uint32_t(h), 0))
+	vm.setGlobal(name, C.avm_new_func(vm.a, uint32(h), 0))
 }
 
 // Stats is a snapshot readable from any goroutine.
@@ -608,9 +599,9 @@ func (vm *VM) RunString(code string) (Result, error) {
 	derr := vm.Do(func() {
 		cc := C.CString(code)
 		cf := C.CString("<eval>")
-		defer C.free(unsafe.Pointer(cc))
-		defer C.free(unsafe.Pointer(cf))
-		r := C.avm_eval(vm.ctx, cc, C.size_t(len(code)), cf)
+		defer C.free(cc)
+		defer C.free(cf)
+		r := C.avm_eval(vm.ctx, cc, uint64(len(code)), cf)
 		if C.avm_is_exception(r) != 0 {
 			err = vm.exception()
 			return

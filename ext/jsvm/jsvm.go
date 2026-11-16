@@ -1,10 +1,5 @@
 package jsvm
 
-/*
-#include "bridge.h"
-*/
-import "C"
-
 import (
 	"bytes"
 	_ "embed"

@@ -1,10 +1,5 @@
 package jsvm
 
-/*
-#include "bridge.h"
-*/
-import "C"
-
 import (
 	"encoding/json"
 	"fmt"
@@ -15,7 +10,6 @@ import (
 	"sync"
 	"time"
 	"unicode"
-	"unsafe"
 
 	"github.com/pockethost/pocketone/ext/extkit/js"
 )
@@ -109,12 +103,12 @@ var nativeBoxType = reflect.TypeOf(nativeBox{})
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 
 // toJS converts a Go value: primitives are copied, everything else becomes a live handle.
-func (vm *VM) toJS(v reflect.Value) (C.JSValue, error) { return vm.toJSWith(v, false) }
+func (vm *VM) toJS(v reflect.Value) (JSValue, error) { return vm.toJSWith(v, false) }
 
 // toJSDeep is for fresh results of Go calls: the handle is charged for everything reachable from the value.
-func (vm *VM) toJSDeep(v reflect.Value) (C.JSValue, error) { return vm.toJSWith(v, true) }
+func (vm *VM) toJSDeep(v reflect.Value) (JSValue, error) { return vm.toJSWith(v, true) }
 
-func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
+func (vm *VM) toJSWith(v reflect.Value, deep bool) (JSValue, error) {
 	for v.IsValid() && v.Kind() == reflect.Interface {
 		if v.IsNil() {
 			return C.avm_null(), nil
@@ -133,7 +127,7 @@ func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
 		if err != nil {
 			return C.avm_undefined(), err
 		}
-		return C.avm_new_func(vm.a, C.uint32_t(h), 0), nil
+		return C.avm_new_func(vm.a, uint32(h), 0), nil
 	}
 	switch v.Kind() {
 	case reflect.Bool:
@@ -142,11 +136,11 @@ func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
 		}
 		return C.avm_bool(0), nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return C.avm_int(vm.ctx, C.int64_t(v.Int())), nil
+		return C.avm_int(vm.ctx, int64(v.Int())), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return C.avm_float(C.double(v.Uint())), nil
+		return C.avm_float(float64(v.Uint())), nil
 	case reflect.Float32, reflect.Float64:
-		return C.avm_float(C.double(v.Float())), nil
+		return C.avm_float(float64(v.Float())), nil
 	case reflect.String:
 		return vm.str(v.String()), nil
 	case reflect.Pointer, reflect.Map, reflect.Slice, reflect.Func:
@@ -168,7 +162,7 @@ func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
 		if err != nil {
 			return C.avm_undefined(), err
 		}
-		return C.avm_new_func(vm.a, C.uint32_t(h), 0), nil
+		return C.avm_new_func(vm.a, uint32(h), 0), nil
 	}
 	bytes := estimate(v)
 	if deep {
@@ -180,7 +174,7 @@ func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
 	if err != nil {
 		return C.avm_undefined(), err
 	}
-	o := C.avm_new_object(vm.a, C.uint32_t(h))
+	o := C.avm_new_object(vm.a, uint32(h))
 	if d := deref(v); (d.Kind() == reflect.Slice || d.Kind() == reflect.Array) && C.avm_tag(vm.sliceProto) == C.JS_TAG_OBJECT {
 		C.avm_set_proto(vm.ctx, o, vm.sliceProto)
 	}
@@ -228,7 +222,7 @@ func estimate(v reflect.Value) int64 {
 
 // ---- JS -> Go ----
 
-func (vm *VM) fromJS(v C.JSValue, t reflect.Type) (reflect.Value, error) {
+func (vm *VM) fromJS(v JSValue, t reflect.Type) (reflect.Value, error) {
 	if t == nil {
 		t = anyType
 	}
@@ -276,11 +270,11 @@ func (vm *VM) fromJS(v C.JSValue, t reflect.Type) (reflect.Value, error) {
 		b := C.JS_ToBool(vm.ctx, v) != 0
 		return convertPrim(reflect.ValueOf(b), t)
 	case C.JS_TAG_INT:
-		var i C.int64_t
+		var i int64
 		C.JS_ToInt64(vm.ctx, &i, v)
 		return convertPrim(reflect.ValueOf(int64(i)), t)
 	case C.JS_TAG_FLOAT64:
-		var f C.double
+		var f float64
 		C.JS_ToFloat64(vm.ctx, &f, v)
 		if t.Kind() == reflect.Interface && float64(f) == float64(int64(f)) && !math.Signbit(float64(f)) {
 			return convertPrim(reflect.ValueOf(int64(f)), t)
@@ -296,7 +290,7 @@ func (vm *VM) fromJS(v C.JSValue, t reflect.Type) (reflect.Value, error) {
 		if t.Kind() == reflect.Func && C.avm_is_function(vm.ctx, v) != 0 {
 			return vm.makeFunc(v, t), nil
 		}
-		if C.avm_is_array(v) != 0 {
+		if C.avm_is_array(vm.ctx, v) != 0 {
 			return vm.arrayToGo(v, t)
 		}
 		if t.Kind() == reflect.Interface || t.Kind() == reflect.Map {
@@ -335,7 +329,7 @@ func convertPrim(v reflect.Value, t reflect.Type) (reflect.Value, error) {
 	return reflect.Value{}, fmt.Errorf("cannot use %s as %s", v.Type(), t)
 }
 
-func (vm *VM) arrayToGo(v C.JSValue, t reflect.Type) (reflect.Value, error) {
+func (vm *VM) arrayToGo(v JSValue, t reflect.Type) (reflect.Value, error) {
 	n := int(C.avm_length(vm.ctx, v))
 	et := anyType
 	if t.Kind() == reflect.Slice {
@@ -343,7 +337,7 @@ func (vm *VM) arrayToGo(v C.JSValue, t reflect.Type) (reflect.Value, error) {
 	}
 	out := reflect.MakeSlice(reflect.SliceOf(et), n, n)
 	for i := 0; i < n; i++ {
-		ev := C.avm_array_get(vm.ctx, v, C.uint32_t(i))
+		ev := C.avm_array_get(vm.ctx, v, uint32(i))
 		gv, err := vm.fromJS(ev, et)
 		vm.free_(ev)
 		if err != nil {
@@ -359,7 +353,7 @@ func (vm *VM) arrayToGo(v C.JSValue, t reflect.Type) (reflect.Value, error) {
 	return out, nil
 }
 
-func (vm *VM) objectToGo(v C.JSValue, t reflect.Type) (reflect.Value, error) {
+func (vm *VM) objectToGo(v JSValue, t reflect.Type) (reflect.Value, error) {
 	mt := reflect.TypeOf(map[string]any{})
 	if t.Kind() == reflect.Map {
 		mt = t
@@ -372,11 +366,11 @@ func (vm *VM) objectToGo(v C.JSValue, t reflect.Type) (reflect.Value, error) {
 	n := int(C.avm_length(vm.ctx, keys))
 	out := reflect.MakeMapWithSize(mt, n)
 	for i := 0; i < n; i++ {
-		kv := C.avm_array_get(vm.ctx, keys, C.uint32_t(i))
+		kv := C.avm_array_get(vm.ctx, keys, uint32(i))
 		k := vm.goString(kv)
 		ck := C.CString(k)
 		ev := C.avm_get_str(vm.ctx, v, ck)
-		C.free(unsafe.Pointer(ck))
+		C.free(ck)
 		vm.free_(kv)
 		gv, err := vm.fromJS(ev, mt.Elem())
 		vm.free_(ev)
@@ -422,8 +416,8 @@ func (vm *VM) exportStruct(src reflect.Value, st reflect.Type) reflect.Value {
 }
 
 // isPlainObject: a JS object that isn't a Go value, an array or a function.
-func (vm *VM) isPlainObject(v C.JSValue) bool {
-	return C.avm_tag(v) == C.JS_TAG_OBJECT && C.avm_handle_of(vm.a, v) == 0 && C.avm_is_array(v) == 0 &&
+func (vm *VM) isPlainObject(v JSValue) bool {
+	return C.avm_tag(v) == C.JS_TAG_OBJECT && C.avm_handle_of(vm.a, v) == 0 && C.avm_is_array(vm.ctx, v) == 0 &&
 		C.avm_is_function(vm.ctx, v) == 0
 }
 
@@ -489,8 +483,8 @@ func (vm *VM) lookup(v reflect.Value, name string) (reflect.Value, bool) {
 	return reflect.Value{}, false
 }
 
-//export avmGoGet
-func avmGoGet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, out *C.JSValue) (rc C.int) {
+// avmGoGet reads property key of the Go object behind handle h into out: 1 found, 0 not found, -1 thrown.
+func avmGoGet(ctx *JSContext, h uint32, key string, out *JSValue) (rc int32) {
 	vm := vmOf(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -498,7 +492,6 @@ func avmGoGet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, out *C.J
 			rc = -1
 		}
 	}()
-	key := C.GoStringN(name, C.int(n))
 	recv := vm.handles[h].v
 	v, ok := vm.lookup(recv, key)
 	if !ok {
@@ -510,7 +503,7 @@ func avmGoGet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, out *C.J
 			vm.throw(err)
 			return -1
 		}
-		*out = C.avm_new_func(vm.a, C.uint32_t(hh), 0)
+		*out = C.avm_new_func(vm.a, uint32(hh), 0)
 		return 1
 	}
 	jv, err := vm.toJS(v)
@@ -522,17 +515,15 @@ func avmGoGet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, out *C.J
 	return 1
 }
 
-//export avmGoHas
-func avmGoHas(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t) C.int {
+func avmGoHas(ctx *JSContext, h uint32, key string) int32 {
 	vm := vmOf(ctx)
-	if _, ok := vm.lookup(vm.handles[h].v, C.GoStringN(name, C.int(n))); ok {
+	if _, ok := vm.lookup(vm.handles[h].v, key); ok {
 		return 1
 	}
 	return 0
 }
 
-//export avmGoSet
-func avmGoSet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, val C.JSValue) (rc C.int) {
+func avmGoSet(ctx *JSContext, h uint32, key string, val JSValue) (rc int32) {
 	vm := vmOf(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -540,7 +531,6 @@ func avmGoSet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, val C.JS
 			rc = -1
 		}
 	}()
-	key := C.GoStringN(name, C.int(n))
 	d := deref(vm.handles[h].v)
 	switch d.Kind() {
 	case reflect.Struct:
@@ -618,10 +608,9 @@ func avmGoSet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, val C.JS
 	return -1
 }
 
-//export avmGoKeys
-func avmGoKeys(ctx *C.JSContext, h C.uint32_t) C.JSValue {
+// avmGoKeys is the enumerable keys of the Go object behind handle h.
+func avmGoKeys(ctx *JSContext, h uint32) []string {
 	vm := vmOf(ctx)
-	arr := C.avm_new_array(ctx)
 	d := deref(vm.handles[h].v)
 	var keys []string
 	switch d.Kind() {
@@ -636,18 +625,14 @@ func avmGoKeys(ctx *C.JSContext, h C.uint32_t) C.JSValue {
 			keys = append(keys, strconv.Itoa(i))
 		}
 	}
-	for i, k := range keys {
-		C.avm_array_push(ctx, arr, C.uint32_t(i), vm.str(k))
-	}
-	return arr
+	return keys
 }
 
 // ---- calls from JS into Go ----
 
-//export avmGoCall
-func avmGoCall(ctx *C.JSContext, h C.uint32_t, this C.JSValue, argc C.int, argv *C.JSValue, ctor C.int) (ret C.JSValue) {
+// avmGoCall calls the Go function behind handle h.
+func avmGoCall(ctx *JSContext, h uint32, this JSValue, args []JSValue, ctor bool) (ret JSValue) {
 	vm := vmOf(ctx)
-	args := unsafe.Slice(argv, int(argc))
 	e := vm.handles[h]
 	// Go time doesn't count against the JS budget.
 	start := C.avm_now_ns()
@@ -660,7 +645,7 @@ func avmGoCall(ctx *C.JSContext, h C.uint32_t, this C.JSValue, argc C.int, argv 
 		}
 	}()
 	if e.kind == kindNative {
-		return e.native(vm, this, args, ctor != 0)
+		return e.native(vm, this, args, ctor)
 	}
 	in, err := vm.goArgs(e.v.Type(), args)
 	if err != nil {
@@ -679,7 +664,7 @@ func avmGoCall(ctx *C.JSContext, h C.uint32_t, this C.JSValue, argc C.int, argv 
 	return vm.goResults(out)
 }
 
-func (vm *VM) goArgs(ft reflect.Type, args []C.JSValue) ([]reflect.Value, error) {
+func (vm *VM) goArgs(ft reflect.Type, args []JSValue) ([]reflect.Value, error) {
 	nIn := ft.NumIn()
 	var in []reflect.Value
 	for i := 0; i < nIn; i++ {
@@ -708,7 +693,7 @@ func (vm *VM) goArgs(ft reflect.Type, args []C.JSValue) ([]reflect.Value, error)
 }
 
 // goResults maps Go results to JS the way goja does: a non-nil trailing error throws; one value returns it.
-func (vm *VM) goResults(out []reflect.Value) C.JSValue {
+func (vm *VM) goResults(out []reflect.Value) JSValue {
 	if n := len(out); n > 0 && out[n-1].Type() == errorType {
 		if !out[n-1].IsNil() {
 			return vm.throw(out[n-1].Interface().(error))
@@ -732,7 +717,7 @@ func (vm *VM) goResults(out []reflect.Value) C.JSValue {
 			vm.free_(arr)
 			return vm.throw(err)
 		}
-		C.avm_array_push(vm.ctx, arr, C.uint32_t(i), jv)
+		C.avm_array_push(vm.ctx, arr, uint32(i), jv)
 	}
 	return arr
 }
@@ -742,17 +727,17 @@ func (vm *VM) goResults(out []reflect.Value) C.JSValue {
 // jsRef keeps a JS value alive for Go. Freed on the loop.
 type jsRef struct {
 	vm *VM
-	v  C.JSValue
+	v  JSValue
 }
 
-func (vm *VM) ref(v C.JSValue) *jsRef {
+func (vm *VM) ref(v JSValue) *jsRef {
 	r := &jsRef{vm: vm, v: C.avm_dup(vm.ctx, v)}
 	vm.refs[r] = struct{}{}
 	return r
 }
 
 // makeFunc wraps a JS function as a Go func of type t.
-func (vm *VM) makeFunc(v C.JSValue, t reflect.Type) reflect.Value {
+func (vm *VM) makeFunc(v JSValue, t reflect.Type) reflect.Value {
 	r := vm.ref(v)
 	return reflect.MakeFunc(t, func(args []reflect.Value) []reflect.Value {
 		res, err := vm.CallRef(r, args, t)
@@ -829,8 +814,8 @@ func (vm *VM) CallRef(r *jsRef, args []reflect.Value, ft reflect.Type) (reflect.
 }
 
 // callHere runs on the loop. If the function returns a pending promise, it returns a channel that gets the result.
-func (vm *VM) callHere(fn C.JSValue, args []reflect.Value, resT reflect.Type) (settled, chan settled) {
-	jsArgs := make([]C.JSValue, len(args))
+func (vm *VM) callHere(fn JSValue, args []reflect.Value, resT reflect.Type) (settled, chan settled) {
+	jsArgs := make([]JSValue, len(args))
 	for i, a := range args {
 		jv, err := vm.toJS(a)
 		if err != nil {
@@ -841,18 +826,18 @@ func (vm *VM) callHere(fn C.JSValue, args []reflect.Value, resT reflect.Type) (s
 		}
 		jsArgs[i] = jv
 	}
-	var argp *C.JSValue
+	var argp *JSValue
 	if len(jsArgs) > 0 {
 		argp = &jsArgs[0]
 	}
-	ret := C.avm_call(vm.ctx, fn, C.avm_undefined(), C.int(len(jsArgs)), argp)
+	ret := C.avm_call(vm.ctx, fn, C.avm_undefined(), int32(len(jsArgs)), argp)
 	for _, x := range jsArgs {
 		vm.free_(x)
 	}
 	if C.avm_is_exception(ret) != 0 {
 		return settled{err: vm.exception()}, nil
 	}
-	if C.avm_is_promise(ret) == 0 {
+	if C.avm_is_promise(vm.ctx, ret) == 0 {
 		return vm.settleValue(ret, resT), nil
 	}
 	vm.runJobs()
@@ -876,9 +861,9 @@ func (vm *VM) callHere(fn C.JSValue, args []reflect.Value, resT reflect.Type) (s
 	cs := C.CString("__settle")
 	g := C.JS_GetGlobalObject(vm.ctx)
 	settle := C.JS_GetPropertyStr(vm.ctx, g, cs)
-	C.free(unsafe.Pointer(cs))
+	C.free(cs)
 	vm.free_(g)
-	sargs := []C.JSValue{ret, C.avm_float(C.double(id))}
+	sargs := []JSValue{ret, C.avm_float(float64(id))}
 	r2 := C.avm_call(vm.ctx, settle, C.avm_undefined(), 2, &sargs[0])
 	vm.free_(r2)
 	vm.free_(settle)
@@ -887,7 +872,7 @@ func (vm *VM) callHere(fn C.JSValue, args []reflect.Value, resT reflect.Type) (s
 }
 
 // settleValue takes ownership of v.
-func (vm *VM) settleValue(v C.JSValue, resT reflect.Type) settled {
+func (vm *VM) settleValue(v JSValue, resT reflect.Type) settled {
 	defer vm.free_(v)
 	if resT == nil {
 		return settled{ok: true}
@@ -914,7 +899,7 @@ func (vm *VM) globalRef(name string) *jsRef {
 	g := C.JS_GetGlobalObject(vm.ctx)
 	cs := C.CString(name)
 	v := C.JS_GetPropertyStr(vm.ctx, g, cs)
-	C.free(unsafe.Pointer(cs))
+	C.free(cs)
 	vm.free_(g)
 	r := &jsRef{vm: vm, v: v}
 	vm.refs[r] = struct{}{}

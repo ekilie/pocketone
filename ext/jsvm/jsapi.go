@@ -1,15 +1,9 @@
 package jsvm
 
-/*
-#include "bridge.h"
-*/
-import "C"
-
 import (
 	"reflect"
 	"regexp"
 	"runtime"
-	"unsafe"
 
 	"github.com/pockethost/pocketone/ext/extkit/js"
 )
@@ -36,15 +30,15 @@ func (r jsRuntime) Get(name string) js.Value {
 	g := C.JS_GetGlobalObject(r.vm.ctx)
 	cs := C.CString(name)
 	v := C.JS_GetPropertyStr(r.vm.ctx, g, cs)
-	C.free(unsafe.Pointer(cs))
+	C.free(cs)
 	r.vm.free_(g)
 	if C.avm_tag(v) == C.JS_TAG_UNDEFINED && identRe.MatchString(name) {
 		code := "(() => { try { return " + name + " } catch (e) { return undefined } })()"
 		cc := C.CString(code)
 		cf := C.CString("<get>")
-		lv := C.avm_eval(r.vm.ctx, cc, C.size_t(len(code)), cf)
-		C.free(unsafe.Pointer(cc))
-		C.free(unsafe.Pointer(cf))
+		lv := C.avm_eval(r.vm.ctx, cc, uint64(len(code)), cf)
+		C.free(cc)
+		C.free(cf)
 		if C.avm_is_exception(lv) != 0 {
 			r.vm.free_(C.JS_GetException(r.vm.ctx))
 		} else {
@@ -59,9 +53,9 @@ var identRe = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 func (r jsRuntime) Eval(code, name string) (js.Value, error) {
 	cc := C.CString(code)
 	cf := C.CString(name)
-	defer C.free(unsafe.Pointer(cc))
-	defer C.free(unsafe.Pointer(cf))
-	v := C.avm_eval(r.vm.ctx, cc, C.size_t(len(code)), cf)
+	defer C.free(cc)
+	defer C.free(cf)
+	v := C.avm_eval(r.vm.ctx, cc, uint64(len(code)), cf)
 	if C.avm_is_exception(v) != 0 {
 		return nil, r.vm.exception()
 	}
@@ -74,7 +68,7 @@ func (r jsRuntime) NewObject() js.Object {
 }
 
 // jsFromAny converts a Go value for extkit/js: a js.NativeFunc becomes a JS function, a *jsValue its own value.
-func (vm *VM) jsFromAny(v any) (C.JSValue, error) {
+func (vm *VM) jsFromAny(v any) (JSValue, error) {
 	switch x := v.(type) {
 	case js.NativeFunc:
 		return vm.nativeValue(func(c *call) (any, error) {
@@ -93,11 +87,11 @@ func (vm *VM) jsFromAny(v any) (C.JSValue, error) {
 // jsValue is a JS value held for Go. It's freed (on the loop) when Go drops it.
 type jsValue struct {
 	vm *VM
-	v  C.JSValue
+	v  JSValue
 }
 
 // value takes ownership of v.
-func (vm *VM) value(v C.JSValue) js.Value {
+func (vm *VM) value(v JSValue) js.Value {
 	jv := &jsValue{vm: vm, v: v}
 	runtime.SetFinalizer(jv, func(jv *jsValue) {
 		vm.post(func() {
@@ -154,7 +148,7 @@ func (v *jsValue) Func() js.Func {
 
 func (v *jsValue) Get(name string) js.Value {
 	cs := C.CString(name)
-	defer C.free(unsafe.Pointer(cs))
+	defer C.free(cs)
 	return v.vm.value(C.avm_get_str(v.vm.ctx, v.v, cs))
 }
 
@@ -164,7 +158,7 @@ func (v *jsValue) Set(name string, x any) error {
 		return err
 	}
 	cs := C.CString(name)
-	defer C.free(unsafe.Pointer(cs))
+	defer C.free(cs)
 	if C.JS_SetPropertyStr(v.vm.ctx, v.v, cs, jv) < 0 {
 		return v.vm.exception()
 	}
@@ -181,7 +175,7 @@ func (v *jsValue) Keys() []string {
 	n := int(C.avm_length(v.vm.ctx, keys))
 	out := make([]string, n)
 	for i := range out {
-		kv := C.avm_array_get(v.vm.ctx, keys, C.uint32_t(i))
+		kv := C.avm_array_get(v.vm.ctx, keys, uint32(i))
 		out[i] = v.vm.goString(kv)
 		v.vm.free_(kv)
 	}

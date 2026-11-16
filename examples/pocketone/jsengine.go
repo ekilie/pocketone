@@ -17,19 +17,12 @@ import (
 //     pages, JS contracts).
 //   - goja: PocketBase's own plugins/jsvm, for pure PocketBase compatibility. The PocketOne JS features are off and
 //     the startup lines say so.
-//
-// A build without cgo has no QuickJS: it defaults to goja.
 const (
 	engineQuickJS = "quickjs"
 	engineGoja    = "goja"
 )
 
-func defaultJSEngine() string {
-	if jsvm.Available {
-		return engineQuickJS
-	}
-	return engineGoja
-}
+func defaultJSEngine() string { return engineQuickJS }
 
 // gojaOff is what an app gives up in goja mode.
 const gojaOff = "pages, $mcp, $tokens, $bulkmail, JS contracts, real globals and async handlers"
@@ -37,9 +30,6 @@ const gojaOff = "pages, $mcp, $tokens, $bulkmail, JS contracts, real globals and
 func registerSet(app core.App, set *standard.Set, engine string, cfg jsvm.Config) error {
 	switch engine {
 	case engineQuickJS:
-		if !jsvm.Available {
-			return fmt.Errorf("--jsvm quickjs: %w", jsvm.ErrNoCgo)
-		}
 		return set.Register(app, cfg)
 	case engineGoja:
 		err := set.RegisterWith(app, func(app core.App) error {
@@ -55,11 +45,7 @@ func registerSet(app core.App, set *standard.Set, engine string, cfg jsvm.Config
 		}
 		app.OnServe().Bind(&hook.Handler[*core.ServeEvent]{
 			Func: func(e *core.ServeEvent) error {
-				msg := "jsvm: goja (PocketBase's own engine, for compatibility); off: " + gojaOff
-				if !jsvm.Available {
-					msg += " (this build has no cgo, so no quickjs)"
-				}
-				slog.Warn(msg)
+				slog.Warn("jsvm: goja (PocketBase's own engine, for compatibility); off: " + gojaOff)
 				return e.Next()
 			},
 		})

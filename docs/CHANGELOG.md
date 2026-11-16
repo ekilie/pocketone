@@ -30,14 +30,14 @@ repo root; each release here says which PocketBase version it's built on.
 
 - **jsvm:** PocketBase's `plugins/jsvm` is upstream's again: `Config.Extensions`, `jsvm.Run` and `jsvm.ScriptPath` are gone from it. Use `ext/jsvm` (its extension methods and `js.Run`) instead. `ext/jserrors` is removed; `ext/jsvm` reports real file positions.
 - **jsvm:** Go code that binds JS takes `js.Runtime` (`github.com/pockethost/pocketone/ext/extkit/js`) instead of `*goja.Runtime`: `extkit.JSBinder.BindJS(app, rt)`, `extkit.BindJS(app, rt, ...)`, `extkit.AppSet.BindJS`, Pocker's `InitJS(inst, app, rt)`, `mcp.BindJS(app, rt)`, `tokens.BindJS(app, rt)`, `bulkmail.BindJS(app, rt)`. `extkit.JSContracts(app)` no longer takes a runner. `standard.Set.Register` takes an `ext/jsvm` config.
-- **sandbox:** `MaxCallStackSize` and `MaxConcurrent` are gone (the engine caps the stack by size; set `jsvm.Config.VM.MaxConcurrent`). `Sandbox.Limits()` gives the execution and sleep limits for `jsvm.Config.VM`.
+- **sandbox:** `MaxCallStackSize` and `MaxConcurrent` are gone (the engine caps call depth with `jsvm.Config.VM.StackSize`; set `jsvm.Config.VM.MaxConcurrent`). `Sandbox.Limits()` gives the execution and sleep limits for `jsvm.Config.VM`.
 - **bundle:** `ext/jsembed` is now `ext/bundle` and runs on the `ext/jsvm` engine. Import `github.com/pockethost/pocketone/ext/bundle`, register `ext/jsvm` instead of `plugins/jsvm`, and pass `bundle.Hooks(...)` / `bundle.Migrations(...)` in `jsvm.Config.Extensions`. A `require()` that isn't found now says "Cannot find module".
 
 ### Added
 
-- **jsvm:** `jsvm: goja` under `app:` in `pocketone.yaml`, or `--jsvm goja`, runs a single app on PocketBase's own JS engine for pure PocketBase compatibility (pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts are off; the startup lines say so). The default is `quickjs`; a build without cgo uses goja.
+- **jsvm:** `jsvm: goja` under `app:` in `pocketone.yaml`, or `--jsvm goja`, runs a single app on PocketBase's own JS engine for pure PocketBase compatibility (pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts are off; the startup lines say so). The default is `quickjs`.
 - **bundle:** `bundle.Public(app, fsys, indexFallback)` serves public files embedded in the binary, like `pb_public`.
-- **jsvm:** new `ext/jsvm` extension, PocketOne's JS engine: one QuickJS VM per app with real globals, async handlers and `.async` Go calls, and hard per-app memory and time limits. It runs PocketBase's JS API unchanged.
+- **jsvm:** new `ext/jsvm` extension, PocketOne's JS engine: one QuickJS VM per app with real globals, async handlers and `.async` Go calls, and hard per-app memory and time limits. It runs PocketBase's JS API unchanged, and is pure Go (no cgo), so `CGO_ENABLED=0` builds and cross-compiles work as with stock PocketBase.
 
 ### Changed
 

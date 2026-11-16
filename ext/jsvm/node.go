@@ -1,10 +1,5 @@
 package jsvm
 
-/*
-#include "bridge.h"
-*/
-import "C"
-
 import (
 	"encoding/base64"
 	"encoding/hex"
@@ -16,7 +11,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"unsafe"
 )
 
 // What goja_nodejs gives plugins/jsvm, on this engine: CommonJS require() (relative paths, node_modules, .json,
@@ -132,9 +126,9 @@ func bindNode(vm *VM, root string, load func(string) ([]byte, error)) error {
 		file, src := c.str(0), c.str(1)
 		cs := C.CString(src)
 		cf := C.CString(file)
-		defer C.free(unsafe.Pointer(cs))
-		defer C.free(unsafe.Pointer(cf))
-		r := C.avm_eval(vm.ctx, cs, C.size_t(len(src)), cf)
+		defer C.free(cs)
+		defer C.free(cf)
+		r := C.avm_eval(vm.ctx, cs, uint64(len(src)), cf)
 		if C.avm_is_exception(r) != 0 {
 			return nil, vm.exception()
 		}
@@ -223,21 +217,21 @@ func bindNode(vm *VM, root string, load func(string) ([]byte, error)) error {
 }
 
 // jsPlain converts plain Go data (maps, slices, primitives) into plain JS values through JSON.
-func (vm *VM) jsPlain(v any) (C.JSValue, error) {
+func (vm *VM) jsPlain(v any) (JSValue, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return C.avm_undefined(), err
 	}
 	cs := C.CString(string(b))
-	defer C.free(unsafe.Pointer(cs))
-	r := C.avm_parse_json(vm.ctx, cs, C.size_t(len(b)))
+	defer C.free(cs)
+	r := C.avm_parse_json(vm.ctx, cs, uint64(len(b)))
 	if C.avm_is_exception(r) != 0 {
 		return C.avm_undefined(), vm.exception()
 	}
 	return r, nil
 }
 
-func (vm *VM) jsArray(items []any) (C.JSValue, error) { return vm.jsPlain(items) }
+func (vm *VM) jsArray(items []any) (JSValue, error) { return vm.jsPlain(items) }
 
 var _ = errors.New
 var _ fs.FS

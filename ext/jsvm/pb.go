@@ -1,15 +1,9 @@
 package jsvm
 
-/*
-#include "bridge.h"
-*/
-import "C"
-
 import (
 	"reflect"
 	"strings"
 	"time"
-	"unsafe"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
@@ -92,7 +86,7 @@ func (vm *VM) runHandler(h *jsRef, app core.App, args ...any) error {
 		}
 		s, wait := vm.callHere(h.v, in, anyType)
 		C.JS_SetPropertyStr(vm.ctx, g, cs, old)
-		C.free(unsafe.Pointer(cs))
+		C.free(cs)
 		vm.free_(g)
 		if wait != nil {
 			ch = wait

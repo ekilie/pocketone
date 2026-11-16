@@ -1,7 +1,6 @@
 package jsvm
 
 import (
-	"errors"
 	"reflect"
 	"time"
 
@@ -42,7 +41,8 @@ type Config struct {
 type VMConfig struct {
 	// MemoryLimit caps JS heap + estimated Go memory held through handles, in bytes.
 	MemoryLimit int64
-	// StackSize is the C stack JS may use, in bytes.
+	// StackSize caps how deep JS calls may nest, in QuickJS stack slots (about one per JS call frame; 0 = 5000).
+	// Deeper recursion throws "InternalError: stack overflow".
 	StackSize int
 	// TaskBudget is the JS time one task (a hook, a request, a promise continuation) may use. Time spent in Go
 	// calls and waiting for async results doesn't count.
@@ -74,9 +74,6 @@ func (c *VMConfig) defaults() {
 	if c.MemoryLimit == 0 {
 		c.MemoryLimit = 64 << 20
 	}
-	if c.StackSize == 0 {
-		c.StackSize = 256 << 10
-	}
 	if c.TaskBudget == 0 {
 		c.TaskBudget = 5 * time.Second
 	}
@@ -99,6 +96,3 @@ func (c *VMConfig) defaults() {
 		c.MaxPumpDepth = 16
 	}
 }
-
-// ErrNoCgo is what Register returns in a build without cgo: the engine is QuickJS, a C library.
-var ErrNoCgo = errors.New("ext/jsvm needs a build with cgo (CGO_ENABLED=1); without it, use PocketBase's plugins/jsvm")
