@@ -26,7 +26,7 @@ const records = ctx.app.findRecordsByFilter(
 
 ## Can I use my favorite npm package?
 
-Maybe. Page code can `require()` modules by name from `_private/` folders (nearest first), then from `pb_pages/node_modules`, then from the app's usual module paths. A `_private/` file with the same name as a package wins. Packages that are plain CommonJS JavaScript, with no Node or browser APIs, have the best chance of working.
+Maybe. Page code can `require()` modules by name from `_private/` folders (nearest first), then from `pb_pages/node_modules`, then `pb_hooks/node_modules` and the app folder's `node_modules`, then from the app's usual module paths. A `_private/` file with the same name as a package wins. Packages that are plain CommonJS JavaScript, with no Node or browser APIs, have the best chance of working.
 
 ```bash
 cd pb_pages

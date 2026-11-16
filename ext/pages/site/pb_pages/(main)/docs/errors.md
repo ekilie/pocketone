@@ -22,8 +22,12 @@ Throw `ctx.httpError()` to answer with a specific status:
 // pb_pages/products/[id]/+page.js
 module.exports = {
   load(ctx) {
-    const product = ctx.app.findFirstRecordByData('products', 'slug', ctx.params.id)
-    if (!product) throw ctx.httpError(404, 'No such product')
+    let product
+    try {
+      product = ctx.app.findFirstRecordByData('products', 'slug', ctx.params.id)
+    } catch (e) {
+      throw ctx.httpError(404, 'No such product') // findFirstRecordByData throws when nothing matches
+    }
     ctx.data.product = product
   },
 }

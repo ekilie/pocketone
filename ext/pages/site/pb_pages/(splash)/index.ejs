@@ -157,7 +157,7 @@ const user = $app.findRecordById('users', params.id)
           <div>
             <pre><code class="language-html">&lt;%- include('header.ejs') %&gt;
 
-&lt;div hx-get="/api/todos"
+&lt;div hx-get="/fragments/todos"
      hx-trigger="load"
      hx-target="#todo-list"&gt;
   Loading todos...
@@ -187,7 +187,7 @@ const user = $app.findRecordById('users', params.id)
        name="message"
        data-bind:message /&gt;
 
-&lt;button data-on:click="@get('/api/chat')"&gt;
+&lt;button data-on:click="@get('/fragments/chat')"&gt;
   Send
 &lt;/button&gt;
 
