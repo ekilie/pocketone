@@ -55,21 +55,21 @@ may differ), so a core change on `main` without its branch fails it. Run
 the script repinned its compare links. Conflicts stop the script with the worktree left to resolve; resolutions are
 remembered (rerere) for later runs.
 
-The `upstream` remote is this repo's own `upstream/develop` and `upstream/master` branches, a copy of PocketBase's
-branches, so day-to-day fetches never reach PocketBase's server. Set it up once per clone:
+The `upstream` remote is PocketHost's maintained mirror of PocketBase,
+[`github.com/pockethost/pocketbase`](https://github.com/pockethost/pocketbase): every PocketBase branch and tag,
+fast-forwarded once a day from `https://ganigeorgiev.com/git/pocketbase/pocketbase` by the mirror's own workflow, so
+day-to-day fetches never reach PocketBase's server. Never fetch PocketBase's server from your own machine. Set it up once
+per clone, without tags (PocketBase's `v0.x` tags must never land here, or Go would take them for PocketOne releases):
 
 ```
-git remote add upstream git@github.com:pockethost/pocketone.git
-git config remote.upstream.fetch '+refs/heads/upstream/*:refs/remotes/upstream/*'
+git remote add upstream https://github.com/pockethost/pocketbase.git
 git config remote.upstream.tagopt --no-tags
 ```
 
-`.github/workflows/upstream-mirror.yml` refreshes those branches from
-`https://ganigeorgiev.com/git/pocketbase/pocketbase` once a day (fast-forward only; run it now with
-`gh workflow run upstream-mirror`). Never fetch PocketBase's server from your own machine. If the workflow fails
-because upstream rewrote history, mirror by hand from a machine that can reach it: fetch into
-`refs/remotes/upstream/*`, then
-`git push --force origin refs/remotes/upstream/develop:refs/heads/upstream/develop refs/remotes/upstream/master:refs/heads/upstream/master`.
+A clone set up before 2026-11-16 (when `upstream` was this repo's own `upstream/*` branches) switches with
+`git remote set-url upstream https://github.com/pockethost/pocketbase.git` and
+`git config remote.upstream.fetch '+refs/heads/*:refs/remotes/upstream/*'`. To fetch one release without its tag:
+`git fetch upstream refs/tags/vX.Y.Z`.
 
 ## Syncing with upstream
 
