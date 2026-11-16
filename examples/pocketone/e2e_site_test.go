@@ -24,7 +24,7 @@ func TestE2ESingleSite(t *testing.T) {
 	t.Run("startup lines", func(t *testing.T) {
 		log := s.Log.String()
 		for _, want := range []string{
-			"standard: on: settings, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy",
+			"standard: on: settings, templates, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy",
 			"dev mail trap is active", s.TrapURL,
 			"restore/v1 ← pitr", "oauth/v1 ← tokens", "deploy/v1 ← deploy",
 		} {

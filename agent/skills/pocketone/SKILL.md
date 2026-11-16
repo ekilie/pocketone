@@ -101,7 +101,8 @@ The `pocketone` binary has PocketBase's commands (`serve`, `superuser`, `migrate
 | `restart [remote]` | Restart a remote so new migrations and packages apply. |
 | `pitr status`, `pitr restore --at <time> [--to file]` | Local point-in-time restore (in place runs on the next start). |
 | `token create\|list\|revoke\|scopes` | API tokens (`pbt_…`). |
-| `oauth clients`, `oauth eject` | OAuth server clients; write its pages into `pb_pages` to edit. |
+| `oauth clients` | OAuth server clients. |
+| `template list`, `template eject [set] [--force]` | Extensions' page templates (`oauth`: the sign-in screens): list them, or copy them to `pb_templates/<set>/` to edit; eject asks before overwriting your changes. |
 | `upgrade [-y] [--backup]` | Move to the latest release (prereleases included; asks before stable → prerelease). |
 | `docker seed\|update` | Release binaries for the Docker runtime (host mode only). |
 

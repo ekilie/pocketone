@@ -55,6 +55,7 @@ require (
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -149,3 +150,5 @@ replace github.com/pockethost/pocketone/ext/settings => ../settings
 replace github.com/pockethost/pocketone/ext/standard => ../standard
 
 replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+
+replace github.com/pockethost/pocketone/ext/templates => ../templates

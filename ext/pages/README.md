@@ -142,7 +142,6 @@ cd example && go run . serve --dir=./pb_data
 | Extension | How they fit |
 |---|---|
 | [Pocker](../pocker/README.md) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
-| [OAuth](../tokens/OAUTH.md) (in Tokens) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
 | [Deploy](../deploy/README.md) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
 ### Under pocker
@@ -172,10 +171,6 @@ To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pa
 
 ### Building on pages
 
-- **Render a template from Go.** `pages.For(app).RenderTemplate(e, "oauth/signin", status, data)` renders
-  `pb_pages/_private/oauth/signin.ejs` (or `.md`, `.jsx`, `.tsx`) as the whole response, with `data` as `ctx.data`
-  and no middleware, layouts or `+page.js`, for any method. It returns `handled=false` when the project has no such
-  template. The OAuth server uses it.
 - **Read the routes.** `pages.For(app)` returns the service: `Dir()` is the folder, `Table()` the current route
   table, `Errors()` the problems from the last build.
 - **JS plugins.** A factory in `+config.js` can add to `ctx`, run on each request and transform rendered HTML

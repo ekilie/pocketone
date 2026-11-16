@@ -67,17 +67,17 @@ which.
 ### Your own sign-in pages
 
 The built-in pages (sign-in, second step, one-time code, consent, device code, done, error) follow the system's light
-or dark mode and work on phones. To change them, eject them as [PocketPages](../pages/README.md) templates:
+or dark mode and work on phones. They're the `oauth` set of [Templates](../templates/README.md); to change them, eject
+it:
 
 ```bash
-pocketone oauth eject           # --force overwrites files you already have
+pocketone template eject oauth      # asks before overwriting files you changed; --force doesn't ask
 ```
 
-It writes `signin.ejs`, `mfa.ejs`, `otp.ejs`, `consent.ejs`, `device.ejs`, `done.ejs`, `error.ejs` and the shared
-`head.ejs`, `foot.ejs` and `hidden.ejs` (with the CSS) to `pb_pages/_private/oauth/`, and prints each file. From then
-on the server renders your templates; a missing one falls back to the built-in page, so delete them to go back.
-`_private` keeps them from being served as routes. See [Custom page templates](#custom-page-templates) for the data
-they get.
+It copies the built-in Go templates to `pb_templates/oauth/`: `signin.tpl`, `mfa.tpl`, `otp.tpl`, `consent.tpl`,
+`device.tpl`, `done.tpl`, `error.tpl`, and the shared `head.tpl` (with the CSS), `foot.tpl` and `hidden.tpl`. From then
+on the server renders your copy of each file, read on every request; delete a file to go back to the built-in one. To
+restyle every page, edit only `head.tpl`. See [Custom page templates](#custom-page-templates) for the data they get.
 
 ## Use
 
@@ -152,7 +152,7 @@ Redirect URIs must be `https`, `http` on a loopback address, or an app's custom 
 | [Remotes](../remotes/README.md) | remote/v1's whoami lists `oauth/v1` (and the `oauth` feature, its metadata); `pocketone login` then signs in in the browser (loopback redirect with PKCE) or with a device code, and renews through the refresh token. |
 | [MCP](../mcp/README.md) | MCP points clients here from its protected resource metadata, turns on self-registration, and makes tokens bound to `/mcp` never expire. Tool calls run as whoever signed in. |
 | [Deploy](../deploy/README.md) | `pocketone login` gives the deploy commands a token for the account that signed in. |
-| [Pages](../pages/README.md) | `pocketone oauth eject` writes the pages as PocketPages templates, rendered from then on. |
+| [Templates](../templates/README.md) | The pages are its `oauth` set: `pocketone template eject oauth` copies them to `pb_templates/oauth/` to edit. Without Templates, the built-in pages. |
 
 Under [Pocker](../pocker/README.md) every instance has it, through the standard set.
 
@@ -248,9 +248,10 @@ tokens.New(tokens.Config{OAuth: tokens.OAuthConfig{
 
 ## Custom page templates
 
-Ejected templates get `ctx.data`: `PageData` in camelCase (`data.appName`, `data.action`, `data.hidden`,
-`data.csrf`, `data.clientName`, `data.scopes`, `data.scopeChoices`, `data.superuser`, `data.providers`, `data.error`, …).
-- Every POST form must include `include('/oauth/hidden')` and a `step` button.
+The templates are Go `html/template` files, and their dot is `PageData` (`{{.AppName}}`, `{{.Action}}`, `{{.Hidden}}`,
+`{{.CSRF}}`, `{{.ClientName}}`, `{{.Scopes}}`, `{{.ScopeChoices}}`, `{{.Superuser}}`, `{{.Providers}}`, `{{.Error}}`, …;
+see `PageData` in [oauth_pages.go](oauth_pages.go)). Each page includes the others by name (`{{template "head" .}}`).
+- Every POST form must include `{{template "hidden" .}}` and a `step` button.
 - Steps: `password`, `request_otp`, `otp`, `oauth2:<provider>`, `use:<collection>` (switch forms; `use:` is the
   default user form), `allow`, `deny`, `switch`.
 - Sign-in forms post `collection`; the MFA and code pages also post `mfa_id` / `otp_id`.

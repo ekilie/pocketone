@@ -86,7 +86,7 @@ func TestPockerInstancesGetTheStandardSet(t *testing.T) {
 	// each instance's startup lines are in its own log
 	logA, _ := os.ReadFile(filepath.Join(root, "a", "logs", "exec.log"))
 	logB, _ := os.ReadFile(filepath.Join(root, "b", "logs", "exec.log"))
-	if !strings.Contains(string(logA), "standard: on: settings, tokens, remotes, mcp,") {
+	if !strings.Contains(string(logA), "standard: on: settings, templates, tokens, remotes, mcp,") {
 		t.Errorf("a's log:\n%s", logA)
 	}
 	if !strings.Contains(string(logB), "mcp off: enabled: false") {

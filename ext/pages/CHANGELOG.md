@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+- Go API: `Pages.RenderTemplate` is gone. Its one user, the OAuth pages, moved to Go templates in ext/templates (templates/v1).
+
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)
 
 ### Changed

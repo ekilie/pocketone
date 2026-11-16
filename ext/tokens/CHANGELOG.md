@@ -7,6 +7,15 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+- `pocketone oauth eject` is gone: run `pocketone template eject oauth`. The OAuth pages are now Go templates in `pb_templates/oauth/` (`signin.tpl`, `head.tpl`, ...); copies in `pb_pages/_private/oauth/` are no longer read, so carry your edits over to the new files.
+- Go API: `tokens.Eject`, `tokens.ExistsError`, `tokens.EjectSubdir` and `OAuthServer.PagesDir()` are gone; the pages are the `tokens.TemplateSet` ("oauth") template set of templates/v1.
+
+### Changed
+
+- The OAuth pages are one set of Go templates, embedded in the binary and rendered through templates/v1 (ext/templates), so the built-in pages and the ones you eject are the same files.
+
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading

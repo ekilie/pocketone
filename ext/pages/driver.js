@@ -391,7 +391,6 @@
     })
 
     ctx.data = {}
-    if (rt.data) for (var dk in rt.data) ctx.data[dk] = rt.data[dk]
     ctx.params = rt.params
     ctx.route = { path: route.path, name: route.name, file: route.file }
     ctx.auth = conf.auth
@@ -582,12 +581,6 @@
     }
 
     function handle() {
-      if (rt.direct) {
-        // a template rendered for a Go plugin (RenderTemplate): no handler, any method
-        var out = transform(render(route.file, null), route.file)
-        if (!rt.sent()) rt.sendPage(out)
-        return
-      }
       var mod = route.handler ? load(route.handler) : null
       var m = rt.method.toLowerCase()
       if (m === 'head') m = 'get'

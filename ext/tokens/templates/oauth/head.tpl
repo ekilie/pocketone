@@ -1,10 +1,8 @@
-<%# Shared top of every OAuth page: document head, styles, logo. data.superuser pages (the superuser form, consent as
-    a superuser) get body.su, which looks clearly different. Ejected by `pocketbase oauth eject`; edit freely. %>
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title><%= data.appName %></title>
+<meta name="robots" content="noindex"><title>{{.AppName}}</title>
 <style>
-:root{--accent:<%= data.accent %>;--bg:#f4f4f6;--card:#fff;--fg:#16161a;--muted:#6b6b76;--line:#e3e3e8;--err:#c62828}
+:root{--accent:{{.Accent}};--bg:#f4f4f6;--card:#fff;--fg:#16161a;--muted:#6b6b76;--line:#e3e3e8;--err:#c62828}
 @media (prefers-color-scheme:dark){:root{--bg:#121214;--card:#1c1c20;--fg:#ececf1;--muted:#9a9aa6;--line:#2c2c33}}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
 background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
@@ -39,5 +37,5 @@ color:#fff;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:up
 padding:10px 12px;margin:0 0 12px;font-size:14px}
 body.su{--accent:#c2410c;--bg:#fde8d7}body.su .card{border:2px solid var(--accent)}
 @media (prefers-color-scheme:dark){body.su{--bg:#2b1708}}
-</style></head><body<%- data.superuser ? ' class="su"' : '' %>><main class="card">
-<% if (data.logoUrl) { %><img class="logo" src="<%= data.logoUrl %>" alt=""><% } %>
+</style></head><body{{if .Superuser}} class="su"{{end}}><main class="card">
+{{if .LogoURL}}<img class="logo" src="{{.LogoURL}}" alt="">{{end}}

@@ -9,8 +9,8 @@ require (
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -34,8 +34,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
-	github.com/yuin/goldmark v1.8.7 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/image v0.48.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
@@ -44,7 +42,6 @@ require (
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.80.1 // indirect
 	modernc.org/libquickjs v0.13.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
@@ -75,3 +72,5 @@ replace github.com/pockethost/pocketone/ext/pages => ../pages
 replace github.com/pockethost/pocketone/ext/remotes => ../remotes
 
 replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+
+replace github.com/pockethost/pocketone/ext/templates => ../templates

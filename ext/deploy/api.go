@@ -404,7 +404,7 @@ func (a *API) blobs(w http.ResponseWriter, r *http.Request) error {
 }
 
 // restartNeeded: files are swapped in while the app runs (each rename is atomic), so the whole batch lands before
-// anything restarts. The running app picks up most of it by itself: pb_pages and pb_public are read on each request,
+// anything restarts. The running app picks up most of it by itself: pb_pages, pb_public and pb_templates are read on each request,
 // and every runtime watches pb_hooks (PocketBase's --hooksWatch, Pocker's and Docker's shared watcher). Only a
 // migration written (migrations run at startup), changed packages (require caches them) or a newly created pb_hooks
 // (a watcher only sees folders that existed when the app started) need a restart. Deploy never restarts on its own:

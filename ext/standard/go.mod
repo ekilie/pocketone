@@ -19,6 +19,7 @@ require (
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 )
 
@@ -145,3 +146,5 @@ replace github.com/pockethost/pocketone/ext/backups => ../backups
 replace github.com/pockethost/pocketone/ext/settings => ../settings
 
 replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+
+replace github.com/pockethost/pocketone/ext/templates => ../templates

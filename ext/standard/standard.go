@@ -33,6 +33,7 @@ import (
 	"github.com/pockethost/pocketone/ext/remotes"
 	"github.com/pockethost/pocketone/ext/s3redirect"
 	"github.com/pockethost/pocketone/ext/settings"
+	"github.com/pockethost/pocketone/ext/templates"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
 
@@ -40,6 +41,7 @@ import (
 // so providers come first).
 type Set struct {
 	Settings   *settings.Extension
+	Templates  *templates.Extension
 	Tokens     *tokens.Extension
 	Remotes    *remotes.Extension
 	MCP        *mcp.Extension
@@ -62,6 +64,7 @@ var _ extkit.AppSet = (*Set)(nil)
 func New() *Set {
 	return &Set{
 		Settings:   settings.New(),
+		Templates:  templates.New(templates.Config{}),
 		Tokens:     tokens.New(tokens.Config{}),
 		Remotes:    remotes.New(remotes.Config{}),
 		MCP:        mcp.New(mcp.Config{}),
@@ -82,7 +85,7 @@ func (s *Set) Add(e ...extkit.Extension) *Set {
 
 // Extensions lists the members then the extras.
 func (s *Set) Extensions() []extkit.Extension {
-	out := make([]extkit.Extension, 0, 11+len(s.extras))
+	out := make([]extkit.Extension, 0, 12+len(s.extras))
 	for _, m := range s.members() {
 		if m.ext != nil {
 			out = append(out, m.ext)
@@ -98,7 +101,7 @@ type member struct {
 
 func (s *Set) members() []member {
 	m := []member{
-		{"Settings", s.Settings}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
+		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
 		{"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
@@ -112,6 +115,8 @@ func (s *Set) members() []member {
 func isNil(e extkit.Extension) bool {
 	switch v := e.(type) {
 	case *settings.Extension:
+		return v == nil
+	case *templates.Extension:
 		return v == nil
 	case *tokens.Extension:
 		return v == nil

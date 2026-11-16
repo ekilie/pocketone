@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
 	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/http"
 	"net/url"
@@ -92,8 +93,7 @@ type OAuthConfig struct {
 
 	Branding Branding
 
-	// Render, if set, renders a page instead of the built-in templates (return handled=false to fall back). When it
-	// isn't set and ext/pages is registered with a RenderTemplate method, pages render "oauth/<page>" templates.
+	// Render, if set, renders a page instead of the "oauth" template set (return handled=false to fall back to it).
 	Render func(e *core.RequestEvent, page string, data PageData) (handled bool, err error)
 
 	// Now is the clock (tests).
@@ -144,6 +144,8 @@ func (s *OAuthServer) accessTTL(audience string) time.Duration {
 // and on a *pocketbase.PocketBase the `oauth clients` command. The app must
 // also register ext/
 func registerOAuth(app core.App, cfg OAuthConfig) (*OAuthServer, error) {
+	// the sign-in pages, themable with `pocketone template eject oauth` (templates/v1)
+	templatesv1.Add(app, TemplateSet, oauthTemplates())
 	if cfg.AccessTTL <= 0 {
 		cfg.AccessTTL = 30 * 24 * time.Hour
 	}
