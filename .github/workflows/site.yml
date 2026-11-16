@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version-file: site/sync/go.mod
           cache-dependency-path: "**/go.sum"
@@ -40,8 +40,8 @@ jobs:
       group: pocketone-dev-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Deploy site/pb_pages to pocketone.dev
@@ -65,8 +65,8 @@ jobs:
       group: pocketpages-dev-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Deploy ext/pages/site/pb_pages to pocketpages.dev
