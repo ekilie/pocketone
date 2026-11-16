@@ -53,6 +53,7 @@ type Pages struct {
 	stamp     string // fingerprint of the tree the table was built from
 	lastCheck time.Time
 	buildErrs []error
+	tableErrs bool // the current table was built with errors (a partial build)
 
 	hashes   hashCache
 	programs programs
@@ -155,7 +156,7 @@ func (p *Pages) refresh(force bool) {
 	stamp, err := treeStamp(p.dir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			p.table, p.stamp, p.buildErrs = nil, "", nil
+			p.table, p.stamp, p.buildErrs, p.tableErrs = nil, "", nil, false
 			return
 		}
 		p.logger().Error("pages: can't read pb_pages", "dir", p.dir, "error", err)
@@ -172,12 +173,14 @@ func (p *Pages) refresh(force bool) {
 		for _, e := range errs {
 			p.logger().Error("pages: "+e.Error(), "dir", p.dir)
 		}
-		if p.table != nil {
+		if p.table != nil && !p.tableErrs {
 			p.logger().Warn("pages: keeping the previous routes until pb_pages builds cleanly")
 			return
 		}
-		// no previous table: serve what built, so one bad file doesn't take the whole site down
+		// no clean table to keep: serve what built, so one bad file doesn't take the whole site down, and a later
+		// partial build (a new page beside a still-broken file) replaces an earlier partial one
 	}
 	p.table = table
+	p.tableErrs = len(errs) > 0
 	p.hashes.reset()
 }

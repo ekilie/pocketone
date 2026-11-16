@@ -26,6 +26,10 @@ func (r *request) loadConfig(file string) (pagesConfig, []goja.Value, error) {
 	if !ok || goja.IsUndefined(v) || goja.IsNull(v) {
 		return cfg, nil, fmt.Errorf("%s: must export an object", file)
 	}
+	if _, isFn := goja.AssertFunction(v); isFn {
+		// 0.x allowed module.exports = (api) => ({...}); a function has no keys, so it would be silently ignored
+		return cfg, nil, fmt.Errorf("%s: must export an object (module.exports = { ... }), not a function", file)
+	}
 	var plugins []goja.Value
 	seen := map[string]bool{}
 	for _, key := range obj.Keys() {

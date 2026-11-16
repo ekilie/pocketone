@@ -33,7 +33,11 @@ myapp/
     looked up in the nearest `node_modules` folder, the same way up. A package resolves through its `package.json`: `exports` (a string,
     or conditions, where `require`, then `node`, then `default` are used), else `main`, else `index.js`. With
     `exports`, only what it lists can be required, and no entry may point outside the package.
-  - Anything not found that way goes to the app's own module loader.
+  - Then `pb_hooks/node_modules`, then the app folder's `node_modules` (the folder that holds `pb_pages`, where 0.x
+    sites keep `package.json`).
+  - Anything not found that way goes to the app's own module loader. If that fails too, the error lists the folders
+    searched.
+  - A require cycle (`a` requires `b`, which requires `a`) gets the exports as they are so far, as in Node.
   - `node_modules` is never routed or served, and isn't watched: after changing files in it, change any file in
     `pb_pages` (or restart) to reload.
 - Page code runs in the app's JS VM, so PocketBase's JSVM globals (`$app`, `Record`, `$dbx`, `$security`, ...) are
@@ -567,6 +571,7 @@ inside `ext/pages` (`starters/`).
 | Cookies JSON-parsed on read | Strings; `{ json: true }` to parse |
 | Middleware: return a value, or call `next(extra)`, chosen by arity | `(ctx, next)`, data on `ctx.data` |
 | `+load.js`, `+get.js`, `+post.js`, ... per folder, results deep-merged | One `+page.js` exporting `load`, `get`, `post`, ...; returned objects shallow-assigned |
+| `+config.js` may export `(api) => ({...})` | It must export an object; a function is an error |
 | Template output that parses as JSON is sent as JSON | Only `ctx.res.json` or `+api.js` |
 | `<!-- slot:name -->` comments; layouts read `slot` / `slots` | `slot(name, fn)` to define, `slot(name)` / `slot()` to read |
 | `echo()` writes during render | Templates return text; streaming only through `ctx.res.sse()` |

@@ -413,6 +413,14 @@ func (r *request) load(file string) goja.Value {
 	module := r.vm.NewObject()
 	exports := r.vm.NewObject()
 	module.Set("exports", exports)
+	// A require cycle (a -> b -> a) gets a's exports as they are so far, as in Node and 0.x, instead of recursing
+	// until the Go stack overflows and kills the process.
+	loadingKey := "l:" + exportsKey
+	if m, ok := r.cache.Get(loadingKey).(*goja.Object); ok && m != nil {
+		return m.Get("exports")
+	}
+	r.cache.Set(loadingKey, module)
+	defer r.cache.Delete(loadingKey)
 	dir := path.Dir(file)
 	requireFn := r.vm.ToValue(func(name string) goja.Value { return r.requireFrom(file, name) })
 	var h, frag goja.Value = goja.Undefined(), goja.Undefined()

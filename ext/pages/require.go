@@ -3,7 +3,9 @@ package pages
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/dop251/goja"
@@ -41,7 +43,41 @@ func (r *request) requireFrom(from, name string) goja.Value {
 	if file, ok := r.resolveBare(from, name); ok {
 		return r.load(file)
 	}
-	return r.globalRequire(name)
+	// Outside pb_pages: pb_hooks/node_modules, then the app folder's node_modules (where 0.x sites keep
+	// package.json). The app's loader runs from a Go frame, so it wouldn't walk up to these on its own.
+	searched := []string{from + ": _private and node_modules folders up to pb_pages"}
+	if pkg, _ := splitPackageName(name); pkg != "" && !strings.HasPrefix(name, "/") && !hasDotDotSegment(name) {
+		for _, dir := range r.outsideModuleDirs() {
+			searched = append(searched, dir)
+			if st, err := os.Stat(filepath.Join(dir, filepath.FromSlash(pkg))); err == nil && st.IsDir() {
+				return r.globalRequire(filepath.Join(dir, filepath.FromSlash(name)))
+			}
+		}
+	}
+	v, err := r.tryGlobalRequire(name)
+	if err != nil {
+		if strings.Contains(err.Error(), "Invalid module") {
+			panic(r.vm.NewGoError(fmt.Errorf("require(%q): not found; looked in %s", name, strings.Join(searched, ", "))))
+		}
+		panic(r.jsError(err))
+	}
+	return v
+}
+
+// outsideModuleDirs are the node_modules folders a bare require tries after pb_pages: pb_hooks', then the app
+// folder's (pb_pages' parent).
+func (r *request) outsideModuleDirs() []string {
+	var dirs []string
+	if h := r.vm.Get("__hooks"); h != nil && !goja.IsUndefined(h) && h.String() != "" {
+		dirs = append(dirs, filepath.Join(h.String(), "node_modules"))
+	}
+	if abs, err := filepath.Abs(r.p.dir); err == nil {
+		d := filepath.Join(filepath.Dir(abs), "node_modules")
+		if len(dirs) == 0 || dirs[0] != d {
+			dirs = append(dirs, d)
+		}
+	}
+	return dirs
 }
 
 // resolveBare finds a bare name in pb_pages: a _private folder from from's folder up, then node_modules from the same
@@ -232,13 +268,25 @@ func condition(raw json.RawMessage) (string, bool) {
 
 // globalRequire is the app's own module loader (the JSVM's require).
 func (r *request) globalRequire(name string) goja.Value {
-	global, ok := goja.AssertFunction(r.vm.Get("require"))
-	if !ok {
-		panic(r.vm.NewGoError(fmt.Errorf("require(%q): no module loader", name)))
-	}
-	v, err := global(goja.Undefined(), r.vm.ToValue(name))
+	v, err := r.tryGlobalRequire(name)
 	if err != nil {
-		panic(err)
+		panic(r.jsError(err))
 	}
 	return v
+}
+
+// jsError keeps a JS exception as it is and wraps a Go error, so a panic from a Go function becomes a JS throw.
+func (r *request) jsError(err error) any {
+	if ex, ok := err.(*goja.Exception); ok {
+		return ex
+	}
+	return r.vm.NewGoError(err)
+}
+
+func (r *request) tryGlobalRequire(name string) (goja.Value, error) {
+	global, ok := goja.AssertFunction(r.vm.Get("require"))
+	if !ok {
+		return nil, fmt.Errorf("require(%q): no module loader", name)
+	}
+	return global(goja.Undefined(), r.vm.ToValue(name))
 }
