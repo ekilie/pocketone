@@ -24,7 +24,16 @@ jobs:
             echo "no previous commit to compare with; skipping"; exit 0
           fi
           missing=0
-          for c in $(git rev-list --no-merges "$BEFORE..$AFTER"); do
+          # Upstream's own commits arrive through a merge whose trailer is "Core-Audit: upstream-merge vX.Y.Z"; that
+          # merge vouches for them, so skip everything reachable only from its upstream (second) parent.
+          skip=()
+          for m in $(git rev-list --merges "$BEFORE..$AFTER"); do
+            if git log -1 --format='%(trailers:key=Core-Audit,valueonly)' "$m" | grep -q '^upstream-merge '; then
+              echo "upstream merge $(git log -1 --format='%h %s' "$m")"
+              skip+=("^$m^2")
+            fi
+          done
+          for c in $(git rev-list --no-merges "$BEFORE..$AFTER" "${skip[@]}"); do
             core=$(.github/core-audit/core-diff.sh --files "$c^" "$c" || true)
             [ -z "$core" ] && continue
             trailer=$(git log -1 --format='%(trailers:key=Core-Audit,valueonly)' "$c" | sed '/^$/d')
