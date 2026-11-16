@@ -76,7 +76,7 @@ type staticVersions []Release
 
 func (s staticVersions) Releases(context.Context) ([]Release, error) { return s, nil }
 
-// testVersions is upstream 0.23.12, 0.36.9 and PocketOne 0.0.1 (testdata/releases.json), seeded into the test cache
+// testVersions is upstream 0.23.12, 0.36.9 and PocketOne 0.0.1-alpha.4 (testdata/releases.json), seeded into the test cache
 // once so containers don't wait on downloads.
 func testVersions(t *testing.T, b *Binaries) staticVersions {
 	t.Helper()
@@ -141,7 +141,7 @@ func TestRuntime(t *testing.T) {
 
 	// instance a (upstream 0.23): a hook that reads env, as customers' hooks do; b runs a PocketOne release
 	a := multisite.Instance{ID: "cedockera", Version: "pb:0.23.*", Secrets: map[string]string{"FOO": "bar"}}
-	b := multisite.Instance{ID: "cedockerb", Version: "p1:0.0.*"}
+	b := multisite.Instance{ID: "cedockerb", Version: "p1:0.0.1-alpha.4"}
 	if err := os.MkdirAll(filepath.Join(data, a.ID, "pb_hooks"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestRuntime(t *testing.T) {
 	for _, s := range list {
 		versions[s.Labels[LabelInstance]] = s.Labels[LabelVersion]
 	}
-	if versions["cedockera"] != "pb:0.23.12" || versions["cedockerb"] != "p1:0.0.1" {
+	if versions["cedockera"] != "pb:0.23.12" || versions["cedockerb"] != "p1:0.0.1-alpha.4" {
 		t.Fatalf("labels: %v", versions)
 	}
 	if _, err := os.Stat(filepath.Join(data, a.ID, "pb_data", "data.db")); err != nil {

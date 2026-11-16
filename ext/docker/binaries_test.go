@@ -53,10 +53,11 @@ func TestLatestPatches(t *testing.T) {
 // The one place that matches an instance's version to a release.
 func TestPick(t *testing.T) {
 	rs := []Release{rel("pb", "0.23.12"), rel("pb", "0.36.9"), rel("pb", "0.36.10"), rel("p1", "0.0.1"), rel("p1", "0.0.2"),
-		rel("pb", "0.36.11-rc1"), rel("p1", "0.0.3-beta.1")} // pre-releases in a list are never picked
+		rel("pb", "0.36.11-rc1"), rel("p1", "0.0.3-beta.1")} // a range never picks a pre-release; naming one does
 	for want, exp := range map[string]string{
 		"0.36.*": "pb:0.36.10", "pb:0.36.*": "pb:0.36.10", "pb:0.36.9": "pb:0.36.9", "~0.23.1": "pb:0.23.12",
-		"p1:0.0.*": "p1:0.0.2", "p1:0.0.1": "p1:0.0.1", "v0.23.12": "pb:0.23.12",
+		"p1:0.0.*": "p1:0.0.2", "p1:0.0.1": "p1:0.0.1", "v0.23.12": "pb:0.23.12", "p1:0.0.3-beta.1": "p1:0.0.3-beta.1",
+		"pb:0.36.11-rc1": "pb:0.36.11-rc1",
 	} {
 		if r, err := Pick(rs, want); err != nil || r.Key() != exp {
 			t.Errorf("Pick(%q) = %s, %v; want %s", want, r.Key(), err, exp)
