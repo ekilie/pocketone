@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 )
@@ -54,6 +55,15 @@ type EventServer interface {
 	ServeEvent(e *core.RequestEvent) error
 }
 
+// OwnsAuthorization is an optional interface for a routed contract's provider that reads the Authorization header
+// itself (an OAuth client's "Basic" credentials, say). Its routes skip PocketBase's pbRejectUnknownToken, which
+// answers 401 to any Authorization header that isn't a known PocketBase token; the provider rejects bad ones itself.
+// It is checked once, on the provider found when the routes are mounted, so a decorator (Contract.Wrap) must forward
+// it. A RouteBinder provider binds its own routes and unbinds the middleware there instead.
+type OwnsAuthorization interface {
+	OwnsAuthorization() bool
+}
+
 type requestEventKey struct{}
 
 // RequestEvent is the PocketBase request a routed contract's http.Handler is serving inside an app (nil when a host
@@ -90,10 +100,14 @@ func (r routed[T]) Mount(app core.App, se *core.ServeEvent) {
 		hh.ServeHTTP(e.Response, req)
 		return nil
 	}
+	unbind := []string{"pbBodyLimit"} // the API sets its own limits
+	if oa, owns := any(impl).(OwnsAuthorization); owns && oa.OwnsAuthorization() {
+		unbind = append(unbind, apis.DefaultRejectUnknownTokenMiddlewareId)
+	}
 	// explicit methods: a method-less pattern would conflict with a static "GET /{path...}" route
 	for _, m := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
-		se.Router.Route(m, prefix, h).Unbind("pbBodyLimit") // the API sets its own limits
-		se.Router.Route(m, prefix+"/{path...}", h).Unbind("pbBodyLimit")
+		se.Router.Route(m, prefix, h).Unbind(unbind...)
+		se.Router.Route(m, prefix+"/{path...}", h).Unbind(unbind...)
 	}
 }
 

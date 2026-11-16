@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 )
@@ -39,8 +40,14 @@ var pollInterval = 5
 // bindRoutes adds the metadata at the root (RFC 8414); the rest is oauth/v1's, mounted under /api/_c/oauth/v1/ by the
 // contracts' seal and served by ServeEvent.
 func (s *OAuthServer) bindRoutes(se *core.ServeEvent) {
-	se.Router.GET(MetadataPath, s.metadata)
+	// public metadata: a stale token mustn't hide where to sign in (PocketBase v0.42 401s unknown tokens)
+	se.Router.GET(MetadataPath, s.metadata).Unbind(apis.DefaultRejectUnknownTokenMiddlewareId)
 }
+
+// OwnsAuthorization implements extkit.OwnsAuthorization: the token and revoke endpoints read an OAuth client's
+// "Basic" credentials (client_secret_basic) from the Authorization header, which PocketBase v0.42 would reject as an
+// unknown token. Every endpoint checks its own credentials.
+func (s *OAuthServer) OwnsAuthorization() bool { return true }
 
 // ServeEvent implements extkit.EventServer: oauth/v1's routes.
 func (s *OAuthServer) ServeEvent(e *core.RequestEvent) error {
