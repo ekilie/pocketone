@@ -1,0 +1,85 @@
+# Mirrors PocketBase's master and develop branches from its own git host into this repo's upstream/master and
+# upstream/develop, once a day. Fast-forward only: if upstream ever rewrites history the push fails and a person
+# decides. See "Branches that show our core changes" in AGENTS.md.
+name: upstream-mirror
+
+on:
+  schedule:
+    - cron: "23 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SRC: https://ganigeorgiev.com/git/pocketbase/pocketbase
+      BRANCHES: master develop
+    steps:
+      - name: Fetch our copy first
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q --bare mirror.git
+          cd mirror.git
+          git config http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          echo "$(date +%T) fetching upstream/* from GitHub"
+          timeout 300 git fetch -q --no-tags origin '+refs/heads/upstream/*:refs/ours/*'
+          git for-each-ref --format='%(objectname:short) %(refname)' refs/ours/
+
+      - name: Check the source answers
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -m 20 -o /dev/null -w '%{http_code}' "$SRC/info/refs?service=git-upload-pack" || echo curl-failed)
+          echo "$(date +%T) $SRC/info/refs -> $code"
+          if [ "$code" != 200 ]; then
+            echo "::error::$SRC answered $code from this runner (blocked or moved?)"
+            exit 1
+          fi
+
+      - name: Fetch from PocketBase (only new objects)
+        working-directory: mirror.git
+        run: |
+          set -euo pipefail
+          refspecs=()
+          for b in $BRANCHES; do refspecs+=("+refs/heads/$b:refs/src/$b"); done
+          echo "$(date +%T) fetching $BRANCHES from $SRC"
+          timeout 300 git fetch --no-tags "$SRC" "${refspecs[@]}"
+          echo "$(date +%T) fetched"
+
+      - name: Fast-forward upstream/*
+        working-directory: mirror.git
+        run: |
+          set -euo pipefail
+          push=()
+          for b in $BRANCHES; do
+            old=$(git rev-parse -q --verify "refs/ours/$b" || true)
+            new=$(git rev-parse "refs/src/$b")
+            if [ "$old" = "$new" ]; then
+              echo "upstream/$b unchanged at ${new:0:8}"
+              echo "- \`upstream/$b\` unchanged at \`${new:0:8}\`" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            if [ -n "$old" ] && ! git merge-base --is-ancestor "$old" "$new"; then
+              echo "::error::upstream/$b ${old:0:8} is not an ancestor of PocketBase's $b ${new:0:8}; history was rewritten, mirror it by hand"
+              exit 1
+            fi
+            n=$([ -n "$old" ] && git rev-list --count "$old..$new" || echo new)
+            echo "upstream/$b ${old:0:8} -> ${new:0:8} ($n commits)"
+            echo "- \`upstream/$b\` ${old:0:8} → \`${new:0:8}\` ($n commits)" >> "$GITHUB_STEP_SUMMARY"
+            push+=("refs/src/$b:refs/heads/upstream/$b")
+          done
+          if [ ${#push[@]} -eq 0 ]; then echo "nothing to push"; exit 0; fi
+          echo "$(date +%T) pushing ${push[*]}"
+          timeout 120 git push origin "${push[@]}"
+          echo "$(date +%T) pushed"
