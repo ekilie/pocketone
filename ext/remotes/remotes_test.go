@@ -215,8 +215,8 @@ func TestWhoamiAndPasswordLoginMintsToken(t *testing.T) {
 	w, _ = cl.Whoami(ctx)
 	probe := *cl
 	probe.Token = res.Credential.Token
-	if w, _ = probe.Whoami(ctx); w.Auth != nil {
-		t.Fatal("minted token still works after logout")
+	if w, err = probe.Whoami(ctx); err == nil {
+		t.Fatalf("minted token still works after logout: %+v", w)
 	}
 }
 

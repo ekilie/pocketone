@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +18,20 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// requestLine matches a request log line ("ERROR GET /api/ph/backup 401"), written in the background.
+var requestLine = regexp.MustCompile(`^[A-Z]+ [A-Z]+ /`)
+
+// consoleLines drops request log lines: their timing isn't the test's to count.
+func consoleLines(lines []map[string]string) []map[string]string {
+	var out []map[string]string
+	for _, l := range lines {
+		if !requestLine.MatchString(l["message"]) {
+			out = append(out, l)
+		}
+	}
+	return out
+}
 
 func readLog(t *testing.T, path string) []map[string]string {
 	t.Helper()
@@ -152,8 +167,8 @@ routerAdd("GET", "/say", (e) => {
 	do("GET", "a.example.com", "/say", "", nil)
 	do("GET", "b.example.com", "/say", "", nil)
 	do("GET", "b.example.com", "/say", "", nil)
-	logA := readLog(t, filepath.Join(root, "a", "logs", "exec.log"))
-	logB := readLog(t, filepath.Join(root, "b", "logs", "exec.log"))
+	logA := consoleLines(readLog(t, filepath.Join(root, "a", "logs", "exec.log")))
+	logB := consoleLines(readLog(t, filepath.Join(root, "b", "logs", "exec.log")))
 	if len(logA) != 2 || len(logB) != 4 {
 		t.Fatalf("expected 2 lines for a and 4 for b, got %d and %d", len(logA), len(logB))
 	}
