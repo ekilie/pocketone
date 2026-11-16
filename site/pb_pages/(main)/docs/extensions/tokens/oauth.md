@@ -115,7 +115,7 @@ pocketone login prod
 ```
 
 With OAuth Server on the remote, [Remotes](/docs/extensions/remotes) opens your browser on the pages above, or shows a
-device code when there's no browser (`--device` asks for one). The client is the built-in `pocketbase-cli`, named
+device code when there's no browser (`--device` asks for one). The client is the built-in `pocketone-cli`, named
 **pocketone CLI** on the consent page (the name follows the command, so another build shows its own).
 
 ### See and revoke what's connected
@@ -210,7 +210,7 @@ Protected resource metadata (RFC 9728) belongs to the resource: MCP serves `/.we
 
 ## Clients
 
-- **`pocketbase-cli`** is built in: public, any `http://127.0.0.1:<port>/…` or `[::1]` redirect, device codes. It's
+- **`pocketone-cli`** is built in: public, any `http://127.0.0.1:<port>/…` or `[::1]` redirect, device codes. It's
   what `pocketone login` uses.
 - **Client ID metadata documents (CIMD):** an `https://` client id is fetched as a JSON document (`client_id` must
   equal the URL; its `client_name` and `redirect_uris` are used; public clients only; cached 10 minutes). Only

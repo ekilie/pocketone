@@ -156,6 +156,9 @@ Rules every extension follows:
 - JS types: after a core change that touches the JS API (a hook, a type JS sees) or an edit to `ext/jsvm/pocketone.d.ts`,
   run `go generate` in `ext/jsvm` to rebuild `ext/jsvm/types.d.ts` (its `TestTypes` tests fail until you do). An
   extension with a JS API declares it in a `TypeScript()` method.
+- Environment variables are named for the layer that reads them: `PB_` is PocketBase core's (leave those alone),
+  `P1_` is PocketOne's in every build (`extkit.EnvVar("TOKEN")` is `P1_TOKEN`), and a build on top uses its own
+  prefix for its own variables. Never name a variable after the binary.
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.
 - **Changelog:** every commit to `main` with a user-visible change adds its line under `## Unreleased` in

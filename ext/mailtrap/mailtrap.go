@@ -10,7 +10,7 @@
 //
 // Under pocker, add [New] to Server.Extensions; every dev instance's mail lands in the one inbox, labeled by instance.
 //
-// The inbox listens on 127.0.0.1:8025 (SMTP 127.0.0.1:1025); PB_MAILTRAP_HTTP and PB_MAILTRAP_SMTP move it.
+// The inbox listens on 127.0.0.1:8025 (SMTP 127.0.0.1:1025); P1_MAILTRAP_HTTP and P1_MAILTRAP_SMTP move it.
 package mailtrap
 
 import (

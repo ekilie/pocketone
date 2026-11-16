@@ -18,7 +18,7 @@ import (
 )
 
 // UserAgent is sent with every client request.
-var UserAgent = "pocketbase-cli"
+var UserAgent = "pocketone-cli"
 
 // WhoamiPath is remote/v1's whoami (public): who the caller is and what the remote offers.
 const WhoamiPath = "/api/_c/remote/v1"
@@ -41,7 +41,7 @@ type Client struct {
 	Remote *Remote
 	// Token is sent as "Authorization: Bearer <token>" (empty: anonymous).
 	Token string
-	// TokenSource says where Token came from, for messages ("POCKETONE_TOKEN", "saved login", ...).
+	// TokenSource says where Token came from, for messages ("P1_TOKEN", "saved login", ...).
 	TokenSource string
 	HTTP        *http.Client
 }

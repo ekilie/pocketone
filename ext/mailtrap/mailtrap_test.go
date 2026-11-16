@@ -11,8 +11,8 @@ import (
 
 // The extension takes an app's mail only in dev mode with SMTP off, and then sendmail never runs.
 func TestRegisterRoutesDevMailToTrap(t *testing.T) {
-	t.Setenv("PB_MAILTRAP_HTTP", freeAddr(t))
-	t.Setenv("PB_MAILTRAP_SMTP", freeAddr(t))
+	t.Setenv("P1_MAILTRAP_HTTP", freeAddr(t))
+	t.Setenv("P1_MAILTRAP_SMTP", freeAddr(t))
 
 	for _, tc := range []struct {
 		name      string

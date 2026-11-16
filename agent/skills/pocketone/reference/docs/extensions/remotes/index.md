@@ -28,8 +28,8 @@ extkit.Setup(app, []extkit.Extension{remotes.New(remotes.Config{})}, nil, nil) /
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](https://pocketone.dev/docs/extensions/tokens) so a password login
-can create a revocable API token, and [the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) for browser login.
+The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](https://pocketone.dev/docs/extensions/tokens) for API tokens and
+[the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) for browser login.
 
 ## Configure
 
@@ -49,18 +49,19 @@ Commands find it by walking up from the current folder. It isn't a `pb_*` name, 
 ### Saved logins
 
 Logins are saved per user, keyed by URL, in `~/.config/pocketone/credentials.json` (mode 0600). Set
-`POCKETONE_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
+`P1_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
 
 ### Environment variables
 
 | Variable | What it does |
 |---|---|
-| `POCKETONE_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`POCKETONE_TOKEN_PROD`). |
-| `POCKETONE_TOKEN` | A token for any remote. |
-| `POCKETONE_PASSWORD` | The password for `login --email`, so it isn't asked for. |
+| `P1_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`P1_TOKEN_PROD`). |
+| `P1_TOKEN` | A token for any remote. |
+| `P1_CONFIG_DIR` | Where saved logins are kept. |
 
-A token in the environment wins over a saved login. The `POCKETONE` in these names and the `pocketone` folder come
-from the command's name, so a build shipped under another name uses its own (`POCKETHOST_TOKEN`, `~/.config/pockethost`).
+A token in the environment wins over a saved login. Every PocketOne variable starts with `P1_`, in every build (the
+`pockethost` binary reads `P1_TOKEN` too). The `pocketone` folder comes from the command's name, so a build shipped
+under another name keeps its logins apart (`~/.config/pockethost`).
 
 ## Use
 
@@ -84,20 +85,15 @@ name: `pocketone deploy https://other.example.com`.
 pocketone login prod
 ```
 
-`login` tries, in order:
+`login` tries, in order (the command itself never asks for a password):
 
 1. **The browser**, when the remote runs [the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth). Your browser opens, you sign in
    and approve, and the command finishes. Over SSH or without a display it shows a code to enter on another device
    instead; `--device` asks for that, and `--no-browser` prints the URL without opening it.
 2. **A pasted token** (`pbt_...`, a PocketHost token, or a PocketBase auth token). At the prompt, paste it, or pass
    `--token <token>` or `--token-stdin`.
-3. **Email and password.** Type a superuser email at the prompt, or pass `--email` (or `--password` to skip the
-   browser). `--collection` picks another auth collection (default `_superusers`). If the account has MFA, a one-time
-   code is sent and asked for.
 
-A password login creates an API token named "pocketone CLI on <host>" and saves that, never the session, so the
-remote needs [Tokens](https://pocketone.dev/docs/extensions/tokens). A browser login keeps a refresh token and renews itself when it's within a
-day of expiring.
+A browser login keeps a refresh token and renews itself when it's within a day of expiring.
 
 You'll see `Logged in to https://myapp.example.com as admin@example.com (oauth).`
 
@@ -117,8 +113,8 @@ the same login flags.
 pocketone logout prod
 ```
 
-Forgets the saved login. It also revokes it on the remote: the API token a password login created, or the browser
-login's refresh token. If the remote can't be reached, it tells you to revoke it in the dashboard.
+Forgets the saved login. A browser login is also revoked on the remote (its refresh token); a pasted token stays
+valid until you revoke it in the dashboard. If the remote can't be reached, it tells you to revoke it in the dashboard.
 
 ## Integrations
 
@@ -128,7 +124,7 @@ login's refresh token. If the remote can't be reached, it tells you to revoke it
 |---|---|
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `deploy`, `dev` and `pull` resolve their remote and login through Remotes and find deploy/v1 in whoami's contracts; `restart` and `logs` use remote/v1. |
 | [OAuth](https://pocketone.dev/docs/extensions/tokens/oauth) (in Tokens) | Provides oauth/v1, so whoami lists it; `login` then signs in through the browser (loopback redirect on 127.0.0.1 with PKCE) or a device code. |
-| [Tokens](https://pocketone.dev/docs/extensions/tokens) | With tokens/v1 in whoami, password logins create an API token, and `logout` deletes it. Whoami reports a token's id and scopes. Without it, `login` takes a pasted token. |
+| [Tokens](https://pocketone.dev/docs/extensions/tokens) | Provides the API tokens `login` takes when pasted. Whoami reports a token's id and scopes. |
 
 ### remote/v1
 
@@ -165,7 +161,7 @@ that instance).
   (environment first, then the saved login, renewing a browser login when due) and returns a `*remoteclient.Client`:
   base URL, bearer token, an HTTP client with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`.
   It also holds the linked project (`LoadProject`), saved logins (`LoadCredentials`) and the sign-ins
-  (`LoginWithToken`, `LoginWithPassword`, `OAuthLogin`). Deploy's commands build on it.
+  (`LoginWithToken`, `OAuthLogin`). Deploy's commands build on it.
 - **Commands.** `remotes.Commands()` returns the `remote`, `login`, `logout` and `link` commands, for a binary that
   isn't a `*pocketbase.PocketBase`. The rest of `remote` is generated: every operation of every contract the binary
   links is a `remote ...` command ([cli.commands/v1](https://pocketone.dev/docs/contracts/cli.commands/v1)), such as `remote status`,
@@ -182,7 +178,7 @@ that instance).
 //
 //	go run ./example serve --http=127.0.0.1:8090                # the "remote"
 //	go run ./example remote add local http://127.0.0.1:8090    # in a project folder
-//	go run ./example login local --email admin@example.com     # password: password; mints a pbt_ token
+//	go run ./example login local                               # browser sign-in: admin@example.com / password
 //	go run ./example remote whoami
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
@@ -203,8 +199,8 @@ func main() {
 	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
 
 	// registered through their contracts (the standard set does this for you): remotes provides remote/v1 (whoami at
-	// /api/_c/remote/v1, status, restart, logs) and the remote/login/logout/link commands; tokens lets login mint a
-	// revocable API token
+	// /api/_c/remote/v1, status, restart, logs) and the remote/login/logout/link commands; tokens adds API tokens
+	// and the OAuth server login signs in through
 	if _, err := extkit.Setup(app, []extkit.Extension{tokens.New(tokens.Config{}), remotes.New(remotes.Config{})}, nil, nil); err != nil {
 		log.Fatal(err)
 	}

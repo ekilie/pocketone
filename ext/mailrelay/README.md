@@ -115,7 +115,7 @@ curl -X POST http://alpha.localhost:8090/api/collections/users/request-password-
 ```
 
 Log in to an instance's dashboard as `admin@example.com` / `password` to see the relay on Settings → Mail. `--listen`
-changes the instances' port; `PB_MAILTRAP_HTTP` and `PB_MAILTRAP_SMTP` change the trap's.
+changes the instances' port; `P1_MAILTRAP_HTTP` and `P1_MAILTRAP_SMTP` change the trap's.
 
 ```go
 // Command example is a Pocker build with mailrelay, relaying into PocketOne's dev mail trap: every instance
@@ -128,8 +128,8 @@ changes the instances' port; `PB_MAILTRAP_HTTP` and `PB_MAILTRAP_SMTP` change th
 //	curl -X POST http://alpha.localhost:8090/api/collections/users/request-password-reset -d email=user@example.com
 //	curl -X POST http://beta.localhost:8090/api/collections/users/request-password-reset -d email=user@example.com
 //
-// and read it in PocketOne's dev mail trap at http://127.0.0.1:8025 (filter by instance; PB_MAILTRAP_HTTP and
-// PB_MAILTRAP_SMTP change its ports). Settings → Mail in each dashboard shows the relay.
+// and read it in PocketOne's dev mail trap at http://127.0.0.1:8025 (filter by instance; P1_MAILTRAP_HTTP and
+// P1_MAILTRAP_SMTP change its ports). Settings → Mail in each dashboard shows the relay.
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 package main

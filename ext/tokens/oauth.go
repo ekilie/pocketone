@@ -38,7 +38,7 @@ const (
 	paramKey      = "oauth_server"
 
 	// CLIClientId is the built-in public client `pocketone login` uses: loopback redirects and device codes.
-	CLIClientId = "pocketbase-cli"
+	CLIClientId = "pocketone-cli"
 
 	// MetadataPath is the server's metadata (oauth/v1's; clients find oauth/v1 in remote/v1's whoami).
 	MetadataPath = oauthv1.MetadataPath

@@ -25,7 +25,7 @@ The generated commands, for any contract:
   whole input (`@file`, `-` for stdin) and `--remote` (a remote's name or a URL; default: the project's default
   remote). Times take RFC 3339, a local time (`2026-11-10 15:00`) or a duration from now (`-2h`).
 - **Output:** the answer as JSON; streams print one JSON line per entry until Ctrl-C.
-- **Auth:** the remote's saved login (`pocketone login`), or `POCKETONE_TOKEN` in CI.
+- **Auth:** the remote's saved login (`pocketone login`), or `P1_TOKEN` in CI.
 - **Not commands:** public operations that take or return a raw body (an unsubscribe page, a mail provider's
   webhook); they're for browsers and services.
 

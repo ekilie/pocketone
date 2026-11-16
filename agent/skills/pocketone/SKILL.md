@@ -91,7 +91,7 @@ The `pocketone` binary has PocketBase's commands (`serve`, `superuser`, `migrate
 | `pages create <name> [--starter kit]`, `pages starters` | A new PocketPages folder from a starter kit. |
 | `config [--json]`, `config check` | List every `pocketone.yaml` section with defaults; check a file and its `$VAR`s. |
 | `link <url> [token]` | Add a remote (default name `default`, `--name`) and sign in. |
-| `login [remote]`, `logout [remote]` | Sign in (browser OAuth, `--device`, `--token`, `--token-stdin`, `--email`/`--password`); forget the login. |
+| `login [remote]`, `logout [remote]` | Sign in (browser OAuth, `--device`, `--token`, `--token-stdin`; never a password); forget the login. |
 | `remote add <name> <url> [--default]`, `list`, `default`, `rm`, `whoami`, `status`, `logs`, `restart` | Manage remotes; inspect an app. |
 | `remote <contract> <op>` | Every contract operation an app offers, e.g. `remote restore points`, `remote restore to --at -2h`, `remote settings`, `remote bulkmail`, `remote mail suppression`. |
 | `deploy [remote]` | Upload changed `pb_*` files (not `pb_data`), `package.json`, `bun.lock(b)`, `patches/` and production `node_modules`. `--restart`, `--dry-run`, `--out <dir>`, `-m`, `-i`/`-e`, `--commit`, `--no-node-modules`. |
@@ -123,7 +123,7 @@ pocketone logs -n 200
   `pocketone restart`, or `r` in `dev`.
 - `dev` keeps state in `.pocketone/` and puts the remote's side of a conflict in `.pocketone/conflicts/`; list files
   to leave out in `.pocketoneignore`.
-- A password login mints an API token on the remote, so the remote needs the Tokens extension.
+- Login is the browser OAuth grant (`--device` on headless machines) or an API token; it never takes a password.
 
 ### pocketone.yaml
 

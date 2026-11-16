@@ -6,9 +6,9 @@
 //	pocketone deploy prod
 //
 // Remote names and URLs live in the project's .pocketbase/remotes.json (commit it); secrets live in the user's
-// ~/.config/pocketone/credentials.json (0600), keyed by URL. CI sets POCKETONE_TOKEN or POCKETONE_TOKEN_<REMOTE>.
-// The command name in these (pocketone) comes from [extkit.Command], so a build shipped under another name gets
-// its own folder and variables (~/.config/pockethost, POCKETHOST_TOKEN).
+// ~/.config/pocketone/credentials.json (0600), keyed by URL. CI sets P1_TOKEN or P1_TOKEN_<REMOTE>. The folder is
+// named after [extkit.Command] (~/.config/pockethost in that build); the variables are PocketOne's (P1_) in every
+// build.
 //
 // The server half is remote/v1's whoami (GET /api/_c/remote/v1): who the request's token is, its scopes, and which
 // contracts the app offers (deploy/v1, oauth/v1, tokens/v1, ...), so clients discover what a remote supports.
@@ -213,18 +213,16 @@ func NormalizeURL(raw string) (string, error) {
 // Credential is a saved sign-in for one URL.
 type Credential struct {
 	Token string `json:"token"`
-	// Via: "token" (pasted or minted pbt_/PocketHost token), "jwt" (a pasted PocketBase auth token), "oauth".
+	// Via: "token" (a pasted pbt_ or PocketHost token), "jwt" (a pasted PocketBase auth token), "oauth".
 	Via          string    `json:"via"`
 	Email        string    `json:"email,omitempty"`
 	Collection   string    `json:"collection,omitempty"`
 	RefreshToken string    `json:"refreshToken,omitempty"`
 	Expires      time.Time `json:"expires,omitzero"`
 	// TokenEndpoint and RevokeEndpoint (OAuth logins) refresh and revoke it.
-	TokenEndpoint  string `json:"tokenEndpoint,omitempty"`
-	RevokeEndpoint string `json:"revokeEndpoint,omitempty"`
-	// MintedTokenId is the API token the CLI created on the remote at login; logout revokes it.
-	MintedTokenId string    `json:"mintedTokenId,omitempty"`
-	Created       time.Time `json:"created"`
+	TokenEndpoint  string    `json:"tokenEndpoint,omitempty"`
+	RevokeEndpoint string    `json:"revokeEndpoint,omitempty"`
+	Created        time.Time `json:"created"`
 }
 
 // Credentials is the user's credential store.
@@ -233,11 +231,11 @@ type Credentials struct {
 	ByURL map[string]*Credential `json:"credentials"`
 }
 
-// EnvVar is the environment variable for suffix, named after [extkit.Command]: EnvVar("TOKEN") is POCKETONE_TOKEN
+// EnvVar is PocketOne's environment variable for suffix ([extkit.EnvVar]): EnvVar("TOKEN") is P1_TOKEN.
 // in pocketone.
-func EnvVar(suffix string) string { return envSuffix(extkit.Command) + "_" + suffix }
+func EnvVar(suffix string) string { return extkit.EnvVar(suffix) }
 
-// ConfigDir is the user's config folder, named after [extkit.Command]: $POCKETONE_CONFIG_DIR, else
+// ConfigDir is the user's config folder, named after [extkit.Command]: $P1_CONFIG_DIR, else
 // $XDG_CONFIG_HOME/pocketone, else ~/.config/pocketone.
 func ConfigDir() (string, error) {
 	if d := os.Getenv(EnvVar("CONFIG_DIR")); d != "" {
@@ -295,8 +293,7 @@ func (c *Credentials) Save() error {
 // Path is the store's file.
 func (c *Credentials) Path() string { return c.path }
 
-// EnvToken returns the CI token for a remote: POCKETONE_TOKEN_<NAME> (upper case, other characters as _), then
-// POCKETONE_TOKEN (named after [extkit.Command]).
+// EnvToken returns the CI token for a remote: P1_TOKEN_<NAME> (upper case, other characters as _), then P1_TOKEN.
 func EnvToken(remoteName string) (token, source string) {
 	if remoteName != "" && !strings.Contains(remoteName, "://") {
 		key := EnvVar("TOKEN_" + envSuffix(remoteName))
