@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -245,9 +246,16 @@ func (s *Set) Register(app core.App, js jsvm.Config) error {
 	if err != nil {
 		return err
 	}
-	for _, l := range lines {
-		app.Logger().Info(l)
-	}
+	// printed to the terminal when the app serves, so `--version`, `help` and other commands print only their own
+	// output (slog's default logger: after bootstrap, app.Logger() writes to the logs database instead)
+	app.OnServe().Bind(&hook.Handler[*core.ServeEvent]{
+		Func: func(e *core.ServeEvent) error {
+			for _, l := range lines {
+				slog.Info(l)
+			}
+			return e.Next()
+		},
+	})
 	// the command tree: every contract operation as `<binary> remote ...`, and the commands extensions provide
 	// (cli.commands/v1)
 	if pb, ok := app.(*pocketbase.PocketBase); ok {

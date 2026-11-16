@@ -34,6 +34,7 @@ repo root; each release here says which PocketBase version it's built on.
 
 ### Added
 
+- `pocketone --version` prints the PocketBase version it's built on: `0.0.2 (PocketBase 0.41.1)`.
 - **docker:** a host with its own accounts decides who may call `remote/v1` (status, restart, logs) for its containers with `docker.Provider.RemoteAuth`; without it, the instance's own superuser login is checked as before. `remote/v1` now lives on the host's contract scope, so `pocketone remote whoami` also lists the host's other contracts for the instance (a host's `deploy/v1`).
 
 ### Changed
@@ -41,6 +42,7 @@ repo root; each release here says which PocketBase version it's built on.
 - **pages:** a plugin name in `+config.js` is required first (a `_private/` file or package, such as the Datastar add-on as `'datastar'`), then a built-in.
 - **pages:** a bare `require('pkg')` looks in `_private/` folders first, then `node_modules` in `pb_pages`, then `pb_hooks/node_modules` and the app folder's `node_modules`; a miss lists the folders searched.
 - **pages:** a page renders for any HTTP method, as in 0.x.
+- The startup lines listing the standard extensions and contracts print when the app serves, not before every command (`--version`, `help`, `migrate`).
 - **pages:** an `Authorization` header login wins over the `pb_auth` cookie, as in 0.x.
 - **pages:** sign-in refuses accounts that need MFA.
 - **pages:** `pocketone pages create` and every starter README show the `superuser upsert` step before the first `serve`.

@@ -66,6 +66,9 @@ func main() {
 		DefaultEncryptionEnv: appCfg.EncryptionEnv,
 		DefaultQueryTimeout:  appCfg.QueryTimeout,
 	})
+	// `pocketone --version`: "0.0.2 (PocketBase 0.41.1)", like `pockethost --version`
+	app.RootCmd.Version = versionString()
+	app.RootCmd.SetVersionTemplate("{{.Version}}\n")
 	var cfgPath, envPath string
 	app.RootCmd.PersistentFlags().StringVar(&cfgPath, "config", "", "the config file (default ./pocketone.yaml, else next to the executable)")
 	app.RootCmd.PersistentFlags().StringVar(&envPath, "env-file", "", "secrets for $VAR references in the config file (default .env beside it); never passed to the app")
