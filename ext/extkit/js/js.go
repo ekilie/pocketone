@@ -1,0 +1,147 @@
+// Package js is what extensions see of an app's JS engine, whichever engine runs it (goja today, QuickJS next).
+// Extensions bind their Go API to JS, read what JS passes them, keep JS functions to call later, and hook the
+// engine's lifecycle, all through these types, never through an engine's own.
+//
+// The engine itself is the jsvm extension (ext/jsvm). It sets an app's [Runner] when it registers, and calls the
+// optional [Extension] methods of every value in its Config.Extensions.
+package js
+
+import (
+	"errors"
+	"net/http"
+
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+)
+
+// Runtime is one JS VM of an app. It's only valid inside the call that handed it out (OnInit, a NativeFunc, Run);
+// keep a [Func] to call JS later instead.
+type Runtime interface {
+	// Set sets a global. Go values cross live (JS sees their fields and methods, named as in PocketBase's JS API:
+	// FindRecordById -> findRecordById); a [NativeFunc] becomes a JS function.
+	Set(name string, v any) error
+	// Get reads a global (undefined if missing).
+	Get(name string) Value
+	// NewObject makes an empty JS object, e.g. a namespace to fill with Set and expose as a global.
+	NewObject() Object
+	// Engine is the engine's own VM (*goja.Runtime under goja), for engine-specific code that has no neutral form
+	// yet. Code that uses it must check the type and work without it.
+	Engine() any
+}
+
+// NativeFunc is a Go function that sees its raw JS arguments. Use it when a plain Go func won't do (optional
+// arguments, a JS function argument, an options object). A returned error is thrown in JS.
+type NativeFunc func(c Call) (any, error)
+
+// Call is one call of a NativeFunc.
+type Call interface {
+	// Arg is the i-th argument; undefined past the end.
+	Arg(i int) Value
+	// Len is how many arguments were passed.
+	Len() int
+	Runtime() Runtime
+}
+
+// Value is a JS value.
+type Value interface {
+	// Nullish reports undefined or null.
+	Nullish() bool
+	// Export converts it to Go: primitives, map[string]any, []any, or the Go value it wraps.
+	Export() any
+	// String converts it to a string the way JS does.
+	String() string
+	// Object is the value as an object, or nil.
+	Object() Object
+	// Func keeps the value as a function to call later, or nil if it isn't one.
+	Func() Func
+}
+
+// Object is a JS object.
+type Object interface {
+	Value
+	Get(name string) Value
+	Set(name string, v any) error
+	Keys() []string
+}
+
+// Func is a JS function kept for later. Call is safe from any goroutine: the engine runs it on the VM it came from
+// (it may use that file's top-level variables), one call at a time per VM, and waits for a returned promise. The
+// result is exported to Go.
+type Func interface {
+	Call(args ...any) (any, error)
+}
+
+// Error is a JS exception as a Go error. Value is what JS threw, exported.
+type Error struct {
+	Message string
+	Value   any
+}
+
+func (e *Error) Error() string { return e.Message }
+
+// Runner runs Go code on one of an app's JS runtimes, the same ones hooks and routes use.
+type Runner interface {
+	Run(fn func(rt Runtime) error) error
+}
+
+const runnerKey = "__pocketone_js_runner"
+
+// ErrNoEngine is returned by [Run] on an app without a JS engine (jsvm not registered).
+var ErrNoEngine = errors.New("js: no JS engine on this app")
+
+// SetRunner is called by the engine when it registers on app.
+func SetRunner(app core.App, r Runner) { app.Store().Set(runnerKey, r) }
+
+// Run calls fn with one of app's JS runtimes. fn must not keep rt after it returns.
+func Run(app core.App, fn func(rt Runtime) error) error {
+	r, _ := app.Store().Get(runnerKey).(Runner)
+	if r == nil {
+		return ErrNoEngine
+	}
+	return r.Run(fn)
+}
+
+// Extension methods. A value in jsvm's Config.Extensions implements any of them; the engine calls only those it has.
+// Extensions run in list order (done funcs in reverse); for the file and module sources the first that has the
+// method wins; error mappers apply in list order.
+type (
+	// Initer sets up each runtime, after the engine's standard globals.
+	Initer interface{ OnInit(rt Runtime) }
+	// Caller wraps every call into JS; an error refuses the call.
+	Caller interface {
+		OnCall(rt Runtime) (done func(), err error)
+	}
+	// HTTPClienter supplies the client $http.send uses on rt.
+	HTTPClienter interface {
+		HTTPClient(rt Runtime) *http.Client
+	}
+	// HookFiler supplies the hook files instead of HooksDir (name -> source).
+	HookFiler interface {
+		HookFiles(pattern string) (map[string][]byte, error)
+	}
+	// MigrationFiler supplies the migration files instead of MigrationsDir.
+	MigrationFiler interface {
+		MigrationFiles(pattern string) (map[string][]byte, error)
+	}
+	// Moduler supplies require()'s modules: root is __hooks; load returns a module's source by its path under root,
+	// or [ErrNoModule].
+	Moduler interface {
+		Modules() (root string, load func(path string) ([]byte, error))
+	}
+	// Loader wraps loading one hook file. done runs after it; mapErr rewrites its errors (nil = unchanged).
+	Loader interface {
+		OnLoad(rt Runtime, hooksRoot, file string, content []byte) (done func(), mapErr func(error) error)
+	}
+	// Compiler wraps compiling one handler; mapErr rewrites its errors (nil = unchanged). prefix is how many bytes
+	// the engine put before src.
+	Compiler interface {
+		OnCompile(rt Runtime, src string, prefix int) (mapErr func(error) error)
+	}
+	// Binder exposes an extension's Go API to an app's JS (e.g. as a $name global), on each of the app's runtimes.
+	// Under a multisite host, what it exposes must be safe for a hostile tenant to call on its own app.
+	Binder interface {
+		BindJS(app core.App, rt Runtime)
+	}
+)
+
+// ErrNoModule is what a [Moduler]'s load returns for a module it doesn't have.
+var ErrNoModule = errors.New("js: no such module")
