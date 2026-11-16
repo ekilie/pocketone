@@ -39,6 +39,8 @@ repo root; each release here says which PocketBase version it's built on.
 - **pages:** a page renders for any HTTP method, as in 0.x.
 - **pages:** an `Authorization` header login wins over the `pb_auth` cookie, as in 0.x.
 - **pages:** sign-in refuses accounts that need MFA.
+- **pages:** `pocketone pages create` and every starter README show the `superuser upsert` step before the first `serve`.
+- **pages:** the daisyui starters' Tailwind input is `-app.tailwind.css`, so it isn't served.
 - **pages:** the Datastar add-on follows the Datastar 1.0.5 SDK spec (`viewTransitionSelector`, `namespace`, signals from the query for DELETE) and has 0.x's helpers back.
 
 ### Fixed

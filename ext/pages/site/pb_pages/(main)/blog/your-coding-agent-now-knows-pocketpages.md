@@ -6,6 +6,8 @@ author: Ben Allfree
 tags: AI agents, tooling, create-pocketpages
 ---
 
+> This post is about PocketPages 0.x, the npm package. PocketPages v1 is built into PocketOne: see [Moving from PocketPages 0.x](/docs/moving-from-0x).
+
 Coding agents are great at frameworks they've seen thousands of times. PocketPages isn't one of those yet, and it runs somewhere unusual: inside PocketBase's JavaScript VM (Goja), not Node.
 
 Left to their instincts, agents write code that looks right and doesn't run:
@@ -60,4 +62,4 @@ For chat assistants without skills, hand them [llms.txt](https://raw.githubuserc
 
 ## Help us make it better
 
-If your agent keeps getting something wrong, a one-line addition to the skill's gotchas usually fixes it for everyone. The skill lives in [`packages/claude-plugin`](https://github.com/benallfree/pocketpages/tree/main/packages/claude-plugin), and PRs are welcome. The full setup guide is on the [AI Coding Agents](/docs/ai-agents) page.
+If your agent keeps getting something wrong, a one-line addition to the skill's gotchas usually fixes it for everyone. The skill lives in [`packages/claude-plugin`](https://github.com/benallfree/pocketpages/tree/main/packages/claude-plugin), and PRs are welcome. Its README has the full setup guide.

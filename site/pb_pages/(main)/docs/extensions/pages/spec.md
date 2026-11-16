@@ -590,7 +590,14 @@ inside `ext/pages` (`starters/`).
 | `echo()` writes during render | Templates return text; streaming only through `ctx.res.sse()` |
 | `redirect(path, { message })` puts the flash in `?__flash=` | `ctx.res.redirect(path, { flash })`, one-time cookie, `ctx.flash()` |
 | `asset()` fingerprint: full SHA-256 | First 12 hex characters |
-| `+config.js` plugins: npm package names, EJS options | Built-in names or JS factories; EJS and Markdown always on |
+| `+config.js` plugins: npm package names, EJS options | A name is required first (a `_private/` file or package), then a built-in; or a JS factory. EJS and Markdown always on |
+| Plugin hooks `onRequest({ request, response })`, `onExtendContextApi`, `onRender`, `onResponse`, `handles` | `extendContext(ctx)`, `onRequest(ctx)`, `transform`; a 0.x hook name is an error |
+| `*.pb.js` beside pages in `pb_hooks/pages/` | Hook files stay in `pb_hooks`; in `pb_pages` they're a startup error |
+| `require('../lib/x')` could reach `pb_hooks` from the pages folder | `require` never leaves `pb_pages`; use `require(__hooks + '/lib/x')` |
+| Cookies (and `pb_auth`) readable by browser JS | `HttpOnly` by default; pass `{ httpOnly: false }` for a cookie the page's JS reads. `pb_auth` stays `HttpOnly`, so `pb.authStore.loadFromCookie(document.cookie)` no longer works |
+| Realtime `send(topic, message)` sent the message as is; `filter(clientId, client, topic, message)` replaced the subscription check | The data is JSON-encoded (a string arrives quoted: `JSON.parse` it); `filter(client)` narrows clients that are subscribed to the topic |
+| `.md`, `.jsx`, `.tsx` were static files unless a plugin handled them | Always pages |
+| EJS ran over the whole `.md` file, front matter included | Front matter is plain YAML, read before EJS runs |
 | auth plugin through the JS SDK over HTTP (`api.pb()`) | `ctx.session.*`, direct app calls |
 | `url()`, `stringify()`, micro-dash globals | Removed: use `ctx.req.url`, `JSON.stringify`, plain JS |
 | `pb()` (js-sdk plugin over HTTP to `localhost:8090`) | `ctx.pb()`: same SDK, built in, in-process, as the signed-in user |

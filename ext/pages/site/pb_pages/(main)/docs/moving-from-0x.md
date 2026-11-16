@@ -5,7 +5,7 @@ description: What changed between the PocketPages npm package (0.x) and PocketPa
 
 # Moving from PocketPages 0.x
 
-PocketPages v1 is part of PocketOne (the `pages` plugin). It keeps the ideas of the npm package (a folder of files that become routes, EJS, layouts, middleware, private partials) and changes the shapes. Apps written for 0.x don't run unchanged.
+PocketPages v1 is part of PocketOne (the `pages` extension). It keeps the ideas of the npm package (a folder of files that become routes, EJS, layouts, middleware, private partials) and changes the shapes. Apps written for 0.x don't run unchanged.
 
 There is no migration tool. Start a new app with `pocketone pages create <name>`, then move your pages over using the list below. The npm package is being retired.
 
@@ -114,6 +114,17 @@ Read it on the next request with `ctx.flash()`. See [flash](/docs/ctx/flash).
 - The auth plugin no longer goes through the JS SDK over HTTP (`api.pb()`). Use `ctx.session.*`, which calls the app directly. See [Authentication](/docs/plugins/auth).
 
 See [+config.js](/docs/config) and [Plugins](/docs/plugins).
+
+## Behavior that changed quietly
+
+These don't fail with an error, so check for them when porting:
+
+- **Cookies are `HttpOnly` by default.** Pass `{ httpOnly: false }` to `ctx.res.cookie` for a cookie your page's JS reads. The `pb_auth` cookie stays `HttpOnly`, so `pb.authStore.loadFromCookie(document.cookie)` in the browser no longer works.
+- **Realtime messages are JSON-encoded.** `ctx.realtime.send(topic, data)` sends `JSON.stringify(data)`, so a string (such as an HTML fragment) arrives in quotes: `JSON.parse` it on the client. A `filter` now gets one argument, the client, and only narrows clients already subscribed to the topic.
+- **`.md`, `.jsx` and `.tsx` files are always pages**, never served as static files.
+- **Front matter is plain YAML.** EJS tags inside it aren't run.
+- **`require` never leaves `pb_pages`.** To load code from `pb_hooks`, use `require(__hooks + '/lib/x')`.
+- **Hook files (`*.pb.js`) go in `pb_hooks`.** In `pb_pages` they're an error and aren't served.
 
 ## Removed globals
 

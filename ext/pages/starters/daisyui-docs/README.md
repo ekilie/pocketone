@@ -5,6 +5,7 @@ A docs site built from Markdown pages, styled with [Tailwind CSS](https://tailwi
 ```bash
 pocketone pages create myapp --starter daisyui-docs
 cd myapp
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
 pocketone serve --dir ./pb_data
 ```
 

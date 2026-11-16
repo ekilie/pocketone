@@ -5,6 +5,7 @@ A realtime chat with rooms and a live counter, built with [Datastar](https://dat
 ```bash
 pocketone pages create myapp --starter datastar
 cd myapp
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
 pocketone serve --dir ./pb_data
 ```
 

@@ -5,6 +5,7 @@ A layout with a responsive navbar and drawer, built with [Tailwind CSS](https://
 ```bash
 pocketone pages create myapp --starter daisyui
 cd myapp
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
 pocketone serve --dir ./pb_data
 ```
 

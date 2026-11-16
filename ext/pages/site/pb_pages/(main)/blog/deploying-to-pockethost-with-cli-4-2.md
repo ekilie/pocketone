@@ -6,6 +6,8 @@ author: Ben Allfree
 tags: deploying, PocketHost, starters
 ---
 
+> This post is about PocketPages 0.x, the npm package. PocketPages v1 is built into PocketOne: see [Moving from PocketPages 0.x](/docs/moving-from-0x).
+
 Going live with PocketPages is now four commands, and the tricky part about npm packages is handled for you.
 
 ## phio is now `pockethost`

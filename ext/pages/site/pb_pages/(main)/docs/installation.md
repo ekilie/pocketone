@@ -1,21 +1,21 @@
 ---
 title: Installation
-description: Run PocketPages v1 on PocketOne with the pages plugin, using a pb_pages folder.
+description: Run PocketPages v1 on PocketOne with the pages extension, using a pb_pages folder.
 ---
 
 # Installation
 
-PocketPages v1 is built into PocketOne as the `pages` plugin (`ext/pages`). There is nothing to install from npm. You need a PocketOne binary with the plugin.
+PocketPages v1 is built into PocketOne as the `pages` extension (`ext/pages`). There is nothing to install from npm: the standard `pocketone` binary includes it.
 
 <%- include('quickstart') %>
 
 `pocketone pages create myapp` creates a new app. Add `--starter <kit>` to start from a [starter kit](/docs/starter-kits).
 
-_Note: `--dir` tells `pocketone` where `pb_data` is. PocketPages looks for `pb_pages` next to it._
+_Note: `--dir` tells `pocketone` where `pb_data` is. PocketPages looks for `pb_pages` next to it. Create the superuser before the first `serve`; otherwise PocketBase opens its superuser installer in your browser._
 
-Browse to `http://localhost:8090` and you'll see your home page:
+Browse to `http://localhost:8090` and you'll see the starter's home page. The default `minimal` kit is one splash page:
 
-<%- include('browser', { content: `Hello, world!` }) %>
+<%- include('browser', { content: `<h1>PocketPages</h1>` }) %>
 
 To start editing, open
 
@@ -36,7 +36,7 @@ myapp/
 ```
 
 - PocketPages finds the folder at `pb_pages` next to `pb_data`, or wherever `--pagesDir` points.
-- If the folder doesn't exist, the plugin does nothing for that app.
+- If the folder doesn't exist, the extension does nothing for that app.
 - Under a multitenant host, every instance has its own `pb_pages`.
 
 ## How does it work?

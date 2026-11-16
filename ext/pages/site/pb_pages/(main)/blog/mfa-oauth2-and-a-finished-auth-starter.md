@@ -6,6 +6,8 @@ author: Ben Allfree
 tags: auth, plugins, starters, release
 ---
 
+> This post is about PocketPages 0.x, the npm package. PocketPages v1 is built into PocketOne: see [Moving from PocketPages 0.x](/docs/moving-from-0x).
+
 Authentication got a lot of attention in this release. The auth plugin learned multi-factor sign-in, OAuth2 got a round of fixes, and the auth starter went from "mostly works" to a complete reference you can deploy.
 
 ## MFA in the auth plugin (0.3.0)

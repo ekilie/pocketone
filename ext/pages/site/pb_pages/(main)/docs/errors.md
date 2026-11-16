@@ -1,6 +1,6 @@
 ---
 title: Errors
-description: How PocketPages turns thrown errors into responses, ctx.httpError(), and a custom +error.ejs page.
+description: How PocketPages turns thrown errors into responses, ctx.httpError(), and custom +error and +404 pages.
 ---
 
 # Errors
@@ -45,4 +45,17 @@ Create `pb_pages/+error.ejs`. It renders for every `ctx.httpError` and for every
 <%% slot('title', () => { %>Error <%%= ctx.error.status %><%% }) %>
 <h1><%%= ctx.error.status %></h1>
 <p><%%= ctx.error.message %></p>
+```
+
+`+error` and `+404` live only at the top of `pb_pages`. Either may be `.ejs`, `.jsx` or `.tsx`.
+
+## A custom 404 page
+
+Create `pb_pages/+404.ejs`. It renders inside the root layout, with status `404`, for a `GET` or `HEAD` that nothing answers: no page, no file in `pb_public` and no PocketBase route. It never renders for `/api/` or `/_/`. The root `+middleware.js` runs first, and page code can still change the status.
+
+```ejs
+<!-- pb_pages/+404.ejs -->
+<%% slot('title', () => { %>Not found<%% }) %>
+<h1>Not found</h1>
+<p>Nothing lives at <%%= ctx.req.url.pathname %>.</p>
 ```

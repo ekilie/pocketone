@@ -5,6 +5,7 @@ One page styled with [MVP.css](https://andybrewer.github.io/mvp/): classless CSS
 ```bash
 pocketone pages create myapp --starter mvp
 cd myapp
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
 pocketone serve --dir ./pb_data
 ```
 
