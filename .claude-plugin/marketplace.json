@@ -1,0 +1,18 @@
+{
+  "name": "pocketone",
+  "owner": {
+    "name": "PocketHost",
+    "url": "https://pocketone.dev"
+  },
+  "metadata": {
+    "description": "Agent Skills for PocketOne and PocketPages v1, kept in step with pocketone.dev."
+  },
+  "plugins": [
+    {
+      "name": "pocketone",
+      "source": "./agent",
+      "description": "Build with PocketOne (the pocketone binary, pocketone.yaml, its extensions and contracts) and PocketPages v1 server-rendered sites.",
+      "category": "development"
+    }
+  ]
+}
