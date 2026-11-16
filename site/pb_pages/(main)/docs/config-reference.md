@@ -178,7 +178,7 @@ Owned by [Pocker](/docs/extensions/pocker).
 
 #### `providers:`
 
-which extension provides a contract when several do
+Which extension provides a contract when several do.
 
 Owned by [Standard Set](/docs/extensions/standard).
 

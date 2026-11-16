@@ -15,7 +15,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Auto TLS](https://pocketone.dev/docs/extensions/autotls) | Certificates on demand and wildcards through ACME. |
 | [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
 | [Pages](https://pocketone.dev/docs/extensions/pages) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
-| [Vacuum](https://pocketone.dev/docs/extensions/vacuum) | Scheduled SQLite VACUUM. |
+| [Vacuum](https://pocketone.dev/docs/extensions/vacuum) | Planned. Scheduled SQLite VACUUM. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Tokens](https://pocketone.dev/docs/extensions/tokens) | Long-lived API tokens with scopes. |
@@ -38,7 +38,7 @@ Host hundreds of PocketBase instances in one process, across regions.
 | [Firewall](https://pocketone.dev/docs/extensions/firewall) | Peer allow-lists, trusted proxies and rate limits for a host. |
 | [Edge](https://pocketone.dev/docs/extensions/edge) | Forwards each request to the edge that owns the instance. |
 | [Mothership](https://pocketone.dev/docs/extensions/mothership) | A control plane and its edges, across regions. |
-| [Schedules](https://pocketone.dev/docs/extensions/schedules) | Scheduled webhooks that wake sleeping instances. |
+| [Schedules](https://pocketone.dev/docs/extensions/schedules) | Planned. Scheduled webhooks that wake sleeping instances. |
 | [Stats](https://pocketone.dev/docs/extensions/stats) | Measures disk use and last request for each instance a host serves. |
 
 ## Services for your instances
@@ -57,9 +57,9 @@ Accounts, quotas and billing, for running PocketBase as a service.
 
 | Extension | What it does |
 |---|---|
-| [Multitenant](https://pocketone.dev/docs/extensions/tenants) | Accounts that own instances: quotas, owner logins, tokens and an API. |
-| [Multitenant Billing](https://pocketone.dev/docs/extensions/tenant-billing) | Plans, quotas and the billing provider hook for Multitenant. |
-| [Lemon Squeezy Adapter](https://pocketone.dev/docs/extensions/tenant-billing-ls) | Lemon Squeezy as the billing provider. |
+| [Multitenant](https://pocketone.dev/docs/extensions/tenants) | Planned. Accounts that own instances: quotas, owner logins, tokens and an API. |
+| [Multitenant Billing](https://pocketone.dev/docs/extensions/tenant-billing) | Planned. Plans, quotas and the billing provider hook for Multitenant. |
+| [Lemon Squeezy Adapter](https://pocketone.dev/docs/extensions/tenant-billing-ls) | Planned. Lemon Squeezy as the billing provider. |
 
 ## For extension authors
 

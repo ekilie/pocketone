@@ -173,7 +173,7 @@ Owned by [Pocker](https://pocketone.dev/docs/extensions/pocker).
 
 #### `providers:`
 
-which extension provides a contract when several do
+Which extension provides a contract when several do.
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 

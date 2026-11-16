@@ -287,7 +287,7 @@ func (s *Set) Register(app core.App, js jsvm.Config) error {
 //	providers:
 //	  mail.fallback/v1: mailrelay
 //	  runtime/v1: [pocker, docker]
-var ProvidersSection = extkit.NewSection("providers", map[string]any{}, "which extension provides a contract when several do")
+var ProvidersSection = extkit.NewSection("providers", map[string]any{}, "Which extension provides a contract when several do.")
 
 // ConfiguredProviders reads the `providers:` section as choices for [Set.Providers].
 func ConfiguredProviders() extkit.Choices {

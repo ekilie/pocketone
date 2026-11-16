@@ -59,7 +59,7 @@ A path segment (file or folder name) starting with one of these characters is ne
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ejs`, `.jsx` or `.tsx`). One of each per folder. Any other `+` name is an error at startup. |
+| `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ejs`, `.jsx` or `.tsx`). `+middleware`, `+page`, `+api` and `+layout`: one of each per folder. `+config`, `+error` and `+404`: only at the top of `pb_pages` (in a subfolder they're an error at startup). Any other `+` name is an error at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
 | `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
@@ -222,7 +222,7 @@ module.exports = {
 - A template is compiled once per content hash and reused.
 
 **In scope inside a template:** `ctx`, `data` (= `ctx.data`), `params` (= `ctx.params`), `include`, `slot`, `asset`
-(= `ctx.asset`), `meta` (= `ctx.meta`).
+(= `ctx.asset`), `meta` (= `ctx.meta`), `require` (the same `require` as page code, 1).
 
 A template returns its text. There is no `echo`; anything you want in the output goes through a tag.
 
@@ -267,7 +267,7 @@ applied innermost first. A folder may have one layout.
 
 - `slot(name, fn)` defines a named slot: `fn`'s output is captured and nothing is output in place.
 - `slot(name)` returns a slot's content (`''` if not defined). `slot()` returns the content being wrapped: the page,
-  or the inner layout.
+  or the inner layout. `<%%- slot %>` (no call, as 0.x layouts wrote it) prints the same thing.
 - Named slots defined by the page or by any inner layout are visible to every outer layout. Defining the same name
   again replaces it; inside the new definition's `fn`, `slot(name)` still returns the previous content, so a layout
   can wrap it (`slot('title', () => { %>Docs: <%%- slot('title') %><%% })`).
@@ -546,10 +546,12 @@ Plugins for third-party libraries ship as JS files in `ext/pages/addons/`, not b
 - `ctx.datastar.signals()` returns the request's signals as an object (from the `datastar` query parameter on
   `GET`, the JSON body otherwise). `readSignals(target)` (or 0.x's `readSignals(request, target)`) merges them into
   `target` and returns it.
-- Script helpers, each an `executeScript` (options `{ eventId, retryDuration }`): `consoleLog(msg)`,
-  `consoleError(err)`, `redirect(url)` (a full page load), `dispatchCustomEvent(name, detail, { selector, bubbles,
-  cancelable, composed }?)` (on `document` by default), `replaceURL(url)` (`history.replaceState`) and
-  `prefetch(urls)` (a `speculationrules` script that stays in the page).
+- Script helpers, each an `executeScript` (options `{ eventId, retryDuration, autoRemove = true, attributes }`;
+  `autoRemove` adds `data-effect="el.remove()"` so the script tag removes itself, `attributes` is a list of extra
+  attribute strings such as `'type="module"'`): `consoleLog(msg)`, `consoleError(err)`, `redirect(url)` (a full
+  page load), `dispatchCustomEvent(name, detail, { selector, bubbles, cancelable, composed, eventId, retryDuration
+  }?)` (on `document` by default), `replaceURL(url)` (`history.replaceState`) and `prefetch(urls)` (a
+  `speculationrules` script that stays in the page).
 - `mode` is one of `outer` (default), `inner`, `replace`, `prepend`, `append`, `before`, `after`, `remove`.
 - When a request has `Datastar-Request: true`, the rendered page (without layouts) is sent as a `patchElements`
   event, into `Datastar-Selector` if given.

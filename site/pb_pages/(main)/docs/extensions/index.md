@@ -20,7 +20,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Auto TLS](/docs/extensions/autotls) | Certificates on demand and wildcards through ACME. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
 | [Pages](/docs/extensions/pages) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
-| [Vacuum](/docs/extensions/vacuum) | Scheduled SQLite VACUUM. |
+| [Vacuum](/docs/extensions/vacuum) | Planned. Scheduled SQLite VACUUM. |
 | [MCP](/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [S3 Redirect](/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Tokens](/docs/extensions/tokens) | Long-lived API tokens with scopes. |
@@ -43,7 +43,7 @@ Host hundreds of PocketBase instances in one process, across regions.
 | [Firewall](/docs/extensions/firewall) | Peer allow-lists, trusted proxies and rate limits for a host. |
 | [Edge](/docs/extensions/edge) | Forwards each request to the edge that owns the instance. |
 | [Mothership](/docs/extensions/mothership) | A control plane and its edges, across regions. |
-| [Schedules](/docs/extensions/schedules) | Scheduled webhooks that wake sleeping instances. |
+| [Schedules](/docs/extensions/schedules) | Planned. Scheduled webhooks that wake sleeping instances. |
 | [Stats](/docs/extensions/stats) | Measures disk use and last request for each instance a host serves. |
 
 ## Services for your instances
@@ -62,9 +62,9 @@ Accounts, quotas and billing, for running PocketBase as a service.
 
 | Extension | What it does |
 |---|---|
-| [Multitenant](/docs/extensions/tenants) | Accounts that own instances: quotas, owner logins, tokens and an API. |
-| [Multitenant Billing](/docs/extensions/tenant-billing) | Plans, quotas and the billing provider hook for Multitenant. |
-| [Lemon Squeezy Adapter](/docs/extensions/tenant-billing-ls) | Lemon Squeezy as the billing provider. |
+| [Multitenant](/docs/extensions/tenants) | Planned. Accounts that own instances: quotas, owner logins, tokens and an API. |
+| [Multitenant Billing](/docs/extensions/tenant-billing) | Planned. Plans, quotas and the billing provider hook for Multitenant. |
+| [Lemon Squeezy Adapter](/docs/extensions/tenant-billing-ls) | Planned. Lemon Squeezy as the billing provider. |
 
 ## For extension authors
 

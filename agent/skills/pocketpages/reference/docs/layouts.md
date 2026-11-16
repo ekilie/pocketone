@@ -33,6 +33,8 @@ In a layout, `slot()` returns the content being wrapped: the page, or the inner 
 </html>
 ```
 
+`<%- slot %>` without parentheses prints the same content, so 0.x layouts that wrote it still work.
+
 ## Named slots
 
 A page (or an inner layout) defines a named slot with `slot(name, fn)`. `fn`'s output is captured and nothing is output in place. A layout reads it with `slot(name)`, which returns `''` if it isn't defined.
@@ -69,6 +71,7 @@ Layouts render after the page, with the same `ctx`. Everything middleware, `+pag
 - When the response isn't HTML (a handler set another `Content-Type`).
 - When a handler or middleware sent the response itself (`ctx.res.json`, `ctx.res.html`, `ctx.res.redirect`, ...).
 - For `+api.js` routes, which have no template.
+- After `ctx.res.layout(false)`, called from middleware, `+page.js` or the page itself.
 - With the [Datastar add-on](https://pocketpages.dev/docs/plugins/datastar), for requests that carry `Datastar-Request: true`.
 
-To serve HTML fragments without the site layout, put the layout in a group (`(site)/+layout.ejs`) and the fragments outside it, or send them with `ctx.res.html()`.
+To serve HTML fragments without the site layout, call `ctx.res.layout(false)`, put the layout in a group (`(site)/+layout.ejs`) and the fragments outside it, or send them with `ctx.res.html()`.

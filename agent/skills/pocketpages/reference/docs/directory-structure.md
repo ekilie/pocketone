@@ -30,7 +30,7 @@ A file or folder name starting with one of these characters is never a URL:
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+config.js`, `+layout.ejs` (or `.jsx`, `.tsx`), `+middleware.js`, `+page.js`, `+api.js`. Any other `+` name, and any other extension (such as `+layout.md`), is an error at startup. |
+| `+` | Framework file: `+layout.ejs` (or `.jsx`, `.tsx`), `+middleware.js`, `+page.js`, `+api.js`, one of each per folder. `+config.js`, `+error.ejs` and `+404.ejs` are allowed only at the top of `pb_pages`. Any other `+` name, any other extension (such as `+layout.md`), and a top-only file in a subfolder are errors at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
 | `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |

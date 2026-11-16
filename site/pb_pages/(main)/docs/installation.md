@@ -32,11 +32,14 @@ go build -o pocketone .
 
 ## Run it
 
+Create your first superuser before the first serve:
+
 ```bash
+pocketone superuser upsert <email> <password>
 pocketone serve
 ```
 
-Open `http://127.0.0.1:8090/_/` to create your first superuser, as in PocketBase.
+Opening `http://127.0.0.1:8090/_/` to create it also works, as in PocketBase.
 
 To start a site with server-rendered pages:
 

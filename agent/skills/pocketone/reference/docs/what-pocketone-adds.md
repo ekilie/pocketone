@@ -23,7 +23,7 @@ one. `pocketone pages create myapp` starts a new site from a starter kit. Full d
 
 Settings can live in `pocketone.yaml`, with secrets in a `.env` file beside it that your JS hooks never see. Without
 the file, PocketOne behaves like stock PocketBase. `pocketone config` lists every section, and
-`pocketone config check` checks a file. A full reference is coming to this site.
+`pocketone config check` checks a file. The [config reference](https://pocketone.dev/docs/config-reference) lists every section.
 
 ## Commands for working with remote apps
 

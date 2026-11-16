@@ -5,7 +5,7 @@ description: Turn on built-in plugins, add JS plugins, and enable debug output f
 
 # Configuration with `+config.js`
 
-Create `pb_pages/+config.js` to configure PocketPages for the app:
+Create `pb_pages/+config.js` to configure PocketPages for the app. It's only allowed at the top of `pb_pages`; a `+config.js` in a subfolder is an error at startup.
 
 ```js
 // pb_pages/+config.js

@@ -13,6 +13,7 @@
 | `text(text)` / `text(status, text)` | Send plain text. |
 | `file(path)` | Send a file from `pb_pages` (path relative to `pb_pages`). |
 | `sse()` | Start a `text/event-stream` response. |
+| `layout(false)` | Render this page without layouts (e.g. an HTML fragment for htmx). Returns `ctx.res`. |
 | `sent` | `true` once a response has been sent. |
 
 Once a response is sent, the later steps of the request (handlers, template, layouts) are skipped.

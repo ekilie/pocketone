@@ -150,7 +150,7 @@ func deployCommand() *cobra.Command {
 		},
 	}
 	f.bind(c)
-	c.Flags().StringVar(&commit, "commit", "", "commit SHA to record (default: $GITHUB_SHA or git HEAD)")
+	c.Flags().StringVar(&commit, "commit", "", "commit SHA to record (default: $GITHUB_SHA, $CI_COMMIT_SHA, or git HEAD)")
 	c.Flags().StringVarP(&message, "message", "m", "", "note to record with this deploy")
 	c.Flags().StringVar(&out, "out", "", "write the deploy set to a local folder instead of deploying")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "list what would be deployed, deploy nothing")

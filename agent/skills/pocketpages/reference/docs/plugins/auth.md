@@ -22,13 +22,14 @@ It reads the `pb_auth` cookie, validates the token and sets `ctx.auth` to the au
 |---|---|
 | `register(email, password, { collection = 'users', data, verify = true, signIn = true }?)` | Create an auth record. `data` holds extra fields. `verify` sends the verification email; `signIn` signs the new account in (returns `{ token: '', record }` when `false`). |
 | `signInWithPassword(email, password, { collection }?)` | Sign in with a password. |
-| `requestOTP(email, { collection }?)` | Send a one-time password. Returns the `otpId`. |
+| `requestOTP(email, { collection, create = false }?)` | Send a one-time password. Returns the `otpId`. An unknown email still gets an id, one that never validates; with `create: true` the account is created first. |
 | `signInWithOTP(otpId, code, { collection }?)` | Sign in with a one-time password. |
 | `signInAnonymously({ collection }?)` | Sign in as a new anonymous user. |
-| `requestOAuth2(provider, { collection, redirectPath = '/auth/oauth/confirm' }?)` | Store state in a cookie and redirect to the provider. |
+| `requestOAuth2(provider, { collection, redirectPath = '/auth/oauth/confirm', redirect = true }?)` | Store state in a cookie and return the provider's URL. With `redirect` it also sends the redirect; pass `redirect: false` to send the URL some other way. `redirectPath` must be a path on this site. |
 | `signInWithOAuth2(state, code, { createData }?)` | Complete an OAuth2 sign-in on the redirect path. Returns `{ token, record, meta }`; `meta.isNew` is `true` for a new account. |
 | `signIn(record)` | Set the cookie for a record you authenticated yourself. It skips the MFA check below. |
 | `signOut()` | Sign out. |
+| `authMethods({ collection }?)` | The sign-in methods a collection has turned on: `{ password: { enabled, identityFields }, otp: { enabled }, mfa: { enabled }, oauth2: { enabled, providers: [{ name, displayName }] } }`, as PocketBase's auth-methods API. |
 
 ### MFA
 
@@ -38,6 +39,21 @@ account needs a second sign-in step (MFA), which pages doesn't support yet." An 
 use pages sign-in, turn MFA off for the collection, or give it a rule that leaves out the accounts that sign in here.
 
 Every sign-in method sets `ctx.auth` for the rest of the request and returns `{ token, record }`.
+
+### Email flows
+
+These use PocketBase's own checks and mail templates. The request methods never reveal whether an email exists.
+
+| Method | |
+|---|---|
+| `requestVerification(email, { collection }?)` | Send the verification email (skipped for an account that's already verified). |
+| `confirmVerification(token)` | Mark the account verified. Returns the record. |
+| `requestPasswordReset(email, { collection }?)` | Send the password reset email. |
+| `confirmPasswordReset(token, password, passwordConfirm)` | Set the new password (and mark the account verified). Returns the record. |
+| `requestEmailChange(newEmail)` | Send a confirmation email to `newEmail`. Needs a signed-in user (`ctx.auth`). |
+| `confirmEmailChange(token, password)` | Change the email after checking the current password. Returns the record. |
+
+A bad or expired token throws an error.
 
 ## Example
 

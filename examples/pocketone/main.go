@@ -1,7 +1,6 @@
-// Command pocketbase is the standard PocketOne binary: PocketBase's examples/base plus the PocketOne extensions that ship
-// by default (ext/pages, ext/s3redirect, ext/bulkmail, ext/tokens (with its OAuth server), ext/remotes, ext/deploy, ext/mcp,
-// ext/pitr, ext/autotls). It's its
-// own module so core's go.mod stays upstream's.
+// Command pocketone is the standard PocketOne binary: PocketBase's examples/base plus the standard set (ext/standard:
+// settings, tokens (with its OAuth server), remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy) and the
+// extras added here (autotls, mailtrap, upgrade). It's its own module so core's go.mod stays upstream's.
 package main
 
 import (
@@ -78,8 +77,8 @@ func main() {
 		return sc, cfg.ResolvePath
 	}))
 
-	// The standard set: every PocketOne app's extensions (tokens with its OAuth server, remotes, mcp, pages, s3redirect,
-	// pitr, bulkmail, deploy). The flags below reconfigure members; extras are added after them.
+	// The standard set: every PocketOne app's extensions (settings, tokens with its OAuth server, remotes, mcp, pages,
+	// s3redirect, pitr, backups, bulkmail, deploy). The flags below reconfigure members; extras are added after them.
 	set := standard.New()
 	set.Providers = standard.ConfiguredProviders() // pocketone.yaml's providers: section
 	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
@@ -260,7 +259,7 @@ func main() {
 	// S3 redirects: with S3 file storage on, downloads redirect to a signed bucket URL after the access check
 	set.S3Redirect = s3redirect.New(s3redirect.Config{Enabled: &s3Redirect, TTL: s3RedirectTTL})
 	// point-in-time restore: on by default (--pitr=false turns it off); history in pb_data/litestream/, restore from
-	// Settings → Backups or `pocketbase pitr restore`
+	// Settings → Backups or `pocketone pitr restore`
 	set.PITR = pitr.New(pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention, SnapshotInterval: pitrCfg.SnapshotInterval})
 
 	// ---------------------------------------------------------------

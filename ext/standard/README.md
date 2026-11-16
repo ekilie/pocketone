@@ -5,8 +5,8 @@ version: 0.0.1
 
 # Standard Set
 
-The extensions every PocketOne app has: API tokens (with the OAuth server), remotes (remote/v1), MCP, PocketPages, S3
-redirects, point-in-time restore, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,
+The extensions every PocketOne app has: settings, API tokens (with the OAuth server), remotes (remote/v1), MCP,
+PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,
 so an app never misses one because its host forgot to list it. Members can be reconfigured or turned off per app,
 never removed.
 
