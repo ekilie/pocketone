@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -26,6 +25,7 @@ import (
 
 const typesFileName = "types.d.ts"
 
+//go:generate go run ./internal/typegen
 //go:embed types.d.ts
 var typesFile []byte
 
@@ -484,21 +484,33 @@ func (p *plugin) relativeTypesPath(basepath string) string {
 	return rel
 }
 
-// refreshTypesFile writes the embedded TS declarations (only when they changed).
+// refreshTypesFile writes the TS declarations: the engine's (generated, embedded) and every extension's (js.Typer),
+// only when they changed.
 func (p *plugin) refreshTypesFile() error {
 	full := p.fullTypesPath()
 	if err := os.MkdirAll(filepath.Dir(full), os.ModePerm); err != nil {
 		return err
 	}
-	if f, err := os.Open(full); err == nil {
-		ts := make([]byte, 13)
-		io.ReadFull(f, ts)
-		f.Close()
-		if len(typesFile) >= len(ts) && bytes.Equal(typesFile[:13], ts) {
-			return nil
+	content := p.typesContent()
+	if old, err := os.ReadFile(full); err == nil && bytes.Equal(old, content) {
+		return nil
+	}
+	return os.WriteFile(full, content, 0644)
+}
+
+// typesContent is types.d.ts for this app: the engine's declarations, then each extension's.
+func (p *plugin) typesContent() []byte {
+	out := append([]byte{}, typesFile...)
+	for _, e := range p.config.Extensions {
+		if t, ok := e.(js.Typer); ok {
+			if d := strings.TrimSpace(t.TypeScript()); d != "" {
+				out = append(out, '\n')
+				out = append(out, d...)
+				out = append(out, '\n')
+			}
 		}
 	}
-	return os.WriteFile(full, typesFile, 0644)
+	return out
 }
 
 func prependToEmptyFile(path, text string) error {

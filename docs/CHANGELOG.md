@@ -35,6 +35,7 @@ repo root; each release here says which PocketBase version it's built on.
 
 ### Added
 
+- **jsvm:** `pb_data/types.d.ts` now covers PocketOne: generated from PocketOne's core (its extra hooks, e.g. `onFilesystemCreate`), with typed `.async` on every Go function, `require`, `process`, `Buffer`, `import.meta`, and the API of each extension on in the app (`$mcp`, `$tokens`, `$bulkmail`, `onContracts`). Extensions add theirs with a `TypeScript()` method.
 - **jsvm:** TypeScript: `.ts`, `.mts` and `.cts` hooks (`*.pb.ts`, `*.pb.mts`, `*.pb.cts`), migrations and modules run directly, with types stripped by esbuild and error positions in the `.ts` source. `.ts` and `.mts` are ES modules, `.cts` is CommonJS; `import "./x.js"` finds `x.ts`. No runtime type checking: use `tsc --noEmit` with `pb_data/types.d.ts`.
 - **jsvm:** ES modules: `pb_hooks/*.pb.mjs` hook files, `pb_migrations/*.mjs` migrations and `.mjs` modules use `import`/`export` with top-level `await` and `import.meta`. `*.pb.js` and the new `*.pb.cjs` stay CommonJS scripts with `require()`. `import` and `require()` share one resolver (relative paths, `node_modules`, `package.json` `exports` conditions) and one instance per module; `require()` of an ES module without top-level `await` returns its namespace, as in Node 22.
 

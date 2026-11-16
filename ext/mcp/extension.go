@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	_ "embed"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/extkit/js"
@@ -38,3 +39,9 @@ func (p *Extension) Contracts() extkit.Contracts {
 		WorksWith:  extkit.IDs("tokens/v1", "oauth/v1"),
 	}
 }
+
+//go:embed jsbind.d.ts
+var jsTypes string
+
+// TypeScript declares the extension's JS API for pb_data/types.d.ts (extkit/js Typer).
+func (p *Extension) TypeScript() string { return jsTypes }

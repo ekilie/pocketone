@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"context"
+	_ "embed"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
@@ -94,3 +95,9 @@ func (info *Info) grant() tokensv1.Grant {
 		Owner:           info.Owner,
 	}
 }
+
+//go:embed jsbind.d.ts
+var jsTypes string
+
+// TypeScript declares the extension's JS API for pb_data/types.d.ts (extkit/js Typer).
+func (p *Extension) TypeScript() string { return jsTypes }

@@ -180,9 +180,18 @@ func (s *Set) Prepare(app core.App, layers func(name string) extkit.Config) (*ex
 	return plan, nil
 }
 
-// JSExtensions implements [extkit.AppSet].
+// JSExtensions implements [extkit.AppSet]: JS contracts, plus every extension on for app that declares its JS API's
+// types (js.Typer), for pb_data/types.d.ts.
 func (s *Set) JSExtensions(app core.App) []any {
-	return []any{extkit.JSContracts(app)}
+	out := []any{extkit.JSContracts(app)}
+	if plan, _ := app.Store().Get(planKey).(*extkit.Plan); plan != nil {
+		for _, e := range plan.On {
+			if t, ok := e.(js.Typer); ok {
+				out = append(out, typesOnly{t}) // only its types: the set binds its JS API itself (BindJS)
+			}
+		}
+	}
+	return out
 }
 
 // BindJS implements [extkit.AppSet]: the JS API of every extension that runs on app.
@@ -313,3 +322,8 @@ func ConfiguredProviders() extkit.Choices {
 	}
 	return out
 }
+
+// typesOnly passes an extension's TypeScript declarations to jsvm without its other methods.
+type typesOnly struct{ t js.Typer }
+
+func (t typesOnly) TypeScript() string { return t.t.TypeScript() }

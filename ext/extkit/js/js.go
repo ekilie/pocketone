@@ -157,6 +157,12 @@ type (
 	Binder interface {
 		BindJS(app core.App, rt Runtime)
 	}
+	// Typer declares in TypeScript what the extension binds (its globals, their types), so editors and tsc know them.
+	// The engine appends it to pb_data/types.d.ts. Write it as a .d.ts script: `declare var $name: ...`, no
+	// top-level import or export.
+	Typer interface {
+		TypeScript() string
+	}
 )
 
 // ErrNoModule is what a [Moduler]'s load returns for a module it doesn't have.

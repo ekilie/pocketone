@@ -105,6 +105,7 @@ var (
 	jsMu       sync.Mutex
 	jsAdapters = map[ContractID]jsAdapter{}
 	jsWires    []func(app core.App, rt js.Runtime) // binds each wire contract's on<Contract><Op> functions
+	jsHookOps  []jsHookOp                          // the same hooks, for TypeScript declarations
 )
 
 // JS registers the contract's JS adapter: how a JS object becomes a T, and what an app's JS may do with it.
@@ -174,6 +175,85 @@ func (j jsContracts) provide(id ContractID, obj js.Object) error {
 	return nil
 }
 
+type jsHookOp struct {
+	id ContractID
+	op string
+}
+
+// TypeScript implements the jsvm extension method (extkit/js Typer): onContracts, ContractError, and the action hook
+// of every wire contract pb_hooks may hook.
+func (j jsContracts) TypeScript() string {
+	var b strings.Builder
+	b.WriteString(jsContractsTypes)
+	jsMu.Lock()
+	ops := append([]jsHookOp{}, jsHookOps...)
+	adapters := map[ContractID]bool{}
+	for id, a := range jsAdapters {
+		adapters[id] = a.policy != JSClosed
+	}
+	jsMu.Unlock()
+	seen := map[string]bool{}
+	for _, o := range ops {
+		name := jsHookName(o.id, o.op)
+		if !adapters[o.id] || seen[name] {
+			continue
+		}
+		seen[name] = true
+		fmt.Fprintf(&b, "/** Runs on every %s call to %s (change e.input, or throw to refuse). @group PocketOne */\n", o.op, o.id)
+		fmt.Fprintf(&b, "declare function %s(handler: (e: contracts.CallEvent) => void): void;\n", name)
+	}
+	return b.String()
+}
+
+const jsContractsTypes = `// ---- contracts (ext/extkit): onContracts and the contracts' action hooks ----
+
+declare namespace contracts {
+  interface Auth {
+    /** "superuser", "record", "token", "host", or "" (anonymous). */
+    kind: string;
+    id: string;
+    /** A token's scopes; null means every scope. */
+    scopes: string[] | null;
+    via: string;
+    collection: string;
+    recordId: string;
+    email: string;
+  }
+  /** One call to a wire contract's operation. */
+  interface CallEvent {
+    contract: string;
+    op: string;
+    auth: Auth;
+    /** The operation's input; a hook may change it. */
+    input: any;
+    next(): void;
+  }
+  interface DeclareEvent {
+    /** Provides a contract from JS: an object with its methods. */
+    provide(id: string, impl: { [method: string]: (...args: any[]) => any }): void;
+    /** The app needs this contract: the start fails (dev mode: warns) when nothing provides it. */
+    require(...ids: string[]): void;
+    /** Works with this contract when present (shown in the startup lines). */
+    worksWith(...ids: string[]): void;
+    next(): void;
+  }
+}
+
+/**
+ * Declares and provides the app's contracts, once, after pb_hooks load.
+ *
+ * @group PocketOne
+ */
+declare function onContracts(handler: (e: contracts.DeclareEvent) => void): void;
+
+/** An error a contract implementation throws: a code, a message and an HTTP status. @group PocketOne */
+declare class ContractError extends Error {
+  constructor(code: string, message: string, status?: number);
+  code: string;
+  status?: number;
+}
+`
+
 // jsHookName is on<Contract><Op>: deploy/v1 + upload → onDeployUpload; mail.fallback/v1 + send → onMailFallbackSend.
 func jsHookName(id ContractID, op string) string {
 	base := strings.SplitN(string(id), "/", 2)[0]
@@ -191,6 +271,9 @@ func jsHookName(id ContractID, op string) string {
 func bindJSHooks(id ContractID, ops []string, on func(owner any, op string) *hook.Hook[*CallEvent]) {
 	jsMu.Lock()
 	defer jsMu.Unlock()
+	for _, op := range ops {
+		jsHookOps = append(jsHookOps, jsHookOp{id, op})
+	}
 	jsWires = append(jsWires, func(app core.App, rt js.Runtime) {
 		jsMu.Lock()
 		a, ok := jsAdapters[id]

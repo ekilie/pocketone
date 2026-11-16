@@ -1,6 +1,7 @@
 package bulkmail
 
 import (
+	_ "embed"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/extkit/js"
@@ -71,3 +72,9 @@ func (p *Extension) BindJS(app core.App, rt js.Runtime) {
 		BindJS(app, rt)
 	}
 }
+
+//go:embed jsbind.d.ts
+var jsTypes string
+
+// TypeScript declares the extension's JS API for pb_data/types.d.ts (extkit/js Typer).
+func (p *Extension) TypeScript() string { return jsTypes }

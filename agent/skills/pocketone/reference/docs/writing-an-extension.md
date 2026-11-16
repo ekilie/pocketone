@@ -35,6 +35,9 @@ func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 
 // optional: a $hello global in the app's JS hooks
 func (p *Extension) BindJS(app core.App, rt js.Runtime) { /* rt.Set("$hello", ...) */ }
+
+// optional: its TypeScript declarations, added to each app's pb_data/types.d.ts
+func (p *Extension) TypeScript() string { return `declare var $hello: { greet(name: string): string };` }
 ```
 
 - **Every app has the [standard set](https://pocketone.dev/docs/extensions/standard)** (tokens, mcp, pitr, deploy and the rest). Add yours

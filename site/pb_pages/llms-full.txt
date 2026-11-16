@@ -334,6 +334,9 @@ func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 
 // optional: a $hello global in the app's JS hooks
 func (p *Extension) BindJS(app core.App, rt js.Runtime) { /* rt.Set("$hello", ...) */ }
+
+// optional: its TypeScript declarations, added to each app's pb_data/types.d.ts
+func (p *Extension) TypeScript() string { return `declare var $hello: { greet(name: string): string };` }
 ```
 
 - **Every app has the [standard set](https://pocketone.dev/docs/extensions/standard)** (tokens, mcp, pitr, deploy and the rest). Add yours
@@ -5838,12 +5841,38 @@ map is kept, so an error names `pb_hooks/main.pb.mts:12:5` in your source, not i
 - `import type` and other type-only imports disappear, so a `*.pb.cts` script can use them and stay a script.
 - A `.cts` module may still be written with `import`/`export`; it's turned into CommonJS.
 
+### Types
+
+When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS API, for your editor and `tsc`:
+
+- PocketBase's API generated from PocketOne's core (its extra hooks included), by PocketBase's own generator.
+- What this engine adds ([`pocketone.d.ts`](pocketone.d.ts)): `.async` on every Go function, fully typed
+  (`await $app.findRecordById.async(...)` is a `Promise<core.Record>`), `require`, `process`, `Buffer`, `console`,
+  `import.meta`.
+- Each extension's own API, for the extensions on in that app (`$mcp`, `$tokens`, `$bulkmail`, `onContracts` and
+  the contracts' action hooks).
+
+To type-check, point a `tsconfig.json` at it:
+
+```json
+{
+  "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2022"],
+    "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true },
+  "include": ["pb_data/types.d.ts", "pb_hooks/**/*", "pb_migrations/**/*"]
+}
+```
+
+`skipLibCheck` skips two type errors inside PocketBase's own generated declarations. In a PocketOne checkout,
+`go generate` in `ext/jsvm` regenerates the declarations after a core change (the `TestTypes` tests fail until you
+do).
+
 ## Integrations
 
 Extensions plug in through `Config.Extensions` with the engine-neutral types in
 [`ext/extkit/js`](../extkit/js/js.go). A value implements any of:
 
-- `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API.
+- `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API. `TypeScript()`: declare it for editors and
+  `tsc` (appended to `pb_data/types.d.ts`).
 - `OnCall(rt)`: wrap every handler call; an error refuses it.
 - `HTTPClient(rt)`: the client `$http.send` uses.
 - `HookFiles`, `MigrationFiles`, `Modules`: hooks, migrations and `require()` modules from somewhere other than disk.
