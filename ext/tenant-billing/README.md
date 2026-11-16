@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.0
+title: "Multitenant Billing"
+group: saas
+summary: "Planned. Plans, quotas and the billing provider hook for Multitenant."
 ---
 
 # tenant-billing

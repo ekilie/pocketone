@@ -56,7 +56,7 @@ release:
   # a tag with a prerelease part (v0.1.0-alpha.1) is published as a GitHub prerelease, so it's never "Latest"
   prerelease: auto
   name_template: 'PocketOne {{ .Tag }}'
-  # every release's notes start with how to install or upgrade; the version's own notes (from docs/CHANGELOG.md) follow
+  # every release's notes start with how to install or upgrade; the version's own notes (from CHANGELOG.md) follow
   header: |
     ## Install or upgrade
 
@@ -105,7 +105,7 @@ archives:
     files:
       - LICENSE.md
       - CHANGELOG.md
-      - docs/CHANGELOG.md
+      - CHANGELOG.pocketbase.md
 
 checksum:
   name_template: 'checksums.txt'
@@ -114,7 +114,8 @@ snapshot:
   version_template: '{{ incpatch .Version }}-next'
 
 # GitHub renders every newline in release notes as a line break: never hard-wrap the header above or the notes file.
-# Release notes come from docs/CHANGELOG.md (see its top for the policy): always run
+# Release notes come from CHANGELOG.md (see its top for the policy): always run
+#   go run ./.github/extensions release vX.Y.Z   (then commit)
 #   examples/pocketone/release-notes.sh vX.Y.Z > /tmp/notes.md
 #   goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes /tmp/notes.md
 # (--release-notes skips the generated changelog, which would list PocketBase's whole upstream history). Don't set

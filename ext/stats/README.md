@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Stats"
+group: many
+summary: "Measures disk use and last request for each instance a host serves."
 ---
 
 # Stats

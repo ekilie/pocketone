@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "S3 Fallback"
+group: services
+summary: "A default bucket for uploads and backups when an instance has no S3 of its own."
 ---
 
 # S3 Fallback

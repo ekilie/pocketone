@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Mail Relay"
+group: services
+summary: "Outgoing mail for instances without SMTP, through your relay, with limits."
 ---
 
 # Mail Relay

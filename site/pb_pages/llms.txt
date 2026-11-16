@@ -42,34 +42,34 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Extensions: standard
 
-- [PITR](https://pocketone.dev/docs/extensions/pitr): Point-in-time restore of your database with Litestream. On by default.
-- [Settings](https://pocketone.dev/docs/extensions/settings): One API for the settings an app's admins change for its extensions. On by default.
-- [Backups](https://pocketone.dev/docs/extensions/backups): Restore an app to a moment from its own backups: the latest one before it. On by default.
 - [Auto TLS](https://pocketone.dev/docs/extensions/autotls): Certificates on demand and wildcards through ACME.
+- [Backups](https://pocketone.dev/docs/extensions/backups): Restore an app to a moment from its own backups: the latest one before it. On by default.
 - [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail): Campaigns to your app's own users, with audiences from a collection, a view or SQL.
+- [Config](https://pocketone.dev/docs/extensions/config): The pocketone.yaml config file, with secrets in a .env beside it.
+- [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
+- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
+- [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
 - [Pages](https://pocketone.dev/docs/extensions/pages): Server-rendered pages from a pb_pages folder (formerly PocketPages).
 - [Pages: PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
-- [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Planned. Scheduled SQLite VACUUM.
-- [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
+- [PITR](https://pocketone.dev/docs/extensions/pitr): Point-in-time restore of your database with Litestream. On by default.
+- [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect): File downloads as short-lived signed S3 redirects.
+- [Settings](https://pocketone.dev/docs/extensions/settings): One API for the settings an app's admins change for its extensions. On by default.
 - [Tokens](https://pocketone.dev/docs/extensions/tokens): Long-lived API tokens with scopes.
 - [Tokens: OAuth](https://pocketone.dev/docs/extensions/tokens/oauth): Tokens: OAuth
-- [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
-- [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
-- [Config](https://pocketone.dev/docs/extensions/config): The pocketone.yaml config file, with secrets in a .env beside it.
-- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
+- [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Planned. Scheduled SQLite VACUUM.
 
 ## Extensions: many instances
 
+- [Docker](https://pocketone.dev/docs/extensions/docker): A host provider that runs each instance in its own container.
+- [Edge](https://pocketone.dev/docs/extensions/edge): Forwards each request to the edge that owns the instance.
+- [Firewall](https://pocketone.dev/docs/extensions/firewall): Peer allow-lists, trusted proxies and rate limits for a host.
+- [Mothership](https://pocketone.dev/docs/extensions/mothership): A control plane and its edges, across regions.
+- [Multisite](https://pocketone.dev/docs/extensions/multisite): Many instances behind one listener, routed by hostname, run by one provider.
 - [Pocker](https://pocketone.dev/docs/extensions/pocker): Hundreds of PocketBase instances in one Go process, routed by hostname.
 - [Pocker: Pocker](https://pocketone.dev/docs/extensions/pocker/pocker): Pocker: Pocker
-- [Multisite](https://pocketone.dev/docs/extensions/multisite): Many instances behind one listener, routed by hostname, run by one provider.
-- [Docker](https://pocketone.dev/docs/extensions/docker): A host provider that runs each instance in its own container.
 - [Sandbox](https://pocketone.dev/docs/extensions/sandbox): Confines untrusted JS hooks, SQL and outbound network.
-- [Firewall](https://pocketone.dev/docs/extensions/firewall): Peer allow-lists, trusted proxies and rate limits for a host.
-- [Edge](https://pocketone.dev/docs/extensions/edge): Forwards each request to the edge that owns the instance.
-- [Mothership](https://pocketone.dev/docs/extensions/mothership): A control plane and its edges, across regions.
 - [Schedules](https://pocketone.dev/docs/extensions/schedules): Planned. Scheduled webhooks that wake sleeping instances.
 - [Stats](https://pocketone.dev/docs/extensions/stats): Measures disk use and last request for each instance a host serves.
 
@@ -81,18 +81,18 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Extensions: sell it
 
+- [Lemon Squeezy Adapter](https://pocketone.dev/docs/extensions/tenant-billing-ls): Planned. Lemon Squeezy as the billing provider.
 - [Multitenant](https://pocketone.dev/docs/extensions/tenants): Planned. Accounts that own instances: quotas, owner logins, tokens and an API.
 - [Multitenant Billing](https://pocketone.dev/docs/extensions/tenant-billing): Planned. Plans, quotas and the billing provider hook for Multitenant.
-- [Lemon Squeezy Adapter](https://pocketone.dev/docs/extensions/tenant-billing-ls): Planned. Lemon Squeezy as the billing provider.
 
 ## Extensions: for authors
 
-- [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
-- [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
-- [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
-- [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
-- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
 - [Bundle](https://pocketone.dev/docs/extensions/bundle): An app's hooks, migrations and public files embedded in the binary.
+- [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
+- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
+- [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
+- [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
+- [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 
 ## Going Further
 

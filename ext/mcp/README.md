@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "MCP"
+group: binary
+summary: "An MCP endpoint at /mcp so agents can manage your app and call its tools."
 ---
 
 # MCP

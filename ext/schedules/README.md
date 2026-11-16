@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.0
+title: "Schedules"
+group: many
+summary: "Planned. Scheduled webhooks that wake sleeping instances."
 ---
 
 # schedules

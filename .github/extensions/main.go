@@ -6,7 +6,9 @@
 //	go run ./.github/extensions examples                  # copy each example/main.go into its README's ## Example
 //	go run ./.github/extensions contracts                 # write each contract README's provides/requires/works-with index
 //	go run ./.github/extensions approvers <base> <head>   # who may approve each area a change touches (owners at base)
-//	go run ./.github/extensions versions <base> <head>    # every extension whose code changed bumped its version
+//	go run ./.github/extensions test [dir...]             # what CI runs on a pull request, locally (default: what you changed)
+//	go run ./.github/extensions release vX.Y.Z            # cut a release: raise each extension with unreleased changes, stamp the changelogs
+//	go run ./.github/extensions release-notes vX.Y.Z      # a release's notes: its section of CHANGELOG.md, links made absolute
 //
 // A module is affected when a file in it changes (Markdown aside), or when a module it reaches through a `replace`
 // is affected. A change to core (the root module) or to this tool affects every module.
@@ -63,6 +65,7 @@ func main() {
 		problems := check(dirs)
 		problems = append(problems, checkContracts()...)
 		problems = append(problems, checkOwnership()...)
+		problems = append(problems, checkChangelogs()...)
 		if len(problems) > 0 {
 			for _, p := range problems {
 				fmt.Println("::error::" + p)
@@ -81,21 +84,32 @@ func main() {
 		for _, a := range list {
 			fmt.Printf("%s: any of %s (%s)\n", a.Area, strings.Join(a.AnyOf, ", "), a.Reason)
 		}
-	case "versions":
-		if len(os.Args) != 4 {
+	case "test":
+		if err := runTest(os.Args[2:]); err != nil {
+			fail(err)
+		}
+	case "release":
+		if len(os.Args) < 3 || len(os.Args) > 4 {
 			usage()
 		}
-		problems, err := versionBumps(os.Args[2], os.Args[3])
+		date := ""
+		if len(os.Args) == 4 {
+			date = os.Args[3]
+		}
+		changed, err := release(os.Args[2], date)
 		if err != nil {
 			fail(err)
 		}
-		for _, p := range problems {
-			fmt.Println("::error::" + p)
+		fmt.Printf("ok: %d files stamped for %s; review and commit them\n", len(changed), os.Args[2])
+	case "release-notes":
+		if len(os.Args) != 3 {
+			usage()
 		}
-		if len(problems) > 0 {
-			os.Exit(1)
+		notes, err := releaseNotes(os.Args[2])
+		if err != nil {
+			fail(err)
 		}
-		fmt.Println("ok: every changed extension bumped its version")
+		fmt.Print(notes)
 	case "contracts":
 		changed, err := syncContracts()
 		if err != nil {
@@ -120,7 +134,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples | extensions contracts | extensions approvers <base> <head> | extensions versions <base> <head>")
+	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples | extensions contracts | extensions approvers <base> <head> | extensions test [dir...] | extensions release vX.Y.Z [YYYY-MM-DD] | extensions release-notes vX.Y.Z")
 	os.Exit(2)
 }
 
@@ -195,18 +209,40 @@ func deps(mods []string) (map[string][]string, error) {
 	return out, nil
 }
 
+// changedFiles lists the files that differ from base to head; with head "", from base to the working tree, new
+// (untracked) files included.
+func changedFiles(base, head string) ([]string, error) {
+	args := []string{"diff", "--name-only", base}
+	if head != "" {
+		args = append(args, head)
+	}
+	b, err := exec.Command("git", args...).Output()
+	if err != nil {
+		return nil, fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
+	}
+	files := strings.Fields(string(b))
+	if head == "" {
+		u, err := exec.Command("git", "ls-files", "--others", "--exclude-standard").Output()
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, strings.Fields(string(u))...)
+	}
+	return files, nil
+}
+
 func affected(base, head string) ([]string, error) {
 	mods, err := modules()
 	if err != nil {
 		return nil, err
 	}
-	b, err := exec.Command("git", "diff", "--name-only", base, head).Output()
+	files, err := changedFiles(base, head)
 	if err != nil {
-		return nil, fmt.Errorf("git diff %s %s: %w", base, head, err)
+		return nil, err
 	}
 	hit := map[string]bool{}
 	all := false
-	for _, f := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+	for _, f := range files {
 		if f == "" || strings.HasSuffix(f, ".md") {
 			continue
 		}
@@ -261,7 +297,7 @@ func isCore(f string) bool {
 		}
 	}
 	switch f {
-	case "README.md", "AGENTS.md", "CLAUDE.md":
+	case "README.md", "AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "CHANGELOG.md", "CHANGELOG.pocketbase.md":
 		return false
 	}
 	return true

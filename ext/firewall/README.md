@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Firewall"
+group: many
+summary: "Peer allow-lists, trusted proxies and rate limits for a host."
 ---
 
 # Firewall

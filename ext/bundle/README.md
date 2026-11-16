@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.1.0
+title: "Bundle"
+group: authors
+summary: "An app's hooks, migrations and public files embedded in the binary."
 ---
 
 # Bundle

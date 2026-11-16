@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Bulk Mail"
+group: binary
+summary: "Campaigns to your app's own users, with audiences from a collection, a view or SQL."
 ---
 
 # Bulk Mail

@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Multisite"
+group: many
+summary: "Many instances behind one listener, routed by hostname, run by one provider."
 ---
 
 # Multisite

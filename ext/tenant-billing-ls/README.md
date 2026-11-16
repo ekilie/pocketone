@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.0
+title: "Lemon Squeezy Adapter"
+group: saas
+summary: "Planned. Lemon Squeezy as the billing provider."
 ---
 
 # tenant-billing-ls

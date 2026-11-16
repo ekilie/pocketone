@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.0
+title: "Vacuum"
+group: binary
+summary: "Planned. Scheduled SQLite VACUUM."
 ---
 
 # Vacuum

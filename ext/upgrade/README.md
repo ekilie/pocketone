@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Upgrade"
+group: binary
+summary: "pocketone upgrade to the latest release, keeping the old executable."
 ---
 
 # Upgrade

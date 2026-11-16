@@ -125,7 +125,7 @@ upstream=${1:-upstream/master}
 source=${2:-origin/main}
 
 # Core per core-diff.sh, minus tests and files that only list PocketOne paths or are contributor prose: code only.
-pathspec=(. ':!ext' ':!site' ':!examples/pocketone' ':!examples/ce' ':!docs' ':!README.md' ':!AGENTS.md' ':!CLAUDE.md'
+pathspec=(. ':!ext' ':!site' ':!examples/pocketone' ':!examples/ce' ':!docs' ':!README.md' ':!AGENTS.md' ':!CLAUDE.md' ':!CHANGELOG.md' ':!CHANGELOG.pocketbase.md'
   ':!.github' ':!.claude' ':!.claude-plugin' ':!agent' ':!.gitignore' ':!CONTRIBUTING.md' ':!*_test.go')
 
 up_sha=$(git rev-parse "$upstream^{commit}")

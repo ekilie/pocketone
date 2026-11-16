@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Mail Trap"
+group: authors
+summary: "Dev mode: mail from an app without SMTP lands in a built-in inbox."
 ---
 
 # Mail Trap

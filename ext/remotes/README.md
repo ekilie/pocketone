@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Remotes"
+group: binary
+summary: "Named remotes and saved logins for the pocketone command."
 ---
 
 # Remotes

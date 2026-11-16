@@ -4,7 +4,7 @@ description: >-
   Work with PocketOne, PocketHost's community fork of PocketBase with extensions in ext/. Use when a project has a
   pocketone.yaml (or its .env), runs the `pocketone` binary (serve, superuser, pages create, login, link, deploy, dev,
   pull, logs, upgrade, config), deploys with `pocketone deploy`, or when writing or changing a PocketOne extension
-  (ext/<name>, extkit, contracts under /api/_c/, site/extensions.json, site/sync). Also use when a PocketBase project
+  (ext/<name>, extkit, contracts under /api/_c/, README front matter, site/sync). Also use when a PocketBase project
   wants something PocketOne adds: point-in-time restore (PITR) or restore to a moment from backups, a dev mail inbox,
   a mail relay or bulk mail, many sites behind one listener (multisite, Pocker, Docker), long-lived API tokens and an
   OAuth server, an MCP endpoint for agents, automatic TLS, or signed S3 download redirects.
@@ -162,7 +162,7 @@ Sections in the stock binary: `app`, `server`, `autotls`, `pitr`, `s3redirect`, 
 
 ### Extensions
 
-From `site/extensions.json`. "In `pocketone`": **yes** = on in the stock binary; **host** = used when
+From each README's front matter. "In `pocketone`": **yes** = on in the stock binary; **host** = used when
 `pocketone.yaml` has a `multisite` section; **Go build** = add it to your own `main.go`; **planned** = README only,
 no code yet (version 0.0.0).
 
@@ -365,24 +365,24 @@ raises its `version`.
 pocketone.dev (`site/`) copies extension READMEs, `docs/extensions.md` and `docs/contracts.md`. When an extension
 changes, in the same change:
 
-1. Update its README (all five sections, Example matching `example/main.go`).
-2. For a new extension, add an entry to `site/extensions.json` (`name`, `title`, `group`, one-line `summary`); every
-   `ext/<name>` folder must be listed.
-3. Run `cd site/sync && go run .` to regenerate the pages, config reference, nav, search index and these reference
-   files. Don't edit generated pages in `site/`; edit the source and re-run. CI runs `go run . --check`.
-4. Add a line under `## Unreleased` in `docs/CHANGELOG.md` for a user-visible change (not the root `CHANGELOG.md`,
-   which is upstream's).
+1. Update its README (all five sections, Example matching `example/main.go`). Its front matter is its catalogue
+   entry: `owners`, `version`, `title`, `group` (an id in `site/extensions.json`) and a one-line `summary`. A new
+   extension lists itself there; nothing outside its folder names it.
+2. Add a line under `## Unreleased` in the extension's own `ext/<name>/CHANGELOG.md` for a user-visible change
+   (the root `CHANGELOG.md` is for core and the binary; `CHANGELOG.pocketbase.md` is upstream's). Don't raise
+   `version:`: the release step does.
+3. Don't edit generated pages in `site/`; edit the source. Generated files (pages, nav, search index, these reference
+   files, contract indexes) are rebuilt on `main` by `.github/regenerate.sh`, so committing them is optional; run
+   `cd site/sync && go run .` to preview.
+4. Run `go run ./.github/extensions test ext/<name>`: everything CI runs on a pull request.
 
-CI only catches generated drift, not stale prose, so reread the README against the code.
+CI checks structure, not prose, so reread the README against the code.
 
 ### Checks before you finish
 
 ```bash
 go build -o /dev/null ./...                          # plain `go build` writes a binary into the tree
-go run ./.github/extensions check                    # README shape, conformance tests
-go run ./.github/extensions affected origin/main HEAD
-go run ./.github/extensions versions origin/main HEAD
-cd site/sync && go run . --check
+go run ./.github/extensions test                     # what CI runs on a pull request: rules, build, vet, -race tests, site
 ```
 
 Stage files by name; never commit binaries.

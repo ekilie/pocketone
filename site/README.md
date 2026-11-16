@@ -23,10 +23,14 @@ Extension pages are copies of the READMEs in `ext/`, made by `sync/`. Don't edit
 cd site/sync && go run .
 ```
 
-- `extensions.json` lists every extension: title, one-line summary and group. Every `ext/<name>` folder must be in it.
+- Each extension's catalogue entry (`title`, `group`, one-line `summary`) is in its README's front matter.
+  `extensions.json` holds the groups (and `links`: the few folders with no page of their own). Within a group,
+  extensions are sorted by title.
+- `go run . --validate` (pull requests) only checks the pages build; on `main`, CI runs `.github/regenerate.sh` and
+  commits the generated files, so a pull request never has to.
 - Each `ext/<name>/README.md` becomes `/docs/extensions/<name>`, with the extension's `pocketone.yaml` keys (from
   `pocketone config --json`, so it builds `examples/pocketone`) added to its `## Configure` section. Other `.md` files
-  in the extension folder become guides under it; `docs/extensions.md` becomes `/docs/writing-an-extension`.
+  in the extension folder (`CHANGELOG.md` aside) become guides under it; `docs/extensions.md` becomes `/docs/writing-an-extension`.
 - It also writes `/docs/config-reference`: every `pocketone.yaml` section.
 - Links between extensions and docs point at the site pages; links to source files point at GitHub.
 - The old URLs from before plugins were called extensions (`/docs/plugins/**`, `/docs/writing-a-plugin`) answer 301

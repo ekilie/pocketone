@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Mothership"
+group: many
+summary: "A control plane and its edges, across regions."
 ---
 
 # Mothership

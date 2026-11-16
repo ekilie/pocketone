@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Server Timing"
+group: services
+summary: "Server-Timing headers for each step of a request."
 ---
 
 # Server Timing

@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "PITR"
+group: binary
+summary: "Point-in-time restore of your database with Litestream. On by default."
 ---
 
 # PITR

@@ -2,7 +2,8 @@
 
 PocketOne is PocketBase plus extensions. **PocketBase's own code ("core") changes only for hooks that let `ext/`
 extend or override behavior; the features themselves live in `ext/`.** Core is every path outside what PocketOne owns:
-`ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.claude/`, `.claude-plugin/`, `agent/`. Each core change is marked
+`ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `CHANGELOG.md`,
+`CHANGELOG.pocketbase.md`, `.github/`, `.claude/`, `.claude-plugin/`, `agent/`. Each core change is marked
 `// PocketOne:` so upstream merges stay easy.
 
 Words: everything in `ext/` is an **extension**, never a "plugin". **Standard extensions** ship in every `pocketone`
@@ -77,14 +78,15 @@ Merge `upstream/master` (a PocketBase release) into `main` on a side branch in i
 directly, and review it before it lands:
 
 1. `git worktree add -b upstream-sync/vX.Y.Z <dir> origin/main`, then `git merge --no-ff --no-commit upstream/master`.
-   Resolve conflicts at the `// PocketOne:` spots.
-2. Review what changed (`git log --oneline <old base>..upstream/master` and upstream's `CHANGELOG.md`): for each change,
+   Resolve conflicts at the `// PocketOne:` spots. Then run `.github/upstream-changelog.sh`: `CHANGELOG.md` is ours, and
+   it copies upstream's `CHANGELOG.md` into `CHANGELOG.pocketbase.md`.
+2. Review what changed (`git log --oneline <old base>..upstream/master` and `CHANGELOG.pocketbase.md`): for each change,
    what it means for our hooks, extensions and contracts, and fix in `ext/` what it breaks.
 3. Check each bug fix in "Core changes that aren't hooks": if upstream now fixes it, drop ours (and its
    `core-bugfix/<name>` branch and README row); if upstream changed the code around it, keep ours only for what is still
    broken.
 4. `go mod tidy` in every module (upstream's dependency bumps reach them), build, vet, and run the full test suite.
-5. Commit with `Core-Audit: upstream-merge vX.Y.Z`, add the **PocketBase** line to `docs/CHANGELOG.md`, rebuild the
+5. Commit with `Core-Audit: upstream-merge vX.Y.Z`, add the **PocketBase** line to `CHANGELOG.md`, rebuild the
    core branches with `core-changes-branch.sh`, then merge the side branch into `main`.
 
 ## Core changes that aren't hooks
@@ -138,20 +140,27 @@ Rules every extension follows:
   (`Of`, `Must` in hooks or at serve time). A lookup inside `Register` panics.
 - **After changing a contract interface**, run `go generate ./...` in `ext/contracts`. Then run
   `go run ./.github/extensions contracts` to regenerate the catalogue and each contract's Extensions section, and
-  `go run ./.github/extensions check`. CI fails if either is stale.
+  `go run ./.github/extensions check`. The catalogue and Extensions sections are regenerated on `main`
+  (`.github/regenerate.sh`), so committing them is optional.
 
 ## Other rules
 
 - Extensions are their own Go modules under `ext/<name>/` with a README and a minimal `example/main.go`
   (`docs/extensions.md`). Modules that reach another `ext/` module add a `replace` for it.
 - Extension CI (`.github/workflows/extensions.yml`, tool in `.github/extensions/`): every `extkit.Extension` module has a
-  conformance test, and each module a change affects builds, vets and passes `go test -race`. Check locally with
-  `go run ./.github/extensions check` and `go run ./.github/extensions affected origin/main HEAD`.
-- pocketone.dev (`site/`) copies extension READMEs and `docs/extensions.md`, and indexes every page for search. A new extension
-  gets an entry in `site/extensions.json`; after changing a README, `docs/extensions.md` or any site page, run
-  `cd site/sync && go run .` (CI checks it).
+  conformance test, and each module a change affects builds, vets and passes `go test -race`. Run what CI runs on a
+  pull request with `go run ./.github/extensions test` (or `test ext/<name>`).
+- **An extension is self-contained:** its catalogue entry (`title`, `group`, `summary`) is in its README's front
+  matter beside `owners` and `version`, and its changelog is `ext/<name>/CHANGELOG.md`. `site/extensions.json` holds
+  only the catalogue groups and the few folders without a page (`links`). A change to an extension touches only its
+  folder.
+- Generated files are never required in a commit: pocketone.dev's pages (`site/`), nav, search index, both sites'
+  `llms.txt` / `llms-full.txt`, the Agent Skills' `reference/` folders and the contract indexes are rebuilt by
+  `.github/regenerate.sh`, which CI runs on `main` after every push and commits as github-actions[bot]. Pull requests
+  only check that the site builds (`cd site/sync && go run . --validate`). Run `.github/regenerate.sh` yourself to see
+  the result; committing its output is fine.
 - Agent Skills (`agent/`, listed in `.claude-plugin/marketplace.json`): `site/sync` also writes each skill's `reference/`
-  folder and both sites' `llms.txt` / `llms-full.txt` from the docs pages. The `SKILL.md` files are hand-written: a change
+  folder and both sites' `llms.txt` / `llms-full.txt` from the docs pages (regenerated on `main`, as above). The `SKILL.md` files are hand-written: a change
   that makes one wrong (a command, a `pocketone.yaml` key, an extension, a PocketPages API) fixes it in the same commit.
 - JS types: after a core change that touches the JS API (a hook, a type JS sees) or an edit to `ext/jsvm/pocketone.d.ts`,
   run `go generate` in `ext/jsvm` to rebuild `ext/jsvm/types.d.ts` (its `TestTypes` tests fail until you do). An
@@ -161,8 +170,11 @@ Rules every extension follows:
   prefix for its own variables. Never name a variable after the binary.
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.
-- **Changelog:** every commit to `main` with a user-visible change adds its line under `## Unreleased` in
-  [docs/CHANGELOG.md](docs/CHANGELOG.md), in the same commit (policy at its top; breaking changes need an
-  **Upgrading** step). Release notes are that file's section for the version, printed by
-  `examples/pocketone/release-notes.sh vX.Y.Z`. The root `CHANGELOG.md` is upstream PocketBase's; leave it alone.
+- **Changelog:** every commit to `main` with a user-visible change adds its line under `## Unreleased`, in the same
+  commit: in the extension's own `ext/<name>/CHANGELOG.md` for a change to one extension, otherwise in the root
+  [CHANGELOG.md](CHANGELOG.md), PocketOne's (policy at its top; breaking changes need an **Upgrading** step).
+  Extension versions go up only at a release: `go run ./.github/extensions release vX.Y.Z` raises each extension with
+  unreleased lines (minor with upgrade steps, else patch), stamps every changelog, and lists the new versions in the
+  release's section, which is its notes (`examples/pocketone/release-notes.sh vX.Y.Z`). Upstream PocketBase's changelog
+  is `CHANGELOG.pocketbase.md`; never edit it by hand (`.github/upstream-changelog.sh` refreshes it).
 - Plans and internal notes go in a private maintainer repo, never here.

@@ -14,10 +14,11 @@ package main
 //   - a contract needs one of its owners (or a maintainer); a new contract needs a maintainer.
 //
 // Owners are read from the base branch, never from the pull request, so a pull request can't add its author as an
-// owner and approve itself. Every merge that changes an extension's code bumps its version (`versions` checks it);
-// its Go module tag (ext/<name>/vX.Y.Z) follows from it.
+// owner and approve itself. Versions are raised when PocketOne releases (`release`, changelog.go), for each extension
+// with unreleased changelog lines; its Go module tag (ext/<name>/vX.Y.Z) follows from it.
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -60,10 +61,14 @@ func parseOwners(v string) []string {
 	return out
 }
 
-// checkOwnership: every extension README has owners (GitHub handles) and a semver version; an extension with code
-// (a go.mod) is at 0.0.1 or later.
+// checkOwnership: every extension README has owners (GitHub handles), a semver version and its catalogue entry
+// (title, group, summary); an extension with code (a go.mod) is at 0.0.1 or later.
 func checkOwnership() []string {
 	entries, err := os.ReadDir("ext")
+	if err != nil {
+		return []string{err.Error()}
+	}
+	groups, err := siteGroups()
 	if err != nil {
 		return []string{err.Error()}
 	}
@@ -87,6 +92,14 @@ func checkOwnership() []string {
 			if !handleRe.MatchString(o) {
 				problems = append(problems, fmt.Sprintf("%s: owner %q isn't a GitHub handle (@name)", f, o))
 			}
+		}
+		for _, k := range []string{"title", "group", "summary"} {
+			if fm[k] == "" {
+				problems = append(problems, f+": front matter needs `"+k+":`, its entry in the pocketone.dev catalogue (docs/extensions.md#what-an-extension-folder-contains)")
+			}
+		}
+		if g := fm["group"]; g != "" && !groups[g] {
+			problems = append(problems, fmt.Sprintf("%s: group %q isn't one of the groups in site/extensions.json", f, g))
 		}
 		v := fm["version"]
 		switch {
@@ -192,47 +205,19 @@ func union(a, b []string) []string {
 	return out
 }
 
-// versionBumps: every extension whose code (anything but Markdown) changed from base to head has a higher version at
-// head than at base. A new extension needs no bump.
-func versionBumps(base, head string) ([]string, error) {
-	out, err := exec.Command("git", "diff", "--name-only", base+"..."+head).Output()
+// siteGroups is the set of catalogue group ids in site/extensions.json.
+func siteGroups() (map[string]bool, error) {
+	raw, err := os.ReadFile("site/extensions.json")
 	if err != nil {
-		return nil, fmt.Errorf("git diff %s...%s: %w", base, head, err)
+		return nil, err
 	}
-	changed := map[string]bool{}
-	for _, f := range strings.Fields(string(out)) {
-		if !strings.HasPrefix(f, "ext/") || strings.HasPrefix(f, "ext/contracts/") || strings.HasSuffix(f, ".md") {
-			continue
-		}
-		changed[strings.SplitN(strings.TrimPrefix(f, "ext/"), "/", 2)[0]] = true
+	var m struct{ Groups []struct{ ID string } }
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return nil, fmt.Errorf("site/extensions.json: %w", err)
 	}
-	var problems []string
-	for name := range changed {
-		before := readFront(gitShow(base, "ext/"+name+"/README.md"))["version"]
-		after := readFront(gitShow(head, "ext/"+name+"/README.md"))["version"]
-		if before == "" {
-			continue // new
-		}
-		if !semverLess(before, after) {
-			problems = append(problems, fmt.Sprintf("ext/%s: its code changed, so its version must go up (now %s at both)", name, before))
-		}
+	out := map[string]bool{}
+	for _, g := range m.Groups {
+		out[g.ID] = true
 	}
-	sort.Strings(problems)
-	return problems, nil
-}
-
-func semverLess(a, b string) bool {
-	pa, pb := semverRe.FindStringSubmatch(a), semverRe.FindStringSubmatch(b)
-	if pa == nil || pb == nil {
-		return false
-	}
-	for i := 1; i <= 3; i++ {
-		var x, y int
-		fmt.Sscan(pa[i], &x)
-		fmt.Sscan(pb[i], &y)
-		if x != y {
-			return x < y
-		}
-	}
-	return false
+	return out, nil
 }

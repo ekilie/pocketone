@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Docker"
+group: many
+summary: "A host provider that runs each instance in its own container."
 ---
 
 # Docker

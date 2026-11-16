@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.0
+title: "Multitenant"
+group: saas
+summary: "Planned. Accounts that own instances: quotas, owner logins, tokens and an API."
 ---
 
 # tenants

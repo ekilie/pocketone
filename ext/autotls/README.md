@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Auto TLS"
+group: binary
+summary: "Certificates on demand and wildcards through ACME."
 ---
 
 # Auto TLS

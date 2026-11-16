@@ -69,11 +69,15 @@ func agentFiles(root string, out map[string]string) error {
 		if err != nil {
 			return err
 		}
-		toc, err := os.ReadFile(filepath.Join(root, s.Toc))
-		if err != nil {
-			return err
+		toc := out[s.Toc] // the nav this run generated, so llms.txt follows it in one run
+		if toc == "" {
+			raw, err := os.ReadFile(filepath.Join(root, s.Toc))
+			if err != nil {
+				return err
+			}
+			toc = string(raw)
 		}
-		sections := parseToc(string(toc))
+		sections := parseToc(toc)
 
 		// Reference files: every docs page, at its path under the site's docs folder.
 		urls := make([]string, 0, len(pages))

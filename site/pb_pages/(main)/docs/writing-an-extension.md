@@ -308,6 +308,7 @@ core doesn't offer yet:
 ext/<name>/
   go.mod            module github.com/pockethost/pocketone/ext/<name>
   README.md         the extension's docs, and its page on pocketone.dev (below)
+  CHANGELOG.md      its changes, newest first (see Changelogs)
   <name>.go         the extension
   <name>_test.go
   conformance_test.go  the shared extension test (below)
@@ -340,12 +341,18 @@ ext/<name>/
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every extension passes; your own tests cover the
   feature.
-- **The README starts with front matter**: who owns the extension and its version (see [Ownership](#ownership)).
+- **The README starts with front matter**: who owns the extension and its version (see [Ownership](#ownership)), and
+  its entry in the [catalogue on pocketone.dev](https://pocketone.dev/docs/extensions): its `title`, its `group` (one
+  of the ids in [`site/extensions.json`](../site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and
+  a one-line `summary`. Nothing outside your folder lists your extension: the site finds it there.
 
   ```markdown
   ---
   owners: ["@your-github-handle"]
   version: 0.1.0
+  title: "My Extension"
+  group: services
+  summary: "One line: what it does for someone running an app."
   ---
   ```
 
@@ -365,24 +372,54 @@ ext/<name>/
   limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another
   license lives in its author's own repository, not here.
-  Add your extension to [`site/extensions.json`](../site/extensions.json) and run `cd site/sync && go run .` to build its page.
   [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
+- **Your pull request touches only your folder** (and, for a new contract, its folder in `ext/contracts`). Don't commit
+  generated files: the site pages, nav, search index, `llms.txt` and contract indexes are rebuilt on `main` after your
+  change merges ([`.github/regenerate.sh`](../.github/regenerate.sh)). To preview your page, run
+  `cd site/sync && go run .` and don't commit what it writes outside your folder.
 - **CI enforces all of this.** [`.github/workflows/extensions.yml`](../.github/workflows/extensions.yml) fails when an extension
-  README is missing its owners and version, one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, or when a module that implements `extkit.Extension` has no conformance
+  README is missing its owners, version, title, group or summary, one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, when it has no
+  `CHANGELOG.md`, or when a module that implements `extkit.Extension` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
-  for a core change. Run the same checks locally from the repository root:
+  for a core change. [`.github/workflows/site.yml`](../.github/workflows/site.yml) checks that the site builds from
+  your README. Run everything CI runs on your pull request, locally, from the repository root:
 
   ```bash
-  go run ./.github/extensions check
-  go run ./.github/extensions affected origin/main HEAD
+  go run ./.github/extensions test            # what you changed since origin/main, committed or not
+  go run ./.github/extensions test ext/<name> # or name the modules
   ```
+
+  When it ends with `ok`, CI passes too.
 
   Tests that need an external tool (MinIO, Docker) skip themselves when it isn't installed, so they don't block CI.
 - **Dependencies stay in your module.** Heavy libraries go in your extension's `go.mod`, never in core's.
 - **Standalone first.** Where it makes sense, an extension works on one standalone app, and adds more on a multisite
   host.
 - **MIT**, like PocketBase and the rest of this repo.
+
+### Changelogs
+
+Each extension keeps its changelog in its own folder, `ext/<name>/CHANGELOG.md`, so a change to it touches nothing
+else. The root [CHANGELOG.md](../CHANGELOG.md) is for the rest: core, the `pocketone` binary, the site.
+
+- **A user-visible change adds its line under `## Unreleased`** in the same commit, grouped under `### Upgrading`
+  (steps for anything breaking), `### Added`, `### Changed` or `### Fixed`. One line per change, written for someone
+  running an app, with the command, flag or config key.
+- **Don't raise `version:` yourself.** Each PocketOne release raises the version of every extension with lines under
+  its `## Unreleased`: minor when it has `### Upgrading` lines, otherwise patch. It renames that section to the new
+  version and lists the extension in the release's notes, linked to its changes
+  (`go run ./.github/extensions release vX.Y.Z`).
+
+```markdown
+# My Extension changelog
+
+## Unreleased
+
+### Added
+
+- `myext.retries` in `pocketone.yaml`: how many times to retry a failed delivery (default 3).
+```
 
 ### Ownership
 
@@ -400,13 +437,12 @@ Who approves an outside pull request:
 | A new extension or a new contract | a maintainer |
 
 Owners are read from the base branch, never from the pull request, so a pull request can't make its author an owner
-and approve itself. Nothing merges unless the checks pass. Every merge that changes an extension's code raises its
-version, and its Go module tag (`ext/<name>/vX.Y.Z`) follows that version. A planned extension (a README and no code
-yet) stays at `0.0.0`.
+and approve itself. Nothing merges unless the checks pass. An extension's version goes up when PocketOne releases
+with changes to it ([Changelogs](#changelogs)), and its Go module tag (`ext/<name>/vX.Y.Z`) follows that version. A
+planned extension (a README and no code yet) stays at `0.0.0`.
 
 ```bash
 go run ./.github/extensions approvers origin/main HEAD   # who may approve each area a change touches
-go run ./.github/extensions versions origin/main HEAD    # every extension whose code changed raised its version
 ```
 
 ## Planned extensions

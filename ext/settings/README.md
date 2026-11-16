@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Settings"
+group: binary
+summary: "One API for the settings an app's admins change for its extensions. On by default."
 ---
 
 # Settings

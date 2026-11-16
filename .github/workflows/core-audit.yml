@@ -1,4 +1,5 @@
 # Every commit that changes PocketBase core (anything outside ext/, site/, examples/pocketone/, docs/, README.md, CONTRIBUTING.md, AGENTS.md, CLAUDE.md,
+# CHANGELOG.md, CHANGELOG.pocketbase.md,
 # .github/, .claude/, .claude-plugin/, agent/) must carry a "Core-Audit:" trailer recording its independent audit. See AGENTS.md.
 name: core-audit
 

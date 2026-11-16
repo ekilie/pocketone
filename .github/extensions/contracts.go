@@ -369,7 +369,7 @@ func syncContracts() ([]string, error) {
 var contractIDInCode = regexp.MustCompile(`(?:NewContract\[[^\]]*\]\(|//contract:id )"?([a-z0-9.]+/v[0-9]+)"?`)
 
 // checkContracts: every contract has a README with owners, a summary and the sections in order; the generated indexes
-// are current; the id in its code matches its folder; every id an extension declares is a contract.
+// generate; the id in its code matches its folder; every id an extension declares is a contract.
 func checkContracts() []string {
 	cs, err := findContracts()
 	if err != nil {
@@ -379,10 +379,17 @@ func checkContracts() []string {
 	if err != nil {
 		return []string{err.Error()}
 	}
+	// A stale index isn't a problem: main regenerates it (.github/regenerate.sh), so a pull request never has to
+	// commit a change to another owner's contract README.
+	var stale []string
 	for f, content := range want {
 		if have, _ := os.ReadFile(f); string(have) != content {
-			problems = append(problems, f+": the generated contract index is stale; run `go run ./.github/extensions contracts`")
+			stale = append(stale, f)
 		}
+	}
+	if len(stale) > 0 {
+		sort.Strings(stale)
+		fmt.Printf("note: %d generated contract indexes will change when main regenerates them (nothing to commit): %s\n", len(stale), strings.Join(stale, ", "))
 	}
 	known := map[string]bool{}
 	for _, c := range cs {

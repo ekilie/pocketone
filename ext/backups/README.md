@@ -1,6 +1,9 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.1
+title: "Backups"
+group: binary
+summary: "Restore an app to a moment from its own backups: the latest one before it. On by default."
 ---
 
 # Backups
