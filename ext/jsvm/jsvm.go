@@ -242,7 +242,7 @@ func (p *plugin) registerMigrations() error {
 			// each migration file gets its own scope, as with a VM per file in plugins/jsvm (an ES module has its own)
 			label := "pb_migrations/" + name
 			dir := filepath.Dir(filepath.Join(p.migrationsDir(), name))
-			module := strings.HasSuffix(name, ".mjs") || strings.HasSuffix(name, ".mts")
+			module := isModuleFile(name)
 			code := string(files[name])
 			if isTS(name) {
 				format, offset := tsScript, 1
@@ -331,7 +331,7 @@ func (p *plugin) registerHooks() error {
 			// are visible to every handler. A .pb.mjs file is an ES module: private top level, export/import.
 			label := "pb_hooks/" + name
 			dir := filepath.Dir(filepath.Join(p.hooksDir, name))
-			module := strings.HasSuffix(name, ".mjs") || strings.HasSuffix(name, ".mts")
+			module := isModuleFile(name)
 			code := string(files[name])
 			if isTS(name) {
 				format := tsScript

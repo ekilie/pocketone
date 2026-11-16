@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TypeScript hooks, modules and migrations: .mts (ES module), .cts (CommonJS) and .ts (like .js), with error
-// positions in the .ts source.
+// TypeScript hooks, modules and migrations: .ts and .mts are ES modules, .cts is CommonJS; error positions are in
+// the .ts source.
 
 var tsHooks = map[string]string{
 	"pb_hooks/lib/store.mts": `
@@ -17,7 +17,7 @@ var tsHooks = map[string]string{
 		export const state: State = { hits: 0 }
 		export const bump = (): number => ++state.hits
 	`,
-	// a .ts module is CommonJS (like .js), but may still be written with import/export
+	// a .ts module is an ES module, like .mts
 	"pb_hooks/lib/math.ts": `
 		export function add(a: number, b: number): number {
 			return a + b
@@ -46,21 +46,28 @@ var tsHooks = map[string]string{
 		}))
 	`,
 	"pb_hooks/b.pb.ts": `
-		import type { State } from "./lib/store.mts" // type-only: gone after stripping, so this stays a script
-		const { add: plus } = require("./lib/math")
+		import type { State } from "./lib/store.mts" // a .pb.ts hook is an ES module, like .pb.mts
+		import { add as plus } from "./lib/math"
 
 		function twice(n: number): number {
 			return plus(n, n)
 		}
+		const mine: State = { hits: -1 } // private to this file
 		routerAdd("GET", "/ts/script", (e) => e.json(200, { n: twice(21) }))
 		routerAdd("GET", "/ts/script-bump", async (e) => {
 			const m = await import("./lib/store.mts")
 			return e.json(200, { n: m.bump() })
 		})
 	`,
+	// a .cts hook is a script in the global scope; require() loads a .ts ES module (no top-level await) as in Node 22
 	"pb_hooks/c.pb.cts": `
 		const ok: boolean = true
-		routerAdd("GET", "/ts/cts", (e: any) => e.json(200, { ok }))
+		const { add } = require("./lib/math")
+		const { state: required } = require("./lib/store.mts")
+		routerAdd("GET", "/ts/cts", async (e: any) => {
+			const { state: imported } = await import("./lib/store.mts")
+			return e.json(200, { ok, sum: add(1, 2), same: required === imported, mine: typeof mine })
+		})
 	`,
 }
 
@@ -85,9 +92,16 @@ func TestTSKinds(t *testing.T) {
 	if getJSON(t, h, "/ts/script", &s); s.N != 42 {
 		t.Fatalf(".pb.ts script: %+v", s)
 	}
-	var c struct{ OK bool }
-	if getJSON(t, h, "/ts/cts", &c); !c.OK {
-		t.Fatal(".pb.cts script didn't run")
+	var c struct {
+		OK, Same bool
+		Sum      int
+		Mine     string
+	}
+	if getJSON(t, h, "/ts/cts", &c); !c.OK || c.Sum != 3 || !c.Same {
+		t.Fatalf(".pb.cts script with require() of ES modules: %+v", c)
+	}
+	if c.Mine != "undefined" {
+		t.Fatalf("b.pb.ts's top-level const leaked into the global scope: typeof mine = %q", c.Mine)
 	}
 }
 
@@ -135,14 +149,20 @@ func TestTSErrorPositions(t *testing.T) {
 		files map[string]string
 		want  string
 	}{
-		{"hook script", map[string]string{"pb_hooks/z.pb.ts": typesAbove + "const n: number = 1\nthrow new Error(\"script boom \" + n)"}, "pb_hooks/z.pb.ts:9:"},
-		{"hook module", map[string]string{"pb_hooks/z.pb.mts": typesAbove + "const n: number = 1\nthrow new Error(\"module boom \" + n)"}, "pb_hooks/z.pb.mts:9:"},
+		{"hook script (.cts)", map[string]string{"pb_hooks/z.pb.cts": typesAbove + "const n: number = 1\nthrow new Error(\"script boom \" + n)"}, "pb_hooks/z.pb.cts:9:"},
+		{"hook module (.ts)", map[string]string{"pb_hooks/z.pb.ts": typesAbove + "const n: number = 1\nthrow new Error(\"module boom \" + n)"}, "pb_hooks/z.pb.ts:9:"},
+		{"hook module (.mts)", map[string]string{"pb_hooks/z.pb.mts": typesAbove + "const n: number = 1\nthrow new Error(\"module boom \" + n)"}, "pb_hooks/z.pb.mts:9:"},
 		{"required module", map[string]string{
 			"pb_hooks/lib/bad.ts": typesAbove + "export function boom(): never {\n\tthrow new Error(\"lib boom\")\n}",
-			"pb_hooks/z.pb.ts":    `require("./lib/bad").boom()`,
+			"pb_hooks/z.pb.cts":   `require("./lib/bad").boom()`,
 		}, "lib/bad.ts:9:"},
+		{"require() of a module with top-level await", map[string]string{
+			"pb_hooks/lib/slow.ts": "await sleep.async(1)\nexport const x = 1",
+			"pb_hooks/z.pb.cts":    `require("./lib/slow")`,
+		}, "uses top-level await: use await import()"},
 		{"syntax error", map[string]string{"pb_hooks/z.pb.ts": "const x: = 1"}, "pb_hooks/z.pb.ts:1:"},
-		{"migration script", map[string]string{"pb_migrations/1700000000_bad.ts": typesAbove + "const n: number = 1\nthrow new Error(\"migration boom\")"}, "pb_migrations/1700000000_bad.ts:9:"},
+		{"migration script (.cts)", map[string]string{"pb_migrations/1700000000_bad.cts": typesAbove + "const n: number = 1\nthrow new Error(\"migration boom\")"}, "pb_migrations/1700000000_bad.cts:9:"},
+		{"migration module (.ts)", map[string]string{"pb_migrations/1700000000_bad.ts": typesAbove + "const n: number = 1\nthrow new Error(\"migration boom\")"}, "pb_migrations/1700000000_bad.ts:9:"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -154,17 +174,18 @@ func TestTSErrorPositions(t *testing.T) {
 	}
 }
 
-// TypeScript migrations: .ts as a script in its own scope, .mts as a module with imports.
+// TypeScript migrations: .ts and .mts as modules with imports, .cts as a script in its own function scope.
 func TestTSMigrations(t *testing.T) {
 	app, _, err := esmAppWith(t, nil, map[string]string{
 		"pb_migrations/lib/names.mts": `export const table: string = "ts_migrated"`,
 		"pb_migrations/1700000000_create.mts": `
 			import { table } from "./lib/names.mjs"
+			await sleep.async(1)
 			migrate((app) => {
 				app.save(new Collection({ name: table, type: "base", fields: [{ name: "title", type: "text" }] }))
 			})
 		`,
-		"pb_migrations/1700000001_more.ts": `
+		"pb_migrations/1700000001_more.cts": `
 			interface Field { name: string; type: string }
 			const fields: Field[] = [{ name: "body", type: "text" }]
 			migrate((app) => {

@@ -80,9 +80,11 @@ var esmHooks = map[string]string{
 		const legacyC = require("./lib/legacy.cjs")
 		routerAdd("GET", "/cjs/inc", (e) => e.json(200, { n: legacyC.inc() }))
 		routerAdd("GET", "/cjs/pkg", (e) => e.json(200, { kind: require("dual").kind }))
-		routerAdd("GET", "/cjs/require-esm", (e) => {
-			try { require("./lib/store.mjs") } catch (err) { return e.json(200, { error: String(err) }) }
-			return e.json(500, {})
+		// require() of an ES module (no top-level await) gives its namespace, the same instance import gives
+		const requiredStore = require("./lib/store.mjs")
+		routerAdd("GET", "/cjs/require-esm", async (e) => {
+			const imported = await import("./lib/store.mjs")
+			return e.json(200, { same: requiredStore.state === imported.state && requiredStore.bump === imported.bump })
 		})
 		// a script reaches ES modules with import()
 		routerAdd("GET", "/cjs/bump", async (e) => {
@@ -165,9 +167,9 @@ func TestESMImportKinds(t *testing.T) {
 	if getJSON(t, h, "/cjs/pkg", &k); k.Kind != "cjs" {
 		t.Errorf("dual package, require condition: got %q", k.Kind)
 	}
-	var e struct{ Error string }
-	if getJSON(t, h, "/cjs/require-esm", &e); !strings.Contains(e.Error, "use import") {
-		t.Errorf("require() of an ES module: %q", e.Error)
+	var rq struct{ Same bool }
+	if getJSON(t, h, "/cjs/require-esm", &rq); !rq.Same {
+		t.Error("require() of an ES module isn't the same instance import gives")
 	}
 }
 

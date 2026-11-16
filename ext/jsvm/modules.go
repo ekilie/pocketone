@@ -2,10 +2,13 @@ package jsvm
 
 // Modules: CommonJS require() and ES import share one resolver.
 //
-//   - .mjs is an ES module, .cjs and .json are CommonJS. A plain .js is CommonJS, except inside node_modules, where
-//     Node's rule applies (the nearest package.json's "type": "module" makes it an ES module).
-//   - Hook files: *.pb.mjs run as ES modules (their top-level names are private to the file; share through
-//     export/import), *.pb.cjs and *.pb.js run as scripts in the app's one global scope. Migrations the same way.
+//   - .mjs, .mts and .ts are ES modules; .cjs, .cts and .json are CommonJS. A plain .js is CommonJS (as in PocketBase),
+//     except inside node_modules, where Node's rule applies ("type": "module" in the package.json).
+//   - Hook files: *.pb.mjs, *.pb.mts and *.pb.ts run as ES modules (their top-level names are private to the file;
+//     share through export/import), *.pb.js, *.pb.cjs and *.pb.cts run as scripts in the app's one global scope.
+//     Migrations the same way.
+//   - require() of an ES module works when the module has no top-level await (as in Node 22): it returns the module's
+//     namespace.
 //   - import of a CommonJS module gives its module.exports as the default export, plus its identifier keys as named
 //     exports, and is the same instance require() returns.
 
@@ -117,12 +120,13 @@ func pickExport(v any, esm bool) string {
 	return ""
 }
 
-// isESM: .mjs/.mts, or a .js/.ts file in a node_modules package whose package.json says "type": "module".
+// isESM: .mjs, .mts and .ts (TypeScript is written as ES modules; .cts is the CommonJS exception), or a .js file in a
+// node_modules package whose package.json says "type": "module".
 func (m *moduleState) isESM(p string) bool {
 	switch filepath.Ext(p) {
-	case ".mjs", ".mts":
+	case ".mjs", ".mts", ".ts":
 		return true
-	case ".js", ".ts":
+	case ".js":
 		if !strings.Contains(p, string(filepath.Separator)+"node_modules"+string(filepath.Separator)) {
 			return false
 		}
@@ -264,4 +268,15 @@ func (vm *VM) awaitHere(v JSValue) error {
 // importMeta is import.meta for the module file at path: url, filename and dirname, as in Node.
 func importMeta(path string) map[string]string {
 	return map[string]string{"url": "file://" + filepath.ToSlash(path), "filename": path, "dirname": filepath.Dir(path)}
+}
+
+// isModuleFile reports a hook or migration file that runs as an ES module.
+func isModuleFile(name string) bool {
+	switch filepath.Ext(name) {
+	case ".mjs", ".mts":
+		return true
+	case ".ts":
+		return !strings.HasSuffix(name, ".d.ts")
+	}
+	return false
 }

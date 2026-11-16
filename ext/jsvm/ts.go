@@ -1,8 +1,7 @@
 package jsvm
 
 // TypeScript: .ts, .mts and .cts files (hooks, migrations, modules) go through esbuild, linked into the binary, which
-// strips the types. Node's rules pick the module system: .mts is an ES module, .cts CommonJS, and .ts is like .js
-// (CommonJS, or an ES module inside a "type": "module" package). There is no type checking at runtime; use tsc or your
+// strips the types. .ts and .mts are ES modules (TypeScript is written that way); .cts is the CommonJS exception. There is no type checking at runtime; use tsc or your
 // editor with pb_data/types.d.ts for that. Each file's source map is kept, so error positions point at the .ts source.
 
 import (

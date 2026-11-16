@@ -22,6 +22,7 @@ const nodeJS = `
 	const makeRequire = (dir) => function require(spec) {
 		const m = __resolveModule(dir, String(spec))
 		if (!m) throw new Error("Cannot find module '" + spec + "' from '" + dir + "'")
+		if (m.esm) return __requireESM(m.path)
 		if (cache[m.path]) return cache[m.path].exports
 		const mod = { id: m.path, filename: m.path, exports: {}, loaded: false }
 		cache[m.path] = mod
@@ -61,6 +62,7 @@ type resolvedModule struct {
 	Path   string `json:"path"`
 	Dir    string `json:"dir"`
 	Source string `json:"source"`
+	ESM    bool   `json:"esm"`
 }
 
 // bindNode installs require, process and Buffer. load reads a module file by its path (disk by default, or an
@@ -74,7 +76,7 @@ func bindNode(vm *VM, root string, load func(string) ([]byte, error)) error {
 			return nil, nil
 		}
 		if vm.mods.isESM(found) {
-			return nil, fmt.Errorf("require() of ES module %s: use import (or import() from CommonJS)", found)
+			return &resolvedModule{Path: found, Dir: filepath.Dir(found), ESM: true}, nil
 		}
 		code := string(src)
 		if isTS(found) {
@@ -84,6 +86,30 @@ func bindNode(vm *VM, root string, load func(string) ([]byte, error)) error {
 			}
 		}
 		return &resolvedModule{Path: found, Dir: filepath.Dir(found), Source: code}, nil
+	}, false))
+
+	// require() of an ES module: its namespace, when it finishes loading synchronously (no top-level await)
+	vm.setHidden("__requireESM", vm.nativeValue(func(c *call) (any, error) {
+		p := c.str(0)
+		q, _ := json.Marshal(p)
+		code := "import(" + string(q) + ")"
+		cc, cf := C.CString(code), C.CString("<require>")
+		defer C.free(cc)
+		defer C.free(cf)
+		r := C.avm_eval(vm.ctx, cc, uint64(len(code)), cf)
+		if C.avm_is_exception(r) != 0 {
+			return nil, vm.exception()
+		}
+		defer vm.free_(r)
+		vm.runJobs()
+		switch C.avm_promise_state(vm.ctx, r) {
+		case C.JS_PROMISE_FULFILLED:
+			return C.avm_promise_result(vm.ctx, r), nil
+		case C.JS_PROMISE_REJECTED:
+			C.JS_Throw(vm.ctx, C.avm_promise_result(vm.ctx, r))
+			return nil, vm.exception()
+		}
+		return nil, fmt.Errorf("require() of ES module %s, which uses top-level await: use await import()", p)
 	}, false))
 
 	vm.setHidden("__compileModule", vm.nativeValue(func(c *call) (any, error) {
