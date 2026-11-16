@@ -17,6 +17,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	restorev1 "github.com/pockethost/pocketone/ext/contracts/restore/v1"
+	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 	"io"
 	"log/slog"
 	"os"
@@ -31,7 +33,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 )
 
-// Name is the extension's name: its config key (extensions.pitr), route prefix (/api/pitr) and admin extension name.
+// Name is the extension's name: its config key (extensions.pitr) and admin extension name.
 const Name = "pitr"
 
 // DirName is the pb_data subfolder that holds everything this extension writes. It is left out of backup zips.
@@ -78,6 +80,7 @@ type Extension struct {
 	closed bool
 
 	retentionSet, intervalSet bool // set in Go: the config file doesn't override them
+	sectionOnce               sync.Once
 }
 
 // New returns the extension for cfg, filling defaults.
@@ -211,6 +214,9 @@ func (p *Extension) SetupApp(app core.App, ac AppConfig) error {
 	app.OnBackupCreate().BindFunc(exclude)
 	app.OnBackupRestore().BindFunc(exclude)
 	app.OnServe().BindFunc(a.onServe) // replication starts when the app serves, not for CLI commands
+	// restore/v1: any moment in the window (the backups default steps aside)
+	restorev1.Contract.Provide(app, restorer{a})
+	settingsv1.Add(app, settingsSection{a}) // its S3 destination, through settings/v1
 	return nil
 }
 
@@ -269,7 +275,7 @@ func (p *Extension) appFor(app core.App) *appPITR {
 
 var errNotEnabled = errors.New("pitr: not enabled for this app")
 
-// Status reports an app's restorable window (for host code; the admin uses GET /api/pitr).
+// Status reports an app's restorable window (for host code; clients use restore/v1).
 func (p *Extension) Status(ctx context.Context, app core.App) (*Status, error) {
 	a := p.appFor(app)
 	if a == nil {

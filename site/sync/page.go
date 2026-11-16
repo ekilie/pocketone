@@ -60,6 +60,29 @@ func extensionPage(rw *rewriter, p *extension, secs []section) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// the README's own front matter (owners, version) becomes a line under the title
+	meta := ""
+	if raw, err := os.ReadFile(filepath.Join(rw.root, src)); err == nil {
+		owners, version := ownersAndVersion(string(raw))
+		var parts []string
+		if version != "" {
+			parts = append(parts, "Version "+version)
+		}
+		if len(owners) > 0 {
+			var links []string
+			for _, o := range owners {
+				links = append(links, "["+o+"](https://github.com/"+strings.TrimPrefix(o, "@")+")")
+			}
+			parts = append(parts, "Owners: "+strings.Join(links, ", "))
+		}
+		meta = strings.Join(parts, " · ")
+	}
+	body = stripFront(body)
+	if meta != "" {
+		if i := strings.Index(body, "\n"); i >= 0 && strings.HasPrefix(body, "# ") {
+			body = body[:i+1] + "\n" + meta + "\n" + body[i+1:]
+		}
+	}
 	var owned strings.Builder
 	for _, s := range secs {
 		if s.Extension == p.Name {
@@ -135,4 +158,27 @@ func configReference(m *manifest, secs []section) string {
 		}
 	}
 	return b.String()
+}
+
+// ownersAndVersion reads `owners: ["@a"]` and `version: X.Y.Z` from a README's front matter.
+func ownersAndVersion(src string) (owners []string, version string) {
+	m := frontStripRe.FindString(src)
+	for _, line := range strings.Split(m, "\n") {
+		k, v, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		v = strings.TrimSpace(v)
+		switch strings.TrimSpace(k) {
+		case "owners":
+			for _, o := range strings.Split(strings.Trim(v, "[]"), ",") {
+				if o = strings.Trim(strings.TrimSpace(o), `"'`); o != "" {
+					owners = append(owners, o)
+				}
+			}
+		case "version":
+			version = v
+		}
+	}
+	return owners, version
 }

@@ -7,27 +7,35 @@ source: "ext/pocker/README.md"
 
 # Pocker
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
-normal app folder and starts on its first request, in tens of milliseconds. Pocker is a runtime provider for
-[Multisite](/docs/extensions/multisite); its peer [Docker](/docs/extensions/docker) runs each instance in a container instead.
+normal app folder and starts on its first request, in tens of milliseconds. Pocker provides
+[runtime/v1](/docs/contracts/runtime/v1) for [Multisite](/docs/extensions/multisite); its peer [Docker](/docs/extensions/docker) runs each instance in a container instead.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
-Pocker is built into `pocketone`. Name it as the provider in `pocketone.yaml` and `pocketone serve` hosts many
-instances instead of one app:
+Pocker is built into `pocketone`. Add a `multisite` section to `pocketone.yaml` and `pocketone serve` hosts many
+instances instead of one app, with pocker as the runtime (docker too, when it has its `docker` section):
 
 ```yaml
-provider: pocker
+multisite: {}
 ```
 
-In your own Go build, register it as a provider ([`examples/pocketone/multi.go`](../../examples/pocketone/multi.go)
+In your own Go build, add it to the host's extensions ([`examples/pocketone/multi.go`](../../examples/pocketone/multi.go)
 is the stock binary's version), or run a `pocker.Server` on its own as [the example](#example) does:
 
 ```go
-multisite.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath, Extensions: []pocker.Extension{
-	pitr.New(pitr.Config{}), // any PocketOne extension, on every instance
+h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Extensions: []multisite.Extension{
+	&pocker.Provider{
+		Resolve:  cfg.ResolvePath,
+		Standard: standard.New(), // every instance gets the standard set (tokens, mcp, pitr, ...)
+		Extensions: []pocker.Extension{
+			myextension.New(), // your own PocketOne extensions, on every instance too
+		},
+	},
 }})
 ```
 
@@ -40,7 +48,7 @@ instance (keys below). Listeners, instances and the firewall are the [Multisite]
 `instances`, `firewall`).
 
 ```yaml
-provider: pocker
+multisite: {}
 instances: { file: ./instances.yaml }
 pocker:
   root: ./pb_root           # one folder per instance: <root>/<id>
@@ -88,7 +96,7 @@ Runtime provider pocker: instances run in-process (root folder, hooks pool, egre
 ```yaml
 # pocketone.yaml
 server: { http: "127.0.0.1:8090" }
-provider: pocker
+multisite: {}
 instances: { dev: true }
 pocker: { root: ./pb_root }
 ```
@@ -132,7 +140,7 @@ failure is written there too.
 
 | Extension | How they fit |
 |---|---|
-| [Multisite](/docs/extensions/multisite) | Routing, listeners, instances file and gates. Pocker is one of its runtime providers. |
+| [Multisite](/docs/extensions/multisite) | Routing, listeners, instances file and gates. Pocker is one of its runtimes (runtime/v1). |
 | [Sandbox](/docs/extensions/sandbox) | Every instance's JS hooks, SQL and outbound network run in it, so one instance can't reach another or the host. |
 | [Firewall](/docs/extensions/firewall) | Peer allow-list and rate limits in front of every instance; per-instance limits in `extensions.firewall`. |
 | [Auto TLS](/docs/extensions/autotls) | In the stock binary: certificates for the hostnames instances map (`autotls` section). |
@@ -144,9 +152,30 @@ failure is written there too.
 
 ### Building on Pocker
 
+- **Standard set.** `pocker.Provider.Standard` (or `pocker.Server.Standard`) is [ext/standard](/docs/extensions/standard)'s
+  set: every instance gets its members, each turned off per instance with `extensions.<name>.enabled: false`, and its
+  startup lines (`standard: on: ...`) are in the instance's own log. Listing a member in `Extensions` too is an error.
+- **Contracts the host provides.** `Server.Host` (or `Provider.Host`) is the host's contract scope. A contract the
+  host provides for its instances steps aside inside each instance's app, and the host answers it on the instance's
+  hostname in `Server.InstanceRoutes` (or `Provider.InstanceRoutes`, `ManagerOptions.InstanceRoutes`): after the
+  gates and the blocked answer, before the app. `pocker.Remote(m, host)` is remote/v1 for Pocker instances (restart
+  through the Manager, logs from `logs/exec.log`); add your own auth:
+
+  ```go
+  host := extkit.NewScope("multisite")
+  srv.Host = host
+  srv.OnStart = func(m *pocker.Manager) { remotev1.Contract.ProvideForInstances(host, pocker.Remote(m, host)) }
+  srv.InstanceRoutes = append(srv.InstanceRoutes, func(next http.Handler) http.Handler {
+  	return remotev1.W.HostHandler(host, multisite.InstanceID, myAuth, next)
+  })
+  ```
+
+  deploy/v1 works the same way with `deploy.New(...)` as the handler: `deployv1.Contract.ProvideForInstances(host,
+  ...)` and `extkit.HostRoutes(host, deployv1.Contract, multisite.InstanceID, next)` as an instance route.
 - **Extensions.** `pocker.Provider.Extensions` (or `pocker.Server.Extensions`) takes any `extkit.Extension`, registered on each
   instance's app before it starts with that instance's `extensions.<name>` settings. Host-level code can implement
-  `Configurer`, `AppIniter`, `JSIniter`, `Starter`, or a host `Gate`, `Wrapper` or `TLSProvider`. See
+  `AppIniter`, `JSIniter`, `Starter`, or be a host extension (`multisite.Extension`, registered on the host like any
+  other: servertiming, autotls). See
   [POCKER.md](/docs/extensions/pocker/pocker#extensions).
 - **Setup per instance.** `SetupApp(inst, app)` runs after migrations and before the app serves, e.g. to add a route
   checked against `inst.Private`.

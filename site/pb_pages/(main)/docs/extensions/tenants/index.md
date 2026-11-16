@@ -7,6 +7,8 @@ source: "ext/tenants/README.md"
 
 # Multitenant
 
+Version 0.0.0 · Owners: [@benallfree](https://github.com/benallfree)
+
 Accounts that own instances, for hosting other people (level 4): each instance has an owner; accounts have quotas and
 can be suspended; owners log in to their instances' dashboards (their login is kept in sync as a superuser); owners
 get API tokens for the CLI and deploys; and an API your own tenant dashboard talks to (PocketHost's dashboard is one).

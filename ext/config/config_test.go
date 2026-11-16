@@ -66,9 +66,6 @@ cfgtest:
 	if a.Dir != "./data" || a.Dev != nil {
 		t.Fatalf("app: %+v", a)
 	}
-	if p, found := Provider.Get(); found || p != "" {
-		t.Fatalf("provider: %q %v", p, found)
-	}
 
 	// the .env stays private: nothing reaches the process environment unless allow-listed
 	for _, k := range []string{"CFG_TEST_SECRET", "CFG_TEST_PORT", "CFG_TEST_NAME", "CFG_TEST_TRAIL"} {

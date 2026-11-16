@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Mail Trap
 
 A development mail catcher (like MailDev or Mailpit) for testing an extension or app that sends mail. In dev mode, an
@@ -5,7 +10,7 @@ app whose SMTP is off sends its mail here instead of the host's `sendmail`, and 
 
 ## Install
 
-Mail Trap is built into `pocketone`, for a single app and for every instance under `provider: pocker`. There's
+Mail Trap is built into `pocketone`, for a single app and for every pocker instance on a multisite host. There's
 nothing to install: run `pocketone serve --dev` with SMTP off and it's active.
 
 In your own Go build, register it before the app starts:
@@ -51,6 +56,7 @@ catches mail and prints each message in the terminal.
 
 | Extension | How they fit |
 |---|---|
+| [Contracts](../contracts/README.md) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); in dev mode Mail Trap takes it, otherwise it passes it on. |
 | [Pocker](../pocker/README.md) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
 | [Mail Relay](../mailrelay/README.md) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |
 | [Bulk Mail](../bulkmail/README.md) | In dev mode with SMTP off, campaign mail lands in the inbox instead of being sent. |

@@ -2,6 +2,8 @@ package deploy
 
 import (
 	"context"
+	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
+	"github.com/pockethost/pocketone/ext/remotes"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -14,7 +16,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
-	"github.com/pockethost/pocketone/ext/remotes"
+	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
 
@@ -61,13 +64,21 @@ func newP1RemoteWith(t *testing.T, adjust func(*Config)) *p1Remote {
 	}
 	t.Cleanup(app.Cleanup)
 	r := &p1Remote{app: app, dir: t.TempDir()}
-	r.tk = tokens.MustRegister(app, tokens.Config{Collections: []string{"_superusers", "users"}})
-	remotes.MustRegister(app, remotes.Config{})
-	cfg := Config{Dir: r.dir, Restart: func(core.App) error { r.restarts.Add(1); return nil }}
+	count := func(core.App) error { r.restarts.Add(1); return nil }
+	cfg := Config{Dir: r.dir, Restart: count}
 	if adjust != nil {
 		adjust(&cfg)
 	}
-	MustRegister(app, cfg)
+	// registered and sealed the way every app is (the standard set), so remote/v1 (restart, logs) mounts
+	exts := []extkit.Extension{
+		tokens.New(tokens.Config{Collections: []string{"_superusers", "users"}}),
+		remotes.New(remotes.Config{Restart: count}),
+		NewExtension(cfg),
+	}
+	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	r.tk = tokens.For(app)
 	// the test app is already bootstrapped: run what OnBootstrap would
 	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(e *core.BootstrapEvent) error { return nil }); err != nil {
 		t.Fatal(err)
@@ -94,7 +105,7 @@ func (r *p1Remote) token(t *testing.T, collection, email string, scopes ...strin
 
 func (r *p1Remote) client(t *testing.T, token string) *Client {
 	t.Helper()
-	rc := &remotes.Client{Remote: &remotes.Remote{Name: "ce", URL: r.url}, Token: token, TokenSource: "test", HTTP: remotes.NewHTTPClient()}
+	rc := &remoteclient.Client{Remote: &remoteclient.Remote{Name: "ce", URL: r.url}, Token: token, TokenSource: "test", HTTP: remoteclient.NewHTTPClient()}
 	c, err := NewClient(context.Background(), rc)
 	if err != nil {
 		t.Fatal(err)
@@ -105,11 +116,11 @@ func (r *p1Remote) client(t *testing.T, token string) *Client {
 func TestP1ToP1(t *testing.T) {
 	r := newP1Remote(t)
 	ctx := context.Background()
-	c := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeDeploy))
-	if c.Prefix != PockerPrefix {
+	c := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeDeploy, "remote", "remote:read"))
+	if c.Prefix != deployv1.Prefix {
 		t.Fatalf("discovered %q", c.Prefix)
 	}
-	if w, err := c.DeployWhoami(ctx); err != nil || w.Via != "token" {
+	if w, err := c.Whoami(ctx); err != nil || w.Via != "token" {
 		t.Fatalf("whoami %+v %v", w, err)
 	}
 
@@ -135,7 +146,7 @@ func TestP1ToP1(t *testing.T) {
 	if res.WrittenCount != 2 || res.Restarted || !res.RestartNeeded || r.restarts.Load() != 0 {
 		t.Fatalf("first %+v restarts %d", res, r.restarts.Load())
 	}
-	if rr, err := c.Restart(ctx); err != nil || !rr.Restarted || r.restarts.Load() != 1 {
+	if rr, err := c.Restart(ctx); err != nil || !rr.Restarted || !r.waitRestarts(1) {
 		t.Fatalf("restart %+v %v (restarts %d)", rr, err, r.restarts.Load())
 	}
 	if b, _ := os.ReadFile(filepath.Join(r.dir, "pb_hooks/main.pb.js")); string(b) != "routerAdd()" {
@@ -157,7 +168,7 @@ func TestP1ToP1(t *testing.T) {
 	}
 
 	// read-only token: pull and logs, no deploys
-	ro := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeRead))
+	ro := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeRead, "remote:read"))
 	if _, err := ro.Check(ctx, map[string]string{}, false); err == nil || !strings.Contains(err.Error(), "read-only") {
 		t.Fatalf("read-only check: %v", err)
 	}
@@ -195,22 +206,22 @@ func TestP1ToP1(t *testing.T) {
 
 	// who may not deploy
 	user := r.client(t, r.token(t, "users", "test@example.com"))
-	if _, err := user.DeployWhoami(ctx); err == nil || !strings.Contains(err.Error(), "Only superusers") {
+	if _, err := user.Check(ctx, map[string]string{}, false); err == nil || !strings.Contains(err.Error(), "Only superusers") {
 		t.Fatalf("user token: %v", err)
 	}
 	anon := r.client(t, "")
-	if _, err := anon.DeployWhoami(ctx); err == nil || !strings.Contains(err.Error(), "authentication failed") {
+	if _, err := anon.Check(ctx, map[string]string{}, false); err == nil || !strings.Contains(err.Error(), "authentication failed") {
 		t.Fatalf("anonymous: %v", err)
 	}
 	other := r.token(t, "_superusers", "test@example.com")
-	if w, err := r.client(t, other).DeployWhoami(ctx); err != nil || w.Via != "token" {
+	if _, err := r.client(t, other).Check(ctx, map[string]string{}, false); err != nil {
 		t.Fatalf("unscoped superuser token: %v", err)
 	}
 }
 
 func TestP1ToP1WithImpersonateLogin(t *testing.T) {
 	r := newP1Remote(t)
-	rc := &remotes.Client{Remote: &remotes.Remote{Name: "ce", URL: r.url}, HTTP: remotes.NewHTTPClient()}
+	rc := &remoteclient.Client{Remote: &remoteclient.Remote{Name: "ce", URL: r.url}, HTTP: remoteclient.NewHTTPClient()}
 	su, _ := r.app.FindAuthRecordByEmail(core.CollectionNameSuperusers, "test@example.com")
 	jwt, err := su.NewStaticAuthToken(time.Hour)
 	if err != nil {
@@ -221,7 +232,7 @@ func TestP1ToP1WithImpersonateLogin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if w, err := c.DeployWhoami(context.Background()); err != nil || w.Via != "jwt" {
+	if w, err := c.Whoami(context.Background()); err != nil || w.Via != "jwt" {
 		t.Fatalf("%+v %v", w, err)
 	}
 }
@@ -246,4 +257,14 @@ func TestRoutesCoexistWithStaticCatchAll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// waitRestarts waits (briefly) for remote/v1's restart, which runs just after it answers.
+func (r *p1Remote) waitRestarts(n int32) bool {
+	for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+		if r.restarts.Load() == n {
+			return true
+		}
+	}
+	return false
 }

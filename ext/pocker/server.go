@@ -3,6 +3,7 @@ package pocker
 import (
 	"context"
 	"fmt"
+	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
 	"log/slog"
 	"net/http"
 	"net/netip"
@@ -45,6 +46,21 @@ type Server struct {
 	// first listed is the outermost.
 	Extensions []Extension
 
+	// Standard is the per-app extension set every instance gets: ext/standard's Set, so every instance has tokens,
+	// mcp, pitr and the rest, each turned off per instance with `extensions.<name>.enabled: false`. Its members'
+	// Starters run like Extensions', and their Closers close once every app has stopped. A member also listed in Extensions is an error.
+	Standard extkit.AppSet
+
+	// Host is the host's contract scope: what it provides for its instances (extkit.ProvideForInstances, e.g.
+	// remote/v1 with [Remote]); those contracts step aside inside each instance, and the host answers them in
+	// InstanceRoutes.
+	Host *extkit.Scope
+
+	// InstanceRoutes answer requests for the instances after the gates and before the app (see
+	// multisite.Host's InstanceRoutes): where the host's contracts for its instances are served, e.g.
+	// remotev1.W.HostHandler(host, multisite.InstanceID, auth, next).
+	InstanceRoutes []func(http.Handler) http.Handler
+
 	// OnStart, if set, receives the Manager once Run has created it, before any request is served: the safe way for
 	// host code running in other goroutines (scheduled jobs, maintenance) to get it.
 	OnStart func(m *Manager)
@@ -70,16 +86,22 @@ func (s *Server) Run(ctx context.Context) error {
 		Listeners: multisite.Listeners{Listen: s.Config.Listen, PlainListen: s.Config.PlainListen, TLS: s.Config.TLS, ShutdownTimeout: s.Config.ShutdownTimeout},
 	}
 	h.Gates = append(h.Gates, s.Gates...)
-	if err := s.prepare(h); err != nil {
+	if err := h.Use(s); err != nil {
+		return err
+	}
+	if _, err := h.Setup(nil); err != nil {
 		return err
 	}
 	return h.Run(ctx)
 }
 
-// prepare makes h run its instances in-process: extensions, the egress policy, the Manager as h's runtime, wrappers,
-// background work (extension starters). h's Source, Gates, Forward, Dev, Listeners and Logger are
-// already set; extension gates are added after h's.
-func (s *Server) prepare(h *multisite.Host) error {
+// Name implements multisite.Extension.
+func (s *Server) Name() string { return "pocker" }
+
+// RegisterHost implements multisite.Extension: it makes h run instances in-process. It registers the host extensions
+// among s.Extensions on h (gates, TLS, wrappers), installs the egress policy and provides the Manager as runtime/v1;
+// its app extensions go to every instance. h's Source, Forward, Dev, Listeners and Logger are already set.
+func (s *Server) RegisterHost(h *multisite.Host) error {
 	log := h.Logger
 	if log == nil {
 		log = slog.Default()
@@ -98,22 +120,30 @@ func (s *Server) prepare(h *multisite.Host) error {
 		allow = append(allow, pfx)
 	}
 	sandbox.InstallEgressPolicy(sandbox.EgressPolicy{Allow: allow})
+	if h.DataRoot == "" {
+		h.DataRoot = s.Config.PBRoot
+	}
 	pool := 2
 	if s.Config.HooksPoolSize != nil {
 		pool = *s.Config.HooksPoolSize
 	}
 	var (
-		tlsProv   TLSProvider
-		wrappers  []Wrapper
 		starters  []Starter
 		initers   []AppIniter
 		jsIniters []JSIniter
 	)
-	for _, p := range s.Extensions {
-		if c, ok := p.(Configurer); ok {
-			if err := c.Configure(s.Config); err != nil {
-				return fmt.Errorf("extension %s: %w", p.Name(), err)
+	standardNames := map[string]bool{}
+	if s.Standard != nil {
+		for _, e := range s.Standard.Extensions() {
+			standardNames[e.Name()] = true
+			if st, ok := e.(Starter); ok {
+				starters = append(starters, st)
 			}
+		}
+	}
+	for _, p := range s.Extensions {
+		if standardNames[p.Name()] {
+			return fmt.Errorf("extension %s is in Standard already: configure the member there instead of listing it in Extensions", p.Name())
 		}
 		if cp, ok := p.(extkit.Extension); ok {
 			// a PocketOne extension: register it on every instance, with that instance's settings
@@ -122,18 +152,6 @@ func (s *Server) prepare(h *multisite.Host) error {
 				initers = append(initers, hp)
 				jsIniters = append(jsIniters, hp)
 			}
-		}
-		if g, ok := p.(Gate); ok {
-			h.Gates = append(h.Gates, g)
-		}
-		if t, ok := p.(TLSProvider); ok {
-			if tlsProv != nil {
-				return fmt.Errorf("extension %s: another extension already provides TLS", p.Name())
-			}
-			tlsProv = t
-		}
-		if wr, ok := p.(Wrapper); ok {
-			wrappers = append(wrappers, wr)
 		}
 		if st, ok := p.(Starter); ok {
 			starters = append(starters, st)
@@ -145,6 +163,23 @@ func (s *Server) prepare(h *multisite.Host) error {
 			jsIniters = append(jsIniters, js)
 		}
 	}
+	// host extensions among s.Extensions (servertiming, autotls, ...): the same as on any runtime
+	var hostExts []multisite.Extension
+	for _, p := range s.Extensions {
+		if he, ok := p.(multisite.Extension); ok {
+			hostExts = append(hostExts, he)
+		}
+	}
+	if s.Standard != nil {
+		for _, e := range s.Standard.Extensions() {
+			if c, ok := e.(extkit.Closer); ok {
+				h.Closers = append(h.Closers, c.Close)
+			}
+		}
+	}
+	if err := h.Use(hostExts...); err != nil {
+		return err
+	}
 	if h.Directory == nil {
 		h.Directory = multisite.NewDirectory(log)
 	}
@@ -154,30 +189,24 @@ func (s *Server) prepare(h *multisite.Host) error {
 		HooksPoolSize: pool,
 		Logger:        log,
 		Defaults:      s.Config.Limits,
-		Gate:          multisite.ChainGates(h.Gates...),
+		Gate:          multisite.HostGate(h), // the host's gates as they are once it's set up
 		OnEvent:       s.onEvent(h.Source, log),
 		Init:          chainIniters(initers),
 		InitJS:        chainJSIniters(jsIniters),
 		Setup:         s.SetupApp,
+		Standard:      s.Standard,
+		Host:          s.Host,
 		Forward:       h.Forward,
 		Directory:     h.Directory,
 	})
 	if s.OnStart != nil {
 		s.OnStart(s.Manager)
 	}
-	h.Runtime = s.Manager
-	if tlsProv != nil {
-		h.TLS = tlsProv
+	runtimev1.Contract.ProvideIn(h.Scope, s.Manager)
+	if s.Wrap != nil { // the host application's wrapper, inside the host extensions'
+		h.Wrappers = append(h.Wrappers, s.Wrap)
 	}
-
-	var wrap []func(http.Handler) http.Handler // outermost first: extension wrappers, then the host application's
-	for _, wr := range wrappers {
-		wrap = append(wrap, wr.Wrap)
-	}
-	if s.Wrap != nil {
-		wrap = append(wrap, s.Wrap)
-	}
-	h.Wrappers = append(wrap, h.Wrappers...)
+	h.InstanceRoutes = append(h.InstanceRoutes, s.InstanceRoutes...)
 	h.Background = append(h.Background, s.Background...)
 	for _, st := range starters {
 		h.Background = append(h.Background, func(ctx context.Context) { st.Start(ctx, s.Manager) })

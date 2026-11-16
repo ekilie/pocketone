@@ -1,6 +1,7 @@
 package bulkmail
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -218,7 +219,7 @@ func TestCampaignSendsOncePerAddressAndHonorsSuppressions(t *testing.T) {
 
 	msg := app.TestMailer.LastMessage()
 	if msg.Headers["List-Unsubscribe-Post"] != "List-Unsubscribe=One-Click" ||
-		!strings.HasPrefix(msg.Headers["List-Unsubscribe"], "<https://app.test/api/bulkmail/unsubscribe?t=") {
+		!strings.HasPrefix(msg.Headers["List-Unsubscribe"], "<https://app.test/api/_c/mail.suppression/v1/unsubscribe?t=") {
 		t.Fatalf("headers: %v", msg.Headers)
 	}
 	if !strings.Contains(msg.HTML, ", verified") || !strings.Contains(msg.HTML, "Cheers") ||
@@ -417,7 +418,7 @@ func TestUnsubscribeLinks(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
 			Name: "GET shows a confirmation and doesn't unsubscribe", Method: http.MethodGet,
-			URL: "/api/bulkmail/unsubscribe?t=" + token, ExpectedStatus: 200,
+			URL: "/api/_c/mail.suppression/v1/unsubscribe?t=" + token, ExpectedStatus: 200,
 			ExpectedContent: []string{"Stop sending", "ann@example.test", `method="post"`},
 			TestAppFactory:  factory,
 			AfterTestFunc: func(t testing.TB, _ *tests.TestApp, _ *http.Response) {
@@ -428,7 +429,7 @@ func TestUnsubscribeLinks(t *testing.T) {
 		},
 		{
 			Name: "one-click POST unsubscribes", Method: http.MethodPost,
-			URL:            "/api/bulkmail/unsubscribe?t=" + token,
+			URL:            "/api/_c/mail.suppression/v1/unsubscribe?t=" + token,
 			Body:           strings.NewReader("List-Unsubscribe=One-Click"),
 			Headers:        map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			ExpectedStatus: 200, ExpectedContent: []string{"won't receive"},
@@ -443,23 +444,18 @@ func TestUnsubscribeLinks(t *testing.T) {
 			},
 		},
 		{
-			Name: "bad token", Method: http.MethodPost, URL: "/api/bulkmail/unsubscribe?t=nope",
+			Name: "bad token", Method: http.MethodPost, URL: "/api/_c/mail.suppression/v1/unsubscribe?t=nope",
 			ExpectedStatus: 400, ExpectedContent: []string{"isn't valid"}, TestAppFactory: factory,
 		},
 		{
-			Name: "superuser routes need auth", Method: http.MethodGet, URL: "/api/bulkmail/settings",
-			ExpectedStatus: 401, ExpectedContent: []string{`"data":{}`}, TestAppFactory: factory,
+			Name: "contract operations need a superuser", Method: http.MethodPost, URL: "/api/_c/bulkmail/v1/count",
+			Body:           strings.NewReader(`{"audience":{"collection":"users"}}`),
+			ExpectedStatus: 401, ExpectedContent: []string{`"code":"unauthorized"`}, TestAppFactory: factory,
 		},
 		{
-			Name: "settings never return secrets", Method: http.MethodGet, URL: "/api/bulkmail/settings",
-			Headers:        map[string]string{"Authorization": superuserToken},
-			ExpectedStatus: 200, ExpectedContent: []string{`"secret":""`, `"daily":5000`, `"allowed":true`},
-			TestAppFactory: factory,
-		},
-		{
-			Name: "webhook needs its secret", Method: http.MethodPost, URL: "/api/bulkmail/feedback/webhook",
+			Name: "webhook needs its secret", Method: http.MethodPost, URL: "/api/_c/mail.feedback/v1/webhook",
 			Body:           strings.NewReader(`{"type":"bounce","email":"b@x.test"}`),
-			ExpectedStatus: 401, ExpectedContent: []string{`"data":{}`}, TestAppFactory: factory,
+			ExpectedStatus: 401, ExpectedContent: []string{`"code":"unauthorized"`}, TestAppFactory: factory,
 		},
 	}
 	for _, s := range scenarios {
@@ -467,6 +463,14 @@ func TestUnsubscribeLinks(t *testing.T) {
 		s.Test(t)
 	}
 	bm.StopSender()
+
+	// settings/v1 section: never returns secrets
+	raw, err := settingsSection{bm}.Get(context.Background())
+	for _, want := range []string{`"secret":""`, `"daily":5000`, `"allowed":true`, `/api/_c/mail.feedback/v1/ses`} {
+		if err != nil || !strings.Contains(string(raw), want) {
+			t.Fatalf("settings section: %s %v (want %s)", raw, err, want)
+		}
+	}
 }
 
 func TestWebhookAndAudienceCountRoutes(t *testing.T) {
@@ -480,13 +484,13 @@ func TestWebhookAndAudienceCountRoutes(t *testing.T) {
 	factory := func(testing.TB) *tests.TestApp { return app }
 	for _, sc := range []tests.ApiScenario{
 		{
-			Name: "webhook bounce", Method: http.MethodPost, URL: "/api/bulkmail/feedback/webhook",
+			Name: "webhook bounce", Method: http.MethodPost, URL: "/api/_c/mail.feedback/v1/webhook",
 			Body:           strings.NewReader(`{"type":"bounce","email":"B@x.test"}`),
-			Headers:        map[string]string{"X-Bulkmail-Secret": "hook-secret"},
-			ExpectedStatus: 204, TestAppFactory: factory,
+			Headers:        map[string]string{"X-Feedback-Secret": "hook-secret"},
+			ExpectedStatus: 200, ExpectedContent: []string{`"accepted":1`}, TestAppFactory: factory,
 		},
 		{
-			Name: "audience count", Method: http.MethodPost, URL: "/api/bulkmail/audience/count",
+			Name: "audience count", Method: http.MethodPost, URL: "/api/_c/bulkmail/v1/count",
 			Body:           strings.NewReader(`{"audience":{"collection":"users","filter":"verified = true"}}`),
 			Headers:        map[string]string{"Authorization": superuserToken},
 			ExpectedStatus: 200, ExpectedContent: []string{`"count":` + itoa(len(users))}, TestAppFactory: factory,
@@ -572,7 +576,7 @@ func TestJSBinds(t *testing.T) {
 		const b = $bulkmail.isSuppressed("js@x.test");
 		const c = $bulkmail.count({collection: "users", filter: "verified = true"}).count;
 		const u = $bulkmail.unsubscribeURL("js@x.test", "c1");
-		[a, b, c > 0, u.startsWith("https://app.test/api/bulkmail/unsubscribe?t=")].join(",")
+		[a, b, c > 0, u.startsWith("https://app.test/api/_c/mail.suppression/v1/unsubscribe?t=")].join(",")
 	`)
 	if err != nil {
 		t.Fatal(err)

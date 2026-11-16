@@ -7,8 +7,11 @@ source: "ext/servertiming/README.md"
 
 # Server Timing
 
-A `Server-Timing` response header on every request to a [Pocker](/docs/extensions/pocker) instance: how long the
-instance's own handler took, and how long it took to wake the instance for the request. Your browser's dev tools show
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+A `Server-Timing` response header on every request to an instance of a [multisite](/docs/extensions/multisite) host: how
+long the instance's own handler took, and how long it took to wake the instance for the request (under
+[Pocker](/docs/extensions/pocker)). Your browser's dev tools show
 it in the request's Timing tab.
 
 ```
@@ -19,16 +22,16 @@ Server-Timing: origin;dur=12.4, wake;dur=0.0
 
 ## Install
 
-Server Timing is built into `pocketone` and on whenever it serves many instances with `provider: pocker`. There's
-nothing to install. It isn't used for a single app or under `provider: docker`.
+Server Timing is built into `pocketone` and on whenever it serves many instances, whatever the provider. There's
+nothing to install. It isn't used for a single app.
 
-In your own Pocker build, list it first among the extensions, so its header covers every other hop:
+In your own host build, list it first among the host extensions, so its header covers every other hop:
 
 ```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{servertiming.New() /*, other extensions */}}
+h, err := multisite.FromConfig(multisite.Options{Extensions: []multisite.Extension{servertiming.New() /*, other host extensions */}})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/servertiming`. It works the same in `pocker.Provider{Extensions: ...}`.
+The module is `github.com/pockethost/pocketone/ext/servertiming`.
 
 ## Configure
 
@@ -53,20 +56,20 @@ first; values a server in front already sent are kept, and this host's entries a
 ## Integrations
 
 - **[Pocker](/docs/extensions/pocker)** registers `origin` and `wake` for every request it hands to an instance.
-- **Add your own entries.** Host code and other extensions call `pocker.Timing(ctx, fn)` during a request; `fn` returns
-  `[]pocker.TimingEntry{{Name, Dur, Desc}}` and runs when the headers go out. Only extensions listed after Server Timing
+- **Add your own entries.** Host code and other extensions call `multisite.Timing(ctx, fn)` during a request; `fn` returns
+  `[]multisite.TimingEntry{{Name, Dur, Desc}}` and runs when the headers go out. Only extensions listed after Server Timing
   are covered. Put names in `Desc`, never addresses.
 - **Go API.** `FormatTiming`, `AppendServerTiming` and `WithServerTiming` render entries, append them to a header and
-  wrap a response writer, for a server that isn't a Pocker extension.
+  wrap a response writer, for a server that isn't a multisite host.
 
 ## Example
 
 There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](../../examples/pocketone/multi.go), which
-lists it first in the `pocketone` binary's Pocker extensions.
+lists it first in the `pocketone` binary's host extensions.
 
 ## How it works
 
-It's a Pocker wrapper (`Wrap(http.Handler)`). For each request it starts collecting timing entries in the request's
+It's a host wrapper (`multisite.Wrapper`). For each request it starts collecting timing entries in the request's
 context, then stamps them into the `Server-Timing` header just before the response headers go out (not on interim
 1xx responses). Flush, Hijack and `http.ResponseController` keep working through its writer.
 

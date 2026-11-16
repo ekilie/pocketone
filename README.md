@@ -43,9 +43,8 @@ choose not to use them.
 | **[Pages](ext/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. |
 | **[Vacuum](ext/vacuum/README.md)** | Scheduled SQLite VACUUM. |
 | **[MCP](ext/mcp/README.md)** | An MCP endpoint at `/mcp` so agents can manage your app and call its tools. |
-| **[OAuth Server](ext/oauth-server/README.md)** | Your app as an OAuth provider; `pocketone login` and MCP sign-in use it. |
 | **[S3 Redirect](ext/s3redirect/README.md)** | File downloads as short-lived signed S3 redirects. |
-| **[Tokens](ext/tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes. |
+| **[Tokens](ext/tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes, and an [OAuth server](ext/tokens/OAUTH.md) for `pocketone login` and MCP sign-in. |
 | **[Deploy](ext/deploy/README.md)** | `pocketone deploy \| dev \| pull \| logs` and the deploy API. |
 | **[Remotes](ext/remotes/README.md)** | Named remotes and saved logins for the `pocketone` command. |
 | **[Upgrade](ext/upgrade/README.md)** | `pocketone upgrade` to the latest release; the old executable is kept as `pocketone-<version>`, never deleted. |

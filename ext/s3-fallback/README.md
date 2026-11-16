@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # S3 Fallback
 
 A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount

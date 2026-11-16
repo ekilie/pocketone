@@ -294,13 +294,13 @@ func TestReachesAndInfrastructure(t *testing.T) {
 		{[]string{"notes:read"}, "GET", "/api/health", false},
 		{[]string{"notes:write"}, "PATCH", "/api/collections/{collection}/records/{id}", true},
 		{[]string{"guarded"}, "DELETE", "/anything", true},
-		{nil, "GET", "/_pocker/whoami", true},
+		{nil, "GET", "/api/_c/remote/v1", true},
 	} {
 		if got := tk.Reaches(c.scopes, c.method, c.pattern); got != c.want {
 			t.Errorf("Reaches(%v, %s %s) = %v", c.scopes, c.method, c.pattern, got)
 		}
 	}
-	if !(Scope{Paths: []string{"/_pocker/deploy/"}}).Infrastructure() || (Scope{Paths: []string{"/api/x"}}).Infrastructure() ||
+	if !(Scope{Paths: []string{"/api/_c/deploy/v1/"}}).Infrastructure() || (Scope{Paths: []string{"/api/x"}}).Infrastructure() ||
 		(Scope{}).Infrastructure() {
 		t.Fatal("Infrastructure")
 	}

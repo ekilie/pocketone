@@ -1,7 +1,10 @@
 package tokens
 
 import (
+	"context"
+
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
@@ -41,4 +44,53 @@ func (p *Extension) Register(app core.App, layers extkit.Config) error {
 	}
 	_, err := Register(app, cfg)
 	return err
+}
+
+// Contracts implements [extkit.Declarer].
+func (p *Extension) Contracts() extkit.Contracts {
+	c := extkit.Contracts{Implements: extkit.IDs("tokens/v1")}
+	if !p.cfg.OAuth.Disabled {
+		c.Implements = append(c.Implements, "oauth/v1") // the OAuth server comes with tokens
+	}
+	return c
+}
+
+// issuer is tokens/v1 over this app's tokens.
+type issuer struct{ t *Tokens }
+
+func (i issuer) Verify(_ context.Context, secret string) (tokensv1.Grant, error) {
+	info, err := i.t.Verify(secret)
+	if err != nil {
+		return tokensv1.Grant{}, err
+	}
+	return info.grant(), nil
+}
+
+func (i issuer) RegisterScope(s tokensv1.Scope) error { return i.t.RegisterScope(Scope(s)) }
+
+func (i issuer) Scopes() []tokensv1.Scope {
+	list := i.t.Scopes()
+	out := make([]tokensv1.Scope, len(list))
+	for n, s := range list {
+		out[n] = tokensv1.Scope(s)
+	}
+	return out
+}
+
+func (i issuer) Reaches(scopes []string, method, path string) bool {
+	return i.t.Reaches(scopes, method, path)
+}
+
+// grant is the token as tokens/v1 describes it.
+func (info *Info) grant() tokensv1.Grant {
+	return tokensv1.Grant{
+		TokenID:         info.Token.Id,
+		Name:            info.Token.GetString("name"),
+		OwnerCollection: info.Owner.Collection().Name,
+		OwnerID:         info.Owner.Id,
+		Scopes:          info.Scopes,
+		Audience:        info.Audience,
+		ClientID:        info.Token.GetString("client_id"),
+		Owner:           info.Owner,
+	}
 }

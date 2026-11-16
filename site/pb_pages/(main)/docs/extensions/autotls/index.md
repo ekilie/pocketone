@@ -7,11 +7,13 @@ source: "ext/autotls/README.md"
 
 # Auto TLS
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Automatic HTTPS certificates through ACME, with [CertMagic](https://github.com/caddyserver/certmagic) (Caddy's
 certificate engine). PocketBase already gets Let's Encrypt certificates for `serve example.com`. Auto TLS takes over
 that job and adds other certificate authorities, extra domains and wildcard certificates.
 
-Status: stable under pocker, beta on a single app.
+Status: stable on a multisite host, beta on a single app.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -117,35 +119,36 @@ Use `--autotlsCA letsencrypt-staging` while testing, so failed attempts don't co
 
 ## Integrations
 
-### Pocker
+### Multisite hosts
 
-Under [pocker](/docs/extensions/pocker), the stock `pocketone` binary (with `provider: pocker`) runs `autotls.New()`, a
-server extension that gets certificates for every instance the host serves. It's configured by the same `autotls`
+On a [multisite](/docs/extensions/multisite) host (any runtime: pocker or docker), the stock `pocketone` binary runs
+`autotls.New()`, a host extension that gets certificates for every instance the host serves. It's configured by the same `autotls`
 section:
 
 ```yaml
 autotls:
   auto: true
   email: ops@example.com
-  storage: ./pb_root/.pocker-certs   # default: .pocker-certs in the pocker root
+  storage: ./pb_root/.pocker-certs   # default: .pocker-certs in the runtime's instance root
   domains: ["*.example.com", "example.com"]
   dns: { provider: cloudflare, api_token_env: CF_API_TOKEN }   # only needed for wildcards
 ```
 
 - Without `dns`, every hostname the instance source maps gets its own certificate on its first TLS handshake, with any
   DNS host and no API token. Hostnames no instance serves never trigger issuance.
-- Challenges include HTTP-01 on the pocker server's port 80, as well as TLS-ALPN-01 and DNS-01.
-- Certificate files (`server.tls.cert`/`key`) stay a core pocker feature. Setting both files and `auto` is an error.
-- Certificates belong to the pocker server, not to instances; the single-app extension (`NewApp`) is a separate type so
+- Challenges include HTTP-01 on the host's port 80, as well as TLS-ALPN-01 and DNS-01.
+- Certificate files (`server.tls.cert`/`key`) stay a core host feature. Setting both files and `auto` is an error.
+- Certificates belong to the host, not to instances; the single-app extension (`NewApp`) is a separate type so
   it never runs per instance.
 
 ### Building on Auto TLS
 
-- `autotls.New()` implements pocker's `Configurer` and `TLSProvider`. A host that builds its own `pocker.Server` adds
-  it to `Extensions`:
+- `autotls.New()` is a host extension (`multisite.Extension`) that provides the [tls/v1](/docs/contracts/tls/v1)
+  contract when `auto` is on. A host adds it to its host extensions (a `pocker.Server` built by hand takes it in
+  `Extensions` too):
 
   ```go
-  srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{autotls.New()}}
+  h, err := multisite.FromConfig(multisite.Options{Extensions: []multisite.Extension{autotls.New()}})
   ```
 
 - `AutoTLS.Config` can be set in Go before the server starts; the `autotls` section is read only when `Auto` is false

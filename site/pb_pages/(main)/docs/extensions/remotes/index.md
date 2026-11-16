@@ -7,6 +7,8 @@ source: "ext/remotes/README.md"
 
 # Remotes
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Named remotes for the `pocketone` command: the apps a project deploys to, each signed in to once. Give an app a name
 like `prod`, log in, and commands such as `pocketone deploy prod` know where to go and who you are.
 
@@ -21,18 +23,19 @@ pocketone deploy prod          # Deploy
 ## Install
 
 Remotes is built into `pocketone` and **on**: the `remote`, `login`, `logout` and `link` commands are always there, and
-every app it serves answers `GET /_pocker/whoami` so other machines can sign in to it. There's nothing to install.
+every app provides [remote/v1](/docs/contracts): whoami at `GET /api/_c/remote/v1` (so other machines can sign
+in to it), status, restart and logs. There's nothing to install: it's in the [standard set](/docs/extensions/standard).
 
-In your own Go build, register it before the app starts:
+In your own Go build, use the standard set, or register it through its contracts yourself:
 
 ```go
 app := pocketbase.New()
-remotes.MustRegister(app, remotes.Config{}) // whoami route; on *pocketbase.PocketBase also the commands
+extkit.Setup(app, []extkit.Extension{remotes.New(remotes.Config{})}, nil, nil) // remote/v1; on *pocketbase.PocketBase also the commands
 app.Start()
 ```
 
 The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](/docs/extensions/tokens) so a password login
-can create a revocable API token, and [OAuth Server](/docs/extensions/oauth-server) for browser login.
+can create a revocable API token, and [the OAuth server](/docs/extensions/tokens/oauth) for browser login.
 
 ## Configure
 
@@ -49,9 +52,6 @@ variables.
 
 Commands find it by walking up from the current folder. It isn't a `pb_*` name, since `pb_*` folders are deployed.
 
-A project linked with `npx pockethost link` has a `.pockethostconfig` (`{"instanceName": "myapp"}`). It reads as the
-remote `pockethost` → `https://myapp.pockethost.io` (a name with a dot is taken as a custom domain).
-
 ### Saved logins
 
 Logins are saved per user, keyed by URL, in `~/.config/pocketone/credentials.json` (mode 0600). Set
@@ -63,7 +63,6 @@ Logins are saved per user, keyed by URL, in `~/.config/pocketone/credentials.jso
 |---|---|
 | `POCKETONE_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`POCKETONE_TOKEN_PROD`). |
 | `POCKETONE_TOKEN` | A token for any remote. |
-| `POCKETHOST_TOKEN` | A token for the `pockethost` remote. |
 | `POCKETONE_PASSWORD` | The password for `login --email`, so it isn't asked for. |
 
 A token in the environment wins over a saved login. The `POCKETONE` in these names and the `pocketone` folder come
@@ -93,7 +92,7 @@ pocketone login prod
 
 `login` tries, in order:
 
-1. **The browser**, when the remote runs [OAuth Server](/docs/extensions/oauth-server). Your browser opens, you sign in
+1. **The browser**, when the remote runs [the OAuth server](/docs/extensions/tokens/oauth). Your browser opens, you sign in
    and approve, and the command finishes. Over SSH or without a display it shows a code to enter on another device
    instead; `--device` asks for that, and `--no-browser` prints the URL without opening it.
 2. **A pasted token** (`pbt_...`, a PocketHost token, or a PocketBase auth token). At the prompt, paste it, or pass
@@ -133,35 +132,51 @@ login's refresh token. If the remote can't be reached, it tells you to revoke it
 
 | Extension | How they fit |
 |---|---|
-| [Deploy](/docs/extensions/deploy) | `deploy`, `dev`, `pull` and `logs` resolve their remote and login through Remotes, and find the deploy API through `/_pocker/whoami`. |
-| [OAuth Server](/docs/extensions/oauth-server) | Advertises itself as the `oauth` feature in `/_pocker/whoami`; `login` then signs in through the browser (loopback redirect on 127.0.0.1 with PKCE) or a device code. |
-| [Tokens](/docs/extensions/tokens) | Password logins create an API token, and `logout` deletes it. Whoami reports a token's id and scopes. |
-| PocketHost | `.pockethostconfig` and `POCKETHOST_TOKEN` work as the `pockethost` remote. A remote without `/_pocker/whoami` takes a pasted token as is. |
+| [Deploy](/docs/extensions/deploy) | `deploy`, `dev` and `pull` resolve their remote and login through Remotes and find deploy/v1 in whoami's contracts; `restart` and `logs` use remote/v1. |
+| [OAuth](/docs/extensions/tokens/oauth) (in Tokens) | Provides oauth/v1, so whoami lists it; `login` then signs in through the browser (loopback redirect on 127.0.0.1 with PKCE) or a device code. |
+| [Tokens](/docs/extensions/tokens) | With tokens/v1 in whoami, password logins create an API token, and `logout` deletes it. Whoami reports a token's id and scopes. Without it, `login` takes a pasted token. |
 
-### `GET /_pocker/whoami`
+### remote/v1
 
-Every app with Remotes answers who the request's credential is and what the app offers, so clients can discover
-features:
+Remote control of an app, at `/api/_c/remote/v1`:
+
+| Operation | Endpoint | Token scope |
+|---|---|---|
+| whoami | `GET /api/_c/remote/v1` | none needed (any token may ask who it is) |
+| status | `GET /api/_c/remote/v1/status` | `remote:read` |
+| restart | `POST /api/_c/remote/v1/restart` | `remote` |
+| logs | `GET /api/_c/remote/v1/logs?n=100` (server-sent events) | `remote:read` |
+
+Whoami says who the request's credential is and what the app offers, so clients can discover it:
 
 ```json
 {"auth": {"collection": "_superusers", "id": "…", "email": "admin@example.com"}, "via": "token",
- "tokenId": "…", "scopes": ["deploy"], "features": {"deploy": "/_pocker/deploy/v1", "tokens": "/api/tokens"},
+ "tokenId": "…", "scopes": ["deploy", "remote"], "contracts": ["deploy/v1", "oauth/v1", "remote/v1", "tokens/v1"],
+ "extensions": ["tokens", "remotes", "deploy"],
  "app": {"name": "Acme", "url": "https://myapp.example.com"}}
 ```
 
 `via` is `token` for an API token, `jwt` for a PocketBase auth token, and empty with no credential (`auth` is then
-`null`). Every API token may call it, whatever its scopes.
+`null`, and `extensions` is left out). `contracts` are the contract APIs the app offers, each at `/api/_c/<id>/`:
+everything a client can use (oauth/v1's metadata is at `/.well-known/oauth-authorization-server`). Restart answers at once and restarts just after (under Pocker, only
+that instance).
 
 ### Building on Remotes
 
-- **Advertise a feature.** `remotes.Advertise(app, "deploy", "/_pocker/deploy/v1")` lists it in whoami. Deploy and
-  OAuth Server do this; Tokens is detected without importing it.
-- **Go client.** `remotes.Open(dir, name)` resolves a remote and its credential (environment first, then the saved
-  login, renewing a browser login when due) and returns a `*remotes.Client`: base URL, bearer token, an HTTP client
-  with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`. Deploy's commands build on it.
+- **remote/v1 client.** `remotev1.NewClient(url, token, httpClient)` (ext/contracts/remote/v1) calls whoami, status,
+  restart and logs.
+- **Go client.** The CLI client lives with the contract, in
+  [`remoteclient`](../contracts/remote/v1/remoteclient) (ext/contracts/remote/v1/remoteclient), so other extensions'
+  commands use it without importing this one. `remoteclient.Open(dir, name)` resolves a remote and its credential
+  (environment first, then the saved login, renewing a browser login when due) and returns a `*remoteclient.Client`:
+  base URL, bearer token, an HTTP client with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`.
+  It also holds the linked project (`LoadProject`), saved logins (`LoadCredentials`) and the sign-ins
+  (`LoginWithToken`, `LoginWithPassword`, `OAuthLogin`). Deploy's commands build on it.
 - **Commands.** `remotes.Commands()` returns the `remote`, `login`, `logout` and `link` commands, for a binary that
-  isn't a `*pocketbase.PocketBase`.
-- **Login.** `remotes.BrowserLogin` is the hook `login` tries first; this package fills it with its OAuth client.
+  isn't a `*pocketbase.PocketBase`. The rest of `remote` is generated: every operation of every contract the binary
+  links is a `remote ...` command ([cli.commands/v1](/docs/contracts/cli.commands/v1)), such as `remote status`,
+  `remote restart`, `remote restore to --at -2h`.
+- **Login.** `remotes.BrowserLogin` is the sign-in `login` tries first (`remoteclient.OAuthLogin`; tests replace it).
 
 ## Example
 
@@ -184,6 +199,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/remotes"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
@@ -192,8 +208,12 @@ func main() {
 	app := pocketbase.New()
 	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
 
-	tokens.MustRegister(app, tokens.Config{})   // so login can mint a revocable API token
-	remotes.MustRegister(app, remotes.Config{}) // GET /_pocker/whoami + remote/login/logout/link commands
+	// registered through their contracts (the standard set does this for you): remotes provides remote/v1 (whoami at
+	// /api/_c/remote/v1, status, restart, logs) and the remote/login/logout/link commands; tokens lets login mint a
+	// revocable API token
+	if _, err := extkit.Setup(app, []extkit.Extension{tokens.New(tokens.Config{}), remotes.New(remotes.Config{})}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)

@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	feedbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/feedback/v1"
 	"io"
 	"net/url"
 	"regexp"
@@ -129,36 +130,41 @@ func (bm *BulkMail) httpGetPEM(u string) ([]byte, error) {
 }
 
 // HandleSNS verifies and processes one SNS delivery: subscription confirmations are confirmed, SES bounce and
-// complaint notifications become suppressions.
+// complaint notifications become mail.feedback/v1 events (which bulk mail turns into suppressions).
 func (bm *BulkMail) HandleSNS(m *SNSMessage) error {
+	_, err := bm.handleSNS(m)
+	return err
+}
+
+func (bm *BulkMail) handleSNS(m *SNSMessage) (int, error) {
 	if err := bm.VerifySNS(m); err != nil {
-		return fmt.Errorf("SNS signature: %w", err)
+		return 0, fmt.Errorf("SNS signature: %w", err)
 	}
 	s, err := bm.Settings()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(s.SNSTopicARNs) > 0 && !slices.Contains(s.SNSTopicARNs, m.TopicArn) {
-		return errors.New("SNS topic not allowed in Bulk mail settings")
+		return 0, errors.New("SNS topic not allowed in Bulk mail settings")
 	}
 
 	switch m.Type {
 	case "SubscriptionConfirmation":
 		if !validSNSURL(m.SubscribeURL, false) {
-			return errors.New("untrusted SubscribeURL")
+			return 0, errors.New("untrusted SubscribeURL")
 		}
 		resp, err := bm.cfg.HTTPClient.Get(m.SubscribeURL)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		resp.Body.Close()
-		return nil
+		return 0, nil
 	case "UnsubscribeConfirmation":
-		return nil
+		return 0, nil
 	case "Notification":
 		return bm.processSES([]byte(m.Message), "ses")
 	}
-	return fmt.Errorf("unknown SNS type %q", m.Type)
+	return 0, fmt.Errorf("unknown SNS type %q", m.Type)
 }
 
 type sesNotification struct {
@@ -183,10 +189,10 @@ type sesNotification struct {
 	} `json:"mail"`
 }
 
-func (bm *BulkMail) processSES(raw []byte, source string) error {
+func (bm *BulkMail) processSES(raw []byte, source string) (int, error) {
 	var n sesNotification
 	if err := json.Unmarshal(raw, &n); err != nil {
-		return fmt.Errorf("SES notification: %w", err)
+		return 0, fmt.Errorf("SES notification: %w", err)
 	}
 	campaignId := ""
 	for _, h := range n.Mail.Headers {
@@ -199,21 +205,26 @@ func (bm *BulkMail) processSES(raw []byte, source string) error {
 		kind = n.EventType
 	}
 	var errs []error
+	raised := 0
+	raise := func(kind, email string) {
+		raised++
+		errs = append(errs, feedbackv1.Raise(bm.app, &feedbackv1.Event{Kind: kind, Email: email, Campaign: campaignId, Source: source}))
+	}
 	switch kind {
 	case "Bounce":
 		if n.Bounce == nil || n.Bounce.BounceType != "Permanent" {
-			return nil // transient bounces don't suppress
+			return 0, nil // transient bounces don't suppress
 		}
 		for _, r := range n.Bounce.BouncedRecipients {
-			errs = append(errs, bm.Feedback(r.EmailAddress, ReasonBounced, source, campaignId))
+			raise(feedbackv1.Bounce, r.EmailAddress)
 		}
 	case "Complaint":
 		if n.Complaint == nil {
-			return nil
+			return 0, nil
 		}
 		for _, r := range n.Complaint.ComplainedRecipients {
-			errs = append(errs, bm.Feedback(r.EmailAddress, ReasonComplained, source, campaignId))
+			raise(feedbackv1.Complaint, r.EmailAddress)
 		}
 	}
-	return errors.Join(errs...)
+	return raised, errors.Join(errs...)
 }

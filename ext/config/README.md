@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Config
 
 PocketOne's config file: `pocketone.yaml`, with secrets in a `.env` beside it. Put your app's settings in one file
@@ -41,7 +46,8 @@ Each top-level key is one section, owned by the extension that uses it. This pac
   `--origins`.
 - `app`: your app's folders and options: the same settings as the root flags (`--dir`, `--dev`, `--hooksDir`,
   `--publicDir` and the rest), plus `env_allow`.
-- `provider`: set it only to run many instances from one binary (see [Integrations](#integrations)).
+- `multisite`: add it only to run many instances from one binary (see [Integrations](#integrations)); `providers:
+  { runtime/v1: [...] }` picks which runtimes.
 
 ```yaml
 server:
@@ -131,16 +137,16 @@ An empty section (`pitr:` with nothing after it) is allowed and means all defaul
 | Extension | How they fit |
 |---|---|
 | Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](../pitr/README.md), [S3 Redirect](../s3redirect/README.md) and [Auto TLS](../autotls/README.md) are examples. |
-| [Pocker](../pocker/README.md) and [Docker](../docker/README.md) | Set `provider: pocker` or `provider: docker` and `pocketone serve` runs many instances instead of one app. The `app` section and `env_allow` don't apply then; each instance has its own folder under the provider's root. |
+| [Pocker](../pocker/README.md) and [Docker](../docker/README.md) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
 
 ### The server section with many instances
 
-With a provider, `server` has a few more keys: `https` is the main address, `http` then redirects plain HTTP to it
+On a multisite host, `server` has a few more keys: `https` is the main address, `http` then redirects plain HTTP to it
 (`http` alone serves plain HTTP), `plain` lists extra plain-HTTP addresses with no redirect, `tls` names a certificate
 and key file (reloaded when they change), and `shutdown_timeout` limits how long in-flight requests get at stop.
 
 ```yaml
-provider: pocker
+multisite: {}
 server:
   https: ":443"
   http: ":80"

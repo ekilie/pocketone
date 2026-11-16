@@ -7,6 +7,8 @@ source: "ext/schedules/README.md"
 
 # Schedules
 
+Version 0.0.0 · Owners: [@benallfree](https://github.com/benallfree)
+
 Scheduled webhooks per instance, called in-process even while the instance sleeps, with a catch-up run after downtime.
 
 **Runs on:** [pocker](/docs/extensions/pocker) (multitenant).

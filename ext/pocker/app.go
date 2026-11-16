@@ -19,6 +19,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/ui"
 	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/sandbox"
 )
 
@@ -46,6 +47,12 @@ type appOptions struct {
 	InitJS func(inst Instance, app core.App, vm *goja.Runtime)
 	// Setup, if set, runs for each app after migrations and before it serves (host application Go code).
 	Setup func(inst Instance, app core.App) error
+	// Standard, if set, is registered on every app (ext/standard's Set): before its hooks load, with the instance's
+	// `extensions.<name>` settings; its JS APIs bound on every runtime; its contracts sealed after the hooks load.
+	Standard extkit.AppSet
+	// Host is the host's contract scope: contracts the host provides for its instances (remote/v1, deploy/v1) step
+	// aside inside each instance's app.
+	Host *extkit.Scope
 }
 
 func instanceDir(opts appOptions, inst Instance) string {
@@ -122,14 +129,35 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 		MaxConcurrent:      lim.MaxConcurrentJS,
 		Console:            openInstanceLog(dir).Write,
 	}
+	if opts.Host != nil {
+		extkit.AttachHost(app, opts.Host, inst.ID)
+	}
+	var plan *extkit.Plan
+	if opts.Standard != nil {
+		if plan, err = opts.Standard.Prepare(app, func(name string) extkit.Config {
+			own, _ := extkit.Layer(inst.ExtensionConfig(name))
+			return extkit.Config{own}
+		}); err != nil {
+			return nil, fmt.Errorf("standard: %w", err)
+		}
+	}
+	jsExt := hookExtensions(sb, dev, openInstanceLog(dir))
+	if opts.Standard != nil {
+		for _, e := range opts.Standard.JSExtensions(app) {
+			jsExt = append(jsExt, e)
+		}
+	}
 	err = jsvm.Register(app, jsvm.Config{
 		HooksDir:      filepath.Join(dir, "pb_hooks"),
 		MigrationsDir: filepath.Join(dir, "pb_migrations"),
 		HooksWatch:    false, // PocketBase's watcher would open an inotify instance per app; the Manager's shared watcher restarts just this app
 		HooksPoolSize: opts.HooksPoolSize,
 		// the sandbox (OnInit, OnCall, HTTPClient); hook errors name pb_hooks/<file>:<line>:<col> in the instance log
-		Extensions: hookExtensions(sb, dev, openInstanceLog(dir)),
+		Extensions: jsExt,
 		OnInit: func(vm *goja.Runtime) {
+			if opts.Standard != nil {
+				opts.Standard.BindJS(app, vm)
+			}
 			if opts.InitJS != nil {
 				opts.InitJS(inst, app, vm)
 			}
@@ -137,6 +165,15 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("load hooks: %w", err)
+	}
+	if opts.Standard != nil {
+		lines, err := opts.Standard.Finish(app, plan)
+		if err != nil {
+			return nil, fmt.Errorf("standard: %w", err)
+		}
+		for _, l := range lines { // the instance's own log, where its owner reads it
+			openInstanceLog(dir).Write("stdout", l)
+		}
 	}
 
 	if err := app.Bootstrap(); err != nil {

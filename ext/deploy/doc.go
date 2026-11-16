@@ -2,9 +2,9 @@
 // the production node_modules tree, as a hash diff (manifest → upload only missing files in gzipped PHB1 bundles →
 // commit, swapped in safely).
 //
-// Client half: `pocketone deploy | dev | pull | logs | restart [remote]` (remotes from ext/remotes). It speaks the same
-// protocol as the pockethost npm CLI, so it deploys to PocketHost edges (/_ph/deploy/v1) and to PocketOne remotes
-// (/_pocker/deploy/v1), found through /_pocker/whoami.
+// Client half: `pocketone deploy | dev | pull | logs | restart [remote]` (remotes from ext/remotes). It finds the
+// remote's deploy/v1 (/api/_c/deploy/v1, the files) through remote/v1's whoami, and restarts and reads logs through
+// remote/v1.
 //
 // Server half: the deploy API. [Register] serves it on a single app (superusers; API tokens with the deploy scope);
 // [New] builds it for any [Backend] and [Instances] (PocketHost runs it under pocker with its own backend).

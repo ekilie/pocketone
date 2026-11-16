@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite"
 )
 
@@ -63,8 +64,9 @@ instances:
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	addr := ln.Addr().String()
 	_ = ln.Close()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtime: rt, Gates: []multisite.Gate{tagGate{}},
-		Listeners: multisite.Listeners{Listen: addr}, Logger: quiet}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtimes: []multisite.Runtime{rt}, Gates: []multisite.Gate{tagGate{}},
+		Listeners: multisite.Listeners{Listen: addr}, Logger: quiet, Directory: multisite.NewDirectory(quiet)}
+	h.InstanceRoutes = append(h.InstanceRoutes, rt.serveRemote(h.Directory)) // as Provider.RegisterHost does
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- h.Run(ctx) }()
@@ -112,6 +114,22 @@ instances:
 	}
 	if code, _, _ := get("nope.test", "/api/health"); code != 404 {
 		t.Fatalf("unknown host: %d", code)
+	}
+	// remote/v1 is the host's, after its gates: whoami is public and names the instance; the rest needs a superuser
+	// of the instance
+	if code, body, hdr := get("up.test", "/api/_c/remote/v1"); code != 200 || !strings.Contains(body, `"remote/v1"`) || !strings.Contains(body, `"cehostup"`) || hdr.Get("X-Gate") != "admitted cehostup" {
+		t.Fatalf("whoami: %d %s gate=%q", code, body, hdr.Get("X-Gate"))
+	}
+	// a blocked instance's remote/v1 gets the host's blocked answer, and the instance stays stopped
+	if code, body, hdr := get("off.test", "/api/_c/remote/v1"); code != 409 || !strings.Contains(body, "powered off") || hdr.Get("X-Gate") != "" || rt.Running("cehostoff") {
+		t.Fatalf("blocked remote/v1: %d %q gate=%q (running %v)", code, body, hdr.Get("X-Gate"), rt.Running("cehostoff"))
+	}
+	if code, body, _ := get("up.test", "/api/_c/remote/v1/status"); code != 401 {
+		t.Fatalf("status without a token: %d %s", code, body)
+	}
+	st, err := rt.Remote(nil, h.Directory)("cehostup").Status(context.Background(), extkit.Auth{Kind: "superuser"})
+	if err != nil || !st.Running || st.PocketBase == "" || st.Uptime == "" {
+		t.Fatalf("status: %+v %v", st, err)
 	}
 	// the instances' data lives in their folders under the data root
 	if _, err := os.Stat(filepath.Join(data, "cehostce", "pb_data", "data.db")); err != nil {

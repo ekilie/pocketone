@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # S3 Redirect
 
 File downloads as short-lived signed redirects to your bucket, after PocketBase's own access check.

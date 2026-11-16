@@ -7,6 +7,8 @@ source: "ext/mailrelay/README.md"
 
 # Mail Relay
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Outgoing mail for [Pocker](/docs/extensions/pocker) instances that haven't set up SMTP.
 
 Stock PocketBase falls back to the host's `sendmail` when SMTP is off. Under Pocker that would run `sendmail` on the
@@ -65,8 +67,8 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 - **Settings → Mail** in an instance's dashboard shows its superusers the relay: the address it sends as, its limits
   and how many messages it sent today. When sending is off for the instance, it says so and points to the SMTP
   settings.
-- **The instance's log** gets one line per message, with masked addresses: `mail from blog@… to a***@x.org accepted`.
-  Refusals and upstream failures are logged too.
+- **The app's log** (Admin > Logs, which Pocker copies to the instance's own log) gets one line per message, with
+  masked addresses: `mailrelay: sent from=blog@… to=a***@x.org`. Refusals and upstream failures are warnings.
 - **A refused message** returns an error to whoever triggered the mail, such as a password-reset request: sending
   off, too many recipients, too large, or the limit reached.
 
@@ -76,6 +78,7 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 
 | Extension | How they fit |
 |---|---|
+| [Contracts](/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); Mail Relay sends it within the instance's limits. |
 | [Pocker](/docs/extensions/pocker) | The host it's built for. Every instance gets the relay, its own address and its own limits. |
 | [Mail Trap](/docs/extensions/mailtrap) | In development, point `SMTPUpstream` at the trap's SMTP port and every relayed message lands in one inbox, tagged with the instance. The example below does this. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Campaigns go through PocketBase's mailer by default, so with SMTP off they are relayed and count against the instance's limits. |
@@ -104,7 +107,7 @@ instance, and with SMTP off PocketBase then falls back to the host's `sendmail`.
 - **Your own hooks first.** The relay runs after the app's own `onMailerSend` hooks, so they can still change or
   drop a message.
 - **Go API.** `(*mailrelay.Extension).Address(id)` returns the From address an instance sends as.
-- **REST API** (superusers): `GET /api/mailrelay` returns the instance's relay status: `active`, `send`, `address`,
+- **settings/v1** (superusers): `GET /api/_c/settings/v1/get?extension=mailrelay` returns the instance's relay status, a read-only section: `active`, `send`, `address`,
   `perMinute`, `daily`, `sentToday`.
 
 ## Example
@@ -146,8 +149,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/mailrelay"
+	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/pocker"
 )
 
@@ -207,7 +210,7 @@ For each message:
    `@example.com` placeholder.
 4. **Build and send.** Bcc stays out of the headers. An `X-Pocker-Instance` header is added, then the message goes to
    the `Upstream`.
-5. **Log it** to the instance's own log.
+5. **Log it** to the app's log.
 
 ## License
 

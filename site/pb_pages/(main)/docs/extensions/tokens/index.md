@@ -7,6 +7,8 @@ source: "ext/tokens/README.md"
 
 # Tokens
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Long-lived API tokens for your app: secrets that start with `pbt_`, for CI, deploys, scripts and agents. Each token
 belongs to an account and acts as that account. It can be limited to scopes, given an expiry, and revoked on its own.
 Send one as `Authorization: Bearer pbt_…`. Ordinary PocketBase auth tokens keep working unchanged.
@@ -44,7 +46,7 @@ A Go build can narrow both (see [Go config](#go-config)).
 ### Scopes
 
 A token without scopes has its owner's full rights. A token with scopes works only on the requests its scopes cover,
-plus `/_pocker/whoami`; anywhere else it gets `403`. Extensions and your own `pb_hooks` register the scopes. In
+plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Extensions and your own `pb_hooks` register the scopes. In
 `pocketone` the built-in ones are:
 
 | Scope | From | Allows | Who can hold it |
@@ -57,7 +59,7 @@ plus `/_pocker/whoami`; anywhere else it gets `403`. Extensions and your own `pb
 ### Your own scopes
 
 Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on the
-[OAuth Server](/docs/extensions/oauth-server) consent page:
+[the OAuth server](/docs/extensions/tokens/oauth) consent page:
 
 ```js
 // pb_hooks/scopes.pb.js
@@ -109,7 +111,7 @@ scope with its header and rule field.
 4. Click **Create token**. Copy the token now: it's shown only once and never stored.
 
 The list shows each token's name, its first characters, owner, scopes, expiry and when it was last used (time and IP).
-Tokens issued by [OAuth Server](/docs/extensions/oauth-server) carry an `oauth: <client id>` label. Click **Revoke** and
+Tokens issued by [the OAuth server](/docs/extensions/tokens/oauth) carry an `oauth: <client id>` label. Click **Revoke** and
 confirm to delete one; anything using it stops working at once.
 
 App users who aren't superusers manage their own tokens through the [REST API](#rest-api).
@@ -154,10 +156,10 @@ curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collection
 
 | Extension | How they fit |
 |---|---|
-| [OAuth Server](/docs/extensions/oauth-server) | Its access tokens are API tokens, issued with the client's id, the granted scopes and, when asked for, an audience. They show up under Settings → API tokens and can be revoked there. OAuth Server needs Tokens on the app. |
+| [OAuth](/docs/extensions/tokens/oauth) (in Tokens) | Its access tokens are API tokens, issued with the client's id, the granted scopes and, when asked for, an audience. They show up under Settings → API tokens and can be revoked there. The OAuth server needs Tokens on the app. |
 | [MCP](/docs/extensions/mcp) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner. A full-access token's calls hold every registered scope; a token limited to scopes on the consent page has its calls checked like requests with those scopes (`WithScopes`). |
 | [Deploy](/docs/extensions/deploy) | Registers `deploy` and `deploy:read`; a `deploy` token is what CI uses. |
-| [Remotes](/docs/extensions/remotes) | A password `pocketone login` creates an API token and `logout` deletes it. In CI, put a token in `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`). `/_pocker/whoami` reports a token's id and scopes, whatever its scopes. |
+| [Remotes](/docs/extensions/remotes) | A password `pocketone login` creates an API token and `logout` deletes it. In CI, put a token in `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`). remote/v1's whoami (`/api/_c/remote/v1`) reports a token's id and scopes, whatever its scopes. |
 | [Pocker](/docs/extensions/pocker) | Add `tokens.New(tokens.Config{})` to the host's extensions and every instance gets its own tokens, routes and screen. Per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
 
 ### Building on Tokens
@@ -183,10 +185,13 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
 - **Read the token on a request.** `tokens.FromRequest(e)` returns the token a request used (nil for a PocketBase
   auth token), with its `Owner`, `Scopes` and `Audience`. `tokens.HasScope(e, "x")` is true for PocketBase auth
   tokens and unscoped API tokens.
-- **Without importing this package.** Read the request store keys `tokens.scopes` and `tokens.id`, or the
-  `X-Token-Scope-*` headers.
-- **Audience.** A token created with `CreateOptions.Audience` (OAuth Server sets it from the RFC 8707 `resource`
-  parameter) only works under that URL's path, plus `/_pocker/whoami`; elsewhere it gets `403`. When the audience has
+- **Without importing this package.** Other extensions use the [tokens/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/tokens/v1/tokens.go)
+  contract instead: `tokensv1.Contract.Of(app)` registers scopes (`RegisterScope`), lists them and checks `Reaches`;
+  `tokensv1.FromRequest(e)` is the request's token (its `Grant`: owner, scopes, audience, client id);
+  `tokensv1.WithScopes` limits in-process requests. Deploy and MCP work this way. The `X-Token-Scope-*` headers work
+  for rules and JS.
+- **Audience.** A token created with `CreateOptions.Audience` (the OAuth server sets it from the RFC 8707 `resource`
+  parameter) only works under that URL's path, plus remote/v1's whoami (`/api/_c/remote/v1`); elsewhere it gets `403`. When the audience has
   a path (like `https://host/mcp`), the token works there whatever its scopes: the scopes limit what that endpoint
   does on the token's behalf (MCP passes them on with `WithScopes`), not the endpoint itself.
 - **Limit in-process requests.** `tokens.WithScopes(ctx, scopes)` returns a context whose requests are checked like a
@@ -194,7 +199,7 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
   scopes in the `X-Token-Scope-*` headers and `HasScope`. Requests made inside them with the same context inherit
   the limit, and a nested `WithScopes` only narrows it. No client value can set it. `tokens.ScopesFromContext(ctx)`
   reads it. `Reaches(scopes, method, pattern)` says whether scopes could cover a route pattern (`{name}` segments
-  match anything), and `Scope.Infrastructure()` whether a scope only reaches `/_pocker/` routes.
+  match anything), and `Scope.Infrastructure()` whether a scope only reaches contract APIs (`/api/_c/`).
 
 **Go API.** `tokens.For(app)` returns the service: `Create(owner, CreateOptions{Name, Scopes, Expires, ClientId,
 Audience})` returns the secret and record; also `Verify(secret)`, `List(owner)`, `Get(id)`, `Revoke(id)`,
@@ -204,27 +209,28 @@ Audience})` returns the secret and record; also `Verify(secret)`, `List(owner)`,
 **JS.** `$tokens.registerScope({name, description, paths, methods, collections})`, `$tokens.requireScope(name)`,
 `$tokens.hasScope(e, name)`, `$tokens.ruleField(name)` and `$tokens.scopes()`.
 
-### REST API
+### REST API (tokens/v1)
 
-Any signed-in account; superusers see and manage everyone's.
+The [tokens/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/tokens/v1/tokens.go) contract, at `/api/_c/tokens/v1`. Any signed-in account; superusers
+see and manage everyone's.
 
 | Route | What |
 |---|---|
-| `GET /api/tokens` | Your tokens. Superusers see all, or one owner's with `?ownerCollection=&owner=`. |
-| `POST /api/tokens` | `{name, scopes, ttl \| expires}` (`ttl` in seconds, `expires` RFC 3339); superusers may add `ownerCollection` and `owner`. Returns the secret once. A scoped token can only create tokens within its own scopes. |
-| `DELETE /api/tokens/{id}` | Revoke one. |
-| `POST /api/tokens/revoke-all` | Revoke all of yours (superusers: `{ownerCollection, owner}`). |
-| `GET /api/tokens/scopes` | The registered scopes, who may own tokens, and whether you can. |
+| `GET /api/_c/tokens/v1` | Your tokens. Superusers see all, or one owner's with `?ownerCollection=&owner=`. |
+| `POST /api/_c/tokens/v1` | `{name, scopes, ttl \| expires}` (`ttl` in seconds, `expires` RFC 3339); superusers may add `ownerCollection` and `owner`. Returns the secret once. A scoped token can only create tokens within its own scopes. |
+| `DELETE /api/_c/tokens/v1/{id}` | Revoke one. |
+| `POST /api/_c/tokens/v1/revoke-all` | Revoke all of yours (superusers: `{ownerCollection, owner}`). |
+| `GET /api/_c/tokens/v1/scopes` | The registered scopes, who may own tokens, and whether you can. |
 
 Owners can also list, view and delete their own tokens through the records API of `_tokens`.
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app with API tokens: Settings → API tokens, the `/api/tokens` routes and the `token` command.
+[`example/main.go`](example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/tokens/v1`) and the `token` command.
 
 ```go
-// Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the /api/tokens
-// routes, and the `token` command.
+// Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the token API (/api/_c/tokens/v1)
+// and the `token` command.
 //
 //	go run ./example serve
 //	go run ./example token create --superuser admin@example.com --name ci
@@ -278,7 +284,7 @@ tokens.MustRegister(app, tokens.Config{
 ```
 
 With `MaxTTL` set, a token asked for with no expiry or a later one gets the cap instead. If you narrow `Collections`,
-OAuth Server can only sign in accounts of those collections.
+The OAuth server can only sign in accounts of those collections.
 
 ## How it works
 

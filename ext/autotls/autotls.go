@@ -1,10 +1,10 @@
 // Package autotls is a PocketOne extension: automatic HTTPS certificates through ACME, with CertMagic (Caddy's
 // certificate engine). Two entry points:
 //
-//   - Under pocker, [New] is a server extension that reads pocketone.yaml's `autotls` section; certificate files
-//     (`server.tls.cert`/`key`) stay a core feature.
+//   - On a multisite host (any runtime), [New] is a host extension that reads pocketone.yaml's `autotls` section;
+//     certificate files (`server.tls.cert`/`key`) stay a core feature.
 //
-//     srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{autotls.New()}}
+//     multisite.FromConfig(multisite.Options{Extensions: []multisite.Extension{autotls.New()}})
 //
 //   - On a single app, [NewApp] is an [extkit.Extension] that replaces PocketBase's built-in autocert on
 //     `pocketbase serve example.com` (or `--https`) with CertMagic: wildcards through DNS-01, other CAs, extra domains.
@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	tlsv1 "github.com/pockethost/pocketone/ext/contracts/tls/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"net"
 	"net/http"
@@ -26,7 +27,7 @@ import (
 
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/cloudflare"
-	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/multisite"
 )
 
 // Config is the `autotls` section (pocketone.yaml), or the settings given in Go.
@@ -39,13 +40,13 @@ type Config struct {
 	DNS     *DNSConfig `yaml:"dns" json:"dns"`
 }
 
-// AutoTLS is the extension ([pocker.Configurer], [pocker.TLSProvider]). It does nothing unless `autotls.auto` is true.
+// AutoTLS is the host extension: it provides tls/v1 when `autotls.auto` is true, and nothing otherwise.
 type AutoTLS struct {
 	// Config may be set before the server starts; the config file's `tls:` block is used when Auto is false here.
 	Config Config
 
-	certFiles      bool   // tls.cert/tls.key are set (not allowed together with auto)
-	defaultStorage string // <pb_root>/.pocker-certs
+	certFiles bool            // tls.cert/tls.key are set (not allowed together with auto)
+	host      *multisite.Host // its DataRoot holds the default storage, <data root>/.pocker-certs
 }
 
 // New returns the extension.
@@ -54,16 +55,31 @@ func New() *AutoTLS { return &AutoTLS{} }
 // Name is the extension's name.
 func (a *AutoTLS) Name() string { return "autotls" }
 
-// Configure reads pocketone.yaml's `autotls` section (unless enabled in Go) and checks it without touching the
-// network.
-func (a *AutoTLS) Configure(cfg pocker.Config) error {
+// RegisterHost reads pocketone.yaml's `autotls` section (unless enabled in Go) and checks it without touching the
+// network. It's a host extension: with `autotls.auto` on it provides tls/v1, otherwise nothing.
+func (a *AutoTLS) RegisterHost(h *multisite.Host) error {
+	if err := a.configure(h); err != nil {
+		return err
+	}
+	if a.Config.Auto {
+		tlsv1.Contract.ProvideIn(h.Scope, a)
+	}
+	return nil
+}
+
+// Contracts implements extkit.Declarer.
+func (a *AutoTLS) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("tls/v1")}
+}
+
+func (a *AutoTLS) configure(h *multisite.Host) error {
 	if !a.Config.Auto {
 		if c, found := Section.Get(); found {
 			a.Config = c
 		}
 	}
-	a.certFiles = cfg.TLS.Cert != "" || cfg.TLS.Key != ""
-	a.defaultStorage = filepath.Join(cfg.PBRoot, ".pocker-certs")
+	a.host = h
+	a.certFiles = h.Listeners.TLS.Cert != "" || h.Listeners.TLS.Key != ""
 	if !a.Config.Auto {
 		return nil
 	}
@@ -76,7 +92,11 @@ func (a *AutoTLS) TLS(ctx context.Context, served func(host string) bool) (*tls.
 	if !a.Config.Auto {
 		return nil, nil, nil
 	}
-	auto, err := newAutoTLS(ctx, a.Config, a.certFiles, a.defaultStorage, served, true)
+	storage := ".pocker-certs"
+	if a.host != nil && a.host.DataRoot != "" {
+		storage = filepath.Join(a.host.DataRoot, storage)
+	}
+	auto, err := newAutoTLS(ctx, a.Config, a.certFiles, storage, served, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -251,5 +271,5 @@ func normalizeHost(h string) string {
 	return strings.TrimSuffix(h, ".")
 }
 
-// Section is the key of the `autotls` section (pocketone.yaml): automatic certificates for a pocker host.
+// Section is the key of the `autotls` section (pocketone.yaml): automatic certificates for a multisite host.
 var Section = extkit.NewSection("autotls", Config{}, "Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certificate storage. The --autotls* flags win.")

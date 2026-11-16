@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.0
+---
+
 # tenant-billing
 
 Billing for [tenants](../tenants/README.md), independent of any payment provider: plans and their quotas, the

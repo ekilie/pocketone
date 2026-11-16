@@ -10,7 +10,7 @@ Every section the `pocketone` binary understands, from `pocketone config --json`
 
 #### `app:`
 
-The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used when a provider runs many instances.
+The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used on a multisite host.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -138,6 +138,12 @@ A community mothership to mirror instances and edges from: url, login, this edge
 
 Owned by [Mothership](/docs/extensions/mothership).
 
+#### `multisite:`
+
+Serve many instances (a multisite host) instead of a single app. The runtimes are the providers of runtime/v1.
+
+Owned by [Multisite](/docs/extensions/multisite).
+
 #### `pitr:`
 
 Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.
@@ -170,9 +176,11 @@ Runtime provider pocker: instances run in-process (root folder, hooks pool, egre
 
 Owned by [Pocker](/docs/extensions/pocker).
 
-#### `provider:`
+#### `providers:`
 
-The runtime provider that runs many instances (pocker or docker). Omit for a single stock app.
+which extension provides a contract when several do
+
+Owned by [Standard Set](/docs/extensions/standard).
 
 #### `rate_limits:`
 

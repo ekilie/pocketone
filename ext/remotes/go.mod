@@ -3,7 +3,9 @@ module github.com/pockethost/pocketone/ext/remotes
 go 1.27
 
 require (
+	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
@@ -13,7 +15,6 @@ require (
 
 require (
 	ganigeorgiev.com/fexpr v0.7.0 // indirect
-	ganigeorgiev.com/pocketbase/dbx v1.13.0 // indirect
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
@@ -67,3 +68,39 @@ replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 
 replace github.com/pockethost/pocketone/ext/config => ../config
+
+replace github.com/pockethost/pocketone/ext/contracts => ../contracts
+
+replace github.com/pockethost/pocketone/ext/mailtrap => ../mailtrap
+
+replace github.com/pockethost/pocketone/ext/autotls => ../autotls
+
+replace github.com/pockethost/pocketone/ext/upgrade => ../upgrade
+
+replace github.com/pockethost/pocketone/ext/docker => ../docker
+
+replace github.com/pockethost/pocketone/ext/deploy => ../deploy
+
+replace github.com/pockethost/pocketone/ext/mcp => ../mcp
+
+replace github.com/pockethost/pocketone/ext/firewall => ../firewall
+
+replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
+
+replace github.com/pockethost/pocketone/ext/jsembed => ../jsembed
+
+replace github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
+
+replace github.com/pockethost/pocketone/ext/mailrelay => ../mailrelay
+
+replace github.com/pockethost/pocketone/ext/s3-fallback => ../s3-fallback
+
+replace github.com/pockethost/pocketone/ext/pitr => ../pitr
+
+replace github.com/pockethost/pocketone/ext/pages => ../pages
+
+replace github.com/pockethost/pocketone/ext/stats => ../stats
+
+replace github.com/pockethost/pocketone/ext/s3redirect => ../s3redirect
+
+replace github.com/pockethost/pocketone/ext/mothership => ../mothership

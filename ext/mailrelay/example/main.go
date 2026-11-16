@@ -23,8 +23,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/mailrelay"
+	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/pocker"
 )
 

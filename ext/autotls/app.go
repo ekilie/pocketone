@@ -22,8 +22,8 @@ const AppStorageDirName = ".autotls"
 // Challenges: TLS-ALPN-01 on the HTTPS port, or DNS-01 with a DNS provider. HTTP-01 is off, because port 80 is
 // PocketBase's redirect server.
 //
-// It's a separate type from [AutoTLS] on purpose: pocker runs every extkit.Extension on each instance, and
-// certificates there belong to the pocker server, not to instances.
+// It's a separate type from [AutoTLS] on purpose: a runtime may run every extkit.Extension on each instance, and
+// certificates there belong to the multisite host, not to instances.
 type App struct {
 	cfg Config
 }

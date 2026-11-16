@@ -16,12 +16,6 @@ type Extension interface {
 	Name() string
 }
 
-// Configurer prepares an extension before the server starts, once: an extension reads its own pocketone.yaml section here
-// (an [extkit.Section] it owns); cfg is the server's config.
-type Configurer interface {
-	Configure(cfg Config) error
-}
-
 // AppIniter sets up each instance's app right after it is created, before its JS hooks load and before it
 // bootstraps (opens its databases): the place to bind OnBootstrap, OnServe and OnTerminate handlers (e.g. the pitr
 // extension). It runs on every start of the app, including restarts. An error fails that start.

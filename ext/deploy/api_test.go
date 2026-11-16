@@ -1,12 +1,12 @@
 package deploy
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,7 +17,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 )
 
 const testPAT = "ph_pat_abcdefghij12345_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
@@ -260,6 +259,9 @@ func (f *apiFixture) deploy(content map[string]string, extra map[string]any) res
 	return f.do("POST", Prefix+"/commit", body)
 }
 
+// Prefix is where the deploy API is served: deploy/v1's.
+var Prefix = deployv1.Prefix
+
 func num0(v any) int { f, _ := v.(float64); return int(f) }
 
 func TestAPIEndToEnd(t *testing.T) {
@@ -267,9 +269,8 @@ func TestAPIEndToEnd(t *testing.T) {
 	f.put("pb_data/data.db", "REMOTE DB")
 	f.put("pb_hooks/old.pb.js", "old")
 
-	who := f.do("GET", Prefix+"/whoami", nil)
-	if who.status != 200 || who.body["via"] != "pat" || who.body["token"] != "CI" || who.body["instance"].(map[string]any)["subdomain"] != "myapp" {
-		t.Fatalf("whoami: %d %s", who.status, who.raw)
+	if who := f.do("GET", Prefix+"/tree", nil); who.status != 200 {
+		t.Fatalf("files: %d %s", who.status, who.raw)
 	}
 
 	r := f.deploy(map[string]string{"pb_hooks/main.pb.js": "routerAdd()", "pb_public/index.html": "<h1>v1</h1>", "package.json": "{}"}, nil)
@@ -332,21 +333,16 @@ func TestAPIEndToEnd(t *testing.T) {
 	if r.status != 200 || f.mgr.stops != stops || r.body["restarted"] != false || r.body["restartNeeded"] != true {
 		t.Fatalf("migration: %d %s", r.status, r.raw)
 	}
-	// ...until the client asks
-	r = f.do("POST", Prefix+"/restart", map[string]any{})
-	if r.status != 200 || r.body["restarted"] != true || f.mgr.stops != stops+1 {
-		t.Fatalf("restart: %d %s", r.status, r.raw)
-	}
-	// or asks on the commit
+	// ...until the client asks on the commit (or restarts through remote/v1)
 	files["pb_migrations/2.js"] = "m2"
 	r = f.deploy(files, map[string]any{"restart": true})
-	if r.status != 200 || r.body["restarted"] != true || r.body["restartNeeded"] != nil || f.mgr.stops != stops+2 {
+	if r.status != 200 || r.body["restarted"] != true || r.body["restartNeeded"] != nil || f.mgr.stops != stops+1 {
 		t.Fatalf("commit with restart: %d %s", r.status, r.raw)
 	}
 	// "restart" without a migration or packages changes nothing
 	files["pb_public/index.html"] = "<h1>v3</h1>"
 	r = f.deploy(files, map[string]any{"restart": true})
-	if r.status != 200 || r.body["restarted"] != false || f.mgr.stops != stops+2 {
+	if r.status != 200 || r.body["restarted"] != false || f.mgr.stops != stops+1 {
 		t.Fatalf("commit with restart, nothing to apply: %d %s", r.status, r.raw)
 	}
 
@@ -381,32 +377,32 @@ func TestAPIAuth(t *testing.T) {
 	check("other owner", f.do("POST", Prefix+"/check", body, withToken(other)), 404, "myapp.example.com not found")
 	check("scope", f.do("POST", Prefix+"/check", body, withToken(scoped)), 404, "myapp.example.com not found")
 	check("read-only", f.do("POST", Prefix+"/check", body, withToken(ro)), 403, "This token is read-only.")
-	if r := f.do("GET", Prefix+"/whoami", nil, withToken(ro)); r.status != 200 || r.body["token"] != nil {
-		t.Fatalf("read-only whoami: %s", r.raw)
+	if r := f.do("GET", Prefix+"/tree", nil, withToken(ro)); r.status != 200 {
+		t.Fatalf("read-only files: %s", r.raw)
 	}
-	if r := f.do("GET", Prefix+"/whoami", nil, withToken("jwt-user1")); r.status != 200 || r.body["via"] != "jwt" {
+	if r := f.do("GET", Prefix+"/tree", nil, withToken("jwt-user1")); r.status != 200 {
 		t.Fatalf("jwt: %s", r.raw)
 	}
-	check("bad jwt", f.do("GET", Prefix+"/whoami", nil, withToken("jwt-nope")), 401, "Your login has expired")
-	check("unknown host", f.do("GET", Prefix+"/whoami", nil, withHost("nope.example.com")), 404, "nope.example.com not found")
+	check("bad jwt", f.do("GET", Prefix+"/tree", nil, withToken("jwt-nope")), 401, "Your login has expired")
+	check("unknown host", f.do("GET", Prefix+"/tree", nil, withHost("nope.example.com")), 404, "nope.example.com not found")
 
 	// an outage is a 500
 	f.be.down = true
-	check("outage", f.do("GET", Prefix+"/whoami", nil, withToken("ph_pat_outage")), 500, "mothership unreachable")
-	check("outage again", f.do("GET", Prefix+"/whoami", nil, withToken("ph_pat_outage")), 500, "mothership unreachable")
+	check("outage", f.do("GET", Prefix+"/tree", nil, withToken("ph_pat_outage")), 500, "mothership unreachable")
+	check("outage again", f.do("GET", Prefix+"/tree", nil, withToken("ph_pat_outage")), 500, "mothership unreachable")
 	f.be.down = false
 
 	// suspensions (owner first), other edge
 	inst := f.be.insts["myapp.example.com"]
 	inst.Suspension, inst.OwnerSuspension = "instance hold", "account hold"
 	f.be.insts["myapp.example.com"] = inst
-	check("owner suspension", f.do("GET", Prefix+"/whoami", nil), 403, "account hold")
+	check("owner suspension", f.do("GET", Prefix+"/tree", nil), 403, "account hold")
 	inst.OwnerSuspension = ""
 	f.be.insts["myapp.example.com"] = inst
-	check("instance suspension", f.do("GET", Prefix+"/whoami", nil), 403, "instance hold")
+	check("instance suspension", f.do("GET", Prefix+"/tree", nil), 403, "instance hold")
 	inst.Suspension, inst.Elsewhere = "", "myapp.example.com is served by another PocketHost edge"
 	f.be.insts["myapp.example.com"] = inst
-	check("elsewhere", f.do("GET", Prefix+"/whoami", nil), 421, "another PocketHost edge")
+	check("elsewhere", f.do("GET", Prefix+"/tree", nil), 421, "another PocketHost edge")
 
 	// unknown deploy route is a JSON 404; other paths go to the instance
 	check("route", f.do("GET", Prefix+"/nope", nil), 404, "Not found")
@@ -548,83 +544,4 @@ func TestAPIFiles(t *testing.T) {
 	if r = f.do("PUT", Prefix+"/files/raw?path=pb_hooks/x.js", []byte("x"), withToken("ph_pat_ro")); r.status != 403 {
 		t.Fatal(r.status)
 	}
-}
-
-func TestAPILogs(t *testing.T) {
-	old := logPoll
-	logPoll = 20 * time.Millisecond
-	defer func() { logPoll = old }()
-	f := newAPIFixture(t)
-	f.put("logs/exec.log", `{"message":"one","stream":"stdout","time":"t1"}`+"\n"+`{"message":"two","stream":"stderr","time":"t2"}`+"\n")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, "GET", f.srv.URL+Prefix+"/logs?n=1", nil)
-	req.Host = "myapp.example.com"
-	req.Header.Set("Authorization", "Bearer "+testPAT)
-	res, err := f.srv.Client().Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.Header.Get("Content-Type") != "text/event-stream; charset=UTF-8" {
-		t.Fatal(res.Header)
-	}
-	sc := bufio.NewScanner(res.Body)
-	next := func() map[string]any {
-		t.Helper()
-		for sc.Scan() {
-			if line := sc.Text(); strings.HasPrefix(line, "data: ") {
-				var e map[string]any
-				_ = json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &e)
-				return e
-			}
-		}
-		t.Fatal("stream ended")
-		return nil
-	}
-	if e := next(); e["message"] != "two" {
-		t.Fatalf("replay: %v", e)
-	}
-	lf, _ := os.OpenFile(f.instFile("logs/exec.log"), os.O_APPEND|os.O_WRONLY, 0)
-	_, _ = lf.WriteString(`{"message":"three","stream":"stdout","time":"t3"}` + "\nplain text\n")
-	lf.Close()
-	if e := next(); e["message"] != "three" {
-		t.Fatalf("follow: %v", e)
-	}
-	if e := next(); e["message"] != "plain text" || e["stream"] != "stdout" {
-		t.Fatalf("plain: %v", e)
-	}
-	// rotation: exec.log → exec.log.1, new exec.log
-	_ = os.Rename(f.instFile("logs/exec.log"), f.instFile("logs/exec.log.1"))
-	f.put("logs/exec.log", `{"message":"after rotate","stream":"stdout","time":"t4"}`+"\n")
-	if e := next(); e["message"] != "after rotate" {
-		t.Fatalf("rotate: %v", e)
-	}
-}
-
-func TestAPILogsBeforeFileExists(t *testing.T) {
-	old := logPoll
-	logPoll = 20 * time.Millisecond
-	defer func() { logPoll = old }()
-	f := newAPIFixture(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, "GET", f.srv.URL+Prefix+"/logs", nil)
-	req.Host = "myapp.example.com"
-	req.Header.Set("Authorization", "Bearer "+testPAT)
-	res, err := f.srv.Client().Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	time.Sleep(50 * time.Millisecond)
-	f.put("logs/exec.log", `{"message":"first","stream":"stdout","time":"t"}`+"\n")
-	sc := bufio.NewScanner(res.Body)
-	for sc.Scan() {
-		if strings.Contains(sc.Text(), `"first"`) {
-			return
-		}
-	}
-	t.Fatal("no entry")
 }

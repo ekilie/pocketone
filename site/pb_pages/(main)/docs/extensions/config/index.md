@@ -7,6 +7,8 @@ source: "ext/config/README.md"
 
 # Config
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 PocketOne's config file: `pocketone.yaml`, with secrets in a `.env` beside it. Put your app's settings in one file
 instead of a long line of flags. Each extension has its own section in the file.
 
@@ -50,7 +52,8 @@ Each top-level key is one section, owned by the extension that uses it. This pac
   `--origins`.
 - `app`: your app's folders and options: the same settings as the root flags (`--dir`, `--dev`, `--hooksDir`,
   `--publicDir` and the rest), plus `env_allow`.
-- `provider`: set it only to run many instances from one binary (see [Integrations](#integrations)).
+- `multisite`: add it only to run many instances from one binary (see [Integrations](#integrations)); `providers:
+  { runtime/v1: [...] }` picks which runtimes.
 
 ```yaml
 server:
@@ -97,7 +100,7 @@ CF_API_TOKEN=abc123
 
 #### `app:`
 
-The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used when a provider runs many instances.
+The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used on a multisite host.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -113,10 +116,6 @@ The single app: data dir, dev mode, encryption, hooks, migrations, public dir, a
 | `public_dir` | string |  | The static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |
 | `index_fallback` | bool |  | Serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins. |
 | `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |
-
-#### `provider:`
-
-The runtime provider that runs many instances (pocker or docker). Omit for a single stock app.
 
 #### `server:`
 
@@ -179,16 +178,16 @@ An empty section (`pitr:` with nothing after it) is allowed and means all defaul
 | Extension | How they fit |
 |---|---|
 | Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](/docs/extensions/pitr), [S3 Redirect](/docs/extensions/s3redirect) and [Auto TLS](/docs/extensions/autotls) are examples. |
-| [Pocker](/docs/extensions/pocker) and [Docker](/docs/extensions/docker) | Set `provider: pocker` or `provider: docker` and `pocketone serve` runs many instances instead of one app. The `app` section and `env_allow` don't apply then; each instance has its own folder under the provider's root. |
+| [Pocker](/docs/extensions/pocker) and [Docker](/docs/extensions/docker) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
 
 ### The server section with many instances
 
-With a provider, `server` has a few more keys: `https` is the main address, `http` then redirects plain HTTP to it
+On a multisite host, `server` has a few more keys: `https` is the main address, `http` then redirects plain HTTP to it
 (`http` alone serves plain HTTP), `plain` lists extra plain-HTTP addresses with no redirect, `tls` names a certificate
 and key file (reloaded when they change), and `shutdown_timeout` limits how long in-flight requests get at stop.
 
 ```yaml
-provider: pocker
+multisite: {}
 server:
   https: ":443"
   http: ":80"

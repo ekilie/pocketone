@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # JS Embed
 
 Ship an extension's or app's JS hooks and migrations inside the binary, instead of `pb_hooks` and `pb_migrations` on

@@ -16,22 +16,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	fallbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/fallback/v1"
 	"html"
 	"net/mail"
 	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/mailer"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"github.com/domodwyer/mailyak/v3"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/pocker"
 )
 
 // Name is the extension's section in pocketone.yaml and its key under an instance's `extensions:`.
@@ -133,14 +131,15 @@ type Extension struct {
 	mu    sync.Mutex
 	usage map[string]*usage // by app id
 
-	mgr atomic.Pointer[pocker.Manager]
+	sectionOnce sync.Once
+	sectionErr  error
 }
 
-var (
-	_ extkit.Extension  = (*Extension)(nil)
-	_ pocker.Starter    = (*Extension)(nil)
-	_ pocker.Configurer = (*Extension)(nil)
-)
+var _ extkit.Extension = (*Extension)(nil)
+
+// InstanceHeader names the app on each relayed message (the header a multisite runtime such as pocker sets; mailrelay
+// sets it too, and strips any the app set itself).
+const InstanceHeader = "X-Pocker-Instance"
 
 // New returns the extension. cfg holds the relay and the defaults for every instance.
 func New(cfg Config) *Extension {
@@ -160,8 +159,13 @@ type SectionConfig struct {
 	Daily     *int  `yaml:"daily" json:"daily" doc:"Messages per instance per UTC day. Default 200. A limit set in Go wins."`
 }
 
-// Configure implements [pocker.Configurer]: pocketone.yaml's `mailrelay` section. Limits set in Go win.
-func (p *Extension) Configure(pocker.Config) error {
+// configure reads pocketone.yaml's `mailrelay` section once, on the first app. Limits set in Go win.
+func (p *Extension) configure() error {
+	p.sectionOnce.Do(func() { p.sectionErr = p.readSection() })
+	return p.sectionErr
+}
+
+func (p *Extension) readSection() error {
 	if p.cfg.Domain == "" || p.cfg.Upstream == nil {
 		return errNotConfigured
 	}
@@ -201,14 +205,20 @@ func (p *Extension) limits(cfg extkit.Config) (limits, error) {
 	return l, nil
 }
 
-// Start implements [pocker.Starter]: keeps the manager so relayed mail shows up in the instance's own log.
-func (p *Extension) Start(_ context.Context, m *pocker.Manager) { p.mgr.Store(m) }
-
 // appRelay is the relay as one app sees it.
 type appRelay struct {
 	*Extension
+	app    core.App
 	id     string
 	limits limits
+}
+
+// Send implements mail.fallback/v1.
+func (r *appRelay) Send(_ context.Context, m *mailer.Message) error { return r.relay(r.app, m) }
+
+// Contracts implements [extkit.Declarer].
+func (p *Extension) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("mail.fallback/v1"), WorksWith: extkit.IDs("settings/v1")}
 }
 
 // Address is the From address the app with this id ([extkit.AppID]) sends as.
@@ -218,25 +228,17 @@ func (p *Extension) Address(id string) string {
 
 // Register implements [extkit.Extension]: takes over the app's mail whenever its SMTP is off.
 func (p *Extension) Register(app core.App, cfg extkit.Config) error {
-	if p.cfg.Domain == "" || p.cfg.Upstream == nil {
-		return errNotConfigured
+	if err := p.configure(); err != nil {
+		return err
 	}
 	l, err := p.limits(cfg)
 	if err != nil {
 		return err
 	}
-	r := &appRelay{Extension: p, id: extkit.AppID(app), limits: l}
-	app.OnMailerSend().Bind(&hook.Handler[*core.MailerEvent]{
-		Id:       "__mailrelay__",
-		Priority: 1 << 30, // last: the app's own onMailerSend hooks run (and may change the message) first
-		Func: func(e *core.MailerEvent) error {
-			if e.App.Settings().SMTP.Enabled {
-				return e.Next() // bring your own SMTP wins
-			}
-			// never e.Next() here: that would run sendmail on the host
-			return r.relay(e.App, e.Message)
-		},
-	})
+	r := &appRelay{Extension: p, app: app, id: extkit.AppID(app), limits: l}
+	// mail.fallback/v1: with SMTP off, the app's mail goes through the relay (never the host's sendmail)
+	fallbackv1.Contract.Provide(app, r)
+	fallbackv1.Bind(app)
 	r.bindRoutes(app)
 	return nil
 }
@@ -278,16 +280,14 @@ func (r *appRelay) relay(app core.App, m *mailer.Message) error {
 		r.log(fmt.Sprintf("mail to %s failed: %v", maskList(rcpts), err))
 		return fmt.Errorf("mailrelay: %w", err)
 	}
-	r.log(fmt.Sprintf("mail from %s to %s accepted", from.Address, maskList(rcpts)))
-	app.Logger().Info("mailrelay: sent", "from", from.Address, "recipients", len(rcpts), "subject", m.Subject)
+	r.app.Logger().Info("mailrelay: sent", "from", from.Address, "to", maskList(rcpts), "recipients", len(rcpts), "subject", m.Subject)
 	return nil
 }
 
-// log writes a line to the instance's own log (under Pocker).
+// log writes a refusal or failure to the app's log (Admin > Logs; a runtime such as pocker copies it to the
+// instance's own log).
 func (r *appRelay) log(msg string) {
-	if m := r.mgr.Load(); m != nil && r.id != "" {
-		m.LogInstance(r.id, "mailrelay", msg)
-	}
+	r.app.Logger().Warn("mailrelay: " + msg)
 }
 
 // usage counts one instance's messages in the current minute and UTC day.
@@ -436,7 +436,7 @@ func encode(m *mailer.Message, from mail.Address, reply, instanceID string) ([]b
 	hasID := false
 	for k, v := range m.Headers {
 		switch strings.ToLower(k) {
-		case "from", "sender", "return-path", "reply-to", "bcc", strings.ToLower(pocker.InstanceHeader):
+		case "from", "sender", "return-path", "reply-to", "bcc", strings.ToLower(InstanceHeader):
 			continue // ours (set below), or envelope-only
 		case "message-id":
 			hasID = true
@@ -446,7 +446,7 @@ func encode(m *mailer.Message, from mail.Address, reply, instanceID string) ([]b
 	if !hasID {
 		yak.AddHeader("Message-ID", fmt.Sprintf("<%s@%s>", security.PseudorandomString(15), from.Address[strings.LastIndexByte(from.Address, '@')+1:]))
 	}
-	yak.AddHeader(pocker.InstanceHeader, instanceID)
+	yak.AddHeader(InstanceHeader, instanceID)
 
 	buf, err := yak.MimeBuf()
 	if err != nil {
@@ -488,5 +488,5 @@ func maskList(list []string) string {
 	return strings.Join(out, ", ")
 }
 
-// Section is the key of the `mailrelay` section (pocketone.yaml): the shared mail relay on a pocker host.
-var Section = extkit.NewSection(Name, SectionConfig{}, "Shared mail relay on a pocker host: send, per-minute and daily limits per instance.")
+// Section is the key of the `mailrelay` section (pocketone.yaml): the shared mail relay on a multisite host.
+var Section = extkit.NewSection(Name, SectionConfig{}, "Shared mail relay on a multisite host: send, per-minute and daily limits per instance.")

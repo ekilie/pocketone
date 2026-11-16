@@ -7,6 +7,8 @@ source: "ext/s3redirect/README.md"
 
 # S3 Redirect
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 File downloads as short-lived signed redirects to your bucket, after PocketBase's own access check.
 
 When an app keeps its files in S3 (Settings → Files storage), PocketBase normally downloads each file from the bucket

@@ -2,7 +2,12 @@ module github.com/pockethost/pocketone/ext/servertiming
 
 go 1.27
 
-require github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
+require (
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
+)
 
 require (
 	ganigeorgiev.com/fexpr v0.7.0 // indirect
@@ -28,9 +33,7 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
@@ -66,3 +69,5 @@ replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 
 replace github.com/pockethost/pocketone/ext/config => ../config
+
+replace github.com/pockethost/pocketone/ext/contracts => ../contracts

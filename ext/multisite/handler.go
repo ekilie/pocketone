@@ -1,6 +1,7 @@
 package multisite
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net"
@@ -8,14 +9,17 @@ import (
 	"net/http/httputil"
 	"net/netip"
 	"net/url"
+	"sync"
 	"time"
 )
 
-// DefaultHealthPath answers on any host with the edge's status (the path pocker always used).
-const DefaultHealthPath = "/_pocker/health"
+// DefaultHealthPath answers on any host with the host's status. It sits under /.well-known/, the one root a
+// host may answer for every hostname (an instance's own API is under /api/).
+const DefaultHealthPath = "/.well-known/health"
 
 // Handler is the edge's request pipeline: health → peer check → resolve the Host to an instance (directory) →
-// blocked → owned by another edge? admit and forward : precheck, admit and hand to the instance's runtime.
+// blocked → owned by another edge? admit and forward : precheck, admit, the instance routes, then the instance's
+// runtime.
 type Handler struct {
 	Dir      *Directory
 	Gate     Gate      // nil = admit everything
@@ -25,11 +29,20 @@ type Handler struct {
 	// plain reverse proxy to Remote as a URL.
 	Forward func(w http.ResponseWriter, r *http.Request, inst Instance)
 
+	// InstanceRoutes answer requests for instances this host runs, after the gates admitted them and before the
+	// runtime (the first is the outermost): host-provided contracts (remote/v1 for docker's stock images) go here, so
+	// the firewall, rate limits and the blocked answer apply to them. [InstanceOf] gives the resolved instance; next
+	// is the runtime. Not run for instances another server runs ([Instance.Remote]).
+	InstanceRoutes []func(next http.Handler) http.Handler
+
 	// Dev serves any hostname: one the directory doesn't map becomes an instance with id [DevID] and Dev set.
 	Dev bool
 
 	HealthPath string // "" = DefaultHealthPath
 	Logger     *slog.Logger
+
+	routesOnce sync.Once
+	routes     http.Handler
 }
 
 func (h *Handler) log() *slog.Logger {
@@ -120,7 +133,41 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if cr, ok := h.Gate.(ClientIPResolver); ok {
 		r = withClientAddr(r, cr.ClientIP(r))
 	}
-	rt.ServeInstance(w, r, inst)
+	if len(h.InstanceRoutes) == 0 {
+		rt.ServeInstance(w, r, inst)
+		return
+	}
+	h.routesOnce.Do(func() {
+		var next http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			s := r.Context().Value(servingKey{}).(serving)
+			s.rt.ServeInstance(w, r, s.inst)
+		})
+		for i := len(h.InstanceRoutes) - 1; i >= 0; i-- {
+			next = h.InstanceRoutes[i](next)
+		}
+		h.routes = next
+	})
+	h.routes.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), servingKey{}, serving{inst, rt})))
+}
+
+type servingKey struct{}
+
+type serving struct {
+	inst Instance
+	rt   Runtime
+}
+
+// InstanceOf is the instance a request is for, inside [Handler.InstanceRoutes] (resolved, not blocked, admitted).
+func InstanceOf(r *http.Request) (Instance, bool) {
+	s, ok := r.Context().Value(servingKey{}).(serving)
+	return s.inst, ok
+}
+
+// InstanceID is [InstanceOf]'s id, in the shape extkit's host handlers take (remotev1.W.HostHandler,
+// extkit.HostRoutes).
+func InstanceID(r *http.Request) (string, bool) {
+	inst, ok := InstanceOf(r)
+	return inst.ID, ok
 }
 
 // withClientAddr returns r with RemoteAddr set to client (keeping the peer's port), or r itself when client is

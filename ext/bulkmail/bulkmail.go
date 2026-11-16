@@ -164,8 +164,9 @@ func Register(app core.App, cfg Config) (*BulkMail, error) {
 		return EnsureSchema(e.App)
 	})
 
+	bm.provide(app) // bulkmail/v1, mail.suppression/v1, mail.feedback/v1, its settings/v1 section
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		bm.bindRoutes(se)
 		ui, err := fs.Sub(uiFiles, "ui")
 		if err != nil {
 			return err

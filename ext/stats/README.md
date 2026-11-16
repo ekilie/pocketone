@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Stats
 
 Looks after the data of the instances a host serves. Today it measures facts about each instance (disk used, last
@@ -12,11 +17,11 @@ request served) and reports them. Later it will also carry out decisions about t
 Lifecycle runs on a host that serves many instances ([ext/multisite](../multisite/README.md), with [pocker](../pocker/README.md)
 or [docker](../docker/README.md)), not on a single app.
 
-The stock `pocketone` binary turns it on by itself in host mode: when `pocketone.yaml` names a `provider` (`pocker`
-or `docker`), every instance under that provider's root folder is measured. There's no switch to flip.
+The stock `pocketone` binary turns it on by itself in host mode: when `pocketone.yaml` has a `multisite` section,
+every instance under the first runtime's root folder is measured. There's no switch to flip.
 
 ```yaml
-provider: pocker   # or docker
+multisite: {}
 instances: { file: ./instances.yaml }
 ```
 

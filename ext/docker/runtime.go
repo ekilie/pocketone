@@ -31,6 +31,7 @@ import (
 	"syscall"
 	"time"
 
+	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
 	"github.com/pockethost/pocketone/ext/multisite"
 )
 
@@ -121,6 +122,7 @@ type Runtime struct {
 	watch  *multisite.ScriptWatcher // restarts a container when its pb_hooks change
 
 	releases atomic.Pointer[[]Release] // the current list from Versions
+	logs     map[string]*logRing       // recent output per instance, for remote/v1 (under mu)
 
 	bg     context.Context
 	cancel context.CancelFunc
@@ -139,6 +141,7 @@ type ctr struct {
 	poweredBy atomic.Value // string: the X-Powered-By for responses that carry none ("PocketBase 0.36.9")
 
 	running  atomic.Bool  // container != "" (readable without mu, which a start holds for seconds)
+	started  atomic.Int64 // unix nanos the container started (or was adopted)
 	portNow  atomic.Int64 // port, readable without mu (a request waiting out a restart stops if it changes)
 	inflight atomic.Int64
 	lastUsed atomic.Int64 // unix nanos
@@ -382,6 +385,7 @@ func (rt *Runtime) adopt(ctx context.Context) error {
 		c.container, c.port, c.hash = s.ID, info.hostPort(), hash
 		c.portNow.Store(int64(c.port))
 		c.poweredBy.Store(PoweredBy(s.Labels[LabelVersion]))
+		c.started.Store(time.Now().UnixNano())
 		c.running.Store(true)
 		c.lastUsed.Store(time.Now().UnixNano())
 		go rt.follow(c.inst, s.ID, time.Now())
@@ -745,6 +749,7 @@ func (rt *Runtime) startLocked(ctx context.Context, c *ctr, inst multisite.Insta
 	c.container, c.port, c.hash, c.dirty = id, port, cfg.Labels[LabelSpec], false
 	c.portNow.Store(int64(port))
 	c.poweredBy.Store(PoweredBy(version))
+	c.started.Store(time.Now().UnixNano())
 	c.running.Store(true)
 	started := inst
 	c.last = &started
@@ -785,9 +790,15 @@ func (rt *Runtime) waitHealthy(ctx context.Context, id string, port int, path st
 	}
 }
 
-// follow sends a container's output to OnLog until it stops.
+// follow sends a container's output to OnLog (and remote/v1's logs) until it stops.
 func (rt *Runtime) follow(instID, containerID string, since time.Time) {
+	ring := rt.ring(instID)
 	_ = rt.e.logs(rt.bg, containerID, func(stream int, text string) {
+		name := "stdout"
+		if stream == 2 {
+			name = "stderr"
+		}
+		ring.add(remotev1.LogEntry{Time: time.Now().UTC().Format(time.RFC3339Nano), Stream: name, Message: text})
 		if rt.cfg.OnLog != nil {
 			rt.cfg.OnLog(instID, stream == 2, text)
 			return

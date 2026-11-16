@@ -7,6 +7,8 @@ source: "ext/deploy/README.md"
 
 # Deploy
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
 `pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded and the app swaps them
 in; `restart` applies new migrations and packages. `pocketone dev` keeps your folder and the app in step both ways and
@@ -31,11 +33,15 @@ remotes and logins, and [Tokens](/docs/extensions/tokens) lets you deploy with A
 
 ```go
 app := pocketbase.New()
-tokens.MustRegister(app, tokens.Config{})   // optional: API tokens with the deploy scope
-remotes.MustRegister(app, remotes.Config{}) // remotes, login, and /_pocker/whoami discovery
-deploy.MustRegister(app, deploy.Config{})   // the deploy API + deploy/dev/pull/logs/restart commands
+extkit.Setup(app, []extkit.Extension{
+	tokens.New(tokens.Config{}),   // optional: API tokens with the deploy scope
+	remotes.New(remotes.Config{}), // remote/v1 (whoami, restart, logs), login
+	deploy.NewExtension(deploy.Config{}), // deploy/v1 + deploy/dev/pull/logs/restart commands
+}, nil, nil)
 app.Start()
 ```
+
+The [standard set](/docs/extensions/standard) does this for you.
 
 The module is `github.com/pockethost/pocketone/ext/deploy`. `deploy.Config{DisableServer: true}` keeps only the
 commands, for a binary that deploys elsewhere but must not accept deploys.
@@ -182,34 +188,34 @@ message, source, token name, superuser and any error. Superusers can browse it i
 
 | Extension | How they fit |
 |---|---|
-| [Remotes](/docs/extensions/remotes) | Gives the commands their remotes, saved logins and CI tokens. The commands find the deploy API through the remote's `/_pocker/whoami`. |
-| [OAuth Server](/docs/extensions/oauth-server) | `pocketone login` signs in through the browser when the remote runs it. |
-| [Tokens](/docs/extensions/tokens) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. |
+| [Remotes](/docs/extensions/remotes) | Gives the commands their remotes, saved logins and CI tokens. The commands find deploy/v1 in the remote's whoami, and `restart` and `logs` use its remote/v1 (deploy requires it). |
+| [OAuth](/docs/extensions/tokens/oauth) (in Tokens) | `pocketone login` signs in through the browser when the remote runs it. |
+| [Tokens](/docs/extensions/tokens) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. Add `remote` for `--restart` and `remote:read` for `dev`'s logs. |
 | [Pocker](/docs/extensions/pocker) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
-| PocketHost | A remote without `/_pocker/whoami` is taken to be a PocketHost instance: the commands use `/_ph/deploy/v1` and a PocketHost token (`POCKETHOST_TOKEN`, or the `pockethost` remote read from `.pockethostconfig`). |
 
 ### Building on Deploy
 
-- **Go client.** `deploy.NewClient(ctx, rc)` takes a [Remotes](/docs/extensions/remotes) client and finds its deploy API.
+- **Go client.** `deploy.NewClient(ctx, rc)` takes a remote/v1 client (`remoteclient.Open`, from
+  [ext/contracts/remote/v1/remoteclient](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient)) and finds its deploy API.
   `Deploy`, `Pull`, `Collect`, `Watch` and `NewSyncer` (two-way sync: `Sync`, `RemoteChanged`) are the commands'
   building blocks.
-- **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths, Logs})`
+- **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths})`
   builds the API; mount `api.Wrap(next)`. `Backend` decides which instance a request is for (`Lookup(r)`), who it
   acts as (`Authenticate(r, inst)` → `Auth{UserID, Scopes, Via, TokenLabel}`, an `*AuthError`, or `ErrNoAccess` for a
-  404) and records history. `Instances` is pocker's Manager (stop, swap, start). The default `FileLogs` tails each
-  instance's `logs/exec.log`, which pocker writes. PocketHost composes it with its own token backend and keeps
-  `/_ph/deploy/v1`.
+  404) and records history. `Instances` is pocker's Manager (stop, swap, start). Serve it as deploy/v1 for the host's
+  instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
 - **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
   does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
-- **Discovery.** Deploy advertises itself as the `deploy` feature of `/_pocker/whoami`, so clients find its path.
+- **Discovery.** Deploy provides the [deploy/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go) contract, which whoami lists, so
+  clients find it at `/api/_c/deploy/v1`. A multisite host can provide it for its instances instead.
 
 ## Example
 
 [`example/main.go`](example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
 
 ```go
-// Command example is a PocketOne app that accepts deploys and can deploy: the deploy API (/_pocker/deploy/v1), API
-// tokens, remotes, and the deploy/dev/pull/logs commands.
+// Command example is a PocketOne app that accepts deploys and can deploy: deploy/v1 (/api/_c/deploy/v1), remote/v1
+// (restart, logs), API tokens, and the deploy/dev/pull/logs/restart commands.
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote
 //	cd myproject && mkdir pb_hooks && echo 'routerAdd("GET", "/hi", (e) => e.string(200, "hi"))' > pb_hooks/main.pb.js
@@ -227,6 +233,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"github.com/pockethost/pocketone/ext/deploy"
 	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/remotes"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
@@ -235,10 +242,12 @@ func main() {
 	app := pocketbase.New()
 	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
 
+	// registered through their contracts (the standard set does this for you); deploys land next to pb_data
+	exts := []extkit.Extension{tokens.New(tokens.Config{}), remotes.New(remotes.Config{}), deploy.NewExtension(deploy.Config{})}
+	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
+		log.Fatal(err)
+	}
 	jsvm.MustRegister(app, jsvm.Config{}) // deployed pb_hooks and pb_migrations
-	tokens.MustRegister(app, tokens.Config{})
-	remotes.MustRegister(app, remotes.Config{})
-	deploy.MustRegister(app, deploy.Config{}) // deploys land next to pb_data
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
@@ -248,19 +257,17 @@ func main() {
 
 ## Deploy API
 
-`/_pocker/deploy/v1` (superusers, see Configure):
+deploy/v1, at `/api/_c/deploy/v1` (superusers, see Configure): the files only, on an app or a host. Whoami, restart
+and logs are remote/v1's (`/api/_c/remote/v1`), which deploy requires.
 
 | Route | What it does |
 |---|---|
-| `GET /whoami` | Who the request acts as, on which instance. |
 | `POST /check` | Takes a manifest, returns the hashes the server is missing. |
 | `POST /blobs` | Gzipped `PHB1` bundles: `[sha256][uint32 length][bytes]`…, every hash verified, 64 MB per request. |
 | `POST /commit` | Stage, swap in, record. `"restartNeeded": true` in the answer when migrations or packages wait for a restart; `"restart": true` in the request restarts after the swap. With `"partial": true` only the listed files (and `"delete"`) change. |
-| `POST /restart` | Restart the app (applies migrations and packages); `restarted` and any `startError`. |
 | `GET`/`DELETE /files` | List or delete files. |
 | `GET`/`PUT /files/raw` | Download or upload one file. |
 | `GET /tree` | One folder of the code set (`?path=`, default the root) with a hash over everything below it; `hashOnly=1` for just the hash. |
-| `GET /logs` | The app's logs as server-sent events. |
 
 The protocol is the pockethost npm CLI's, so the same client deploys to PocketOne apps and PocketHost.
 

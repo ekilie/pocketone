@@ -5,7 +5,7 @@
 //	app := pocketbase.New()
 //	tokens.MustRegister(app, tokens.Config{})
 //
-// It adds the _tokens collection, the /api/tokens routes, an "API tokens" screen under Settings and, on a
+// It adds the _tokens collection, the token API (tokens/v1, /api/_c/tokens/v1), an "API tokens" screen under Settings and, on a
 // *pocketbase.PocketBase, the `token` command.
 package tokens
 
@@ -16,6 +16,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"io/fs"
 	"slices"
 	"strings"
@@ -46,6 +48,10 @@ var (
 
 // Config is set by whoever builds the binary (or, under pocker, per instance).
 type Config struct {
+	// OAuth configures the OAuth server that comes with tokens (oauth/v1 at /api/_c/oauth/v1/): browser and device
+	// sign-in for the CLI, and OAuth clients such as Claude's MCP connectors. On unless OAuth.Disabled.
+	OAuth OAuthConfig
+
 	// Collections are the auth collections (by name) whose records may own tokens. Default (empty): every auth
 	// collection, superusers and app users alike (an OAuth sign-in, e.g. to /mcp, gets a token owned by the account).
 	Collections []string
@@ -93,6 +99,23 @@ func Register(app core.App, cfg Config) (*Tokens, error) {
 		app.Store().Remove(pendingKey)
 	}
 	app.Store().Set(storeKey, t)
+	// tokens/v1: Verify in Go, and the token API under /api/_c/tokens/v1 (the contracts' seal mounts it)
+	tokensv1.Contract.Provide(app, issuer{t})
+	if !cfg.OAuth.Disabled {
+		if _, err := registerOAuth(app, cfg.OAuth); err != nil {
+			return nil, err
+		}
+	}
+	// the scopes of the wire contracts this app offers (remote, remote:read, ...), on their exact paths, once its
+	// contracts are sealed
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		for _, ws := range extkit.ProvidedScopes(app) {
+			if err := t.registry.add(Scope{Name: ws.Name, Description: ws.Description, Paths: ws.Paths}); err != nil {
+				return err
+			}
+		}
+		return se.Next()
+	})
 
 	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
 		if err := e.Next(); err != nil {
@@ -103,7 +126,6 @@ func Register(app core.App, cfg Config) (*Tokens, error) {
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.Bind(t.middleware(), t.scopeHeadersMiddleware())
-		t.bindRoutes(se)
 		ui, err := fs.Sub(uiFiles, "ui")
 		if err != nil {
 			return err
@@ -174,7 +196,7 @@ type CreateOptions struct {
 	// ClientId is the OAuth client issuing it, if any.
 	ClientId string
 	// Audience binds the token to a resource URL (RFC 8707): it authenticates only under that URL's path (and
-	// /_pocker/whoami). Empty: anywhere its scopes allow.
+	// remote/v1's whoami). Empty: anywhere its scopes allow.
 	Audience string
 }
 

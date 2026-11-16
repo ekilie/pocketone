@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite"
 	"log/slog"
 	"net/http"
@@ -193,6 +195,17 @@ func (m *Mirror) Watch(ctx context.Context) (<-chan multisite.Change, error) {
 		go m.loop(ctx)
 	}
 	return m.out, nil
+}
+
+// RegisterHost makes the mirror the host's instance.source/v1 (a multisite.Extension; Name is "mothership").
+func (m *Mirror) RegisterHost(h *multisite.Host) error {
+	sourcev1.Contract.ProvideIn(h.Scope, m)
+	return nil
+}
+
+// Contracts implements extkit.Declarer.
+func (m *Mirror) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("instance.source/v1")}
 }
 
 // SelfRecord is this edge's record id at the mothership ("" before Snapshot).
@@ -641,3 +654,6 @@ func (m *Mirror) hosts(r Record) []string {
 	}
 	return append(out, r.Strings("hosts")...)
 }
+
+// Name implements multisite.Extension.
+func (m *Mirror) Name() string { return "mothership" }

@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"net/http"
@@ -17,16 +19,9 @@ import (
 	"golang.org/x/term"
 )
 
-// BrowserLogin, when set (by the OAuth client half), is tried first by `login` on remotes that offer OAuth. It
-// returns (nil, nil) to fall back to the token/password prompt.
-var BrowserLogin func(ctx context.Context, c *Client, w *Whoami, opts BrowserLoginOptions) (*LoginResult, error)
-
-// BrowserLoginOptions are `login`'s flags for the OAuth flow.
-type BrowserLoginOptions struct {
-	Device    bool // device code instead of a browser redirect
-	NoBrowser bool // print the URL, don't open a browser
-	Out       io.Writer
-}
+// BrowserLogin is tried first by `login` on remotes that offer OAuth (tests replace it). It returns (nil, nil) to fall
+// back to the token/password prompt.
+var BrowserLogin = remoteclient.OAuthLogin
 
 // Commands returns the client commands: remote, login, logout, link.
 func Commands() []*cobra.Command {
@@ -42,14 +37,14 @@ func cwd() string {
 }
 
 func remoteCommand() *cobra.Command {
-	cmd := &cobra.Command{Use: "remote", Short: "Manage the project's remotes (.pocketbase/remotes.json)"}
+	cmd := &cobra.Command{Use: "remote", Short: "The project's remotes, and the commands that run on them (every contract an app offers)"}
 
 	var makeDefault bool
 	add := &cobra.Command{
 		Use: "add <name> <url>", Short: "Adds or replaces a remote", Args: cobra.ExactArgs(2), SilenceUsage: true,
 		Example: "remote add prod https://myapp.example.com",
 		RunE: func(c *cobra.Command, args []string) error {
-			p, err := LoadProject(cwd())
+			p, err := remoteclient.LoadProject(cwd())
 			if err != nil {
 				return err
 			}
@@ -72,11 +67,11 @@ func remoteCommand() *cobra.Command {
 	list := &cobra.Command{
 		Use: "list", Aliases: []string{"ls"}, Short: "Lists remotes and whether you're logged in", SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			p, err := LoadProject(cwd())
+			p, err := remoteclient.LoadProject(cwd())
 			if err != nil {
 				return err
 			}
-			creds, err := LoadCredentials()
+			creds, err := remoteclient.LoadCredentials()
 			if err != nil {
 				return err
 			}
@@ -102,7 +97,7 @@ func remoteCommand() *cobra.Command {
 		Use: "rm <name>", Aliases: []string{"remove"}, Short: "Removes a remote (its saved login stays; see logout)",
 		Args: cobra.ExactArgs(1), SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			p, err := LoadProject(cwd())
+			p, err := remoteclient.LoadProject(cwd())
 			if err != nil {
 				return err
 			}
@@ -116,7 +111,7 @@ func remoteCommand() *cobra.Command {
 	def := &cobra.Command{
 		Use: "default <name>", Short: "Sets the default remote", Args: cobra.ExactArgs(1), SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			p, err := LoadProject(cwd())
+			p, err := remoteclient.LoadProject(cwd())
 			if err != nil {
 				return err
 			}
@@ -132,7 +127,7 @@ func remoteCommand() *cobra.Command {
 		Use: "whoami [remote]", Short: "Shows who you are on a remote and what it offers", Args: cobra.MaximumNArgs(1),
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			cl, err := Open(cwd(), first(args))
+			cl, err := remoteclient.Open(cwd(), first(args))
 			if err != nil && cl == nil {
 				return err
 			}
@@ -153,8 +148,8 @@ func remoteCommand() *cobra.Command {
 				}
 				fmt.Fprintf(out, "  %s in %s, via %s (%s), scopes: %s\n", w.Auth.Email, w.Auth.Collection, w.Via, cl.TokenSource, sc)
 			}
-			for k, v := range w.Features {
-				fmt.Fprintf(out, "  offers %s at %s\n", k, v)
+			for _, c := range w.Contracts {
+				fmt.Fprintf(out, "  offers %s at /api/_c/%s\n", c, c)
 			}
 			return nil
 		},
@@ -164,8 +159,8 @@ func remoteCommand() *cobra.Command {
 	return cmd
 }
 
-func describeLogin(name string, cr *Credential) string {
-	if tok, src := EnvToken(name); tok != "" {
+func describeLogin(name string, cr *remoteclient.Credential) string {
+	if tok, src := remoteclient.EnvToken(name); tok != "" {
 		return src
 	}
 	if cr == nil {
@@ -221,7 +216,7 @@ func loginCommand() *cobra.Command {
 			"else with a pasted API token, else with email + password (mints an API token; the remote needs the tokens extension).",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			cl, err := Open(cwd(), first(args))
+			cl, err := remoteclient.Open(cwd(), first(args))
 			if err != nil && cl == nil {
 				return err
 			}
@@ -243,7 +238,7 @@ func linkCommand() *cobra.Command {
 		Example: "link https://myapp.example.com\nlink https://myapp.pockethost.io ph_pat_...",
 		Args:    cobra.RangeArgs(1, 2), SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			p, err := LoadProject(cwd())
+			p, err := remoteclient.LoadProject(cwd())
 			if err != nil {
 				return err
 			}
@@ -261,15 +256,15 @@ func linkCommand() *cobra.Command {
 			if len(args) == 2 {
 				f.token = args[1]
 			}
-			return runLogin(c, &Client{Remote: r, HTTP: NewHTTPClient()}, f)
+			return runLogin(c, &remoteclient.Client{Remote: r, HTTP: remoteclient.NewHTTPClient()}, f)
 		},
 	}
-	c.Flags().StringVar(&name, "name", DefaultName, "remote name")
+	c.Flags().StringVar(&name, "name", remoteclient.DefaultName, "remote name")
 	f.bind(c)
 	return c
 }
 
-func runLogin(c *cobra.Command, cl *Client, f loginFlags) error {
+func runLogin(c *cobra.Command, cl *remoteclient.Client, f loginFlags) error {
 	out := c.OutOrStdout()
 	in := bufio.NewReader(c.InOrStdin())
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Minute)
@@ -277,7 +272,7 @@ func runLogin(c *cobra.Command, cl *Client, f loginFlags) error {
 	cl.Token, cl.TokenSource = "", ""
 
 	var (
-		res *LoginResult
+		res *remoteclient.LoginResult
 		err error
 	)
 	switch {
@@ -286,9 +281,9 @@ func runLogin(c *cobra.Command, cl *Client, f loginFlags) error {
 		if rerr != nil && rerr != io.EOF {
 			return rerr
 		}
-		res, err = LoginWithToken(ctx, cl, line)
+		res, err = remoteclient.LoginWithToken(ctx, cl, line)
 	case f.token != "":
-		res, err = LoginWithToken(ctx, cl, f.token)
+		res, err = remoteclient.LoginWithToken(ctx, cl, f.token)
 	case f.email != "" || f.password:
 		res, err = passwordLogin(ctx, cl, f, in, out)
 	default:
@@ -297,11 +292,11 @@ func runLogin(c *cobra.Command, cl *Client, f loginFlags) error {
 			wctx, wcancel := context.WithTimeout(ctx, 20*time.Second)
 			w, werr := cl.Whoami(wctx)
 			wcancel()
-			if werr != nil && !errors.Is(werr, ErrNoWhoami) {
+			if werr != nil && !errors.Is(werr, remoteclient.ErrNoWhoami) {
 				return werr
 			}
-			if w != nil && w.Features["oauth"] != "" {
-				res, err = BrowserLogin(ctx, cl, w, BrowserLoginOptions{Device: f.device, NoBrowser: f.noBrowser, Out: out})
+			if w != nil && w.Offers("oauth/v1") {
+				res, err = BrowserLogin(ctx, cl, w, remoteclient.BrowserLoginOptions{Device: f.device, NoBrowser: f.noBrowser, Out: out})
 				if err != nil {
 					return err
 				}
@@ -309,7 +304,7 @@ func runLogin(c *cobra.Command, cl *Client, f loginFlags) error {
 		}
 		if res == nil {
 			if !isTerminal(c.InOrStdin()) {
-				return errors.New("no terminal to prompt in: pass --token, --token-stdin, or set " + EnvVar("TOKEN"))
+				return errors.New("no terminal to prompt in: pass --token, --token-stdin, or set " + remoteclient.EnvVar("TOKEN"))
 			}
 			fmt.Fprintf(out, "Signing in to %s.\nPaste an API token, or enter a superuser email to sign in with a password: ", cl.Remote.URL)
 			line, rerr := in.ReadString('\n')
@@ -321,14 +316,14 @@ func runLogin(c *cobra.Command, cl *Client, f loginFlags) error {
 				f.email = line
 				res, err = passwordLogin(ctx, cl, f, in, out)
 			} else {
-				res, err = LoginWithToken(ctx, cl, line)
+				res, err = remoteclient.LoginWithToken(ctx, cl, line)
 			}
 		}
 	}
 	if err != nil {
 		return err
 	}
-	if err := SaveLogin(cl, res); err != nil {
+	if err := remoteclient.SaveLogin(cl, res); err != nil {
 		return err
 	}
 	who := res.Credential.Email
@@ -347,7 +342,7 @@ func looksLikeToken(s string) bool {
 	return strings.HasPrefix(s, "pbt_") || strings.HasPrefix(s, "ph_pat_") || isJWT
 }
 
-func passwordLogin(ctx context.Context, cl *Client, f loginFlags, in *bufio.Reader, out io.Writer) (*LoginResult, error) {
+func passwordLogin(ctx context.Context, cl *remoteclient.Client, f loginFlags, in *bufio.Reader, out io.Writer) (*remoteclient.LoginResult, error) {
 	email := f.email
 	if email == "" {
 		fmt.Fprint(out, "Email: ")
@@ -357,7 +352,7 @@ func passwordLogin(ctx context.Context, cl *Client, f loginFlags, in *bufio.Read
 		}
 		email = strings.TrimSpace(line)
 	}
-	password := os.Getenv(EnvVar("PASSWORD"))
+	password := os.Getenv(remoteclient.EnvVar("PASSWORD"))
 	if password == "" {
 		fmt.Fprint(out, "Password: ")
 		p, err := readSecret(in)
@@ -367,7 +362,7 @@ func passwordLogin(ctx context.Context, cl *Client, f loginFlags, in *bufio.Read
 		}
 		password = p
 	}
-	return LoginWithPassword(ctx, cl, PasswordLogin{
+	return remoteclient.LoginWithPassword(ctx, cl, remoteclient.PasswordLogin{
 		Collection: f.collection, Email: email, Password: password,
 		OTP: func(email string) (string, error) {
 			fmt.Fprintf(out, "A one-time code was sent to %s. Code: ", email)
@@ -402,7 +397,7 @@ func logoutCommand() *cobra.Command {
 		Use: "logout [remote]", Short: "Forgets the saved login (and revokes the API token login created)",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
-			p, err := LoadProject(cwd())
+			p, err := remoteclient.LoadProject(cwd())
 			if err != nil {
 				return err
 			}
@@ -410,7 +405,7 @@ func logoutCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			creds, err := LoadCredentials()
+			creds, err := remoteclient.LoadCredentials()
 			if err != nil {
 				return err
 			}
@@ -421,17 +416,17 @@ func logoutCommand() *cobra.Command {
 			}
 			if cr.Via == "oauth" {
 				ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
-				if err := revokeOAuth(ctx, &Client{Remote: r, HTTP: NewHTTPClient()}, cr); err != nil {
+				if err := remoteclient.RevokeOAuth(ctx, &remoteclient.Client{Remote: r, HTTP: remoteclient.NewHTTPClient()}, cr); err != nil {
 					fmt.Fprintf(c.ErrOrStderr(), "Couldn't revoke the login on %s (%v); revoke it in the dashboard.\n", r.URL, err)
 				}
 				cancel()
 			}
 			if cr.MintedTokenId != "" {
-				cl := &Client{Remote: r, Token: cr.Token, HTTP: NewHTTPClient()}
+				cl := &remoteclient.Client{Remote: r, Token: cr.Token, HTTP: remoteclient.NewHTTPClient()}
 				ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
-				err := cl.JSON(ctx, http.MethodDelete, "/api/tokens/"+cr.MintedTokenId, nil, nil)
+				err := cl.JSON(ctx, http.MethodDelete, tokensv1.Prefix+"/"+cr.MintedTokenId, nil, nil)
 				cancel()
-				if err != nil && !IsStatus(err, http.StatusNotFound) && !IsStatus(err, http.StatusUnauthorized) {
+				if err != nil && !remoteclient.IsStatus(err, http.StatusNotFound) && !remoteclient.IsStatus(err, http.StatusUnauthorized) {
 					fmt.Fprintf(c.ErrOrStderr(), "Couldn't revoke the API token on %s (%v); revoke it in the dashboard.\n", r.URL, err)
 				}
 			}

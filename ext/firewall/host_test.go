@@ -51,7 +51,7 @@ instances:
 	}
 	addr := ln.Addr().String()
 	_ = ln.Close()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtime: okRuntime{},
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtimes: []multisite.Runtime{okRuntime{}},
 		Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: addr}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -72,7 +72,7 @@ instances:
 		return res
 	}
 	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(50 * time.Millisecond) {
-		req, _ := http.NewRequest(http.MethodGet, "http://"+addr+"/_pocker/health", nil)
+		req, _ := http.NewRequest(http.MethodGet, "http://"+addr+multisite.DefaultHealthPath, nil)
 		if res, err := client.Do(req); err == nil {
 			res.Body.Close()
 			if res.StatusCode == 200 {

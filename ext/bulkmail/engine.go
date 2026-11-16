@@ -246,7 +246,7 @@ func (bm *BulkMail) queue(c *core.Record, limit int) error {
 	if err != nil {
 		return err
 	}
-	sup, err := bm.suppressedSet()
+	suppressed, err := bm.suppressedCheck()
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func (bm *BulkMail) queue(c *core.Record, limit int) error {
 		rec.Set("email", e)
 		rec.Set("record_ref", r.RecordRef)
 		rec.Set("status", SendQueued)
-		if sup[e] {
+		if suppressed(e) {
 			rec.Set("status", SendSkipped)
 			rec.Set("reason", "suppressed")
 		} else {
@@ -631,7 +631,7 @@ func (bm *BulkMail) sendOne(c *core.Record, send *core.Record) {
 	}
 
 	// a suppression added after queueing still wins
-	if sup, _ := bm.IsSuppressed(email); sup {
+	if bm.suppressedNow(email) {
 		send.Set("status", SendSkipped)
 		send.Set("reason", "suppressed")
 		bm.saveSend(c, send)

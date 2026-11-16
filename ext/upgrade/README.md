@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Upgrade
 
 `pocketone upgrade` replaces the `pocketone` executable with the latest PocketOne release and keeps the old one beside

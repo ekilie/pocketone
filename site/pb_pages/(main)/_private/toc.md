@@ -11,18 +11,41 @@
 - [All extensions](/docs/extensions)
 - [Writing an extension](/docs/writing-an-extension)
 
+# Contracts
+
+- [All contracts](/docs/contracts)
+- [bulkmail/v1](/docs/contracts/bulkmail/v1)
+- [cli.commands/v1](/docs/contracts/cli.commands/v1)
+- [deploy/v1](/docs/contracts/deploy/v1)
+- [gate/v1](/docs/contracts/gate/v1)
+- [http.wrap/v1](/docs/contracts/http.wrap/v1)
+- [instance.source/v1](/docs/contracts/instance.source/v1)
+- [mail.fallback/v1](/docs/contracts/mail.fallback/v1)
+- [mail.feedback/v1](/docs/contracts/mail.feedback/v1)
+- [mail.suppression/v1](/docs/contracts/mail.suppression/v1)
+- [mcp/v1](/docs/contracts/mcp/v1)
+- [oauth/v1](/docs/contracts/oauth/v1)
+- [remote/v1](/docs/contracts/remote/v1)
+- [restore/v1](/docs/contracts/restore/v1)
+- [runtime/v1](/docs/contracts/runtime/v1)
+- [settings/v1](/docs/contracts/settings/v1)
+- [tls/v1](/docs/contracts/tls/v1)
+- [tokens/v1](/docs/contracts/tokens/v1)
+
 # Extensions: standard
 
 - [PITR](/docs/extensions/pitr)
+- [Settings](/docs/extensions/settings)
+- [Backups](/docs/extensions/backups)
 - [Auto TLS](/docs/extensions/autotls)
 - [Bulk Mail](/docs/extensions/bulkmail)
 - [Pages](/docs/extensions/pages)
 - [Pages: PocketPages v1 specification](/docs/extensions/pages/spec)
 - [Vacuum](/docs/extensions/vacuum)
 - [MCP](/docs/extensions/mcp)
-- [OAuth Server](/docs/extensions/oauth-server)
 - [S3 Redirect](/docs/extensions/s3redirect)
 - [Tokens](/docs/extensions/tokens)
+- [Tokens: OAuth](/docs/extensions/tokens/oauth)
 - [Deploy](/docs/extensions/deploy)
 - [Remotes](/docs/extensions/remotes)
 - [Upgrade](/docs/extensions/upgrade)
@@ -57,6 +80,8 @@
 # Extensions: for authors
 
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
+- [Standard Set](/docs/extensions/standard)
+- [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
 - [Mail Trap](/docs/extensions/mailtrap)
 - [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
 - [JS Embed](/docs/extensions/jsembed)

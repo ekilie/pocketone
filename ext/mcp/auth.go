@@ -3,12 +3,13 @@ package mcp
 import (
 	"errors"
 	"fmt"
+	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/http"
 	"slices"
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 // Grant is who a valid credential signs in, and how tool calls forward it.
@@ -22,7 +23,7 @@ type Grant struct {
 	// (an OAuth token bound to /mcp isn't accepted on the REST API).
 	Credential string
 	// Scopes, when not empty, limit the connection like an API token limited to them (ext/tokens): tool calls
-	// run with [tokens.WithScopes], so requests the scopes don't allow are refused, and tools/list hides tools
+	// run with [tokensv1.WithScopes], so requests the scopes don't allow are refused, and tools/list hides tools
 	// none of them reaches.
 	Scopes []string
 }
@@ -34,7 +35,7 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 )
 
-// Authenticator signs MCP requests in: [OAuth] (ext/oauth-server + ext/tokens), or [PocketBaseTokenAuth] when the
+// Authenticator signs MCP requests in: [OAuth] (the OAuth server in ext/tokens), or [PocketBaseTokenAuth] when the
 // app has no OAuth server.
 type Authenticator interface {
 	// Authenticate checks the request's credentials for resource (the endpoint's canonical URL, which an OAuth token
@@ -49,7 +50,7 @@ type Authenticator interface {
 // PocketBaseTokenAuth accepts ordinary PocketBase auth tokens (Authorization: Bearer <token>) for records of the
 // listed collections (default: any auth collection). Tool calls forward the same token.
 //
-// It's the fallback for apps without ext/oauth-server, and handy in tests. Clients can't sign in by themselves with it.
+// It's the fallback for apps without the OAuth server, and handy in tests. Clients can't sign in by themselves with it.
 type PocketBaseTokenAuth struct {
 	Collections []string
 }
@@ -68,16 +69,14 @@ func (a PocketBaseTokenAuth) Authenticate(e *core.RequestEvent, _ string) (*Gran
 	return &Grant{Auth: e.Auth, Credential: e.Request.Header.Get("Authorization")}, nil
 }
 
-// AuthorizationServers implements [Authenticator]: the app itself, where ext/oauth-server will answer.
+// AuthorizationServers implements [Authenticator]: the app itself, where ext/tokens' OAuth server answers.
 func (a PocketBaseTokenAuth) AuthorizationServers(e *core.RequestEvent, s *Server) []string {
 	return []string{s.publicOrigin(e)}
 }
 
-const wellKnownPRM = "/.well-known/oauth-protected-resource"
-
 // MetadataURL is where this endpoint's protected resource metadata (RFC 9728) is served.
 func (s *Server) MetadataURL(e *core.RequestEvent) string {
-	return s.publicOrigin(e) + wellKnownPRM + s.cfg.Path
+	return s.publicOrigin(e) + mcpv1.MetadataPath
 }
 
 // ProtectedResourceMetadata is the RFC 9728 document for this endpoint.
@@ -99,7 +98,7 @@ func (s *Server) ProtectedResourceMetadata(e *core.RequestEvent) map[string]any 
 // tool reaches, aren't offered).
 func (s *Server) offeredScopes() []string {
 	out := []string{}
-	if tk := tokens.For(s.app); tk != nil {
+	if tk, ok := tokensv1.Contract.Of(s.app); ok {
 		for _, sc := range tk.Scopes() {
 			if !sc.Infrastructure() {
 				out = append(out, sc.Name)

@@ -7,6 +7,8 @@ source: "ext/pitr/README.md"
 
 # PITR
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Point-in-time restore: your database as it was at any moment in the last few days, restored from the dashboard.
 History is recorded with [Litestream](https://litestream.io), next to your data or in an S3-compatible bucket.
 
@@ -91,8 +93,9 @@ by default).
 
 ### Restore from the dashboard
 
-1. Open **Settings → Backups**. The **Point-in-time restore** section shows how far back you can go, how big the
-   history is and where it's stored.
+1. Open **Settings → Backups**. **Restore to a moment** (the [restore/v1](/docs/contracts/restore/v1)
+   contract's section) shows how far back you can go; **Point-in-time restore** shows how big the history is and where
+   it's stored.
 2. Under **Restore to**, pick a date and time, then click **Restore**.
 3. The app keeps serving while the old database is rebuilt, then restarts with it.
 
@@ -156,8 +159,10 @@ A bucket in an instance's settings is refused, so credentials never sit in insta
   PITR reads them when the instance starts. Multitenant will work this way.
 - **Go API.** `(*pitr.Extension).Status(ctx, app)` returns the restorable window, size, destination and last restore;
   `Restore(ctx, app, at)` restores an app to a time.
-- **REST API** (superusers): `GET /api/pitr` for the status, `POST /api/pitr/restore` with
-  `{"at": "<RFC 3339 time>"}` to restore.
+- **restore/v1.** PITR provides the [restore/v1](/docs/contracts/restore/v1) contract (superusers):
+  `GET /api/_c/restore/v1` for the window, size, destination and last restore, `POST /api/_c/restore/v1/restore`
+  with `{"at": "<RFC 3339 time>"}` to restore. Without PITR the same calls restore the latest backup before the
+  moment ([Backups](/docs/extensions/backups)), so clients and agents don't care which is on.
 
 ## Example
 

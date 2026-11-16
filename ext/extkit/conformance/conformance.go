@@ -26,7 +26,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 	"net/http"
+	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
@@ -61,6 +63,14 @@ type Options struct {
 	// Setup runs on every test app before the extension registers: what the extension expects the host to have put there
 	// first, such as an MCP server (ext/mcp) for an extension that adds tools.
 	Setup func(app core.App) error
+
+	// AllowRoutes lists routes (path patterns, e.g. "/{path...}") the extension may register outside the allowed
+	// prefixes, each with a reason a reviewer can check.
+	AllowRoutes map[string]string
+
+	// Deps are extensions the one under test requires (its Contracts().Requires), registered first on every test app,
+	// the way the standard set orders them: e.g. tokens for the OAuth server.
+	Deps []extkit.Extension
 }
 
 // TB is the part of testing.T the checks use, so they can be tested against a recorder.
@@ -92,6 +102,7 @@ func Run(t *testing.T, newExtension func() extkit.Extension, opts ...Options) {
 	t.Run("Lifecycle", func(t *testing.T) { CheckLifecycle(t, newExtension(), o) })
 	t.Run("Collections", func(t *testing.T) { CheckCollections(t, newExtension(), o) })
 	t.Run("ManyApps", func(t *testing.T) { CheckManyApps(t, newExtension(), withApps(o)) })
+	t.Run("Routes", func(t *testing.T) { CheckRoutes(t, newExtension(), o) })
 	t.Run("MCPTools", func(t *testing.T) {
 		if o.Setup == nil {
 			t.Skip("no Options.Setup: the extension adds no MCP tools")
@@ -252,6 +263,9 @@ func CheckMCPTools(t TB, p extkit.Extension, o Options) {
 	for _, tool := range before {
 		had[tool.Name] = true
 	}
+	for _, tool := range extkit.ProvidedTools(app) { // a contract's tools are named for the contract (restore_points)
+		had[tool.Name] = true
+	}
 	prefix := strings.ReplaceAll(p.Name(), "-", "_") + "_"
 	for _, tool := range after {
 		if had[tool.Name] {
@@ -293,17 +307,104 @@ func newApp(t TB, o Options) *core.BaseApp {
 			t.Fatalf("Options.Setup: %v", err)
 		}
 	}
+	for _, d := range o.Deps {
+		extkit.AppScope(app).Registering(d.Name())
+		if err := d.Register(app, nil); err != nil {
+			t.Fatalf("Options.Deps: %s: %v", d.Name(), err)
+		}
+	}
+	deps.Store(app, o.Deps)
 	return app
 }
 
+// deps remembers each test app's Options.Deps, so start can seal the app's contracts with them.
+var deps sync.Map // *core.BaseApp → []extkit.Extension
+
 // start registers p (if any) and runs the app up to serving.
 func start(app *core.BaseApp, p extkit.Extension, layers extkit.Config) error {
+	on, _ := deps.Load(app)
+	plan := &extkit.Plan{}
+	if d, ok := on.([]extkit.Extension); ok {
+		plan.On = append(plan.On, d...)
+	}
 	if p != nil {
+		extkit.AppScope(app).Registering(p.Name())
 		if err := p.Register(app, layers); err != nil {
 			return fmt.Errorf("Register: %w", err)
 		}
+		plan.On = append(plan.On, p)
+	}
+	// seal the app's contracts as the standard set does, which also checks the extension provided what it declares
+	if _, err := extkit.Finish(app, plan, nil); err != nil {
+		return err
 	}
 	return run(app)
+}
+
+// CheckRoutes: every route the extension adds is a contract's, under /api/_c/ (mounted by extkit); or /.well-known/
+// (what a standard fixes at the root), /mcp, or the dashboard's /_/extensions/ (its admin screens), unless
+// Options.AllowRoutes lists it with a reason. Extensions have no routes of their own: their API is contracts.
+func CheckRoutes(t TB, p extkit.Extension, o Options) {
+	without := newApp(t, o)
+	if err := start(without, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	before := routesOf(without)
+	_ = stop(without)
+
+	app := newApp(t, o)
+	if err := start(app, p, o.Layers); err != nil {
+		t.Fatal(err)
+	}
+	defer stop(app)
+	for route := range routesOf(app) {
+		if before[route] {
+			continue
+		}
+		path := route
+		if i := strings.IndexByte(route, ' '); i >= 0 {
+			path = route[i+1:]
+		}
+		switch {
+		case strings.HasPrefix(path, extkit.ContractPrefix), strings.HasPrefix(path, "/.well-known/"), path == "/mcp",
+			strings.HasPrefix(path, "/_/extensions/"):
+			continue
+		}
+		if _, ok := o.AllowRoutes[path]; ok {
+			continue
+		}
+		t.Errorf("route %q: an extension's API is contracts, under %s<id>/ (ext/contracts); or list it in AllowRoutes with a reason", route, extkit.ContractPrefix)
+	}
+}
+
+var lastRouters sync.Map // *core.BaseApp → the router its last run built
+
+// routesOf lists the routes ("METHOD /path") app's last run registered.
+func routesOf(app *core.BaseApp) map[string]bool {
+	out := map[string]bool{}
+	r, ok := lastRouters.Load(app)
+	if !ok {
+		return out
+	}
+	walkRoutes(reflect.ValueOf(r.(*router.Router[*core.RequestEvent]).RouterGroup), "", out)
+	return out
+}
+
+// walkRoutes reads the router's tree (its children aren't exported; this is test code, so reflection is fine).
+func walkRoutes(group reflect.Value, prefix string, out map[string]bool) {
+	g := reflect.Indirect(group)
+	prefix += g.FieldByName("Prefix").String()
+	children := g.FieldByName("children")
+	for i := 0; i < children.Len(); i++ {
+		c := children.Index(i).Elem()
+		v := reflect.Indirect(c)
+		if v.FieldByName("children").IsValid() {
+			walkRoutes(c, prefix, out)
+			continue
+		}
+		method := v.FieldByName("Method").String()
+		out[strings.TrimSpace(method+" "+prefix+v.FieldByName("Path").String())] = true
+	}
 }
 
 // run bootstraps the app, applies every migration and triggers OnServe with a real router (no listener).
@@ -318,6 +419,7 @@ func run(app *core.BaseApp) error {
 	if err != nil {
 		return fmt.Errorf("router: %w", err)
 	}
+	lastRouters.Store(app, r)
 	se := &core.ServeEvent{App: app, Router: r, Server: &http.Server{Addr: "127.0.0.1:0"}}
 	if err := app.OnServe().Trigger(se, func(e *core.ServeEvent) error {
 		_, err := e.Router.BuildMux()

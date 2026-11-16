@@ -1,8 +1,8 @@
 // Package mailtrap catches an app's mail in development: in dev mode, an app whose SMTP is off sends to a built-in
 // mail catcher (like MailDev or Mailpit) instead of the host's sendmail, and you read it at http://127.0.0.1:8025.
 //
-// It needs no change to PocketBase: it binds OnMailerSend last and, when it takes a message, never calls e.Next(),
-// so sendmail never runs. Outside dev mode, or with SMTP on, it does nothing.
+// It provides mail.fallback/v1 (ext/contracts): with SMTP off, the app's mail goes to the contract's providers in
+// order; in dev mode mailtrap takes it, so sendmail never runs. Outside dev mode it passes the message on.
 //
 // A single app:
 //
@@ -14,8 +14,11 @@
 package mailtrap
 
 import (
+	"context"
+
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/mailer"
+	fallbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/fallback/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
@@ -42,6 +45,23 @@ func (p *Extension) Register(app core.App, _ extkit.Config) error {
 // MustRegister routes app's mail to the dev mail trap while the app is in dev mode with SMTP off.
 func MustRegister(app core.App) { Register(app) }
 
+// Contracts implements [extkit.Declarer].
+func (p *Extension) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("mail.fallback/v1")}
+}
+
+// trap is mail.fallback/v1 in dev mode: the mail lands in the local inbox. Outside dev mode it passes.
+type trap struct{ app core.App }
+
+func (t trap) Send(_ context.Context, m *mailer.Message) error {
+	if !t.app.IsDev() {
+		return fallbackv1.ErrPass
+	}
+	tr, _ := Default(reason) // if its ports are taken it still keeps mail in memory and prints each one
+	_, err := tr.AddMessage(m, t.app.Settings().Meta.AppName)
+	return err
+}
+
 // Register is MustRegister; it can't fail.
 func Register(app core.App) {
 	// at startup, so the inbox address shows before the first mail
@@ -54,19 +74,9 @@ func Register(app core.App) {
 		}
 		return nil
 	})
-	app.OnMailerSend().Bind(&hook.Handler[*core.MailerEvent]{
-		Id:       "__mailtrap__",
-		Priority: 1 << 30, // last: the app's own onMailerSend hooks run (and may change the message) first
-		Func: func(e *core.MailerEvent) error {
-			if !active(e.App) {
-				return e.Next()
-			}
-			t, _ := Default(reason) // if its ports are taken it still keeps mail in memory and prints each one
-			// never e.Next() here: that would run sendmail on the host
-			_, err := t.AddMessage(e.Message, e.App.Settings().Meta.AppName)
-			return err
-		},
-	})
+	// mail.fallback/v1: in dev mode, mail lands here instead of sendmail
+	fallbackv1.Contract.Provide(app, trap{app})
+	fallbackv1.Bind(app)
 }
 
 func active(app core.App) bool {

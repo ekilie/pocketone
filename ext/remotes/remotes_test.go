@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -50,12 +51,15 @@ func newApp(t *testing.T, withTokens bool) (*tests.TestApp, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	if err := Register(app, Config{}); err != nil {
+	exts := []extkit.Extension{New(Config{})}
+	if withTokens {
+		exts = append(exts, tokens.New(tokens.Config{}))
+	}
+	// registered and sealed the way every app is (the standard set does this), so remote/v1's routes mount
+	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	Advertise(app, "deploy", "/_pocker/deploy/v1")
 	if withTokens {
-		tokens.MustRegister(app, tokens.Config{})
 		if err := tokens.EnsureSchema(app); err != nil {
 			t.Fatal(err)
 		}
@@ -75,7 +79,7 @@ func isolate(t *testing.T) string {
 
 func TestProjectFile(t *testing.T) {
 	dir := isolate(t)
-	p, err := LoadProject(dir)
+	p, err := remoteclient.LoadProject(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +101,7 @@ func TestProjectFile(t *testing.T) {
 
 	sub := filepath.Join(dir, "pb_hooks", "deep")
 	os.MkdirAll(sub, 0o755)
-	p2, err := LoadProject(sub) // found by walking up
+	p2, err := remoteclient.LoadProject(sub) // found by walking up
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,40 +120,25 @@ func TestProjectFile(t *testing.T) {
 	}
 }
 
-func TestLegacyPocketHostLinkAndEnv(t *testing.T) {
+func TestEnvTokens(t *testing.T) {
 	dir := isolate(t)
-	os.WriteFile(filepath.Join(dir, LegacyPocketHostFile), []byte(`{"instanceName":"myapp"}`), 0o644)
-	p, err := LoadProject(dir)
+	p, err := remoteclient.LoadProject(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err := p.Resolve("")
-	if err != nil || r.Name != PocketHostRemote || r.URL != "https://myapp.pockethost.io" {
-		t.Fatalf("%+v %v", r, err)
-	}
-	if err := p.Remove(PocketHostRemote); err == nil {
-		t.Fatal("legacy remote removed")
-	}
 	p.Add("prod", "prod.test")
-	p.Save()
-	b, _ := os.ReadFile(filepath.Join(dir, ProjectDir, ProjectFile))
-	if strings.Contains(string(b), "pockethost.io") {
-		t.Fatalf("legacy remote written: %s", b)
-	}
-
-	t.Setenv("POCKETHOST_TOKEN", "ph_pat_x")
-	if tok, src := EnvToken(PocketHostRemote); tok != "ph_pat_x" || src != "POCKETHOST_TOKEN" {
-		t.Fatal(tok, src)
+	if err := p.Save(); err != nil {
+		t.Fatal(err)
 	}
 	t.Setenv("POCKETONE_TOKEN", "general")
 	t.Setenv("POCKETONE_TOKEN_MY_PROD", "specific")
-	if tok, _ := EnvToken("my-prod"); tok != "specific" {
+	if tok, _ := remoteclient.EnvToken("my-prod"); tok != "specific" {
 		t.Fatal(tok)
 	}
-	if tok, _ := EnvToken("other"); tok != "general" {
+	if tok, _ := remoteclient.EnvToken("other"); tok != "general" {
 		t.Fatal(tok)
 	}
-	c, err := Open(dir, "prod")
+	c, err := remoteclient.Open(dir, "prod")
 	if err != nil || c.Token != "general" {
 		t.Fatalf("open: %v", err)
 	}
@@ -157,8 +146,8 @@ func TestLegacyPocketHostLinkAndEnv(t *testing.T) {
 
 func TestCredentialsFile(t *testing.T) {
 	isolate(t)
-	c, _ := LoadCredentials()
-	c.ByURL["https://x.test"] = &Credential{Token: "pbt_x", Via: "token"}
+	c, _ := remoteclient.LoadCredentials()
+	c.ByURL["https://x.test"] = &remoteclient.Credential{Token: "pbt_x", Via: "token"}
 	if err := c.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +155,7 @@ func TestCredentialsFile(t *testing.T) {
 	if err != nil || st.Mode().Perm() != 0o600 {
 		t.Fatalf("perm %v %v", st.Mode(), err)
 	}
-	c2, _ := LoadCredentials()
+	c2, _ := remoteclient.LoadCredentials()
 	if c2.ByURL["https://x.test"].Token != "pbt_x" {
 		t.Fatal("not saved")
 	}
@@ -175,32 +164,32 @@ func TestCredentialsFile(t *testing.T) {
 func TestWhoamiAndPasswordLoginMintsToken(t *testing.T) {
 	dir := isolate(t)
 	_, url := newApp(t, true)
-	cl := &Client{Remote: &Remote{Name: "local", URL: url}, HTTP: NewHTTPClient()}
+	cl := &remoteclient.Client{Remote: &remoteclient.Remote{Name: "local", URL: url}, HTTP: remoteclient.NewHTTPClient()}
 	ctx := context.Background()
 
 	w, err := cl.Whoami(ctx)
-	if err != nil || w.Auth != nil || w.Features["deploy"] != "/_pocker/deploy/v1" || w.Features["tokens"] != "/api/tokens" {
+	if err != nil || w.Auth != nil || !w.Offers("remote/v1") || !w.Offers("tokens/v1") {
 		t.Fatalf("anon whoami %+v %v", w, err)
 	}
-	if _, err := LoginWithPassword(ctx, cl, PasswordLogin{Email: "test@example.com", Password: "wrong"}); err == nil {
+	if _, err := remoteclient.LoginWithPassword(ctx, cl, remoteclient.PasswordLogin{Email: "test@example.com", Password: "wrong"}); err == nil {
 		t.Fatal("wrong password accepted")
 	}
-	res, err := LoginWithPassword(ctx, cl, PasswordLogin{Email: "test@example.com", Password: "1234567890", TokenName: "test cli"})
+	res, err := remoteclient.LoginWithPassword(ctx, cl, remoteclient.PasswordLogin{Email: "test@example.com", Password: "1234567890", TokenName: "test cli"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !res.Minted || !strings.HasPrefix(res.Credential.Token, "pbt_") || res.Warning != "" {
 		t.Fatalf("%+v", res)
 	}
-	if err := SaveLogin(cl, res); err != nil {
+	if err := remoteclient.SaveLogin(cl, res); err != nil {
 		t.Fatal(err)
 	}
 
 	// a project remote pointing at it now opens with the saved login
-	p, _ := LoadProject(dir)
+	p, _ := remoteclient.LoadProject(dir)
 	p.Add("local", url)
 	p.Save()
-	authed, err := Open(dir, "local")
+	authed, err := remoteclient.Open(dir, "local")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,11 +199,11 @@ func TestWhoamiAndPasswordLoginMintsToken(t *testing.T) {
 	}
 
 	// login with that token again (paste)
-	res2, err := LoginWithToken(ctx, cl, res.Credential.Token)
+	res2, err := remoteclient.LoginWithToken(ctx, cl, res.Credential.Token)
 	if err != nil || res2.Credential.Email != "test@example.com" {
 		t.Fatalf("token login %+v %v", res2, err)
 	}
-	if _, err := LoginWithToken(ctx, cl, "pbt_"+strings.Repeat("z", 40)); err == nil {
+	if _, err := remoteclient.LoginWithToken(ctx, cl, "pbt_"+strings.Repeat("z", 40)); err == nil {
 		t.Fatal("bad token accepted")
 	}
 
@@ -234,9 +223,9 @@ func TestWhoamiAndPasswordLoginMintsToken(t *testing.T) {
 func TestPasswordLoginNeedsTokens(t *testing.T) {
 	isolate(t)
 	_, url := newApp(t, false)
-	cl := &Client{Remote: &Remote{Name: "local", URL: url}, HTTP: NewHTTPClient()}
-	_, err := LoginWithPassword(context.Background(), cl, PasswordLogin{Email: "test@example.com", Password: "1234567890"})
-	if !errors.Is(err, ErrNoTokens) {
+	cl := &remoteclient.Client{Remote: &remoteclient.Remote{Name: "local", URL: url}, HTTP: remoteclient.NewHTTPClient()}
+	_, err := remoteclient.LoginWithPassword(context.Background(), cl, remoteclient.PasswordLogin{Email: "test@example.com", Password: "1234567890"})
+	if !errors.Is(err, remoteclient.ErrNoTokens) {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -245,8 +234,8 @@ func TestNoWhoamiRemoteTakesTokenAsIs(t *testing.T) {
 	isolate(t)
 	srv := httptest.NewServer(http.NotFoundHandler()) // e.g. a PocketHost edge today
 	defer srv.Close()
-	cl := &Client{Remote: &Remote{Name: "ph", URL: srv.URL}, HTTP: NewHTTPClient()}
-	res, err := LoginWithToken(context.Background(), cl, "ph_pat_abc")
+	cl := &remoteclient.Client{Remote: &remoteclient.Remote{Name: "ph", URL: srv.URL}, HTTP: remoteclient.NewHTTPClient()}
+	res, err := remoteclient.LoginWithToken(context.Background(), cl, "ph_pat_abc")
 	if err != nil || res.Credential.Token != "ph_pat_abc" {
 		t.Fatalf("%+v %v", res, err)
 	}
@@ -272,8 +261,8 @@ func TestCommands(t *testing.T) {
 	if out, err = runCmd(t, dir, "link", url, "--name", "two", "--token", "pbt_"+strings.Repeat("z", 40)); err == nil {
 		t.Fatalf("link with a bad token: %s", out)
 	}
-	var proj Project
-	b, _ := os.ReadFile(filepath.Join(dir, ProjectDir, ProjectFile))
+	var proj remoteclient.Project
+	b, _ := os.ReadFile(filepath.Join(dir, remoteclient.ProjectDir, remoteclient.ProjectFile))
 	json.Unmarshal(b, &proj)
 	if proj.Remotes["two"] == nil || proj.Default != "prod" {
 		t.Fatalf("link kept the remote, default unchanged: %s", b)
@@ -312,15 +301,15 @@ func TestNamesFollowCommand(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("MY_TOOL_CONFIG_DIR", "")
 	t.Setenv("XDG_CONFIG_HOME", home)
-	if d, _ := ConfigDir(); d != filepath.Join(home, "my-tool") {
+	if d, _ := remoteclient.ConfigDir(); d != filepath.Join(home, "my-tool") {
 		t.Fatal(d)
 	}
 	t.Setenv("MY_TOOL_CONFIG_DIR", "/elsewhere")
-	if d, _ := ConfigDir(); d != "/elsewhere" {
+	if d, _ := remoteclient.ConfigDir(); d != "/elsewhere" {
 		t.Fatal(d)
 	}
 	t.Setenv("MY_TOOL_TOKEN", "t")
-	if tok, src := EnvToken("prod"); tok != "t" || src != "MY_TOOL_TOKEN" {
+	if tok, src := remoteclient.EnvToken("prod"); tok != "t" || src != "MY_TOOL_TOKEN" {
 		t.Fatal(tok, src)
 	}
 }

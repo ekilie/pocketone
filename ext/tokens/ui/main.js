@@ -1,5 +1,5 @@
 // API tokens screen for the PocketBase dashboard (Settings → API tokens). Loaded as a UI extension
-// (/_/extensions/tokens/main.js). A thin view over the extension's /api/tokens routes.
+// (/_/extensions/tokens/main.js). A thin view over the extension's token API (/api/_c/tokens/v1).
 (() => {
     app.store.settingsNavGroups["Access"] = [
         ...(app.store.settingsNavGroups["Access"] || []),
@@ -7,7 +7,7 @@
     ];
 
     function api(path, method = "GET", body) {
-        return app.pb.send("/api/tokens" + path, { method, body });
+        return app.pb.send("/api/_c/tokens/v1" + path, { method, body });
     }
 
     function sidebar() {

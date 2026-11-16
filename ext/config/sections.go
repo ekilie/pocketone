@@ -59,9 +59,9 @@ type AppConfig struct {
 	EnvAllow      []string      `yaml:"env_allow" doc:"Names from the .env the app and its JS hooks may read. Default none."`
 }
 
-// Server, App and Provider are the sections this package owns.
+// Server and App are the sections this package owns. (A multisite host is the `multisite` section, ext/multisite;
+// its runtimes are `providers: { runtime/v1: [...] }`.)
 var (
 	Server   = extkit.NewSectionFunc("server", func() ServerConfig { return ServerConfig{} }, "How the binary listens: http, https and CORS origins (single-app mode: the serve command's defaults).")
-	App      = extkit.NewSectionFunc("app", func() AppConfig { return AppConfig{} }, "The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used when a provider runs many instances.")
-	Provider = extkit.NewSection("provider", "", "The runtime provider that runs many instances (pocker or docker). Omit for a single stock app.")
+	App      = extkit.NewSectionFunc("app", func() AppConfig { return AppConfig{} }, "The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used on a multisite host.")
 )

@@ -2,9 +2,10 @@ package deploy
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"log/slog"
 	"net/http"
@@ -13,12 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/remotes"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 // Scopes the server registers with the tokens extension.
@@ -40,7 +37,7 @@ type Config struct {
 	// skip it; not a pb_* name, so it's never deployed).
 	StoreDir string
 
-	// Prefix is the API path (default /_pocker/deploy/v1).
+	// Prefix is the API path (default deploy/v1's, /api/_c/deploy/v1).
 	Prefix string
 
 	// Restart restarts the app when a client asks (POST /restart, or a commit with "restart": true) so it applies
@@ -74,9 +71,7 @@ func Register(app core.App, cfg Config) (*API, error) {
 	if cfg.DisableServer {
 		return nil, nil
 	}
-	if cfg.Prefix == "" {
-		cfg.Prefix = PockerPrefix
-	}
+	cfg.Prefix = deployv1.Prefix
 	if cfg.Restart == nil {
 		cfg.Restart = func(app core.App) error {
 			go func() {
@@ -93,11 +88,17 @@ func Register(app core.App, cfg Config) (*API, error) {
 		Prefix:    cfg.Prefix,
 		Backend:   &AppBackend{App: app},
 		Instances: func() Instances { return insts },
-		Logs:      DBLogs{App: app},
 		Logger:    slog.New(slogHandler{app}),
 	})
 	insts.api = api
-	remotes.Advertise(app, "deploy", cfg.Prefix)
+	// deploy/v1: the contracts' seal mounts its routes under /api/_c/deploy/v1/ (a multisite host provides its own)
+	deployv1.Contract.ProvideDefault(app, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var auth requestAuth
+		if e := extkit.RequestEvent(r); e != nil {
+			auth = requestAuth{record: e.Auth, token: tokensv1.FromRequest(e)}
+		}
+		api.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestAuthKey{}, auth)))
+	}))
 
 	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
 		if err := e.Next(); err != nil {
@@ -111,28 +112,15 @@ func Register(app core.App, cfg Config) (*API, error) {
 		}
 		api.opts.PBRoot = cfg.Dir
 		api.opts.DataRoot = cfg.StoreDir
-		if t := tokens.For(e.App); t != nil {
-			t.RegisterScope(tokens.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages), read files and logs",
+		if t, ok := tokensv1.Contract.Of(e.App); ok {
+			t.RegisterScope(tokensv1.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages) and read files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
-			t.RegisterScope(tokens.Scope{Name: ScopeRead, Description: "Read deployed files and stream logs",
+			t.RegisterScope(tokensv1.Scope{Name: ScopeRead, Description: "Read deployed files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
 		}
 		return EnsureSchema(e.App)
 	})
 
-	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		h := func(e *core.RequestEvent) error {
-			ctx := context.WithValue(e.Request.Context(), requestAuthKey{}, requestAuth{record: e.Auth, token: tokens.FromRequest(e)})
-			api.ServeHTTP(e.Response, e.Request.WithContext(ctx))
-			return nil
-		}
-		// the API caps its own bodies (64 MB bundles), above PocketBase's default limit
-		// explicit methods: a method-less pattern would conflict with the static "GET /{path...}" route
-		for _, m := range []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete} {
-			se.Router.Route(m, cfg.Prefix+"/{path...}", h).Unbind(apis.DefaultBodyLimitMiddlewareId)
-		}
-		return se.Next()
-	})
 	return api, nil
 }
 
@@ -140,7 +128,7 @@ type requestAuthKey struct{}
 
 type requestAuth struct {
 	record *core.Record
-	token  *tokens.Info
+	token  *tokensv1.Grant
 }
 
 // AppBackend is the default backend on a single app: one instance (the app), superusers only. A superuser JWT
@@ -167,7 +155,7 @@ func (b *AppBackend) Authenticate(r *http.Request, _ Instance) (Auth, error) {
 	if ra.token == nil {
 		return Auth{UserID: ra.record.Id, Scopes: ReadWrite, Via: "jwt"}, nil
 	}
-	a := Auth{UserID: ra.record.Id, Via: "token", TokenLabel: ra.token.Token.GetString("name")}
+	a := Auth{UserID: ra.record.Id, Via: "token", TokenLabel: ra.token.Name}
 	switch {
 	case len(ra.token.Scopes) == 0 || slices.Contains(ra.token.Scopes, ScopeDeploy):
 		a.Scopes = ReadWrite
@@ -226,86 +214,6 @@ func (a *appInstances) WithInstanceStopped(_ context.Context, _ string, fn func(
 
 func (a *appInstances) StartInstance(context.Context, string) error { return a.cfg.Restart(a.app) }
 
-// DBLogs is a [LogSource] over the app's own logs (the _logs table: requests and app.Logger()). Entries at error
-// level and above come through as stderr. PocketBase writes logs in batches, so new lines show up a few seconds
-// late.
-type DBLogs struct {
-	App core.App
-}
-
-type logRow struct {
-	Id      string         `db:"id"`
-	Created string         `db:"created"`
-	Level   int            `db:"level"`
-	Message string         `db:"message"`
-	Data    map[string]any `db:"-"`
-	RawData string         `db:"data"`
-}
-
-// Open implements [LogSource].
-func (d DBLogs) Open(_ Instance, _ string, n int) ([][]byte, func() [][]byte, func()) {
-	var last logRow
-	var initial []logRow
-	_ = d.App.LogQuery().Select("id", "created", "level", "message", "data").
-		OrderBy("created DESC", "id DESC").Limit(int64(max(n, 1))).All(&initial)
-	if len(initial) > 0 {
-		last = initial[0]
-	}
-	if n == 0 {
-		initial = nil
-	}
-	slices.Reverse(initial)
-	toLines := func(rows []logRow) [][]byte {
-		out := make([][]byte, 0, len(rows))
-		for _, r := range rows {
-			msg := formatLog(r.Message, r.RawData)
-			stream := "stdout"
-			if r.Level >= int(slog.LevelError) {
-				stream = "stderr"
-			}
-			b, _ := json.Marshal(map[string]any{"message": msg, "stream": stream, "time": r.Created})
-			out = append(out, b)
-		}
-		return out
-	}
-	poll := func() [][]byte {
-		var rows []logRow
-		q := d.App.LogQuery().Select("id", "created", "level", "message", "data").OrderBy("created ASC", "id ASC").Limit(500)
-		if last.Id != "" {
-			q = q.AndWhere(dbx.Or(
-				dbx.NewExp("created > {:c}", dbx.Params{"c": last.Created}),
-				dbx.And(dbx.NewExp("created = {:c}", dbx.Params{"c": last.Created}), dbx.NewExp("id > {:id}", dbx.Params{"id": last.Id})),
-			))
-		}
-		if err := q.All(&rows); err != nil || len(rows) == 0 {
-			return nil
-		}
-		last = rows[len(rows)-1]
-		return toLines(rows)
-	}
-	return toLines(initial), poll, func() {}
-}
-
-// formatLog shortens request log entries to "GET /url → 200 (1.2 ms)"; other entries keep their data as JSON.
-func formatLog(message, raw string) string {
-	if raw == "" || raw == "{}" || raw == "null" {
-		return message
-	}
-	var d map[string]any
-	if json.Unmarshal([]byte(raw), &d) == nil && d["type"] == "request" {
-		out := fmt.Sprintf("%v %v → %v", d["method"], d["url"], d["status"])
-		if ms, ok := d["execTime"].(float64); ok {
-			out += fmt.Sprintf(" (%.1f ms)", ms)
-		}
-		if e, ok := d["error"].(string); ok && e != "" {
-			out += " " + e
-		}
-		return out
-	}
-	return message + " " + raw
-}
-
-// slogHandler sends the API's own log lines to the app logger.
 type slogHandler struct{ app core.App }
 
 func (h slogHandler) Enabled(ctx context.Context, l slog.Level) bool {

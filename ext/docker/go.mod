@@ -6,6 +6,7 @@ replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
@@ -53,6 +54,8 @@ require (
 
 replace (
 	ganigeorgiev.com/pocketbase/pocketbase => ../..
-	github.com/pockethost/pocketone/ext/extkit => ../extkit
 	github.com/pockethost/pocketone/ext/config => ../config
+	github.com/pockethost/pocketone/ext/extkit => ../extkit
 )
+
+replace github.com/pockethost/pocketone/ext/contracts => ../contracts

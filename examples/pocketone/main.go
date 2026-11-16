@@ -1,10 +1,11 @@
 // Command pocketbase is the standard PocketOne binary: PocketBase's examples/base plus the PocketOne extensions that ship
-// by default (ext/pages, ext/s3redirect, ext/bulkmail, ext/tokens, ext/remotes, ext/oauth-server, ext/deploy, ext/mcp,
+// by default (ext/pages, ext/s3redirect, ext/bulkmail, ext/tokens (with its OAuth server), ext/remotes, ext/deploy, ext/mcp,
 // ext/pitr, ext/autotls). It's its
 // own module so core's go.mod stays upstream's.
 package main
 
 import (
+	"github.com/pockethost/pocketone/ext/multisite"
 	"log"
 	"net/http"
 	"os"
@@ -20,23 +21,17 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/plugins/migratecmd"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/autotls"
-	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/deploy"
+	"github.com/pockethost/pocketone/ext/docker"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/jserrors"
 	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/mcp"
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/pocker"
-	oauthserver "github.com/pockethost/pocketone/ext/oauth-server"
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pitr"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"github.com/pockethost/pocketone/ext/pocker"
 	"github.com/pockethost/pocketone/ext/s3redirect"
-	"github.com/pockethost/pocketone/ext/tokens"
+	"github.com/pockethost/pocketone/ext/standard"
 	"github.com/pockethost/pocketone/ext/upgrade"
 )
 
@@ -44,14 +39,15 @@ import (
 var PoweredBy = "PocketOne " + pocker.Version()
 
 func main() {
+	extkit.Version = pocker.Version() // remote/v1's status reports it
 	// pocketone.yaml (and the .env beside it): each extension's section, defaults for the flags below (flags win)
 	cfgOpts := config.FromArgs(os.Args[1:])
 	cfg, err := config.Load(cfgOpts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if p, _ := config.Provider.Get(); p != "" && firstArg(os.Args[1:]) == "serve" {
-		// a provider in pocketone.yaml: serve many instances (pocker or docker) instead of a single app
+	if _, host := multisite.Section.Get(); host && firstArg(os.Args[1:]) == "serve" {
+		// a `multisite` section in pocketone.yaml: serve many instances (pocker, docker) instead of a single app
 		if handled, err := serveMany(cfg); handled {
 			if err != nil {
 				log.Fatal(err)
@@ -79,13 +75,11 @@ func main() {
 		return sc, cfg.ResolvePath
 	}))
 
-	// PocketOne extensions that ship in the standard binary and follow the extension contract (extkit): Register
-	// here, and BindJS in the jsvm below. Bulk mail: campaigns to the app's own users (Mail in the dashboard, Bulk
-	// mail on Settings > Mail); nothing happens until someone starts a campaign. Defaults: 5/s, 5,000/day.
-	defaultExtensions := []extkit.Extension{
-		bulkmail.New(bulkmail.Config{}),
-		mailtrap.New(), // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
-	}
+	// The standard set: every PocketOne app's extensions (tokens with its OAuth server, remotes, mcp, pages, s3redirect,
+	// pitr, bulkmail, deploy). The flags below reconfigure members; extras are added after them.
+	set := standard.New()
+	set.Providers = standard.ConfiguredProviders() // pocketone.yaml's providers: section
+	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
 
 	// ---------------------------------------------------------------
 	// Optional extension flags:
@@ -256,52 +250,33 @@ func main() {
 		}
 	}
 	// Auto TLS: off unless --autotls; then CertMagic serves the HTTPS certificates of `serve <domain>`
-	defaultExtensions = append(defaultExtensions, autotls.NewApp(autoTLSConfig))
+	set.Add(autotls.NewApp(autoTLSConfig))
+
+	// members configured from the flags above
+	set.Pages = pages.New(pages.Config{Dir: pagesDir}) // serves pb_pages when the folder exists
+	// S3 redirects: with S3 file storage on, downloads redirect to a signed bucket URL after the access check
+	set.S3Redirect = s3redirect.New(s3redirect.Config{Enabled: &s3Redirect, TTL: s3RedirectTTL})
+	// point-in-time restore: on by default (--pitr=false turns it off); history in pb_data/litestream/, restore from
+	// Settings → Backups or `pocketbase pitr restore`
+	set.PITR = pitr.New(pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention, SnapshotInterval: pitrCfg.SnapshotInterval})
 
 	// ---------------------------------------------------------------
 	// Extensions and hooks:
 	// ---------------------------------------------------------------
 
-	// load jsvm (pb_hooks and pb_migrations); hook errors name pb_hooks/<file>:<line>:<col> (ext/jserrors)
-	jsvm.MustRegister(app, jsvm.Config{
+	// the standard set, then pb_hooks and pb_migrations through jsvm (with $mcp, $tokens, $bulkmail and pb_hooks
+	// providing contracts), then the contracts sealed; hook errors name pb_hooks/<file>:<line>:<col> (ext/jserrors)
+	if err := set.Register(app, jsvm.Config{
 		MigrationsDir: migrationsDir,
 		HooksDir:      hooksDir,
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
-		OnInit: func(vm *goja.Runtime) {
-			extkit.BindJS(app, vm, defaultExtensions...) // e.g. $bulkmail in pb_hooks
-			mcp.BindJS(vm, app)                          // $mcp.addEndpoint in pb_hooks
-			tokens.BindJS(vm, app)                       // $tokens.registerScope / requireScope in pb_hooks
-		},
-		Extensions: []jsvm.Extension{jserrors.New()},
-	})
-
-	// PocketPages: serves pb_pages when the folder exists (page code runs in the jsvm above)
-	pages.MustRegister(app, pages.Config{Dir: pagesDir})
-	pages.RegisterCommand(app.RootCmd) // `pocketone pages create <name> [--starter kit]`, `pocketone pages starters`
-
-	// S3 redirects: with S3 file storage on, downloads redirect to a signed bucket URL after the access check
-	s3redirect.MustRegister(app, s3redirect.Config{Enabled: &s3Redirect, TTL: s3RedirectTTL})
-
-	// API tokens (pbt_...), Settings → API tokens, the token command
-	tokens.MustRegister(app, tokens.Config{})
-
-	// remotes: remote/login/logout/link commands and GET /_pocker/whoami
-	remotes.MustRegister(app, remotes.Config{})
-
-	// OAuth server: browser sign-in for `pocketone login` and OAuth clients
-	oauthserver.MustRegister(app, oauthserver.Config{})
-
-	// deploys: deploy/dev/pull/logs commands and the deploy API (/_pocker/deploy/v1, superusers)
-	deploy.MustRegister(app, deploy.Config{})
-
-	// MCP endpoint at /mcp (built-in pb_* tools plus $mcp tools from pb_hooks); OAuth sign-in through oauth-server
-	mcp.MustRegister(app, mcp.Config{})
-
-	// point-in-time restore: on by default (--pitr=false turns it off); history in pb_data/litestream/, restore from
-	// Settings → Backups or `pocketbase pitr restore`
-	pitr.MustRegister(app, pitr.Config{Enabled: &pitrEnabled, Retention: pitrRetention, SnapshotInterval: pitrCfg.SnapshotInterval})
-	extkit.MustRegister(app, defaultExtensions...)
+		Extensions:    []jsvm.Extension{jserrors.New()},
+	}); err != nil {
+		log.Fatal(err)
+	}
+	pages.RegisterCommand(app.RootCmd)            // `pocketone pages create <name> [--starter kit]`, `pocketone pages starters`
+	app.RootCmd.AddCommand(set.PITR.Command(app)) // `pocketone pitr status|restore`
 
 	// migrate command (with js templates)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{

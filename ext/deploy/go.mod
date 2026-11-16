@@ -6,6 +6,7 @@ require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
@@ -37,8 +38,8 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
@@ -79,3 +80,37 @@ replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 
 replace github.com/pockethost/pocketone/ext/config => ../config
+
+replace github.com/pockethost/pocketone/ext/contracts => ../contracts
+
+replace github.com/pockethost/pocketone/ext/mailtrap => ../mailtrap
+
+replace github.com/pockethost/pocketone/ext/autotls => ../autotls
+
+replace github.com/pockethost/pocketone/ext/upgrade => ../upgrade
+
+replace github.com/pockethost/pocketone/ext/docker => ../docker
+
+replace github.com/pockethost/pocketone/ext/mcp => ../mcp
+
+replace github.com/pockethost/pocketone/ext/firewall => ../firewall
+
+replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
+
+replace github.com/pockethost/pocketone/ext/jsembed => ../jsembed
+
+replace github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
+
+replace github.com/pockethost/pocketone/ext/mailrelay => ../mailrelay
+
+replace github.com/pockethost/pocketone/ext/s3-fallback => ../s3-fallback
+
+replace github.com/pockethost/pocketone/ext/pitr => ../pitr
+
+replace github.com/pockethost/pocketone/ext/pages => ../pages
+
+replace github.com/pockethost/pocketone/ext/stats => ../stats
+
+replace github.com/pockethost/pocketone/ext/s3redirect => ../s3redirect
+
+replace github.com/pockethost/pocketone/ext/mothership => ../mothership

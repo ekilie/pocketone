@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.0
+---
+
 # schedules
 
 Scheduled webhooks per instance, called in-process even while the instance sleeps, with a catch-up run after downtime.
