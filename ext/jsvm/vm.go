@@ -1,0 +1,625 @@
+// Package jsvm is PocketOne's JS engine: one async QuickJS VM per app, with a generic reflection bridge to Go values.
+//
+// Each VM is owned by one goroutine locked to its OS thread. Everything that touches the VM runs on that thread:
+// Go code elsewhere posts jobs (Do) and waits. Code already on the thread (a Go call made from JS that triggers a
+// hook) runs inline, which is what makes Go → JS → Go → JS re-entrancy work.
+package jsvm
+
+/*
+#cgo CFLAGS: -I${SRCDIR}/deps/quickjs -D_GNU_SOURCE -DNDEBUG -O2 -w
+#cgo LDFLAGS: -lm
+#include "bridge.h"
+*/
+import "C"
+
+import (
+	"errors"
+	"net/http"
+	"fmt"
+	"reflect"
+	"runtime"
+	"runtime/cgo"
+	"sync/atomic"
+	"time"
+	"unsafe"
+)
+
+type VMConfig struct {
+	// MemoryLimit caps JS heap + estimated Go memory held through handles, in bytes.
+	MemoryLimit int64
+	// StackSize is the C stack JS may use, in bytes.
+	StackSize int
+	// TaskBudget is the JS time one task (a hook, a request, a promise continuation) may use. Time spent in Go
+	// calls and waiting for async results doesn't count.
+	TaskBudget time.Duration
+	// QueueSize caps the tasks waiting for the loop; more fail fast with ErrBusy.
+	QueueSize int
+	// WaitTimeout bounds how long a Go caller waits for a JS task to finish.
+	WaitTimeout time.Duration
+	// PumpSyncCalls runs blocking Go calls made from sync JS (DB, sleep) on their own goroutine and keeps serving
+	// other tasks meanwhile, nested on the same stack, up to MaxPumpDepth deep.
+	// TaskWall caps one top-level task's wall time, Go calls included (a loop over Go calls never hits TaskBudget).
+	TaskWall time.Duration
+	// MaxAsync caps async Go calls in flight per VM.
+	MaxAsync int
+	PumpSyncCalls bool
+	MaxPumpDepth  int
+	// Shared types are alive anyway (the app, DB pools): handles to them aren't charged for what they reach.
+	Shared func(t reflect.Type) bool
+	// Blocking says whether a Go method on a receiver of this type may block (I/O); only those get pumped.
+	Blocking func(recv reflect.Type) bool
+}
+
+func (c *VMConfig) defaults() {
+	if c.MemoryLimit == 0 {
+		c.MemoryLimit = 64 << 20
+	}
+	if c.StackSize == 0 {
+		c.StackSize = 256 << 10
+	}
+	if c.TaskBudget == 0 {
+		c.TaskBudget = 5 * time.Second
+	}
+	if c.QueueSize == 0 {
+		c.QueueSize = 1024
+	}
+	if c.WaitTimeout == 0 {
+		c.WaitTimeout = 30 * time.Second
+	}
+	if c.TaskWall == 0 {
+		c.TaskWall = 30 * time.Second
+	}
+	if c.MaxAsync == 0 {
+		c.MaxAsync = 256
+	}
+	if c.MaxPumpDepth == 0 {
+		c.MaxPumpDepth = 16
+	}
+}
+
+var (
+	ErrBusy    = errors.New("asyncvm: too many queued tasks")
+	ErrTimeout = errors.New("asyncvm: timed out waiting for JS")
+	ErrClosed  = errors.New("asyncvm: closed")
+)
+
+type kind uint8
+
+const (
+	kindObj kind = iota + 1
+	kindFn
+	kindNative
+)
+
+type nativeFn func(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValue
+
+type entry struct {
+	blocking bool
+	v      reflect.Value
+	bytes  int64
+	kind   kind
+	native nativeFn
+	ctor   func(args []reflect.Value) any // for `new X(...)` on Go factories
+}
+
+type VM struct {
+	cfg  VMConfig
+	a    *C.AVM
+	ctx  *C.JSContext
+	self cgo.Handle
+
+	jobs  chan *task
+	posts chan func() // completions from async Go calls; never refused
+	quit  chan struct{}
+	done  chan struct{}
+
+	// only touched on the loop thread
+	handles []entry
+	free    []uint32
+	goBytes int64
+
+	// stats, readable anywhere
+	statGoBytes   atomic.Int64
+	statHandles   atomic.Int64
+	statTasks     atomic.Int64
+	statPeakQueue atomic.Int64
+
+	pumpDepth    int
+	asyncInFlight int
+	statMaxPump  atomic.Int64
+	statPumped   atomic.Int64
+
+	settleSeq uint64
+	settles     map[uint64]chan settled
+	settleTypes map[uint64]reflect.Type
+	refs        map[*jsRef]struct{}
+
+	Log func(args ...any)
+
+	// HTTPClient is what $http.send uses (nil = http.DefaultClient).
+	HTTPClient *http.Client
+
+	sliceProto C.JSValue // prototype of Go slices: Array methods
+
+	// OnTask, when set, wraps every JS handler call (hooks, routes, cron, migrations): an error refuses the call.
+	OnTask func() (done func(), err error)
+}
+
+type task struct {
+	fn        func()
+	done      chan struct{}
+	cancelled atomic.Bool
+}
+
+type settled struct {
+	ok  bool
+	val any
+	err error
+}
+
+// New starts a VM on its own locked OS thread. setup runs on the loop before New returns.
+func New(cfg VMConfig, setup func(vm *VM) error) (*VM, error) {
+	cfg.defaults()
+	vm := &VM{
+		cfg:     cfg,
+		jobs:    make(chan *task, cfg.QueueSize),
+		posts:   make(chan func(), 4096),
+		quit:    make(chan struct{}),
+		done:    make(chan struct{}),
+		handles: make([]entry, 1, 256), // handle 0 = none
+		settles: map[uint64]chan settled{},
+		settleTypes: map[uint64]reflect.Type{},
+		refs:        map[*jsRef]struct{}{},
+		Log:     func(args ...any) { fmt.Println(args...) },
+	}
+	vm.self = cgo.NewHandle(vm)
+	ready := make(chan error, 1)
+	go vm.loop(setup, ready)
+	if err := <-ready; err != nil {
+		vm.Close()
+		return nil, err
+	}
+	return vm, nil
+}
+
+func (vm *VM) loop(setup func(*VM) error, ready chan error) {
+	runtime.LockOSThread() // never unlocked: the thread exits with the goroutine
+	defer close(vm.done)
+	vm.a = C.avm_new(C.uintptr_t(vm.self), C.size_t(vm.cfg.MemoryLimit), C.size_t(vm.cfg.StackSize))
+	vm.ctx = vm.a.ctx
+	err := vm.installPrelude()
+	if err == nil && setup != nil {
+		err = vm.guard(func() error { return setup(vm) })
+	}
+	ready <- err
+	if err != nil {
+		<-vm.quit
+		vm.teardown()
+		return
+	}
+	for {
+		select {
+		case t := <-vm.jobs:
+			vm.runTask(t)
+		case f := <-vm.posts:
+			vm.runTask(&task{fn: f})
+		case <-vm.quit:
+			vm.teardown()
+			return
+		}
+	}
+}
+
+func (vm *VM) teardown() {
+	vm.free_(vm.sliceProto)
+	for r := range vm.refs {
+		vm.free_(r.v)
+	}
+	vm.refs = nil
+	C.JS_RunGC(vm.a.rt)
+	C.avm_free(vm.a)
+	vm.a = nil
+	vm.self.Delete()
+}
+
+func (vm *VM) Close() {
+	select {
+	case <-vm.quit:
+	default:
+		close(vm.quit)
+	}
+	<-vm.done
+}
+
+// guard runs f with a fresh CPU budget and turns panics into errors.
+func (vm *VM) guard(f func() error) (err error) {
+	prev := vm.a.deadline_ns
+	prevWall := vm.a.wall_ns
+	now := C.avm_now_ns()
+	vm.a.deadline_ns = now + C.int64_t(vm.cfg.TaskBudget)
+	if prevWall == 0 {
+		vm.a.wall_ns = now + C.int64_t(vm.cfg.TaskWall)
+	}
+	defer func() {
+		vm.a.deadline_ns = prev
+		vm.a.wall_ns = prevWall
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	return f()
+}
+
+func (vm *VM) runTask(t *task) {
+	if t.cancelled.Load() {
+		return
+	}
+	C.avm_set_interrupt(vm.a, 0)
+	vm.statTasks.Add(1)
+	_ = vm.guard(func() error {
+		t.fn()
+		vm.runJobs()
+		return nil
+	})
+	if t.done != nil {
+		close(t.done)
+	}
+}
+
+func (vm *VM) runJobs() {
+	for C.avm_run_jobs(vm.a) > 0 {
+	}
+}
+
+func (vm *VM) onLoop() bool { return vm.a != nil && C.avm_on_thread(vm.a) != 0 }
+
+// Do runs f on the loop and waits. On the loop already (re-entrant), f runs inline.
+func (vm *VM) Do(f func()) error {
+	if vm.onLoop() {
+		f()
+		return nil
+	}
+	t := &task{fn: f, done: make(chan struct{})}
+	select {
+	case vm.jobs <- t:
+	case <-vm.quit:
+		return ErrClosed
+	default:
+		return ErrBusy
+	}
+	if q := int64(len(vm.jobs)); q > vm.statPeakQueue.Load() {
+		vm.statPeakQueue.Store(q)
+	}
+	timer := time.NewTimer(vm.cfg.WaitTimeout)
+	defer timer.Stop()
+	select {
+	case <-t.done:
+		return nil
+	case <-timer.C:
+		t.cancelled.Store(true)
+		C.avm_set_interrupt(vm.a, 1) // stop it if it is running now
+		return ErrTimeout
+	case <-vm.quit:
+		return ErrClosed
+	}
+}
+
+// post queues a completion; used by async Go calls. Never refused (the work is already done).
+func (vm *VM) post(f func()) {
+	select {
+	case vm.posts <- f:
+	case <-vm.quit:
+	}
+}
+
+// waitSettled waits on the loop for a settle channel, running other tasks meanwhile (re-entrant pump).
+// The CPU budget is paused while waiting.
+func (vm *VM) waitSettled(ch chan settled) settled {
+	timer := time.NewTimer(vm.cfg.WaitTimeout)
+	defer timer.Stop()
+	for {
+		vm.runJobs()
+		select {
+		case s := <-ch:
+			return s
+		default:
+		}
+		saved := vm.a.deadline_ns
+		vm.a.deadline_ns = 0
+		start := C.avm_now_ns()
+		var run func()
+		var t *task
+		select {
+		case s := <-ch:
+			vm.a.deadline_ns = saved
+			return s
+		case t = <-vm.jobs:
+		case run = <-vm.posts:
+		case <-timer.C:
+			vm.a.deadline_ns = saved
+			return settled{err: ErrTimeout}
+		}
+		if saved != 0 {
+			saved += C.avm_now_ns() - start
+		}
+		vm.a.deadline_ns = saved
+		if t != nil {
+			vm.runTask(t)
+		} else {
+			vm.runTask(&task{fn: run})
+		}
+	}
+}
+
+// pumped runs a blocking Go call on its own goroutine and serves other tasks until it returns.
+func (vm *VM) pumped(call func() []reflect.Value) ([]reflect.Value, error) {
+	type res struct {
+		out []reflect.Value
+		err error
+	}
+	ch := make(chan res, 1)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				ch <- res{err: fmt.Errorf("%v", r)}
+			}
+		}()
+		ch <- res{out: call()}
+	}()
+	vm.pumpDepth++
+	vm.statPumped.Add(1)
+	if d := int64(vm.pumpDepth); d > vm.statMaxPump.Load() {
+		vm.statMaxPump.Store(d)
+	}
+	defer func() { vm.pumpDepth-- }()
+	for {
+		vm.runJobs()
+		select {
+		case r := <-ch:
+			return r.out, r.err
+		case t := <-vm.jobs:
+			vm.runTask(t)
+		case f := <-vm.posts:
+			vm.runTask(&task{fn: f})
+		}
+	}
+}
+
+// ---- handles ----
+
+func (vm *VM) newHandle(e entry) (uint32, error) {
+	if vm.goBytes+e.bytes > vm.cfg.MemoryLimit {
+		return 0, fmt.Errorf("out of memory: Go objects held by JS would exceed %d bytes", vm.cfg.MemoryLimit)
+	}
+	var h uint32
+	if n := len(vm.free); n > 0 {
+		h = vm.free[n-1]
+		vm.free = vm.free[:n-1]
+		vm.handles[h] = e
+	} else {
+		h = uint32(len(vm.handles))
+		vm.handles = append(vm.handles, e)
+	}
+	vm.charge(e.bytes)
+	vm.statHandles.Add(1)
+	return h, nil
+}
+
+func (vm *VM) charge(n int64) {
+	vm.goBytes += n
+	vm.statGoBytes.Store(vm.goBytes)
+	limit := vm.cfg.MemoryLimit - vm.goBytes
+	if limit < 1<<20 {
+		limit = 1 << 20
+	}
+	C.JS_SetMemoryLimit(vm.a.rt, C.size_t(limit))
+}
+
+//export avmGoFinalize
+func avmGoFinalize(id C.uintptr_t, h C.uint32_t) {
+	vm := cgo.Handle(id).Value().(*VM)
+	e := vm.handles[h]
+	vm.handles[h] = entry{}
+	vm.free = append(vm.free, uint32(h))
+	vm.statHandles.Add(-1)
+	if e.bytes != 0 {
+		vm.charge(-e.bytes)
+	}
+}
+
+func vmOf(ctx *C.JSContext) *VM {
+	a := (*C.AVM)(C.JS_GetContextOpaque(ctx))
+	return cgo.Handle(a.id).Value().(*VM)
+}
+
+// ---- small helpers ----
+
+func (vm *VM) free_(v C.JSValue) { C.JS_FreeValue(vm.ctx, v) }
+
+func (vm *VM) str(s string) C.JSValue {
+	if len(s) == 0 {
+		return C.JS_NewStringLen(vm.ctx, nil, 0)
+	}
+	return C.JS_NewStringLen(vm.ctx, (*C.char)(unsafe.Pointer(unsafe.StringData(s))), C.size_t(len(s)))
+}
+
+func (vm *VM) goString(v C.JSValue) string {
+	var n C.size_t
+	p := C.JS_ToCStringLen2(vm.ctx, &n, v, false)
+	if p == nil {
+		return ""
+	}
+	s := C.GoStringN(p, C.int(n))
+	C.JS_FreeCString(vm.ctx, p)
+	return s
+}
+
+func (vm *VM) throw(err error) C.JSValue {
+	// A Go error stays reachable from JS as e.value, and comes back to Go unchanged if rethrown.
+	msg := err.Error()
+	ex := C.JS_NewError(vm.ctx)
+	ms := vm.str(msg)
+	cs := C.CString("message")
+	C.JS_SetPropertyStr(vm.ctx, ex, cs, ms)
+	if gv, e2 := vm.toJS(reflect.ValueOf(err)); e2 == nil {
+		cv := C.CString("value")
+		C.JS_SetPropertyStr(vm.ctx, ex, cv, gv)
+		C.free(unsafe.Pointer(cv))
+	}
+	C.free(unsafe.Pointer(cs))
+	return C.JS_Throw(vm.ctx, ex)
+}
+
+// exception takes the pending JS exception as a Go error.
+func (vm *VM) exception() error {
+	ex := C.JS_GetException(vm.ctx)
+	defer vm.free_(ex)
+	if C.avm_tag(ex) == C.JS_TAG_OBJECT {
+		if h := C.avm_handle_of(vm.a, ex); h != 0 {
+			if err, ok := vm.handles[h].v.Interface().(error); ok {
+				return err
+			}
+		}
+		cv := C.CString("value")
+		val := C.JS_GetPropertyStr(vm.ctx, ex, cv)
+		C.free(unsafe.Pointer(cv))
+		if h := C.avm_handle_of(vm.a, val); h != 0 {
+			if err, ok := vm.handles[h].v.Interface().(error); ok {
+				vm.free_(val)
+				return err
+			}
+		}
+		vm.free_(val)
+		cs := C.CString("stack")
+		stack := C.JS_GetPropertyStr(vm.ctx, ex, cs)
+		C.free(unsafe.Pointer(cs))
+		defer vm.free_(stack)
+		msg := vm.goString(ex)
+		if C.avm_tag(stack) == C.JS_TAG_STRING {
+			return &JSError{Message: msg, Stack: vm.goString(stack)}
+		}
+		return &JSError{Message: msg}
+	}
+	if C.avm_tag(ex) == C.JS_TAG_NULL {
+		// QuickJS throws null when it can't even allocate the error object
+		return &JSError{Message: "InternalError: out of memory"}
+	}
+	return &JSError{Message: vm.goString(ex)}
+}
+
+type JSError struct{ Message, Stack string }
+
+func (e *JSError) Error() string { return e.Message }
+
+// Eval runs a script in the global scope (on the loop) and returns its exception, if any.
+func (vm *VM) Eval(code, file string) error {
+	var err error
+	derr := vm.Do(func() {
+		err = vm.evalHere(code, file)
+	})
+	if derr != nil {
+		return derr
+	}
+	return err
+}
+
+func (vm *VM) evalHere(code, file string) error {
+	cc := C.CString(code)
+	cf := C.CString(file)
+	defer C.free(unsafe.Pointer(cc))
+	defer C.free(unsafe.Pointer(cf))
+	r := C.avm_eval(vm.ctx, cc, C.size_t(len(code)), cf)
+	if C.avm_is_exception(r) != 0 {
+		return vm.exception()
+	}
+	vm.free_(r)
+	vm.runJobs()
+	return nil
+}
+
+func (vm *VM) setGlobal(name string, v C.JSValue) {
+	g := C.JS_GetGlobalObject(vm.ctx)
+	cs := C.CString(name)
+	C.JS_SetPropertyStr(vm.ctx, g, cs, v)
+	C.free(unsafe.Pointer(cs))
+	vm.free_(g)
+}
+
+// Set exposes a Go value as a global (on the loop).
+func (vm *VM) Set(name string, v any) error {
+	var err error
+	derr := vm.Do(func() {
+		var jv C.JSValue
+		jv, err = vm.toJS(reflect.ValueOf(v))
+		if err == nil {
+			vm.setGlobal(name, jv)
+		}
+	})
+	if derr != nil {
+		return derr
+	}
+	return err
+}
+
+// SetNative exposes a raw native function as a global.
+func (vm *VM) setNative(name string, fn nativeFn) {
+	h, _ := vm.newHandle(entry{kind: kindNative, native: fn})
+	vm.setGlobal(name, C.avm_new_func(vm.a, C.uint32_t(h), 0))
+}
+
+// Stats is a snapshot readable from any goroutine.
+type Stats struct {
+	JSBytes, GoBytes, Handles, Tasks, PeakQueue int64
+}
+
+func (vm *VM) Stats() Stats {
+	s := Stats{GoBytes: vm.statGoBytes.Load(), Handles: vm.statHandles.Load(), Tasks: vm.statTasks.Load(), PeakQueue: vm.statPeakQueue.Load()}
+	_ = vm.Do(func() { s.JSBytes = int64(C.avm_mem_used(vm.a)) })
+	return s
+}
+
+// Interrupts is how many times the interrupt handler stopped JS.
+func (vm *VM) Interrupts() int64 {
+	var n int64
+	_ = vm.Do(func() { n = int64(vm.a.interrupts) })
+	return n
+}
+
+// Result is a JS value exported to Go, as RunString returns it.
+type Result struct{ v any }
+
+// Export is the value converted to Go (int64 for integers, as goja does).
+func (r Result) Export() any { return r.v }
+
+func (r Result) String() string { return fmt.Sprint(r.v) }
+
+// RunString evaluates code in the global scope and returns its completion value, exported.
+func (vm *VM) RunString(code string) (Result, error) {
+	var res Result
+	var err error
+	derr := vm.Do(func() {
+		cc := C.CString(code)
+		cf := C.CString("<eval>")
+		defer C.free(unsafe.Pointer(cc))
+		defer C.free(unsafe.Pointer(cf))
+		r := C.avm_eval(vm.ctx, cc, C.size_t(len(code)), cf)
+		if C.avm_is_exception(r) != 0 {
+			err = vm.exception()
+			return
+		}
+		vm.runJobs()
+		gv, e := vm.fromJS(r, nil)
+		vm.free_(r)
+		if e != nil {
+			err = e
+			return
+		}
+		if gv.IsValid() {
+			res.v = gv.Interface()
+		}
+	})
+	if derr != nil {
+		return res, derr
+	}
+	return res, err
+}
