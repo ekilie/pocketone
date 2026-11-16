@@ -21,6 +21,7 @@ require (
 	github.com/pockethost/pocketone/ext/servertiming v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/standard v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/stats v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/upgrade v0.0.0-00010101000000-000000000000
 )
 
@@ -76,7 +77,6 @@ require (
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
