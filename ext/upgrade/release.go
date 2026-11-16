@@ -12,15 +12,18 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+
+	"golang.org/x/mod/semver"
 )
 
 // Release is a GitHub release (only the fields this package uses).
 type Release struct {
-	Tag    string  `json:"tag_name"`
-	Body   string  `json:"body"`
-	Assets []Asset `json:"assets"`
+	Tag        string  `json:"tag_name"`
+	Body       string  `json:"body"`
+	Prerelease bool    `json:"prerelease"`
+	Draft      bool    `json:"draft"`
+	Assets     []Asset `json:"assets"`
 }
 
 // Asset is one file attached to a [Release].
@@ -31,6 +34,10 @@ type Asset struct {
 
 // Version is the release's version without the leading "v".
 func (r *Release) Version() string { return strings.TrimPrefix(r.Tag, "v") }
+
+// IsPrerelease reports whether the release is a prerelease: flagged on GitHub, or a version with a prerelease part
+// ("0.1.0-alpha.1").
+func (r *Release) IsPrerelease() bool { return r.Prerelease || isPrerelease(r.Version()) }
 
 func (r *Release) asset(name string) (*Asset, error) {
 	for i := range r.Assets {
@@ -60,6 +67,54 @@ func (c *Config) FetchRelease(ctx context.Context, tag string) (*Release, error)
 		return nil, errors.New("release info has no tag")
 	}
 	return r, nil
+}
+
+// FetchReleases fetches the repository's published releases (drafts left out), prereleases included.
+func (c *Config) FetchReleases(ctx context.Context) ([]Release, error) {
+	url := fmt.Sprintf("%s/repos/%s/%s/releases?per_page=100", c.BaseURL, c.Owner, c.Repo)
+	body, err := c.get(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	var all []Release
+	if err := json.Unmarshal(body, &all); err != nil {
+		return nil, fmt.Errorf("decoding release list: %w", err)
+	}
+	out := all[:0]
+	for _, r := range all {
+		if !r.Draft && r.Tag != "" && semver.IsValid("v"+r.Version()) {
+			out = append(out, r)
+		}
+	}
+	return out, nil
+}
+
+// UpgradeFor picks the newest release newer than current (a version such as "0.1.0" or "0.1.0-alpha.2", or a dev
+// build's non-version string), prerelease or not, or nil when there's nothing newer. With stableOnly, prereleases are
+// left out. Whether to ask before installing is [NeedsConfirm]'s call.
+func UpgradeFor(current string, releases []Release, stableOnly bool) *Release {
+	current = strings.TrimPrefix(current, "v")
+	var best *Release
+	for i := range releases {
+		r := &releases[i]
+		if stableOnly && r.IsPrerelease() {
+			continue
+		}
+		if isRelease(current) && compareVersions(current, r.Version()) <= 0 {
+			continue
+		}
+		if best == nil || compareVersions(best.Version(), r.Version()) > 0 {
+			best = r
+		}
+	}
+	return best
+}
+
+// NeedsConfirm reports whether moving from current to r needs a yes: only a jump from a stable release to a
+// prerelease does. Prerelease to prerelease, prerelease to stable and a dev build to anything go ahead.
+func NeedsConfirm(current string, r *Release) bool {
+	current = strings.TrimPrefix(current, "v")
+	return r != nil && r.IsPrerelease() && isRelease(current) && !isPrerelease(current)
 }
 
 // DownloadArchive downloads the release archive for this platform into dir, checks it against the release's
@@ -171,23 +226,10 @@ func archiveSuffix(goos, goarch string) string {
 	return ""
 }
 
-// compareVersions returns 1 if b is newer than a, -1 if a is newer, 0 if equal ("1.2.3" form, missing parts = 0).
+// compareVersions returns 1 if b is newer than a, -1 if a is newer, 0 if equal. Versions are semver without the
+// "v" ("1.2.3", "1.2.3-alpha.1"; "1.2" means "1.2.0"); a prerelease is older than its release.
 func compareVersions(a, b string) int {
-	as, bs := strings.Split(a, "."), strings.Split(b, ".")
-	for i := 0; i < max(len(as), len(bs)); i++ {
-		var x, y int
-		if i < len(as) {
-			x, _ = strconv.Atoi(as[i])
-		}
-		if i < len(bs) {
-			y, _ = strconv.Atoi(bs[i])
-		}
-		if x < y {
-			return 1
-		}
-		if x > y {
-			return -1
-		}
-	}
-	return 0
+	return semver.Compare("v"+b, "v"+a)
 }
+
+func isPrerelease(v string) bool { return semver.Prerelease("v"+strings.TrimPrefix(v, "v")) != "" }
