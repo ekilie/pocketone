@@ -10,9 +10,9 @@ name: site
 on:
   push:
     branches: [main]
-    paths: ['ext/**', 'docs/**', 'site/**', 'examples/pocketone/**', '.github/workflows/site.yml']
+    paths: ['ext/**', 'docs/**', 'site/**', 'examples/pocketone/**', 'agent/**', '.github/workflows/site.yml']
   pull_request:
-    paths: ['ext/**', 'docs/**', 'site/**', 'examples/pocketone/**', '.github/workflows/site.yml']
+    paths: ['ext/**', 'docs/**', 'site/**', 'examples/pocketone/**', 'agent/**', '.github/workflows/site.yml']
 
 jobs:
   sync-check:

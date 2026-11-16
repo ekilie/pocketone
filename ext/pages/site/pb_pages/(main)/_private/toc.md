@@ -2,6 +2,7 @@
 
 - [Overview of PocketPages](/docs/overview)
 - [Moving from PocketPages 0.x](/docs/moving-from-0x)
+- [Coding agents](/docs/agents)
 
 # Getting Started
 

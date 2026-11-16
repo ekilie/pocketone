@@ -10,7 +10,7 @@
 //
 // It owns: pb_pages/(main)/docs/extensions/**, pb_pages/(main)/docs/config-reference.md, pb_pages/(main)/docs/writing-an-extension.md (from docs/extensions.md), the region of
 // pb_pages/(main)/_private/toc.md between the extensions markers, and pb_pages/assets/search-index.json (the search box's
-// index of every docs and blog page, hand-written ones included, so editing any page means running sync). The extension list, titles and groups come from
+// index of every docs and blog page, hand-written ones included, so editing any page means running sync), each site's llms.txt and llms-full.txt, and the Agent Skills' reference folders (agent/skills/*/reference; see agent.go). The extension list, titles and groups come from
 // site/extensions.json; every ext/<name> folder must be in it.
 package main
 
@@ -270,6 +270,9 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	if out[searchOut], err = searchIndex(root, out); err != nil {
 		return nil, err
 	}
+	if err := agentFiles(root, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -444,7 +447,7 @@ func diff(root string, want map[string]string) ([]string, error) {
 		}
 	}
 	var err error
-	for _, out1 := range []string{extensionsOut, contractsOut} {
+	for _, out1 := range append([]string{extensionsOut, contractsOut}, agentOutDirs()...) {
 		if err = staleUnder(root, out1, want, &out); err != nil {
 			return nil, err
 		}

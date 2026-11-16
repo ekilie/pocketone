@@ -2,7 +2,7 @@
 
 PocketOne is PocketBase plus extensions. **PocketBase's own code ("core") changes only for hooks that let `ext/`
 extend or override behavior; the features themselves live in `ext/`.** Core is every path outside what PocketOne owns:
-`ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.claude/`. Each core change is marked
+`ext/`, `site/`, `examples/pocketone/`, `docs/`, `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.claude/`, `.claude-plugin/`, `agent/`. Each core change is marked
 `// PocketOne:` so upstream merges stay easy.
 
 Words: everything in `ext/` is an **extension**, never a "plugin". **Standard extensions** ship in every `pocketone`
@@ -115,6 +115,9 @@ Rules every extension follows:
 - pocketone.dev (`site/`) copies extension READMEs and `docs/extensions.md`, and indexes every page for search. A new extension
   gets an entry in `site/extensions.json`; after changing a README, `docs/extensions.md` or any site page, run
   `cd site/sync && go run .` (CI checks it).
+- Agent Skills (`agent/`, listed in `.claude-plugin/marketplace.json`): `site/sync` also writes each skill's `reference/`
+  folder and both sites' `llms.txt` / `llms-full.txt` from the docs pages. The `SKILL.md` files are hand-written: a change
+  that makes one wrong (a command, a `pocketone.yaml` key, an extension, a PocketPages API) fixes it in the same commit.
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.
 - **Changelog:** every commit to `main` with a user-visible change adds its line under `## Unreleased` in

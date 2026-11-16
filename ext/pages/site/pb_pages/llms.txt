@@ -1,0 +1,89 @@
+# PocketPages
+
+> PocketPages v1 is a file-routed, server-rendered page framework built into PocketOne (the `pages` extension): EJS, JSX or Markdown pages in pb_pages/, rendered inside PocketBase's JavaScript VM with a `ctx` API for requests, auth, data and assets.
+
+PocketPages v1 runs in the `pocketone` binary, not Node; PocketPages 0.x (the npm package) is retired, see /docs/moving-from-0x. Agent Skill: https://github.com/pockethost/pocketone/tree/main/agent/skills/pocketpages (Claude Code: `/plugin marketplace add pockethost/pocketone`).
+
+Every page below in one file: https://pocketpages.dev/llms-full.txt
+
+## Introduction
+
+- [Moving from PocketPages 0.x](https://pocketpages.dev/docs/moving-from-0x): What changed between the PocketPages npm package (0.x) and PocketPages v1 in PocketOne.
+- [Coding agents](https://pocketpages.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketPages v1 with the pocketpages Agent Skill and llms.txt.
+
+## Getting Started
+
+- [Installation](https://pocketpages.dev/docs/installation): Run PocketPages v1 on PocketOne with the pages extension, using a pb_pages folder.
+- [Starter Kits](https://pocketpages.dev/docs/starter-kits): Start a new PocketPages app from a starter kit with pocketone pages create.
+
+## Basics
+
+- [Creating a Page](https://pocketpages.dev/docs/creating-a-page): Create .ejs and .md files in pb_pages to add pages, with index files and nested folders mapping to URLs.
+- [Directory Structure](https://pocketpages.dev/docs/directory-structure): How a pb_pages folder is organized, and the special +, _, - and . prefixes.
+- [Routing](https://pocketpages.dev/docs/routing): How files in pb_pages map to URLs: pages, [param] segments, groups, API routes, static files, and which route wins.
+- [Accessing Parameters](https://pocketpages.dev/docs/parameters): Read route parameters from [param] file and folder names with ctx.params, and query strings with ctx.req.query().
+- [Loading Data](https://pocketpages.dev/docs/loading-data): Load data inline in templates or in a +page.js file with load and per-method handlers.
+- [API Routes and JSON](https://pocketpages.dev/docs/api-routes): Serve JSON and other non-HTML responses from +api.js files and ctx.res.json.
+
+## Templating
+
+- [EJS](https://pocketpages.dev/docs/ejs): The EJS tags PocketPages supports, escaping rules, and what's in scope inside a template.
+- [Markdown](https://pocketpages.dev/docs/markdown): .md pages and partials run through EJS, then Markdown, with YAML front matter passed to meta().
+- [JSX and TSX](https://pocketpages.dev/docs/jsx): Write pages, layouts, partials and error pages as .jsx or .tsx components, rendered to HTML on the server with no build step.
+- [Partials](https://pocketpages.dev/docs/partials): Include reusable templates from _private folders with include(name, locals).
+- [Layouts and Slots](https://pocketpages.dev/docs/layouts): Wrap pages with +layout.ejs files, and pass content between pages and layouts with named slots.
+
+## Security and Content
+
+- [Private files](https://pocketpages.dev/docs/private-files): How _private folders hold partials and JS modules for include() and ctx.resolve(), and which names are never routed.
+- [Middleware](https://pocketpages.dev/docs/middleware): +middleware.js files run root first for every route below them, with one (ctx, next) signature.
+- [Asset Management](https://pocketpages.dev/docs/asset-management): Static files in pb_pages get content-hashed URLs through asset() for long-term caching.
+- [Static content](https://pocketpages.dev/docs/static-content): Files in pb_pages that aren't pages or framework files are served as-is, with content types and ETags.
+- [Managing Secrets](https://pocketpages.dev/docs/secrets): Read API keys and other secrets from environment variables with ctx.env().
+
+## Configuration
+
+- [+config.js](https://pocketpages.dev/docs/config): Turn on built-in plugins, add JS plugins, and enable debug output from pb_pages/+config.js.
+- [Caching](https://pocketpages.dev/docs/caching): How PocketPages caches templates, static files and fingerprinted assets.
+- [Errors](https://pocketpages.dev/docs/errors): How PocketPages turns thrown errors into responses, ctx.httpError(), and custom +error and +404 pages.
+- [Debugging](https://pocketpages.dev/docs/debugging): Dev mode, debug in +config.js, and logging with ctx.log.
+- [Going Live](https://pocketpages.dev/docs/deploying): Deploy a PocketPages app by putting pb_pages next to pb_data on a PocketOne server (pages is built in).
+
+## Plugins
+
+- [Overview](https://pocketpages.dev/docs/plugins): Built-in plugins (auth, realtime) and JS plugins such as the Datastar add-on, turned on in +config.js.
+- [Authentication](https://pocketpages.dev/docs/plugins/auth): The built-in auth plugin keeps PocketBase auth in a cookie and adds ctx.session sign-in methods.
+- [Datastar](https://pocketpages.dev/docs/plugins/datastar): The Datastar add-on adds ctx.datastar helpers for Datastar script tags, SSE patches and signals.
+- [Realtime](https://pocketpages.dev/docs/plugins/realtime): The built-in realtime plugin sends messages to PocketBase realtime subscribers with ctx.realtime.send().
+- [Authoring](https://pocketpages.dev/docs/plugins/authoring): Write a JS plugin for PocketPages v1, a factory that returns onRequest, extendContext and transform hooks.
+
+## ctx Reference
+
+- [Overview](https://pocketpages.dev/docs/ctx): Reference for ctx, the one object per request passed to middleware, handlers, templates and plugins.
+- [req](https://pocketpages.dev/docs/ctx/req): The request - method, URL, query parameters, headers, cookies, body, uploaded files and client IP.
+- [res](https://pocketpages.dev/docs/ctx/res): The response - status, headers, cookies, redirects with flash messages, JSON, HTML, text, files and server-sent events.
+- [data, params, route](https://pocketpages.dev/docs/ctx/data): The shared data object, route parameters and the matched route.
+- [flash](https://pocketpages.dev/docs/ctx/flash): One-time messages carried across a redirect in a cookie.
+- [auth](https://pocketpages.dev/docs/ctx/auth): The authenticated record for the request, or null.
+- [app](https://pocketpages.dev/docs/ctx/app): The app - records, collections and settings.
+- [pb (JS SDK)](https://pocketpages.dev/docs/ctx/pb): Query your app with the PocketBase JS SDK from page code, as the signed-in user.
+- [env](https://pocketpages.dev/docs/ctx/env): Read environment variables.
+- [log](https://pocketpages.dev/docs/ctx/log): Write to the app's log with debug, info, warn and error.
+- [meta](https://pocketpages.dev/docs/ctx/meta): A per-request key/value store for page metadata such as title and description.
+- [asset](https://pocketpages.dev/docs/ctx/asset): Content-hashed URLs for static files in pb_pages.
+- [resolve](https://pocketpages.dev/docs/ctx/resolve): Load a module or file from a _private folder.
+- [store](https://pocketpages.dev/docs/ctx/store): The app's in-memory store, shared across requests.
+
+## Going Further
+
+- [JavaScript Runtime](https://pocketpages.dev/docs/jsvm): Where page code runs, what it can reach, and using npm packages from pb_pages/node_modules.
+
+## Guides
+
+- [Authentication](https://pocketpages.dev/docs/authentication): Sign users in and out with the auth plugin - passwords, one-time passwords, OAuth2 and anonymous sessions.
+- [HTMX Integration](https://pocketpages.dev/docs/htmx): Use HTMX with PocketPages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.
+- [Realtime Events](https://pocketpages.dev/docs/realtime): Send realtime messages from pages with the realtime plugin, and receive them in the browser with the PocketBase JS SDK.
+- [Custom Domains on Fly+Cloudflare](https://pocketpages.dev/docs/speedruns/custom-domain-fly-cloudflare): Step-by-step process to configure DNS records, SSL certificates, and domain verification between Fly.io and Cloudflare. Includes specific settings for A/AAAA records, CNAME verification, and SSL/TLS encryption modes.
+- [Google OAuth2](https://pocketpages.dev/docs/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketPages app with the auth plugin.
+- [Outgoing Email with Amazon SES](https://pocketpages.dev/docs/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
+- [Setting up a new email domain in Google Suite](https://pocketpages.dev/docs/speedruns/gs-gmail): Complete walkthrough for configuring email domains in Google Suite, including domain verification, Gmail activation, catch-all email setup, MX record configuration, and sender account integration.
