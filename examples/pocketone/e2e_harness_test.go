@@ -81,6 +81,7 @@ func baseEnv(t *testing.T) []string {
 
 // siteOptions describes one app folder and how to serve it.
 type siteOptions struct {
+	Dir   string            // an existing app folder to serve ("" = a new temp folder)
 	Files map[string]string // relative path → content (pb_hooks/x.pb.js, pb_pages/index.ejs, pocketone.yaml, ...)
 	Args  []string          // extra serve flags
 	Env   []string          // extra environment
@@ -105,7 +106,10 @@ type site struct {
 func startSite(t *testing.T, opts siteOptions) *site {
 	t.Helper()
 	bin := pocketoneBin(t)
-	s := &site{t: t, Dir: t.TempDir(), Log: &syncBuffer{}}
+	s := &site{t: t, Dir: opts.Dir, Log: &syncBuffer{}}
+	if s.Dir == "" {
+		s.Dir = t.TempDir()
+	}
 	for rel, content := range opts.Files {
 		write(t, filepath.Join(s.Dir, rel), content)
 	}
