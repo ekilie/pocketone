@@ -74,7 +74,9 @@ release:
     brew upgrade pocketone
     ```
 
-    Or, if you didn't install with Homebrew, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`) or download the zip below. Check the version's **Upgrading** section below, if it has one, before you upgrade.
+    Or, if you didn't install with Homebrew, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
+
+    ## What's in this release
 
 # the Homebrew formula in pockethost/homebrew-tap, updated on every release, prereleases included. brews is deprecated in favor of
 # homebrew_casks, but casks are macOS-only and quarantine unsigned binaries; the formula works on macOS and Linux.
