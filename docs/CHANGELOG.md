@@ -26,8 +26,13 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
+### Upgrading
+
+- **bundle:** `ext/jsembed` is now `ext/bundle` and runs on the `ext/jsvm` engine. Import `github.com/pockethost/pocketone/ext/bundle`, register `ext/jsvm` instead of `plugins/jsvm`, and pass `bundle.Hooks(...)` / `bundle.Migrations(...)` in `jsvm.Config.Extensions`. A `require()` that isn't found now says "Cannot find module".
+
 ### Added
 
+- **bundle:** `bundle.Public(app, fsys, indexFallback)` serves public files embedded in the binary, like `pb_public`.
 - **jsvm:** new `ext/jsvm` extension, PocketOne's JS engine: one QuickJS VM per app with real globals, async handlers and `.async` Go calls, and hard per-app memory and time limits. It runs PocketBase's JS API unchanged; not in the `pocketone` binary yet.
 
 ## v0.0.1-alpha.4 (2026-11-16)

@@ -66,7 +66,6 @@ and read the log.
 | Extension | How they fit |
 |---|---|
 | [Pocker](https://pocketone.dev/docs/extensions/pocker) | Built in for every instance: hook errors in each instance's log name `pb_hooks/<file>:<line>:<col>`. |
-| [jsembed](https://pocketone.dev/docs/extensions/jsembed) | Combine the two, for example `Extensions: []jsvm.Extension{jsembed.Hooks(hooks), jserrors.New()}`. Embedded files are named `pb_hooks/<file>`. |
 
 ### Building on JS Errors
 

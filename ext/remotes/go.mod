@@ -87,7 +87,7 @@ replace github.com/pockethost/pocketone/ext/firewall => ../firewall
 
 replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
 
-replace github.com/pockethost/pocketone/ext/jsembed => ../jsembed
+replace github.com/pockethost/pocketone/ext/bundle => ../bundle
 
 replace github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
 

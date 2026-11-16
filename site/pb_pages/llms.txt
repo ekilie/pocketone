@@ -87,6 +87,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Extensions: for authors
 
+- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet.
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
@@ -101,4 +102,4 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Optional
 
-- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet.
+- [Bundle](https://pocketone.dev/docs/extensions/bundle): An app's hooks, migrations and public files embedded in the binary.

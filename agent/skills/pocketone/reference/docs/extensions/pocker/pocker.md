@@ -234,8 +234,7 @@ Kept small and marked `// PocketOne:` so upstream merges stay easy:
 - `plugins/jsvm`: `Config.Extensions` ([`extension.go`](../../plugins/jsvm/extension.go)): values with optional
   methods (`OnInit`, `OnCall` around every call into JS, `HTTPClient` for `$http.send`, `HookFiles` /
   `MigrationFiles` / `Require`, `OnLoad` / `OnCompile` for error mapping), plus `Run` and `ScriptPath`. The
-  [sandbox](https://pocketone.dev/docs/extensions/sandbox), [jsembed](https://pocketone.dev/docs/extensions/jsembed) and [jserrors](https://pocketone.dev/docs/extensions/jserrors) are
-  extensions.
+  [sandbox](https://pocketone.dev/docs/extensions/sandbox) and [jserrors](https://pocketone.dev/docs/extensions/jserrors) are extensions.
 - Mail needs no core change: the sandbox sends an app's own SMTP through the egress policy on `OnMailerSend`
   (`sandbox.BindMail`).
 

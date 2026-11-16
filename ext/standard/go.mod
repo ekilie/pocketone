@@ -111,7 +111,7 @@ replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
 replace github.com/pockethost/pocketone/ext/firewall => ../firewall
 
-replace github.com/pockethost/pocketone/ext/jsembed => ../jsembed
+replace github.com/pockethost/pocketone/ext/bundle => ../bundle
 
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 

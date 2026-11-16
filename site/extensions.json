@@ -44,6 +44,6 @@
     { "name": "contracts", "title": "Contracts", "group": "authors", "summary": "The versioned interfaces extensions use to work together, and the generator that writes their plumbing.", "link": "ext/contracts/README.md" },
     { "name": "mailtrap", "title": "Mail Trap", "group": "authors", "summary": "Dev mode: mail from an app without SMTP lands in a built-in inbox." },
     { "name": "devusers", "title": "Dev Users", "group": "authors", "summary": "Local testing only: a superuser and a user with password \"password\".", "link": "ext/devusers/devusers.go" },
-    { "name": "jsembed", "title": "JS Embed", "group": "authors", "summary": "JS hooks and migrations embedded in the binary." }
+    { "name": "bundle", "title": "Bundle", "group": "authors", "summary": "An app's hooks, migrations and public files embedded in the binary." }
   ]
 }

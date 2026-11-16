@@ -1,4 +1,4 @@
-package jsembed
+package bundle
 
 import (
 	"io/fs"
@@ -13,9 +13,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 // recorder collects values passed to the JS global record(v) from every runtime.
@@ -24,8 +24,8 @@ type recorder struct {
 	vals []string
 }
 
-func (r *recorder) onInit(vm *goja.Runtime) {
-	vm.Set("record", func(v string) {
+func (r *recorder) onInit(rt js.Runtime) {
+	_ = rt.Set("record", func(v string) {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.vals = append(r.vals, v)
@@ -65,12 +65,12 @@ func mapFS(files map[string]string) fstest.MapFS {
 	return m
 }
 
-// evalOnPool runs code on one of the app's pooled executors and returns the result as a string.
+// evalOnPool runs code on the app's VM and returns the result as a string.
 func evalOnPool(t *testing.T, app core.App, code string) string {
 	t.Helper()
 	var out string
-	err := jsvm.Run(app, func(vm *goja.Runtime) error {
-		v, err := vm.RunScript("pb.js", code)
+	err := js.Run(app, func(rt js.Runtime) error {
+		v, err := rt.Engine().(*jsvm.VM).RunString(code)
 		if err != nil {
 			return err
 		}
@@ -179,7 +179,6 @@ func TestEmbeddedHooksAndMigrationsFromFS(t *testing.T) {
 		HooksDir:      hooksDir,
 		MigrationsDir: migrationsDir,
 		HooksWatch:    true,
-		HooksPoolSize: 2,
 		OnInit:        rec.onInit,
 	}))
 	if err != nil {
@@ -228,7 +227,7 @@ func TestEmbeddedRequireIsSealed(t *testing.T) {
 		"node_modules/epkg/index.js": `module.exports = { name: "epkg" };`,
 		"lib/escape.js":              `module.exports = require("../../x.js");`,
 	}))
-	// no hook files: the lazy executors still use the sealed registry
+	// no hook files: require is still sealed
 	if err := jsvm.Register(app, withEmbedded(hooksFS, nil, jsvm.Config{OnInit: (&recorder{}).onInit})); err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +245,7 @@ func TestEmbeddedRequireIsSealed(t *testing.T) {
 		`__hooks + "/lib"`,
 	} {
 		got := tryRequire(t, app, expr)
-		if !strings.HasPrefix(got, "err:") || !strings.Contains(got, "Invalid module") {
+		if !strings.HasPrefix(got, "err:") || !strings.Contains(got, "Cannot find module") {
 			t.Errorf("require(%s): expected module not found, got %q", expr, got)
 		}
 	}
@@ -350,4 +349,33 @@ func withEmbedded(hooksFS, migrationsFS fs.FS, c jsvm.Config) jsvm.Config {
 		c.Extensions = append(c.Extensions, Migrations(migrationsFS))
 	}
 	return c
+}
+
+// Public serves the FS like pb_public: files, index.html fallback, and an app's own catch-all route wins.
+func TestPublic(t *testing.T) {
+	app, _ := tests.NewTestApp()
+	defer app.Cleanup()
+	Public(app, mapFS(map[string]string{"index.html": "home", "app.js": "js!"}), true)
+
+	router, err := apis.NewRouter(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = app.OnServe().Trigger(&core.ServeEvent{App: app, Router: router}, func(e *core.ServeEvent) error {
+		mux, err := e.Router.BuildMux()
+		if err != nil {
+			return err
+		}
+		for path, want := range map[string]string{"/app.js": "js!", "/": "home", "/some/spa/route": "home"} {
+			rr := httptest.NewRecorder()
+			mux.ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
+			if rr.Code != 200 || rr.Body.String() != want {
+				t.Errorf("%s: got %d %q", path, rr.Code, rr.Body.String())
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }

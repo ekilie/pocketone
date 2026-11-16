@@ -73,4 +73,4 @@ The extension contract and tools for building and testing extensions.
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
 | [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
 | [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
-| [JS Embed](https://pocketone.dev/docs/extensions/jsembed) | JS hooks and migrations embedded in the binary. |
+| [Bundle](https://pocketone.dev/docs/extensions/bundle) | An app's hooks, migrations and public files embedded in the binary. |

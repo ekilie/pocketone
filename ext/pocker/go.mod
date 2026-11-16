@@ -118,7 +118,7 @@ replace github.com/pockethost/pocketone/ext/edge => ../edge
 
 replace github.com/pockethost/pocketone/ext/firewall => ../firewall
 
-replace github.com/pockethost/pocketone/ext/jsembed => ../jsembed
+replace github.com/pockethost/pocketone/ext/bundle => ../bundle
 
 replace github.com/pockethost/pocketone/ext/mailrelay => ../mailrelay
 

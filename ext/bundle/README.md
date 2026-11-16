@@ -1,0 +1,107 @@
+---
+owners: ["@benallfree"]
+version: 0.1.0
+---
+
+# Bundle
+
+Ship an app's files inside the binary instead of folders on disk: its JS hooks (`pb_hooks`), migrations
+(`pb_migrations`) and public files (`pb_public`). Nothing is written to disk and nothing on disk can override them.
+PocketHost's mothership uses it for its own hooks. Formerly `jsembed`.
+
+## Install
+
+Bundle is not in the `pocketone` binary. Add it to your own Go build: embed the folders, pass the hooks and migrations
+to [jsvm](../jsvm/README.md) as extensions, and serve the public files.
+
+```go
+//go:embed hooks migrations public
+var files embed.FS
+
+hooks, _ := fs.Sub(files, "hooks")
+migrations, _ := fs.Sub(files, "migrations")
+public, _ := fs.Sub(files, "public")
+jsvm.MustRegister(app, jsvm.Config{
+	Extensions: []any{bundle.Hooks(hooks), bundle.Migrations(migrations)},
+})
+bundle.Public(app, public, true)
+```
+
+The module is `github.com/pockethost/pocketone/ext/bundle`.
+
+## Configure
+
+Nothing to configure. List only what you bundle: without `bundle.Hooks`, hooks still come from `HooksDir` on disk,
+and the same for migrations.
+
+## Use
+
+- **Hooks:** `.pb.js` files come from the FS's root only. `HooksDir` is ignored, nothing is written to it, and hooks
+  aren't watched.
+- **Migrations:** files come from the FS's root only; `MigrationsDir` is ignored.
+- **`require()`:** `__hooks` is the virtual root `/pb_embedded/pb_hooks`. Paths under it, and relative paths, load
+  from the hooks FS. Everything else is "module not found": absolute disk paths, `..` escapes, `node_modules`. JS that
+  reads files itself (`$os.readFile(__hooks + ...)`) gets "no such file", since the root doesn't exist on disk.
+- **Public files:** `bundle.Public(app, fsys, indexFallback)` serves the FS at `GET /{path...}` like `pb_public`,
+  unless the app has its own route there. With `indexFallback`, unknown paths serve `index.html` (single-page apps).
+
+## Integrations
+
+| Extension | How they fit |
+|---|---|
+| [JSVM](../jsvm/README.md) | `Hooks` and `Migrations` are jsvm extensions (`HookFiles`, `Modules`, `MigrationFiles`). |
+
+## Example
+
+```go
+// Command example serves its JS hooks and public files from files embedded in the binary: no pb_hooks or pb_public
+// folder on disk.
+//
+//	go run ./example serve
+//	curl http://127.0.0.1:8090/hello
+//	curl http://127.0.0.1:8090/
+package main
+
+import (
+	"embed"
+	"io/fs"
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/bundle"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/jsvm"
+)
+
+//go:embed hooks public
+var files embed.FS
+
+func main() {
+	hooks, err := fs.Sub(files, "hooks")
+	if err != nil {
+		log.Fatal(err)
+	}
+	public, err := fs.Sub(files, "public")
+	if err != nil {
+		log.Fatal(err)
+	}
+	app := pocketbase.New()
+	devusers.Register(app)
+	jsvm.MustRegister(app, jsvm.Config{Extensions: []any{bundle.Hooks(hooks)}})
+	bundle.Public(app, public, true)
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## How it works
+
+`Hooks` implements jsvm's `HookFiles` and `Modules`: the engine asks it for the hook files and for every module
+`require()` resolves, and it serves only paths under the virtual root, from the FS. `Migrations` implements
+`MigrationFiles`. `Public` binds the static route with `apis.Static` at the lowest priority, as PocketBase does for
+`pb_public`.
+
+## License
+
+MIT

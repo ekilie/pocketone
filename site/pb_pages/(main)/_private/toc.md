@@ -87,7 +87,7 @@
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
 - [Mail Trap](/docs/extensions/mailtrap)
 - [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
-- [JS Embed](/docs/extensions/jsembed)
+- [Bundle](/docs/extensions/bundle)
 
 <!-- extensions:end -->
 

@@ -79,6 +79,8 @@ Extensions plug in through `Config.Extensions` with the engine-neutral types in
 
 `js.Run(app, fn)` runs Go code on the app's VM; a `js.Func` kept from JS can be called from any goroutine.
 
+[Bundle](https://pocketone.dev/docs/extensions/bundle) uses these to serve hooks and migrations embedded in the binary.
+
 ## Example
 
 ```go

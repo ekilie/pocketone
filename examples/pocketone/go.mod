@@ -166,7 +166,7 @@ replace github.com/pockethost/pocketone/ext/contracts => ../../ext/contracts
 
 replace github.com/pockethost/pocketone/ext/standard => ../../ext/standard
 
-replace github.com/pockethost/pocketone/ext/jsembed => ../../ext/jsembed
+replace github.com/pockethost/pocketone/ext/bundle => ../../ext/bundle
 
 replace github.com/pockethost/pocketone/ext/mailrelay => ../../ext/mailrelay
 
