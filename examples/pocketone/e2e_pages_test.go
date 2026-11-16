@@ -192,4 +192,3 @@ func pageDo(t *testing.T, s *site, method, path string, form url.Values, cookie 
 	b, _ := io.ReadAll(res.Body)
 	return pageAnswer{code: res.StatusCode, ctype: res.Header.Get("Content-Type"), location: res.Header.Get("Location"), body: string(b), cookies: res.Cookies()}
 }
-

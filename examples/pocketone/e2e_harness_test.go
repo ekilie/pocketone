@@ -99,6 +99,8 @@ type site struct {
 	cmd     *exec.Cmd
 	jwt     string
 	starts  int // "Server started" lines seen when last checked
+	exited  chan error
+	stopped bool
 }
 
 // startSite writes opts.Files, creates the superuser before the first serve, serves on a free port and waits until
@@ -133,12 +135,15 @@ func startSite(t *testing.T, opts siteOptions) *site {
 		t.Fatal(err)
 	}
 	exited := make(chan error, 1)
+	s.exited = exited
 	go func() { exited <- s.cmd.Wait() }()
 	t.Cleanup(func() {
-		_ = s.cmd.Process.Kill()
-		select {
-		case <-exited:
-		case <-time.After(5 * time.Second):
+		if !s.stopped {
+			_ = s.cmd.Process.Kill()
+			select {
+			case <-exited:
+			case <-time.After(5 * time.Second):
+			}
 		}
 		if t.Failed() {
 			t.Logf("site log (%s):\n%s", s.URL, tail(s.Log.String(), 120))
@@ -147,6 +152,21 @@ func startSite(t *testing.T, opts siteOptions) *site {
 	s.waitUp("serve", 20*time.Second, exited)
 	s.starts = s.serverStarts()
 	return s
+}
+
+// stop ends the serve process (SIGTERM, then a kill after 10s) and waits for it, so its folder can be used again.
+func (s *site) stop() {
+	s.t.Helper()
+	step(s.t, "stop "+s.URL)
+	s.stopped = true
+	_ = s.cmd.Process.Signal(os.Interrupt)
+	select {
+	case <-s.exited:
+	case <-time.After(10 * time.Second):
+		_ = s.cmd.Process.Kill()
+		<-s.exited
+	}
+	step(s.t, "stopped "+s.URL)
 }
 
 // waitUp waits for /api/health, failing at once if the process exits.
