@@ -68,6 +68,22 @@ Refresh those branches from `https://ganigeorgiev.com/git/pocketbase/pocketbase`
 release, by hand and once: fetch it into `refs/remotes/upstream/*`, then
 `git push origin refs/remotes/upstream/develop:refs/heads/upstream/develop refs/remotes/upstream/master:refs/heads/upstream/master`.
 
+## Syncing with upstream
+
+Merge `upstream/master` (a PocketBase release) into `main` on a side branch in its own worktree, never on `main`
+directly, and review it before it lands:
+
+1. `git worktree add -b upstream-sync/vX.Y.Z <dir> origin/main`, then `git merge --no-ff --no-commit upstream/master`.
+   Resolve conflicts at the `// PocketOne:` spots.
+2. Review what changed (`git log --oneline <old base>..upstream/master` and upstream's `CHANGELOG.md`): for each change,
+   what it means for our hooks, extensions and contracts, and fix in `ext/` what it breaks.
+3. Check each bug fix in "Core changes that aren't hooks": if upstream now fixes it, drop ours (and its
+   `core-bugfix/<name>` branch and README row); if upstream changed the code around it, keep ours only for what is still
+   broken.
+4. `go mod tidy` in every module (upstream's dependency bumps reach them), build, vet, and run the full test suite.
+5. Commit with `Core-Audit: upstream-merge vX.Y.Z`, add the **PocketBase** line to `docs/CHANGELOG.md`, rebuild the
+   core branches with `core-changes-branch.sh`, then merge the side branch into `main`.
+
 ## Core changes that aren't hooks
 
 Bug fixes to upstream behavior, each tested and meant for upstream; drop each one once upstream has it:
