@@ -209,7 +209,6 @@ no code yet (version 0.0.0).
 | Mail Trap | yes (dev mode) | Dev mode: mail from an app without SMTP lands in a built-in inbox. | [mailtrap](reference/docs/extensions/mailtrap/index.md) |
 | Dev Users | Go build | Local testing only: a superuser and a user with password "password". | `ext/devusers/devusers.go` (no page) |
 | Bundle | Go build | An app's hooks, migrations and public files embedded in the binary. | [bundle](reference/docs/extensions/bundle/index.md) |
-| JS Errors | Go build | Hook error positions for PocketBase's plugins/jsvm (goja); ext/jsvm doesn't need it. | [jserrors](reference/docs/extensions/jserrors/index.md) |
 
 To turn a standard extension off, set `enabled: false` in its `pocketone.yaml` section; extensions that require it
 turn off too, and the startup lines say why.

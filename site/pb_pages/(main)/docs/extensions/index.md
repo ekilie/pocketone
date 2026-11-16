@@ -72,7 +72,6 @@ The extension contract and tools for building and testing extensions.
 
 | Extension | What it does |
 |---|---|
-| [JS Errors](/docs/extensions/jserrors) | Hook error positions for PocketBase's plugins/jsvm (goja). ext/jsvm doesn't need it. |
 | [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
 | [Standard Set](/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |

@@ -53,8 +53,6 @@ replace github.com/pockethost/pocketone/ext/multisite => ../multisite
 
 replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 
-replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
-
 replace github.com/pockethost/pocketone/ext/config => ../config
 
 replace github.com/pockethost/pocketone/ext/contracts => ../contracts

@@ -148,8 +148,6 @@ replace github.com/pockethost/pocketone/ext/mailtrap => ../../ext/mailtrap
 
 replace github.com/pockethost/pocketone/ext/extkit => ../../ext/extkit
 
-replace github.com/pockethost/pocketone/ext/jserrors => ../../ext/jserrors
-
 replace github.com/pockethost/pocketone/ext/docker => ../../ext/docker
 
 replace github.com/pockethost/pocketone/ext/firewall => ../../ext/firewall

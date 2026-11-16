@@ -18,7 +18,7 @@ context from the change's session, or a human), and must record the result in a 
 1. Get the core diff: `.github/core-audit/core-diff.sh origin/main HEAD` (or `<sha>^ <sha>` for one commit).
 2. Give the reviewer only that diff, this section, and the commit message. For each changed hunk it answers:
    - **Necessary:** could this live in `ext/` instead, using hooks core already has (upstream's own, or PocketOne's existing
-     seams such as `OnFilesystemCreate`, `jsvm.Config.Extensions`, `BaseAppConfig.AppMigrations`/`OnLog`)?
+     seams such as `OnFilesystemCreate`, `BaseAppConfig.AppMigrations`/`OnLog`, or the `ext/jsvm` engine's extension methods)?
    - **Minimal:** is it the smallest seam that works, with no feature logic, policy or extension-specific names in core?
    - **Sensible:** marked `// PocketOne:`, documented on the hook, upstream behavior unchanged when nothing uses it, tested?
    - **Listed:** a new or changed hook is on its `core-hook/<name>` branch (a new one is added to `HOOK_STACK`) and has

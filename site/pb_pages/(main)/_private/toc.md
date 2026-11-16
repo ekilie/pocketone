@@ -81,7 +81,6 @@
 
 # Extensions: for authors
 
-- [JS Errors](/docs/extensions/jserrors)
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Standard Set](/docs/extensions/standard)
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)

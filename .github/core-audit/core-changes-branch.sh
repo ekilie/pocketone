@@ -20,7 +20,7 @@
 # the code must match (comments may differ, since the bugfix branches are written for upstream).
 set -euo pipefail
 
-HOOK_STACK=(filesystem-driver on-filesystem-create app-migrations on-log jsvm-extensions jsvm-run)
+HOOK_STACK=(filesystem-driver on-filesystem-create app-migrations on-log)
 
 branch=core-changes
 root=$(git rev-parse --show-toplevel)

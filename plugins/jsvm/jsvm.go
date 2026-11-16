@@ -64,10 +64,6 @@ type Config struct {
 	// attach custom Go variables and functions.
 	OnInit func(vm *goja.Runtime)
 
-	// PocketOne: Extensions extend jsvm: each implements any of the optional methods listed on [Extension] (call wrappers,
-	// file sources, require registries, error mapping, the $http client). Empty = upstream behavior.
-	Extensions []Extension
-
 	// HooksWatch enables auto app restarts when a JS app hook file changes.
 	//
 	// Note that currently the application cannot be automatically restarted on Windows
@@ -133,11 +129,6 @@ func MustRegister(app core.App, config Config) {
 func Register(app core.App, config Config) error {
 	p := &plugin{app: app, config: config}
 
-	p.ext = extensions(p.config.Extensions)
-	if p.ext.hookFiles() != nil {
-		p.config.HooksWatch = false // PocketOne: the files don't come from HooksDir, so there's nothing to watch
-	}
-
 	if p.config.HooksDir == "" {
 		p.config.HooksDir = filepath.Join(app.DataDir(), "../pb_hooks")
 	}
@@ -187,22 +178,22 @@ func Register(app core.App, config Config) error {
 type plugin struct {
 	app    core.App
 	config Config
-	ext    extensions // PocketOne: config.Extensions
 }
 
 // registerMigrations registers the JS migrations loader.
 func (p *plugin) registerMigrations() error {
 	// fetch all js migrations sorted by their filename
-	files, err := p.migrationFiles() // PocketOne: MigrationFiles
+	files, err := filesContent(p.config.MigrationsDir, p.config.MigrationsFilesPattern)
 	if err != nil {
 		return err
 	}
 
-	absHooksDir, registry, err := p.hooksRequire() // PocketOne: Require; the registry can be shared by multiple runtimes
+	absHooksDir, err := filepath.Abs(p.config.HooksDir)
 	if err != nil {
 		return err
 	}
 
+	registry := new(require.Registry) // this can be shared by multiple runtimes
 	templateRegistry := template.NewRegistry()
 
 	for file, content := range files {
@@ -229,13 +220,13 @@ func (p *plugin) registerMigrations() error {
 		vm.Set("migrate", func(up, down func(txApp core.App) error) {
 			// note: safe wrap to capture any eventual panic and to allow
 			// the error message to print the migration filename
-			core.AppMigrationsOf(p.app).Register( // PocketOne: per-app list
+			core.AppMigrations.Register(
 				func(txApp core.App) error {
 					return routine.SafeWrap(func() error {
 						if up == nil {
 							return nil
 						}
-						return p.ext.call(vm, func() error { return up(txApp) }) // PocketOne: Extensions' OnCall
+						return up(txApp)
 					})()
 				},
 				func(txApp core.App) error {
@@ -243,14 +234,13 @@ func (p *plugin) registerMigrations() error {
 						if down == nil {
 							return nil
 						}
-						return p.ext.call(vm, func() error { return down(txApp) }) // PocketOne: Extensions' OnCall
+						return down(txApp)
 					})()
 				},
 				file,
 			)
 		})
 
-		p.ext.onInit(vm) // PocketOne
 		if p.config.OnInit != nil {
 			p.config.OnInit(vm)
 		}
@@ -267,7 +257,7 @@ func (p *plugin) registerMigrations() error {
 // registerHooks registers the JS app hooks loader.
 func (p *plugin) registerHooks() error {
 	// fetch all js hooks sorted by their filename
-	files, err := p.hookFiles() // PocketOne: HookFiles
+	files, err := filesContent(p.config.HooksDir, p.config.HooksFilesPattern)
 	if err != nil {
 		return err
 	}
@@ -278,9 +268,6 @@ func (p *plugin) registerHooks() error {
 	// the case when the HooksWatch option is enabled and the application
 	// restart on newly created file
 	for name, content := range files {
-		if p.ext.hookFiles() != nil {
-			break // PocketOne: the files aren't in HooksDir; never write them there
-		}
 		if len(content) != 0 {
 			// skip non-empty files for now to prevent accidental overwrite
 			continue
@@ -299,19 +286,24 @@ func (p *plugin) registerHooks() error {
 		}
 	}
 
-	absHooksDir, requireRegistry, err := p.hooksRequire() // PocketOne: Require; safe to be shared across multiple vms
+	if len(files) == 0 {
+		// no need to register the vms since there are no entrypoint files anyway
+		return nil
+	}
+
+	absHooksDir, err := filepath.Abs(p.config.HooksDir)
 	if err != nil {
 		return err
 	}
 
-	if len(files) > 0 { // PocketOne: without hook files, only the (lazy) executors below are set up, for Run
-		p.app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-			e.Router.BindFunc(p.normalizeServeExceptions)
+	p.app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		e.Router.BindFunc(p.normalizeServeExceptions)
 
-			return e.Next()
-		})
-	}
+		return e.Next()
+	})
 
+	// safe to be shared across multiple vms
+	requireRegistry := new(require.Registry)
 	templateRegistry := template.NewRegistry()
 
 	sharedBinds := func(vm *goja.Runtime) {
@@ -335,37 +327,21 @@ func (p *plugin) registerHooks() error {
 		vm.Set("$template", templateRegistry)
 		vm.Set("__hooks", absHooksDir)
 
-		p.ext.onInit(vm) // PocketOne
 		if p.config.OnInit != nil {
 			p.config.OnInit(vm)
 		}
 	}
 
 	// initiliaze the executor vms
-	executorFactory := func() *goja.Runtime {
+	executors := newPool(p.config.HooksPoolSize, func() *goja.Runtime {
 		executor := goja.New()
 		sharedBinds(executor)
 		return executor
-	}
-	// PocketOne: with no hook files the vms are only created when Run first needs them
-	var executors *vmsPool
-	if len(files) > 0 {
-		executors = newPool(p.config.HooksPoolSize, executorFactory)
-	} else {
-		executors = newLazyPool(p.config.HooksPoolSize, executorFactory)
-	}
-	executors.ext = p.ext                           // PocketOne: Extensions (OnCall, OnCompile)
-	p.app.Store().Set(executorsStoreKey, executors) // PocketOne: for Run
-
-	if len(files) == 0 {
-		// no need to register the hooks since there are no entrypoint files anyway
-		return nil
-	}
+	})
 
 	// initialize the loader vm
 	loader := goja.New()
 	sharedBinds(loader)
-	executors.loader = loader // PocketOne: the runtime registering handlers, for Extensions' OnCompile
 	hooksBinds(p.app, loader, executors)
 	cronBinds(p.app, loader, executors)
 	routerBinds(p.app, loader, executors)
@@ -384,13 +360,7 @@ func (p *plugin) registerHooks() error {
 				}
 			}()
 
-			// PocketOne: Extensions' OnCall and OnLoad wrap running the file
-			err := p.ext.call(loader, func() error {
-				done, mapErr := p.ext.load(loader, absHooksDir, file, content)
-				defer done()
-				_, err := loader.RunScript(defaultScriptPath, string(content))
-				return mapErr(err)
-			})
+			_, err := loader.RunScript(defaultScriptPath, string(content))
 			if err != nil {
 				panic(err)
 			}
@@ -619,37 +589,3 @@ func filesContent(dirPath string, pattern string) (map[string][]byte, error) {
 
 	return result, nil
 }
-
-// PocketOne: hookFiles returns the hook files from an extension's HookFiles, otherwise from HooksDir.
-func (p *plugin) hookFiles() (map[string][]byte, error) {
-	if h := p.ext.hookFiles(); h != nil {
-		return h.HookFiles(p.config.HooksFilesPattern)
-	}
-	return filesContent(p.config.HooksDir, p.config.HooksFilesPattern)
-}
-
-// PocketOne: migrationFiles returns the migration files from an extension's MigrationFiles, otherwise from MigrationsDir.
-func (p *plugin) migrationFiles() (map[string][]byte, error) {
-	if m := p.ext.migrationFiles(); m != nil {
-		return m.MigrationFiles(p.config.MigrationsFilesPattern)
-	}
-	return filesContent(p.config.MigrationsDir, p.config.MigrationsFilesPattern)
-}
-
-// PocketOne: hooksRequire returns the __hooks value and the require registry: from an extension's Require, otherwise the
-// absolute HooksDir and a default (disk) registry.
-func (p *plugin) hooksRequire() (string, *require.Registry, error) {
-	if r := p.ext.require(); r != nil {
-		root, reg := r.Require()
-		return root, reg, nil
-	}
-	absHooksDir, err := filepath.Abs(p.config.HooksDir)
-	if err != nil {
-		return "", nil, err
-	}
-	return absHooksDir, new(require.Registry), nil
-}
-
-// PocketOne: ScriptPath is the name handlers and hooks files are compiled under (<cwd>/pb.js): error positions in a
-// handler's program carry it (see the OnCompile method on [Extension]).
-func ScriptPath() string { return defaultScriptPath }

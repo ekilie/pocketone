@@ -13,7 +13,7 @@ import (
 // errBodyTooLarge is what $http.send reports when a response is over HTTPSendMaxBody.
 var errBodyTooLarge = errors.New("$http.send: response body larger than the allowed size")
 
-// HTTPClient is the app's client for $http.send (a jsvm.Extension method).
+// HTTPClient is the app's client for $http.send (a jsvm extension method, js.HTTPClienter).
 func (s *Sandbox) HTTPClient(js.Runtime) *http.Client { return s.httpClient() }
 
 // httpClient is the app's client for $http.send: it dials through Go's default transport (so

@@ -286,7 +286,6 @@ The extension contract and tools for building and testing extensions.
 
 | Extension | What it does |
 |---|---|
-| [JS Errors](https://pocketone.dev/docs/extensions/jserrors) | Hook error positions for PocketBase's plugins/jsvm (goja). ext/jsvm doesn't need it. |
 | [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
 | [Standard Set](https://pocketone.dev/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
@@ -2893,7 +2892,6 @@ cd example && go run . serve --dir=./pb_data
 | [Pocker](https://pocketone.dev/docs/extensions/pocker) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
 | [OAuth](https://pocketone.dev/docs/extensions/tokens/oauth) (in Tokens) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
-| [JS Errors](https://pocketone.dev/docs/extensions/jserrors) | Both run in the same JS VM; JS Errors covers `pb_hooks`, pages report their own file and line. |
 
 ### Under pocker
 
@@ -6346,8 +6344,7 @@ Kept small and marked `// PocketOne:` so upstream merges stay easy:
 - `core.BaseAppConfig.EncryptionKey`: the settings encryption key passed in directly instead of read from the process
   environment.
 - The JS engine isn't a core change: Pocker runs [jsvm](https://pocketone.dev/docs/extensions/jsvm) (QuickJS), an extension, and the
-  [sandbox](https://pocketone.dev/docs/extensions/sandbox) plugs into it. PocketBase's own `plugins/jsvm` still carries PocketOne seams that
-  are being removed.
+  [sandbox](https://pocketone.dev/docs/extensions/sandbox) plugs into it. PocketBase's own `plugins/jsvm` is exactly upstream's.
 - Mail needs no core change: the sandbox sends an app's own SMTP through the egress policy on `OnMailerSend`
   (`sandbox.BindMail`).
 

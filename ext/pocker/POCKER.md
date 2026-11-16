@@ -229,8 +229,7 @@ Kept small and marked `// PocketOne:` so upstream merges stay easy:
 - `core.BaseAppConfig.EncryptionKey`: the settings encryption key passed in directly instead of read from the process
   environment.
 - The JS engine isn't a core change: Pocker runs [jsvm](../jsvm/README.md) (QuickJS), an extension, and the
-  [sandbox](../sandbox/README.md) plugs into it. PocketBase's own `plugins/jsvm` still carries PocketOne seams that
-  are being removed.
+  [sandbox](../sandbox/README.md) plugs into it. PocketBase's own `plugins/jsvm` is exactly upstream's.
 - Mail needs no core change: the sandbox sends an app's own SMTP through the egress policy on `OnMailerSend`
   (`sandbox.BindMail`).
 

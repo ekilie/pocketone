@@ -147,7 +147,6 @@ cd example && go run . serve --dir=./pb_data
 | [Pocker](/docs/extensions/pocker) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
 | [OAuth](/docs/extensions/tokens/oauth) (in Tokens) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
 | [Deploy](/docs/extensions/deploy) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
-| [JS Errors](/docs/extensions/jserrors) | Both run in the same JS VM; JS Errors covers `pb_hooks`, pages report their own file and line. |
 
 ### Under pocker
 
