@@ -117,4 +117,8 @@ Rules every extension follows:
   `cd site/sync && go run .` (CI checks it).
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.
+- **Changelog:** every commit to `main` with a user-visible change adds its line under `## Unreleased` in
+  [docs/CHANGELOG.md](docs/CHANGELOG.md), in the same commit (policy at its top; breaking changes need an
+  **Upgrading** step). Release notes are that file's section for the version, printed by
+  `examples/pocketone/release-notes.sh vX.Y.Z`. The root `CHANGELOG.md` is upstream PocketBase's; leave it alone.
 - Plans and internal notes go in a private maintainer repo, never here.

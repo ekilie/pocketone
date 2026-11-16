@@ -1,7 +1,8 @@
 # PocketOne's release config (the repo root's .goreleaser.yaml is upstream's, for plain examples/base).
 # Run from the repo root:
 #
-#   goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes <file>
+#   examples/pocketone/release-notes.sh vX.Y.Z > /tmp/notes.md
+#   goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes /tmp/notes.md
 #
 version: 2
 
@@ -55,15 +56,25 @@ release:
   # a tag with a prerelease part (v0.1.0-alpha.1) is published as a GitHub prerelease, so it's never "Latest"
   prerelease: auto
   name_template: 'PocketOne {{ .Tag }}'
-  # every release's notes start with the install lines
+  # every release's notes start with how to install or upgrade; the version's own notes (from docs/CHANGELOG.md) follow
   header: |
-    ## Install
+    ## Install or upgrade
+
+    **New install:**
 
     ```bash
     brew install pockethost/tap/pocketone
     ```
 
     Homebrew on macOS or Linux; the formula comes from [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap). Or download the zip for your platform below and run `./pocketone serve`.
+
+    **Upgrade:**
+
+    ```bash
+    brew upgrade pocketone
+    ```
+
+    Or, if you didn't install with Homebrew, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`) or download the zip below. Check the version's **Upgrading** section below, if it has one, before you upgrade.
 
 # the Homebrew formula in pockethost/homebrew-tap, updated on every release, prereleases included. brews is deprecated in favor of
 # homebrew_casks, but casks are macOS-only and quarantine unsigned binaries; the formula works on macOS and Linux.
@@ -92,6 +103,7 @@ archives:
     files:
       - LICENSE.md
       - CHANGELOG.md
+      - docs/CHANGELOG.md
 
 checksum:
   name_template: 'checksums.txt'
@@ -100,6 +112,8 @@ snapshot:
   version_template: '{{ incpatch .Version }}-next'
 
 # GitHub renders every newline in release notes as a line break: never hard-wrap the header above or the notes file.
-# Release notes are written by hand: always run `goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes <file>` (that skips the
-# generated changelog, which would list PocketBase's whole upstream history). Don't set changelog.disable: it drops
-# the --release-notes file too. The header above is prepended to the notes.
+# Release notes come from docs/CHANGELOG.md (see its top for the policy): always run
+#   examples/pocketone/release-notes.sh vX.Y.Z > /tmp/notes.md
+#   goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes /tmp/notes.md
+# (--release-notes skips the generated changelog, which would list PocketBase's whole upstream history). Don't set
+# changelog.disable: it drops the --release-notes file too. The header above is prepended to the notes.
