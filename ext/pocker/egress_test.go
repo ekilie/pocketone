@@ -128,7 +128,7 @@ func TestEgressFromApps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	running, err := startApp(appOptions{PBRoot: root, Defaults: Limits{HTTPSendMaxTimeout: 5 * time.Second, HTTPSendMaxBody: 1024}}, Instance{ID: "a"})
+	running, err := startApp(appOptions{Standard: testStandard, PBRoot: root, Defaults: Limits{HTTPSendMaxTimeout: 5 * time.Second, HTTPSendMaxBody: 1024}}, Instance{ID: "a"})
 	if err != nil {
 		t.Fatal(err)
 	}

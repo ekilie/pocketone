@@ -201,7 +201,7 @@ func TestEncryptionKeyIsExplicit(t *testing.T) {
 		EncryptionKey: key,
 		Secrets:       map[string]string{"PB_ENCRYPTION_KEY": "just-an-app-variable"},
 	}
-	running, err := startApp(appOptions{PBRoot: root, Defaults: DefaultLimits()}, inst)
+	running, err := startApp(appOptions{Standard: testStandard, PBRoot: root, Defaults: DefaultLimits()}, inst)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,13 +219,13 @@ func TestEncryptionKeyIsExplicit(t *testing.T) {
 	stopApp(running)
 
 	// the encrypted settings only load with the same key
-	running, err = startApp(appOptions{PBRoot: root, Defaults: DefaultLimits()}, inst)
+	running, err = startApp(appOptions{Standard: testStandard, PBRoot: root, Defaults: DefaultLimits()}, inst)
 	if err != nil {
 		t.Fatalf("restart with the same key: %v", err)
 	}
 	stopApp(running)
 	inst.EncryptionKey = "ffffffffffffffffffffffffffffffff"
-	if _, err := startApp(appOptions{PBRoot: root, Defaults: DefaultLimits()}, inst); err == nil {
+	if _, err := startApp(appOptions{Standard: testStandard, PBRoot: root, Defaults: DefaultLimits()}, inst); err == nil {
 		t.Fatal("a different encryption_key must not open the encrypted settings")
 	}
 }

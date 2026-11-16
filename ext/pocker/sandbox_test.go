@@ -137,7 +137,7 @@ func TestSandboxBlocksEscapes(t *testing.T) {
 	must(os.Symlink(filepath.Join(bDir, "pb_data"), filepath.Join(aDir, "pb_public/escape")))
 	t.Setenv("HOME", "/root/host-home")
 
-	running, err := startApp(appOptions{PBRoot: root, Defaults: DefaultLimits()}, Instance{
+	running, err := startApp(appOptions{Standard: testStandard, PBRoot: root, Defaults: DefaultLimits()}, Instance{
 		Limits:  Limits{MaxJSExecution: time.Second, MaxQueryDuration: time.Second},
 		ID:      "a",
 		Secrets: map[string]string{"A_SECRET": "a's own value", "OTHER_DIR": bDir},

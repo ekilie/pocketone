@@ -58,7 +58,7 @@ func TestPerInstanceJSTimeLimit(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	opts := appOptions{PBRoot: root, Defaults: DefaultLimits()}
+	opts := appOptions{Standard: testStandard, PBRoot: root, Defaults: DefaultLimits()}
 	strict, err := startApp(opts, Instance{ID: "strict", Limits: Limits{MaxJSExecution: time.Second}})
 	if err != nil {
 		t.Fatal(err)

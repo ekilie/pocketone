@@ -162,7 +162,7 @@ instances:
 func TestMaxConcurrentJS(t *testing.T) {
 	root := t.TempDir()
 	writeHooks(t, root, "busy", `routerAdd("GET", "/work", (e) => { sleep(1500); return e.json(200, {}) })`)
-	running, err := startApp(appOptions{PBRoot: root, Defaults: DefaultLimits()}, Instance{
+	running, err := startApp(appOptions{Standard: testStandard, PBRoot: root, Defaults: DefaultLimits()}, Instance{
 		ID:     "busy",
 		Limits: Limits{MaxConcurrentJS: 1, MaxJSExecution: 2 * time.Second},
 	})
