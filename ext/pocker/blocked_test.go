@@ -2,6 +2,7 @@ package pocker
 
 import (
 	"context"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,7 +16,8 @@ func TestBlockedInstanceStopsApp(t *testing.T) {
 	var mu sync.Mutex
 	var events []EventKind
 	inst := Instance{ID: "a", Hosts: []string{"a.test"}}
-	m := NewManager(staticSource{inst}, ManagerOptions{Standard: testStandard,
+	src, scope := sourcetest.Scope(inst)
+	m := NewManager(scope, ManagerOptions{Standard: testStandard,
 		PBRoot: t.TempDir(),
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		OnEvent: func(e Event) {
@@ -24,7 +26,7 @@ func TestBlockedInstanceStopsApp(t *testing.T) {
 			mu.Unlock()
 		},
 	})
-	m.dir.Load([]Instance{inst})
+	runManager(t, m)
 	defer m.Shutdown()
 
 	ctx := context.Background()
@@ -35,7 +37,8 @@ func TestBlockedInstanceStopsApp(t *testing.T) {
 
 	off := inst
 	off.Blocked = &Blocked{Status: http.StatusServiceUnavailable, Message: "powered off"}
-	m.dir.Apply(Change{Kind: Upsert, Instance: off})
+	src.Set(off)
+	waitUntil(t, "a blocked", func() bool { i, _ := m.dir.Get("a"); return i.Blocked != nil })
 
 	if m.Running("a") {
 		t.Fatal("a blocked instance's app is still registered")
@@ -50,7 +53,8 @@ func TestBlockedInstanceStopsApp(t *testing.T) {
 		t.Fatalf("no %q event: %v", EventStopped, events)
 	}
 
-	m.dir.Apply(Change{Kind: Upsert, Instance: inst})
+	src.Set(inst)
+	waitUntil(t, "a unblocked", func() bool { i, _ := m.dir.Get("a"); return i.Blocked == nil })
 	if err := m.StartInstance(ctx, "a"); err != nil {
 		t.Fatal(err)
 	}

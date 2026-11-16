@@ -3,6 +3,7 @@ package multiinstance
 
 import (
 	"context"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
@@ -18,11 +19,6 @@ import (
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pocker"
 )
-
-type fixedSource []pocker.Instance
-
-func (s fixedSource) Snapshot(context.Context) ([]pocker.Instance, error) { return s, nil }
-func (s fixedSource) Watch(context.Context) (<-chan pocker.Change, error) { return nil, nil }
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))
 
@@ -52,7 +48,7 @@ func start(t *testing.T, insts []pocker.Instance, files map[string]map[string]st
 	for id, f := range files {
 		write(t, filepath.Join(h.root, id), f)
 	}
-	h.m = pocker.NewManager(fixedSource(insts), pocker.ManagerOptions{Standard: testStandard,
+	h.m = pocker.NewManager(sourcetest.ScopeOf(insts...), pocker.ManagerOptions{Standard: testStandard,
 		PBRoot:   h.root,
 		Logger:   quiet,
 		Defaults: limits,

@@ -2,6 +2,7 @@ package pitr
 
 import (
 	"context"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,11 +17,6 @@ import (
 	"github.com/pockethost/pocketone/ext/pocker"
 )
 
-type fixedSource []pocker.Instance
-
-func (s fixedSource) Snapshot(context.Context) ([]pocker.Instance, error) { return s, nil }
-func (s fixedSource) Watch(context.Context) (<-chan pocker.Change, error) { return nil, nil }
-
 // Under the multitenant host: the restore route stages, app.Restart() restarts only that instance, the staged DB is
 // swapped in before the new app opens it, and the other instance keeps running untouched.
 func TestPockerRestoreRestartsOnlyThatInstance(t *testing.T) {
@@ -34,7 +30,7 @@ func TestPockerRestoreRestartsOnlyThatInstance(t *testing.T) {
 	apps := map[string][]core.App{} // every app started, by instance
 	a := pocker.Instance{ID: "a", Hosts: []string{"a.test"}, Extensions: map[string]any{"pitr": map[string]any{"retention": "168h"}}}
 	b := pocker.Instance{ID: "b", Hosts: []string{"b.test"}, Extensions: map[string]any{"pitr": map[string]any{"enabled": false}}}
-	m := pocker.NewManager(fixedSource{a, b}, pocker.ManagerOptions{Standard: testStandard,
+	m := pocker.NewManager(sourcetest.ScopeOf(a, b), pocker.ManagerOptions{Standard: testStandard,
 		PBRoot: t.TempDir(),
 		Logger: quiet,
 		Init:   pocker.InitExtensions(p), // what pocker.Server does for extkit extensions

@@ -3,6 +3,7 @@ package standard_test
 import (
 	"context"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
@@ -23,11 +24,6 @@ import (
 	"github.com/pockethost/pocketone/ext/standard"
 )
 
-type fixedSource []pocker.Instance
-
-func (s fixedSource) Snapshot(context.Context) ([]pocker.Instance, error) { return s, nil }
-func (s fixedSource) Watch(context.Context) (<-chan pocker.Change, error) { return nil, nil }
-
 // Every Pocker instance gets the standard set, with its own extensions.<name> settings, and pb_hooks sees its JS APIs.
 func TestPockerInstancesGetTheStandardSet(t *testing.T) {
 	root := t.TempDir()
@@ -45,7 +41,7 @@ func TestPockerInstancesGetTheStandardSet(t *testing.T) {
 	apps := map[string]core.App{}
 	a := pocker.Instance{ID: "a", Hosts: []string{"a.test"}}
 	b := pocker.Instance{ID: "b", Hosts: []string{"b.test"}, Extensions: map[string]any{"mcp": map[string]any{"enabled": false}}}
-	m := pocker.NewManager(fixedSource{a, b}, pocker.ManagerOptions{
+	m := pocker.NewManager(sourcetest.ScopeOf(a, b), pocker.ManagerOptions{
 		PBRoot:   root,
 		Logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Standard: set,
@@ -103,7 +99,7 @@ func TestPockerRefusesAMemberInExtensions(t *testing.T) {
 	set := standard.New()
 	srv := &pocker.Server{Config: pocker.DefaultConfig(), Standard: set, Extensions: []pocker.Extension{set.PITR}}
 	srv.Config.PBRoot = t.TempDir()
-	srv.Source = fixedSource{}
+	srv.Source = sourcetest.New()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := srv.Run(ctx)
@@ -127,7 +123,7 @@ func TestHostProvidesRemoteForPockerInstances(t *testing.T) {
 		return extkit.Auth{}
 	}
 	gate := &countGate{}
-	m := pocker.NewManager(fixedSource{{ID: "a", Hosts: []string{"a.test"}}}, pocker.ManagerOptions{
+	m := pocker.NewManager(sourcetest.ScopeOf(pocker.Instance{ID: "a", Hosts: []string{"a.test"}}), pocker.ManagerOptions{
 		PBRoot:   root,
 		Logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Standard: standard.New(),

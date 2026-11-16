@@ -2,6 +2,7 @@ package pocker
 
 import (
 	"context"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
@@ -82,14 +83,6 @@ func TestPerInstanceJSTimeLimit(t *testing.T) {
 	}
 }
 
-type chanSource struct {
-	list []Instance
-	ch   chan Change
-}
-
-func (s *chanSource) Snapshot(context.Context) ([]Instance, error) { return s.list, nil }
-func (s *chanSource) Watch(context.Context) (<-chan Change, error) { return s.ch, nil }
-
 func TestSecretChangeRestartsApp(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "app", "pb_hooks"), 0o755); err != nil {
@@ -100,10 +93,10 @@ func TestSecretChangeRestartsApp(t *testing.T) {
 		t.Fatal(err)
 	}
 	inst := Instance{ID: "app", Hosts: []string{"app.example.com"}, Secrets: map[string]string{"API_KEY": "old"}}
-	src := &chanSource{list: []Instance{inst}, ch: make(chan Change)}
+	src, scope := sourcetest.Scope(inst)
 	var restartedMu sync.Mutex
 	var restarted []string
-	m := NewManager(src, ManagerOptions{Standard: testStandard,
+	m := NewManager(scope, ManagerOptions{Standard: testStandard,
 		PBRoot: root,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		OnEvent: func(e Event) {
@@ -136,7 +129,7 @@ func TestSecretChangeRestartsApp(t *testing.T) {
 	}
 
 	inst.Secrets = map[string]string{"API_KEY": "rotated"}
-	src.ch <- Change{Kind: Upsert, Instance: inst}
+	src.Set(inst)
 	time.Sleep(50 * time.Millisecond)
 	if got := get(); got != "rotated" {
 		t.Fatalf("after rotation: got %q, want rotated", got)
@@ -156,7 +149,7 @@ func TestSecretChangeRestartsApp(t *testing.T) {
 
 	// a hosts-only change keeps the running app
 	inst.Hosts = append(inst.Hosts, "www.app.example.com")
-	src.ch <- Change{Kind: Upsert, Instance: inst}
+	src.Set(inst)
 	time.Sleep(50 * time.Millisecond)
 	if countRestarts() != 1 {
 		t.Fatalf("hosts change must not restart, events: %v", events())
@@ -173,7 +166,8 @@ func TestWithInstanceStopped(t *testing.T) {
 	}
 	write("v1")
 	inst := Instance{ID: "app", Hosts: []string{"app.example.com"}}
-	m := NewManager(staticSource{inst}, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	_, scope := sourcetest.Scope(inst)
+	m := NewManager(scope, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go m.Run(ctx)

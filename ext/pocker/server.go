@@ -188,7 +188,7 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 	if h.Directory == nil {
 		h.Directory = multisite.NewDirectory(log)
 	}
-	s.Manager = NewManager(h.Source, ManagerOptions{
+	s.Manager = NewManager(h.Scope, ManagerOptions{
 		PBRoot:        s.Config.PBRoot,
 		Dev:           s.Config.Dev,
 		HooksPoolSize: pool,

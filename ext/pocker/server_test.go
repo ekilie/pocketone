@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"math/big"
@@ -369,8 +370,9 @@ func TestStandardRequired(t *testing.T) {
 		t.Fatalf("Server without Standard: %v", err)
 	}
 	list := []Instance{{ID: "a", Hosts: []string{"a.test"}}}
-	m := NewManager(staticSource(list), ManagerOptions{PBRoot: t.TempDir(), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
-	m.dir.Load(list)
+	_, scope := sourcetest.Scope(list...)
+	m := NewManager(scope, ManagerOptions{PBRoot: t.TempDir(), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	runManager(t, m)
 	defer m.Shutdown()
 	if err := m.StartInstance(context.Background(), "a"); !errors.Is(err, errNoStandard) {
 		t.Fatalf("Manager without Standard: %v", err)

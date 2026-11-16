@@ -2,11 +2,11 @@ package deploy
 
 import (
 	"context"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,12 +20,8 @@ import (
 func TestWithPockerManager(t *testing.T) {
 	root := t.TempDir()
 	pbRoot := filepath.Join(root, "instances")
-	yaml := filepath.Join(root, "instances.yaml")
-	if err := os.WriteFile(yaml, []byte("instances:\n  - id: inst1\n    hosts: [myapp.example.com]\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	mgr := pocker.NewManager(&pocker.YAMLSource{Path: yaml, Required: true}, pocker.ManagerOptions{Standard: testStandard, PBRoot: pbRoot, Logger: quiet})
+	mgr := pocker.NewManager(sourcetest.ScopeOf(pocker.Instance{ID: "inst1", Hosts: []string{"myapp.example.com"}}), pocker.ManagerOptions{Standard: testStandard, PBRoot: pbRoot, Logger: quiet})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go mgr.Run(ctx)

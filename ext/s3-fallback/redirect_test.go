@@ -3,6 +3,7 @@ package s3fallback
 import (
 	"bytes"
 	"context"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,7 +25,7 @@ func TestS3RedirectSeesDefaultBucket(t *testing.T) {
 	st := New(Config{Bucket: b, Logger: quiet})
 	rd := s3redirect.New(s3redirect.Config{Logger: quiet})
 	var appA core.App
-	m := pocker.NewManager(fixedSource{{ID: "a", Hosts: []string{"a.test"}}}, pocker.ManagerOptions{Standard: testStandard,
+	m := pocker.NewManager(sourcetest.ScopeOf(pocker.Instance{ID: "a", Hosts: []string{"a.test"}}), pocker.ManagerOptions{Standard: testStandard,
 		PBRoot: t.TempDir(), Logger: quiet,
 		Init:  pocker.InitExtensions(st, rd),
 		Setup: func(_ pocker.Instance, app core.App) error { appA = app; return nil },

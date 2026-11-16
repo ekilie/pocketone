@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+- `pocker.NewManager(scope, opts)` takes the host's contract scope instead of an instance source: the Manager runs the instances instance.source/v1 supplies there. Provide your source with `sourcev1.Contract.ProvideIn(scope, src)` (in tests, `sourcetest.Scope(instances...)` from `ext/contracts/instance/source/v1/sourcetest`). `pocker.Server` and `pocker.Provider` are unchanged.
+
 ### Changed
 
 - A `pb_hooks` change restarts the instance like PocketBase's watcher restarts a process: the running app stops, then a fresh one starts, so two apps never have the instance's folder open (migrations and bootstrap code no longer run beside a live app). In production a broken hook file now leaves the instance down (502 naming the file) until it's fixed, instead of the previous code serving on; dev mode still skips the broken file.

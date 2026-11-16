@@ -2,6 +2,7 @@ package pocker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
 	"github.com/pockethost/pocketone/ext/multisite"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
@@ -29,12 +31,13 @@ func ValidID(id string) bool { return multisite.ValidID(id) }
 func DevID(h string) string { return multisite.DevID(h) }
 
 // Manager runs instances in-process: an [multisite.Runtime] that starts each instance's app on its first request and
-// keeps it running. It reads instances from an [multisite.Directory] (its own, fed by the source, unless one is shared in
-// [ManagerOptions.Directory]); as an http.Handler it serves the whole edge pipeline with itself as the only runtime.
+// keeps it running. Its instances come from instance.source/v1 on the host's scope, through an [multisite.Directory]:
+// the host's (shared in [ManagerOptions.Directory], which the host feeds), or its own, fed by Run. As an http.Handler
+// it serves the whole edge pipeline with itself as the only runtime.
 type Manager struct {
-	source InstanceSource
-	opts   appOptions
-	log    *slog.Logger
+	scope *extkit.Scope // the host's contracts: instance.source/v1
+	opts  appOptions
+	log   *slog.Logger
 
 	dir     *multisite.Directory
 	ownsDir bool
@@ -105,14 +108,16 @@ type ManagerOptions struct {
 	Host *extkit.Scope
 }
 
-// NewManager creates a Manager. Call [Manager.Run] to load instances and follow changes.
-func NewManager(source InstanceSource, opts ManagerOptions) *Manager {
+// NewManager creates a Manager that takes its instances from instance.source/v1 on scope, the host's contract scope
+// (sealed before [Manager.Run]; sourcetest.Scope gives tests one). On a host, pass the host's scope and its
+// [ManagerOptions.Directory]. Call [Manager.Run] to load instances and follow changes.
+func NewManager(scope *extkit.Scope, opts ManagerOptions) *Manager {
 	if opts.Logger == nil {
 		opts.Logger = slog.Default()
 	}
 	defaults := opts.Defaults.Over(DefaultLimits())
 	m := &Manager{
-		source:   source,
+		scope:    scope,
 		opts:     appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup, Standard: opts.Standard, Host: opts.Host},
 		defaults: defaults,
 		onEvent:  opts.OnEvent,
@@ -133,6 +138,9 @@ func NewManager(source InstanceSource, opts ManagerOptions) *Manager {
 	return m
 }
 
+// errNoSource: the Manager's scope has no instance.source/v1 provider.
+var errNoSource = errors.New("pocker: no instance.source/v1 provider on the host scope (the instances file, a control plane's mirror, or sourcetest in tests)")
+
 // Directory is the instance directory the Manager reads.
 func (m *Manager) Directory() *multisite.Directory { return m.dir }
 
@@ -143,7 +151,14 @@ func (m *Manager) Run(ctx context.Context) error {
 		<-ctx.Done()
 		return nil
 	}
-	return m.dir.Run(ctx, m.source, nil)
+	if m.scope == nil {
+		return errNoSource
+	}
+	src, ok := sourcev1.Contract.In(m.scope)
+	if !ok {
+		return errNoSource
+	}
+	return m.dir.Run(ctx, src, nil)
 }
 
 // Sync implements [multisite.Syncer]: a changed instance (env, limits, dev mode, folder) gets a fresh app on its next

@@ -1,6 +1,7 @@
 package pocker
 
 import (
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
@@ -27,8 +28,9 @@ func TestRemoteInstanceIsForwarded(t *testing.T) {
 	}
 
 	// default: a reverse proxy to Remote; no app starts and no folder is created here
-	m := NewManager(staticSource{remote}, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: quiet})
-	m.dir.Load([]Instance{remote})
+	_, scope := sourcetest.Scope(remote)
+	m := NewManager(scope, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: quiet})
+	runManager(t, m)
 	if code, body := get(m); code != 200 || body != "upstream away.example.com/x" {
 		t.Fatalf("default forward: %d %q", code, body)
 	}
@@ -42,12 +44,13 @@ func TestRemoteInstanceIsForwarded(t *testing.T) {
 	// Forward replaces the proxy, after the gate admits the request
 	var forwarded []string
 	limited := remote
-	m = NewManager(staticSource{limited}, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: quiet, Gate: &onceGate{},
+	_, scope = sourcetest.Scope(limited)
+	m = NewManager(scope, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: quiet, Gate: &onceGate{},
 		Forward: func(w http.ResponseWriter, r *http.Request, inst Instance) {
 			forwarded = append(forwarded, inst.ID)
 			_, _ = io.WriteString(w, "forwarded")
 		}})
-	m.dir.Load([]Instance{limited})
+	runManager(t, m)
 	if code, body := get(m); code != 200 || body != "forwarded" {
 		t.Fatalf("custom forward: %d %q", code, body)
 	}

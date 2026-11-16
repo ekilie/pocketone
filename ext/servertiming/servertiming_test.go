@@ -3,6 +3,7 @@ package servertiming
 import (
 	"context"
 	"errors"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,11 +18,6 @@ import (
 
 	"github.com/pockethost/pocketone/ext/pocker"
 )
-
-type staticSource []pocker.Instance
-
-func (s staticSource) Snapshot(context.Context) ([]pocker.Instance, error) { return s, nil }
-func (s staticSource) Watch(context.Context) (<-chan pocker.Change, error) { return nil, nil }
 
 // timings parses `a;dur=1.0;desc="x", b;dur=2.0` into names and millisecond durations.
 func timings(h string) (names []string, durs []float64) {
@@ -104,7 +100,7 @@ func TestManagerServerTiming(t *testing.T) {
 		t.Fatal(err)
 	}
 	inst := pocker.Instance{ID: "app", Hosts: []string{"app.example.com"}}
-	m := pocker.NewManager(staticSource{inst}, pocker.ManagerOptions{Standard: testStandard,
+	m := pocker.NewManager(sourcetest.ScopeOf(inst), pocker.ManagerOptions{Standard: testStandard,
 		PBRoot: root,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})

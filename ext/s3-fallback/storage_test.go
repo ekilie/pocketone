@@ -3,6 +3,7 @@ package s3fallback
 import (
 	"bytes"
 	"context"
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"image"
 	"image/color"
 	"image/png"
@@ -24,11 +25,6 @@ import (
 )
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))
-
-type fixedSource []pocker.Instance
-
-func (s fixedSource) Snapshot(context.Context) ([]pocker.Instance, error) { return s, nil }
-func (s fixedSource) Watch(context.Context) (<-chan pocker.Change, error) { return nil, nil }
 
 // startMinio runs a throwaway MinIO with buckets "shared" (the operator's) and "own" (an instance's own S3).
 func startMinio(t *testing.T) *Bucket {
@@ -129,14 +125,14 @@ func TestDefaultBucketUnderPocker(t *testing.T) {
 	}
 
 	p := New(Config{Bucket: b, Logger: quiet})
-	insts := fixedSource{
+	insts := []pocker.Instance{
 		{ID: "a", Hosts: []string{"a.test"}},
 		{ID: "b", Hosts: []string{"b.test"}},
 		{ID: "c", Hosts: []string{"c.test"}, Extensions: map[string]any{"storage": map[string]any{"enabled": false}}},
 	}
 	var mu sync.Mutex
 	apps := map[string]core.App{}
-	m := pocker.NewManager(insts, pocker.ManagerOptions{Standard: testStandard,
+	m := pocker.NewManager(sourcetest.ScopeOf(insts...), pocker.ManagerOptions{Standard: testStandard,
 		PBRoot: pbRoot, Logger: quiet, Init: pocker.InitExtensions(p),
 		Setup: func(inst pocker.Instance, app core.App) error {
 			mu.Lock()

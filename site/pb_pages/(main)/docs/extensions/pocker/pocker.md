@@ -59,9 +59,11 @@ instances:
 ```
 
 Unknown hosts get 404 and no folder is ever created from a request. Ids are lowercase letters, digits, dots and dashes.
-Hosting platforms plug in their own [`InstanceSource`](instance.go) (for example a control plane streaming the
-hostname -> id map over SSE) instead of the file; a community mothership is one (the `mothership` section,
-[ext/mothership](/docs/extensions/mothership)).
+Pocker runs whatever instances the host's [instance.source/v1](/docs/contracts/instance.source/v1) provider
+supplies, and nothing else: the file by default. Hosting platforms provide that contract themselves instead (for
+example a control plane streaming the hostname -> id map over SSE); a community mothership is one (the `mothership`
+section, [ext/mothership](/docs/extensions/mothership)). Tests provide it with
+[sourcetest](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go).
 
 pocketone.yaml for a production host (each extension owns its section; every field has a default):
 
