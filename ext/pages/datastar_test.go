@@ -54,3 +54,43 @@ func TestDatastarHelpers(t *testing.T) {
 		t.Errorf("scripts() should load Datastar 1.0.5: %.300q", rec.Body.String())
 	}
 }
+
+// The Datastar 1.0.5 SDK spec: viewTransitionSelector and namespace on patchElements, no retry line for the default
+// 1000 ms, and DELETE reads signals from the datastar query parameter.
+func TestDatastarSpecOptions(t *testing.T) {
+	addon, _ := os.ReadFile("addons/datastar.js")
+	dir := writeTree(t, map[string]string{
+		"+config.js":           "module.exports = { plugins: ['datastar'] }",
+		"_private/datastar.js": string(addon),
+		"p/+api.js": `module.exports = {
+			post(ctx) {
+				ctx.datastar.patchElements('<circle id="c"/>', { selector: '#vis', mode: 'append', namespace: 'svg', useViewTransition: true, viewTransitionSelector: '#main', retryDuration: 1000 })
+				ctx.datastar.patchSignals({ a: 1 }, { retryDuration: 2000 })
+			},
+			delete(ctx) {
+				ctx.datastar.patchSignals({ got: ctx.datastar.signals().id })
+			},
+		}`,
+	})
+	h, _ := newServer(t, dir)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("POST", "/p", strings.NewReader(`{}`)))
+	body := rec.Body.String()
+	for _, want := range []string{
+		"data: useViewTransition true\ndata: viewTransitionSelector #main\ndata: namespace svg\ndata: elements <circle id=\"c\"/>",
+		"retry: 2000",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q in:\n%s", want, body)
+		}
+	}
+	if strings.Count(body, "retry:") != 1 {
+		t.Errorf("the default 1000 ms retry should be left out:\n%s", body)
+	}
+
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("DELETE", "/p?datastar=%7B%22id%22%3A9%7D", nil))
+	if !strings.Contains(rec.Body.String(), `data: signals {"got":9}`) {
+		t.Errorf("DELETE should read the datastar query parameter:\n%s", rec.Body.String())
+	}
+}

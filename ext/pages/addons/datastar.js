@@ -14,6 +14,9 @@ var REALTIME = "<script>\n  {\n    const source = new EventSource('/api/realtime
 var PATCH_ELEMENTS = 'datastar-patch-elements'
 var PATCH_SIGNALS = 'datastar-patch-signals'
 var MODES = ['outer', 'inner', 'replace', 'prepend', 'append', 'before', 'after', 'remove']
+var NAMESPACES = ['html', 'svg', 'mathml']
+// Datastar's default SSE retry; the SDK spec leaves it out of the stream.
+var DEFAULT_RETRY = 1000
 
 function elementLines(html, opts) {
   var lines = []
@@ -22,7 +25,14 @@ function elementLines(html, opts) {
     if (MODES.indexOf(opts.mode) < 0) throw new Error('datastar: unknown mode ' + opts.mode)
     lines.push('mode ' + opts.mode)
   }
-  if (opts.useViewTransition) lines.push('useViewTransition true')
+  if (opts.useViewTransition) {
+    lines.push('useViewTransition true')
+    if (opts.viewTransitionSelector) lines.push('viewTransitionSelector ' + opts.viewTransitionSelector)
+  }
+  if (opts.namespace && opts.namespace !== 'html') {
+    if (NAMESPACES.indexOf(opts.namespace) < 0) throw new Error('datastar: unknown namespace ' + opts.namespace)
+    lines.push('namespace ' + opts.namespace)
+  }
   if (html) {
     String(html)
       .split('\n')
@@ -59,7 +69,8 @@ module.exports = function () {
       var stream = null
       function send(event, lines, opts) {
         if (!stream) stream = ctx.res.sse()
-        stream.send(event, lines.join('\n'), { id: opts.eventId, retry: opts.retryDuration })
+        var retry = opts.retryDuration === DEFAULT_RETRY ? undefined : opts.retryDuration
+        stream.send(event, lines.join('\n'), { id: opts.eventId, retry: retry })
       }
       function broadcast(type, argsRaw, realtimeOpts) {
         if (!ctx.realtime) throw new Error("datastar: the realtime helpers need the 'realtime' plugin")
@@ -126,7 +137,8 @@ module.exports = function () {
         },
         signals: function () {
           var raw
-          if (ctx.req.method === 'GET') {
+          // GET and DELETE carry signals in the datastar query parameter; the other methods in the body (SDK spec)
+          if (ctx.req.method === 'GET' || ctx.req.method === 'DELETE') {
             raw = ctx.req.query('datastar')
             if (!raw) return {}
             try {

@@ -32,17 +32,19 @@ a colon between the attribute name and its key (`data-on:click`, `data-bind:name
 | Member | |
 |---|---|
 | `scripts({ spa, realtime }?)` | Returns the script tags. |
-| `patchElements(html, { selector, mode }?)` | Sends a patch-elements SSE event on the current response. |
-| `patchSignals(signals)` | Sends a patch-signals SSE event. |
+| `patchElements(html, { selector, mode, useViewTransition, viewTransitionSelector, namespace }?)` | Sends a patch-elements SSE event on the current response. `mode` is `outer` (default), `inner`, `replace`, `prepend`, `append`, `before`, `after` or `remove`; `namespace` is `html` (default), `svg` or `mathml`. |
+| `patchSignals(signals, { onlyIfMissing }?)` | Sends a patch-signals SSE event (JSON Merge Patch: `null` removes a signal). |
 | `executeScript(js, { autoRemove, attributes }?)` | Sends a script to run in the browser. |
 | `consoleLog(msg)` / `consoleError(err)` | Logs to the browser console. |
 | `redirect(url)` | Sends the browser to `url` (a full page load). A Datastar fetch can't follow `ctx.res.redirect`, so use this from `@get`/`@post` handlers. |
 | `dispatchCustomEvent(name, detail, { selector }?)` | Fires a `CustomEvent` on `document`, or on the elements matching `selector`. |
 | `replaceURL(url)` | Changes the address bar without a navigation (`history.replaceState`). |
 | `prefetch(urls)` | Adds speculation rules so the browser prefetches `urls`. |
-| `signals()` | Reads the request's signals as an object. |
+| `signals()` | Reads the request's signals as an object: from the `datastar` query parameter for GET and DELETE, from the body otherwise. |
 | `readSignals(target)` | Merges the request's signals into `target` and returns it (0.x's `readSignals(request, target)` also works). |
 | `realtime.*` | Sends the same patches to realtime subscribers. Needs the [`realtime`](/docs/plugins/realtime) plugin. |
+
+Every send also takes `eventId` and `retryDuration` (in ms; the default 1000 isn't sent).
 
 ## Pages as patches
 
