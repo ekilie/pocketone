@@ -26,6 +26,10 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
+### Added
+
+- **docker:** a host with its own accounts decides who may call `remote/v1` (status, restart, logs) for its containers with `docker.Provider.RemoteAuth`; without it, the instance's own superuser login is checked as before. `remote/v1` now lives on the host's contract scope, so `pocketone remote whoami` also lists the host's other contracts for the instance (a host's `deploy/v1`).
+
 ## v0.0.1-alpha.2 (2026-11-16)
 
 Built on PocketBase v0.41.1.

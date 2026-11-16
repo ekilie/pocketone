@@ -5,6 +5,7 @@ import (
 	"errors"
 	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -92,6 +93,10 @@ type Provider struct {
 	Versions VersionsSource
 	// MinUpstream, if set, replaces the section's `min_upstream` (see [Config.MinUpstream]).
 	MinUpstream string
+	// RemoteAuth decides who may call remote/v1 for the instances (status, restart, logs), from the request: a host
+	// with its own accounts (PocketHost: the instance owner's tokens) sets it. nil: a superuser of the instance, as
+	// the instance itself checks it.
+	RemoteAuth func(r *http.Request) extkit.Auth
 }
 
 var _ multisite.Extension = (*Provider)(nil)
@@ -131,6 +136,6 @@ func (p *Provider) RegisterHost(h *multisite.Host) error {
 		h.DataRoot = cfg.DataRoot
 	}
 	// stock images have no PocketOne extensions: the host answers remote/v1 for them, after its gates
-	h.InstanceRoutes = append(h.InstanceRoutes, rt.serveRemote(h.Directory))
+	h.InstanceRoutes = append(h.InstanceRoutes, rt.serveRemote(h.Scope, h.Directory, p.RemoteAuth))
 	return nil
 }

@@ -150,6 +150,9 @@ container stays stopped.
 - `GET /api/_c/remote/v1` (whoami) is public and lists `remote/v1`.
 - `status`, `restart` and `logs` need a superuser token of that instance (`pocketone remote login` with a superuser
   email and password). The host asks the instance itself to check it.
+- A host with its own accounts sets `docker.Provider.RemoteAuth` to decide who may call them instead (PocketHost: the
+  instance owner's tokens). `remote/v1` is provided on the host's scope, so whoami also lists the other contracts the
+  host provides for its instances (a host's `deploy/v1`).
 - `restart` replaces the container; `logs` replays and follows the container's output, the last 1000 lines per
   instance kept by this host since it started following the container.
 

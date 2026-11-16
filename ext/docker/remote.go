@@ -150,13 +150,21 @@ func jwtID(token string) string {
 }
 
 // serveRemote is an instance route (multisite.Host's InstanceRoutes) answering remote/v1 for the instances, after
-// the host's gates and before next, the container.
-func (rt *Runtime) serveRemote(dir *multisite.Directory) func(http.Handler) http.Handler {
-	host := extkit.NewScope("docker")
-	host.Registering("docker")
+// the host's gates and before next, the container. It provides remote/v1 on the host's scope (nil: a scope of its
+// own), so whoami lists every contract the host provides for its instances (a host's deploy/v1 too). auth decides who
+// may call it (nil: a superuser of the instance itself).
+func (rt *Runtime) serveRemote(host *extkit.Scope, dir *multisite.Directory, auth func(*http.Request) extkit.Auth) func(http.Handler) http.Handler {
+	if host == nil {
+		host = extkit.NewScope("docker")
+	}
+	prev := host.Registering("docker")
 	remotev1.Contract.ProvideForInstances(host, rt.Remote(host, dir))
+	host.Registering(prev)
+	if auth == nil {
+		auth = rt.SuperuserAuth()
+	}
 	return func(next http.Handler) http.Handler {
-		return remotev1.W.HostHandler(host, multisite.InstanceID, rt.SuperuserAuth(), next)
+		return remotev1.W.HostHandler(host, multisite.InstanceID, auth, next)
 	}
 }
 
