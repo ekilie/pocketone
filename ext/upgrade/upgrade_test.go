@@ -165,24 +165,32 @@ func TestUpgradeFor(t *testing.T) {
 		{Tag: "v0.0.1"},
 		{Tag: "v0.0.2-alpha.1", Prerelease: true},
 	}
-	cases := map[string]string{
-		"0.0.1-alpha.1": "v0.0.2-alpha.1", // a prerelease follows the newest of either kind
-		"0.0.1":         "",               // a release is never offered a prerelease, even a newer one
-		"0.0.0":         "v0.0.1",         // a release is offered newer releases only
-		"0.0.2-alpha.1": "",               // nothing newer
-		"(untracked)":   "v0.0.2-alpha.1", // a dev build: the newest of either kind
+	cases := []struct {
+		current    string
+		stableOnly bool
+		want       string
+		confirm    bool
+	}{
+		{"0.0.1-alpha.1", false, "v0.0.2-alpha.1", false}, // prerelease to prerelease: smooth
+		{"0.0.1", false, "v0.0.2-alpha.1", true},          // stable to prerelease: asks
+		{"0.0.1", true, "", false},                        // said no, and there's no newer stable release
+		{"0.0.0", true, "v0.0.1", false},                  // said no: the newest stable release instead
+		{"0.0.2-alpha.1", false, "", false},               // nothing newer
+		{"(untracked)", false, "v0.0.2-alpha.1", false},   // a dev build: smooth
 	}
-	for current, want := range cases {
+	for _, c := range cases {
 		got := ""
-		if r := UpgradeFor(current, rs); r != nil {
+		r := UpgradeFor(c.current, rs, c.stableOnly)
+		if r != nil {
 			got = r.Tag
 		}
-		if got != want {
-			t.Errorf("UpgradeFor(%q) = %q, want %q", current, got, want)
+		if got != c.want || NeedsConfirm(c.current, r) != c.confirm {
+			t.Errorf("UpgradeFor(%q, %v) = %q (confirm %v), want %q (confirm %v)",
+				c.current, c.stableOnly, got, NeedsConfirm(c.current, r), c.want, c.confirm)
 		}
 	}
 	// ordering: alpha.2 > alpha.1, a release > its prereleases
-	if UpgradeFor("0.0.1-alpha.1", rs[:3]).Tag != "v0.0.1" || UpgradeFor("0.0.1-alpha.1", rs[:2]).Tag != "v0.0.1-alpha.2" {
+	if UpgradeFor("0.0.1-alpha.1", rs[:3], false).Tag != "v0.0.1" || UpgradeFor("0.0.1-alpha.1", rs[:2], false).Tag != "v0.0.1-alpha.2" {
 		t.Fatal("prerelease ordering is wrong")
 	}
 }
@@ -208,29 +216,26 @@ func TestUpgradeAsksBeforeAPrerelease(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	for _, c := range []struct {
-		answer string
-		yes    bool
-		want   string
-	}{{"n\n", false, "old"}, {"", false, "old"}, {"y\n", false, "new"}, {"", true, "new"}} {
+		current string
+		answer  string
+		yes     bool
+		want    string
+	}{
+		{"0.0.3", "n\n", false, "old"}, // stable to prerelease asks; no means no
+		{"0.0.3", "", false, "old"},    // no answer (no terminal) means no
+		{"0.0.3", "y\n", false, "new"},
+		{"0.0.3", "", true, "new"},          // --yes answers for you
+		{"0.0.3-alpha.1", "", false, "new"}, // prerelease to prerelease doesn't ask
+	} {
 		exe := filepath.Join(t.TempDir(), "pocketone")
 		os.WriteFile(exe, []byte("old"), 0o755)
-		p := testExtension(t, srv, "0.0.3-alpha.1", exe)
+		p := testExtension(t, srv, c.current, exe)
 		p.stdin = strings.NewReader(c.answer)
 		if err := p.upgrade(false, c.yes); err != nil {
 			t.Fatal(err)
 		}
 		if got, _ := os.ReadFile(exe); string(got) != c.want {
-			t.Errorf("answer %q, --yes %v: executable is %q, want %q", c.answer, c.yes, got, c.want)
+			t.Errorf("%s, answer %q, --yes %v: executable is %q, want %q", c.current, c.answer, c.yes, got, c.want)
 		}
-	}
-
-	// on a stable release the prerelease isn't offered at all, so nothing is asked or changed
-	exe := filepath.Join(t.TempDir(), "pocketone")
-	os.WriteFile(exe, []byte("old"), 0o755)
-	if err := testExtension(t, srv, "0.0.3", exe).upgrade(false, true); err != nil {
-		t.Fatal(err)
-	}
-	if got, _ := os.ReadFile(exe); string(got) != "old" {
-		t.Errorf("a release was upgraded to a prerelease: %q", got)
 	}
 }

@@ -101,15 +101,15 @@ func (p *extension) command() *cobra.Command {
 		Use:   "upgrade",
 		Short: "Upgrades this executable to the latest release, keeping the old one as <name>-<version>",
 		Long: "Upgrades this executable to the latest release, keeping the old one as <name>-<version>.\n\n" +
-			"On a stable release, only newer stable releases are offered. On a prerelease (or a dev build), the newest\n" +
-			"release is offered, prereleases included, and you're asked before a prerelease is installed.",
+			"The newest release is offered, prereleases included. Moving from a stable release to a prerelease asks first\n" +
+			"(no means the newest stable release instead, if there's a newer one); from one prerelease to the next it doesn't.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return p.upgrade(backup, yes)
 		},
 	}
 	cmd.Flags().BoolVar(&backup, "backup", true, "Back up pb_data after upgrading, if this folder has one")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Install a prerelease without asking")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Move from a stable release to a prerelease without asking")
 	return cmd
 }
 
@@ -137,22 +137,22 @@ func (p *extension) upgrade(backup, yes bool) error {
 		return err
 	}
 	current := strings.TrimPrefix(p.current, "v")
-	latest := UpgradeFor(current, releases)
-	if latest == nil {
-		if isRelease(current) && !isPrerelease(current) {
-			color.Green("You already have the latest release %s. Prereleases aren't offered to a release.", current)
-		} else {
-			color.Green("You already have the latest version %s.", current)
-		}
-		return nil
-	}
-	if latest.IsPrerelease() && !yes {
-		fmt.Printf("%s is a prerelease, not a stable release. Install it? [y/N] ", latest.Tag)
+	latest := UpgradeFor(current, releases, false)
+	if NeedsConfirm(current, latest) && !yes {
+		fmt.Printf("You're on the stable release %s; %s is a prerelease. Install it? [y/N] ", current, latest.Tag)
 		if !p.confirm() {
 			fmt.Println()
-			color.Yellow("Not upgraded. Run `upgrade --yes` to install it without asking.")
-			return nil
+			latest = UpgradeFor(current, releases, true)
+			if latest == nil {
+				color.Yellow("Not upgraded. Run `upgrade --yes` to install the prerelease without asking.")
+				return nil
+			}
+			color.Yellow("Installing the newest stable release, %s, instead.", latest.Tag)
 		}
+	}
+	if latest == nil {
+		color.Green("You already have the latest version %s.", current)
+		return nil
 	}
 
 	tmp, err := os.MkdirTemp(filepath.Dir(exe), ".upgrade-")

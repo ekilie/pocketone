@@ -34,7 +34,7 @@ flag:
 | Flag | Default | What it does |
 |---|---|---|
 | `--backup` | `true` | Back up `pb_data` after upgrading, if the current folder has one. `--backup=false` skips it. |
-| `--yes`, `-y` | `false` | Install a prerelease without asking. |
+| `--yes`, `-y` | `false` | Move from a stable release to a prerelease without asking. |
 
 ## Use
 
@@ -47,11 +47,12 @@ pocketone upgrade
 It:
 
 1. Picks the newest release on GitHub that fits what you're running, and stops if you already have it:
-   - **On a stable release** (`0.1.0`), only newer stable releases are offered. A prerelease never is, even a newer
-     one: `0.1.0` doesn't go to `0.1.1-alpha.1`.
-   - **On a prerelease** (`0.1.0-alpha.2`) **or a local build**, the newest release of either kind is offered:
-     `0.1.0-alpha.2` goes to `0.1.0-alpha.3` or `0.1.0`, whichever is newest.
-   - Before installing a prerelease, it asks. `--yes` answers for you; with no answer (no terminal), it doesn't install.
+   - The newest release is offered, prereleases included: `0.1.0-alpha.2` goes to `0.1.0-alpha.3` or `0.1.0`,
+     whichever is newest.
+   - **From one prerelease to the next** (or to a stable release), it just upgrades.
+   - **From a stable release to a prerelease** (`0.1.0` to `0.1.1-alpha.1`), it asks first. No means the newest stable
+     release instead, if there's a newer one. `--yes` answers yes for you; with no answer (no terminal), it's no.
+   - A local build upgrades to the newest release without asking.
 2. Downloads the archive for your platform and checks it against the release's `checksums.txt` before touching
    anything.
 3. Renames the current executable to `<name>-<version>` and puts the new one in its place. **Old copies are never
@@ -79,7 +80,8 @@ Nothing integrates with it yet. Other tools can reuse its release code:
   `upgrade.Config`. Release archives are named `<prefix>_<version>_<os>_<arch>.zip`, with a goreleaser-style
   `checksums.txt` in the same release.
 - **Go API.** `Config.FetchReleases(ctx)` lists the published releases, prereleases included, and
-  `upgrade.UpgradeFor(current, releases)` picks the one to upgrade to by the rules above. `Config.FetchRelease(ctx, tag)`
+  `upgrade.UpgradeFor(current, releases, stableOnly)` picks the one to upgrade to and `upgrade.NeedsConfirm(current, release)`
+  says whether to ask first. `Config.FetchRelease(ctx, tag)`
   fetches GitHub's latest stable release (tag `""`) or a given one;
   `Config.DownloadArchive(ctx, release, goos, goarch, dir)` downloads and checks a platform's archive.
   `upgrade.KeptName(exe, version)` is the name an old executable is kept under.

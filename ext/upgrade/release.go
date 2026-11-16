@@ -89,18 +89,15 @@ func (c *Config) FetchReleases(ctx context.Context) ([]Release, error) {
 	return out, nil
 }
 
-// UpgradeFor picks the release to upgrade current (a version such as "0.1.0" or "0.1.0-alpha.2", or a dev build's
-// non-version string) to, or nil when there's nothing newer:
-//
-//   - On a stable release, only newer stable releases are offered; a prerelease never is, even a newer one.
-//   - On a prerelease or a dev build, the newest release of either kind is offered.
-func UpgradeFor(current string, releases []Release) *Release {
+// UpgradeFor picks the newest release newer than current (a version such as "0.1.0" or "0.1.0-alpha.2", or a dev
+// build's non-version string), prerelease or not, or nil when there's nothing newer. With stableOnly, prereleases are
+// left out. Whether to ask before installing is [NeedsConfirm]'s call.
+func UpgradeFor(current string, releases []Release, stableOnly bool) *Release {
 	current = strings.TrimPrefix(current, "v")
-	stable := isRelease(current) && !isPrerelease(current)
 	var best *Release
 	for i := range releases {
 		r := &releases[i]
-		if stable && r.IsPrerelease() {
+		if stableOnly && r.IsPrerelease() {
 			continue
 		}
 		if isRelease(current) && compareVersions(current, r.Version()) <= 0 {
@@ -111,6 +108,13 @@ func UpgradeFor(current string, releases []Release) *Release {
 		}
 	}
 	return best
+}
+
+// NeedsConfirm reports whether moving from current to r needs a yes: only a jump from a stable release to a
+// prerelease does. Prerelease to prerelease, prerelease to stable and a dev build to anything go ahead.
+func NeedsConfirm(current string, r *Release) bool {
+	current = strings.TrimPrefix(current, "v")
+	return r != nil && r.IsPrerelease() && isRelease(current) && !isPrerelease(current)
 }
 
 // DownloadArchive downloads the release archive for this platform into dir, checks it against the release's
