@@ -57,6 +57,7 @@ repo root; each release here says which PocketBase version it's built on.
 
 ### Fixed
 
+- **jsvm, sandbox:** a hook can no longer pin a CPU with an Array method on a huge sparse array or array-like (`new Array(1e9).join("x")`, `[].indexOf.call({ length: 2 ** 53 - 1 }, 1)`), which QuickJS ran without checking the time limit. Array methods that walk every index, and passing an array to a Go function, now throw a `RangeError` past `MemoryLimit / 16` elements (4,194,304 at the default 64 MiB), a length no dense array fits in that memory.
 - A crash or data race when an app stops its cron scheduler (on shutdown or restart), a PocketBase v0.42 regression; fixed in core until upstream has it.
 
 ### PocketBase
