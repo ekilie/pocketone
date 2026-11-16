@@ -26,6 +26,8 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
+## v0.0.1-alpha.3 (2026-11-16)
+
 ### Upgrading
 
 - **pages:** a `+config.js` must export an object (`module.exports = { ... }`); the 0.x function form is now an error instead of being ignored.
