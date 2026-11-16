@@ -34,6 +34,94 @@ const preludeJS = `
 })();
 `
 
+// arrayGuardJS caps the length the Array.prototype methods that loop over an array's holes may walk.
+//
+// QuickJS checks the interrupt handler on every JS call and loop back-edge, never inside a built-in's own C loop.
+// Methods such as join, indexOf, slice or forEach walk every index up to length, and on a sparse array
+// (new Array(1e9)) or an array-like ({ length: 2 ** 53 - 1 }) the holes cost time but no memory and call no JS:
+// neither the memory limit nor TaskBudget stops them, and one call pins a CPU for minutes. Methods that allocate
+// per element (fill, toSorted, Array.from) are stopped by the memory limit instead, and ones that call back into JS
+// for every index (find*) by the interrupt handler. A dense array longer than MAX can't fit in the VM's memory, so
+// the cap only refuses sparse arrays and array-likes.
+//
+// The originals stay in this closure: JS can replace the wrappers (in its own VM) but never reach the unguarded
+// built-ins.
+const arrayGuardJS = `
+((MAX) => {
+	"use strict" // a wrapper called on null or a primitive must not see globalThis or a boxed this
+	const P = Array.prototype, isArray = Array.isArray, spreadable = Symbol.isConcatSpreadable
+	const len = (o) => {
+		if (o == null) return 0
+		const n = Number(o.length)
+		return n > 0 ? n : 0
+	}
+	const refuse = (name, n) => {
+		throw new RangeError("Array.prototype." + name + ": length " + n + " is over this VM's limit of " + MAX)
+	}
+	const guard = (name, check) => {
+		const orig = P[name]
+		if (typeof orig !== "function") return
+		const w = { [name](...args) { check(this, args); return orig.apply(this, args) } }[name]
+		Object.defineProperty(w, "length", { value: orig.length })
+		Object.defineProperty(P, name, { value: w, writable: true, configurable: true, enumerable: false })
+	}
+	const self = (name) => (o) => { const n = len(o); if (n > MAX) refuse(name, n) }
+	for (const name of ["copyWithin", "every", "fill", "filter", "forEach", "includes", "indexOf", "join",
+		"lastIndexOf", "map", "reduce", "reduceRight", "reverse", "shift", "slice", "some", "sort", "splice",
+		"toLocaleString", "unshift"]) {
+		guard(name, self(name))
+	}
+	// concat walks every spread argument too
+	guard("concat", (o, args) => {
+		let n = len(o)
+		for (const a of args) {
+			if (a !== null && typeof a === "object" && (a[spreadable] ?? isArray(a))) n += len(a)
+		}
+		if (n > MAX) refuse("concat", n)
+	})
+	// flat walks nested arrays natively: add up every array it will open, in JS (interruptible)
+	const nested = (name, o, depth) => {
+		let n = 0
+		const walk = (a, d) => {
+			const l = len(a)
+			n += l
+			if (n > MAX) refuse(name, n)
+			if (d < 1) return
+			for (let i = 0; i < l; i++) {
+				if (i in a && isArray(a[i])) walk(a[i], d - 1)
+			}
+		}
+		walk(o, depth)
+	}
+	guard("flat", (o, args) => {
+		const d = args[0] === undefined ? 1 : Math.trunc(Number(args[0])) || 0
+		nested("flat", o, d)
+	})
+	// flatMap opens each callback result natively, between JS calls: check each one
+	const flatMap = P.flatMap
+	if (typeof flatMap === "function") {
+		const w = { flatMap(cb, thisArg) {
+			const n = len(this)
+			if (n > MAX) refuse("flatMap", n)
+			if (typeof cb !== "function") return flatMap.call(this, cb, thisArg)
+			return flatMap.call(this, function (...a) {
+				const r = cb.apply(thisArg, a)
+				if (isArray(r) && len(r) > MAX) refuse("flatMap", len(r))
+				return r
+			})
+		} }.flatMap
+		Object.defineProperty(w, "length", { value: flatMap.length })
+		Object.defineProperty(P, "flatMap", { value: w, writable: true, configurable: true, enumerable: false })
+	}
+})
+`
+
+// maxArrayWalk is the longest array the guarded Array methods may walk: as many elements as a dense array could
+// hold in the VM's memory (16 bytes per value), at least 1M.
+func (vm *VM) maxArrayWalk() int64 {
+	return max(vm.cfg.MemoryLimit/16, 1<<20)
+}
+
 func (vm *VM) installPrelude() error {
 	hidden := func(name string, fn nativeFn) {
 		h, _ := vm.newHandle(entry{kind: kindNative, native: fn})
@@ -77,6 +165,9 @@ func (vm *VM) installPrelude() error {
 		return C.avm_undefined()
 	})
 	if err := vm.evalHere(preludeJS, "<prelude>"); err != nil {
+		return err
+	}
+	if err := vm.evalHere(arrayGuardJS+fmt.Sprintf("(%d);", vm.maxArrayWalk()), "<prelude>"); err != nil {
 		return err
 	}
 	g := C.JS_GetGlobalObject(vm.ctx)

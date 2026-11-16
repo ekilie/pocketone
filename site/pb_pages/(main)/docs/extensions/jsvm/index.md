@@ -51,6 +51,10 @@ The module is `github.com/pockethost/pocketone/ext/jsvm`.
 - `OnInit func(rt js.Runtime)`: add globals after everything else is set up.
 - `VM`: the limits. `MemoryLimit` (default 64 MiB), `TaskBudget` (JS time per task, default 5 s), `TaskWall` (wall time
   per task, Go calls included, default 30 s), `QueueSize`, `MaxAsync`, `MaxPumpDepth`.
+  Array methods that walk every index (`join`, `indexOf`, `slice`, `forEach`, `concat`, `flat`, ...) and arrays passed
+  to Go throw a `RangeError` past `MemoryLimit / 16` elements: QuickJS doesn't check `TaskBudget` inside those loops,
+  and a sparse array (`new Array(1e9)`) or array-like costs no memory, so the cap is what stops them. No dense array
+  that long fits in `MemoryLimit`.
 - `Extensions`: values that extend it (below).
 
 ## Use

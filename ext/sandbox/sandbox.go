@@ -525,7 +525,8 @@ var hiddenMethods = map[string]map[string]bool{
 		"UnsafeWithoutHooks": true,
 	},
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook": {
-		// binding JS functions at runtime runs them on other goroutines (goja isn't goroutine-safe)
+		// hooks are bound only by the onX binds as hook files load; binding, unbinding or firing them from a
+		// running handler would add handlers the engine never registered or fire events for code that isn't ready
 		"Bind": true, "BindFunc": true, "Unbind": true, "UnbindAll": true, "Trigger": true,
 	},
 	"os": {

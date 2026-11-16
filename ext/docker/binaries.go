@@ -70,7 +70,8 @@ func ParseVersion(v string) (line, want string, err error) {
 }
 
 // Pick returns the newest release in rs that satisfies want: "pb:0.36.*", "p1:0.0.1", or an upstream version without
-// a prefix; exact versions and ranges ("0.36.*", "~0.36", "^0.30") both work. It is the one place that decides which
+// a prefix; exact versions and ranges ("0.36.*", "~0.36", "^0.30") both work. A pre-release is picked only when want
+// names one ("p1:0.0.1-alpha.4"); a range skips them. It is the one place that decides which
 // release an instance runs.
 func Pick(rs []Release, want string) (Release, error) { return PickMin(rs, want, MinUpstream) }
 
@@ -99,8 +100,9 @@ func PickMin(rs []Release, want, minUpstream string) (Release, error) {
 			continue
 		}
 		v, err := semver.StrictNewVersion(r.Version)
-		if err != nil || v.Prerelease() != "" || !c.Check(v) || (line == LinePB && v.LessThan(floor)) {
-			continue // pre-releases are never served
+		// a range never matches a pre-release; only a version that names one ("p1:0.0.1-alpha.4") picks it
+		if err != nil || !c.Check(v) || (line == LinePB && v.LessThan(floor)) {
+			continue
 		}
 		if best == nil || v.GreaterThan(best) {
 			best, pick = v, r

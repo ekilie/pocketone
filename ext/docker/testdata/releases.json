@@ -29,16 +29,16 @@
  },
  {
   "line": "p1",
-  "version": "0.0.1",
+  "version": "0.0.1-alpha.4",
   "base": "0.41.1",
   "assets": {
    "linux_amd64": {
-    "url": "https://github.com/pockethost/pocketone/releases/download/v0.0.1/pocketone_0.0.1_linux_amd64.zip",
-    "sha256": "0392fd2cc98930b7e58a7aceba68aa6b8c557549c35af06c37fc44516a54b422"
+    "url": "https://github.com/pockethost/pocketone/releases/download/v0.0.1-alpha.4/pocketone_0.0.1-alpha.4_linux_amd64.zip",
+    "sha256": "eecc20ef8189928f75940166d7808a6057a84edba051627c709983cb7fe9abe9"
    },
    "linux_arm64": {
-    "url": "https://github.com/pockethost/pocketone/releases/download/v0.0.1/pocketone_0.0.1_linux_arm64.zip",
-    "sha256": "2a92d288e74db19109a2383142fa47c35824382f83297448629181b628090d04"
+    "url": "https://github.com/pockethost/pocketone/releases/download/v0.0.1-alpha.4/pocketone_0.0.1-alpha.4_linux_arm64.zip",
+    "sha256": "786e99bcb0c49419b503d8c31db20c93b4c23af8d3e6bfedfe280901d731268e"
    }
   }
  }

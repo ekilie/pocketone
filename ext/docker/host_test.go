@@ -43,7 +43,7 @@ instances:
     version: "pb:0.23.*"
   - id: cehostce
     hosts: [ce.test]
-    version: "p1:0.0.*"
+    version: "p1:0.0.1-alpha.4"
   - id: cehostoff
     hosts: [off.test]
     version: "pb:0.23.*"
@@ -152,7 +152,7 @@ func TestMaintenance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rt.Shutdown()
-	inst := multisite.Instance{ID: "p4maint", Version: "p1:0.0.*"}
+	inst := multisite.Instance{ID: "p4maint", Version: "p1:0.0.1-alpha.4"}
 	if err := rt.StartInstance(ctx, inst); err != nil || !rt.Running(inst.ID) {
 		t.Fatalf("start: %v running=%v", err, rt.Running(inst.ID))
 	}
@@ -204,7 +204,7 @@ func TestHooksChangeRestartsContainer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rt.Shutdown()
-	inst := multisite.Instance{ID: "p4hooks", Version: "p1:0.0.*"}
+	inst := multisite.Instance{ID: "p4hooks", Version: "p1:0.0.1-alpha.4"}
 	hook := func(v string) {
 		t.Helper()
 		_ = os.MkdirAll(filepath.Join(data, inst.ID, "pb_hooks"), 0o755)
@@ -253,7 +253,7 @@ func TestBrokenHookFileStillBoots(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rt.Shutdown()
-	inst := multisite.Instance{ID: "p4broken", Version: "p1:0.0.*"}
+	inst := multisite.Instance{ID: "p4broken", Version: "p1:0.0.1-alpha.4"}
 	hooks := filepath.Join(data, inst.ID, "pb_hooks")
 	_ = os.MkdirAll(hooks, 0o755)
 	files := map[string]string{

@@ -2,6 +2,7 @@ package jsvm
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -331,6 +332,14 @@ func convertPrim(v reflect.Value, t reflect.Type) (reflect.Value, error) {
 
 func (vm *VM) arrayToGo(v JSValue, t reflect.Type) (reflect.Value, error) {
 	n := int(C.avm_length(vm.ctx, v))
+	if n < 0 {
+		return reflect.Value{}, errors.New("array length can't be read")
+	}
+	// a sparse array's length costs JS nothing, but the Go slice is allocated in full (outside the memory limit)
+	// and filled in a loop the interrupt handler can't stop
+	if limit := vm.maxArrayWalk(); int64(n) > limit {
+		return reflect.Value{}, fmt.Errorf("array length %d is over this VM's limit of %d", n, limit)
+	}
 	et := anyType
 	if t.Kind() == reflect.Slice {
 		et = t.Elem()
