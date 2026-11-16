@@ -8,8 +8,8 @@
 //	curl -X POST http://alpha.localhost:8090/api/collections/users/request-password-reset -d email=user@example.com
 //	curl -X POST http://beta.localhost:8090/api/collections/users/request-password-reset -d email=user@example.com
 //
-// and read it in PocketOne's dev mail trap at http://127.0.0.1:8025 (filter by instance; PB_MAILTRAP_HTTP and
-// PB_MAILTRAP_SMTP change its ports). Settings → Mail in each dashboard shows the relay.
+// and read it in PocketOne's dev mail trap at http://127.0.0.1:8025 (filter by instance; P1_MAILTRAP_HTTP and
+// P1_MAILTRAP_SMTP change its ports). Settings → Mail in each dashboard shows the relay.
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 package main

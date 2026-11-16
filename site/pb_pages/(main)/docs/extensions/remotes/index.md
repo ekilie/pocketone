@@ -55,17 +55,19 @@ Commands find it by walking up from the current folder. It isn't a `pb_*` name, 
 ### Saved logins
 
 Logins are saved per user, keyed by URL, in `~/.config/pocketone/credentials.json` (mode 0600). Set
-`POCKETONE_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
+`P1_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
 
 ### Environment variables
 
 | Variable | What it does |
 |---|---|
-| `POCKETONE_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`POCKETONE_TOKEN_PROD`). |
-| `POCKETONE_TOKEN` | A token for any remote. |
+| `P1_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`P1_TOKEN_PROD`). |
+| `P1_TOKEN` | A token for any remote. |
+| `P1_CONFIG_DIR` | Where saved logins are kept. |
 
-A token in the environment wins over a saved login. The `POCKETONE` in these names and the `pocketone` folder come
-from the command's name, so a build shipped under another name uses its own (`POCKETHOST_TOKEN`, `~/.config/pockethost`).
+A token in the environment wins over a saved login. Every PocketOne variable starts with `P1_`, in every build (the
+`pockethost` binary reads `P1_TOKEN` too). The `pocketone` folder comes from the command's name, so a build shipped
+under another name keeps its logins apart (`~/.config/pockethost`).
 
 ## Use
 

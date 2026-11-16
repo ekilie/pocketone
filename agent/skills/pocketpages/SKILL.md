@@ -334,7 +334,7 @@ pocketone logs                             # follow the remote's log
 pocketone dev                              # two-way sync while you work, with logs
 ```
 
-- On PocketHost: `pocketone link https://<name>.pockethost.io <token>`. In CI, set `POCKETONE_TOKEN` instead.
+- On PocketHost: `pocketone link https://<name>.pockethost.io <token>`. In CI, set `P1_TOKEN` instead.
 - Migrations and packages apply only on restart: `pocketone deploy --restart` or `pocketone restart`.
   `pull` skips pages unless named: `pocketone pull prod pb_pages`.
 - Self-hosting: run `pocketone` (pages is built in) with `pb_pages` next to `pb_data`, without `--dev`, over HTTPS.

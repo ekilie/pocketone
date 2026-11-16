@@ -32,10 +32,11 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"github.com/domodwyer/mailyak/v3"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // Where the dev mail trap listens. Set them before the first app bootstraps, or with the environment variables
-// PB_MAILTRAP_HTTP and PB_MAILTRAP_SMTP.
+// P1_MAILTRAP_HTTP and P1_MAILTRAP_SMTP.
 var (
 	DevTrapHTTPAddr = "127.0.0.1:8025"
 	DevTrapSMTPAddr = "127.0.0.1:1025"
@@ -56,7 +57,7 @@ var (
 // message to stderr; err says why the inbox isn't served.
 func Default(reason string) (t *Trap, err error) {
 	devTrapOnce.Do(func() {
-		devTrap = &Trap{SMTPAddr: envOr("PB_MAILTRAP_SMTP", DevTrapSMTPAddr), HTTPAddr: envOr("PB_MAILTRAP_HTTP", DevTrapHTTPAddr)}
+		devTrap = &Trap{SMTPAddr: envOr(extkit.EnvVar("MAILTRAP_SMTP"), DevTrapSMTPAddr), HTTPAddr: envOr(extkit.EnvVar("MAILTRAP_HTTP"), DevTrapHTTPAddr)}
 		devTrapErr = devTrap.Start(context.Background())
 		if devTrapErr != nil {
 			fmt.Fprintf(os.Stderr, "Mail trap: %v; caught mail is printed here only.\n", devTrapErr)

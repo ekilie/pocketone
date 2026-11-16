@@ -41,7 +41,7 @@ type Client struct {
 	Remote *Remote
 	// Token is sent as "Authorization: Bearer <token>" (empty: anonymous).
 	Token string
-	// TokenSource says where Token came from, for messages ("POCKETONE_TOKEN", "saved login", ...).
+	// TokenSource says where Token came from, for messages ("P1_TOKEN", "saved login", ...).
 	TokenSource string
 	HTTP        *http.Client
 }

@@ -34,8 +34,8 @@ Turn SMTP on, or run without `--dev`, and it does nothing. Two environment varia
 
 | Variable | Default |
 |---|---|
-| `PB_MAILTRAP_HTTP` | `127.0.0.1:8025` (the web inbox) |
-| `PB_MAILTRAP_SMTP` | `127.0.0.1:1025` (SMTP) |
+| `P1_MAILTRAP_HTTP` | `127.0.0.1:8025` (the web inbox) |
+| `P1_MAILTRAP_SMTP` | `127.0.0.1:1025` (SMTP) |
 
 Never expose these ports: anyone who can reach them can read the mail.
 

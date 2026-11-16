@@ -19,9 +19,9 @@ import (
 // Two stock apps: app1's `link` signs in to app2 through app2's OAuth server (a browser grant), never a password,
 // and what it saves is a revocable API token that works on app2's contracts.
 func TestLinkSignsInThroughOAuth(t *testing.T) {
-	t.Setenv("POCKETONE_CONFIG_DIR", t.TempDir())
-	t.Setenv("POCKETONE_TOKEN", "")
-	t.Setenv("POCKETONE_TOKEN_DEFAULT", "")
+	t.Setenv("P1_CONFIG_DIR", t.TempDir())
+	t.Setenv("P1_TOKEN", "")
+	t.Setenv("P1_TOKEN_DEFAULT", "")
 	t.Chdir(t.TempDir()) // app1's project folder: link writes .pocketbase/remotes.json here
 
 	app1, _ := newApp(t, standard.New(), nil)

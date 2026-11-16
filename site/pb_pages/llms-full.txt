@@ -1067,7 +1067,7 @@ The generated commands, for any contract:
   whole input (`@file`, `-` for stdin) and `--remote` (a remote's name or a URL; default: the project's default
   remote). Times take RFC 3339, a local time (`2026-11-10 15:00`) or a duration from now (`-2h`).
 - **Output:** the answer as JSON; streams print one JSON line per entry until Ctrl-C.
-- **Auth:** the remote's saved login (`pocketone login`), or `POCKETONE_TOKEN` in CI.
+- **Auth:** the remote's saved login (`pocketone login`), or `P1_TOKEN` in CI.
 - **Not commands:** public operations that take or return a raw body (an unsubscribe page, a mail provider's
   webhook); they're for browsers and services.
 
@@ -4434,7 +4434,7 @@ curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collection
 | [OAuth](https://pocketone.dev/docs/extensions/tokens/oauth) (in Tokens) | Its access tokens are API tokens, issued with the client's id, the granted scopes and, when asked for, an audience. They show up under Settings → API tokens and can be revoked there. The OAuth server needs Tokens on the app. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner. A full-access token's calls hold every registered scope; a token limited to scopes on the consent page has its calls checked like requests with those scopes (`WithScopes`). |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | Registers `deploy` and `deploy:read`; a `deploy` token is what CI uses. |
-| [Remotes](https://pocketone.dev/docs/extensions/remotes) | `pocketone login` takes a pasted API token when the remote has no OAuth server. In CI, put a token in `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`). remote/v1's whoami (`/api/_c/remote/v1`) reports a token's id and scopes, whatever its scopes. |
+| [Remotes](https://pocketone.dev/docs/extensions/remotes) | `pocketone login` takes a pasted API token when the remote has no OAuth server. In CI, put a token in `P1_TOKEN` (or `P1_TOKEN_<REMOTE>`). remote/v1's whoami (`/api/_c/remote/v1`) reports a token's id and scopes, whatever its scopes. |
 | [Pocker](https://pocketone.dev/docs/extensions/pocker) | Add `tokens.New(tokens.Config{})` to the host's extensions and every instance gets its own tokens, routes and screen. Per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
 
 ### Building on Tokens
@@ -4903,7 +4903,7 @@ There is no `pocketone.yaml` section, flag or settings screen. Defaults on the r
   `pb_data`, so backups skip it, and it's never deployed.
 
 On your machine, the commands use the project's remotes and saved logins from [Remotes](https://pocketone.dev/docs/extensions/remotes). In CI,
-set `POCKETONE_TOKEN` (or `POCKETONE_TOKEN_<REMOTE>`) instead of signing in.
+set `P1_TOKEN` (or `P1_TOKEN_<REMOTE>`) instead of signing in.
 
 ## Use
 
@@ -5186,17 +5186,19 @@ Commands find it by walking up from the current folder. It isn't a `pb_*` name, 
 ### Saved logins
 
 Logins are saved per user, keyed by URL, in `~/.config/pocketone/credentials.json` (mode 0600). Set
-`POCKETONE_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
+`P1_CONFIG_DIR` to use another folder; with `XDG_CONFIG_HOME` set, it's `$XDG_CONFIG_HOME/pocketone/`.
 
 ### Environment variables
 
 | Variable | What it does |
 |---|---|
-| `POCKETONE_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`POCKETONE_TOKEN_PROD`). |
-| `POCKETONE_TOKEN` | A token for any remote. |
+| `P1_TOKEN_<REMOTE>` | A token for one remote, for CI. The name is upper case, other characters as `_` (`P1_TOKEN_PROD`). |
+| `P1_TOKEN` | A token for any remote. |
+| `P1_CONFIG_DIR` | Where saved logins are kept. |
 
-A token in the environment wins over a saved login. The `POCKETONE` in these names and the `pocketone` folder come
-from the command's name, so a build shipped under another name uses its own (`POCKETHOST_TOKEN`, `~/.config/pockethost`).
+A token in the environment wins over a saved login. Every PocketOne variable starts with `P1_`, in every build (the
+`pockethost` binary reads `P1_TOKEN` too). The `pocketone` folder comes from the command's name, so a build shipped
+under another name keeps its logins apart (`~/.config/pockethost`).
 
 ## Use
 
@@ -8133,7 +8135,7 @@ curl -X POST http://alpha.localhost:8090/api/collections/users/request-password-
 ```
 
 Log in to an instance's dashboard as `admin@example.com` / `password` to see the relay on Settings → Mail. `--listen`
-changes the instances' port; `PB_MAILTRAP_HTTP` and `PB_MAILTRAP_SMTP` change the trap's.
+changes the instances' port; `P1_MAILTRAP_HTTP` and `P1_MAILTRAP_SMTP` change the trap's.
 
 ```go
 // Command example is a Pocker build with mailrelay, relaying into PocketOne's dev mail trap: every instance
@@ -8146,8 +8148,8 @@ changes the instances' port; `PB_MAILTRAP_HTTP` and `PB_MAILTRAP_SMTP` change th
 //	curl -X POST http://alpha.localhost:8090/api/collections/users/request-password-reset -d email=user@example.com
 //	curl -X POST http://beta.localhost:8090/api/collections/users/request-password-reset -d email=user@example.com
 //
-// and read it in PocketOne's dev mail trap at http://127.0.0.1:8025 (filter by instance; PB_MAILTRAP_HTTP and
-// PB_MAILTRAP_SMTP change its ports). Settings → Mail in each dashboard shows the relay.
+// and read it in PocketOne's dev mail trap at http://127.0.0.1:8025 (filter by instance; P1_MAILTRAP_HTTP and
+// P1_MAILTRAP_SMTP change its ports). Settings → Mail in each dashboard shows the relay.
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 package main
@@ -8708,8 +8710,8 @@ Turn SMTP on, or run without `--dev`, and it does nothing. Two environment varia
 
 | Variable | Default |
 |---|---|
-| `PB_MAILTRAP_HTTP` | `127.0.0.1:8025` (the web inbox) |
-| `PB_MAILTRAP_SMTP` | `127.0.0.1:1025` (SMTP) |
+| `P1_MAILTRAP_HTTP` | `127.0.0.1:8025` (the web inbox) |
+| `P1_MAILTRAP_SMTP` | `127.0.0.1:1025` (SMTP) |
 
 Never expose these ports: anyone who can reach them can read the mail.
 

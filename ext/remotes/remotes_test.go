@@ -65,9 +65,8 @@ func newApp(t *testing.T) (*tests.TestApp, string) {
 
 func isolate(t *testing.T) string {
 	t.Helper()
-	t.Setenv("POCKETONE_CONFIG_DIR", t.TempDir())
-	t.Setenv("POCKETONE_TOKEN", "")
-	t.Setenv("POCKETHOST_TOKEN", "")
+	t.Setenv("P1_CONFIG_DIR", t.TempDir())
+	t.Setenv("P1_TOKEN", "")
 	return t.TempDir()
 }
 
@@ -124,8 +123,8 @@ func TestEnvTokens(t *testing.T) {
 	if err := p.Save(); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("POCKETONE_TOKEN", "general")
-	t.Setenv("POCKETONE_TOKEN_MY_PROD", "specific")
+	t.Setenv("P1_TOKEN", "general")
+	t.Setenv("P1_TOKEN_MY_PROD", "specific")
 	if tok, _ := remoteclient.EnvToken("my-prod"); tok != "specific" {
 		t.Fatal(tok)
 	}
@@ -292,23 +291,24 @@ func runCmd(t *testing.T, dir string, args ...string) (string, error) {
 	return "", nil
 }
 
-// A build shipped under another command name (extkit.Command) gets its own variables and config folder.
-func TestNamesFollowCommand(t *testing.T) {
+// A build shipped under another command name (extkit.Command) gets its own config folder; the variables stay
+// PocketOne's (P1_), since the prefix names the layer that reads them.
+func TestConfigFolderFollowsCommandVariablesDont(t *testing.T) {
 	old := extkit.Command
 	t.Cleanup(func() { extkit.Command = old })
 	extkit.Command = "my-tool"
 	home := t.TempDir()
-	t.Setenv("MY_TOOL_CONFIG_DIR", "")
+	t.Setenv("P1_CONFIG_DIR", "")
 	t.Setenv("XDG_CONFIG_HOME", home)
 	if d, _ := remoteclient.ConfigDir(); d != filepath.Join(home, "my-tool") {
 		t.Fatal(d)
 	}
-	t.Setenv("MY_TOOL_CONFIG_DIR", "/elsewhere")
+	t.Setenv("P1_CONFIG_DIR", "/elsewhere")
 	if d, _ := remoteclient.ConfigDir(); d != "/elsewhere" {
 		t.Fatal(d)
 	}
-	t.Setenv("MY_TOOL_TOKEN", "t")
-	if tok, src := remoteclient.EnvToken("prod"); tok != "t" || src != "MY_TOOL_TOKEN" {
+	t.Setenv("P1_TOKEN", "t")
+	if tok, src := remoteclient.EnvToken("prod"); tok != "t" || src != "P1_TOKEN" {
 		t.Fatal(tok, src)
 	}
 }
