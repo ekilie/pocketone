@@ -13,8 +13,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 // rendering is false until the JS pass exists; cases that need it are skipped.
@@ -50,7 +50,7 @@ func newServer(t *testing.T, dir string) (http.Handler, *Pages) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	jsvm.MustRegister(app, jsvm.Config{HooksDir: filepath.Join(t.TempDir(), "pb_hooks")})
+	jsvm.MustRegister(app, jsvm.Config{HooksDir: filepath.Join(t.TempDir(), "pb_hooks"), MigrationsDir: t.TempDir(), TypesDir: t.TempDir()})
 	p, err := Register(app, Config{Dir: dir})
 	if err != nil {
 		t.Fatal(err)

@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 func TestRenderTemplate(t *testing.T) {
@@ -26,7 +26,7 @@ func TestRenderTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer app.Cleanup()
-	jsvm.MustRegister(app, jsvm.Config{HooksDir: t.TempDir()})
+	jsvm.MustRegister(app, jsvm.Config{HooksDir: t.TempDir(), MigrationsDir: t.TempDir(), TypesDir: t.TempDir()})
 	p := MustRegister(app, Config{Dir: dir})
 	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(*core.BootstrapEvent) error { return nil }); err != nil {
 		t.Fatal(err)

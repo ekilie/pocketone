@@ -323,9 +323,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/mcp"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
@@ -360,7 +360,7 @@ func main() {
 	})
 
 	jsvm.MustRegister(app, jsvm.Config{
-		OnInit: func(vm *goja.Runtime) { mcp.BindJS(vm, app) },
+		OnInit: func(rt js.Runtime) { mcp.BindJS(app, rt) },
 	})
 
 	if err := app.Start(); err != nil {

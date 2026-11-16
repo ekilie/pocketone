@@ -3,6 +3,7 @@ package pages
 import (
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -50,18 +51,21 @@ func (r *request) oauth2CookieOpts(maxAge int) map[string]any {
 	return o
 }
 
-func (r *request) requestOAuth2(providerName string, opts map[string]any) string {
-	col := r.authCollection(opts)
+func (r *request) requestOAuth2(providerName string, opts map[string]any) (string, error) {
+	col, err := r.authCollection(opts)
+	if err != nil {
+		return "", err
+	}
 	if !col.OAuth2.Enabled {
-		r.fail400("OAuth2 sign-in is turned off for " + col.Name)
+		return "", errors.New("OAuth2 sign-in is turned off for " + col.Name)
 	}
 	cfg, ok := col.OAuth2.GetProviderConfig(providerName)
 	if !ok {
-		r.fail400(fmt.Sprintf("OAuth2 provider %q isn't set up for %s", providerName, col.Name))
+		return "", errors.New(fmt.Sprintf("OAuth2 provider %q isn't set up for %s", providerName, col.Name))
 	}
 	provider, err := cfg.InitProvider()
 	if err != nil {
-		panic(r.vm.NewGoError(fmt.Errorf("OAuth2 provider %q: %w", providerName, err)))
+		return "", fmt.Errorf("OAuth2 provider %q: %w", providerName, err)
 	}
 
 	redirectPath := "/auth/oauth/confirm"
@@ -69,7 +73,7 @@ func (r *request) requestOAuth2(providerName string, opts map[string]any) string
 		redirectPath = v
 	}
 	if u, err := url.Parse(redirectPath); err != nil || u.IsAbs() || u.Host != "" || len(redirectPath) == 0 || redirectPath[0] != '/' {
-		r.fail400("ctx.session.requestOAuth2: redirectPath must be a path on this site, like /auth/oauth/confirm")
+		return "", errors.New("ctx.session.requestOAuth2: redirectPath must be a path on this site, like /auth/oauth/confirm")
 	}
 
 	st := oauth2State{
@@ -98,26 +102,26 @@ func (r *request) requestOAuth2(providerName string, opts map[string]any) string
 
 	if v, ok := opts["redirect"].(bool); !ok || v {
 		if r.sent {
-			panic(r.vm.NewGoError(fmt.Errorf("a response was already sent")))
+			return "", errSent
 		}
 		r.sent = true
 		http.Redirect(r.e.Response, r.e.Request, authURL, http.StatusFound)
 	}
-	return authURL
+	return authURL, nil
 }
 
-func (r *request) signInWithOAuth2(state, code string, opts map[string]any) map[string]any {
+func (r *request) signInWithOAuth2(state, code string, opts map[string]any) (map[string]any, error) {
 	raw := r.cookies()[oauth2Cookie]
 	var st oauth2State
 	if raw == "" || json.Unmarshal([]byte(raw), &st) != nil || st.State == "" {
-		r.fail400("This sign-in link expired or was already used. Please try again.")
+		return nil, errors.New("This sign-in link expired or was already used. Please try again.")
 	}
 	r.setCookie(oauth2Cookie, "", r.oauth2CookieOpts(0)) // one use
 	if state == "" || subtle.ConstantTimeCompare([]byte(state), []byte(st.State)) != 1 {
-		r.fail400("This sign-in link expired or was already used. Please try again.")
+		return nil, errors.New("This sign-in link expired or was already used. Please try again.")
 	}
 	if code == "" {
-		r.fail400("The sign-in provider didn't send a code. Please try again.")
+		return nil, errors.New("The sign-in provider didn't send a code. Please try again.")
 	}
 
 	body := map[string]any{
@@ -131,14 +135,21 @@ func (r *request) signInWithOAuth2(state, code string, opts map[string]any) map[
 	}
 	headers := map[string]any{"Content-Type": "application/json"}
 	if r.auth != nil && r.auth.Collection().Name == st.Collection {
-		headers["Authorization"] = r.authToken() // link the provider to the signed-in account
+		token, err := r.authToken()
+		if err != nil {
+			return nil, err
+		}
+		headers["Authorization"] = token // link the provider to the signed-in account
 	}
-	res := r.apiSend(map[string]any{
+	res, err := r.apiSend(map[string]any{
 		"url":     sdkBaseURL + "/api/collections/" + url.PathEscape(st.Collection) + "/auth-with-oauth2",
 		"method":  http.MethodPost,
 		"body":    body,
 		"headers": headers,
 	})
+	if err != nil {
+		return nil, err
+	}
 	status, _ := res["statusCode"].(int)
 	parsed, _ := res["json"].(map[string]any)
 	if status != http.StatusOK {
@@ -149,14 +160,17 @@ func (r *request) signInWithOAuth2(state, code string, opts map[string]any) map[
 		if _, mfa := parsed["mfaId"]; mfa {
 			msg = mfaMessage
 		}
-		r.fail400(msg)
+		return nil, errors.New(msg)
 	}
 	token, _ := parsed["token"].(string)
 	rec, err := r.p.app.FindAuthRecordByToken(token, core.TokenTypeAuth)
 	if err != nil {
-		panic(r.vm.NewGoError(fmt.Errorf("OAuth2: %w", err)))
+		return nil, fmt.Errorf("OAuth2: %w", err)
 	}
-	out := r.signIn(rec)
+	out, err := r.signIn(rec)
+	if err != nil {
+		return nil, err
+	}
 	out["meta"] = parsed["meta"]
-	return out
+	return out, nil
 }

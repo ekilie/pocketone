@@ -212,16 +212,14 @@ route from one instance against another instance and the host; all of these are 
 | Files: `$os.*`, `$filepath.glob/walk*`, `$filesystem.fileFromPath`, `$template.loadFiles`, `$apis.static`, `require()` | Confined to the instance folder with an `os.Root`: the kernel resolves every path beneath it, refusing `..` and symlinks that leave it. Relative paths and absolute paths inside the folder (`__hooks + "/x"`) work as before. |
 | Host primitives: `$os.cmd`, `$os.exec`, `$os.exit`, `$os.args`, `$filesystem.local` | Disabled (`$os.args` is empty). |
 | Environment: `$os.getenv`, `process.env` | Only the instance's own `secrets`. |
-| Go internals: `$app.restart/bootstrap/runAllMigrations/onServe/onTerminate/onBootstrap/cron/unsafeWithoutHooks`, `hook.bindFunc/bind/trigger/unbind*`, `*sql.DB/Conn/Tx/Stmt` (e.g. `dbx.DB.DB()`), `database/sql/driver`, `os/exec`, `net`, `syscall`, `http.Server` controls | Hidden from JS (the field-name mapper maps them to nothing). Top-level `onRecord*`, `routerAdd`, `cronAdd` and the rest of `$app` work as usual. |
+| Go internals: `$app.restart/bootstrap/runAllMigrations/onServe/onTerminate/onBootstrap/cron/unsafeWithoutHooks`, `hook.bindFunc/bind/trigger/unbind*`, `*sql.DB/Conn/Tx/Stmt` (e.g. `dbx.DB.DB()`), `database/sql/driver`, `os/exec`, `net`, `syscall`, `http.Server` controls | Hidden from JS (the sandbox's member filter: they read as `undefined`, including when promoted from an embedded app type). Top-level `onRecord*`, `routerAdd`, `cronAdd` and the rest of `$app` work as usual. |
 | Raw SQL (`$app.db().newQuery`) | Allowed. SQLite's authorizer refuses `ATTACH` (and `VACUUM INTO`) outside the instance's `pb_data`, `PRAGMA temp_store_directory/data_store_directory` and `load_extension`; the CLI-only `readfile`/`writefile`/`fsdir` don't exist in the library. Statements without a deadline get `max_query_duration`. |
-| CPU | Every JS call is interrupted after `max_js_execution`; `sleep()` is capped at 10 s. |
-| Memory, one shot | Built-ins that allocate a large result in one step refuse results over `max_js_allocation`: `String.repeat/padStart/padEnd`, `Array.join/toString`, `ArrayBuffer`, typed arrays (incl. array-likes, `.from`, and reaching the constructor through an instance), `Buffer.alloc*` / `new Buffer`, `$os.readFile`, `fileFromPath`, `readerToString`/`toBytes` limits. Recursion depth is capped (a JS stack overflow would otherwise crash the Go process). |
-| Memory, gradual | Not limited. goja has no per-VM memory accounting, so a hook's gradual growth counts against the whole process; the process can use the host's swap, and the OS is the last line. (A memory watch with strikes and quarantine was removed on 2026-11-14: it could fail requests where swap would have absorbed them, and it never fired in production.) |
+| CPU | Every JS call is interrupted after `max_js_execution`, Go calls included; `sleep()` is capped at 10 s. At most `max_concurrent_js` calls are in flight per instance. |
+| Memory | Each instance has one QuickJS VM ([ext/jsvm](/docs/extensions/jsvm)) with a hard cap (64 MiB by default): its JS heap plus the Go objects its JS holds. Growth past it, gradual or at once, is an out-of-memory error for that instance only. The JS stack is capped by size, so deep recursion is an error, never a crash. `$os.readFile`, `fileFromPath` and `readerToString`/`toBytes` are capped at `max_js_allocation`. |
 | Outbound network: `$http.send`, `$filesystem.fileFromURL`, S3 storage and backups, OAuth2/JWK fetches, SMTP | Public addresses only, checked on the address actually connected to (after DNS, so rebinding doesn't help): loopback, private ranges, link-local and cloud metadata, CGNAT, multicast, reserved and documentation ranges, and IPv6 equivalents/IPv4-in-IPv6 are refused unless listed in `egress_allow`. Installed process-wide on Go's default HTTP transport and PocketBase's SMTP client (`pocker/egress.go`). Host code that must reach private addresses (e.g. a control plane over a private network) uses its own `http.Client` with its own transport. `$http.send` timeouts and response bodies are capped. |
 
-**Limits of the memory controls:** only one-shot allocations are capped. A hook that grows memory gradually slows or,
-past swap, restarts the whole process (every instance in it) rather than failing alone; per-instance memory accounting
-needs a goja with a memory API, or one process per instance (docker).
+**Limits of the memory controls:** Go objects JS holds are charged by estimate, and Go's garbage collector can let the
+process use up to about twice the charge; set `GOMEMLIMIT` for the process as the backstop.
 
 **Not covered yet:** per-instance concurrency limits, and OS-level defence in depth: run Pocker as a non-root user with an
 OS firewall that only lets that user reach public addresses (a second, independent egress layer), plus seccomp and
@@ -233,14 +231,13 @@ These live in the repo root (PocketBase's own files), not in this extension.
 
 Kept small and marked `// PocketOne:` so upstream merges stay easy:
 
-- `core.BaseAppConfig.AppMigrations`: a per-app migrations list (JS migrations from `plugins/jsvm` register there
-  instead of the global `core.AppMigrations`).
+- `core.BaseAppConfig.AppMigrations`: a per-app migrations list (JS migrations from [jsvm](/docs/extensions/jsvm) register
+  there instead of the global `core.AppMigrations`).
 - `core.BaseAppConfig.EncryptionKey`: the settings encryption key passed in directly instead of read from the process
   environment.
-- `plugins/jsvm`: `Config.Extensions` ([`extension.go`](../../plugins/jsvm/extension.go)): values with optional
-  methods (`OnInit`, `OnCall` around every call into JS, `HTTPClient` for `$http.send`, `HookFiles` /
-  `MigrationFiles` / `Require`, `OnLoad` / `OnCompile` for error mapping), plus `Run` and `ScriptPath`. The
-  [sandbox](/docs/extensions/sandbox) and [jserrors](/docs/extensions/jserrors) are extensions.
+- The JS engine isn't a core change: Pocker runs [jsvm](/docs/extensions/jsvm) (QuickJS), an extension, and the
+  [sandbox](/docs/extensions/sandbox) plugs into it. PocketBase's own `plugins/jsvm` still carries PocketOne seams that
+  are being removed.
 - Mail needs no core change: the sandbox sends an app's own SMTP through the egress policy on `OnMailerSend`
   (`sandbox.BindMail`).
 

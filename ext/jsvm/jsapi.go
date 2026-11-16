@@ -135,7 +135,21 @@ func (v *jsValue) Func() js.Func {
 	if C.avm_tag(v.v) != C.JS_TAG_OBJECT || C.avm_is_function(v.vm.ctx, v.v) == 0 {
 		return nil
 	}
-	return jsFunc{vm: v.vm, ref: v.vm.ref(v.v)}
+	f := &jsFunc{vm: v.vm, ref: v.vm.ref(v.v)}
+	// free the function's reference when Go drops the Func (else it lives as long as the VM)
+	runtime.SetFinalizer(f, func(f *jsFunc) {
+		vm, r := f.vm, f.ref
+		vm.post(func() {
+			if vm.a == nil {
+				return
+			}
+			if _, ok := vm.refs[r]; ok {
+				delete(vm.refs, r)
+				vm.free_(r.v)
+			}
+		})
+	})
+	return f
 }
 
 func (v *jsValue) Get(name string) js.Value {
@@ -180,7 +194,7 @@ type jsFunc struct {
 }
 
 // Call runs the function on its VM (from any goroutine), awaiting a returned promise; the result is exported.
-func (f jsFunc) Call(args ...any) (any, error) {
+func (f *jsFunc) Call(args ...any) (any, error) {
 	in := make([]reflect.Value, len(args))
 	for i, a := range args {
 		in[i] = reflect.ValueOf(a)

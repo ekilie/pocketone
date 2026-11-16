@@ -20,7 +20,7 @@ can use your data directly. This is PocketPages v1, formerly the npm PocketPages
 Pages is built into `pocketone` and **on whenever a `pb_pages` folder exists** next to `pb_data`. There's no switch:
 no folder, no pages. If the folder appears while the app runs, it starts serving it.
 
-In your own Go build, register it after the JS VM, since page code runs there:
+In your own Go build, register it after the JS VM ([ext/jsvm](/docs/extensions/jsvm)), since page code runs there:
 
 ```go
 app := pocketbase.New()
@@ -207,8 +207,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/pages"
 )
 

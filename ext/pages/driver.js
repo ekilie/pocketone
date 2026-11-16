@@ -1,350 +1,651 @@
-// The page driver: one call per request. Go passes `rt` (request primitives and the route); this builds `ctx`,
-// runs plugins' onRequest/extendContext, middleware (root first), the folder's +page.js / +api.js handlers, the
-// template and its layouts, and sends the response. See SPEC.md section 3.
-(function (rt) {
+// The page driver: one call per request. Go passes a getter for `rt` (request primitives and the route); this loads
+// +config.js and its plugins, builds `ctx`, runs plugins' onRequest/extendContext, middleware (root first), the
+// folder's +page.js / +api.js handlers, the template and its layouts, and sends the response. See SPEC.md section 3.
+// Templates, modules and components are called from here, not from Go, so JS values and exceptions stay as they are;
+// Go only finds, compiles and caches them (rt.template, rt.module, ...).
+(function (getRT) {
+  var rt = getRT()
   var route = rt.route
+  var cache = rt.cache // per VM: compiled functions and module exports
 
-  // ---- escaping, used by compiled templates ----
-  var escRe = /[&<>"']/g
-  var escMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&#34;', "'": '&#39;' }
-  function str(v) {
-    return v === null || v === undefined ? '' : String(v)
-  }
-  function esc(v) {
-    return str(v).replace(escRe, function (c) {
-      return escMap[c]
-    })
-  }
-
-  // ---- ctx ----
-  var ctx = {}
-  var queryVals = rt.query()
-  var cookieVals = null
-  function loadCookies() {
-    if (!cookieVals) cookieVals = rt.cookies()
-    return cookieVals
-  }
-
-  ctx.req = {
-    method: rt.method,
-    url: rt.url,
-    query: function (name, opts) {
-      if (name === undefined) {
-        var o = {}
-        for (var k in queryVals) o[k] = queryVals[k][0]
-        return o
-      }
-      var v = queryVals[name]
-      if (opts && opts.all) return v ? v.slice() : []
-      return v ? v[0] : undefined
-    },
-    header: function (name) {
-      return rt.header(name)
-    },
-    cookies: function () {
-      var c = loadCookies()
-      var o = {}
-      for (var k in c) o[k] = c[k]
-      return o
-    },
-    cookie: function (name, opts) {
-      var v = loadCookies()[name]
-      if (v === undefined) return undefined
-      if (opts && opts.json) {
-        try {
-          return JSON.parse(v)
-        } catch (e) {
-          return undefined
-        }
-      }
-      return v
-    },
-    body: function () {
-      return rt.body()
-    },
-    files: function (name) {
-      return rt.files(name)
-    },
-    ip: rt.ip,
-    event: rt.event,
-  }
-
-  function sendWith(type, a, b, conv) {
-    if (b === undefined) rt.send(200, type, conv(a))
-    else rt.send(a, type, conv(b))
-    return ctx.res
-  }
-  ctx.res = {
-    status: function (code) {
-      rt.setStatus(code)
-      return ctx.res
-    },
-    header: function (name, value) {
-      if (value === undefined) return rt.getHeader(name)
-      rt.setHeader(name, String(value))
-      return ctx.res
-    },
-    cookie: function (name, value, opts) {
-      rt.setCookie(name, typeof value === 'string' ? value : JSON.stringify(value), opts || {})
-      return ctx.res
-    },
-    clearCookie: function (name, opts) {
-      rt.clearCookie(name, opts || {})
-      return ctx.res
-    },
-    redirect: function (location, opts) {
-      // redirect(location, 301) as in 0.x, or redirect(location, { status, flash })
-      if (typeof opts === 'number') opts = { status: opts }
-      opts = opts || {}
-      var status = opts.status === undefined ? 302 : opts.status
-      if (typeof status !== 'number' || status < 300 || status > 399 || status % 1 !== 0) {
-        throw new Error('ctx.res.redirect: status must be a 3xx code, got ' + status)
-      }
-      if (opts.flash !== undefined) rt.setCookie('pp_flash', JSON.stringify(opts.flash), { maxAge: 300 })
-      rt.redirect(status, String(location))
-      return ctx.res
-    },
-    json: function (a, b) {
-      if (b === undefined) rt.sendJSON(200, a)
-      else rt.sendJSON(a, b)
-      return ctx.res
-    },
-    html: function (a, b) {
-      return sendWith('text/html; charset=utf-8', a, b, String)
-    },
-    text: function (a, b) {
-      return sendWith('text/plain; charset=utf-8', a, b, String)
-    },
-    file: function (path) {
-      rt.sendFile(String(path))
-      return ctx.res
-    },
-    sse: function () {
-      return rt.sse()
-    },
-    layout: function (on) {
-      rt.setLayout(!!on)
-      return ctx.res
-    },
-  }
-  Object.defineProperty(ctx.res, 'sent', {
-    get: function () {
-      return rt.sent()
-    },
-  })
-
-  ctx.data = {}
-  if (rt.data) for (var dk in rt.data) ctx.data[dk] = rt.data[dk]
-  ctx.params = rt.params
-  ctx.route = { path: route.path, name: route.name, file: route.file }
-  ctx.auth = rt.auth
-  ctx.app = $app
-  ctx.dev = rt.dev
-  ctx.pagesDir = rt.pagesDir
-  ctx.env = function (name) {
-    return $os.getenv(name) || ''
-  }
-  ctx.log = {
-    debug: function () {
-      rt.log('debug', Array.prototype.slice.call(arguments))
-    },
-    info: function () {
-      rt.log('info', Array.prototype.slice.call(arguments))
-    },
-    warn: function () {
-      rt.log('warn', Array.prototype.slice.call(arguments))
-    },
-    error: function () {
-      rt.log('error', Array.prototype.slice.call(arguments))
-    },
-  }
-  ctx.meta = function (key, value) {
-    if (arguments.length < 2) return rt.metaGet(key)
-    rt.metaSet(key, value)
-    return value
-  }
-  ctx.asset = function (path) {
-    return rt.asset(route.file, String(path))
-  }
-  ctx.include = function (name, locals) {
-    return rt.include(route.file, String(name), locals)
-  }
-  ctx.resolve = function (name, opts) {
-    return rt.resolve(route.file, String(name), (opts && opts.mode) || 'require')
-  }
-  ctx.store = function (name, value) {
-    if (value === undefined) return $app.store().get(name)
-    $app.store().set(name, value)
-    return value
-  }
-  var flashRead = false,
-    flashValue
-  ctx.flash = function () {
-    if (!flashRead) {
-      flashRead = true
-      var raw = rt.flash()
-      if (raw !== undefined && raw !== null) {
-        try {
-          flashValue = JSON.parse(raw)
-        } catch (e) {
-          flashValue = raw
-        }
-      }
+  try {
+    main()
+  } catch (e) {
+    // tell Go what a JS error carries; a Go error comes back to Go as itself, without these properties
+    if (e !== null && typeof e === 'object') {
+      if (e.__ppHttp) rt.httpError(Number(e.__ppHttp.status), String(e.__ppHttp.message))
+      else if (e.__ppWhere) rt.setWhere(String(e.__ppWhere))
     }
-    return flashValue
-  }
-  if (rt.realtime) ctx.realtime = rt.realtime
-  if (rt.session) {
-    var session = rt.session
-    ctx.session = {}
-    Object.keys(session).forEach(function (name) {
-      if (name === 'current') return
-      ctx.session[name] = function () {
-        var out = session[name].apply(null, arguments)
-        ctx.auth = session.current()
-        return out
-      }
-    })
-  }
-  var pbClient = null,
-    pbToken = null
-  ctx.pb = function () {
-    var token = rt.authToken()
-    if (pbClient && pbToken === token) return pbClient
-    var Client = rt.sdk()
-    var pb = new Client(rt.sdkBaseURL)
-    if (token) pb.authStore.save(token, JSON.parse(rt.authRecordJSON()))
-    pb.beforeSend = function (url, options) {
-      options.fetch = rt.apiSend
-      return { url: url, options: options }
-    }
-    pbClient = pb
-    pbToken = token
-    return pb
-  }
-  ctx.httpError = function (status, message) {
-    var e = new Error(message === undefined ? '' : String(message))
-    e.__ppHttp = { status: status, message: message === undefined ? '' : String(message) }
-    return e
+    throw e
   }
 
-  // ---- what compiled templates receive ----
-  rt.setPP({
-    ctx: ctx,
-    include: rt.include,
-    require: rt.require,
-    asset: rt.asset,
-    setSlot: rt.setSlot,
-    getSlot: rt.getSlot,
-    wrapped: rt.wrapped,
-    esc: esc,
-    str: str,
-    rethrow: function (e, file, line) {
-      if (e && typeof e === 'object') {
-        if (!e.__ppHttp && !e.__ppWhere) {
-          try {
-            e.__ppWhere = file + ':' + line
-          } catch (_) {}
-        }
-        return e
-      }
-      var x = new Error(String(e))
-      x.__ppWhere = file + ':' + line
-      return x
-    },
-  })
-
-  // ---- plugins ----
-  var plugins = rt.plugins()
-  for (var pi = 0; pi < plugins.length; pi++) {
-    if (typeof plugins[pi].extendContext === 'function') plugins[pi].extendContext(ctx)
-  }
-  for (pi = 0; pi < plugins.length; pi++) {
-    if (typeof plugins[pi].onRequest === 'function') plugins[pi].onRequest(ctx)
-    if (rt.sent()) return
-  }
-  function transform(html, file) {
-    for (var i = 0; i < plugins.length; i++) {
-      if (typeof plugins[i].transform === 'function') {
-        var out = plugins[i].transform({ html: html, ctx: ctx, file: file })
-        if (typeof out === 'string') html = out
-      }
+  function main() {
+    // ---- escaping, used by compiled templates ----
+    var escRe = /[&<>"']/g
+    var escMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&#34;', "'": '&#39;' }
+    function str(v) {
+      return v === null || v === undefined ? '' : String(v)
     }
-    return html
-  }
-
-  // ---- the request ----
-  var methods = ['get', 'post', 'put', 'patch', 'delete']
-  function assign(v) {
-    if (v && typeof v === 'object' && v !== ctx.res && !rt.sent()) {
-      for (var k in v) ctx.data[k] = v[k]
-    }
-  }
-
-  function handle() {
-    if (rt.direct) {
-      // a template rendered for a Go plugin (RenderTemplate): no handler, any method
-      var out = transform(rt.render(route.file, null), route.file)
-      if (!rt.sent()) rt.sendPage(out)
-      return
-    }
-    var mod = route.handler ? rt.load(route.handler) : null
-    var m = rt.method.toLowerCase()
-    if (m === 'head') m = 'get'
-
-    if (mod && typeof mod.load === 'function') {
-      assign(mod.load(ctx))
-      if (rt.sent()) return
-    }
-    var h = mod && mod[m]
-    if (typeof h === 'function') {
-      assign(h(ctx))
-      if (rt.sent()) return
-    } else if (route.kind === 'api' || route.kind === 'page-js') {
-      // nothing to render, so a method without a handler is a 405. A page with a template renders for any
-      // method (like PHP); the template can branch on ctx.req.method.
-      var allow = ['GET', 'HEAD']
-      for (var i = 1; i < methods.length; i++) {
-        if (mod && typeof mod[methods[i]] === 'function') allow.push(methods[i].toUpperCase())
-      }
-      if ((route.kind === 'api' || route.kind === 'page-js') && !(mod && typeof mod.get === 'function')) allow = allow.slice(2)
-      rt.methodNotAllowed(allow.join(', '))
-      return
-    }
-    if (route.kind === 'api' || route.kind === 'page-js') {
-      if (!rt.sent()) throw new Error(route.file + ': the ' + m + ' handler returned without sending a response')
-      return
-    }
-
-    var html = transform(rt.render(route.file, null), route.file)
-    if (rt.sent()) return
-    if (rt.layoutsOn()) {
-      for (var li = 0; li < route.layouts.length; li++) {
-        rt.setWrapped(html)
-        html = transform(rt.render(route.layouts[li], null), route.layouts[li])
-        if (rt.sent()) return
-      }
-    }
-    rt.sendPage(html)
-  }
-
-  var mi = 0
-  function next() {
-    if (mi < route.middlewares.length) {
-      var file = route.middlewares[mi++]
-      var fn = rt.load(file)
-      if (typeof fn !== 'function') throw new Error(file + ' must export a function (ctx, next)')
-      var nextCalled = false
-      var out = fn(ctx, function () {
-        nextCalled = true
-        return next()
+    function esc(v) {
+      return str(v).replace(escRe, function (c) {
+        return escMap[c]
       })
-      if (!nextCalled && !rt.sent()) {
-        throw new Error(file + ' ended the request without calling next() or sending a response')
+    }
+
+    // ---- modules (CommonJS, cached per VM by content) ----
+    function load(file) {
+      var key = rt.moduleKey(file)
+      if (key in cache) return cache[key]
+      // A require cycle (a -> b -> a) gets a's exports as they are so far, as in Node and 0.x.
+      var loading = cache['l:' + key]
+      if (loading) return loading.exports
+      var m = rt.module(file)
+      if (m.json !== undefined) {
+        var v
+        try {
+          v = JSON.parse(m.json)
+        } catch (e) {
+          throw new Error(file + ': ' + e.message)
+        }
+        cache[key] = v
+        return v
       }
+      var module = { exports: {} }
+      cache['l:' + key] = module
+      try {
+        var h, frag
+        if (m.ts) {
+          h = jsx().h
+          frag = jsx().Fragment
+        }
+        var req = function (name) {
+          return requireFrom(file, String(name))
+        }
+        m.fn(module, module.exports, req, m.filename, m.dirname, h, frag)
+      } finally {
+        delete cache['l:' + key]
+      }
+      var out = module.exports
+      // an ES module whose only export is default (TS `export default ...`) behaves like module.exports = ...
+      if (out !== null && typeof out === 'object' && out.__esModule) {
+        var keys = Object.keys(out)
+        if (keys.length === 1 && keys[0] === 'default') out = out['default']
+      }
+      cache[key] = out
       return out
     }
-    return handle()
+
+    // requireFrom resolves name for the pb_pages file from (require.go), then loads it here or with the app's loader.
+    function requireFrom(from, name) {
+      var res = rt.resolveRequire(from, name)
+      if (res.file !== undefined) return load(res.file)
+      var global = globalThis.require
+      if (typeof global !== 'function') throw new Error('require(' + JSON.stringify(name) + '): no module loader')
+      if (res.notFound === undefined) return global(res.global)
+      try {
+        return global(res.global)
+      } catch (e) {
+        if (e && typeof e.message === 'string' && e.message.indexOf("Cannot find module '" + res.global + "'") === 0) {
+          throw new Error(res.notFound)
+        }
+        throw e
+      }
+    }
+
+    function jsx() {
+      if (!cache.jsx) cache.jsx = rt.program('jsx')(esc)
+      return cache.jsx
+    }
+
+    function sdk() {
+      if (!cache.sdk) {
+        var m = { exports: {} }
+        cache.sdk = rt.program('sdk')(m, m.exports)
+      }
+      return cache.sdk
+    }
+
+    // ---- templates ----
+    var pp // what compiled templates receive; set below
+
+    // render renders a template (page, layout or partial) and returns its text.
+    function render(file, locals) {
+      rt.enter(file)
+      try {
+        if (/\.(jsx|tsx)$/.test(file)) return renderJSX(file, locals)
+        var out = String(rt.template(file)(pp, file, locals))
+        if (/\.md$/.test(file)) out = rt.markdown(file, out)
+        return out
+      } finally {
+        rt.leave()
+      }
+    }
+
+    function include(from, name, locals) {
+      return render(rt.includeFile(from, String(name)), locals)
+    }
+
+    // renderJSX renders a .jsx/.tsx template: its default export is called with props and the result turned to
+    // HTML. Props: ctx, data, params, meta, asset, include, slot, children (the inner content, for layouts), plus an
+    // include's locals.
+    function renderJSX(file, locals) {
+      var exports = load(file)
+      var comp = exports !== null && exports !== undefined && exports['default'] !== undefined ? exports['default'] : exports
+      if (typeof comp !== 'function') throw new Error(file + ': the default export must be a component function')
+      var j = jsx()
+      var props = {}
+      if (locals !== undefined && locals !== null) {
+        var lo = Object(locals)
+        Object.keys(lo).forEach(function (k) {
+          props[k] = lo[k]
+        })
+      }
+      props.ctx = ctx
+      props.data = ctx.data
+      props.params = ctx.params
+      props.meta = ctx.meta
+      props.asset = function (p) {
+        return rt.asset(file, String(p))
+      }
+      props.include = function (name, l) {
+        return j.raw(include(file, name, l))
+      }
+      props.slot = function (name, content) {
+        if (name === undefined || name === null) return j.raw(rt.wrapped())
+        if (arguments.length > 1) {
+          rt.setSlot(String(name), j.toHTML(content))
+          return undefined
+        }
+        return j.raw(rt.getSlot(String(name)))
+      }
+      props.children = j.raw(rt.wrapped())
+      return j.toHTML(comp(props))
+    }
+
+    // ---- +config.js ----
+    // 0.x plugin hooks v1 doesn't call, with what to use instead (SPEC 9.2). A plugin that still has one is an error
+    // rather than silently half-working.
+    var oldPluginHooks = {
+      onExtendContextApi: 'use extendContext(ctx)',
+      onRender: 'use transform({ html, ctx, file })',
+      onResponse: 'use transform, or ctx.res in onRequest',
+      handles: 'add a page or +api.js for the path instead',
+    }
+    // the plugins turned on by name (SPEC 9.1)
+    var builtinPlugins = { auth: true, realtime: true }
+
+    // requirePlugin loads a plugin listed by module name. Its export (or its `default`, for a module compiled from
+    // ESM) must be a plugin factory; loadConfig checks that.
+    function requirePlugin(file, name) {
+      var v
+      try {
+        v = requireFrom(file, name)
+      } catch (e) {
+        var why = e !== null && typeof e === 'object' && typeof e.message === 'string' ? e.message : String(e)
+        throw new Error(file + ': plugin ' + JSON.stringify(name) + ': require failed (built-in plugins: auth, realtime): ' + why)
+      }
+      if (v !== null && typeof v === 'object' && typeof v['default'] === 'function') return v['default']
+      return v
+    }
+
+    // loadConfig runs +config.js (if any), validates it and returns { debug, builtins, plugins }.
+    function loadConfig(file) {
+      var cfg = { debug: false, builtins: [], plugins: [] }
+      if (!file) return cfg
+      var v = load(file)
+      if (typeof v === 'function') {
+        // 0.x allowed module.exports = (api) => ({...}); a function has no keys, so it would be silently ignored
+        throw new Error(file + ': must export an object (module.exports = { ... }), not a function')
+      }
+      if (v === null || typeof v !== 'object') throw new Error(file + ': must export an object')
+      var seen = {}
+      Object.keys(v).forEach(function (key) {
+        switch (key) {
+          case 'debug':
+            cfg.debug = !!v.debug
+            break
+          case 'plugins':
+            var list = v.plugins
+            if (!Array.isArray(list)) {
+              if (list !== undefined) throw new Error(file + ': plugins must be an array')
+              break
+            }
+            for (var i = 0; i < list.length; i++) {
+              var item = list[i]
+              // A string is a module name, required from +config.js (SPEC 7): a _private file, a node_modules
+              // package or a path. Only when no module by that name exists in pb_pages is it a built-in.
+              if (typeof item === 'string' && (!builtinPlugins[item] || rt.moduleExists(file, item))) {
+                item = requirePlugin(file, item)
+              } else if (typeof item === 'string') {
+                if (seen[item]) throw new Error(file + ': plugin ' + JSON.stringify(item) + ' listed twice')
+                seen[item] = true
+                cfg.builtins.push(item)
+                continue
+              }
+              var factory = item,
+                options = {}
+              if (item !== null && (typeof item === 'object' || typeof item === 'function') && item.factory !== undefined) {
+                factory = item.factory
+                Object.keys(item).forEach(function (k) {
+                  if (k !== 'factory') options[k] = item[k]
+                })
+              }
+              if (typeof factory !== 'function') {
+                throw new Error(file + ': plugins[' + i + '] must be a built-in name, a module name or a plugin factory')
+              }
+              var p = factory(options)
+              if (p === null || (typeof p !== 'object' && typeof p !== 'function')) {
+                throw new Error(file + ': plugins[' + i + ']: the factory must return an object')
+              }
+              if (p.name === undefined || p.name === null || String(p.name) === '') {
+                throw new Error(file + ': plugins[' + i + ']: a plugin needs a name')
+              }
+              var name = String(p.name)
+              Object.keys(p).forEach(function (k) {
+                if (Object.prototype.hasOwnProperty.call(oldPluginHooks, k)) {
+                  throw new Error(
+                    file + ': plugin ' + JSON.stringify(name) + ': ' + k + ' is a 0.x hook that v1 never calls; ' + oldPluginHooks[k]
+                  )
+                }
+              })
+              if (seen[name]) throw new Error(file + ': plugin ' + JSON.stringify(name) + ' listed twice')
+              seen[name] = true
+              cfg.plugins.push(p)
+            }
+            break
+          default:
+            throw new Error(file + ': unknown key ' + JSON.stringify(key))
+        }
+      })
+      return cfg
+    }
+
+    var config = loadConfig(rt.config)
+    // Go applies debug and the built-ins (reading the pb_auth cookie for auth) and returns what they give
+    var conf = rt.configure(config.debug, config.builtins)
+
+    // ---- ctx ----
+    var ctx = {}
+    var queryVals = rt.query()
+    var cookieVals = null
+    function loadCookies() {
+      if (!cookieVals) cookieVals = rt.cookies()
+      return cookieVals
+    }
+
+    ctx.req = {
+      method: rt.method,
+      url: rt.url,
+      query: function (name, opts) {
+        if (name === undefined) {
+          var o = {}
+          for (var k in queryVals) o[k] = queryVals[k][0]
+          return o
+        }
+        var v = queryVals[name]
+        if (opts && opts.all) return v ? Array.prototype.slice.call(v) : []
+        return v ? v[0] : undefined
+      },
+      header: function (name) {
+        return rt.header(name)
+      },
+      cookies: function () {
+        var c = loadCookies()
+        var o = {}
+        for (var k in c) o[k] = c[k]
+        return o
+      },
+      cookie: function (name, opts) {
+        var v = loadCookies()[name]
+        if (v === undefined) return undefined
+        if (opts && opts.json) {
+          try {
+            return JSON.parse(v)
+          } catch (e) {
+            return undefined
+          }
+        }
+        return v
+      },
+      body: function () {
+        return rt.body()
+      },
+      files: function (name) {
+        return rt.files(name)
+      },
+      ip: rt.ip,
+      event: rt.event,
+    }
+
+    // cookieOpts copies a cookie's options with a Date expires as milliseconds, which Go reads (a Date doesn't
+    // cross into Go as a time)
+    function cookieOpts(opts) {
+      var o = {}
+      for (var k in opts || {}) o[k] = opts[k]
+      if (o.expires instanceof Date) o.expires = o.expires.getTime()
+      return o
+    }
+
+    function sendWith(type, a, b, conv) {
+      if (b === undefined) rt.send(200, type, conv(a))
+      else rt.send(a, type, conv(b))
+      return ctx.res
+    }
+    ctx.res = {
+      status: function (code) {
+        rt.setStatus(code)
+        return ctx.res
+      },
+      header: function (name, value) {
+        if (value === undefined) return rt.getHeader(name)
+        rt.setHeader(name, String(value))
+        return ctx.res
+      },
+      cookie: function (name, value, opts) {
+        rt.setCookie(name, typeof value === 'string' ? value : JSON.stringify(value), cookieOpts(opts))
+        return ctx.res
+      },
+      clearCookie: function (name, opts) {
+        rt.clearCookie(name, opts || {})
+        return ctx.res
+      },
+      redirect: function (location, opts) {
+        // redirect(location, 301) as in 0.x, or redirect(location, { status, flash })
+        if (typeof opts === 'number') opts = { status: opts }
+        opts = opts || {}
+        var status = opts.status === undefined ? 302 : opts.status
+        if (typeof status !== 'number' || status < 300 || status > 399 || status % 1 !== 0) {
+          throw new Error('ctx.res.redirect: status must be a 3xx code, got ' + status)
+        }
+        if (opts.flash !== undefined) rt.setCookie('pp_flash', JSON.stringify(opts.flash), { maxAge: 300 })
+        rt.redirect(status, String(location))
+        return ctx.res
+      },
+      json: function (a, b) {
+        if (b === undefined) rt.sendJSON(200, a)
+        else rt.sendJSON(a, b)
+        return ctx.res
+      },
+      html: function (a, b) {
+        return sendWith('text/html; charset=utf-8', a, b, String)
+      },
+      text: function (a, b) {
+        return sendWith('text/plain; charset=utf-8', a, b, String)
+      },
+      file: function (path) {
+        rt.sendFile(String(path))
+        return ctx.res
+      },
+      sse: function () {
+        return rt.sse()
+      },
+      layout: function (on) {
+        rt.setLayout(!!on)
+        return ctx.res
+      },
+    }
+    Object.defineProperty(ctx.res, 'sent', {
+      get: function () {
+        return rt.sent()
+      },
+    })
+
+    ctx.data = {}
+    if (rt.data) for (var dk in rt.data) ctx.data[dk] = rt.data[dk]
+    ctx.params = rt.params
+    ctx.route = { path: route.path, name: route.name, file: route.file }
+    ctx.auth = conf.auth
+    ctx.app = $app
+    ctx.dev = conf.dev
+    ctx.pagesDir = rt.pagesDir
+    ctx.env = function (name) {
+      return $os.getenv(name) || ''
+    }
+    ctx.log = {
+      debug: function () {
+        rt.log('debug', Array.prototype.slice.call(arguments))
+      },
+      info: function () {
+        rt.log('info', Array.prototype.slice.call(arguments))
+      },
+      warn: function () {
+        rt.log('warn', Array.prototype.slice.call(arguments))
+      },
+      error: function () {
+        rt.log('error', Array.prototype.slice.call(arguments))
+      },
+    }
+    ctx.meta = function (key, value) {
+      if (arguments.length < 2) return rt.metaGet(key)
+      rt.metaSet(key, value)
+      return value
+    }
+    ctx.asset = function (path) {
+      return rt.asset(route.file, String(path))
+    }
+    ctx.include = function (name, locals) {
+      return include(route.file, name, locals)
+    }
+    ctx.resolve = function (name, opts) {
+      var mode = (opts && opts.mode) || 'require'
+      var file = rt.resolveFile(route.file, String(name))
+      switch (mode) {
+        case 'require':
+          return load(file)
+        case 'raw':
+          return rt.readText(file)
+        case 'script':
+          return '<script>\n' + rt.readText(file) + '\n</script>'
+        case 'style':
+          return '<style>\n' + rt.readText(file) + '\n</style>'
+      }
+      throw new Error('resolve: unknown mode ' + JSON.stringify(String(mode)))
+    }
+    ctx.store = function (name, value) {
+      if (value === undefined) return $app.store().get(name)
+      $app.store().set(name, value)
+      return value
+    }
+    var flashRead = false,
+      flashValue
+    ctx.flash = function () {
+      if (!flashRead) {
+        flashRead = true
+        var raw = rt.flash()
+        if (raw !== undefined && raw !== null) {
+          try {
+            flashValue = JSON.parse(raw)
+          } catch (e) {
+            flashValue = raw
+          }
+        }
+      }
+      return flashValue
+    }
+    if (conf.realtime) {
+      ctx.realtime = {
+        // send(topic, data, { filter(client) }) sends to the clients subscribed to topic (that filter accepts)
+        send: function (topic, data, opts) {
+          var to = null
+          if (opts && typeof opts.filter === 'function') {
+            to = []
+            var clients = rt.realtimeClients(String(topic))
+            for (var i = 0; i < clients.length; i++) {
+              if (opts.filter(clients[i])) to.push(clients[i])
+            }
+          }
+          rt.realtimeSend(String(topic), data, to)
+        },
+        client: function (id) {
+          return rt.realtimeClient(String(id))
+        },
+      }
+    }
+    if (conf.session) {
+      var session = conf.session
+      ctx.session = {}
+      Object.keys(session).forEach(function (name) {
+        if (name === 'current') return
+        ctx.session[name] = function () {
+          var out = session[name].apply(null, arguments)
+          ctx.auth = session.current()
+          return out
+        }
+      })
+    }
+    var pbClient = null,
+      pbToken = null
+    ctx.pb = function () {
+      var token = rt.authToken()
+      if (pbClient && pbToken === token) return pbClient
+      var Client = sdk()
+      var pb = new Client(rt.sdkBaseURL)
+      if (token) pb.authStore.save(token, JSON.parse(rt.authRecordJSON()))
+      pb.beforeSend = function (url, options) {
+        options.fetch = rt.apiSend
+        return { url: url, options: options }
+      }
+      pbClient = pb
+      pbToken = token
+      return pb
+    }
+    ctx.httpError = function (status, message) {
+      var e = new Error(message === undefined ? '' : String(message))
+      e.__ppHttp = { status: status, message: message === undefined ? '' : String(message) }
+      return e
+    }
+
+    // ---- what compiled templates receive ----
+    pp = {
+      ctx: ctx,
+      include: include, // one JS frame less per nesting level: the C stack bounds how deep includes go
+      require: function (from, name) {
+        return requireFrom(from, String(name))
+      },
+      asset: rt.asset,
+      setSlot: rt.setSlot,
+      getSlot: rt.getSlot,
+      wrapped: rt.wrapped,
+      esc: esc,
+      str: str,
+      rethrow: function (e, file, line) {
+        if (e && typeof e === 'object') {
+          if (!e.__ppHttp && !e.__ppWhere) {
+            try {
+              e.__ppWhere = file + ':' + line
+            } catch (_) {}
+          }
+          return e
+        }
+        var x = new Error(String(e))
+        x.__ppWhere = file + ':' + line
+        return x
+      },
+    }
+
+    // renderError renders +error.ejs inside the root layout, for Go's error responses (render.go).
+    rt.renderError = function (status, message, errorTpl, rootLayout) {
+      ctx.error = { status: status, message: message }
+      var html = render(errorTpl, null)
+      if (rootLayout) {
+        rt.setWrapped(html)
+        html = render(rootLayout, null)
+      }
+      return html
+    }
+
+    // ---- plugins ----
+    var plugins = config.plugins
+    for (var pi = 0; pi < plugins.length; pi++) {
+      if (typeof plugins[pi].extendContext === 'function') plugins[pi].extendContext(ctx)
+    }
+    for (pi = 0; pi < plugins.length; pi++) {
+      if (typeof plugins[pi].onRequest === 'function') plugins[pi].onRequest(ctx)
+      if (rt.sent()) return
+    }
+    function transform(html, file) {
+      for (var i = 0; i < plugins.length; i++) {
+        if (typeof plugins[i].transform === 'function') {
+          var out = plugins[i].transform({ html: html, ctx: ctx, file: file })
+          if (typeof out === 'string') html = out
+        }
+      }
+      return html
+    }
+
+    // ---- the request ----
+    var methods = ['get', 'post', 'put', 'patch', 'delete']
+    function assign(v) {
+      if (v && typeof v === 'object' && v !== ctx.res && !rt.sent()) {
+        for (var k in v) ctx.data[k] = v[k]
+      }
+    }
+
+    function handle() {
+      if (rt.direct) {
+        // a template rendered for a Go plugin (RenderTemplate): no handler, any method
+        var out = transform(render(route.file, null), route.file)
+        if (!rt.sent()) rt.sendPage(out)
+        return
+      }
+      var mod = route.handler ? load(route.handler) : null
+      var m = rt.method.toLowerCase()
+      if (m === 'head') m = 'get'
+
+      if (mod && typeof mod.load === 'function') {
+        assign(mod.load(ctx))
+        if (rt.sent()) return
+      }
+      var h = mod && mod[m]
+      if (typeof h === 'function') {
+        assign(h(ctx))
+        if (rt.sent()) return
+      } else if (route.kind === 'api' || route.kind === 'page-js') {
+        // nothing to render, so a method without a handler is a 405. A page with a template renders for any
+        // method (like PHP); the template can branch on ctx.req.method.
+        var allow = ['GET', 'HEAD']
+        for (var i = 1; i < methods.length; i++) {
+          if (mod && typeof mod[methods[i]] === 'function') allow.push(methods[i].toUpperCase())
+        }
+        if ((route.kind === 'api' || route.kind === 'page-js') && !(mod && typeof mod.get === 'function')) allow = allow.slice(2)
+        rt.methodNotAllowed(allow.join(', '))
+        return
+      }
+      if (route.kind === 'api' || route.kind === 'page-js') {
+        if (!rt.sent()) throw new Error(route.file + ': the ' + m + ' handler returned without sending a response')
+        return
+      }
+
+      var html = transform(render(route.file, null), route.file)
+      if (rt.sent()) return
+      if (rt.layoutsOn()) {
+        for (var li = 0; li < route.layouts.length; li++) {
+          rt.setWrapped(html)
+          html = transform(render(route.layouts[li], null), route.layouts[li])
+          if (rt.sent()) return
+        }
+      }
+      rt.sendPage(html)
+    }
+
+    var mi = 0
+    function next() {
+      if (mi < route.middlewares.length) {
+        var file = route.middlewares[mi++]
+        var fn = load(file)
+        if (typeof fn !== 'function') throw new Error(file + ' must export a function (ctx, next)')
+        var nextCalled = false
+        var out = fn(ctx, function () {
+          nextCalled = true
+          return next()
+        })
+        if (!nextCalled && !rt.sent()) {
+          throw new Error(file + ' ended the request without calling next() or sending a response')
+        }
+        return out
+      }
+      return handle()
+    }
+    next()
   }
-  next()
 })

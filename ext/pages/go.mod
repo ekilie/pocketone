@@ -6,10 +6,10 @@ require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
 	github.com/evanw/esbuild v0.28.2
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/standard v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
@@ -25,17 +25,12 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
-	github.com/dlclark/regexp2/v2 v2.9.1 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
-	github.com/dop251/base64dec v0.0.0-20231022112746-c6c9f9a96217 // indirect
-	github.com/dop251/goja_nodejs v0.0.0-20260212111938-1f56ff5bcf14 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
-	github.com/google/pprof v0.0.0-20261016150608-1facf8f91b50 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hablullah/go-hijri v1.0.2 // indirect
 	github.com/hablullah/go-juliandays v1.0.0 // indirect
@@ -55,7 +50,6 @@ require (
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/pitr v0.0.0-00010101000000-000000000000 // indirect
@@ -152,3 +146,5 @@ replace github.com/pockethost/pocketone/ext/backups => ../backups
 replace github.com/pockethost/pocketone/ext/settings => ../settings
 
 replace github.com/pockethost/pocketone/ext/standard => ../standard
+
+replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm

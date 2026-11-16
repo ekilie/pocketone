@@ -198,11 +198,11 @@ func TestSandboxHoldsInPages(t *testing.T) {
 
 	// runaway code: stopped by the instance's limits, quickly, with a 500
 	runaway := map[string]string{
-		"/loop":    "execution timeout",        // MaxJSExecution
-		"/alloc":   "not allowed on this host", // MaxJSAllocation: one huge allocation is refused
-		"/grow":    "execution timeout",        // steady growth: bounded by the time limit
+		"/loop":    "interrupted",              // MaxJSExecution
+		"/alloc":   "out of memory",            // MaxJSAllocation: one huge allocation is refused
+		"/grow":    "out of memory",            // steady growth: QuickJS's heap cap stops it before the time limit
 		"/recurse": "recurse.ejs",              // MaxCallStackSize
-		"/self":    "nested more than 64 deep", // pages' own include guard
+		"/self":    "nested more than 32 deep", // pages' own include guard
 	}
 	for path, want := range runaway {
 		start := time.Now()

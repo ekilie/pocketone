@@ -27,7 +27,7 @@ mail := bulkmail.New(bulkmail.Config{Rate: 5, Daily: 5000})
 
 app := pocketbase.New()
 extkit.MustRegister(app, mail)
-jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { extkit.BindJS(app, vm, mail) }})
+jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { extkit.BindJS(app, rt, mail) }})
 app.Start()
 ```
 
@@ -224,11 +224,11 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 func main() {
@@ -245,7 +245,7 @@ func main() {
 	extkit.MustRegister(app, mail)
 
 	jsvm.MustRegister(app, jsvm.Config{
-		OnInit: func(vm *goja.Runtime) { extkit.BindJS(app, vm, mail) }, // $bulkmail in JS hooks
+		OnInit: func(rt js.Runtime) { extkit.BindJS(app, rt, mail) }, // $bulkmail in JS hooks
 	})
 
 	if err := app.Start(); err != nil {

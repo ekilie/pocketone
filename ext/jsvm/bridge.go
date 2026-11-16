@@ -124,6 +124,10 @@ func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
 	if !v.IsValid() {
 		return C.avm_null(), nil
 	}
+	if jv, ok := v.Interface().(*jsValue); ok && jv != nil && jv.vm == vm {
+		// a JS value held by Go passes back as itself
+		return C.avm_dup(vm.ctx, jv.v), nil
+	}
 	if v.Type() == nativeBoxType {
 		h, err := vm.newHandle(entry{kind: kindNative, native: v.Interface().(nativeBox).fn})
 		if err != nil {

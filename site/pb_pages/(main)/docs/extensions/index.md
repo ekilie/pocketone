@@ -28,7 +28,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Remotes](/docs/extensions/remotes) | Named remotes and saved logins for the pocketone command. |
 | [Upgrade](/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
 | [Config](/docs/extensions/config) | The pocketone.yaml config file, with secrets in a .env beside it. |
-| [JS Errors](/docs/extensions/jserrors) | JS hook errors that name the pb_hooks file and line. |
+| [JSVM](/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
 
 ## Run many instances
 
@@ -72,7 +72,7 @@ The extension contract and tools for building and testing extensions.
 
 | Extension | What it does |
 |---|---|
-| [JSVM](/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet. |
+| [JS Errors](/docs/extensions/jserrors) | Hook error positions for PocketBase's plugins/jsvm (goja). ext/jsvm doesn't need it. |
 | [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
 | [Standard Set](/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |

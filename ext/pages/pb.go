@@ -10,8 +10,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
-
-	"github.com/dop251/goja"
 )
 
 // ctx.pb(): the bundled synchronous PocketBase JS SDK (see sdk/README.md), with a transport that hands each request
@@ -20,8 +18,8 @@ import (
 //go:embed sdk/pocketbase.cjs.js
 var sdkSource string
 
-var sdkProgram = goja.MustCompile("ext/pages/sdk/pocketbase.cjs.js",
-	"(function (module, exports) {\n"+sdkSource+"\nreturn module.exports;\n})", false)
+// sdkWrapped evaluates to a function of (module, exports) that returns the SDK's Client class.
+var sdkWrapped = "(function (module, exports) {\n" + sdkSource + "\nreturn module.exports;\n})"
 
 // sdkBaseURL is the base URL the SDK is created with; only its path matters.
 const sdkBaseURL = "http://pocketbase.internal"
@@ -39,50 +37,30 @@ func (p *Pages) apiHandler() (http.Handler, error) {
 	return p.mux, p.muxErr
 }
 
-// sdkClass returns the SDK's Client class in this VM (evaluated once per VM).
-func (r *request) sdkClass() goja.Value {
-	if v := r.cache.Get("sdk"); v != nil && !goja.IsUndefined(v) {
-		return v
-	}
-	fn, err := r.programFunc("sdkModule", sdkProgram)
-	if err != nil {
-		panic(r.vm.NewGoError(err))
-	}
-	module := r.vm.NewObject()
-	exports := r.vm.NewObject()
-	_ = module.Set("exports", exports)
-	cls, err := fn(goja.Undefined(), module, exports)
-	if err != nil {
-		panic(err)
-	}
-	r.cache.Set("sdk", cls)
-	return cls
-}
-
 // authToken returns a token for the signed-in record ("" for guests), made once per request.
-func (r *request) authToken() string {
+func (r *request) authToken() (string, error) {
 	if r.auth == nil {
-		return ""
+		return "", nil
 	}
 	if r.token == "" || r.tokenFor != r.auth.Id {
 		t, err := r.auth.NewAuthToken()
 		if err != nil {
-			panic(r.vm.NewGoError(err))
+			return "", err
 		}
 		r.token, r.tokenFor = t, r.auth.Id
 	}
-	return r.token
+	return r.token, nil
 }
 
 // apiSend is the SDK's transport: same arguments and result shape as $http.send.
-func (r *request) apiSend(opts map[string]any) map[string]any {
+func (r *request) apiSend(opts map[string]any) (map[string]any, error) {
 	raw, _ := opts["url"].(string)
 	u, err := url.Parse(raw)
 	if err != nil {
-		panic(r.vm.NewGoError(fmt.Errorf("ctx.pb(): bad url %q", raw)))
+		return nil, fmt.Errorf("ctx.pb(): bad url %q", raw)
 	}
 	if !strings.HasPrefix(u.Path, "/api/") {
-		panic(r.vm.NewGoError(fmt.Errorf("ctx.pb(): only /api/ routes can be called, not %q", u.Path)))
+		return nil, fmt.Errorf("ctx.pb(): only /api/ routes can be called, not %q", u.Path)
 	}
 	method, _ := opts["method"].(string)
 	if method == "" {
@@ -96,14 +74,14 @@ func (r *request) apiSend(opts map[string]any) map[string]any {
 	default:
 		j, err := json.Marshal(b)
 		if err != nil {
-			panic(r.vm.NewGoError(err))
+			return nil, err
 		}
 		body = strings.NewReader(string(j))
 	}
 
 	h, err := r.p.apiHandler()
 	if err != nil {
-		panic(r.vm.NewGoError(err))
+		return nil, err
 	}
 	req := httptest.NewRequestWithContext(r.e.Request.Context(), method, u.RequestURI(), body)
 	req.Host = r.e.Request.Host
@@ -133,7 +111,7 @@ func (r *request) apiSend(opts map[string]any) map[string]any {
 	if text != "" {
 		_ = json.Unmarshal([]byte(text), &parsed)
 	}
-	return map[string]any{"statusCode": rec.Code, "headers": headers, "raw": text, "json": parsed}
+	return map[string]any{"statusCode": rec.Code, "headers": headers, "raw": text, "json": parsed}, nil
 }
 
 // authRecordJSON is the signed-in record as the SDK's auth store expects it.

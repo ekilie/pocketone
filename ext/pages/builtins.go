@@ -18,15 +18,15 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/search"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/subscriptions"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // ---- ctx.res.sse() ----
 
 // sse starts a text/event-stream response and returns the stream object for JS.
-func (r *request) sse() *goja.Object {
+func (r *request) sse() (js.Object, error) {
 	if r.sent {
-		panic(r.vm.NewGoError(errors.New("ctx.res.sse(): a response was already sent")))
+		return nil, errors.New("ctx.res.sse(): a response was already sent")
 	}
 	r.sent = true
 	h := r.e.Response.Header()
@@ -45,94 +45,93 @@ func (r *request) sse() *goja.Object {
 		_, _ = r.e.Response.Write([]byte(s))
 		_ = r.e.Flush()
 	}
-	o := r.vm.NewObject()
-	_ = o.Set("send", func(event string, data goja.Value, opts map[string]any) {
-		var b strings.Builder
-		if id, ok := opts["id"]; ok && id != nil && fmt.Sprint(id) != "" {
-			fmt.Fprintf(&b, "id: %v\n", id)
-		}
-		if retry, ok := toInt(opts["retry"]); ok && retry > 0 {
-			fmt.Fprintf(&b, "retry: %d\n", retry)
-		}
-		if event != "" {
-			fmt.Fprintf(&b, "event: %s\n", event)
-		}
-		text := ""
-		if data != nil && !goja.IsUndefined(data) && !goja.IsNull(data) {
-			if s, ok := data.Export().(string); ok {
+	o := r.rt.NewObject()
+	err := errors.Join(
+		o.Set("send", func(event string, data any, opts map[string]any) error {
+			var b strings.Builder
+			if id, ok := opts["id"]; ok && id != nil && fmt.Sprint(id) != "" {
+				fmt.Fprintf(&b, "id: %v\n", id)
+			}
+			if retry, ok := toInt(opts["retry"]); ok && retry > 0 {
+				fmt.Fprintf(&b, "retry: %d\n", retry)
+			}
+			if event != "" {
+				fmt.Fprintf(&b, "event: %s\n", event)
+			}
+			text := ""
+			if s, ok := data.(string); ok {
 				text = s
-			} else {
-				j, err := marshalJSON(data.Export())
+			} else if data != nil {
+				j, err := marshalJSON(data)
 				if err != nil {
-					panic(r.vm.NewGoError(err))
+					return err
 				}
 				text = string(j)
 			}
-		}
-		for _, line := range strings.Split(text, "\n") {
-			fmt.Fprintf(&b, "data: %s\n", line)
-		}
-		b.WriteString("\n")
-		write(b.String())
-	})
-	_ = o.Set("comment", func(text string) {
-		var b strings.Builder
-		for _, line := range strings.Split(text, "\n") {
-			fmt.Fprintf(&b, ": %s\n", line)
-		}
-		b.WriteString("\n")
-		write(b.String())
-	})
-	_ = o.Set("close", func() { closed = true })
-	return o
+			for _, line := range strings.Split(text, "\n") {
+				fmt.Fprintf(&b, "data: %s\n", line)
+			}
+			b.WriteString("\n")
+			write(b.String())
+			return nil
+		}),
+		o.Set("comment", func(text string) {
+			var b strings.Builder
+			for _, line := range strings.Split(text, "\n") {
+				fmt.Fprintf(&b, ": %s\n", line)
+			}
+			b.WriteString("\n")
+			write(b.String())
+		}),
+		o.Set("close", func() { closed = true }),
+	)
+	return o, err
 }
 
-// ---- realtime ----
+// ---- realtime (ctx.realtime, built by the driver) ----
 
-func (r *request) realtimeObject() *goja.Object {
-	vm := r.vm
-	broker := r.p.app.SubscriptionsBroker()
-	o := vm.NewObject()
-	_ = o.Set("send", func(topic string, data goja.Value, opts map[string]any) {
-		var v any
-		if data != nil {
-			v = data.Export()
+// realtimeClients are the clients subscribed to topic, for a send with a filter (the driver calls the filter).
+func (r *request) realtimeClients(topic string) []subscriptions.Client {
+	var out []subscriptions.Client
+	for _, c := range r.p.app.SubscriptionsBroker().Clients() {
+		if c.HasSubscription(topic) {
+			out = append(out, c)
 		}
-		payload, err := marshalJSON(v)
-		if err != nil {
-			panic(vm.NewGoError(err))
-		}
-		var filter goja.Callable
-		if f, ok := opts["filter"]; ok && f != nil {
-			fv := vm.ToValue(f)
-			filter, _ = goja.AssertFunction(fv)
-		}
-		msg := subscriptions.Message{Name: topic, Data: payload}
-		for _, client := range broker.Clients() {
-			if !client.HasSubscription(topic) {
-				continue
+	}
+	return out
+}
+
+// realtimeSend(topic, data, clients) sends data as JSON to clients, or, when clients is null, to every client
+// subscribed to topic.
+func (r *request) realtimeSend(c js.Call) (any, error) {
+	topic := c.Arg(0).String()
+	payload, err := marshalJSON(c.Arg(1).Export())
+	if err != nil {
+		return nil, err
+	}
+	var to []subscriptions.Client
+	if list := c.Arg(2).Object(); list != nil {
+		for _, k := range list.Keys() {
+			if client, ok := list.Get(k).Export().(subscriptions.Client); ok {
+				to = append(to, client)
 			}
-			if filter != nil {
-				ok, err := filter(goja.Undefined(), vm.ToValue(client))
-				if err != nil {
-					panic(err)
-				}
-				if !ok.ToBoolean() {
-					continue
-				}
-			}
-			c := client
-			routine.FireAndForget(func() { c.Send(msg) }) // Send blocks until the client reads; never stall the page
 		}
-	})
-	_ = o.Set("client", func(id string) goja.Value {
-		c, err := broker.ClientById(id)
-		if err != nil || c == nil {
-			return goja.Null()
-		}
-		return vm.ToValue(c)
-	})
-	return o
+	} else {
+		to = r.realtimeClients(topic)
+	}
+	msg := subscriptions.Message{Name: topic, Data: payload}
+	for _, client := range to {
+		routine.FireAndForget(func() { client.Send(msg) }) // Send blocks until the client reads; never stall the page
+	}
+	return nil, nil
+}
+
+func (r *request) realtimeClient(id string) any {
+	c, err := r.p.app.SubscriptionsBroker().ClientById(id)
+	if err != nil || c == nil {
+		return nil
+	}
+	return c
 }
 
 // ---- auth (ctx.session) ----
@@ -166,21 +165,20 @@ func (r *request) readAuthCookie() {
 	r.e.Auth = rec
 }
 
-func (r *request) authCollection(opts map[string]any) *core.Collection {
+func (r *request) authCollection(opts map[string]any) (*core.Collection, error) {
 	name := "users"
 	if c, ok := opts["collection"].(string); ok && c != "" {
 		name = c
 	}
 	col, err := r.p.app.FindCollectionByNameOrId(name)
 	if err != nil || !col.IsAuth() {
-		panic(r.vm.NewGoError(fmt.Errorf("ctx.session: %q is not an auth collection", name)))
+		return nil, fmt.Errorf("ctx.session: %q is not an auth collection", name)
 	}
-	return col
+	return col, nil
 }
 
-func (r *request) fail400(msg string) {
-	panic(r.vm.NewGoError(errors.New(msg)))
-}
+// errMFA is the error every pages sign-in gives an account that needs MFA.
+var errMFA = errors.New(mfaMessage)
 
 // mfaMessage is the error every pages sign-in gives an account that needs MFA (the OAuth2 flow says the same).
 const mfaMessage = "This account needs a second sign-in step (MFA), which pages doesn't support yet."
@@ -218,28 +216,28 @@ func (r *request) needsMFA(rec *core.Record) bool {
 
 // signInChecked is signIn for pages' own sign-in methods: it refuses an account that needs MFA, since pages has no
 // second step yet. ctx.session.signIn(record), for records the app authenticated itself, doesn't go through it.
-func (r *request) signInChecked(rec *core.Record) map[string]any {
+func (r *request) signInChecked(rec *core.Record) (map[string]any, error) {
 	if r.needsMFA(rec) {
-		r.fail400(mfaMessage)
+		return nil, errMFA
 	}
 	return r.signIn(rec)
 }
 
 // signIn sets the session cookie for record and returns { token, record }.
-func (r *request) signIn(rec *core.Record) map[string]any {
+func (r *request) signIn(rec *core.Record) (map[string]any, error) {
 	token, err := rec.NewAuthToken()
 	if err != nil {
-		panic(r.vm.NewGoError(err))
+		return nil, err
 	}
 	val, err := json.Marshal(authCookieValue{Token: token, Record: rec})
 	if err != nil {
-		panic(r.vm.NewGoError(err))
+		return nil, err
 	}
 	maxAge := int(rec.Collection().AuthToken.DurationTime() / time.Second)
 	r.setCookie(authCookie, string(val), map[string]any{"maxAge": maxAge})
 	r.auth = rec
 	r.e.Auth = rec
-	return map[string]any{"token": token, "record": rec}
+	return map[string]any{"token": token, "record": rec}, nil
 }
 
 func (r *request) findByIdentity(col *core.Collection, identity string) *core.Record {
@@ -256,21 +254,23 @@ func (r *request) findByIdentity(col *core.Collection, identity string) *core.Re
 	return nil
 }
 
-func (r *request) sessionObject() *goja.Object {
-	vm := r.vm
+func (r *request) sessionObject() js.Object {
 	app := r.p.app
-	o := vm.NewObject()
+	o := r.rt.NewObject()
 	set := func(name string, v any) { _ = o.Set(name, v) }
 
-	set("current", func() goja.Value {
+	set("current", func() any {
 		if r.auth == nil {
-			return goja.Null()
+			return nil
 		}
-		return vm.ToValue(r.auth)
+		return r.auth
 	})
 
-	set("authMethods", func(opts map[string]any) map[string]any {
-		col := r.authCollection(opts)
+	set("authMethods", func(opts map[string]any) (map[string]any, error) {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return nil, err
+		}
 		providers := []any{}
 		for _, p := range col.OAuth2.Providers {
 			providers = append(providers, map[string]any{"name": p.Name, "displayName": p.DisplayName})
@@ -280,30 +280,36 @@ func (r *request) sessionObject() *goja.Object {
 			"otp":      map[string]any{"enabled": col.OTP.Enabled},
 			"mfa":      map[string]any{"enabled": col.MFA.Enabled},
 			"oauth2":   map[string]any{"enabled": col.OAuth2.Enabled, "providers": providers},
-		}
+		}, nil
 	})
 
-	set("signIn", func(rec *core.Record) map[string]any {
+	set("signIn", func(rec *core.Record) (map[string]any, error) {
 		if rec == nil || !rec.Collection().IsAuth() {
-			r.fail400("ctx.session.signIn: needs an auth record")
+			return nil, errors.New("ctx.session.signIn: needs an auth record")
 		}
 		return r.signIn(rec)
 	})
 
-	set("signInWithPassword", func(identity, password string, opts map[string]any) map[string]any {
-		col := r.authCollection(opts)
+	set("signInWithPassword", func(identity, password string, opts map[string]any) (map[string]any, error) {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return nil, err
+		}
 		if !col.PasswordAuth.Enabled {
-			r.fail400("password sign-in is turned off for " + col.Name)
+			return nil, errors.New("password sign-in is turned off for " + col.Name)
 		}
 		rec := r.findByIdentity(col, identity)
 		if rec == nil || !rec.ValidatePassword(password) {
-			r.fail400("Invalid login credentials.")
+			return nil, errors.New("Invalid login credentials.")
 		}
 		return r.signInChecked(rec)
 	})
 
-	set("register", func(email, password string, opts map[string]any) map[string]any {
-		col := r.authCollection(opts)
+	set("register", func(email, password string, opts map[string]any) (map[string]any, error) {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return nil, err
+		}
 		rec := core.NewRecord(col)
 		if data, ok := opts["data"].(map[string]any); ok {
 			for k, v := range data {
@@ -313,7 +319,7 @@ func (r *request) sessionObject() *goja.Object {
 		rec.SetEmail(email)
 		rec.SetPassword(password)
 		if err := app.Save(rec); err != nil {
-			panic(vm.NewGoError(err))
+			return nil, err
 		}
 		if v, ok := opts["verify"].(bool); !ok || v {
 			if err := mails.SendRecordVerification(app, rec); err != nil {
@@ -323,45 +329,51 @@ func (r *request) sessionObject() *goja.Object {
 		if v, ok := opts["signIn"].(bool); !ok || v {
 			return r.signInChecked(rec)
 		}
-		return map[string]any{"token": "", "record": rec}
+		return map[string]any{"token": "", "record": rec}, nil
 	})
 
-	set("signInAnonymously", func(opts map[string]any) map[string]any {
-		col := r.authCollection(opts)
+	set("signInAnonymously", func(opts map[string]any) (map[string]any, error) {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return nil, err
+		}
 		if col.MFA.Enabled && col.MFA.Rule == "" {
-			r.fail400(mfaMessage) // every account needs MFA: don't create one that can't sign in
+			return nil, errMFA // every account needs MFA: don't create one that can't sign in
 		}
 		rec := core.NewRecord(col)
 		rec.SetEmail("anon-" + strings.ToLower(security.RandomString(16)) + "@anonymous.invalid")
 		rec.SetPassword(security.RandomString(32))
 		if err := app.Save(rec); err != nil {
-			panic(vm.NewGoError(err))
+			return nil, err
 		}
 		if r.needsMFA(rec) {
 			_ = app.Delete(rec)
-			r.fail400(mfaMessage)
+			return nil, errMFA
 		}
 		return r.signIn(rec)
 	})
 
-	set("requestOTP", func(email string, opts map[string]any) string {
-		col := r.authCollection(opts)
+	set("requestOTP", func(email string, opts map[string]any) (string, error) {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return "", err
+		}
 		if !col.OTP.Enabled {
-			r.fail400("OTP sign-in is turned off for " + col.Name)
+			return "", errors.New("OTP sign-in is turned off for " + col.Name)
 		}
 		rec, err := app.FindAuthRecordByEmail(col, email)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			panic(vm.NewGoError(err))
+			return "", err
 		}
 		if rec == nil {
 			if c, _ := opts["create"].(bool); !c {
-				return core.GenerateDefaultRandomId()
+				return core.GenerateDefaultRandomId(), nil
 			}
 			rec = core.NewRecord(col)
 			rec.SetEmail(email)
 			rec.SetPassword(security.RandomString(32))
 			if err := app.Save(rec); err != nil {
-				panic(vm.NewGoError(err))
+				return "", err
 			}
 		}
 		pass := security.RandomStringWithAlphabet(col.OTP.Length, "1234567890")
@@ -371,28 +383,32 @@ func (r *request) sessionObject() *goja.Object {
 		otp.SetPassword(pass)
 		otp.SetSentTo(email)
 		if err := app.Save(otp); err != nil {
-			panic(vm.NewGoError(err))
+			return "", err
 		}
 		routine.FireAndForget(func() {
 			if err := mails.SendRecordOTP(app, rec, otp.Id, pass); err != nil {
 				app.Logger().Error("pages: OTP email failed", "error", errors.Join(err, app.Delete(otp)))
 			}
 		})
-		return otp.Id
+		return otp.Id, nil
 	})
 
-	set("signInWithOTP", func(otpId, code string, opts map[string]any) map[string]any {
-		col := r.authCollection(opts)
+	set("signInWithOTP", func(otpId, code string, opts map[string]any) (map[string]any, error) {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return nil, err
+		}
+		errOTP := errors.New("Invalid or expired one-time password.")
 		otp, err := app.FindOTPById(otpId)
 		if err != nil || otp.CollectionRef() != col.Id || otp.HasExpired(col.OTP.DurationTime()) || !otp.ValidatePassword(code) {
-			r.fail400("Invalid or expired one-time password.")
+			return nil, errOTP
 		}
 		rec, err := app.FindRecordById(col, otp.RecordRef())
 		if err != nil {
-			r.fail400("Invalid or expired one-time password.")
+			return nil, errOTP
 		}
 		if r.needsMFA(rec) {
-			r.fail400(mfaMessage)
+			return nil, errMFA
 		}
 		_ = app.Delete(otp)
 		if !rec.Verified() && otp.SentTo() != "" && strings.EqualFold(otp.SentTo(), rec.Email()) {
@@ -408,111 +424,122 @@ func (r *request) sessionObject() *goja.Object {
 		r.e.Auth = nil
 	})
 
-	set("requestVerification", func(email string, opts map[string]any) {
-		col := r.authCollection(opts)
+	set("requestVerification", func(email string, opts map[string]any) error {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return err
+		}
 		rec, err := app.FindAuthRecordByEmail(col, email)
 		if err != nil || rec.Verified() {
-			return // never reveal whether the email exists
+			return nil // never reveal whether the email exists
 		}
 		routine.FireAndForget(func() {
 			if err := mails.SendRecordVerification(app, rec); err != nil {
 				app.Logger().Error("pages: verification email failed", "error", err)
 			}
 		})
+		return nil
 	})
 
-	set("confirmVerification", func(token string) goja.Value {
+	set("confirmVerification", func(token string) (*core.Record, error) {
 		rec, err := app.FindAuthRecordByToken(token, core.TokenTypeVerification)
 		if err != nil || !tokenEmailMatches(token, rec.Email()) {
-			r.fail400("Invalid or expired verification token.")
+			return nil, errors.New("Invalid or expired verification token.")
 		}
 		if !rec.Verified() {
 			rec.SetVerified(true)
 			if err := app.Save(rec); err != nil {
-				panic(vm.NewGoError(err))
+				return nil, err
 			}
 		}
-		return vm.ToValue(rec)
+		return rec, nil
 	})
 
-	set("requestPasswordReset", func(email string, opts map[string]any) {
-		col := r.authCollection(opts)
+	set("requestPasswordReset", func(email string, opts map[string]any) error {
+		col, err := r.authCollection(opts)
+		if err != nil {
+			return err
+		}
 		rec, err := app.FindAuthRecordByEmail(col, email)
 		if err != nil {
-			return
+			return nil
 		}
 		routine.FireAndForget(func() {
 			if err := mails.SendRecordPasswordReset(app, rec); err != nil {
 				app.Logger().Error("pages: password reset email failed", "error", err)
 			}
 		})
+		return nil
 	})
 
-	set("confirmPasswordReset", func(token, password, confirm string) goja.Value {
+	set("confirmPasswordReset", func(token, password, confirm string) (*core.Record, error) {
 		if password != confirm {
-			r.fail400("The passwords don't match.")
+			return nil, errors.New("The passwords don't match.")
 		}
 		rec, err := app.FindAuthRecordByToken(token, core.TokenTypePasswordReset)
 		if err != nil || !tokenEmailMatches(token, rec.Email()) {
-			r.fail400("Invalid or expired password reset token.")
+			return nil, errors.New("Invalid or expired password reset token.")
 		}
 		rec.SetPassword(password)
 		if !rec.Verified() {
 			rec.SetVerified(true)
 		}
 		if err := app.Save(rec); err != nil {
-			panic(vm.NewGoError(err))
+			return nil, err
 		}
-		return vm.ToValue(rec)
+		return rec, nil
 	})
 
-	set("requestEmailChange", func(newEmail string) {
+	set("requestEmailChange", func(newEmail string) error {
 		if r.auth == nil {
-			r.fail400("ctx.session.requestEmailChange: not signed in")
+			return errors.New("ctx.session.requestEmailChange: not signed in")
 		}
 		rec := r.auth
 		// the checks PocketBase's request-email-change API makes
 		newEmail = strings.TrimSpace(newEmail)
 		if is.EmailFormat.Validate(newEmail) != nil || newEmail == "" {
-			r.fail400("Enter a valid email address.")
+			return errors.New("Enter a valid email address.")
 		}
 		if strings.EqualFold(newEmail, rec.Email()) {
-			r.fail400("That's already your email address.")
+			return errors.New("That's already your email address.")
 		}
 		if other, err := app.FindAuthRecordByEmail(rec.Collection(), newEmail); err == nil && other != nil {
-			r.fail400("That email address is already in use.")
+			return errors.New("That email address is already in use.")
 		}
 		routine.FireAndForget(func() {
 			if err := mails.SendRecordChangeEmail(app, rec, newEmail); err != nil {
 				app.Logger().Error("pages: email change email failed", "error", err)
 			}
 		})
+		return nil
 	})
 
-	set("confirmEmailChange", func(token, password string) goja.Value {
+	set("confirmEmailChange", func(token, password string) (*core.Record, error) {
 		rec, err := app.FindAuthRecordByToken(token, core.TokenTypeEmailChange)
 		if err != nil || !tokenEmailMatches(token, rec.Email()) || !rec.ValidatePassword(password) {
-			r.fail400("Invalid or expired email change token, or wrong password.")
+			return nil, errors.New("Invalid or expired email change token, or wrong password.")
 		}
 		newEmail := tokenClaim(token, core.TokenClaimNewEmail)
 		if newEmail == "" {
-			r.fail400("Invalid email change token.")
+			return nil, errors.New("Invalid email change token.")
 		}
 		rec.SetEmail(newEmail)
 		rec.SetVerified(true)
 		if err := app.Save(rec); err != nil {
-			panic(vm.NewGoError(err))
+			return nil, err
 		}
 		if r.auth != nil && r.auth.Id == rec.Id {
-			r.signIn(rec)
+			if _, err := r.signIn(rec); err != nil {
+				return nil, err
+			}
 		}
-		return vm.ToValue(rec)
+		return rec, nil
 	})
 
-	set("requestOAuth2", func(provider string, opts map[string]any) string {
+	set("requestOAuth2", func(provider string, opts map[string]any) (string, error) {
 		return r.requestOAuth2(provider, opts)
 	})
-	set("signInWithOAuth2", func(state, code string, opts map[string]any) map[string]any {
+	set("signInWithOAuth2", func(state, code string, opts map[string]any) (map[string]any, error) {
 		return r.signInWithOAuth2(state, code, opts)
 	})
 	return o

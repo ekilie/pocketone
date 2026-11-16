@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/remotes"
 )
@@ -24,7 +24,7 @@ func TestEjectRendersThroughPages(t *testing.T) {
 	}
 	defer app.Cleanup()
 	pagesDir := filepath.Join(t.TempDir(), "pb_pages")
-	jsvm.MustRegister(app, jsvm.Config{HooksDir: t.TempDir()})
+	jsvm.MustRegister(app, jsvm.Config{HooksDir: t.TempDir(), MigrationsDir: t.TempDir(), TypesDir: t.TempDir()})
 	pages.MustRegister(app, pages.Config{Dir: pagesDir})
 	MustRegister(app, Config{OAuth: OAuthConfig{Branding: Branding{Name: "Acme Cloud"}}})
 	remotes.MustRegister(app, remotes.Config{})

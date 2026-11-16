@@ -19,29 +19,30 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 //go:embed driver.js
 var driverSource string
 
-var driverProgram = goja.MustCompile("ext/pages/driver.js", driverSource, false)
+// callSource is how Go calls a JS function it doesn't hold: get() returns the object (a NativeFunc can return a JS
+// value, while Func.Call can only pass Go values), name is the method. One js.Func per VM, kept for its lifetime.
+const callSource = "(function (get, name) { var o = get(); return o[name].apply(o, Array.prototype.slice.call(arguments, 2)) })"
 
-// maxIncludeDepth guards against templates including themselves.
-const maxIncludeDepth = 64
+// maxIncludeDepth guards against templates including themselves. It stays well below what the VM's C stack allows
+// (about 50 levels at jsvm's default 256 KiB), so a loop gets this error rather than a stack overflow.
+const maxIncludeDepth = 32
 
-// programs caches compiled JS (templates and modules) by kind and content hash. Compiled programs are shared by
-// every VM.
+// programs caches compiled JS sources (templates and modules) by kind and content hash, for every VM. Each VM
+// evaluates a source once and keeps the function in its own cache (see vmCache).
 type programs struct {
 	mu sync.Mutex
 	m  map[string]*compiledFile
 }
 
 type compiledFile struct {
-	prog        *goja.Program
+	src         string         // evaluates to a function
 	frontMatter map[string]any // .md pages
-	markdown    bool
 }
 
 func (c *programs) get(key string) *compiledFile {
@@ -65,6 +66,11 @@ type httpError struct {
 	message string
 }
 
+// vmState is pages' Go state for one VM, kept in the VM's cache object so it lives and dies with the VM.
+type vmState struct {
+	call js.Func // callSource
+}
+
 // request is one page request's state.
 type request struct {
 	p      *Pages
@@ -72,9 +78,10 @@ type request struct {
 	root   *os.Root
 	route  *Route
 	params map[string]string
-	vm     *goja.Runtime
-	pp     goja.Value
-	cache  *goja.Object // per-VM cache of program functions and module exports
+	rt     js.Runtime
+	cache  js.Object // per-VM cache of compiled functions and module exports
+	st     *vmState
+	obj    js.Object // the rt object the driver receives
 
 	status   int
 	sent     bool
@@ -84,13 +91,13 @@ type request struct {
 	meta     map[string]any
 	depth    int
 	dev      bool
-	plugins  []goja.Value
 	builtins map[string]bool
 	auth     *core.Record
 	token    string
 	tokenFor string
 	flashed  bool
-	errorCtx map[string]any
+	where    string     // template location of the error that failed the request (__ppWhere)
+	httpErr  *httpError // a ctx.httpError() that failed the request
 
 	data   map[string]any // RenderTemplate: initial ctx.data
 	direct bool           // RenderTemplate: render route.File, skip handlers and method checks
@@ -113,27 +120,21 @@ func (p *Pages) renderWith(e *core.RequestEvent, root *os.Root, route *Route, pa
 		e.Response.Header().Set("Content-Type", ct)
 	}
 
-	var runErr error
-	err := jsvm.Run(p.app, func(vm *goja.Runtime) error {
+	err := js.Run(p.app, func(rt js.Runtime) error {
 		r := &request{
-			p: p, e: e, root: root, route: route, params: params, vm: vm,
+			p: p, e: e, root: root, route: route, params: params, rt: rt,
 			status: status, layouts: true, slots: map[string]string{}, meta: map[string]any{}, dev: dev,
 			data: data, direct: direct,
 		}
-		r.cache = perVMCache(vm)
-		runErr = r.run(t)
-		if runErr != nil {
-			r.fail(runErr)
+		if err := r.run(t); err != nil {
+			r.fail(err)
 		}
 		return nil
 	})
-	if errors.Is(err, jsvm.ErrNotRegistered) {
-		return e.String(http.StatusInternalServerError, "ext/pages: the jsvm plugin must be registered on this app\n")
+	if errors.Is(err, js.ErrNoEngine) {
+		return e.String(http.StatusInternalServerError, "ext/pages: the jsvm extension must be registered on this app\n")
 	}
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // pageContentType is the Content-Type a page's inner extension implies (robots.txt.ejs → text/plain), or "" for
@@ -149,72 +150,60 @@ func pageContentType(route *Route) string {
 	return mime.TypeByExtension(ext)
 }
 
-func perVMCache(vm *goja.Runtime) *goja.Object {
-	if v := vm.Get("__ppCache"); v != nil && !goja.IsUndefined(v) {
-		return v.ToObject(vm)
+// vmCache returns the VM's cache object (the __ppCache global) and pages' state for the VM, making them on first use.
+func (r *request) vmCache() (js.Object, *vmState, error) {
+	if o := r.rt.Get("__ppCache").Object(); o != nil {
+		if st, ok := o.Get("go").Export().(*vmState); ok {
+			return o, st, nil
+		}
 	}
-	o := vm.NewObject()
-	vm.Set("__ppCache", o)
-	return o
+	call, err := r.rt.Eval(callSource, "ext/pages/call.js")
+	if err != nil {
+		return nil, nil, err
+	}
+	driver, err := r.rt.Eval(driverSource, "ext/pages/driver.js")
+	if err != nil {
+		return nil, nil, err
+	}
+	o := r.rt.NewObject()
+	st := &vmState{call: call.Func()}
+	if err := errors.Join(o.Set("driver", driver), o.Set("go", st), r.rt.Set("__ppCache", o)); err != nil {
+		return nil, nil, err
+	}
+	return o, st, nil
+}
+
+// callJS calls the method name of the JS object o with Go args, and returns its result exported.
+func (r *request) callJS(o js.Object, name string, args ...any) (any, error) {
+	get := js.NativeFunc(func(js.Call) (any, error) { return o, nil })
+	return r.st.call.Call(append([]any{get, name}, args...)...)
 }
 
 // run calls the driver.
-func (r *request) run(t *Table) (err error) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			err = panicErr(rec)
-		}
-	}()
-	cfg, plugins, err := r.loadConfig(t.Config)
+func (r *request) run(t *Table) error {
+	cache, st, err := r.vmCache()
 	if err != nil {
 		return err
 	}
-	r.dev = r.dev || cfg.Debug
-	r.plugins = plugins
-	r.builtins = cfg.Builtins
-	r.auth = r.e.Auth
-	// an Authorization header login wins over the pb_auth cookie (as in 0.x)
-	if r.builtins["auth"] && r.auth == nil {
-		r.readAuthCookie()
-	}
-
-	driver, err := r.programFunc("driver", driverProgram)
-	if err != nil {
-		return err
-	}
-	_, err = driver(goja.Undefined(), r.rtObject())
+	r.cache, r.st = cache, st
+	r.obj = r.rtObject(t)
+	_, err = r.callJS(r.cache, "driver", js.NativeFunc(func(js.Call) (any, error) { return r.obj, nil }))
 	return err
 }
 
-func panicErr(rec any) error {
-	switch v := rec.(type) {
-	case *goja.Exception:
-		return v
-	case *goja.InterruptedError:
-		return v
-	case error:
-		return v
-	default:
-		return fmt.Errorf("%v", v)
+// program returns the function src evaluates to on this VM, evaluating it once per VM (cached under key).
+func (r *request) program(key, name, src string) (js.Value, error) {
+	if v := r.cache.Get(key); !v.Nullish() {
+		return v, nil
 	}
-}
-
-// programFunc runs a compiled program once per VM and caches the function it evaluates to.
-func (r *request) programFunc(key string, prog *goja.Program) (goja.Callable, error) {
-	v := r.cache.Get(key)
-	if v == nil || goja.IsUndefined(v) {
-		var err error
-		v, err = r.vm.RunProgram(prog)
-		if err != nil {
-			return nil, err
-		}
-		r.cache.Set(key, v)
+	v, err := r.rt.Eval(src, name)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
 	}
-	fn, ok := goja.AssertFunction(v)
-	if !ok {
-		return nil, fmt.Errorf("%s is not a function", key)
+	if err := r.cache.Set(key, v); err != nil {
+		return nil, err
 	}
-	return fn, nil
+	return v, nil
 }
 
 // ---- files ----
@@ -227,91 +216,63 @@ func (r *request) readFile(file string) ([]byte, error) {
 	return b, nil
 }
 
-// template returns the compiled template for file.
-func (r *request) template(file string) (*compiledFile, string, error) {
+// template returns the template function for file (page, layout or partial), and merges a .md page's front matter
+// into ctx.meta.
+func (r *request) template(file string) (js.Value, error) {
 	hash := r.p.hashes.get(r.root, file)
 	if hash == "" {
-		return nil, "", fmt.Errorf("%s: not found", file)
+		return nil, fmt.Errorf("%s: not found", file)
 	}
 	key := "t:" + hash
-	if c := r.p.programs.get(key); c != nil {
-		return c, key, nil
-	}
-	src, err := r.readFile(file)
-	if err != nil {
-		return nil, "", err
-	}
-	text := string(src)
-	c := &compiledFile{}
-	if path.Ext(file) == ".md" {
-		c.markdown = true
-		fm, body, err := splitFrontMatter(text)
+	c := r.p.programs.get(key)
+	if c == nil {
+		src, err := r.readFile(file)
 		if err != nil {
-			return nil, "", fmt.Errorf("%s: front matter: %w", file, err)
+			return nil, err
 		}
-		c.frontMatter, text = fm, body
-	}
-	js, err := CompileEJS(text)
-	if err != nil {
-		return nil, "", fmt.Errorf("%s: %w", file, err)
-	}
-	prog, err := goja.Compile(file, js, false)
-	if err != nil {
-		return nil, "", fmt.Errorf("%s: %w", file, err)
-	}
-	c.prog = prog
-	r.p.programs.put(key, c)
-	return c, key, nil
-}
-
-// renderFile renders a template (page, layout or partial) and returns its text.
-func (r *request) renderFile(file string, locals goja.Value) string {
-	r.depth++
-	defer func() { r.depth-- }()
-	if r.depth > maxIncludeDepth {
-		panic(r.vm.NewGoError(fmt.Errorf("%s: includes nested more than %d deep", file, maxIncludeDepth)))
-	}
-	if isJSX(file) {
-		return r.renderJSX(file, locals)
-	}
-	c, key, err := r.template(file)
-	if err != nil {
-		panic(r.vm.NewGoError(err))
+		text := string(src)
+		c = &compiledFile{}
+		if path.Ext(file) == ".md" {
+			fm, body, err := splitFrontMatter(text)
+			if err != nil {
+				return nil, fmt.Errorf("%s: front matter: %w", file, err)
+			}
+			c.frontMatter, text = fm, body
+		}
+		code, err := CompileEJS(text)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", file, err)
+		}
+		c.src = code
+		r.p.programs.put(key, c)
 	}
 	for k, v := range c.frontMatter {
 		r.meta[k] = v
 	}
-	fn, err := r.programFunc(key, c.prog)
-	if err != nil {
-		panic(r.vm.NewGoError(err))
-	}
-	if locals == nil {
-		locals = goja.Undefined()
-	}
-	out, err := fn(goja.Undefined(), r.pp, r.vm.ToValue(file), locals)
-	if err != nil {
-		panic(err)
-	}
-	text := out.String()
-	if c.markdown {
-		text, err = renderMarkdown(text, func(ref string) string { return r.p.Asset(path.Dir(file), ref) })
-		if err != nil {
-			panic(r.vm.NewGoError(fmt.Errorf("%s: markdown: %w", file, err)))
-		}
-	}
-	return text
+	return r.program(key, file, c.src)
 }
+
+// enter counts one level of template nesting, refusing past maxIncludeDepth; leave undoes it.
+func (r *request) enter(file string) error {
+	if r.depth >= maxIncludeDepth {
+		return fmt.Errorf("%s: includes nested more than %d deep", file, maxIncludeDepth)
+	}
+	r.depth++
+	return nil
+}
+
+func (r *request) leave() { r.depth-- }
 
 // includeExts are tried, in order, for an include name without an extension.
 var includeExts = []string{".ejs", ".md", ".jsx", ".tsx"}
 
-// includeFrom renders the _private partial name, looked up from file from (SPEC 4.2).
-func (r *request) includeFrom(from, name string, locals goja.Value) string {
+// includeFile finds the _private partial name, looked up from file from (SPEC 4.2).
+func (r *request) includeFile(from, name string) (string, error) {
 	file, err := r.lookupPrivate(from, name, includeExts)
 	if err != nil {
-		panic(r.vm.NewGoError(fmt.Errorf("%s: %w", from, err)))
+		return "", fmt.Errorf("%s: %w", from, err)
 	}
-	return r.renderFile(file, locals)
+	return file, nil
 }
 
 // lookupPrivate finds name in _private folders from the folder of from upwards (SPEC 4.2). exts are tried when
@@ -379,82 +340,50 @@ func (r *request) lookupPrivate(from, name string, exts []string) (string, error
 	return "", fmt.Errorf("%q not found in any _private/ folder from %s up", name, path.Dir(from))
 }
 
-// load runs a JS module (CommonJS) from pb_pages and returns its exports, cached per VM by content.
-func (r *request) load(file string) goja.Value {
+// moduleKey is the per-VM cache key of file's exports, which are reused until the file changes.
+func (r *request) moduleKey(file string) (string, error) {
 	hash := r.p.hashes.get(r.root, file)
 	if hash == "" {
-		panic(r.vm.NewGoError(fmt.Errorf("%s: not found", file)))
+		return "", fmt.Errorf("%s: not found", file)
 	}
-	exportsKey := "e:" + file + ":" + hash
-	if v := r.cache.Get(exportsKey); v != nil && !goja.IsUndefined(v) {
-		return v
+	return "e:" + file + ":" + hash, nil
+}
+
+// module returns what the driver needs to run a JS module (CommonJS) from pb_pages: { fn, filename, dirname, ts },
+// or { json } (the file's text) for a .json file.
+func (r *request) module(file string) (js.Object, error) {
+	hash := r.p.hashes.get(r.root, file)
+	if hash == "" {
+		return nil, fmt.Errorf("%s: not found", file)
 	}
+	o := r.rt.NewObject()
 	if path.Ext(file) == ".json" {
 		src, err := r.readFile(file)
 		if err != nil {
-			panic(r.vm.NewGoError(err))
+			return nil, err
 		}
-		var v any
-		if err := json.Unmarshal(src, &v); err != nil {
-			panic(r.vm.NewGoError(fmt.Errorf("%s: %w", file, err)))
-		}
-		val := r.vm.ToValue(v)
-		r.cache.Set(exportsKey, val)
-		return val
+		return o, o.Set("json", string(src))
 	}
 	key := "m:" + hash
 	c := r.p.programs.get(key)
 	if c == nil {
 		src, err := r.readFile(file)
 		if err != nil {
-			panic(r.vm.NewGoError(err))
+			return nil, err
 		}
 		code, err := transpile(file, src)
 		if err != nil {
-			panic(r.vm.NewGoError(err))
+			return nil, err
 		}
-		wrapped := "(function (module, exports, require, __filename, __dirname, __h, __Fragment) {\n" + code + "\n})"
-		prog, err := goja.Compile(file, wrapped, false)
-		if err != nil {
-			panic(r.vm.NewGoError(fmt.Errorf("%s: %w", file, err)))
-		}
-		c = &compiledFile{prog: prog}
+		c = &compiledFile{src: "(function (module, exports, require, __filename, __dirname, __h, __Fragment) {\n" + code + "\n})"}
 		r.p.programs.put(key, c)
 	}
-	fn, err := r.programFunc(key, c.prog)
+	fn, err := r.program(key, file, c.src)
 	if err != nil {
-		panic(r.vm.NewGoError(err))
+		return nil, err
 	}
-	module := r.vm.NewObject()
-	exports := r.vm.NewObject()
-	module.Set("exports", exports)
-	// A require cycle (a -> b -> a) gets a's exports as they are so far, as in Node and 0.x, instead of recursing
-	// until the Go stack overflows and kills the process.
-	loadingKey := "l:" + exportsKey
-	if m, ok := r.cache.Get(loadingKey).(*goja.Object); ok && m != nil {
-		return m.Get("exports")
-	}
-	r.cache.Set(loadingKey, module)
-	defer r.cache.Delete(loadingKey)
-	dir := path.Dir(file)
-	requireFn := r.vm.ToValue(func(name string) goja.Value { return r.requireFrom(file, name) })
-	var h, frag goja.Value = goja.Undefined(), goja.Undefined()
-	if _, ok := tsExts[path.Ext(file)]; ok {
-		rt := r.jsxRuntime()
-		h, frag = rt.Get("h"), rt.Get("Fragment")
-	}
-	if _, err := fn(goja.Undefined(), module, exports, requireFn, r.vm.ToValue(r.absPath(file)), r.vm.ToValue(r.absPath(dir)), h, frag); err != nil {
-		panic(err)
-	}
-	out := module.Get("exports")
-	// an ES module whose only export is default (TS `export default ...`) behaves like module.exports = ...
-	if o, ok := out.(*goja.Object); ok && o.Get("__esModule") != nil && o.Get("__esModule").ToBoolean() {
-		if keys := o.Keys(); len(keys) == 1 && keys[0] == "default" {
-			out = o.Get("default")
-		}
-	}
-	r.cache.Set(exportsKey, out)
-	return out
+	_, ts := tsExts[path.Ext(file)]
+	return o, errors.Join(o.Set("fn", fn), o.Set("filename", r.absPath(file)), o.Set("dirname", r.absPath(path.Dir(file))), o.Set("ts", ts))
 }
 
 // absPath turns a pb_pages slash path into an absolute OS path (for __filename and __dirname, as in Node and 0.x).
@@ -470,9 +399,11 @@ func (r *request) absPath(p string) string {
 
 func (r *request) isHead() bool { return r.e.Request.Method == http.MethodHead }
 
-func (r *request) write(status int, contentType string, body []byte) {
+var errSent = errors.New("a response was already sent")
+
+func (r *request) write(status int, contentType string, body []byte) error {
 	if r.sent {
-		panic(r.vm.NewGoError(errors.New("a response was already sent")))
+		return errSent
 	}
 	r.sent = true
 	h := r.e.Response.Header()
@@ -483,9 +414,10 @@ func (r *request) write(status int, contentType string, body []byte) {
 	if !r.isHead() {
 		_, _ = r.e.Response.Write(body)
 	}
+	return nil
 }
 
-func (r *request) sendPage(html string) {
+func (r *request) sendPage(html string) error {
 	status := r.status
 	if status == 0 {
 		status = http.StatusOK
@@ -494,7 +426,7 @@ func (r *request) sendPage(html string) {
 	if ct == "" {
 		ct = "text/html; charset=utf-8"
 	}
-	r.write(status, ct, []byte(html))
+	return r.write(status, ct, []byte(html))
 }
 
 // ---- cookies ----
@@ -558,8 +490,8 @@ func applyCookieOpts(c *http.Cookie, opts map[string]any) {
 	}
 }
 
-// toTime reads a cookie's expires option: a JS Date (exported as time.Time), milliseconds since the epoch (as
-// Date.now() gives), or a date string (RFC 3339 or an HTTP date).
+// toTime reads a cookie's expires option: milliseconds since the epoch (as Date.now() gives; the driver passes a JS
+// Date this way), a time.Time, or a date string (RFC 3339 or an HTTP date).
 func toTime(v any) (time.Time, bool) {
 	switch t := v.(type) {
 	case time.Time:
@@ -609,27 +541,18 @@ func (r *request) cookies() map[string]string {
 
 // ---- errors ----
 
-// asHTTPError extracts a ctx.httpError() from a JS exception.
-func asHTTPError(err error) (*httpError, bool) {
-	var ex *goja.Exception
-	if !errors.As(err, &ex) {
-		return nil, false
+// asHTTPError returns the ctx.httpError() that failed the request: as the driver reported it, or from the thrown
+// value when it reached Go another way.
+func (r *request) asHTTPError(err error) (*httpError, bool) {
+	if r.httpErr != nil {
+		return r.httpErr, true
 	}
-	obj, ok := ex.Value().Export().(map[string]any)
-	if !ok {
-		if o := ex.Value(); o != nil {
-			if oo, ok2 := o.(*goja.Object); ok2 {
-				h := oo.Get("__ppHttp")
-				if h != nil && !goja.IsUndefined(h) {
-					m, _ := h.Export().(map[string]any)
-					return httpErrorFrom(m), true
-				}
+	if v, ok := js.Thrown(err); ok {
+		if m, ok := v.(map[string]any); ok {
+			if h, ok := m["__ppHttp"].(map[string]any); ok {
+				return httpErrorFrom(h), true
 			}
 		}
-		return nil, false
-	}
-	if m, ok := obj["__ppHttp"].(map[string]any); ok {
-		return httpErrorFrom(m), true
 	}
 	return nil, false
 }
@@ -643,13 +566,15 @@ func httpErrorFrom(m map[string]any) *httpError {
 	return &httpError{status: st, message: msg}
 }
 
-// errorWhere returns the template location attached to an exception, if any.
-func errorWhere(err error) string {
-	var ex *goja.Exception
-	if errors.As(err, &ex) {
-		if o, ok := ex.Value().(*goja.Object); ok {
-			if w := o.Get("__ppWhere"); w != nil && !goja.IsUndefined(w) {
-				return w.String()
+// errorWhere returns the template location attached to the error that failed the request, if any.
+func (r *request) errorWhere(err error) string {
+	if r.where != "" {
+		return r.where
+	}
+	if v, ok := js.Thrown(err); ok {
+		if m, ok := v.(map[string]any); ok {
+			if w, ok := m["__ppWhere"].(string); ok {
+				return w
 			}
 		}
 	}
@@ -658,11 +583,11 @@ func errorWhere(err error) string {
 
 // fail answers a request whose page code threw.
 func (r *request) fail(err error) {
-	if he, ok := asHTTPError(err); ok {
+	if he, ok := r.asHTTPError(err); ok {
 		r.sendError(he.status, he.message, nil)
 		return
 	}
-	where := errorWhere(err)
+	where := r.errorWhere(err)
 	r.p.logger().Error("pages: request failed", "path", r.e.Request.URL.Path, "file", r.route.File, "where", where, "error", err.Error())
 	r.sendError(http.StatusInternalServerError, "", err)
 }
@@ -689,7 +614,7 @@ func (r *request) sendError(status int, message string, cause error) {
 	}
 
 	if cause != nil && r.dev {
-		where := errorWhere(cause)
+		where := r.errorWhere(cause)
 		var b strings.Builder
 		b.WriteString("<!doctype html><html><body><h1>PocketPages error</h1>")
 		if where != "" {
@@ -716,35 +641,28 @@ func (r *request) sendError(status int, message string, cause error) {
 	r.write(status, "text/html; charset=utf-8", []byte(page))
 }
 
-// renderErrorPage renders +error.ejs inside the root layout. It returns false if that fails too.
-func (r *request) renderErrorPage(t *Table, status int, message string) (out string, ok bool) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			r.p.logger().Error("pages: +error.ejs failed", "error", fmt.Sprint(rec))
-			ok = false
-		}
-	}()
-	if r.pp == nil {
+// renderErrorPage renders +error.ejs inside the root layout (the driver's rt.renderError). It returns false if that
+// fails too, or if the driver failed before it could render templates.
+func (r *request) renderErrorPage(t *Table, status int, message string) (string, bool) {
+	if r.obj == nil || r.obj.Get("renderError").Nullish() {
 		return "", false
 	}
-	ctx := r.pp.ToObject(r.vm).Get("ctx").ToObject(r.vm)
-	ctx.Set("error", map[string]any{"status": status, "message": message})
 	r.slots = map[string]string{}
 	r.layouts = true
-	html := r.renderFile(t.ErrorTpl, nil)
-	if t.RootLayout != "" {
-		r.wrapped = html
-		html = r.renderFile(t.RootLayout, nil)
+	out, err := r.callJS(r.obj, "renderError", status, message, t.ErrorTpl, t.RootLayout)
+	if err != nil {
+		r.p.logger().Error("pages: +error.ejs failed", "error", err.Error())
+		return "", false
 	}
-	return html, true
+	s, _ := out.(string)
+	return s, true
 }
 
 // ---- the rt object the driver receives ----
 
-func (r *request) rtObject() *goja.Object {
-	vm := r.vm
+func (r *request) rtObject(t *Table) js.Object {
 	e := r.e
-	o := vm.NewObject()
+	o := r.rt.NewObject()
 	set := func(name string, v any) { _ = o.Set(name, v) }
 
 	layouts := r.route.Layouts
@@ -755,6 +673,8 @@ func (r *request) rtObject() *goja.Object {
 	if middlewares == nil {
 		middlewares = []string{}
 	}
+	set("cache", r.cache)
+	set("config", t.Config)
 	set("route", map[string]any{
 		"path": r.route.Pattern, "name": r.route.Name, "file": r.route.File, "kind": r.route.Kind.String(),
 		"handler": r.route.Handler, "middlewares": middlewares, "layouts": layouts,
@@ -793,12 +713,12 @@ func (r *request) rtObject() *goja.Object {
 	})
 	set("header", func(name string) string { return e.Request.Header.Get(name) })
 	set("cookies", func() map[string]string { return r.cookies() })
-	set("body", func() any {
+	set("body", func() (any, error) {
 		info, err := e.RequestInfo()
 		if err != nil {
-			panic(vm.NewGoError(err))
+			return nil, err
 		}
-		return info.Body
+		return info.Body, nil
 	})
 	set("files", func(name string) any {
 		files, err := e.FindUploadedFiles(name)
@@ -809,19 +729,36 @@ func (r *request) rtObject() *goja.Object {
 	})
 	set("ip", e.RealIP())
 	set("event", e)
-	if r.auth != nil {
-		set("auth", r.auth)
-	} else {
-		set("auth", goja.Null())
-	}
-	if r.builtins["realtime"] {
-		set("realtime", r.realtimeObject())
-	}
-	if r.builtins["auth"] {
-		set("session", r.sessionObject())
-	}
-	set("dev", r.dev)
 	set("pagesDir", r.p.dir)
+
+	// configure applies +config.js (loaded by the driver) and returns { dev, auth, realtime, session }.
+	set("configure", js.NativeFunc(func(c js.Call) (any, error) {
+		r.dev = r.dev || c.Arg(0).Export() == true
+		r.builtins = map[string]bool{}
+		if list, ok := c.Arg(1).Export().([]any); ok {
+			for _, name := range list {
+				if s, ok := name.(string); ok {
+					r.builtins[s] = true
+				}
+			}
+		}
+		r.auth = e.Auth
+		// an Authorization header login wins over the pb_auth cookie (as in 0.x)
+		if r.builtins["auth"] && r.auth == nil {
+			r.readAuthCookie()
+		}
+		out := r.rt.NewObject()
+		err := errors.Join(out.Set("dev", r.dev), out.Set("auth", r.auth), out.Set("realtime", r.builtins["realtime"]))
+		if r.builtins["auth"] {
+			err = errors.Join(err, out.Set("session", r.sessionObject()))
+		}
+		return out, err
+	}))
+	set("moduleExists", func(file, name string) bool { return r.moduleExists(file, name) })
+	set("httpError", func(status int, message string) {
+		r.httpErr = httpErrorFrom(map[string]any{"status": status, "message": message})
+	})
+	set("setWhere", func(where string) { r.where = where })
 
 	set("setStatus", func(code int) { r.status = code })
 	set("getHeader", func(name string) string { return e.Response.Header().Get(name) })
@@ -834,48 +771,45 @@ func (r *request) rtObject() *goja.Object {
 		opts["maxAge"] = 0
 		r.setCookie(name, "", opts)
 	})
-	set("redirect", func(status int, location string) {
+	set("redirect", func(status int, location string) error {
 		if r.sent {
-			panic(vm.NewGoError(errors.New("a response was already sent")))
+			return errSent
 		}
 		r.sent = true
 		http.Redirect(e.Response, e.Request, location, status)
+		return nil
 	})
-	set("send", func(status int, contentType, body string) { r.write(status, contentType, []byte(body)) })
-	set("sendJSON", func(status int, data goja.Value) {
-		var v any
-		if data != nil {
-			v = data.Export()
-		}
+	set("send", func(status int, contentType, body string) error { return r.write(status, contentType, []byte(body)) })
+	set("sendJSON", func(status int, data any) error {
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
 		enc.SetEscapeHTML(false)
-		if err := enc.Encode(v); err != nil {
-			panic(vm.NewGoError(err))
+		if err := enc.Encode(data); err != nil {
+			return err
 		}
-		r.write(status, "application/json", bytes.TrimRight(buf.Bytes(), "\n"))
+		return r.write(status, "application/json", bytes.TrimRight(buf.Bytes(), "\n"))
 	})
-	set("sendFile", func(p string) {
+	set("sendFile", func(p string) error {
 		f := path.Clean(strings.TrimPrefix(p, "/"))
 		if strings.HasPrefix(f, "..") {
-			panic(vm.NewGoError(fmt.Errorf("file %q leaves pb_pages", p)))
+			return fmt.Errorf("file %q leaves pb_pages", p)
 		}
 		fh, err := r.root.Open(f)
 		if err != nil {
-			panic(vm.NewGoError(err))
+			return err
 		}
 		defer fh.Close()
 		body, err := io.ReadAll(fh)
 		if err != nil {
-			panic(vm.NewGoError(err))
+			return err
 		}
 		ct := mime.TypeByExtension(path.Ext(f))
 		if ct == "" {
 			ct = http.DetectContentType(body)
 		}
-		r.write(http.StatusOK, ct, body)
+		return r.write(http.StatusOK, ct, body)
 	})
-	set("sse", func() *goja.Object { return r.sse() })
+	set("sse", js.NativeFunc(func(js.Call) (any, error) { return r.sse() }))
 	set("setLayout", func(on bool) { r.layouts = on })
 	set("layoutsOn", func() bool {
 		if !r.layouts {
@@ -885,11 +819,11 @@ func (r *request) rtObject() *goja.Object {
 		return ct == "" || strings.HasPrefix(ct, "text/html")
 	})
 	set("sent", func() bool { return r.sent })
-	set("methodNotAllowed", func(allow string) {
+	set("methodNotAllowed", func(allow string) error {
 		e.Response.Header().Set("Allow", allow)
-		r.write(http.StatusMethodNotAllowed, "text/plain; charset=utf-8", []byte("Method Not Allowed\n"))
+		return r.write(http.StatusMethodNotAllowed, "text/plain; charset=utf-8", []byte("Method Not Allowed\n"))
 	})
-	set("sendPage", func(html string) { r.sendPage(html) })
+	set("sendPage", func(html string) error { return r.sendPage(html) })
 
 	set("log", func(level string, args []any) {
 		msg := strings.TrimSpace(fmt.Sprintln(args...))
@@ -910,63 +844,60 @@ func (r *request) rtObject() *goja.Object {
 	set("metaGet", func(key string) any { return r.meta[key] })
 	set("metaSet", func(key string, value any) { r.meta[key] = value })
 	set("asset", func(from, ref string) string { return r.p.Asset(path.Dir(from), ref) })
-	set("include", func(from, name string, locals goja.Value) string { return r.includeFrom(from, name, locals) })
-	set("resolve", func(from, name, mode string) goja.Value {
+
+	// templates and modules: Go finds and compiles them, the driver calls them
+	set("enter", func(file string) error { return r.enter(file) })
+	set("leave", func() { r.leave() })
+	set("template", js.NativeFunc(func(c js.Call) (any, error) { return r.template(c.Arg(0).String()) }))
+	set("markdown", func(file, text string) (string, error) {
+		out, err := renderMarkdown(text, func(ref string) string { return r.p.Asset(path.Dir(file), ref) })
+		if err != nil {
+			return "", fmt.Errorf("%s: markdown: %w", file, err)
+		}
+		return out, nil
+	})
+	set("includeFile", func(from, name string) (string, error) { return r.includeFile(from, name) })
+	set("resolveFile", func(from, name string) (string, error) {
 		file, err := r.lookupPrivate(from, name, []string{"", ".js", ".ts", ".json"})
 		if err != nil {
-			panic(vm.NewGoError(fmt.Errorf("%s: %w", from, err)))
+			return "", fmt.Errorf("%s: %w", from, err)
 		}
-		switch mode {
-		case "require", "":
-			return r.load(file)
-		case "raw", "script", "style":
-			b, err := r.readFile(file)
-			if err != nil {
-				panic(vm.NewGoError(err))
-			}
-			s := string(b)
-			switch mode {
-			case "script":
-				s = "<script>\n" + s + "\n</script>"
-			case "style":
-				s = "<style>\n" + s + "\n</style>"
-			}
-			return vm.ToValue(s)
-		default:
-			panic(vm.NewGoError(fmt.Errorf("resolve: unknown mode %q", mode)))
-		}
+		return file, nil
 	})
-	set("load", func(file string) goja.Value { return r.load(file) })
-	set("require", func(from, name string) goja.Value { return r.requireFrom(from, name) })
-	set("sdk", func() goja.Value { return r.sdkClass() })
-	set("authToken", func() string { return r.authToken() })
+	set("readText", func(file string) (string, error) {
+		b, err := r.readFile(file)
+		return string(b), err
+	})
+	set("moduleKey", func(file string) (string, error) { return r.moduleKey(file) })
+	set("module", js.NativeFunc(func(c js.Call) (any, error) { return r.module(c.Arg(0).String()) }))
+	set("resolveRequire", js.NativeFunc(func(c js.Call) (any, error) {
+		return r.resolveRequire(c.Arg(0).String(), c.Arg(1).String())
+	}))
+	set("program", js.NativeFunc(func(c js.Call) (any, error) { return r.builtinProgram(c.Arg(0).String()) }))
+
+	set("realtimeClients", r.realtimeClients)
+	set("realtimeSend", js.NativeFunc(r.realtimeSend))
+	set("realtimeClient", func(id string) any { return r.realtimeClient(id) })
+
+	set("authToken", func() (string, error) { return r.authToken() })
 	set("authRecordJSON", func() string { return r.authRecordJSON() })
-	set("apiSend", func(opts map[string]any) map[string]any { return r.apiSend(opts) })
+	set("apiSend", func(opts map[string]any) (map[string]any, error) { return r.apiSend(opts) })
 	set("sdkBaseURL", sdkBaseURL)
-	set("render", func(file string, locals goja.Value) string { return r.renderFile(file, locals) })
 	set("setWrapped", func(s string) { r.wrapped = s })
 	set("wrapped", func() string { return r.wrapped })
 	set("setSlot", func(name, content string) { r.slots[name] = content })
 	set("getSlot", func(name string) string { return r.slots[name] })
-	set("setPP", func(v goja.Value) { r.pp = v })
-	set("plugins", func() goja.Value {
-		items := make([]any, len(r.plugins))
-		for i, v := range r.plugins {
-			items[i] = v
-		}
-		return vm.NewArray(items...)
-	})
-	set("flash", func() goja.Value {
+	set("flash", func() any {
 		if r.flashed {
-			return goja.Undefined()
+			return nil
 		}
 		r.flashed = true
 		v, ok := r.cookies()["pp_flash"]
 		if !ok {
-			return goja.Undefined()
+			return nil
 		}
 		r.setCookie("pp_flash", "", map[string]any{"maxAge": 0})
-		return vm.ToValue(v)
+		return v
 	})
 	return o
 }

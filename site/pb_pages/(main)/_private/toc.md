@@ -52,7 +52,7 @@
 - [Remotes](/docs/extensions/remotes)
 - [Upgrade](/docs/extensions/upgrade)
 - [Config](/docs/extensions/config)
-- [JS Errors](/docs/extensions/jserrors)
+- [JSVM](/docs/extensions/jsvm)
 
 # Extensions: many instances
 
@@ -81,7 +81,7 @@
 
 # Extensions: for authors
 
-- [JSVM](/docs/extensions/jsvm)
+- [JS Errors](/docs/extensions/jserrors)
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Standard Set](/docs/extensions/standard)
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)

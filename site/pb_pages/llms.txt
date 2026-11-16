@@ -58,7 +58,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
 - [Config](https://pocketone.dev/docs/extensions/config): The pocketone.yaml config file, with secrets in a .env beside it.
-- [JS Errors](https://pocketone.dev/docs/extensions/jserrors): JS hook errors that name the pb_hooks file and line.
+- [JS Errors](https://pocketone.dev/docs/extensions/jserrors): Hook error positions for PocketBase's plugins/jsvm (goja). ext/jsvm doesn't need it.
 
 ## Extensions: many instances
 
@@ -87,19 +87,15 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Extensions: for authors
 
-- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet.
+- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
-- [JS Embed](https://pocketone.dev/docs/extensions/jsembed): JS hooks and migrations embedded in the binary.
+- [Bundle](https://pocketone.dev/docs/extensions/bundle): An app's hooks, migrations and public files embedded in the binary.
 
 ## Going Further
 
 - [pocketone.yaml reference](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
 - [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.
-
-## Optional
-
-- [Bundle](https://pocketone.dev/docs/extensions/bundle): An app's hooks, migrations and public files embedded in the binary.
