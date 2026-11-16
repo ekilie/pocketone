@@ -119,7 +119,7 @@ minimum hook your extension needs, and include a small `example/main.go` that bu
 
 We change PocketBase's own code as little as possible: only the hooks our extensions need, and fixes for bugs we hit in
 production. The [`core-changes` branch](https://github.com/pockethost/pocketone/compare/7b9ab7ccce7a0e5c9d96796a6bf804f3dd5e4c77...core-changes) is current
-upstream `develop` plus every one of those changes and nothing else, so you can audit them in one diff. It is rebuilt
+upstream `master` (PocketBase's release line) plus every one of those changes and nothing else, so you can audit them in one diff. It is rebuilt
 after each upstream pull.
 
 ### Hooks

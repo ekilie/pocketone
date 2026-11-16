@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Rebuilds the branches that show PocketOne's changes to PocketBase core against upstream `develop`, code only (no
+# Rebuilds the branches that show PocketOne's changes to PocketBase core against upstream `master` (its release line), code only (no
 # _test.go files):
 #
-#   core-changes        upstream develop + one commit holding every core change on main (no ext/, site/, docs or other
+#   core-changes        upstream master + one commit holding every core change on main (no ext/, site/, docs or other
 #                       PocketOne-owned paths; see core-diff.sh). Audit everything in one diff.
 #   core-hook/<name>    one hook each, stacked in HOOK_STACK order (each on the one before), so a branch's compare link
 #                       against its parent shows just that hook.
-#   core-bugfix/<name>  one upstream bug fix each, straight on upstream develop, written to be taken upstream as is.
+#   core-bugfix/<name>  one upstream bug fix each, straight on upstream master, written to be taken upstream as is.
 #
 # Run it after every pull from upstream (and after a core change lands on main), then force-push:
 #   git fetch upstream && git fetch origin
-#   .github/core-audit/core-changes-branch.sh            # defaults: upstream/develop, origin/main
+#   .github/core-audit/core-changes-branch.sh            # defaults: upstream/master, origin/main
 #   git push --force origin core-changes 'refs/heads/core-hook/*' 'refs/heads/core-bugfix/*'
 #   (and commit README.md if the script repinned its compare links)
 #
-# core-changes is rebuilt from main's core diff (fork point..main) applied three-way onto upstream develop. The hook and
+# core-changes is rebuilt from main's core diff (fork point..main) applied three-way onto upstream master. The hook and
 # bugfix branches are rebased onto it. Conflicts resolved on an earlier run are replayed (git rerere); a new one stops
 # the script and leaves the worktree. Finally the hook stack plus the bugfix branches is checked against core-changes:
 # the code must match (comments may differ, since the bugfix branches are written for upstream).
@@ -29,7 +29,7 @@ rr=(-c rerere.enabled=true -c rerere.autoupdate=true)
 finish() { # $1 worktree, $2 upstream sha, $3 source sha
   local wt=$1 up_sha=$2 src_sha=$3
   git -C "$wt" "${rr[@]}" commit --quiet -F - <<MSG
-PocketOne core changes on upstream develop ${up_sha:0:10}
+PocketOne core changes on upstream master ${up_sha:0:10}
 
 Every change PocketOne makes to PocketBase core, as of PocketOne ${src_sha:0:10}. Extensions (ext/) and other
 PocketOne-owned paths are left out. Rebuilt and force-pushed after each upstream pull; never merge from it.
@@ -121,7 +121,7 @@ if [ "${1:-}" = "--continue" ]; then
   exit 0
 fi
 
-upstream=${1:-upstream/develop}
+upstream=${1:-upstream/master}
 source=${2:-origin/main}
 
 # Core per core-diff.sh, minus tests and files that only list PocketOne paths or are contributor prose: code only.

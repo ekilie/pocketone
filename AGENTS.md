@@ -38,10 +38,11 @@ PocketOne change the merge forced.
 
 ## Branches that show our core changes
 
-Three kinds, all on upstream `develop` and code only (no `_test.go` files), rebuilt and force-pushed (never merged) by
-`.github/core-audit/core-changes-branch.sh` after every upstream pull and after a core change lands on main:
+Three kinds, all on upstream `master` (PocketBase's release line; `develop` is unstable and never a base) and code only
+(no `_test.go` files), rebuilt and force-pushed (never merged) by `.github/core-audit/core-changes-branch.sh` after every
+upstream pull and after a core change lands on main:
 
-- `core-changes`: upstream `develop` plus one commit holding every core change on `main` (no `ext/` or other
+- `core-changes`: upstream `master` plus one commit holding every core change on `main` (no `ext/` or other
   PocketOne-owned paths), to audit all of it in one diff.
 - `core-hook/<name>`: one hook each, stacked in the script's `HOOK_STACK` order (each on the one before), so its diff
   against the previous branch shows just that hook.
