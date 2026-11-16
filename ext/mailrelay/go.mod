@@ -52,7 +52,7 @@ require (
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000 // indirect
@@ -154,3 +154,5 @@ replace github.com/pockethost/pocketone/ext/backups => ../backups
 replace github.com/pockethost/pocketone/ext/settings => ../settings
 
 replace github.com/pockethost/pocketone/ext/standard => ../standard
+
+replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
