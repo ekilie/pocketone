@@ -225,19 +225,28 @@ func (s *Set) NewApp(cfg pocketbase.Config, jsCfg jsvm.Config) *pocketbase.Pocke
 // Register sets the set up on an app you built yourself: Prepare, jsvm with the set's JS extensions and binds
 // (chained before jsCfg.OnInit), Finish.
 func (s *Set) Register(app core.App, jsCfg jsvm.Config) error {
+	return s.RegisterWith(app, func(app core.App) error {
+		jsCfg.Extensions = append(jsCfg.Extensions, s.JSExtensions(app)...)
+		userInit := jsCfg.OnInit
+		jsCfg.OnInit = func(rt js.Runtime) {
+			s.BindJS(app, rt)
+			if userInit != nil {
+				userInit(rt)
+			}
+		}
+		return jsvm.Register(app, jsCfg)
+	})
+}
+
+// RegisterWith is Register with another JS engine: loadJS registers it on app between the extensions and the seal.
+// The pocketone binary passes PocketBase's own plugins/jsvm here in its goja compatibility mode; then the set's JS
+// APIs ($mcp, $tokens, pages, JS contracts) aren't bound.
+func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error {
 	plan, err := s.Prepare(app, nil)
 	if err != nil {
 		return err
 	}
-	jsCfg.Extensions = append(jsCfg.Extensions, s.JSExtensions(app)...)
-	userInit := jsCfg.OnInit
-	jsCfg.OnInit = func(rt js.Runtime) {
-		s.BindJS(app, rt)
-		if userInit != nil {
-			userInit(rt)
-		}
-	}
-	if err := jsvm.Register(app, jsCfg); err != nil {
+	if err := loadJS(app); err != nil {
 		return err
 	}
 	lines, err := s.Finish(app, plan)

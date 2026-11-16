@@ -56,7 +56,9 @@ func Public(app core.App, fsys fs.FS, indexFallback bool) {
 type hooks struct{ fs fs.FS }
 
 // HookFiles implements the jsvm extension method.
-func (h hooks) HookFiles(pattern string) (map[string][]byte, error) { return filesContent(h.fs, pattern) }
+func (h hooks) HookFiles(pattern string) (map[string][]byte, error) {
+	return filesContent(h.fs, pattern)
+}
 
 // Modules implements the jsvm extension method: require() is sealed to the FS under Root.
 func (h hooks) Modules() (string, func(string) ([]byte, error)) {
@@ -114,4 +116,3 @@ func filesContent(fsys fs.FS, pattern string) (map[string][]byte, error) {
 	}
 	return result, nil
 }
-

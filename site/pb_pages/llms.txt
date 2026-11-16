@@ -58,7 +58,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
 - [Config](https://pocketone.dev/docs/extensions/config): The pocketone.yaml config file, with secrets in a .env beside it.
-- [JS Errors](https://pocketone.dev/docs/extensions/jserrors): Hook error positions for PocketBase's plugins/jsvm (goja). ext/jsvm doesn't need it.
+- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
 
 ## Extensions: many instances
 
@@ -87,7 +87,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Extensions: for authors
 
-- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
+- [JS Errors](https://pocketone.dev/docs/extensions/jserrors): Hook error positions for PocketBase's plugins/jsvm (goja). ext/jsvm doesn't need it.
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)

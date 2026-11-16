@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // hostedExtension runs a PocketOne extension ([extkit.Extension], e.g. bulkmail.New(...)) on every instance: put the

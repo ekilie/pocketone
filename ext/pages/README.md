@@ -155,16 +155,15 @@ srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(page
 
 - Each start of an instance's app gets its own route table, compiled templates and caches. An instance that sleeps
   drops them; nothing is shared between instances.
-- Page code runs in the instance's own sandboxed JS runtimes, under its limits (execution time, single allocations,
-  call stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
+- Page code runs in the instance's own sandboxed JS VM ([jsvm](../jsvm/README.md)), under its limits (execution time,
+  memory, stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
   `pb_pages`; `$os` file access stays inside the instance folder. Tests:
   [multiinstance_test.go](multiinstance/multiinstance_test.go).
 - An instance turns pages off in its settings with `extensions: { pages: { enabled: false } }`.
 
-Measured (same machine as [Speed](#speed), docs kit): each awake instance adds about **2.3 MB** (50 instances: 41 MB
-idle to 155 MB). One instance under pocker serves about **4,000 requests/s** (p50 5.6 ms, p99 80 ms at 50
-concurrent): less than a single app because pocker keeps 2 prewarmed JS runtimes per instance (`hooks_pool_size`; a
-single app has 15) and every call goes through the sandbox.
+Measured on the earlier goja engine (same machine as [Speed](#speed), docs kit; not yet re-measured on jsvm): each
+awake instance added about **2.3 MB** (50 instances: 41 MB idle to 155 MB), and one instance under pocker served about
+**4,000 requests/s** (p50 5.6 ms, p99 80 ms at 50 concurrent).
 
 To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pages`, run
 `go run ./multiinstance/example`, and open `http://<name>.localhost:8791`.

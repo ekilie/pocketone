@@ -15,7 +15,8 @@ PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS AP
 - **Real error positions.** Stack traces name `pb_hooks/<file>:<line>`.
 
 The `pocketone` binary and every Pocker instance run on it. PocketBase's own `plugins/jsvm` (goja) is for pure
-PocketBase compatibility only.
+PocketBase compatibility only: `jsvm: goja` under `app:` in `pocketone.yaml` (or `--jsvm goja`) runs a single app on it,
+with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off. A build without cgo has only goja.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 

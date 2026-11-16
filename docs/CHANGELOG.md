@@ -34,6 +34,7 @@ repo root; each release here says which PocketBase version it's built on.
 
 ### Added
 
+- **jsvm:** `jsvm: goja` under `app:` in `pocketone.yaml`, or `--jsvm goja`, runs a single app on PocketBase's own JS engine for pure PocketBase compatibility (pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts are off; the startup lines say so). The default is `quickjs`; a build without cgo uses goja.
 - **bundle:** `bundle.Public(app, fsys, indexFallback)` serves public files embedded in the binary, like `pb_public`.
 - **jsvm:** new `ext/jsvm` extension, PocketOne's JS engine: one QuickJS VM per app with real globals, async handlers and `.async` Go calls, and hard per-app memory and time limits. It runs PocketBase's JS API unchanged.
 

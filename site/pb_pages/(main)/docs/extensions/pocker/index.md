@@ -78,7 +78,7 @@ Runtime provider pocker: instances run in-process (root folder, hooks pool, egre
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `root` | string | `./pb_root` | The folder holding one folder per instance: <root>/<id>. |
-| `hooks_pool_size` | int | `2` | JS runtimes kept ready per instance (0: a new one for each hook run). |
+| `hooks_pool_size` | int | `2` | Ignored: each instance has one JS VM (ext/jsvm). Kept so existing configs load. |
 | `max_js_execution` | duration | `30s` | Longest any single JS call (hook, route, cron job, migration) may run. |
 | `max_js_allocation` | int | `67108864` | Largest result a JS built-in may allocate in one step, such as 64MiB. |
 | `max_call_stack_size` | int | `2000` | Deepest JS recursion allowed. |

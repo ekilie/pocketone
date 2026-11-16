@@ -40,6 +40,7 @@ type ServerTLS struct {
 //	  dir: ./pb_data
 //	  dev: false
 //	  encryption_env: PB_ENCRYPTION_KEY
+//	  jsvm: quickjs                 # or goja: PocketBase's own JS engine, for pure PocketBase compatibility
 //	  hooks_dir: ./pb_hooks
 //	  migrations_dir: ./pb_migrations
 //	  public_dir: ./pb_public
@@ -51,7 +52,8 @@ type AppConfig struct {
 	QueryTimeout  time.Duration `yaml:"query_timeout" doc:"Default timeout for SELECT queries, such as 30s. The --queryTimeout flag wins."`
 	HooksDir      string        `yaml:"hooks_dir" doc:"The JS hooks folder. Default: pb_hooks next to pb_data. The --hooksDir flag wins."`
 	HooksWatch    *bool         `yaml:"hooks_watch" doc:"Restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins."`
-	HooksPool     int           `yaml:"hooks_pool" doc:"How many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins."`
+	JSVM          string        `yaml:"jsvm" doc:"The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $tokens and JS contracts are off). The --jsvm flag wins."`
+	HooksPool     int           `yaml:"hooks_pool" doc:"Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins."`
 	MigrationsDir string        `yaml:"migrations_dir" doc:"The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins."`
 	Automigrate   *bool         `yaml:"automigrate" doc:"Write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins."`
 	PublicDir     string        `yaml:"public_dir" doc:"The static files folder. Default: pb_public next to the executable. The --publicDir flag wins."`
@@ -62,6 +64,6 @@ type AppConfig struct {
 // Server and App are the sections this package owns. (A multisite host is the `multisite` section, ext/multisite;
 // its runtimes are `providers: { runtime/v1: [...] }`.)
 var (
-	Server   = extkit.NewSectionFunc("server", func() ServerConfig { return ServerConfig{} }, "How the binary listens: http, https and CORS origins (single-app mode: the serve command's defaults).")
-	App      = extkit.NewSectionFunc("app", func() AppConfig { return AppConfig{} }, "The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used on a multisite host.")
+	Server = extkit.NewSectionFunc("server", func() ServerConfig { return ServerConfig{} }, "How the binary listens: http, https and CORS origins (single-app mode: the serve command's defaults).")
+	App    = extkit.NewSectionFunc("app", func() AppConfig { return AppConfig{} }, "The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used on a multisite host.")
 )

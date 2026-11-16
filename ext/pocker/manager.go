@@ -15,8 +15,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/pockethost/pocketone/ext/extkit/js"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // HealthPath answers on any host with the engine's status (see [multisite.DefaultHealthPath]).

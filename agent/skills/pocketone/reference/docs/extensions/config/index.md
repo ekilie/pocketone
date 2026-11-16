@@ -104,7 +104,8 @@ The single app: data dir, dev mode, encryption, hooks, migrations, public dir, a
 | `query_timeout` | duration |  | Default timeout for SELECT queries, such as 30s. The --queryTimeout flag wins. |
 | `hooks_dir` | string |  | The JS hooks folder. Default: pb_hooks next to pb_data. The --hooksDir flag wins. |
 | `hooks_watch` | bool |  | Restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
-| `hooks_pool` | int |  | How many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
+| `jsvm` | string |  | The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $tokens and JS contracts are off). The --jsvm flag wins. |
+| `hooks_pool` | int |  | Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
 | `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
 | `automigrate` | bool |  | Write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
 | `public_dir` | string |  | The static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |

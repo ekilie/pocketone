@@ -18,7 +18,7 @@ import (
 //	  max_js_execution: 30s       # instance limit defaults (an instance's own limits override them)
 type SectionConfig struct {
 	Root          string `yaml:"root" doc:"The folder holding one folder per instance: <root>/<id>."`
-	HooksPoolSize *int   `yaml:"hooks_pool_size" doc:"JS runtimes kept ready per instance (0: a new one for each hook run)."`
+	HooksPoolSize *int   `yaml:"hooks_pool_size" doc:"Ignored: each instance has one JS VM (ext/jsvm). Kept so existing configs load."`
 	Limits        `yaml:",inline"`
 	EgressAllow   []string `yaml:"egress_allow" doc:"Private networks (CIDRs) instances may still connect to. Default none: public addresses only."`
 }

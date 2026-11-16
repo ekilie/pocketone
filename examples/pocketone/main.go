@@ -102,12 +102,20 @@ func main() {
 		"auto restart the app on pb_hooks file change; it has no effect on Windows",
 	)
 
+	var jsEngine string
+	app.RootCmd.PersistentFlags().StringVar(
+		&jsEngine,
+		"jsvm",
+		orStr(appCfg.JSVM, defaultJSEngine()),
+		"the JS engine: quickjs (PocketOne's) or goja (PocketBase's own, for pure PocketBase compatibility)",
+	)
+
 	var hooksPool int
 	app.RootCmd.PersistentFlags().IntVar(
 		&hooksPool,
 		"hooksPool",
 		orInt(appCfg.HooksPool, 15),
-		"ignored: each app has one JS VM (kept so existing command lines still work)",
+		"only with --jsvm goja: the JS runtimes kept ready for hooks",
 	)
 
 	var migrationsDir string
@@ -265,9 +273,8 @@ func main() {
 	// Extensions and hooks:
 	// ---------------------------------------------------------------
 
-	// the standard set, then pb_hooks and pb_migrations through ext/jsvm (one QuickJS VM per app, with $mcp, $tokens,
-	// $bulkmail and pb_hooks providing contracts), then the contracts sealed
-	if err := set.Register(app, jsvm.Config{
+	// the standard set, then pb_hooks and pb_migrations through the JS engine, then the contracts sealed
+	if err := registerSet(app, set, jsEngine, jsvm.Config{
 		MigrationsDir: migrationsDir,
 		HooksDir:      hooksDir,
 		HooksWatch:    hooksWatch,

@@ -1,6 +1,7 @@
 package jsvm
 
 import (
+	"errors"
 	"reflect"
 	"time"
 
@@ -98,3 +99,6 @@ func (c *VMConfig) defaults() {
 		c.MaxPumpDepth = 16
 	}
 }
+
+// ErrNoCgo is what Register returns in a build without cgo: the engine is QuickJS, a C library.
+var ErrNoCgo = errors.New("ext/jsvm needs a build with cgo (CGO_ENABLED=1); without it, use PocketBase's plugins/jsvm")
