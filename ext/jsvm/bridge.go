@@ -16,6 +16,8 @@ import (
 	"time"
 	"unicode"
 	"unsafe"
+
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // ---- reflection cache: JS names for a Go type's fields and methods ----
@@ -130,6 +132,9 @@ func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
 		v = p
 	}
 	if v.Kind() == reflect.Func {
+		if f, ok := v.Interface().(js.NativeFunc); ok {
+			return vm.jsFromAny(f)
+		}
 		h, err := vm.newHandle(entry{v: v, kind: kindFn, bytes: handleBase})
 		if err != nil {
 			return C.avm_undefined(), err

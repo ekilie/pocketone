@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // BindJS exposes the Go service to an app's JS hooks as the $bulkmail global. Add it to the jsvm OnInit (next to
 // the sandbox's, under pocker):
 //
-//	jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { bulkmail.BindJS(vm, app) }})
+//	jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { bulkmail.BindJS(app, rt) }})
 //
 //	$bulkmail.start(id, [limit]), .pause(id), .resume(id), .cancel(id) -> campaign record
 //	$bulkmail.test(id, [to]), .preview(id, [email])           -> preview: {subject, html, text, to}
@@ -28,92 +28,124 @@ import (
 //
 // The SQL audience (and SQL vars) runs read-only, but it can read any table of the app; a sandboxed multitenant
 // host only exposes $bulkmail to tenants it trusts with their own data, which is every tenant: it's their app.
-func BindJS(vm *goja.Runtime, app core.App) {
-	obj := vm.NewObject()
-	get := func() *BulkMail {
-		bm := For(app)
-		if bm == nil {
-			panic(vm.NewGoError(errors.New("bulkmail isn't registered on this app")))
+func BindJS(app core.App, rt js.Runtime) {
+	get := func() (*BulkMail, error) {
+		if bm := For(app); bm != nil {
+			return bm, nil
 		}
-		return bm
+		return nil, errors.New("bulkmail isn't registered on this app")
 	}
-	must := func(v any, err error) any {
-		if err != nil {
-			panic(vm.NewGoError(err))
-		}
-		return v
-	}
-	str := func(call goja.FunctionCall, i int) string {
-		if v := call.Argument(i); !goja.IsUndefined(v) && !goja.IsNull(v) {
-			return v.String()
-		}
-		return ""
-	}
-	action := func(fn func(*BulkMail, string) (*core.Record, error)) func(goja.FunctionCall) goja.Value {
-		return func(call goja.FunctionCall) goja.Value {
-			return vm.ToValue(must(fn(get(), str(call, 0))))
+	action := func(fn func(*BulkMail, string) (*core.Record, error)) func(string) (*core.Record, error) {
+		return func(id string) (*core.Record, error) {
+			bm, err := get()
+			if err != nil {
+				return nil, err
+			}
+			return fn(bm, id)
 		}
 	}
-
-	_ = obj.Set("start", func(call goja.FunctionCall) goja.Value {
-		limit := 0
-		if v := call.Argument(1); !goja.IsUndefined(v) && !goja.IsNull(v) {
-			limit = int(v.ToInteger())
-		}
-		return vm.ToValue(must(get().StartLimit(str(call, 0), max(limit, 0))))
-	})
-	_ = obj.Set("pause", action((*BulkMail).Pause))
-	_ = obj.Set("resume", action((*BulkMail).Resume))
-	_ = obj.Set("cancel", action((*BulkMail).Cancel))
-	_ = obj.Set("test", func(call goja.FunctionCall) goja.Value {
-		must(nil, get().Test(str(call, 0), str(call, 1)))
-		return goja.Undefined()
-	})
-	_ = obj.Set("preview", func(call goja.FunctionCall) goja.Value {
-		msg, err := get().Preview(str(call, 0), str(call, 1))
-		must(nil, err)
-		return vm.ToValue(map[string]any{
-			"to": msg.To[0].Address, "from": msg.From.String(), "subject": msg.Subject,
-			"html": msg.HTML, "text": msg.Text, "headers": msg.Headers,
-		})
-	})
-	_ = obj.Set("count", func(call goja.FunctionCall) goja.Value {
-		raw, err := json.Marshal(call.Argument(0).Export())
-		must(nil, err)
-		a, err := ParseAudience(raw)
-		must(nil, err)
-		n, sup, sample, err := get().CountAudience(a, 5)
-		must(nil, err)
-		return vm.ToValue(map[string]any{"count": n, "suppressed": sup, "sample": sample})
-	})
-	_ = obj.Set("suppress", func(call goja.FunctionCall) goja.Value {
-		reason := str(call, 1)
-		if reason == "" {
-			reason = ReasonManual
-		}
-		return vm.ToValue(must(get().Suppress(str(call, 0), reason, "js", "")))
-	})
-	_ = obj.Set("unsuppress", func(call goja.FunctionCall) goja.Value {
-		must(nil, get().Unsuppress(str(call, 0)))
-		return goja.Undefined()
-	})
-	_ = obj.Set("isSuppressed", func(call goja.FunctionCall) goja.Value {
-		return vm.ToValue(must(get().IsSuppressed(str(call, 0))))
-	})
-	_ = obj.Set("unsubscribe", func(call goja.FunctionCall) goja.Value {
-		must(nil, get().Unsubscribe(str(call, 0), str(call, 1), "js"))
-		return goja.Undefined()
-	})
-	_ = obj.Set("unsubscribeURL", func(call goja.FunctionCall) goja.Value {
-		return vm.ToValue(get().UnsubscribeURL(str(call, 0), str(call, 1)))
-	})
-	_ = obj.Set("limits", func(call goja.FunctionCall) goja.Value {
-		rate, daily, sent, err := get().Limits()
-		must(nil, err)
-		return vm.ToValue(map[string]any{"rate": rate, "daily": daily, "sentToday": sent})
-	})
-
-	if err := vm.Set("$bulkmail", obj); err != nil {
+	ns := map[string]any{
+		"start": func(id string, limit int) (*core.Record, error) {
+			bm, err := get()
+			if err != nil {
+				return nil, err
+			}
+			return bm.StartLimit(id, max(limit, 0))
+		},
+		"pause":  action((*BulkMail).Pause),
+		"resume": action((*BulkMail).Resume),
+		"cancel": action((*BulkMail).Cancel),
+		"test": func(id, to string) error {
+			bm, err := get()
+			if err != nil {
+				return err
+			}
+			return bm.Test(id, to)
+		},
+		"preview": func(id, email string) (map[string]any, error) {
+			bm, err := get()
+			if err != nil {
+				return nil, err
+			}
+			msg, err := bm.Preview(id, email)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{
+				"to": msg.To[0].Address, "from": msg.From.String(), "subject": msg.Subject,
+				"html": msg.HTML, "text": msg.Text, "headers": msg.Headers,
+			}, nil
+		},
+		"count": func(def any) (map[string]any, error) {
+			bm, err := get()
+			if err != nil {
+				return nil, err
+			}
+			raw, err := json.Marshal(def)
+			if err != nil {
+				return nil, err
+			}
+			a, err := ParseAudience(raw)
+			if err != nil {
+				return nil, err
+			}
+			n, sup, sample, err := bm.CountAudience(a, 5)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"count": n, "suppressed": sup, "sample": sample}, nil
+		},
+		"suppress": func(email, reason string) (*core.Record, error) {
+			bm, err := get()
+			if err != nil {
+				return nil, err
+			}
+			if reason == "" {
+				reason = ReasonManual
+			}
+			return bm.Suppress(email, reason, "js", "")
+		},
+		"unsuppress": func(email string) error {
+			bm, err := get()
+			if err != nil {
+				return err
+			}
+			return bm.Unsuppress(email)
+		},
+		"isSuppressed": func(email string) (bool, error) {
+			bm, err := get()
+			if err != nil {
+				return false, err
+			}
+			return bm.IsSuppressed(email)
+		},
+		"unsubscribe": func(email, campaignID string) error {
+			bm, err := get()
+			if err != nil {
+				return err
+			}
+			return bm.Unsubscribe(email, campaignID, "js")
+		},
+		"unsubscribeURL": func(email, campaignID string) (string, error) {
+			bm, err := get()
+			if err != nil {
+				return "", err
+			}
+			return bm.UnsubscribeURL(email, campaignID), nil
+		},
+		"limits": func() (map[string]any, error) {
+			bm, err := get()
+			if err != nil {
+				return nil, err
+			}
+			rate, daily, sent, err := bm.Limits()
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"rate": rate, "daily": daily, "sentToday": sent}, nil
+		},
+	}
+	if err := rt.Set("$bulkmail", ns); err != nil {
 		panic(fmt.Errorf("bulkmail: bind JS: %w", err))
 	}
 }

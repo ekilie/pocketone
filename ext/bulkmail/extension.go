@@ -2,8 +2,8 @@ package bulkmail
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // Extension is bulk mail as a PocketOne extension ([extkit.Extension]): the same value works on a single app and on
@@ -66,8 +66,8 @@ func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 
 // BindJS implements [extkit.JSBinder]: $bulkmail in the app's JS hooks. It only reaches the app's own data, mail
 // settings and limits, so it's safe for an untrusted tenant under pocker.
-func (p *Extension) BindJS(app core.App, vm *goja.Runtime) {
+func (p *Extension) BindJS(app core.App, rt js.Runtime) {
 	if For(app) != nil {
-		BindJS(vm, app)
+		BindJS(app, rt)
 	}
 }

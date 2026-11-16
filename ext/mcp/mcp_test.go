@@ -11,7 +11,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 type harness struct {
@@ -447,8 +448,7 @@ func TestReadOnlyBuiltinsAndGroups(t *testing.T) {
 
 func TestBindJS(t *testing.T) {
 	h := newHarness(t, Config{}, notesApp)
-	vm := goja.New()
-	BindJS(vm, h.app)
+	vm := jsVM(t, func(rt js.Runtime) { BindJS(h.app, rt) })
 	if _, err := vm.RunString(`
 		$mcp.addEndpoint({
 			name: "notes_archive_js",
@@ -497,8 +497,7 @@ func TestBindJSBeforeRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	vm := goja.New()
-	BindJS(vm, app)
+	vm := jsVM(t, func(rt js.Runtime) { BindJS(app, rt) })
 	if _, err := vm.RunString(`$mcp.addEndpoint({ name: "early_get_thing", description: "x", method: "GET", path: "/api/health" }); $mcp.instructions("Early.")`); err != nil {
 		t.Fatal(err)
 	}
@@ -506,4 +505,18 @@ func TestBindJSBeforeRegister(t *testing.T) {
 	if s.tool("early_get_thing") == nil || !strings.Contains(s.instructionsText(), "Early.") {
 		t.Fatal("tool declared before Register is missing")
 	}
+}
+
+// jsVM is an ext/jsvm VM set up by bind.
+func jsVM(t testing.TB, bind func(js.Runtime)) *jsvm.VM {
+	t.Helper()
+	vm, err := jsvm.New(jsvm.VMConfig{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(vm.Close)
+	if err := vm.Run(func(rt js.Runtime) error { bind(rt); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	return vm
 }

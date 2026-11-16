@@ -56,6 +56,19 @@ func (r jsRuntime) Get(name string) js.Value {
 
 var identRe = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 
+func (r jsRuntime) Eval(code, name string) (js.Value, error) {
+	cc := C.CString(code)
+	cf := C.CString(name)
+	defer C.free(unsafe.Pointer(cc))
+	defer C.free(unsafe.Pointer(cf))
+	v := C.avm_eval(r.vm.ctx, cc, C.size_t(len(code)), cf)
+	if C.avm_is_exception(v) != 0 {
+		return nil, r.vm.exception()
+	}
+	r.vm.runJobs()
+	return r.vm.value(v), nil
+}
+
 func (r jsRuntime) NewObject() js.Object {
 	return r.vm.value(C.JS_NewObject(r.vm.ctx)).(*jsValue)
 }

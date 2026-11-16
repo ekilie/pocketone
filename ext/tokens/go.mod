@@ -5,10 +5,10 @@ go 1.27
 require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
 	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
@@ -22,6 +22,7 @@ require (
 	github.com/dlclark/regexp2/v2 v2.9.1 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
 	github.com/dop251/base64dec v0.0.0-20231022112746-c6c9f9a96217 // indirect
+	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20260212111938-1f56ff5bcf14 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/evanw/esbuild v0.28.2 // indirect
@@ -79,3 +80,5 @@ replace github.com/pockethost/pocketone/ext/contracts => ../contracts
 replace github.com/pockethost/pocketone/ext/pages => ../pages
 
 replace github.com/pockethost/pocketone/ext/remotes => ../remotes
+
+replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm

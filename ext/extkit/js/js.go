@@ -23,6 +23,8 @@ type Runtime interface {
 	Get(name string) Value
 	// NewObject makes an empty JS object, e.g. a namespace to fill with Set and expose as a global.
 	NewObject() Object
+	// Eval runs code in the global scope (name labels it in stack traces) and returns its completion value.
+	Eval(code, name string) (Value, error)
 	// Engine is the engine's own VM (*goja.Runtime under goja), for engine-specific code that has no neutral form
 	// yet. Code that uses it must check the type and work without it.
 	Engine() any
@@ -70,13 +72,25 @@ type Func interface {
 	Call(args ...any) (any, error)
 }
 
-// Error is a JS exception as a Go error. Value is what JS threw, exported.
-type Error struct {
-	Message string
-	Value   any
+// Thrown returns what JS threw, exported to Go (an object's own enumerable properties as a map), when err is a JS
+// exception; ok is false for other errors. A thrown Go error comes back as itself, not through Thrown.
+func Thrown(err error) (value any, ok bool) {
+	var t interface{ ThrownValue() any }
+	if errors.As(err, &t) {
+		return t.ThrownValue(), true
+	}
+	return nil, false
 }
 
-func (e *Error) Error() string { return e.Message }
+// Message is what JS threw as a short message: an Error's message, or the thrown value as a string. For other
+// errors it's err.Error().
+func Message(err error) string {
+	var m interface{ JSMessage() string }
+	if errors.As(err, &m) {
+		return m.JSMessage()
+	}
+	return err.Error()
+}
 
 // Runner runs Go code on one of an app's JS runtimes, the same ones hooks and routes use.
 type Runner interface {

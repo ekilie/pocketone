@@ -442,10 +442,22 @@ func (vm *VM) exception() error {
 		C.free(unsafe.Pointer(cs))
 		defer vm.free_(stack)
 		msg := vm.goString(ex)
-		if C.avm_tag(stack) == C.JS_TAG_STRING {
-			return &JSError{Message: msg, Stack: vm.goString(stack)}
+		cm := C.CString("message")
+		mv := C.JS_GetPropertyStr(vm.ctx, ex, cm)
+		C.free(unsafe.Pointer(cm))
+		short := ""
+		if C.avm_tag(mv) == C.JS_TAG_STRING {
+			short = vm.goString(mv)
 		}
-		return &JSError{Message: msg}
+		vm.free_(mv)
+		var thrown any
+		if tv, err := vm.fromJS(ex, nil); err == nil && tv.IsValid() {
+			thrown = tv.Interface()
+		}
+		if C.avm_tag(stack) == C.JS_TAG_STRING {
+			return &JSError{Message: msg, Stack: vm.goString(stack), Value: thrown, Msg: short}
+		}
+		return &JSError{Message: msg, Value: thrown, Msg: short}
 	}
 	if C.avm_tag(ex) == C.JS_TAG_NULL {
 		// QuickJS throws null when it can't even allocate the error object
@@ -454,9 +466,27 @@ func (vm *VM) exception() error {
 	return &JSError{Message: vm.goString(ex)}
 }
 
-type JSError struct{ Message, Stack string }
+// JSError is a JS exception as a Go error.
+type JSError struct {
+	Message, Stack string
+	// Msg is an Error's message property, or Message for other thrown values.
+	Msg string
+	// Value is what JS threw, exported (an object's own enumerable properties as a map).
+	Value any
+}
 
 func (e *JSError) Error() string { return e.Message }
+
+// ThrownValue implements extkit/js's Thrown.
+func (e *JSError) ThrownValue() any { return e.Value }
+
+// JSMessage implements extkit/js's Message.
+func (e *JSError) JSMessage() string {
+	if e.Msg != "" {
+		return e.Msg
+	}
+	return e.Message
+}
 
 // Eval runs a script in the global scope (on the loop) and returns its exception, if any.
 func (vm *VM) Eval(code, file string) error {

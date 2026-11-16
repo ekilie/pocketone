@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // Extension is a PocketOne extension.
@@ -45,7 +45,7 @@ type Extension interface {
 // JS runtime of an app the extension is registered on. Under pocker, what it exposes must be safe for a hostile tenant
 // to call on its own app.
 type JSBinder interface {
-	BindJS(app core.App, vm *goja.Runtime)
+	BindJS(app core.App, rt js.Runtime)
 }
 
 // Closer is an extension that holds process-wide resources shared by all its apps (a pool, a store, a connection) and
@@ -125,10 +125,10 @@ func MustRegister(app core.App, extensions ...Extension) {
 }
 
 // BindJS calls BindJS on every extension that implements [JSBinder]. Call it from jsvm's OnInit on a single app.
-func BindJS(app core.App, vm *goja.Runtime, extensions ...Extension) {
+func BindJS(app core.App, rt js.Runtime, extensions ...Extension) {
 	for _, p := range extensions {
 		if b, ok := p.(JSBinder); ok {
-			b.BindJS(app, vm)
+			b.BindJS(app, rt)
 		}
 	}
 }

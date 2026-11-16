@@ -14,10 +14,10 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	examplev1 "github.com/pockethost/pocketone/ext/contracts/internal/example/v1"
 	fallbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/fallback/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 // jsSetup registers the Go extensions, loads pb_hooks (files) through jsvm, then seals: the order the standard Set
@@ -50,8 +50,9 @@ func loadHooks(app core.App, dir string) (err error) {
 	}()
 	return jsvm.Register(app, jsvm.Config{
 		HooksDir:      dir,
-		HooksPoolSize: 2,
-		Extensions:    []jsvm.Extension{extkit.JSContracts(app, jsvm.Run)},
+		MigrationsDir: filepath.Join(dir, "no_migrations"),
+		TypesDir:      dir,
+		Extensions:    []any{extkit.JSContracts(app)},
 	})
 }
 
@@ -68,7 +69,8 @@ onContracts((e) => {
       throw new ContractError("upstream", "mail API said 500", 502)
     }
     if (msg.to[0].Address === "capture@example.com") {
-      return unused // methods run on pooled runtimes: file-local variables aren't there
+      $app.store().set("captured", unused) // methods run on the app's VM: the file's top-level variables are there
+      return
     }
     $app.store().set("sent", msg.from.Address + " -> " + msg.to.map((a) => a.Address).join(",") + " (" + msg.text.length + " bytes)")
   },
@@ -123,10 +125,12 @@ func TestJSProvidesMailFallback(t *testing.T) {
 		t.Fatalf("err = %#v", err)
 	}
 
-	// the pooled-runtime rule: no file-local variables
-	err = s.Send(ctx, to("capture@example.com"))
-	if !errors.As(err, &ce) || ce.Code != "js_error" || !strings.Contains(ce.Message, "unused is not defined") {
-		t.Fatalf("err = %#v", err)
+	// one VM per app: provider methods see the file's top-level variables
+	if err := s.Send(ctx, to("capture@example.com")); err != nil {
+		t.Fatal(err)
+	}
+	if got := app.Store().Get("captured"); got != "file-local" {
+		t.Fatalf("captured = %v", got)
 	}
 
 	// a pass is a typed error the chain reads as "not mine"

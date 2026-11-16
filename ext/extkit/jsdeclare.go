@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // An app's JS declares and provides its contracts in onContracts, the way a Go extension does in Contracts() and
@@ -21,15 +21,13 @@ import (
 //	})
 //
 // The handlers run once, after pb_hooks load and before the seal (so before the app bootstraps): every bootstrap
-// handler, Go or JS, sees the final wiring. They run on a pooled runtime, so like any hook handler they can't use the
-// file's local variables.
+// handler, Go or JS, sees the final wiring. Like every handler on ext/jsvm, they can use the file's top-level code.
 
 const jsDeclKey = "extkit.jsdecl"
 
 type jsDecl struct {
 	mu        sync.Mutex
-	run       JSRunner
-	handlers  []*goja.Program
+	handlers  []js.Func
 	ran       bool
 	requires  []ContractID
 	worksWith []ContractID
@@ -40,28 +38,22 @@ func jsDeclOf(app core.App) *jsDecl {
 	return app.Store().GetOrSet(jsDeclKey, func() any { return &jsDecl{} }).(*jsDecl)
 }
 
-// bindOnContracts adds the onContracts global to a runtime. Only the loader runs hook files, so a handler registers
-// once per load.
-func (j jsContracts) bindOnContracts(vm *goja.Runtime) {
+// bindOnContracts adds the onContracts global.
+func (j jsContracts) bindOnContracts(rt js.Runtime) {
 	d := jsDeclOf(j.app)
-	d.mu.Lock()
-	d.run = j.run
-	d.mu.Unlock()
-	vm.Set("onContracts", func(handler goja.Value) {
-		if _, ok := goja.AssertFunction(handler); !ok {
-			panic(vm.NewTypeError("onContracts(handler): handler must be a function"))
+	_ = rt.Set("onContracts", js.NativeFunc(func(c js.Call) (any, error) {
+		f := c.Arg(0).Func()
+		if f == nil {
+			return nil, fmt.Errorf("onContracts(handler): handler must be a function")
 		}
 		if scopeOf(j.app).sealed {
-			panic(vm.NewGoError(fmt.Errorf("onContracts after the seal: call it at the top level of a .pb.js file")))
-		}
-		pr, err := goja.Compile("onContracts", "("+handler.String()+").apply(undefined, __args)", true)
-		if err != nil {
-			panic(vm.NewGoError(err))
+			return nil, fmt.Errorf("onContracts after the seal: call it at the top level of a .pb.js file")
 		}
 		d.mu.Lock()
-		d.handlers = append(d.handlers, pr)
+		d.handlers = append(d.handlers, f)
 		d.mu.Unlock()
-	})
+		return nil, nil
+	}))
 }
 
 // runJSDeclarations runs the app's onContracts handlers, once, before its contracts seal.
@@ -77,48 +69,41 @@ func runJSDeclarations(app core.App) error {
 		return nil
 	}
 	v.ran = true
-	handlers, run := append([]*goja.Program(nil), v.handlers...), v.run
+	handlers := append([]js.Func(nil), v.handlers...)
 	v.mu.Unlock()
-	j := jsContracts{app: app, run: run}
-	for _, pr := range handlers {
-		err := run(app, func(vm *goja.Runtime) error {
-			e := vm.NewObject()
-			_ = e.Set("provide", func(call goja.FunctionCall) goja.Value {
-				id := ContractID(call.Argument(0).String())
-				obj, isObj := call.Argument(1).(*goja.Object)
-				if !isObj {
-					panic(vm.NewTypeError("e.provide(%q, object): the second argument must be an object", id))
-				}
-				if err := j.provide(vm, id, obj); err != nil {
-					panic(vm.NewGoError(err))
-				}
-				v.mu.Lock()
-				v.provides = append(v.provides, id)
-				v.mu.Unlock()
-				return goja.Undefined()
-			})
-			list := func(dst *[]ContractID) func(goja.FunctionCall) goja.Value {
-				return func(call goja.FunctionCall) goja.Value {
-					v.mu.Lock()
-					for _, a := range call.Arguments {
-						*dst = append(*dst, ContractID(a.String()))
-					}
-					v.mu.Unlock()
-					return goja.Undefined()
-				}
+	j := jsContracts{app: app}
+	list := func(dst *[]ContractID) js.NativeFunc {
+		return func(c js.Call) (any, error) {
+			v.mu.Lock()
+			for i := 0; i < c.Len(); i++ {
+				*dst = append(*dst, ContractID(c.Arg(i).String()))
 			}
-			_ = e.Set("require", list(&v.requires))
-			_ = e.Set("worksWith", list(&v.worksWith))
-			_ = e.Set("next", func(goja.FunctionCall) goja.Value { return goja.Undefined() })
-			vm.Set("__args", []any{e})
-			defer vm.Set("__args", goja.Undefined())
-			if _, err := vm.RunProgram(pr); err != nil {
-				return jsError(vm, err)
+			v.mu.Unlock()
+			return nil, nil
+		}
+	}
+	e := map[string]any{
+		"provide": js.NativeFunc(func(c js.Call) (any, error) {
+			id := ContractID(c.Arg(0).String())
+			obj := c.Arg(1).Object()
+			if obj == nil {
+				return nil, fmt.Errorf("e.provide(%q, object): the second argument must be an object", id)
 			}
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("onContracts in pb_hooks: %w", err)
+			if err := j.provide(id, obj); err != nil {
+				return nil, err
+			}
+			v.mu.Lock()
+			v.provides = append(v.provides, id)
+			v.mu.Unlock()
+			return nil, nil
+		}),
+		"require":   list(&v.requires),
+		"worksWith": list(&v.worksWith),
+		"next":      js.NativeFunc(func(js.Call) (any, error) { return nil, nil }),
+	}
+	for _, f := range handlers {
+		if _, err := f.Call(e); err != nil {
+			return fmt.Errorf("onContracts in pb_hooks: %w", jsError(err))
 		}
 	}
 	return nil

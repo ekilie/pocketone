@@ -23,8 +23,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/mailer"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 const superuserToken = "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InN5d2JoZWNuaDQ2cmhtMCIsInR5cGUiOiJhdXRoIiwiY29sbGVjdGlvbklkIjoicGJjXzMxNDI2MzU4MjMiLCJleHAiOjI1MjQ2MDQ0NjEsInJlZnJlc2hhYmxlIjp0cnVlfQ.UXgO3j-0BumcugrFjbd7j0M4MQvbrLggLlcu_YNGjoY"
@@ -143,15 +144,16 @@ func TestSchemaIsIdempotentAndAcceptsLegacyCreation(t *testing.T) {
 }
 
 func TestLegacyJSMigrationCompiles(t *testing.T) {
-	js, err := LegacyJSMigration()
+	src, err := LegacyJSMigration()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := goja.Compile("m.js", js, false); err != nil {
+	vm := jsVM(t, func(js.Runtime) {})
+	if _, err := vm.RunString("(function () {\n" + src + "\n})"); err != nil {
 		t.Fatalf("invalid JS: %v", err)
 	}
 	for _, id := range []string{CampaignsId, SendsId, SuppressionsId, "bms_campaign", "idx_bulkmail_sends_campaign_email"} {
-		if !strings.Contains(js, id) {
+		if !strings.Contains(src, id) {
 			t.Errorf("migration lacks %s", id)
 		}
 	}
@@ -567,8 +569,7 @@ func TestSESFeedbackVerifiesSignatures(t *testing.T) {
 
 func TestJSBinds(t *testing.T) {
 	app, _ := newApp(t, Config{})
-	vm := goja.New()
-	BindJS(vm, app)
+	vm := jsVM(t, func(rt js.Runtime) { BindJS(app, rt) })
 	v, err := vm.RunString(`
 		$bulkmail.suppress("JS@x.test");
 		const a = $bulkmail.isSuppressed("js@x.test");
@@ -707,8 +708,7 @@ func TestExtension(t *testing.T) {
 	if rate, daily, _, _ := bm.Limits(); rate != 9 || daily != NoBulkMail {
 		t.Fatalf("rate %v daily %d", rate, daily)
 	}
-	vm := goja.New()
-	p.BindJS(app, vm)
+	vm := jsVM(t, func(rt js.Runtime) { p.BindJS(app, rt) })
 	if v, err := vm.RunString("typeof $bulkmail.start"); err != nil || v.String() != "function" {
 		t.Fatalf("$bulkmail: %v %v", v, err)
 	}
@@ -720,4 +720,18 @@ func TestExtension(t *testing.T) {
 	if rate, daily, _, _ := For(plain).Limits(); rate != 3 || daily != 0 && daily != 5000 {
 		t.Fatalf("defaults: rate %v daily %d", rate, daily)
 	}
+}
+
+// jsVM is an ext/jsvm VM set up by bind.
+func jsVM(t testing.TB, bind func(js.Runtime)) *jsvm.VM {
+	t.Helper()
+	vm, err := jsvm.New(jsvm.VMConfig{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(vm.Close)
+	if err := vm.Run(func(rt js.Runtime) error { bind(rt); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	return vm
 }

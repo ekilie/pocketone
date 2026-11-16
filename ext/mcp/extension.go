@@ -2,8 +2,8 @@ package mcp
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // Name is the extension's key: its pocketone.yaml switch and an instance's `extensions.<name>`.
@@ -28,7 +28,7 @@ func (p *Extension) Register(app core.App, _ extkit.Config) error {
 }
 
 // BindJS implements [extkit.JSBinder].
-func (p *Extension) BindJS(app core.App, vm *goja.Runtime) { BindJS(vm, app) }
+func (p *Extension) BindJS(app core.App, rt js.Runtime) { BindJS(app, rt) }
 
 // Contracts implements [extkit.Declarer].
 func (p *Extension) Contracts() extkit.Contracts {

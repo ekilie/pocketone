@@ -12,7 +12,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 )
 
 func TestScopeNamesAndHeaders(t *testing.T) {
@@ -180,8 +181,7 @@ func TestScopeCollectionsLimitHeldScopes(t *testing.T) {
 
 func TestBindJS(t *testing.T) {
 	app, tk := newApp(t, Config{})
-	vm := goja.New()
-	BindJS(vm, app)
+	vm := jsVM(t, app)
 	_, err := vm.RunString(`
 		$tokens.registerScope({ name: "notes:read", description: "Read notes", paths: ["/api/collections/notes/records"], methods: ["get"] })
 		$tokens.registerScope({ name: "notes:read", paths: ["/api/notes"] })
@@ -313,8 +313,7 @@ func TestBindJSBeforeRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	vm := goja.New()
-	BindJS(vm, app)
+	vm := jsVM(t, app)
 	if _, err := vm.RunString(`$tokens.registerScope({ name: "talks:read", description: "See talks", paths: ["/api/collections/talks/records"], methods: ["GET"] })`); err != nil {
 		t.Fatal(err)
 	}
@@ -334,4 +333,18 @@ func TestBindJSBeforeRegister(t *testing.T) {
 	if _, ok := tk.registry.get("talks:write"); !ok {
 		t.Fatal("scope after Register")
 	}
+}
+
+// jsVM is an ext/jsvm VM with $tokens bound for app.
+func jsVM(t testing.TB, app core.App) *jsvm.VM {
+	t.Helper()
+	vm, err := jsvm.New(jsvm.VMConfig{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(vm.Close)
+	if err := vm.Run(func(rt js.Runtime) error { BindJS(app, rt); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	return vm
 }
