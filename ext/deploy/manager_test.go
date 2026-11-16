@@ -67,7 +67,7 @@ func TestWithPockerManager(t *testing.T) {
 	waitFor := func(v string) {
 		t.Helper()
 		deadline := time.Now().Add(10 * time.Second)
-		for get("/v") != v {
+		for !strings.HasPrefix(get("/v"), v) {
 			if time.Now().After(deadline) {
 				t.Fatalf("%s never served (got %q)", v, get("/v"))
 			}
@@ -87,15 +87,12 @@ func TestWithPockerManager(t *testing.T) {
 		t.Fatalf("pb_public only: %s", r.raw)
 	}
 
-	// a broken hook: the watcher keeps the last good code serving
+	// a broken hook on a production instance: the watcher restarts it, and it doesn't start until fixed
 	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": "this is not js (", "pb_public/index.html": "two"}, nil)
 	if r.status != 200 || r.body["restarted"] != false {
 		t.Fatalf("broken: %s", r.raw)
 	}
-	time.Sleep(500 * time.Millisecond)
-	if v := get("/v"); v != "v2" || !mgr.Running("inst1") {
-		t.Fatalf("broken hook took the app down: %q", v)
-	}
+	waitFor("instance failed to start")
 
 	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": hook("v3"), "pb_public/index.html": "two"}, nil)
 	if r.status != 200 {

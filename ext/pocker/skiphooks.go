@@ -10,8 +10,7 @@ import (
 // members). Errors already name pb_hooks/<file>:<line> (the engine runs each file under its own name). In dev mode,
 // last, a hook file that fails to load is skipped (logged to the instance log) and the rest of the app runs, so the
 // owner can fix it live; otherwise the app doesn't start.
-// A running app whose pb_hooks change keeps serving until the new code starts (Manager.hooksChanged), so in
-// production a bad edit doesn't take a working instance down either.
+// A running app whose pb_hooks change is stopped, then started again (Manager.hooksChanged), with the same rule.
 func hookExtensions(sb any, dev bool, log *instanceLog) []any {
 	x := []any{sb}
 	if dev {

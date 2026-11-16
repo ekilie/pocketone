@@ -47,9 +47,6 @@ type Manager struct {
 
 	held map[string]chan struct{} // by ID: instances under maintenance; requests wait for the channel to close
 
-	reloadMu  sync.Mutex
-	reloading map[string]bool // by ID: a pb_hooks reload is running; true = another change arrived meanwhile
-
 	mu   sync.RWMutex
 	apps map[string]*appSlot // by ID
 }
@@ -115,16 +112,15 @@ func NewManager(source InstanceSource, opts ManagerOptions) *Manager {
 	}
 	defaults := opts.Defaults.Over(DefaultLimits())
 	m := &Manager{
-		source:    source,
-		opts:      appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup, Standard: opts.Standard, Host: opts.Host},
-		defaults:  defaults,
-		onEvent:   opts.OnEvent,
-		gate:      opts.Gate,
-		held:      map[string]chan struct{}{},
-		log:       opts.Logger,
-		apps:      map[string]*appSlot{},
-		reloading: map[string]bool{},
-		dir:       opts.Directory,
+		source:   source,
+		opts:     appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup, Standard: opts.Standard, Host: opts.Host},
+		defaults: defaults,
+		onEvent:  opts.OnEvent,
+		gate:     opts.Gate,
+		held:     map[string]chan struct{}{},
+		log:      opts.Logger,
+		apps:     map[string]*appSlot{},
+		dir:      opts.Directory,
 	}
 	if m.dir == nil {
 		m.dir = multisite.NewDirectory(opts.Logger)
@@ -314,10 +310,11 @@ func (m *Manager) watchHooks(inst Instance, slot *appSlot) {
 	})
 }
 
-// hooksChanged reloads the instance's running app after its pb_hooks change. The new app starts beside the running
-// one, which keeps serving; only once the new one has started does it take over (the old one is retired like a
-// settings change). If the new code fails to load, the previous app keeps serving and the error goes to the instance
-// log, so a bad edit never takes a working instance down. Changes that arrive during a reload trigger one more.
+// hooksChanged restarts the instance after its pb_hooks change, as PocketBase's hooks watcher restarts its process:
+// the running app stops (requests in flight are cut off), then a fresh app starts with the new files. Only one app
+// ever has the instance's folder open, so migrations and bootstrap code never run beside a live app. A hook file that
+// fails to load is skipped in dev mode; otherwise the instance doesn't start: the error goes to its log, requests get
+// 502, and the next request after a fix starts it.
 func (m *Manager) hooksChanged(id string) {
 	m.mu.RLock()
 	slot := m.apps[id]
@@ -333,68 +330,18 @@ func (m *Manager) hooksChanged(id string) {
 	if slot.app == nil {
 		return
 	}
-	m.reloadMu.Lock()
-	if _, running := m.reloading[id]; running {
-		m.reloading[id] = true
-		m.reloadMu.Unlock()
-		return
-	}
-	m.reloading[id] = false
-	m.reloadMu.Unlock()
-	go m.reloadHooks(id)
-}
-
-// reloadHooks runs reloads for one instance until no change arrived during the last one.
-func (m *Manager) reloadHooks(id string) {
-	for {
-		m.reloadOnce(id)
-		m.reloadMu.Lock()
-		if !m.reloading[id] {
-			delete(m.reloading, id)
-			m.reloadMu.Unlock()
+	go func() {
+		m.log.Info("pocker: pb_hooks changed, restarting", "id", id)
+		if dir, ok := m.InstanceDir(id); ok {
+			openInstanceLog(dir).Write("stdout", "pb_hooks changed, restarting")
+		}
+		if err := m.WithInstanceStopped(context.Background(), id, func(string) error { return nil }); err != nil {
+			m.log.Info("pocker: pb_hooks restart skipped", "id", id, "reason", err)
 			return
 		}
-		m.reloading[id] = false
-		m.reloadMu.Unlock()
-	}
-}
-
-func (m *Manager) reloadOnce(id string) {
-	m.mu.RLock()
-	old := m.apps[id]
-	inst, ok := m.dir.Get(id)
-	m.mu.RUnlock()
-	if old == nil || !ok || inst.Blocked != nil {
-		return // stopped or blocked meanwhile: the next start reads the current files
-	}
-	ilog := openInstanceLog(instanceDir(m.opts, inst))
-	m.log.Info("pocker: pb_hooks changed, starting the new code", "id", id)
-	ilog.Write("stdout", "pb_hooks changed, starting the new code")
-
-	t := time.Now()
-	next := &appSlot{done: make(chan struct{})}
-	next.app, next.err = startApp(m.opts, inst)
-	close(next.done)
-	if next.err != nil {
-		m.log.Error("pocker: pb_hooks change failed to load; still serving the previous code", "id", id, "error", next.err)
-		ilog.Write("stderr", "pb_hooks change failed to load; still serving the previous code: "+next.err.Error())
-		m.emit(Event{Kind: EventFailed, InstanceID: id, Reason: "pb_hooks change failed to load: " + next.err.Error()})
-		return
-	}
-
-	m.mu.Lock()
-	if m.apps[id] != old {
-		m.mu.Unlock()
-		stopApp(next.app) // settings changed, stopped or restarted meanwhile: that path owns the instance now
-		return
-	}
-	m.apps[id] = next
-	m.mu.Unlock()
-	m.catchRestart(id, next)
-	m.watchHooks(inst, next)
-	m.log.Info("pocker: new pb_hooks code is serving", "id", id, "ms", time.Since(t).Milliseconds())
-	m.emit(Event{Kind: EventRestarted, InstanceID: id, Reason: "pb_hooks changed"})
-	go retire(old)
+		m.emit(Event{Kind: EventRestarted, InstanceID: id, Reason: "pb_hooks changed"})
+		_ = m.StartInstance(context.Background(), id) // a start error is logged and reported by app()
+	}()
 }
 
 // Shutdown stops every running app.

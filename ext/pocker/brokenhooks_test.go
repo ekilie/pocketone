@@ -1,6 +1,8 @@
 package pocker
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,9 +10,10 @@ import (
 	"time"
 )
 
-// A bad pb_hooks edit on a running production app doesn't take it down: the new code fails to load, the previous app
-// keeps serving, and fixing the file brings the new code in.
-func TestBrokenHooksEditKeepsServingPreviousCode(t *testing.T) {
+// A pb_hooks edit restarts a production app the way PocketBase's watcher does: the running app stops first, then a
+// fresh one starts, so two apps never have the folder open. A bad edit leaves the instance down (502 with the error)
+// until a fix, and the next request after the fix starts it with the new code.
+func TestHooksEditStopsThenStarts(t *testing.T) {
 	d := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(d, "pb_hooks"), 0o755); err != nil {
 		t.Fatal(err)
@@ -25,21 +28,35 @@ func TestBrokenHooksEditKeepsServingPreviousCode(t *testing.T) {
 	if got := get(m, "a.test"); got != "a1" {
 		t.Fatalf("before: %q", got)
 	}
+	m.mu.RLock()
+	old := m.apps["a"].app
+	m.mu.RUnlock()
+
+	writeHook(t, d, "a2")
+	waitEvent(t, events, EventRestarted, "pb_hooks changed")
+	if old.app.IsBootstrapped() {
+		t.Fatal("the old app was still running when the restart was reported")
+	}
+	waitEvent(t, events, EventStarted, "")
+	if got := get(m, "a.test"); got != "a2" {
+		t.Fatalf("after the edit: %q", got)
+	}
 
 	if err := os.WriteFile(filepath.Join(d, "pb_hooks", "main.pb.js"), []byte("this is not javascript ("), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	waitEvent(t, events, EventFailed, "pb_hooks change failed to load")
-	if got := get(m, "a.test"); got != "a1" {
-		t.Fatalf("after a broken edit the previous code should still serve, got %q", got)
+	waitEvent(t, events, EventFailed, "main.pb.js")
+	w := httptest.NewRecorder()
+	m.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://a.test/v", nil))
+	if w.Code != http.StatusBadGateway || !strings.Contains(w.Body.String(), "main.pb.js") {
+		t.Fatalf("a broken production edit: %d %q, want 502 naming the file", w.Code, w.Body.String())
 	}
 	log, _ := os.ReadFile(filepath.Join(d, "logs", "exec.log"))
-	if !strings.Contains(string(log), "still serving the previous code") {
-		t.Errorf("instance log should say the previous code still serves:\n%s", log)
+	if !strings.Contains(string(log), "Instance failed to start") {
+		t.Errorf("instance log should have the start error:\n%s", log)
 	}
 
 	writeHook(t, d, "a3")
-	waitEvent(t, events, EventRestarted, "pb_hooks changed")
 	if got := get(m, "a.test"); got != "a3" {
 		t.Fatalf("after the fix: %q", got)
 	}

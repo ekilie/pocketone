@@ -7061,9 +7061,11 @@ runs in dev mode. In production only the hostnames in the instances file are ser
 In dev mode, a `pb_hooks` file that fails to load is logged and skipped, and the rest of the instance runs, so you can
 fix it live. Otherwise an instance doesn't start with a broken file.
 
-When a running instance's `pb_hooks` change, the new code starts beside the running app and takes over only once it
-has started. If it fails to load, the previous code keeps serving and the error goes to the instance log, so a bad
-edit never takes a working instance down.
+When a running instance's `pb_hooks` change, Pocker restarts it as PocketBase's watcher restarts a process: the running
+app stops (requests in flight are cut off), then a fresh app starts with the new files. Only one app has an instance's
+folder open at a time, so migrations and bootstrap code never run beside a live app. A broken file in production
+leaves the instance down: requests get 502 with the error, which also goes to the instance log, and the first request
+after a fix starts it.
 
 ### Logs
 

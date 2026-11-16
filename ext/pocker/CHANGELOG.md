@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Changed
+
+- A `pb_hooks` change restarts the instance like PocketBase's watcher restarts a process: the running app stops, then a fresh one starts, so two apps never have the instance's folder open (migrations and bootstrap code no longer run beside a live app). In production a broken hook file now leaves the instance down (502 naming the file) until it's fixed, instead of the previous code serving on; dev mode still skips the broken file.
+
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)
 
 ### Changed
