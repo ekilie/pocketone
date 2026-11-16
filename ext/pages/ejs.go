@@ -28,6 +28,8 @@ var slot = function (n, f) {
   if (n === undefined || n === null) return __pp.wrapped();
   return __pp.getSlot(n);
 };
+// 0.x layouts printed <%- slot %> (no call): print the wrapped content, not the function's source
+slot.toString = function () { return __pp.wrapped(); };
 var __esc = __pp.esc, __str = __pp.str;
 `
 

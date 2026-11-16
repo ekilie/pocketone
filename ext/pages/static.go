@@ -79,7 +79,7 @@ func treeStamp(dir string) (string, error) {
 		if err != nil {
 			return nil
 		}
-		if p != "." && d.IsDir() && (d.Name() == "node_modules" || strings.HasPrefix(d.Name(), ".")) {
+		if p != "." && d.IsDir() && (d.Name() == "node_modules" || strings.HasPrefix(d.Name(), ".")) && !wellKnown(p) {
 			return fs.SkipDir
 		}
 		info, err := d.Info()

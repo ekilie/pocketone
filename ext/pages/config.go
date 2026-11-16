@@ -6,6 +6,15 @@ import (
 	"github.com/dop251/goja"
 )
 
+// oldPluginHooks are 0.x plugin hooks v1 doesn't call, with what to use instead (SPEC 9.2). A plugin that still has
+// one is an error rather than silently half-working.
+var oldPluginHooks = map[string]string{
+	"onExtendContextApi": "use extendContext(ctx)",
+	"onRender":           "use transform({ html, ctx, file })",
+	"onResponse":         "use transform, or ctx.res in onRequest",
+	"handles":            "add a page or +api.js for the path instead",
+}
+
 // builtinPlugins are the plugins turned on by name in +config.js (SPEC 9.1).
 var builtinPlugins = map[string]bool{"auth": true, "realtime": true}
 
@@ -89,6 +98,11 @@ func (r *request) loadConfig(file string) (pagesConfig, []goja.Value, error) {
 				name := po.Get("name")
 				if name == nil || goja.IsUndefined(name) || name.String() == "" {
 					return cfg, nil, fmt.Errorf("%s: plugins[%d]: a plugin needs a name", file, i)
+				}
+				for _, k := range po.Keys() {
+					if hint, ok := oldPluginHooks[k]; ok {
+						return cfg, nil, fmt.Errorf("%s: plugin %q: %s is a 0.x hook that v1 never calls; %s", file, name.String(), k, hint)
+					}
 				}
 				if seen[name.String()] {
 					return cfg, nil, fmt.Errorf("%s: plugin %q listed twice", file, name.String())

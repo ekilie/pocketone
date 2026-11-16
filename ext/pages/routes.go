@@ -95,6 +95,14 @@ func ignored(name string) bool {
 		strings.HasPrefix(name, "_")
 }
 
+// wellKnown is the one dot folder that's served (RFC 8615: ACME challenges, security.txt, app links), at the top only.
+func wellKnown(p string) bool { return p == ".well-known" }
+
+// isHookFile reports a pb_hooks hook file (*.pb.js, *.pb.ts): never served from pb_pages, where it wouldn't run.
+func isHookFile(name string) bool {
+	return strings.HasSuffix(name, ".pb.js") || strings.HasSuffix(name, ".pb.ts")
+}
+
 func isGroup(name string) bool {
 	return len(name) > 2 && strings.HasPrefix(name, "(") && strings.HasSuffix(name, ")")
 }
@@ -143,7 +151,7 @@ func Build(dir string) (*Table, []error) {
 		}
 		name := d.Name()
 		if d.IsDir() {
-			if ignored(name) {
+			if ignored(name) && !wellKnown(p) {
 				return fs.SkipDir
 			}
 			if strings.HasPrefix(name, "+") {
@@ -156,6 +164,10 @@ func Build(dir string) (*Table, []error) {
 			return nil // symlinks and other non-regular files are never served
 		}
 		if ignored(name) {
+			return nil
+		}
+		if isHookFile(name) {
+			addErr(p, "hook files run from pb_hooks, not pb_pages; move it there (it isn't served)")
 			return nil
 		}
 		dirName := path.Dir(p)

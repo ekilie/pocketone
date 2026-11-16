@@ -33,7 +33,7 @@ func (r *request) requireFrom(from, name string) goja.Value {
 	if strings.HasPrefix(name, "./") || strings.HasPrefix(name, "../") || name == "." || name == ".." {
 		target := path.Clean(path.Join(dir, name))
 		if target == ".." || strings.HasPrefix(target, "../") {
-			panic(r.vm.NewGoError(fmt.Errorf("%s: require(%q) leaves pb_pages", from, name)))
+			panic(r.vm.NewGoError(fmt.Errorf("%s: require(%q) leaves pb_pages; for pb_hooks code use require(__hooks + '/...')", from, name)))
 		}
 		if file, ok := r.resolvePath(target); ok {
 			return r.load(file)
