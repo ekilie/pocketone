@@ -54,6 +54,19 @@ may differ), so a core change on `main` without its branch fails it. Run
 the script repinned its compare links. Conflicts stop the script with the worktree left to resolve; resolutions are
 remembered (rerere) for later runs.
 
+The `upstream` remote is this repo's own `upstream/develop` and `upstream/master` branches, a copy of PocketBase's
+branches, so day-to-day fetches never reach PocketBase's server. Set it up once per clone:
+
+```
+git remote add upstream git@github.com:pockethost/pocketone.git
+git config remote.upstream.fetch '+refs/heads/upstream/*:refs/remotes/upstream/*'
+git config remote.upstream.tagopt --no-tags
+```
+
+Refresh those branches from `https://ganigeorgiev.com/git/pocketbase/pocketbase` only when merging a PocketBase
+release, by hand and once: fetch it into `refs/remotes/upstream/*`, then
+`git push origin refs/remotes/upstream/develop:refs/heads/upstream/develop refs/remotes/upstream/master:refs/heads/upstream/master`.
+
 ## Core changes that aren't hooks
 
 Bug fixes to upstream behavior, each tested and meant for upstream; drop each one once upstream has it:
