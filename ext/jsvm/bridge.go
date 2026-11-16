@@ -28,16 +28,29 @@ type members struct {
 	keys    []string         // enumerable: field names
 }
 
-var memberCache sync.Map // reflect.Type -> *members
+var memberCache sync.Map // memberKey -> *members
 
-func membersOf(t reflect.Type) *members {
-	if m, ok := memberCache.Load(t); ok {
+type memberKey struct {
+	t    reflect.Type
+	hide reflect.Type // the VM's js.Hider type (rules are per type), nil for none
+}
+
+func membersOf(t reflect.Type) *members { return membersFor(t, nil) }
+
+func (vm *VM) membersOf(t reflect.Type) *members { return membersFor(t, vm.Hider) }
+
+func membersFor(t reflect.Type, hider js.Hider) *members {
+	key := memberKey{t: t}
+	if hider != nil {
+		key.hide = reflect.TypeOf(hider)
+	}
+	if m, ok := memberCache.Load(key); ok {
 		return m.(*members)
 	}
 	m := &members{methods: map[string]int{}, fields: map[string][]int{}}
 	for i := 0; i < t.NumMethod(); i++ {
 		meth := t.Method(i)
-		if meth.IsExported() {
+		if meth.IsExported() && (hider == nil || !hider.HideMethod(t, meth)) {
 			m.methods[jsName(meth.Name)] = i
 		}
 	}
@@ -47,7 +60,7 @@ func membersOf(t reflect.Type) *members {
 	}
 	if st.Kind() == reflect.Struct {
 		for _, f := range reflect.VisibleFields(st) {
-			if !f.IsExported() || f.Anonymous {
+			if !f.IsExported() || f.Anonymous || (hider != nil && hider.HideField(st, f)) {
 				continue
 			}
 			n := jsName(f.Name)
@@ -58,7 +71,7 @@ func membersOf(t reflect.Type) *members {
 			m.keys = append(m.keys, n)
 		}
 	}
-	memberCache.Store(t, m)
+	memberCache.Store(key, m)
 	return m
 }
 
@@ -88,6 +101,11 @@ func jsName(name string) string {
 
 // ---- Go -> JS ----
 
+// nativeBox carries a native JS function through a Go value (e.g. a namespace map member).
+type nativeBox struct{ fn nativeFn }
+
+var nativeBoxType = reflect.TypeOf(nativeBox{})
+
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 
 // toJS converts a Go value: primitives are copied, everything else becomes a live handle.
@@ -105,6 +123,13 @@ func (vm *VM) toJSWith(v reflect.Value, deep bool) (C.JSValue, error) {
 	}
 	if !v.IsValid() {
 		return C.avm_null(), nil
+	}
+	if v.Type() == nativeBoxType {
+		h, err := vm.newHandle(entry{kind: kindNative, native: v.Interface().(nativeBox).fn})
+		if err != nil {
+			return C.avm_undefined(), err
+		}
+		return C.avm_new_func(vm.a, C.uint32_t(h), 0), nil
 	}
 	switch v.Kind() {
 	case reflect.Bool:
@@ -206,7 +231,12 @@ func (vm *VM) fromJS(v C.JSValue, t reflect.Type) (reflect.Value, error) {
 	if h := C.avm_handle_of(vm.a, v); h != 0 {
 		e := vm.handles[h]
 		if e.kind == kindNative {
-			return reflect.Value{}, fmt.Errorf("cannot pass a built-in function to Go")
+			// a native JS function stored into a Go slot (a namespace member): it stays the same function
+			nb := reflect.ValueOf(nativeBox{fn: e.native})
+			if nb.Type().AssignableTo(t) {
+				return nb, nil
+			}
+			return reflect.Value{}, fmt.Errorf("cannot pass a built-in function to Go as %s", t)
 		}
 		gv := e.v
 		switch {
@@ -389,14 +419,14 @@ func (vm *VM) lookup(v reflect.Value, name string) (reflect.Value, bool) {
 	if !v.IsValid() {
 		return reflect.Value{}, false
 	}
-	m := membersOf(v.Type())
+	m := vm.membersOf(v.Type())
 	if i, ok := m.methods[name]; ok {
 		return v.Method(i), true
 	}
 	d := deref(v)
 	switch d.Kind() {
 	case reflect.Struct:
-		if idx, ok := membersOf(d.Type()).fields[name]; ok {
+		if idx, ok := vm.membersOf(d.Type()).fields[name]; ok {
 			f, err := d.FieldByIndexErr(idx)
 			if err != nil {
 				return reflect.Value{}, true // nil embedded pointer
@@ -407,7 +437,7 @@ func (vm *VM) lookup(v reflect.Value, name string) (reflect.Value, bool) {
 			return f, true
 		}
 		if d.CanAddr() {
-			pm := membersOf(d.Addr().Type())
+			pm := vm.membersOf(d.Addr().Type())
 			if i, ok := pm.methods[name]; ok {
 				return d.Addr().Method(i), true
 			}
@@ -492,7 +522,7 @@ func avmGoSet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, val C.JS
 	d := deref(vm.handles[h].v)
 	switch d.Kind() {
 	case reflect.Struct:
-		if idx, ok := membersOf(d.Type()).fields[key]; ok {
+		if idx, ok := vm.membersOf(d.Type()).fields[key]; ok {
 			f := d.FieldByIndex(idx)
 			if !f.CanSet() {
 				vm.throw(fmt.Errorf("field %s is read-only", key))
@@ -554,7 +584,7 @@ func avmGoKeys(ctx *C.JSContext, h C.uint32_t) C.JSValue {
 	var keys []string
 	switch d.Kind() {
 	case reflect.Struct:
-		keys = membersOf(d.Type()).keys
+		keys = vm.membersOf(d.Type()).keys
 	case reflect.Map:
 		for _, k := range d.MapKeys() {
 			keys = append(keys, fmt.Sprint(k.Interface()))

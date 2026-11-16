@@ -162,6 +162,9 @@ func (p *plugin) setup(vm *VM) error {
 		if h, ok := e.(js.HTTPClienter); ok && vm.HTTPClient == nil {
 			vm.HTTPClient = h.HTTPClient(rt)
 		}
+		if h, ok := e.(js.Hider); ok && vm.Hider == nil {
+			vm.Hider = h
+		}
 	}
 	for _, e := range p.config.Extensions {
 		if i, ok := e.(js.Initer); ok {

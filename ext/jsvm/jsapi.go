@@ -151,7 +151,9 @@ func (v *jsValue) Set(name string, x any) error {
 	}
 	cs := C.CString(name)
 	defer C.free(unsafe.Pointer(cs))
-	C.JS_SetPropertyStr(v.vm.ctx, v.v, cs, jv)
+	if C.JS_SetPropertyStr(v.vm.ctx, v.v, cs, jv) < 0 {
+		return v.vm.exception()
+	}
 	return nil
 }
 

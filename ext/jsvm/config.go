@@ -54,6 +54,8 @@ type VMConfig struct {
 	// other tasks meanwhile, nested on the same stack, up to MaxPumpDepth deep.
 	// TaskWall caps one top-level task's wall time, Go calls included (a loop over Go calls never hits TaskBudget).
 	TaskWall time.Duration
+	// MaxSleep caps sleep() (default 10 s).
+	MaxSleep time.Duration
 	// MaxAsync caps async Go calls in flight per VM.
 	MaxAsync      int
 	PumpSyncCalls bool
@@ -82,6 +84,9 @@ func (c *VMConfig) defaults() {
 	}
 	if c.TaskWall == 0 {
 		c.TaskWall = 30 * time.Second
+	}
+	if c.MaxSleep == 0 {
+		c.MaxSleep = 10 * time.Second
 	}
 	if c.MaxAsync == 0 {
 		c.MaxAsync = 256

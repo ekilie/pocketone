@@ -9,6 +9,7 @@ package js
 import (
 	"errors"
 	"net/http"
+	"reflect"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
@@ -144,6 +145,12 @@ type (
 	// Loader wraps loading one hook file. done runs after it; mapErr rewrites its errors (nil = unchanged).
 	Loader interface {
 		OnLoad(rt Runtime, hooksRoot, file string, content []byte) (done func(), mapErr func(error) error)
+	}
+	// Hider hides Go members from JS (e.g. a sandbox hiding $app.restart and raw database handles): a hidden field
+	// or method reads as undefined. The engine asks once per type.
+	Hider interface {
+		HideField(t reflect.Type, f reflect.StructField) bool
+		HideMethod(t reflect.Type, m reflect.Method) bool
 	}
 	// Binder exposes an extension's Go API to an app's JS (e.g. as a $name global), on each of the app's runtimes.
 	// Under a multisite host, what it exposes must be safe for a hostile tenant to call on its own app.

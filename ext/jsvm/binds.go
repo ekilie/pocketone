@@ -292,8 +292,13 @@ func BindCore(vm *VM) {
 		}
 	})
 
+	maxSleep := vm.cfg.MaxSleep
 	sh, _ := vm.newHandle(entry{v: reflect.ValueOf(func(milliseconds int64) {
-		time.Sleep(time.Duration(milliseconds) * time.Millisecond)
+		d := time.Duration(milliseconds) * time.Millisecond
+		if maxSleep > 0 && d > maxSleep {
+			d = maxSleep
+		}
+		time.Sleep(d)
 	}), kind: kindFn, bytes: handleBase, blocking: true})
 	vm.setGlobal("sleep", C.avm_new_func(vm.a, C.uint32_t(sh), 0))
 

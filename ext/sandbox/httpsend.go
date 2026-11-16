@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // errBodyTooLarge is what $http.send reports when a response is over HTTPSendMaxBody.
 var errBodyTooLarge = errors.New("$http.send: response body larger than the allowed size")
 
 // HTTPClient is the app's client for $http.send (a jsvm.Extension method).
-func (s *Sandbox) HTTPClient(*goja.Runtime) *http.Client { return s.httpClient() }
+func (s *Sandbox) HTTPClient(js.Runtime) *http.Client { return s.httpClient() }
 
 // httpClient is the app's client for $http.send: it dials through Go's default transport (so
 // the egress policy applies when installed) with this app's timeout and response size caps.

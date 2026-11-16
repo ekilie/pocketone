@@ -20,13 +20,13 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/backups"
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/deploy"
 	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/extkit/js"
+	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/mcp"
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pitr"
@@ -182,18 +182,18 @@ func (s *Set) Prepare(app core.App, layers func(name string) extkit.Config) (*ex
 
 // JSExtensions implements [extkit.AppSet].
 func (s *Set) JSExtensions(app core.App) []any {
-	return []any{extkit.JSContracts(app, jsvm.Run)}
+	return []any{extkit.JSContracts(app)}
 }
 
 // BindJS implements [extkit.AppSet]: the JS API of every extension that runs on app.
-func (s *Set) BindJS(app core.App, vm *goja.Runtime) {
+func (s *Set) BindJS(app core.App, rt js.Runtime) {
 	plan, _ := app.Store().Get(planKey).(*extkit.Plan)
 	if plan == nil {
 		return
 	}
 	for _, e := range plan.On {
 		if b, ok := e.(extkit.JSBinder); ok {
-			b.BindJS(app, vm)
+			b.BindJS(app, rt)
 		}
 	}
 }
@@ -214,32 +214,30 @@ func (s *Set) Finish(app core.App, plan *extkit.Plan) ([]string, error) {
 
 // NewApp is a PocketOne single app: the set registered, pb_hooks loaded through jsvm with the set's JS APIs, the
 // contracts sealed. It panics on a setup error, like PocketBase's MustRegister helpers.
-func (s *Set) NewApp(cfg pocketbase.Config, js jsvm.Config) *pocketbase.PocketBase {
+func (s *Set) NewApp(cfg pocketbase.Config, jsCfg jsvm.Config) *pocketbase.PocketBase {
 	app := pocketbase.NewWithConfig(cfg)
-	if err := s.Register(app, js); err != nil {
+	if err := s.Register(app, jsCfg); err != nil {
 		panic(err)
 	}
 	return app
 }
 
 // Register sets the set up on an app you built yourself: Prepare, jsvm with the set's JS extensions and binds
-// (chained before js.OnInit), Finish.
-func (s *Set) Register(app core.App, js jsvm.Config) error {
+// (chained before jsCfg.OnInit), Finish.
+func (s *Set) Register(app core.App, jsCfg jsvm.Config) error {
 	plan, err := s.Prepare(app, nil)
 	if err != nil {
 		return err
 	}
-	for _, e := range s.JSExtensions(app) {
-		js.Extensions = append(js.Extensions, e)
-	}
-	userInit := js.OnInit
-	js.OnInit = func(vm *goja.Runtime) {
-		s.BindJS(app, vm)
+	jsCfg.Extensions = append(jsCfg.Extensions, s.JSExtensions(app)...)
+	userInit := jsCfg.OnInit
+	jsCfg.OnInit = func(rt js.Runtime) {
+		s.BindJS(app, rt)
 		if userInit != nil {
-			userInit(vm)
+			userInit(rt)
 		}
 	}
-	if err := jsvm.Register(app, js); err != nil {
+	if err := jsvm.Register(app, jsCfg); err != nil {
 		return err
 	}
 	lines, err := s.Finish(app, plan)

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/sandbox"
 )
 
@@ -31,7 +31,7 @@ func main() {
 
 	jsvm.MustRegister(app, jsvm.Config{
 		HooksDir:   filepath.Join(dir, "pb_hooks"),
-		Extensions: []jsvm.Extension{sb}, // OnInit, OnCall and HTTPClient
+		Extensions: []any{sb}, // OnInit, Modules, HTTPClient and the member filter
 	})
 
 	if err := app.Start(); err != nil {

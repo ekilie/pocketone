@@ -16,6 +16,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/pockethost/pocketone/ext/extkit/js"
 	"reflect"
 	"runtime"
 	"runtime/cgo"
@@ -85,6 +87,9 @@ type VM struct {
 
 	// HTTPClient is what $http.send uses (nil = http.DefaultClient).
 	HTTPClient *http.Client
+
+	// Hider, when set, hides Go members from JS (an extension's js.Hider, e.g. the sandbox's).
+	Hider js.Hider
 
 	sliceProto C.JSValue // prototype of Go slices: Array methods
 

@@ -1,11 +1,15 @@
 // Package sandbox confines one PocketBase app's JS hooks and migrations so many apps can share one process.
 //
-// It plugs into PocketBase's jsvm plugin through two hooks:
+// It plugs into the jsvm extension (ext/jsvm) as one of its extensions:
 //
-//	jsvm.Register(app, jsvm.Config{Extensions: []jsvm.Extension{sb}})
+//	jsvm.Register(app, jsvm.Config{Extensions: []any{sb}})
+//
+// The engine itself enforces the per-app memory cap, the CPU and wall-clock budget per call, the stack limit and the
+// sleep cap (jsvm.Config.VM); the sandbox confines what JS can reach.
 package sandbox
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,11 +24,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/template"
-	"github.com/dop251/goja"
-	"github.com/dop251/goja_nodejs/require"
+	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // Sandbox confines an app's JS hooks and migrations so several apps can share one process:
@@ -43,27 +45,16 @@ type Sandbox struct {
 	// Env is the only environment JS can read.
 	Env map[string]string
 
-	// MaxExecution interrupts any single JS call (hook, route, cron job, migration, hook file load) that runs longer.
-	// Zero means 30 seconds; negative disables the limit.
+	// MaxExecution is the wall time one JS call (hook, route, cron job, migration) may take, Go calls included.
+	// Zero means 30 seconds; negative disables the limit. The host applies it (Limits).
 	MaxExecution time.Duration
 
-	// MaxSleep caps the sleep() binding (default 10 seconds).
+	// MaxSleep caps the sleep() binding (default 10 seconds). The host applies it (Limits).
 	MaxSleep time.Duration
 
-	// MaxAllocation caps single large allocations JS can request in one step (String repeat/pad, Array join,
-	// Buffer/ArrayBuffer/typed arrays, file reads, readerToString/toBytes). Default 64 MiB. Gradual growth isn't
-	// limited (goja has no per-VM memory accounting).
+	// MaxAllocation caps one file read through the sandbox ($os.readFile, $filesystem.fileFromPath) and
+	// readerToString/toBytes. Default 64 MiB. JS memory as a whole is the engine's per-app cap (VMConfig.MemoryLimit).
 	MaxAllocation int64
-
-	// MaxCallStackSize caps JS recursion depth (default 2000). Without it deep recursion overflows the Go stack,
-	// which is fatal for the whole process.
-	MaxCallStackSize int
-
-	// MaxConcurrent caps how many hook/route/cron calls the app runs at once (0 = no cap). A call waits up to
-	// MaxExecution for a slot, then fails.
-	MaxConcurrent int
-	slotsOnce     sync.Once
-	slots         chan struct{}
 
 	// Console, when set, receives console.log/info/debug ("stdout") and console.warn/error ("stderr") output
 	// instead of the process's stdout/stderr, so each app's output stays its own.
@@ -81,8 +72,7 @@ type Sandbox struct {
 	dir       string
 	realDir   string // dir with symlinks resolved, when different
 	root      *os.Root
-	templates *template.Registry // shared by the app's runtimes, like jsvm's own
-	requires  *require.Registry  // confined require(), shared by the app's runtimes
+	templates *template.Registry // the app's, like jsvm's own
 }
 
 // ErrSandboxed is returned by bindings that are disabled in the sandbox.
@@ -105,7 +95,6 @@ func (s *Sandbox) open() error {
 		}
 		s.root, s.openErr = os.OpenRoot(s.dir)
 		s.templates = template.NewRegistry()
-		s.requires = require.NewRegistry(require.WithLoader(s.requireLoader))
 	})
 	return s.openErr
 }
@@ -173,166 +162,166 @@ func (s *Sandbox) abs(rel string) string {
 	return filepath.Join(s.dir, filepath.FromSlash(rel))
 }
 
-// requireLoader reads modules for require() through the root.
-func (s *Sandbox) requireLoader(p string) ([]byte, error) {
+// Limits are the engine limits for this app, for the host to put in jsvm.Config.VM: the wall time one call may take
+// (0 = no limit) and the sleep cap.
+func (s *Sandbox) Limits() (execution, sleep time.Duration) { return s.maxExecution(), s.maxSleep() }
+
+// Modules implements the jsvm extension method: require() reads through the root, under Dir.
+func (s *Sandbox) Modules() (string, func(string) ([]byte, error)) {
 	if err := s.open(); err != nil {
-		return nil, err
+		return "", func(string) ([]byte, error) { return nil, err }
 	}
-	r, err := s.rel(p)
-	if err != nil {
-		return nil, require.ModuleFileDoesNotExistError
+	return filepath.Join(s.dir, "pb_hooks"), func(p string) ([]byte, error) {
+		r, err := s.rel(p)
+		if err != nil {
+			return nil, fs.ErrNotExist
+		}
+		return s.root.ReadFile(r)
 	}
-	b, err := s.root.ReadFile(r)
-	if err != nil {
-		return nil, require.ModuleFileDoesNotExistError
-	}
-	return b, nil
 }
 
-// OnInit replaces the host-reaching bindings on vm (a jsvm.Extension method: it runs after jsvm's standard binds and
-// before Config.OnInit).
-func (s *Sandbox) OnInit(vm *goja.Runtime) {
+// OnInit implements the jsvm extension method: it replaces the host-reaching bindings (it runs after jsvm's
+// standard binds and before Config.OnInit).
+func (s *Sandbox) OnInit(rt js.Runtime) {
 	if err := s.open(); err != nil {
 		panic(err)
 	}
 	templates := s.templates
-	s.requires.Enable(vm) // require() reads through the root
-
-	vm.SetFieldNameMapper(sandboxMapper{})
-
-	disabled := func(name string) func(goja.FunctionCall) goja.Value {
-		return func(goja.FunctionCall) goja.Value {
-			panic(vm.NewGoError(fmt.Errorf("%s: %w", name, ErrSandboxed)))
+	disabled := func(name string) js.NativeFunc {
+		return func(js.Call) (any, error) { return nil, fmt.Errorf("%s: %w", name, ErrSandboxed) }
+	}
+	ns := func(name string) js.Object {
+		if o := rt.Get(name).Object(); o != nil {
+			return o
 		}
+		return nil
 	}
 
 	// $os
-	osObj := vm.NewObject()
-	vm.Set("$os", osObj)
-	osObj.Set("args", []string{})
-	osObj.Set("exec", disabled("$os.exec"))
-	osObj.Set("cmd", disabled("$os.cmd"))
-	osObj.Set("exit", disabled("$os.exit"))
-	osObj.Set("getenv", func(key string) string { return s.Env[key] })
-	osObj.Set("dirFS", func(p string) (fs.FS, error) {
-		r, err := s.fsPath(p)
-		if err != nil {
-			return nil, err
-		}
-		return fs.Sub(s.root.FS(), r)
-	})
-	osObj.Set("stat", func(p string) (os.FileInfo, error) {
-		r, err := s.rel(p)
-		if err != nil {
-			return nil, err
-		}
-		return s.root.Stat(r)
-	})
-	osObj.Set("readFile", func(p string) ([]byte, error) {
-		return s.readFileCapped(p)
-	})
-	osObj.Set("writeFile", func(p string, data []byte, perm os.FileMode) error {
-		r, err := s.rel(p)
-		if err != nil {
-			return err
-		}
-		return s.root.WriteFile(r, data, perm)
-	})
-	osObj.Set("readDir", func(p string) ([]os.DirEntry, error) {
-		r, err := s.fsPath(p)
-		if err != nil {
-			return nil, err
-		}
-		return fs.ReadDir(s.root.FS(), r)
-	})
-	osObj.Set("tempDir", func() string {
-		_ = s.root.MkdirAll(filepath.Join("pb_data", ".pocker_tmp"), 0o755)
-		return s.abs("pb_data/.pocker_tmp")
-	})
-	osObj.Set("truncate", func(p string, size int64) error {
-		r, err := s.rel(p)
-		if err != nil {
-			return err
-		}
-		f, err := s.root.OpenFile(r, os.O_WRONLY, 0)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		return f.Truncate(size)
-	})
-	osObj.Set("getwd", func() (string, error) { return s.dir, nil })
-	osObj.Set("mkdir", func(p string, perm os.FileMode) error {
-		r, err := s.rel(p)
-		if err != nil {
-			return err
-		}
-		return s.root.Mkdir(r, perm)
-	})
-	osObj.Set("mkdirAll", func(p string, perm os.FileMode) error {
-		r, err := s.rel(p)
-		if err != nil {
-			return err
-		}
-		return s.root.MkdirAll(r, perm)
-	})
-	osObj.Set("rename", func(from, to string) error {
-		rf, err := s.rel(from)
-		if err != nil {
-			return err
-		}
-		rt, err := s.rel(to)
-		if err != nil {
-			return err
-		}
-		return s.root.Rename(rf, rt)
-	})
-	osObj.Set("remove", func(p string) error {
-		r, err := s.rel(p)
-		if err != nil {
-			return err
-		}
-		return s.root.Remove(r)
-	})
-	osObj.Set("removeAll", func(p string) error {
-		r, err := s.rel(p)
-		if err != nil {
-			return err
-		}
-		return s.root.RemoveAll(r)
-	})
-	osObj.Set("openRoot", func(p string) (*os.Root, error) {
-		r, err := s.rel(p)
-		if err != nil {
-			return nil, err
-		}
-		return s.root.OpenRoot(r)
-	})
-	osObj.Set("openInRoot", func(dir, name string) (*os.File, error) {
-		r, err := s.rel(dir)
-		if err != nil {
-			return nil, err
-		}
-		sub, err := s.root.OpenRoot(r)
-		if err != nil {
-			return nil, err
-		}
-		defer sub.Close()
-		return sub.Open(name)
+	_ = rt.Set("$os", map[string]any{
+		"args":   []string{},
+		"exec":   disabled("$os.exec"),
+		"cmd":    disabled("$os.cmd"),
+		"exit":   disabled("$os.exit"),
+		"getenv": func(key string) string { return s.Env[key] },
+		"dirFS": func(p string) (fs.FS, error) {
+			r, err := s.fsPath(p)
+			if err != nil {
+				return nil, err
+			}
+			return fs.Sub(s.root.FS(), r)
+		},
+		"stat": func(p string) (os.FileInfo, error) {
+			r, err := s.rel(p)
+			if err != nil {
+				return nil, err
+			}
+			return s.root.Stat(r)
+		},
+		"readFile": func(p string) ([]byte, error) { return s.readFileCapped(p) },
+		"writeFile": func(p string, data []byte, perm os.FileMode) error {
+			r, err := s.rel(p)
+			if err != nil {
+				return err
+			}
+			return s.root.WriteFile(r, data, perm)
+		},
+		"readDir": func(p string) ([]os.DirEntry, error) {
+			r, err := s.fsPath(p)
+			if err != nil {
+				return nil, err
+			}
+			return fs.ReadDir(s.root.FS(), r)
+		},
+		"tempDir": func() string {
+			_ = s.root.MkdirAll(filepath.Join("pb_data", ".pocker_tmp"), 0o755)
+			return s.abs("pb_data/.pocker_tmp")
+		},
+		"truncate": func(p string, size int64) error {
+			r, err := s.rel(p)
+			if err != nil {
+				return err
+			}
+			f, err := s.root.OpenFile(r, os.O_WRONLY, 0)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			return f.Truncate(size)
+		},
+		"getwd": func() (string, error) { return s.dir, nil },
+		"mkdir": func(p string, perm os.FileMode) error {
+			r, err := s.rel(p)
+			if err != nil {
+				return err
+			}
+			return s.root.Mkdir(r, perm)
+		},
+		"mkdirAll": func(p string, perm os.FileMode) error {
+			r, err := s.rel(p)
+			if err != nil {
+				return err
+			}
+			return s.root.MkdirAll(r, perm)
+		},
+		"rename": func(from, to string) error {
+			rf, err := s.rel(from)
+			if err != nil {
+				return err
+			}
+			rto, err := s.rel(to)
+			if err != nil {
+				return err
+			}
+			return s.root.Rename(rf, rto)
+		},
+		"remove": func(p string) error {
+			r, err := s.rel(p)
+			if err != nil {
+				return err
+			}
+			return s.root.Remove(r)
+		},
+		"removeAll": func(p string) error {
+			r, err := s.rel(p)
+			if err != nil {
+				return err
+			}
+			return s.root.RemoveAll(r)
+		},
+		"openRoot": func(p string) (*os.Root, error) {
+			r, err := s.rel(p)
+			if err != nil {
+				return nil, err
+			}
+			return s.root.OpenRoot(r)
+		},
+		"openInRoot": func(dir, name string) (*os.File, error) {
+			r, err := s.rel(dir)
+			if err != nil {
+				return nil, err
+			}
+			sub, err := s.root.OpenRoot(r)
+			if err != nil {
+				return nil, err
+			}
+			defer sub.Close()
+			return sub.Open(name)
+		},
 	})
 
-	// process.env
-	if proc, ok := vm.Get("process").(*goja.Object); ok {
-		env := vm.NewObject()
+	// process.env: only Env
+	if proc := ns("process"); proc != nil {
+		env := map[string]any{}
 		for k, v := range s.Env {
-			env.Set(k, v)
+			env[k] = v
 		}
-		proc.Set("env", env)
+		_ = proc.Set("env", env)
 	}
 
 	// $filepath: pure helpers stay; the ones that read the disk go through the root
-	if fp, ok := vm.Get("$filepath").(*goja.Object); ok {
-		fp.Set("glob", func(pattern string) ([]string, error) {
+	if fp := ns("$filepath"); fp != nil {
+		_ = fp.Set("glob", func(pattern string) ([]string, error) {
 			r, err := s.fsPath(pattern)
 			if err != nil {
 				return nil, err
@@ -346,7 +335,7 @@ func (s *Sandbox) OnInit(vm *goja.Runtime) {
 			}
 			return matches, nil
 		})
-		fp.Set("walkDir", func(start string, fn fs.WalkDirFunc) error {
+		_ = fp.Set("walkDir", func(start string, fn fs.WalkDirFunc) error {
 			r, err := s.fsPath(start)
 			if err != nil {
 				return err
@@ -355,7 +344,7 @@ func (s *Sandbox) OnInit(vm *goja.Runtime) {
 				return fn(s.abs(p), d, err)
 			})
 		})
-		fp.Set("walk", func(start string, fn filepath.WalkFunc) error {
+		_ = fp.Set("walk", func(start string, fn filepath.WalkFunc) error {
 			r, err := s.fsPath(start)
 			if err != nil {
 				return err
@@ -371,9 +360,9 @@ func (s *Sandbox) OnInit(vm *goja.Runtime) {
 	}
 
 	// $filesystem
-	if fsObj, ok := vm.Get("$filesystem").(*goja.Object); ok {
-		fsObj.Set("local", disabled("$filesystem.local"))
-		fsObj.Set("fileFromPath", func(p string) (*filesystem.File, error) {
+	if fsObj := ns("$filesystem"); fsObj != nil {
+		_ = fsObj.Set("local", disabled("$filesystem.local"))
+		_ = fsObj.Set("fileFromPath", func(p string) (*filesystem.File, error) {
 			b, err := s.readFileCapped(p)
 			if err != nil {
 				return nil, err
@@ -383,8 +372,8 @@ func (s *Sandbox) OnInit(vm *goja.Runtime) {
 	}
 
 	// $apis.static: a string path is resolved inside the app folder
-	if apisObj, ok := vm.Get("$apis").(*goja.Object); ok {
-		apisObj.Set("static", func(dirOrFS any, indexFallback bool) (func(*core.RequestEvent) error, error) {
+	if apisObj := ns("$apis"); apisObj != nil {
+		_ = apisObj.Set("static", func(dirOrFS any, indexFallback bool) (func(*core.RequestEvent) error, error) {
 			switch v := dirOrFS.(type) {
 			case fs.FS:
 				return apis.Static(v, indexFallback), nil
@@ -405,51 +394,51 @@ func (s *Sandbox) OnInit(vm *goja.Runtime) {
 	}
 
 	// $template: loadFiles reads through the root
-	tpl := vm.NewObject()
-	tpl.Set("loadFiles", func(filenames ...string) (*template.Renderer, error) {
-		rels := make([]string, len(filenames))
-		for i, f := range filenames {
-			r, err := s.fsPath(f)
-			if err != nil {
-				return nil, err
+	tpl := map[string]any{
+		"loadFiles": func(filenames ...string) (*template.Renderer, error) {
+			rels := make([]string, len(filenames))
+			for i, f := range filenames {
+				r, err := s.fsPath(f)
+				if err != nil {
+					return nil, err
+				}
+				rels[i] = r
 			}
-			rels[i] = r
-		}
-		return templates.LoadFS(s.root.FS(), rels...), nil
-	})
-	tpl.Set("loadFS", templates.LoadFS)
-	tpl.Set("loadString", templates.LoadString)
-	tpl.Set("addFuncs", func(funcs map[string]any) *goja.Object {
+			return templates.LoadFS(s.root.FS(), rels...), nil
+		},
+		"loadFS":     templates.LoadFS,
+		"loadString": templates.LoadString,
+	}
+	tpl["addFuncs"] = func(funcs map[string]any) map[string]any {
 		templates.AddFuncs(funcs)
 		return tpl
-	})
-	vm.Set("$template", tpl)
-
-	// memory: recursion depth and one-shot allocations
-	callStack := s.MaxCallStackSize
-	if callStack <= 0 {
-		callStack = 2000
 	}
-	vm.SetMaxCallStackSize(callStack)
-	s.capAllocations(vm)
+	_ = rt.Set("$template", tpl)
+
+	// Go-side readers take a JS-supplied limit: clamp it
+	max := s.maxAllocation()
+	clamp := func(n int) int {
+		if n <= 0 || int64(n) > max {
+			return int(max)
+		}
+		return n
+	}
+	if orig, ok := rt.Get("readerToString").Export().(func(io.Reader, int) (string, error)); ok {
+		_ = rt.Set("readerToString", func(r io.Reader, n int) (string, error) { return orig(r, clamp(n)) })
+	}
+	if orig, ok := rt.Get("toBytes").Export().(func(any, int) ([]byte, error)); ok {
+		_ = rt.Set("toBytes", func(raw any, n int) ([]byte, error) { return orig(raw, clamp(n)) })
+	}
 
 	// console: the app's own sink instead of the shared process output
 	if s.Console != nil {
 		sink := s.Console
-		isError := func(goja.Value) bool { return false }
-		if v, err := vm.RunString("(function (e) { return e instanceof Error })"); err == nil {
-			if fn, ok := goja.AssertFunction(v); ok {
-				isError = func(o goja.Value) bool {
-					res, err := fn(goja.Undefined(), o)
-					return err == nil && res.ToBoolean()
-				}
-			}
-		}
-		format := func(call goja.FunctionCall) string {
-			parts := make([]string, len(call.Arguments))
-			for i, a := range call.Arguments {
-				if o, ok := a.(*goja.Object); ok && !isError(o) {
-					if b, err := o.MarshalJSON(); err == nil {
+		format := func(c js.Call) string {
+			parts := make([]string, c.Len())
+			for i := range parts {
+				a := c.Arg(i)
+				if o := a.Object(); o != nil && o.Func() == nil && o.Get("stack").Nullish() {
+					if b, err := json.Marshal(a.Export()); err == nil {
 						parts[i] = string(b)
 						continue
 					}
@@ -458,26 +447,16 @@ func (s *Sandbox) OnInit(vm *goja.Runtime) {
 			}
 			return strings.Join(parts, " ")
 		}
-		con := vm.NewObject()
+		con := map[string]any{}
 		for name, stream := range map[string]string{"log": "stdout", "info": "stdout", "debug": "stdout", "warn": "stderr", "error": "stderr"} {
 			stream := stream
-			con.Set(name, func(call goja.FunctionCall) goja.Value {
-				sink(stream, format(call))
-				return goja.Undefined()
+			con[name] = js.NativeFunc(func(c js.Call) (any, error) {
+				sink(stream, format(c))
+				return nil, nil
 			})
 		}
-		vm.Set("console", con)
+		_ = rt.Set("console", con)
 	}
-
-	// sleep: capped, so a hook can't park a goroutine forever
-	maxSleep := s.maxSleep()
-	vm.Set("sleep", func(ms int64) {
-		d := time.Duration(ms) * time.Millisecond
-		if d > maxSleep {
-			d = maxSleep
-		}
-		time.Sleep(d)
-	})
 }
 
 // readFileCapped reads a file inside the root, refusing files larger than MaxAllocation.
@@ -502,108 +481,8 @@ func (s *Sandbox) readFileCapped(p string) ([]byte, error) {
 	return b, nil
 }
 
-// capAllocations wraps the built-ins that allocate a large result in one step. The originals are only reachable
-// through the wrappers' closures. Results above MaxAllocation throw a RangeError instead of allocating.
-func (s *Sandbox) capAllocations(vm *goja.Runtime) {
-	max := s.maxAllocation()
-
-	// Go-side readers take a JS-supplied limit: clamp it.
-	for _, name := range []string{"readerToString", "toBytes"} {
-		orig, ok := goja.AssertFunction(vm.Get(name))
-		if !ok {
-			continue
-		}
-		vm.Set(name, func(call goja.FunctionCall) goja.Value {
-			limit := call.Argument(1).ToInteger()
-			if limit <= 0 || limit > max {
-				limit = max
-			}
-			res, err := orig(goja.Undefined(), call.Argument(0), vm.ToValue(limit))
-			if err != nil {
-				panic(err)
-			}
-			return res
-		})
-	}
-
-	_, err := vm.RunString(fmt.Sprintf(`(function () {
-  "use strict";
-  const MAX = %d;
-  const tooBig = (what) => new RangeError(what + ": result larger than " + MAX + " bytes is not allowed on this host");
-  const lenOf = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
-  const wrap = (obj, key, check) => {
-    if (!obj || typeof obj[key] !== "function") return;
-    const orig = obj[key];
-    Object.defineProperty(obj, key, { configurable: false, writable: false, enumerable: false,
-      value: function (...args) { check(this, args); return orig.apply(this, args); } });
-  };
-
-  wrap(String.prototype, "repeat", (self, a) => { if (String(self).length * lenOf(a[0]) > MAX) throw tooBig("String.repeat"); });
-  wrap(String.prototype, "padStart", (self, a) => { if (lenOf(a[0]) > MAX) throw tooBig("String.padStart"); });
-  wrap(String.prototype, "padEnd", (self, a) => { if (lenOf(a[0]) > MAX) throw tooBig("String.padEnd"); });
-  wrap(Array.prototype, "join", (self, a) => {
-    const sep = a[0] === undefined ? 1 : String(a[0]).length;
-    if (lenOf(self.length) * Math.max(sep, 1) > MAX) throw tooBig("Array.join");
-  });
-
-  // requested element count: a number, or the length of an array-like (not an existing buffer)
-  const requested = (a) => {
-    if (typeof a === "number") return a;
-    if (a && typeof a === "object" && !(a instanceof ArrayBuffer) && typeof a.length === "number") return a.length;
-    return 0;
-  };
-  const guardCtor = (name, bytesPer) => {
-    const C = globalThis[name];
-    if (typeof C !== "function") return;
-    const check = (n) => { if (requested(n) * bytesPer > MAX) throw tooBig(name); };
-    const P = new Proxy(C, {
-      construct(t, args, nt) { check(args[0]); return Reflect.construct(t, args, nt === P ? t : nt); },
-      apply(t, self, args) { check(args[0]); return Reflect.apply(t, self, args); },
-    });
-    // instances reach their constructor through prototype.constructor: point it at the guard too
-    Object.defineProperty(C.prototype, "constructor", { configurable: false, writable: false, enumerable: false, value: P });
-    if (typeof C.from === "function") wrap(C, "from", (self, a) => check(a[0]));
-    Object.defineProperty(globalThis, name, { configurable: false, writable: false, enumerable: false, value: P });
-  };
-  guardCtor("ArrayBuffer", 1);
-  guardCtor("SharedArrayBuffer", 1);
-  [["Int8Array",1],["Uint8Array",1],["Uint8ClampedArray",1],["Int16Array",2],["Uint16Array",2],["Int32Array",4],
-   ["Uint32Array",4],["Float32Array",4],["Float64Array",8],["BigInt64Array",8],["BigUint64Array",8]]
-    .forEach(([n, b]) => guardCtor(n, b));
-
-  if (typeof Buffer === "function") {
-    ["alloc", "allocUnsafe", "allocUnsafeSlow"].forEach((k) =>
-      wrap(Buffer, k, (self, a) => { if (lenOf(a[0]) > MAX) throw tooBig("Buffer." + k); }));
-    guardCtor("Buffer", 1); // deprecated new Buffer(size)
-  }
-  // Array.toString / toLocaleString join without going through the wrapped join
-  ["toString", "toLocaleString"].forEach((k) =>
-    wrap(Array.prototype, k, (self) => { if (lenOf(self && self.length) > MAX) throw tooBig("Array." + k); }));
-})()`, max))
-	if err != nil {
-		panic(fmt.Errorf("sandbox: allocation caps: %w", err))
-	}
-}
-
-// interruptAfter arms vm.Interrupt for one JS call (the execution time limit) and returns the function that ends it.
-func (s *Sandbox) interruptAfter(vm *goja.Runtime) func() {
-	var t *time.Timer
-	if limit := s.maxExecution(); limit > 0 {
-		t = time.AfterFunc(limit, func() {
-			vm.Interrupt(fmt.Sprintf("execution timeout: JS ran longer than %s", limit))
-		})
-	}
-	return func() {
-		if t != nil {
-			t.Stop()
-		}
-		vm.ClearInterrupt()
-	}
-}
-
-// sandboxMapper hides Go members that let JS reach the process instead of its own app.
-// goja does not expose a member whose mapped name is "".
-type sandboxMapper struct{ jsvm.FieldMapper }
+// The sandbox hides Go members that let JS reach the process instead of its own app (a js.Hider: the engine shows a
+// hidden member as undefined).
 
 // hiddenPackages: every field and method of types from these packages is hidden.
 var hiddenPackages = map[string]bool{
@@ -671,6 +550,33 @@ var hiddenFields = map[string]map[string]bool{
 	},
 }
 
+// methodPkgs is the package of t and of every embedded type (recursively) that has the method name.
+func methodPkgs(t reflect.Type, name string, depth int) []string {
+	out := []string{pkgOf(t)}
+	st := t
+	for st.Kind() == reflect.Pointer {
+		st = st.Elem()
+	}
+	if st.Kind() != reflect.Struct || depth > 5 {
+		return out
+	}
+	for i := 0; i < st.NumField(); i++ {
+		f := st.Field(i)
+		if !f.Anonymous {
+			continue
+		}
+		ft := f.Type
+		if _, ok := ft.MethodByName(name); ok {
+			out = append(out, methodPkgs(ft, name, depth+1)...)
+		} else if ft.Kind() != reflect.Pointer {
+			if _, ok := reflect.PointerTo(ft).MethodByName(name); ok {
+				out = append(out, methodPkgs(reflect.PointerTo(ft), name, depth+1)...)
+			}
+		}
+	}
+	return out
+}
+
 func pkgOf(t reflect.Type) string {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -678,61 +584,27 @@ func pkgOf(t reflect.Type) string {
 	return t.PkgPath()
 }
 
-func (m sandboxMapper) FieldName(t reflect.Type, f reflect.StructField) string {
-	pkg := pkgOf(t)
-	if isHiddenType(t) || hiddenFields[pkg][f.Name] || isHiddenType(f.Type) {
-		return ""
-	}
-	return m.FieldMapper.FieldName(t, f)
+// HideField implements js.Hider.
+func (s *Sandbox) HideField(t reflect.Type, f reflect.StructField) bool {
+	return isHiddenType(t) || hiddenFields[pkgOf(t)][f.Name] || isHiddenType(f.Type)
 }
 
-func (m sandboxMapper) MethodName(t reflect.Type, meth reflect.Method) string {
-	pkg := pkgOf(t)
-	if isHiddenType(t) || hiddenMethods[pkg][meth.Name] {
-		return ""
+// HideMethod implements js.Hider. A method promoted from an embedded type (a PocketBase app embeds *core.BaseApp)
+// is judged by every type that declares it.
+func (s *Sandbox) HideMethod(t reflect.Type, meth reflect.Method) bool {
+	if isHiddenType(t) {
+		return true
+	}
+	for _, pkg := range methodPkgs(t, meth.Name, 0) {
+		if hiddenMethods[pkg][meth.Name] {
+			return true
+		}
 	}
 	// any method returning a hidden type (e.g. dbx.DB.DB() *sql.DB)
 	for i := 0; i < meth.Type.NumOut(); i++ {
 		if isHiddenType(meth.Type.Out(i)) {
-			return ""
+			return true
 		}
 	}
-	return m.FieldMapper.MethodName(t, meth)
-}
-
-// ErrTooBusy is returned when an app already runs MaxConcurrent JS calls and no slot frees up in time.
-var ErrTooBusy = errors.New("too many concurrent JS calls for this app; retry shortly")
-
-// acquire takes a concurrency slot for one JS call; the returned function gives it back.
-func (s *Sandbox) acquire() (func(), error) {
-	if s.MaxConcurrent <= 0 {
-		return func() {}, nil
-	}
-	s.slotsOnce.Do(func() { s.slots = make(chan struct{}, s.MaxConcurrent) })
-	wait := s.maxExecution()
-	if wait <= 0 {
-		wait = 30 * time.Second
-	}
-	t := time.NewTimer(wait)
-	defer t.Stop()
-	select {
-	case s.slots <- struct{}{}:
-		return func() { <-s.slots }, nil
-	case <-t.C:
-		return nil, ErrTooBusy
-	}
-}
-
-// OnCall limits one JS call: it takes a concurrency slot (MaxConcurrent) and arms the MaxExecution interrupt (a
-// jsvm.Extension method, like OnInit and HTTPClient).
-func (s *Sandbox) OnCall(vm *goja.Runtime) (func(), error) {
-	release, err := s.acquire()
-	if err != nil {
-		return nil, err
-	}
-	stop := s.interruptAfter(vm)
-	return func() {
-		stop()
-		release()
-	}, nil
+	return false
 }
