@@ -1,3 +1,5 @@
+//go:build cgo
+
 package jsvm
 
 import (
@@ -15,11 +17,11 @@ type Post struct {
 	Meta  map[string]any
 }
 
-func (p *Post) Upper() string          { return strings.ToUpper(p.Title) }
-func (p *Post) SetTitle(s string)      { p.Title = s }
-func (p *Post) Fail(msg string) error  { return errors.New(msg) }
-func (p *Post) Slow(ms int) string     { time.Sleep(time.Duration(ms) * time.Millisecond); return p.Title }
-func (p *Post) Pair() (string, error)  { return p.Title, nil }
+func (p *Post) Upper() string         { return strings.ToUpper(p.Title) }
+func (p *Post) SetTitle(s string)     { p.Title = s }
+func (p *Post) Fail(msg string) error { return errors.New(msg) }
+func (p *Post) Slow(ms int) string    { time.Sleep(time.Duration(ms) * time.Millisecond); return p.Title }
+func (p *Post) Pair() (string, error) { return p.Title, nil }
 func (p *Post) Each(f func(int) error) error {
 	for i := 0; i < 3; i++ {
 		if err := f(i); err != nil {

@@ -1,3 +1,5 @@
+//go:build cgo
+
 package jsvm
 
 import (
@@ -1593,7 +1595,6 @@ func TestCronBindsCount(t *testing.T) {
 
 	vm := testVM(t)
 
-
 	cronBinds(app, vm)
 
 	testBindsCount(vm, "this", 2, t) // one VM per app: no pool VMs to check
@@ -1624,7 +1625,6 @@ func TestHooksBinds(t *testing.T) {
 		vm.Set("result", result)
 		return vm
 	}
-
 
 	vm := vmFactory()
 	hooksBinds(app, vm)
@@ -1710,7 +1710,6 @@ func TestHooksExceptionUnwrapping(t *testing.T) {
 		return vm
 	}
 
-
 	vm := vmFactory()
 	hooksBinds(app, vm)
 
@@ -1763,7 +1762,6 @@ func TestRouterBinds(t *testing.T) {
 		vm.Set("result", result)
 		return vm
 	}
-
 
 	vm := vmFactory()
 	routerBinds(app, vm)

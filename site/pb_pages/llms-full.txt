@@ -286,6 +286,7 @@ The extension contract and tools for building and testing extensions.
 
 | Extension | What it does |
 |---|---|
+| [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet. |
 | [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
 | [Standard Set](https://pocketone.dev/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
@@ -9070,3 +9071,132 @@ extensions. This site doesn't copy them.
 
 PocketOne is built on PocketBase v0.41. When the docs there describe a newer release, some of it may not be in
 PocketOne yet.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/jsvm
+
+# JSVM
+
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS API as PocketBase (`$app`, `onX`,
+`routerAdd`, `cronAdd`, `$http`, `$security`, ...) on QuickJS, with one VM per app:
+
+- **Real globals.** Every hook file runs in the app's one global scope, so top-level helpers, constants and state are
+  visible to every handler. No more `require()` inside each handler.
+- **Async.** Handlers can be `async`. Every Go function has an `.async(...)` twin that runs off the VM and returns a
+  promise, so one app serves other requests while it waits: `await $app.findRecordById.async("posts", id)`.
+- **Hard limits per app.** A memory cap (JS heap plus Go objects JS holds), a CPU and a wall-clock budget per task, and
+  caps on queued tasks and async calls. A runaway script stops with an error; other apps in the process keep running.
+- **Real error positions.** Stack traces name `pb_hooks/<file>:<line>`.
+
+It isn't wired into the `pocketone` binary yet. PocketBase's own `plugins/jsvm` (goja) stays as upstream ships it, for
+pure PocketBase compatibility.
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+JSVM needs a build with cgo (QuickJS is C). In your own Go build, register it where you'd register `plugins/jsvm`:
+
+```go
+jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", MigrationsDir: "pb_migrations"})
+```
+
+The module is `github.com/pockethost/pocketone/ext/jsvm`. Without cgo, `Register` returns an error saying so.
+
+## Configure
+
+`Config` takes PocketBase's jsvm fields (`HooksDir`, `HooksWatch`, `HooksFilesPattern`, `MigrationsDir`,
+`MigrationsFilesPattern`, `TypesDir`; `HooksPoolSize` is accepted and ignored) plus:
+
+- `OnInit func(rt js.Runtime)`: add globals after everything else is set up.
+- `VM`: the limits. `MemoryLimit` (default 64 MiB), `TaskBudget` (JS time per task, default 5 s), `TaskWall` (wall time
+  per task, Go calls included, default 30 s), `QueueSize`, `MaxAsync`, `MaxPumpDepth`.
+- `Extensions`: values that extend it (below).
+
+## Use
+
+Write hooks and migrations as in PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/); they run unchanged.
+What's new:
+
+```js
+// pb_hooks/main.pb.js
+const cache = new Map()
+
+routerAdd("GET", "/post/{slug}", async (e) => {
+	const slug = e.request.pathValue("slug")
+	if (!cache.has(slug)) {
+		cache.set(slug, await e.app.findFirstRecordByData.async("posts", "slug", slug))
+	}
+	return e.json(200, cache.get(slug))
+})
+```
+
+- Globals live as long as the app's VM. A restart, a hooks reload or running out of memory starts a fresh one, so keep
+  durable data in the database.
+- After an `await`, other requests may have run: use `e.app`, not the global `$app`, and keep transactions short across
+  `await`s (they hold SQLite's write lock).
+- Calls that wait on I/O (`$app` methods, DB queries, `$http.send`, `sleep`) let the app's other requests run even
+  without `.async`.
+- `require()` loads CommonJS modules from `pb_hooks` and its `node_modules` (`.js`, `.json`, `index.js`,
+  `package.json` `main`). `process.env` and a small `Buffer` (`from`, `toString` with utf8, base64, hex) are there.
+
+## Integrations
+
+Extensions plug in through `Config.Extensions` with the engine-neutral types in
+[`ext/extkit/js`](../extkit/js/js.go). A value implements any of:
+
+- `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API.
+- `OnCall(rt)`: wrap every handler call; an error refuses it.
+- `HTTPClient(rt)`: the client `$http.send` uses.
+- `HookFiles`, `MigrationFiles`, `Modules`: hooks, migrations and `require()` modules from somewhere other than disk.
+- `OnLoad(rt, root, file, content)`: wrap loading each hook file.
+
+`js.Run(app, fn)` runs Go code on the app's VM; a `js.Func` kept from JS can be called from any goroutine.
+
+## Example
+
+```go
+// Command example serves example/pb_hooks with the jsvm extension: one QuickJS VM for the app, so the hook file's
+// top-level helpers and state are visible to every handler.
+//
+//	cd example && go run . serve
+//	curl http://127.0.0.1:8090/hello/world
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/jsvm"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app)
+	jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", MigrationsDir: "pb_migrations"})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## How it works
+
+- Each app's VM is owned by one goroutine locked to its OS thread; everything that touches the VM runs there. Go code
+  elsewhere posts tasks and waits. A Go call made from JS that fires a hook runs it inline, so Go → JS → Go → JS works.
+- Go values cross live through two QuickJS classes: `GoObject` (property get/set/has/keys go to Go by reflection, with
+  PocketBase's JS names) and `GoFunc` (calls go to Go). Each holds a handle into the VM's table; QuickJS's refcounting
+  frees it as soon as JS drops it.
+- Memory: QuickJS caps its own heap. Go objects JS holds are charged to the same budget: a per-type estimate, and a
+  reachability walk for fresh results of Go calls.
+- Benchmarks and the red team (27 attacks against 50 VMs in one process) are in the package's tests
+  (`ASYNCVM_BENCH=1`, `ASYNCVM_REDTEAM=1`).
+
+## License
+
+MIT

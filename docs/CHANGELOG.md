@@ -26,6 +26,10 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
+### Added
+
+- **jsvm:** new `ext/jsvm` extension, PocketOne's JS engine: one QuickJS VM per app with real globals, async handlers and `.async` Go calls, and hard per-app memory and time limits. It runs PocketBase's JS API unchanged; not in the `pocketone` binary yet.
+
 ## v0.0.1-alpha.4 (2026-11-16)
 
 ### Upgrading

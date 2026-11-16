@@ -22,6 +22,7 @@
     { "name": "remotes", "title": "Remotes", "group": "binary", "summary": "Named remotes and saved logins for the pocketone command." },
     { "name": "upgrade", "title": "Upgrade", "group": "binary", "summary": "pocketone upgrade to the latest release, keeping the old executable." },
     { "name": "config", "title": "Config", "group": "binary", "summary": "The pocketone.yaml config file, with secrets in a .env beside it." },
+    { "name": "jsvm", "title": "JSVM", "group": "authors", "summary": "PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet." },
     { "name": "jserrors", "title": "JS Errors", "group": "binary", "summary": "JS hook errors that name the pb_hooks file and line." },
     { "name": "pocker", "title": "Pocker", "group": "many", "summary": "Hundreds of PocketBase instances in one Go process, routed by hostname." },
     { "name": "multisite", "title": "Multisite", "group": "many", "summary": "Many instances behind one listener, routed by hostname, run by one provider." },

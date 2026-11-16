@@ -14,8 +14,8 @@ import "C"
 
 import (
 	"errors"
-	"net/http"
 	"fmt"
+	"net/http"
 	"reflect"
 	"runtime"
 	"runtime/cgo"
@@ -23,59 +23,6 @@ import (
 	"time"
 	"unsafe"
 )
-
-type VMConfig struct {
-	// MemoryLimit caps JS heap + estimated Go memory held through handles, in bytes.
-	MemoryLimit int64
-	// StackSize is the C stack JS may use, in bytes.
-	StackSize int
-	// TaskBudget is the JS time one task (a hook, a request, a promise continuation) may use. Time spent in Go
-	// calls and waiting for async results doesn't count.
-	TaskBudget time.Duration
-	// QueueSize caps the tasks waiting for the loop; more fail fast with ErrBusy.
-	QueueSize int
-	// WaitTimeout bounds how long a Go caller waits for a JS task to finish.
-	WaitTimeout time.Duration
-	// PumpSyncCalls runs blocking Go calls made from sync JS (DB, sleep) on their own goroutine and keeps serving
-	// other tasks meanwhile, nested on the same stack, up to MaxPumpDepth deep.
-	// TaskWall caps one top-level task's wall time, Go calls included (a loop over Go calls never hits TaskBudget).
-	TaskWall time.Duration
-	// MaxAsync caps async Go calls in flight per VM.
-	MaxAsync int
-	PumpSyncCalls bool
-	MaxPumpDepth  int
-	// Shared types are alive anyway (the app, DB pools): handles to them aren't charged for what they reach.
-	Shared func(t reflect.Type) bool
-	// Blocking says whether a Go method on a receiver of this type may block (I/O); only those get pumped.
-	Blocking func(recv reflect.Type) bool
-}
-
-func (c *VMConfig) defaults() {
-	if c.MemoryLimit == 0 {
-		c.MemoryLimit = 64 << 20
-	}
-	if c.StackSize == 0 {
-		c.StackSize = 256 << 10
-	}
-	if c.TaskBudget == 0 {
-		c.TaskBudget = 5 * time.Second
-	}
-	if c.QueueSize == 0 {
-		c.QueueSize = 1024
-	}
-	if c.WaitTimeout == 0 {
-		c.WaitTimeout = 30 * time.Second
-	}
-	if c.TaskWall == 0 {
-		c.TaskWall = 30 * time.Second
-	}
-	if c.MaxAsync == 0 {
-		c.MaxAsync = 256
-	}
-	if c.MaxPumpDepth == 0 {
-		c.MaxPumpDepth = 16
-	}
-}
 
 var (
 	ErrBusy    = errors.New("asyncvm: too many queued tasks")
@@ -95,11 +42,11 @@ type nativeFn func(vm *VM, this C.JSValue, args []C.JSValue, ctor bool) C.JSValu
 
 type entry struct {
 	blocking bool
-	v      reflect.Value
-	bytes  int64
-	kind   kind
-	native nativeFn
-	ctor   func(args []reflect.Value) any // for `new X(...)` on Go factories
+	v        reflect.Value
+	bytes    int64
+	kind     kind
+	native   nativeFn
+	ctor     func(args []reflect.Value) any // for `new X(...)` on Go factories
 }
 
 type VM struct {
@@ -124,12 +71,12 @@ type VM struct {
 	statTasks     atomic.Int64
 	statPeakQueue atomic.Int64
 
-	pumpDepth    int
+	pumpDepth     int
 	asyncInFlight int
-	statMaxPump  atomic.Int64
-	statPumped   atomic.Int64
+	statMaxPump   atomic.Int64
+	statPumped    atomic.Int64
 
-	settleSeq uint64
+	settleSeq   uint64
 	settles     map[uint64]chan settled
 	settleTypes map[uint64]reflect.Type
 	refs        map[*jsRef]struct{}
@@ -161,16 +108,16 @@ type settled struct {
 func New(cfg VMConfig, setup func(vm *VM) error) (*VM, error) {
 	cfg.defaults()
 	vm := &VM{
-		cfg:     cfg,
-		jobs:    make(chan *task, cfg.QueueSize),
-		posts:   make(chan func(), 4096),
-		quit:    make(chan struct{}),
-		done:    make(chan struct{}),
-		handles: make([]entry, 1, 256), // handle 0 = none
-		settles: map[uint64]chan settled{},
+		cfg:         cfg,
+		jobs:        make(chan *task, cfg.QueueSize),
+		posts:       make(chan func(), 4096),
+		quit:        make(chan struct{}),
+		done:        make(chan struct{}),
+		handles:     make([]entry, 1, 256), // handle 0 = none
+		settles:     map[uint64]chan settled{},
 		settleTypes: map[uint64]reflect.Type{},
 		refs:        map[*jsRef]struct{}{},
-		Log:     func(args ...any) { fmt.Println(args...) },
+		Log:         func(args ...any) { fmt.Println(args...) },
 	}
 	vm.self = cgo.NewHandle(vm)
 	ready := make(chan error, 1)

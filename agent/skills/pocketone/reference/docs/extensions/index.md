@@ -67,6 +67,7 @@ The extension contract and tools for building and testing extensions.
 
 | Extension | What it does |
 |---|---|
+| [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet. |
 | [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
 | [Standard Set](https://pocketone.dev/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |

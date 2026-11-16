@@ -3,7 +3,7 @@
 // engine's lifecycle, all through these types, never through an engine's own.
 //
 // The engine itself is the jsvm extension (ext/jsvm). It sets an app's [Runner] when it registers, and calls the
-// optional [Extension] methods of every value in its Config.Extensions.
+// optional extension methods below on every value in its Config.Extensions.
 package js
 
 import (
@@ -130,11 +130,6 @@ type (
 	// Loader wraps loading one hook file. done runs after it; mapErr rewrites its errors (nil = unchanged).
 	Loader interface {
 		OnLoad(rt Runtime, hooksRoot, file string, content []byte) (done func(), mapErr func(error) error)
-	}
-	// Compiler wraps compiling one handler; mapErr rewrites its errors (nil = unchanged). prefix is how many bytes
-	// the engine put before src.
-	Compiler interface {
-		OnCompile(rt Runtime, src string, prefix int) (mapErr func(error) error)
 	}
 	// Binder exposes an extension's Go API to an app's JS (e.g. as a $name global), on each of the app's runtimes.
 	// Under a multisite host, what it exposes must be safe for a hostile tenant to call on its own app.

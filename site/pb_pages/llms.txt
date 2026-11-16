@@ -98,3 +98,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 - [pocketone.yaml reference](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
 - [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.
+
+## Optional
+
+- [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async, hard limits. Not in the binary yet.

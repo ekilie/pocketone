@@ -34,37 +34,6 @@ const typesFileName = "types.d.ts"
 //go:embed types.d.ts
 var typesFile []byte
 
-// Config is the engine's configuration. The hook and migration fields mean what they mean in PocketBase's
-// plugins/jsvm.
-type Config struct {
-	// OnInit runs after the app's VM is set up (after the extensions' OnInit), to add globals.
-	OnInit func(rt js.Runtime)
-
-	// HooksWatch restarts the app when a file in HooksDir changes.
-	HooksWatch bool
-	// HooksDir is the hooks folder (default pb_data/../pb_hooks).
-	HooksDir string
-	// HooksFilesPattern picks the hook files (default `^.*(\.pb\.js|\.pb\.ts)$`).
-	HooksFilesPattern string
-	// HooksPoolSize is accepted for compatibility with plugins/jsvm and ignored: each app has one VM.
-	HooksPoolSize int
-
-	// MigrationsDir is the migrations folder (default pb_data/../pb_migrations).
-	MigrationsDir string
-	// MigrationsFilesPattern picks the migration files (default `^.*(\.js|\.ts)$`).
-	MigrationsFilesPattern string
-
-	// TypesDir is where types.d.ts is written (default pb_data).
-	TypesDir string
-
-	// VM sets the engine's limits (memory, CPU and wall time per task, queue, async calls).
-	VM VMConfig
-
-	// Extensions are values with any of the extkit/js extension methods (js.Initer, js.Caller, js.HTTPClienter,
-	// js.HookFiler, js.MigrationFiler, js.Moduler, js.Loader, js.Binder).
-	Extensions []any
-}
-
 // MustRegister is Register that panics on error.
 func MustRegister(app core.App, config Config) {
 	if err := Register(app, config); err != nil {

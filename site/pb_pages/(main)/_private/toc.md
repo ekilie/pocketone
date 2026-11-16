@@ -81,6 +81,7 @@
 
 # Extensions: for authors
 
+- [JSVM](/docs/extensions/jsvm)
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Standard Set](/docs/extensions/standard)
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)

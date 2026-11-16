@@ -7,7 +7,10 @@ require (
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
+	github.com/fatih/color v1.19.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/spf13/cast v1.10.0
 	github.com/spf13/cobra v1.10.2
@@ -22,8 +25,6 @@ require (
 	github.com/dop251/base64dec v0.0.0-20231022112746-c6c9f9a96217 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20260212111938-1f56ff5bcf14 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
-	github.com/fatih/color v1.19.0 // indirect
-	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/google/pprof v0.0.0-20261016150608-1facf8f91b50 // indirect
@@ -50,3 +51,5 @@ require (
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace github.com/pockethost/pocketone/ext/extkit => ../extkit
+
+replace github.com/pockethost/pocketone/ext/devusers => ../devusers

@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"reflect"
+	"regexp"
 	"runtime"
 	"unsafe"
 
@@ -30,14 +31,30 @@ func (r jsRuntime) Set(name string, v any) error {
 	return nil
 }
 
+// Get reads a global: a property of globalThis, or a top-level let/const/class binding of the hook files.
 func (r jsRuntime) Get(name string) js.Value {
 	g := C.JS_GetGlobalObject(r.vm.ctx)
 	cs := C.CString(name)
 	v := C.JS_GetPropertyStr(r.vm.ctx, g, cs)
 	C.free(unsafe.Pointer(cs))
 	r.vm.free_(g)
+	if C.avm_tag(v) == C.JS_TAG_UNDEFINED && identRe.MatchString(name) {
+		code := "(() => { try { return " + name + " } catch (e) { return undefined } })()"
+		cc := C.CString(code)
+		cf := C.CString("<get>")
+		lv := C.avm_eval(r.vm.ctx, cc, C.size_t(len(code)), cf)
+		C.free(unsafe.Pointer(cc))
+		C.free(unsafe.Pointer(cf))
+		if C.avm_is_exception(lv) != 0 {
+			r.vm.free_(C.JS_GetException(r.vm.ctx))
+		} else {
+			v = lv
+		}
+	}
 	return r.vm.value(v)
 }
+
+var identRe = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 
 func (r jsRuntime) NewObject() js.Object {
 	return r.vm.value(C.JS_NewObject(r.vm.ctx)).(*jsValue)

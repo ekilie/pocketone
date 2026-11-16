@@ -119,4 +119,3 @@ func (vm *VM) runHandler(h *jsRef, app core.App, args ...any) error {
 	}
 	return nil
 }
-

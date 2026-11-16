@@ -1,0 +1,92 @@
+package jsvm
+
+import (
+	"reflect"
+	"time"
+
+	"github.com/pockethost/pocketone/ext/extkit/js"
+)
+
+// Config is the engine's configuration. The hook and migration fields mean what they mean in PocketBase's
+// plugins/jsvm.
+type Config struct {
+	// OnInit runs after the app's VM is set up (after the extensions' OnInit), to add globals.
+	OnInit func(rt js.Runtime)
+
+	// HooksWatch restarts the app when a file in HooksDir changes.
+	HooksWatch bool
+	// HooksDir is the hooks folder (default pb_data/../pb_hooks).
+	HooksDir string
+	// HooksFilesPattern picks the hook files (default `^.*(\.pb\.js|\.pb\.ts)$`).
+	HooksFilesPattern string
+	// HooksPoolSize is accepted for compatibility with plugins/jsvm and ignored: each app has one VM.
+	HooksPoolSize int
+
+	// MigrationsDir is the migrations folder (default pb_data/../pb_migrations).
+	MigrationsDir string
+	// MigrationsFilesPattern picks the migration files (default `^.*(\.js|\.ts)$`).
+	MigrationsFilesPattern string
+
+	// TypesDir is where types.d.ts is written (default pb_data).
+	TypesDir string
+
+	// VM sets the engine's limits (memory, CPU and wall time per task, queue, async calls).
+	VM VMConfig
+
+	// Extensions are values with any of the extkit/js extension methods (js.Initer, js.Caller, js.HTTPClienter,
+	// js.HookFiler, js.MigrationFiler, js.Moduler, js.Loader, js.Binder).
+	Extensions []any
+}
+
+type VMConfig struct {
+	// MemoryLimit caps JS heap + estimated Go memory held through handles, in bytes.
+	MemoryLimit int64
+	// StackSize is the C stack JS may use, in bytes.
+	StackSize int
+	// TaskBudget is the JS time one task (a hook, a request, a promise continuation) may use. Time spent in Go
+	// calls and waiting for async results doesn't count.
+	TaskBudget time.Duration
+	// QueueSize caps the tasks waiting for the loop; more fail fast with ErrBusy.
+	QueueSize int
+	// WaitTimeout bounds how long a Go caller waits for a JS task to finish.
+	WaitTimeout time.Duration
+	// PumpSyncCalls runs blocking Go calls made from sync JS (DB, sleep) on their own goroutine and keeps serving
+	// other tasks meanwhile, nested on the same stack, up to MaxPumpDepth deep.
+	// TaskWall caps one top-level task's wall time, Go calls included (a loop over Go calls never hits TaskBudget).
+	TaskWall time.Duration
+	// MaxAsync caps async Go calls in flight per VM.
+	MaxAsync      int
+	PumpSyncCalls bool
+	MaxPumpDepth  int
+	// Shared types are alive anyway (the app, DB pools): handles to them aren't charged for what they reach.
+	Shared func(t reflect.Type) bool
+	// Blocking says whether a Go method on a receiver of this type may block (I/O); only those get pumped.
+	Blocking func(recv reflect.Type) bool
+}
+
+func (c *VMConfig) defaults() {
+	if c.MemoryLimit == 0 {
+		c.MemoryLimit = 64 << 20
+	}
+	if c.StackSize == 0 {
+		c.StackSize = 256 << 10
+	}
+	if c.TaskBudget == 0 {
+		c.TaskBudget = 5 * time.Second
+	}
+	if c.QueueSize == 0 {
+		c.QueueSize = 1024
+	}
+	if c.WaitTimeout == 0 {
+		c.WaitTimeout = 30 * time.Second
+	}
+	if c.TaskWall == 0 {
+		c.TaskWall = 30 * time.Second
+	}
+	if c.MaxAsync == 0 {
+		c.MaxAsync = 256
+	}
+	if c.MaxPumpDepth == 0 {
+		c.MaxPumpDepth = 16
+	}
+}
