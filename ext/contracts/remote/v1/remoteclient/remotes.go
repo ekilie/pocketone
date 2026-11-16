@@ -213,18 +213,16 @@ func NormalizeURL(raw string) (string, error) {
 // Credential is a saved sign-in for one URL.
 type Credential struct {
 	Token string `json:"token"`
-	// Via: "token" (pasted or minted pbt_/PocketHost token), "jwt" (a pasted PocketBase auth token), "oauth".
+	// Via: "token" (a pasted pbt_ or PocketHost token), "jwt" (a pasted PocketBase auth token), "oauth".
 	Via          string    `json:"via"`
 	Email        string    `json:"email,omitempty"`
 	Collection   string    `json:"collection,omitempty"`
 	RefreshToken string    `json:"refreshToken,omitempty"`
 	Expires      time.Time `json:"expires,omitzero"`
 	// TokenEndpoint and RevokeEndpoint (OAuth logins) refresh and revoke it.
-	TokenEndpoint  string `json:"tokenEndpoint,omitempty"`
-	RevokeEndpoint string `json:"revokeEndpoint,omitempty"`
-	// MintedTokenId is the API token the CLI created on the remote at login; logout revokes it.
-	MintedTokenId string    `json:"mintedTokenId,omitempty"`
-	Created       time.Time `json:"created"`
+	TokenEndpoint  string    `json:"tokenEndpoint,omitempty"`
+	RevokeEndpoint string    `json:"revokeEndpoint,omitempty"`
+	Created        time.Time `json:"created"`
 }
 
 // Credentials is the user's credential store.

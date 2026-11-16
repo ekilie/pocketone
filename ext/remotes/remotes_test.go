@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -44,25 +44,20 @@ func serve(t *testing.T, app *tests.TestApp) string {
 	return srv.URL
 }
 
-func newApp(t *testing.T, withTokens bool) (*tests.TestApp, string) {
+func newApp(t *testing.T) (*tests.TestApp, string) {
 	t.Helper()
 	app, err := tests.NewTestApp()
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	exts := []extkit.Extension{New(Config{})}
-	if withTokens {
-		exts = append(exts, tokens.New(tokens.Config{}))
-	}
+	exts := []extkit.Extension{New(Config{}), tokens.New(tokens.Config{})}
 	// registered and sealed the way every app is (the standard set does this), so remote/v1's routes mount
 	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if withTokens {
-		if err := tokens.EnsureSchema(app); err != nil {
-			t.Fatal(err)
-		}
+	if err := tokens.EnsureSchema(app); err != nil {
+		t.Fatal(err)
 	}
 	// the test app's superuser test@example.com has password 1234567890
 	return app, serve(t, app)
@@ -73,7 +68,6 @@ func isolate(t *testing.T) string {
 	t.Setenv("POCKETONE_CONFIG_DIR", t.TempDir())
 	t.Setenv("POCKETONE_TOKEN", "")
 	t.Setenv("POCKETHOST_TOKEN", "")
-	t.Setenv("POCKETONE_PASSWORD", "")
 	return t.TempDir()
 }
 
@@ -161,9 +155,36 @@ func TestCredentialsFile(t *testing.T) {
 	}
 }
 
-func TestWhoamiAndPasswordLoginMintsToken(t *testing.T) {
+// apiToken signs in as the test superuser and creates an API token, the way a user makes one in the dashboard.
+func apiToken(t *testing.T, cl *remoteclient.Client) (token, id string) {
+	t.Helper()
+	ctx := context.Background()
+	anon := *cl
+	anon.Token = ""
+	var auth struct {
+		Token string `json:"token"`
+	}
+	if err := anon.JSON(ctx, http.MethodPost, "/api/collections/_superusers/auth-with-password",
+		map[string]string{"identity": "test@example.com", "password": "1234567890"}, &auth); err != nil {
+		t.Fatal(err)
+	}
+	session := *cl
+	session.Token = auth.Token
+	var created struct {
+		Token  string `json:"token"`
+		Record struct {
+			Id string `json:"id"`
+		} `json:"record"`
+	}
+	if err := session.JSON(ctx, http.MethodPost, tokensv1.Prefix, map[string]any{"name": "test cli"}, &created); err != nil {
+		t.Fatal(err)
+	}
+	return created.Token, created.Record.Id
+}
+
+func TestWhoamiAndTokenLogin(t *testing.T) {
 	dir := isolate(t)
-	_, url := newApp(t, true)
+	_, url := newApp(t)
 	cl := &remoteclient.Client{Remote: &remoteclient.Remote{Name: "local", URL: url}, HTTP: remoteclient.NewHTTPClient()}
 	ctx := context.Background()
 
@@ -171,15 +192,10 @@ func TestWhoamiAndPasswordLoginMintsToken(t *testing.T) {
 	if err != nil || w.Auth != nil || !w.Offers("remote/v1") || !w.Offers("tokens/v1") {
 		t.Fatalf("anon whoami %+v %v", w, err)
 	}
-	if _, err := remoteclient.LoginWithPassword(ctx, cl, remoteclient.PasswordLogin{Email: "test@example.com", Password: "wrong"}); err == nil {
-		t.Fatal("wrong password accepted")
-	}
-	res, err := remoteclient.LoginWithPassword(ctx, cl, remoteclient.PasswordLogin{Email: "test@example.com", Password: "1234567890", TokenName: "test cli"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !res.Minted || !strings.HasPrefix(res.Credential.Token, "pbt_") || res.Warning != "" {
-		t.Fatalf("%+v", res)
+	token, tokenId := apiToken(t, cl)
+	res, err := remoteclient.LoginWithToken(ctx, cl, token)
+	if err != nil || res.Credential.Email != "test@example.com" || res.TokenId != tokenId || res.Warning != "" {
+		t.Fatalf("token login %+v %v", res, err)
 	}
 	if err := remoteclient.SaveLogin(cl, res); err != nil {
 		t.Fatal(err)
@@ -194,39 +210,22 @@ func TestWhoamiAndPasswordLoginMintsToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	w, err = authed.Whoami(ctx)
-	if err != nil || w.Auth == nil || w.Auth.Email != "test@example.com" || w.Via != "token" || w.TokenId != res.TokenId {
+	if err != nil || w.Auth == nil || w.Auth.Email != "test@example.com" || w.Via != "token" || w.TokenId != tokenId {
 		t.Fatalf("authed whoami %+v %v", w, err)
-	}
-
-	// login with that token again (paste)
-	res2, err := remoteclient.LoginWithToken(ctx, cl, res.Credential.Token)
-	if err != nil || res2.Credential.Email != "test@example.com" {
-		t.Fatalf("token login %+v %v", res2, err)
 	}
 	if _, err := remoteclient.LoginWithToken(ctx, cl, "pbt_"+strings.Repeat("z", 40)); err == nil {
 		t.Fatal("bad token accepted")
 	}
 
-	// logout revokes the minted token
+	// logout forgets a pasted token but leaves it working: it's the user's to revoke
 	out, err := runCmd(t, dir, "logout", "local")
 	if err != nil || !strings.Contains(out, "Logged out") {
 		t.Fatalf("logout: %v %s", err, out)
 	}
-	w, _ = cl.Whoami(ctx)
 	probe := *cl
-	probe.Token = res.Credential.Token
-	if w, _ = probe.Whoami(ctx); w.Auth != nil {
-		t.Fatal("minted token still works after logout")
-	}
-}
-
-func TestPasswordLoginNeedsTokens(t *testing.T) {
-	isolate(t)
-	_, url := newApp(t, false)
-	cl := &remoteclient.Client{Remote: &remoteclient.Remote{Name: "local", URL: url}, HTTP: remoteclient.NewHTTPClient()}
-	_, err := remoteclient.LoginWithPassword(context.Background(), cl, remoteclient.PasswordLogin{Email: "test@example.com", Password: "1234567890"})
-	if !errors.Is(err, remoteclient.ErrNoTokens) {
-		t.Fatalf("got %v", err)
+	probe.Token = token
+	if w, _ = probe.Whoami(ctx); w.Auth == nil {
+		t.Fatal("logout revoked a pasted token")
 	}
 }
 
@@ -243,12 +242,12 @@ func TestNoWhoamiRemoteTakesTokenAsIs(t *testing.T) {
 
 func TestCommands(t *testing.T) {
 	dir := isolate(t)
-	_, url := newApp(t, true)
+	_, url := newApp(t)
 	if out, err := runCmd(t, dir, "remote", "add", "prod", url); err != nil || !strings.Contains(out, "Added prod") {
 		t.Fatalf("%v %s", err, out)
 	}
-	t.Setenv("POCKETONE_PASSWORD", "1234567890")
-	if out, err := runCmd(t, dir, "login", "prod", "--email", "test@example.com"); err != nil || !strings.Contains(out, "Logged in") {
+	token, _ := apiToken(t, &remoteclient.Client{Remote: &remoteclient.Remote{URL: url}, HTTP: remoteclient.NewHTTPClient()})
+	if out, err := runCmd(t, dir, "login", "prod", "--token", token); err != nil || !strings.Contains(out, "Logged in") {
 		t.Fatalf("login: %v %s", err, out)
 	}
 	out, err := runCmd(t, dir, "remote", "list")

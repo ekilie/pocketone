@@ -18,7 +18,7 @@ import (
 )
 
 // UserAgent is sent with every client request.
-var UserAgent = "pocketbase-cli"
+var UserAgent = "pocketone-cli"
 
 // WhoamiPath is remote/v1's whoami (public): who the caller is and what the remote offers.
 const WhoamiPath = "/api/_c/remote/v1"

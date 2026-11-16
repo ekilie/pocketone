@@ -21,7 +21,7 @@ import (
 )
 
 // OAuthClientId is the built-in public client of the OAuth server in ext/tokens.
-const OAuthClientId = "pocketbase-cli"
+const OAuthClientId = "pocketone-cli"
 
 // BrowserLoginOptions are `login`'s flags for the OAuth flow.
 type BrowserLoginOptions struct {

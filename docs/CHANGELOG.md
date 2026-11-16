@@ -32,6 +32,8 @@ repo root; each release here says which PocketBase version it's built on.
 - **jsvm:** Go code that binds JS takes `js.Runtime` (`github.com/pockethost/pocketone/ext/extkit/js`) instead of `*goja.Runtime`: `extkit.JSBinder.BindJS(app, rt)`, `extkit.BindJS(app, rt, ...)`, `extkit.AppSet.BindJS`, Pocker's `InitJS(inst, app, rt)`, `mcp.BindJS(app, rt)`, `tokens.BindJS(app, rt)`, `bulkmail.BindJS(app, rt)`. `extkit.JSContracts(app)` no longer takes a runner. `standard.Set.Register` takes an `ext/jsvm` config.
 - **sandbox:** `MaxCallStackSize` and `MaxConcurrent` are gone (the engine caps call depth with `jsvm.Config.VM.StackSize`; set `jsvm.Config.VM.MaxConcurrent`). `Sandbox.Limits()` gives the execution and sleep limits for `jsvm.Config.VM`.
 - **bundle:** `ext/jsembed` is now `ext/bundle` and runs on the `ext/jsvm` engine. Import `github.com/pockethost/pocketone/ext/bundle`, register `ext/jsvm` instead of `plugins/jsvm`, and pass `bundle.Hooks(...)` / `bundle.Migrations(...)` in `jsvm.Config.Extensions`. A `require()` that isn't found now says "Cannot find module".
+- **tokens:** The CLI's built-in OAuth client is now `pocketone-cli` (was `pocketbase-cli`). Browser logins made before this release can't renew once the remote is upgraded: run `pocketone login <remote>` again when one expires.
+- **remotes:** `login` and `link` no longer take a password: `--email`, `--password`, `--collection` and `POCKETONE_PASSWORD` are gone. Sign in through the browser (`--device` on a machine without one), or pass an API token with `--token`, `--token-stdin` or `POCKETONE_TOKEN`. A saved login made with a password keeps working; `logout` no longer revokes its token, so delete it in the dashboard.
 
 ### Added
 
@@ -49,6 +51,7 @@ repo root; each release here says which PocketBase version it's built on.
 - **sandbox, pocker:** each instance's JS has a hard memory cap (64 MiB: JS heap plus Go objects it holds); gradual growth is now limited per instance, not only one-shot allocations. Process-reaching Go methods are also hidden when an app type embeds `*core.BaseApp`.
 - **contracts:** contract providers and `on<Contract><Op>` handlers written in pb_hooks can use the file's top-level variables.
 - **pages:** runs on `ext/jsvm`. Templates can include each other at most 32 deep (was 64). A page that runs away now fails with the engine's "interrupted" or "out of memory" error.
+- **tokens:** The CLI's OAuth client id, the CLI's User-Agent and the default deploy source are now `pocketone-cli`, matching the "pocketone CLI" name on the sign-in pages.
 
 ## v0.0.1-alpha.4 (2026-11-16)
 

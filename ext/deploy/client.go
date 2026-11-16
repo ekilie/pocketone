@@ -414,7 +414,7 @@ type DeployOptions struct {
 	CollectOptions
 	Commit  string // recorded commit (default: $GITHUB_SHA, $CI_COMMIT_SHA, or git HEAD)
 	Message string
-	Source  string // recorded source (default: github-actions, ci, or pocketbase-cli)
+	Source  string // recorded source (default: github-actions, ci, or pocketone-cli)
 	Verbose bool
 	Log     func(string)
 	// Restart asks the remote to restart the app after the files are in, when migrations or packages changed.
@@ -609,7 +609,7 @@ func detectSource() string {
 	case os.Getenv("CI") != "":
 		return "ci"
 	}
-	return "pocketbase-cli"
+	return "pocketone-cli"
 }
 
 func humanBytes(n int64) string {
