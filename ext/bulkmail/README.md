@@ -21,7 +21,7 @@ mail := bulkmail.New(bulkmail.Config{Rate: 5, Daily: 5000})
 
 app := pocketbase.New()
 extkit.MustRegister(app, mail)
-jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { extkit.BindJS(app, vm, mail) }})
+jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { extkit.BindJS(app, rt, mail) }})
 app.Start()
 ```
 

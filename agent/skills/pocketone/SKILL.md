@@ -183,7 +183,7 @@ no code yet (version 0.0.0).
 | Remotes | yes | Named remotes and saved logins for the pocketone command. | [remotes](reference/docs/extensions/remotes/index.md) |
 | Upgrade | yes | pocketone upgrade to the latest release, keeping the old executable. | [upgrade](reference/docs/extensions/upgrade/index.md) |
 | Config | yes | The pocketone.yaml config file, with secrets in a .env beside it. | [config](reference/docs/extensions/config/index.md) |
-| JS Errors | yes | JS hook errors that name the pb_hooks file and line. | [jserrors](reference/docs/extensions/jserrors/index.md) |
+| JSVM | yes | The JS engine for pb_hooks and pb_migrations: one QuickJS VM per app, real globals, async handlers, hard limits. | [jsvm](reference/docs/extensions/jsvm/index.md) |
 | **Run many instances** | | | |
 | Pocker | host | Hundreds of PocketBase instances in one Go process, routed by hostname. | [pocker](reference/docs/extensions/pocker/index.md), [guide](reference/docs/extensions/pocker/pocker.md) |
 | Multisite | host | Many instances behind one listener, routed by hostname, run by one provider. | [multisite](reference/docs/extensions/multisite/index.md) |
@@ -208,7 +208,8 @@ no code yet (version 0.0.0).
 | Contracts | Go library | The versioned interfaces extensions use to work together, and their generator. | [all contracts](reference/docs/contracts/all.md) |
 | Mail Trap | yes (dev mode) | Dev mode: mail from an app without SMTP lands in a built-in inbox. | [mailtrap](reference/docs/extensions/mailtrap/index.md) |
 | Dev Users | Go build | Local testing only: a superuser and a user with password "password". | `ext/devusers/devusers.go` (no page) |
-| JS Embed | Go build | JS hooks and migrations embedded in the binary. | [jsembed](reference/docs/extensions/jsembed/index.md) |
+| Bundle | Go build | An app's hooks, migrations and public files embedded in the binary. | [bundle](reference/docs/extensions/bundle/index.md) |
+| JS Errors | Go build | Hook error positions for PocketBase's plugins/jsvm (goja); ext/jsvm doesn't need it. | [jserrors](reference/docs/extensions/jserrors/index.md) |
 
 To turn a standard extension off, set `enabled: false` in its `pocketone.yaml` section; extensions that require it
 turn off too, and the startup lines say why.
@@ -281,12 +282,12 @@ func (e *Extension) Register(app core.App, cfg extkit.Config) error {
 	return nil
 }
 
-// optional: a $hello global in pb_hooks
-func (e *Extension) BindJS(app core.App, vm *goja.Runtime) {}
+// optional: a $hello global in pb_hooks (js is ext/extkit/js)
+func (e *Extension) BindJS(app core.App, rt js.Runtime) { _ = rt.Set("$hello", map[string]any{"hi": func() string { return "hi" }}) }
 ```
 
 - Add it to the standard set: `set.Add(myext.New(...))`. Without the set: `extkit.MustRegister(app, exts...)` and
-  `extkit.BindJS(app, vm, exts...)` in jsvm's `OnInit`.
+  `extkit.BindJS(app, rt, exts...)` in jsvm's `OnInit`.
 - Process-wide settings: a `pocketone.yaml` section with `extkit.NewSection(name, defaults, doc)`; describe each key
   with a `doc:"…"` struct tag (it feeds `pocketone config --json` and the site's key table).
 - Per-app state in `app.Store()`; shared resources close through `extkit.Closer` (`Close(ctx) error`).

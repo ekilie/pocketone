@@ -24,7 +24,7 @@ app.Start()
 To use `$tokens` in `pb_hooks`, bind it in jsvm's `OnInit` (the stock binary does):
 
 ```go
-jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { tokens.BindJS(vm, app) }})
+jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { tokens.BindJS(app, rt) }})
 ```
 
 The module is `github.com/pockethost/pocketone/ext/tokens`.

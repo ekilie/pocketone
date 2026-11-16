@@ -16,7 +16,6 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/cmd"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/plugins/migratecmd"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
@@ -24,7 +23,7 @@ import (
 	"github.com/pockethost/pocketone/ext/config"
 	"github.com/pockethost/pocketone/ext/docker"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jserrors"
+	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pitr"
@@ -108,7 +107,7 @@ func main() {
 		&hooksPool,
 		"hooksPool",
 		orInt(appCfg.HooksPool, 15),
-		"the total prewarm goja.Runtime instances for the JS app hooks execution",
+		"ignored: each app has one JS VM (kept so existing command lines still work)",
 	)
 
 	var migrationsDir string
@@ -266,14 +265,13 @@ func main() {
 	// Extensions and hooks:
 	// ---------------------------------------------------------------
 
-	// the standard set, then pb_hooks and pb_migrations through jsvm (with $mcp, $tokens, $bulkmail and pb_hooks
-	// providing contracts), then the contracts sealed; hook errors name pb_hooks/<file>:<line>:<col> (ext/jserrors)
+	// the standard set, then pb_hooks and pb_migrations through ext/jsvm (one QuickJS VM per app, with $mcp, $tokens,
+	// $bulkmail and pb_hooks providing contracts), then the contracts sealed
 	if err := set.Register(app, jsvm.Config{
 		MigrationsDir: migrationsDir,
 		HooksDir:      hooksDir,
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
-		Extensions:    []jsvm.Extension{jserrors.New()},
 	}); err != nil {
 		log.Fatal(err)
 	}

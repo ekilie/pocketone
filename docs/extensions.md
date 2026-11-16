@@ -33,7 +33,7 @@ func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 }
 
 // optional: a $hello global in the app's JS hooks
-func (p *Extension) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello", ...) */ }
+func (p *Extension) BindJS(app core.App, rt js.Runtime) { /* rt.Set("$hello", ...) */ }
 ```
 
 - **Every app has the [standard set](../ext/standard/README.md)** (tokens, mcp, pitr, deploy and the rest). Add yours

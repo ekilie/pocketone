@@ -28,12 +28,20 @@ repo root; each release here says which PocketBase version it's built on.
 
 ### Upgrading
 
+- **jsvm:** Go code that binds JS takes `js.Runtime` (`github.com/pockethost/pocketone/ext/extkit/js`) instead of `*goja.Runtime`: `extkit.JSBinder.BindJS(app, rt)`, `extkit.BindJS(app, rt, ...)`, `extkit.AppSet.BindJS`, Pocker's `InitJS(inst, app, rt)`, `mcp.BindJS(app, rt)`, `tokens.BindJS(app, rt)`, `bulkmail.BindJS(app, rt)`. `extkit.JSContracts(app)` no longer takes a runner. `standard.Set.Register` takes an `ext/jsvm` config.
+- **sandbox:** `MaxCallStackSize` and `MaxConcurrent` are gone (the engine caps the stack by size; set `jsvm.Config.VM.MaxConcurrent`). `Sandbox.Limits()` gives the execution and sleep limits for `jsvm.Config.VM`.
 - **bundle:** `ext/jsembed` is now `ext/bundle` and runs on the `ext/jsvm` engine. Import `github.com/pockethost/pocketone/ext/bundle`, register `ext/jsvm` instead of `plugins/jsvm`, and pass `bundle.Hooks(...)` / `bundle.Migrations(...)` in `jsvm.Config.Extensions`. A `require()` that isn't found now says "Cannot find module".
 
 ### Added
 
 - **bundle:** `bundle.Public(app, fsys, indexFallback)` serves public files embedded in the binary, like `pb_public`.
-- **jsvm:** new `ext/jsvm` extension, PocketOne's JS engine: one QuickJS VM per app with real globals, async handlers and `.async` Go calls, and hard per-app memory and time limits. It runs PocketBase's JS API unchanged; not in the `pocketone` binary yet.
+- **jsvm:** new `ext/jsvm` extension, PocketOne's JS engine: one QuickJS VM per app with real globals, async handlers and `.async` Go calls, and hard per-app memory and time limits. It runs PocketBase's JS API unchanged.
+
+### Changed
+
+- **jsvm:** the `pocketone` binary and every Pocker instance run JS on `ext/jsvm` (QuickJS, one VM per app) instead of goja. Hooks, routes and migrations run as before; hook files now share one global scope, handlers can be `async`, and errors name `pb_hooks/<file>:<line>:<col>` on their own (`ext/jserrors` is no longer used). `--hooksPool` is accepted and ignored.
+- **sandbox, pocker:** each instance's JS has a hard memory cap (64 MiB: JS heap plus Go objects it holds); gradual growth is now limited per instance, not only one-shot allocations. Process-reaching Go methods are also hidden when an app type embeds `*core.BaseApp`.
+- **contracts:** contract providers and `on<Contract><Op>` handlers written in pb_hooks can use the file's top-level variables.
 
 ## v0.0.1-alpha.4 (2026-11-16)
 

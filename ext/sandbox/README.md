@@ -15,13 +15,15 @@ Sandbox isn't a switch in `pocketone`: [Pocker](../pocker/README.md) applies it 
 a `multisite` section in `pocketone.yaml` (pocker as the runtime), every instance is sandboxed and there's nothing to install. A single app
 served by `pocketone` without a `multisite` section is not sandboxed.
 
-In your own Go build, give it to PocketBase's JS plugin as an extension:
+In your own Go build, give it to the [JSVM](../jsvm/README.md) engine as an extension:
 
 ```go
 sb := &sandbox.Sandbox{Dir: dir, Env: map[string]string{"GREETING": "hi"}}
+execution, sleep := sb.Limits()
 jsvm.MustRegister(app, jsvm.Config{
 	HooksDir:   filepath.Join(dir, "pb_hooks"),
-	Extensions: []jsvm.Extension{sb},
+	Extensions: []any{sb},
+	VM:         jsvm.VMConfig{TaskWall: execution, MaxSleep: sleep},
 })
 ```
 
@@ -36,8 +38,8 @@ defaults for every instance, and each instance can override them in its own `lim
 ```yaml
 pocker:
   max_js_execution: 30s       # each JS call (hook, route, cron, migration) is interrupted after this
-  max_js_allocation: 64MiB    # biggest single allocation JS can ask for
-  max_call_stack_size: 2000   # JS recursion depth
+  max_js_allocation: 64MiB    # biggest single file read or reader JS can ask for
+  max_call_stack_size: 2000   # unused: the JS engine caps its stack by size
   max_sleep: 10s              # cap on sleep()
   max_query_duration: 30s     # deadline for SQL statements that have none
   http_send_max_timeout: 60s  # cap on $http.send timeouts
@@ -49,8 +51,9 @@ pocker:
 The values shown are Pocker's defaults. An instance gets only its own `secrets` as environment.
 
 In a Go build, the same settings are `Sandbox` fields: `Dir` (required), `Env`, `MaxExecution` (default 30 s,
-negative turns it off), `MaxSleep`, `MaxAllocation`, `MaxCallStackSize`, `MaxConcurrent`, `HTTPSendMaxTimeout`,
-`HTTPSendMaxBody`, and `Console` to send `console.*` output somewhere other than the process's stdout and stderr.
+negative turns it off), `MaxSleep`, `MaxAllocation`, `HTTPSendMaxTimeout`, `HTTPSendMaxBody`, and `Console` to send
+`console.*` output somewhere other than the process's stdout and stderr. `Limits()` gives the execution and sleep
+limits for `jsvm.Config.VM`; the memory cap and `MaxConcurrent` are set there too.
 
 ## Use
 
@@ -79,7 +82,8 @@ Under Pocker, `console.*` output and hook errors go to the instance's own `logs/
 
 ### Building on Sandbox
 
-- **`Sandbox`** is a `jsvm.Extension` (`OnInit`, `OnCall`, `HTTPClient`); add it to `jsvm.Config.Extensions`.
+- **`Sandbox`** is a jsvm extension (`OnInit`, `Modules`, `HTTPClient`, and `HideField`/`HideMethod` to hide
+  process-reaching Go members); add it to `jsvm.Config.Extensions`.
 - **`GuardedDBConnect(maxQuery)`** is a `core.DBConnectFunc`: set it as the app's `DBConnect` to open the databases
   through SQLite's authorizer, with a deadline for statements that have none.
 - **`InstallEgressPolicy(sandbox.EgressPolicy{Allow: ...})`** routes Go's default HTTP transport through the
@@ -153,7 +157,7 @@ What you give up is the kernel boundary between tenants. Everything below replac
 ### The threat
 
 Assume every instance's owner is hostile. They control:
-- their `pb_hooks` (JavaScript, run by PocketBase's goja VM);
+- their `pb_hooks` (JavaScript, run by the instance's own QuickJS VM, [ext/jsvm](../jsvm/README.md));
 - their `pb_migrations`;
 - their collections, rules and settings;
 - any SQL their hooks run;
@@ -237,10 +241,9 @@ response sizes are capped.
 
 | Resource | What's enforced |
 |---|---|
-| CPU | Every JS call (hook, route, cron, migration) is interrupted after `max_js_execution`. `sleep()` is capped. |
-| Concurrency | At most `max_concurrent_js` JS calls per instance at once; more wait, then fail. Per-IP and per-instance rate and concurrency limits sit in front of every request. |
-| One-shot memory | Built-ins that allocate a big result in one step refuse results over `max_js_allocation`: `repeat`, `padStart`, `join`, typed arrays, `ArrayBuffer`, `Buffer`, file reads and others. Recursion depth is capped, so a JS stack overflow can't crash Go. |
-| Gradual memory | Not limited: goja can't account memory per VM. Gradual growth counts against the whole process (and its swap). |
+| CPU | Every JS call (hook, route, cron, migration) is interrupted after `max_js_execution`, Go calls included. `sleep()` is capped. |
+| Concurrency | At most `max_concurrent_js` JS calls per instance in flight at once; more wait, then fail. Per-IP and per-instance rate and concurrency limits sit in front of every request. |
+| Memory | Each instance's VM has a hard cap (default 64 MiB): the JS heap plus the Go objects JS holds. A script that grows past it, slowly or at once, gets an out-of-memory error; other instances are unaffected. The JS stack is capped by size, so deep recursion is an error, never a crash. File reads are capped at `max_js_allocation`. |
 
 Every limit has a process default and a per-instance override.
 
@@ -254,9 +257,9 @@ Every limit has a process default and a per-instance override.
 
 Be clear about these before you host strangers:
 
-- **Gradual memory isn't per instance.** goja can't account memory per VM, so a hook that grows memory slowly uses
-  the whole process's memory (and swap). Only one-shot allocations are capped.
-- **It's one address space.** A bug in Go, goja, SQLite or PocketOne's own checks would cross tenants in a way a
+- **Go memory is estimated.** Go objects JS holds are charged to the instance by estimate, and Go's garbage collector
+  can let the process use up to about twice that; set `GOMEMLIMIT` for the process.
+- **It's one address space.** A bug in Go, QuickJS, SQLite or PocketOne's own checks would cross tenants in a way a
   container boundary wouldn't. The sandbox tests cover the known paths, but they don't prove nothing else exists.
 - **No OS-level layer yet.** Seccomp, Landlock and a second, OS-level egress filter aren't built in.
 

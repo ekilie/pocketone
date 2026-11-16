@@ -10,7 +10,7 @@ require (
 	github.com/pockethost/pocketone/ext/edge v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/firewall v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/mailtrap v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/mothership v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
@@ -175,3 +175,5 @@ replace github.com/pockethost/pocketone/ext/s3-fallback => ../../ext/s3-fallback
 replace github.com/pockethost/pocketone/ext/backups => ../../ext/backups
 
 replace github.com/pockethost/pocketone/ext/settings => ../../ext/settings
+
+replace github.com/pockethost/pocketone/ext/jsvm => ../../ext/jsvm
