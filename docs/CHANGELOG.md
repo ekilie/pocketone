@@ -26,6 +26,8 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
+## v0.0.1-alpha.5 (2026-11-16)
+
 ### Upgrading
 
 - **jsvm:** PocketBase's `plugins/jsvm` is upstream's again: `Config.Extensions`, `jsvm.Run` and `jsvm.ScriptPath` are gone from it. Use `ext/jsvm` (its extension methods and `js.Run`) instead. `ext/jserrors` is removed; `ext/jsvm` reports real file positions.
