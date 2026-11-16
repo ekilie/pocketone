@@ -51,6 +51,10 @@ repo root; each release here says which PocketBase version it's built on.
 - **contracts:** contract providers and `on<Contract><Op>` handlers written in pb_hooks can use the file's top-level variables.
 - **pages:** runs on `ext/jsvm`. Templates can include each other at most 32 deep (was 64). A page that runs away now fails with the engine's "interrupted" or "out of memory" error.
 
+### Fixed
+
+- A crash or data race when an app stops its cron scheduler (on shutdown or restart), a PocketBase v0.42 regression; fixed in core until upstream has it.
+
 ### PocketBase
 
 - Built on PocketBase v0.42.2 (was v0.41.1). See its [changelog](../CHANGELOG.md) for v0.42.0 to v0.42.2.

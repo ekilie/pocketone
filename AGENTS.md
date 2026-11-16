@@ -97,6 +97,8 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 - `core/notify_watcher.go`: keeps the notify file until the next write, so macOS (kqueue) sees the change.
 - `core/notify_watcher.go`: stops the watcher goroutine (and waits for it) before `ClearBootstrap`, which it raced
   (`TestNotifyWatcher_StoppedBeforeClearBootstrap`, `TestNotifyWatcher_QueuedReloadAfterClearBootstrap`).
+- `tools/cron/cron.go` `Start`: the ticker goroutine keeps its own ticker, since `Stop` (buffered `tickerDone`
+  since v0.42) no longer waits for it before setting `c.ticker` to nil (`TestCronStopDoesNotRaceTicker`).
 
 ## Writing an extension
 
