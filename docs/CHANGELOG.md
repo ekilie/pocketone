@@ -26,7 +26,7 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
-## v0.0.1-alpha.5 (2026-11-16)
+## v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading
 
