@@ -101,8 +101,9 @@ func TestLinkSignsInThroughOAuth(t *testing.T) {
 	}
 	probe := *cl
 	probe.Token = cr.Token
-	if w, err := probe.Whoami(ctx); err != nil || w.Auth != nil {
-		t.Fatalf("token still works after logout: %+v %v", w, err)
+	// PocketBase v0.42 answers a revoked token with 401 (pbRejectUnknownToken) instead of serving it as a guest
+	if w, err := probe.Whoami(ctx); err == nil {
+		t.Fatalf("token still works after logout: %+v", w)
 	}
 }
 
