@@ -64,7 +64,7 @@ func searchIndex(root string, want map[string]string) (string, error) {
 		}
 	}
 	for p, content := range want { // generated pages, including ones not written yet
-		if strings.HasSuffix(p, ".md") && strings.HasPrefix(p, searchRoots[0]+"/") {
+		if strings.HasSuffix(p, ".md") && (strings.HasPrefix(p, searchRoots[0]+"/") || strings.HasPrefix(p, searchRoots[1]+"/")) {
 			pages[p] = content
 		}
 	}

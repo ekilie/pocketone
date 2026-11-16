@@ -91,7 +91,7 @@ func TestModuleRequireRelative(t *testing.T) {
 
 func TestStarterKitsRender(t *testing.T) {
 	dirs, _ := filepath.Glob("starters/*/pb_pages")
-	dirs = append(dirs, "site/pb_pages")
+	dirs = append(dirs, "../../site/pb_pages") // pocketone.dev, which carries the PocketPages docs (ext/pages/site)
 	for _, dir := range dirs {
 		t.Run(dir, func(t *testing.T) {
 			table, errs := Build(dir)
@@ -121,7 +121,7 @@ func TestAddonCopiesMatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, copy := range []string{"starters/datastar/pb_pages/_private/datastar.js", "site/pb_pages/_private/datastar.js"} {
+	for _, copy := range []string{"starters/datastar/pb_pages/_private/datastar.js"} {
 		got, err := os.ReadFile(copy)
 		if err != nil || string(got) != string(want) {
 			t.Errorf("%s differs from addons/datastar.js (copy it again)", copy)

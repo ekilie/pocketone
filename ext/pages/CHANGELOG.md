@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- The PocketPages docs and blog moved from pocketpages.dev into this folder (`site/`, `blog/`) and are now on
+  pocketone.dev under [/docs/extensions/pages](https://pocketone.dev/docs/extensions/pages); the minimal starter links
+  there.
+
 ### Upgrading
 
 - Go API: `Pages.RenderTemplate` is gone. Its one user, the OAuth pages, moved to Go templates in ext/templates (templates/v1).

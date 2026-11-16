@@ -16,8 +16,8 @@ caught and shown at `http://127.0.0.1:8025`.
 ## Server-rendered pages
 
 Put `.ejs` and Markdown files in a `pb_pages` folder and they're served as pages, with no build step. This site is
-one. `pocketone pages create myapp` starts a new site from a starter kit. Full docs are at
-[pocketpages.dev](https://pocketpages.dev).
+one. `pocketone pages create myapp` starts a new site from a starter kit. Full docs are under
+[Pages](https://pocketone.dev/docs/extensions/pages/overview).
 
 ## A config file
 

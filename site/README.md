@@ -1,7 +1,8 @@
 # pocketone.dev
 
 The PocketOne website: what PocketOne is, how to install it, and its extensions. A PocketPages v1 app (`ext/pages`),
-started from the pocketpages.dev site in [`../ext/pages/site`](../ext/pages/site).
+started from the pocketpages.dev site, whose docs now live in [`../ext/pages/site`](../ext/pages/site) and appear here
+under `/docs/extensions/pages`.
 
 ## Layout
 
@@ -31,6 +32,11 @@ cd site/sync && go run .
 - Each `ext/<name>/README.md` becomes `/docs/extensions/<name>`, with the extension's `pocketone.yaml` keys (from
   `pocketone config --json`, so it builds `examples/pocketone`) added to its `## Configure` section. Other `.md` files
   in the extension folder (`CHANGELOG.md` aside) become guides under it; `docs/extensions.md` becomes `/docs/writing-an-extension`.
+- An extension's `site/` folder (PocketPages pages, see `extsite.go` and
+  [Writing an extension](../docs/extensions.md#what-an-extension-folder-contains)) is copied under
+  `/docs/extensions/<name>/`, with its relative links pointed at site URLs and `source:` added for the edit link; its
+  `site/_private/toc.md` becomes nav sections after the extension catalogue. Its `blog/*.md` posts are copied into
+  `(main)/blog/` (only files sync wrote are ever removed there).
 - It also writes `/docs/config-reference`: every `pocketone.yaml` section.
 - Links between extensions and docs point at the site pages; links to source files point at GitHub.
 - The old URLs from before plugins were called extensions (`/docs/plugins/**`, `/docs/writing-a-plugin`) answer 301
@@ -49,7 +55,7 @@ cd site/sync && go run .
   [MiniSearch](https://lucaong.github.io/minisearch/) and the index the first time it's used. No external service.
 - **Comments** (`pb_pages/_private/docs-footer.js`, `pb_pages/assets/docs.js`): each docs page ends with a
   [giscus](https://giscus.app) box backed by GitHub Discussions (the Q&A category of pockethost/pocketone). A page's
-  thread is found by an exact term, not its URL: `pocketone.dev/docs/plugins/<name>` (the pre-rename URL, so old threads follow) for an extension and all its guides,
+  thread is found by an exact term, not its URL: `pocketone.dev/docs/plugins/<name>` (the pre-rename URL, so old threads follow) for an extension and its guides,
   `pocketone.dev/<path>` for other pages. Front matter `discussion: <term>` picks another term (keep it when a page
   moves, so its thread follows); `discussion: false` turns comments off. The docs home and the extension index have none.
   A thread is created on the first comment or reaction.

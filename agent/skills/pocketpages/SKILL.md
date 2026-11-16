@@ -12,7 +12,7 @@ routes, like PHP. Pages are EJS, Markdown, JSX or TSX templates rendered on the 
 It is **not** the npm `pocketpages` package (0.x). That one lived in `pb_hooks/pages/`, passed an `api` object and had
 `+load.js`/`+get.js` loaders. Most 0.x code needs changes: see [moving-from-0x](reference/docs/moving-from-0x.md).
 
-The contract is [reference/SPEC.md](reference/SPEC.md). Where a doc and the SPEC differ, trust the SPEC.
+The contract is [reference/docs/spec.md](reference/docs/spec.md). Where a doc and the SPEC differ, trust the SPEC.
 
 ## This is not Node
 
@@ -345,7 +345,7 @@ More: [deploying](reference/docs/deploying.md), [secrets](reference/docs/secrets
 ## Reference files
 
 Getting started
-- [SPEC.md](reference/SPEC.md): the full v1 contract, including every change from 0.x (section 12).
+- [spec](reference/docs/spec.md): the full v1 contract, including every change from 0.x (section 12).
 - [installation](reference/docs/installation.md): installing PocketOne, quickstart, where `pb_pages` lives.
 - [starter-kits](reference/docs/starter-kits.md): `pocketone pages create` and the kits.
 - [creating-a-page](reference/docs/creating-a-page.md): first pages, index files, nested folders.

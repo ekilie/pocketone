@@ -308,6 +308,8 @@ ext/<name>/
   conformance_test.go  the shared extension test (below)
   example/main.go   a minimal program that builds cleanly and shows the feature
   ui/               optional: admin screens (embedded main.js)
+  site/             optional: more end-user docs, as PocketPages pages (below)
+  blog/             optional: posts for the pocketone.dev blog
 ```
 
 - **`example/main.go` is required.** Keep it as small as possible: just enough to build a binary that shows the
@@ -364,6 +366,19 @@ ext/<name>/
 
   Write the first three for someone running one PocketOne app, not for a Go developer. Anything else (how it works,
   limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
+- **More docs than a README holds go in `site/`:** a folder of [PocketPages](https://pocketone.dev/docs/extensions/pages) pages that
+  pocketone.dev serves under your extension's page, so `site/ctx/req.md` is `/docs/extensions/<name>/ctx/req`.
+  [`ext/pages/site`](../ext/pages/site) (PocketPages' own docs) is the example.
+  - `site/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. It's added to the docs nav
+    after the extension catalogue, each section titled `<your extension's title>: <section>`.
+  - Pages are templates: EJS runs in `.md` files as in any PocketPages app, so a code sample writes `<%%` for a
+    literal `<%`. Partials go in `site/_private/`; the site's own (`browser`, for one) are found too.
+  - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `shot.png` beside the page); the
+    site turns them into site URLs, and a link to a file that doesn't exist fails the build.
+  - Content only: no `+` files (layouts, `+config.js`, middleware, API routes) and no `index` page at the root of
+    `site/`, which is your README's page.
+  - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
+    blog's own (title, description, date, author, tags) and links relative to the file.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another
   license lives in its author's own repository, not here.
   [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.

@@ -118,7 +118,7 @@ func TestFingerprint(t *testing.T) {
 
 func TestKitsAndSiteBuild(t *testing.T) {
 	dirs, _ := filepath.Glob("starters/*/pb_pages")
-	dirs = append(dirs, "site/pb_pages")
+	dirs = append(dirs, "../../site/pb_pages") // pocketone.dev, which carries the PocketPages docs (ext/pages/site)
 	for _, d := range dirs {
 		t.Run(d, func(t *testing.T) {
 			table, errs := Build(d)

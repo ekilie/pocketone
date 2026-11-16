@@ -2,9 +2,10 @@
 // giscus into it, and keeps
 // the tab title in step).
 //
-// Comments: one thread per page in the Q&A category, matched by an exact term. An extension's page and its guides share
-// the extension's thread. Pages that moved from /docs/plugins/ and /docs/writing-a-plugin keep their old terms, so
-// their existing threads follow them. Front matter `discussion: <term>` picks another term; `discussion: false` turns comments off.
+// Comments: one thread per page in the Q&A category, matched by an exact term. An extension's page and its guides (the
+// extra .md files beside its README; site/sync gives them `discussion:`) share the extension's thread; each page of an
+// extension's site (ext/<name>/site) has its own. Pages that moved from /docs/plugins/ and /docs/writing-a-plugin keep
+// their old terms, so their existing threads follow them. Front matter `discussion: <term>` picks another term; `discussion: false` turns comments off.
 // The docs home and the extension index have none.
 //
 // Docs links swap only #content, and a Datastar request gets the page without its layouts. So besides
@@ -19,7 +20,7 @@ module.exports = function () {
     const d = ctx.meta('discussion')
     if (d === false || d === 'false') return ''
     if (d) return String(d)
-    const ext = path.match(/^\/docs\/extensions\/([^/]+)/)
+    const ext = path.match(/^\/docs\/extensions\/([^/]+)$/)
     if (ext) return `pocketone.dev/docs/plugins/${ext[1]}` // old term: keeps threads from before the rename
     if (path === '/docs/writing-an-extension') return 'pocketone.dev/docs/writing-a-plugin'
     if (path === '/docs' || path === '/docs/extensions') return ''

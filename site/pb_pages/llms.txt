@@ -96,6 +96,89 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 
+## Pages: Introduction
+
+- [Overview of PocketPages](https://pocketone.dev/docs/extensions/pages/overview): PocketPages is server-rendered multi-page apps for PocketOne, from a pb_pages folder of EJS and Markdown files.
+- [Moving from PocketPages 0.x](https://pocketone.dev/docs/extensions/pages/moving-from-0x): What changed between the PocketPages npm package (0.x) and PocketPages v1 in PocketOne.
+- [Coding agents](https://pocketone.dev/docs/extensions/pages/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketPages v1 with the pocketpages Agent Skill and llms.txt.
+
+## Pages: Getting Started
+
+- [Installation](https://pocketone.dev/docs/extensions/pages/installation): Run PocketPages v1 on PocketOne with the pages extension, using a pb_pages folder.
+- [Starter Kits](https://pocketone.dev/docs/extensions/pages/starter-kits): Start a new PocketPages app from a starter kit with pocketone pages create.
+
+## Pages: Basics
+
+- [Creating a Page](https://pocketone.dev/docs/extensions/pages/creating-a-page): Create .ejs and .md files in pb_pages to add pages, with index files and nested folders mapping to URLs.
+- [Directory Structure](https://pocketone.dev/docs/extensions/pages/directory-structure): How a pb_pages folder is organized, and the special +, _, - and . prefixes.
+- [Routing](https://pocketone.dev/docs/extensions/pages/routing): How files in pb_pages map to URLs: pages, [param] segments, groups, API routes, static files, and which route wins.
+- [Accessing Parameters](https://pocketone.dev/docs/extensions/pages/parameters): Read route parameters from [param] file and folder names with ctx.params, and query strings with ctx.req.query().
+- [Loading Data](https://pocketone.dev/docs/extensions/pages/loading-data): Load data inline in templates or in a +page.js file with load and per-method handlers.
+- [API Routes and JSON](https://pocketone.dev/docs/extensions/pages/api-routes): Serve JSON and other non-HTML responses from +api.js files and ctx.res.json.
+
+## Pages: Templating
+
+- [EJS](https://pocketone.dev/docs/extensions/pages/ejs): The EJS tags PocketPages supports, escaping rules, and what's in scope inside a template.
+- [Markdown](https://pocketone.dev/docs/extensions/pages/markdown): .md pages and partials run through EJS, then Markdown, with YAML front matter passed to meta().
+- [JSX and TSX](https://pocketone.dev/docs/extensions/pages/jsx): Write pages, layouts, partials and error pages as .jsx or .tsx components, rendered to HTML on the server with no build step.
+- [Partials](https://pocketone.dev/docs/extensions/pages/partials): Include reusable templates from _private folders with include(name, locals).
+- [Layouts and Slots](https://pocketone.dev/docs/extensions/pages/layouts): Wrap pages with +layout.ejs files, and pass content between pages and layouts with named slots.
+
+## Pages: Security and Content
+
+- [Private files](https://pocketone.dev/docs/extensions/pages/private-files): How _private folders hold partials and JS modules for include() and ctx.resolve(), and which names are never routed.
+- [Middleware](https://pocketone.dev/docs/extensions/pages/middleware): +middleware.js files run root first for every route below them, with one (ctx, next) signature.
+- [Asset Management](https://pocketone.dev/docs/extensions/pages/asset-management): Static files in pb_pages get content-hashed URLs through asset() for long-term caching.
+- [Static content](https://pocketone.dev/docs/extensions/pages/static-content): Files in pb_pages that aren't pages or framework files are served as-is, with content types and ETags.
+- [Managing Secrets](https://pocketone.dev/docs/extensions/pages/secrets): Read API keys and other secrets from environment variables with ctx.env().
+
+## Pages: Configuration
+
+- [+config.js](https://pocketone.dev/docs/extensions/pages/config): Turn on built-in plugins, add JS plugins, and enable debug output from pb_pages/+config.js.
+- [Caching](https://pocketone.dev/docs/extensions/pages/caching): How PocketPages caches templates, static files and fingerprinted assets.
+- [Errors](https://pocketone.dev/docs/extensions/pages/errors): How PocketPages turns thrown errors into responses, ctx.httpError(), and custom +error and +404 pages.
+- [Debugging](https://pocketone.dev/docs/extensions/pages/debugging): Dev mode, debug in +config.js, and logging with ctx.log.
+- [Going Live](https://pocketone.dev/docs/extensions/pages/deploying): Deploy a PocketPages app by putting pb_pages next to pb_data on a PocketOne server (pages is built in).
+
+## Pages: Plugins
+
+- [Overview](https://pocketone.dev/docs/extensions/pages/plugins): Built-in plugins (auth, realtime) and JS plugins such as the Datastar add-on, turned on in +config.js.
+- [Authentication](https://pocketone.dev/docs/extensions/pages/plugins/auth): The built-in auth plugin keeps PocketBase auth in a cookie and adds ctx.session sign-in methods.
+- [Datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar): The Datastar add-on adds ctx.datastar helpers for Datastar script tags, SSE patches and signals.
+- [Realtime](https://pocketone.dev/docs/extensions/pages/plugins/realtime): The built-in realtime plugin sends messages to PocketBase realtime subscribers with ctx.realtime.send().
+- [Authoring](https://pocketone.dev/docs/extensions/pages/plugins/authoring): Write a JS plugin for PocketPages v1, a factory that returns onRequest, extendContext and transform hooks.
+
+## Pages: ctx Reference
+
+- [Overview](https://pocketone.dev/docs/extensions/pages/ctx): Reference for ctx, the one object per request passed to middleware, handlers, templates and plugins.
+- [req](https://pocketone.dev/docs/extensions/pages/ctx/req): The request - method, URL, query parameters, headers, cookies, body, uploaded files and client IP.
+- [res](https://pocketone.dev/docs/extensions/pages/ctx/res): The response - status, headers, cookies, redirects with flash messages, JSON, HTML, text, files and server-sent events.
+- [data, params, route](https://pocketone.dev/docs/extensions/pages/ctx/data): The shared data object, route parameters and the matched route.
+- [flash](https://pocketone.dev/docs/extensions/pages/ctx/flash): One-time messages carried across a redirect in a cookie.
+- [auth](https://pocketone.dev/docs/extensions/pages/ctx/auth): The authenticated record for the request, or null.
+- [app](https://pocketone.dev/docs/extensions/pages/ctx/app): The app - records, collections and settings.
+- [pb (JS SDK)](https://pocketone.dev/docs/extensions/pages/ctx/pb): Query your app with the PocketBase JS SDK from page code, as the signed-in user.
+- [env](https://pocketone.dev/docs/extensions/pages/ctx/env): Read environment variables.
+- [log](https://pocketone.dev/docs/extensions/pages/ctx/log): Write to the app's log with debug, info, warn and error.
+- [meta](https://pocketone.dev/docs/extensions/pages/ctx/meta): A per-request key/value store for page metadata such as title and description.
+- [asset](https://pocketone.dev/docs/extensions/pages/ctx/asset): Content-hashed URLs for static files in pb_pages.
+- [resolve](https://pocketone.dev/docs/extensions/pages/ctx/resolve): Load a module or file from a _private folder.
+- [store](https://pocketone.dev/docs/extensions/pages/ctx/store): The app's in-memory store, shared across requests.
+
+## Pages: Going Further
+
+- [JavaScript Runtime](https://pocketone.dev/docs/extensions/pages/jsvm): Where page code runs, what it can reach, and using npm packages from pb_pages/node_modules.
+
+## Pages: Guides
+
+- [Authentication](https://pocketone.dev/docs/extensions/pages/authentication): Sign users in and out with the auth plugin - passwords, one-time passwords, OAuth2 and anonymous sessions.
+- [HTMX Integration](https://pocketone.dev/docs/extensions/pages/htmx): Use HTMX with PocketPages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.
+- [Realtime Events](https://pocketone.dev/docs/extensions/pages/realtime): Send realtime messages from pages with the realtime plugin, and receive them in the browser with the PocketBase JS SDK.
+- [Custom Domains on Fly+Cloudflare](https://pocketone.dev/docs/extensions/pages/speedruns/custom-domain-fly-cloudflare): Step-by-step process to configure DNS records, SSL certificates, and domain verification between Fly.io and Cloudflare. Includes specific settings for A/AAAA records, CNAME verification, and SSL/TLS encryption modes.
+- [Google OAuth2](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketPages app with the auth plugin.
+- [Outgoing Email with Amazon SES](https://pocketone.dev/docs/extensions/pages/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
+- [Setting up a new email domain in Google Suite](https://pocketone.dev/docs/extensions/pages/speedruns/gs-gmail): Complete walkthrough for configuring email domains in Google Suite, including domain verification, Gmail activation, catch-all email setup, MX record configuration, and sender account integration.
+
 ## Going Further
 
 - [pocketone.yaml reference](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.

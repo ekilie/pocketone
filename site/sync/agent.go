@@ -26,6 +26,7 @@ type docsSite struct {
 	Toc                       string            // its docs nav (Markdown: "# Section" headings and "- [Title](/docs/...)" links)
 	SkillRef                  string            // the skill's reference folder
 	Extra                     map[string]string // more reference files: reference path -> repo path
+	Within                    string            // a part of the site (a URL prefix): only its pages, and no llms.txt of its own
 }
 
 var docsSites = []docsSite{
@@ -40,15 +41,12 @@ var docsSites = []docsSite{
 		SkillRef: "agent/skills/pocketone/reference",
 	},
 	{
-		Name:    "PocketPages",
-		URL:     "https://pocketpages.dev",
-		Summary: "PocketPages v1 is a file-routed, server-rendered page framework built into PocketOne (the `pages` extension): EJS, JSX or Markdown pages in pb_pages/, rendered inside PocketBase's JavaScript VM with a `ctx` API for requests, auth, data and assets.",
-		Intro: "PocketPages v1 runs in the `pocketone` binary, not Node; PocketPages 0.x (the npm package) is retired, see /docs/moving-from-0x. " +
-			"Agent Skill: https://github.com/pockethost/pocketone/tree/main/agent/skills/pocketpages (Claude Code: `/plugin marketplace add pockethost/pocketone`).",
-		Pages:    "ext/pages/site/pb_pages",
-		Toc:      "ext/pages/site/pb_pages/(main)/_private/toc.md",
+		// PocketPages' docs are the pages extension's site (ext/pages/site), part of pocketone.dev
+		Name:     "PocketPages",
+		URL:      "https://pocketone.dev",
+		Pages:    "site/pb_pages",
+		Within:   "/docs/extensions/pages",
 		SkillRef: "agent/skills/pocketpages/reference",
-		Extra:    map[string]string{"SPEC.md": "ext/pages/SPEC.md"},
 	},
 }
 
@@ -68,6 +66,26 @@ func agentFiles(root string, out map[string]string) error {
 		pages, err := docsPages(root, s, out)
 		if err != nil {
 			return err
+		}
+		if s.Within != "" {
+			// the skill gets only this part of the site, at paths relative to it (the landing page is docs/index.md)
+			sub := map[string]docsPage{}
+			for u, p := range pages {
+				if u == s.Within || strings.HasPrefix(u, s.Within+"/") {
+					rel := strings.TrimPrefix(strings.TrimPrefix(u, s.Within), "/")
+					if rel == "" {
+						rel = "index"
+					} else if strings.HasSuffix(p.file, "/index.md") {
+						rel += "/index"
+					}
+					p.file = rel + ".md"
+					sub[u] = p
+				}
+			}
+			for _, p := range sub {
+				out[s.SkillRef+"/docs/"+p.file] = p.body
+			}
+			continue
 		}
 		toc := out[s.Toc] // the nav this run generated, so llms.txt follows it in one run
 		if toc == "" {

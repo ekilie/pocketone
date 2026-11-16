@@ -54,6 +54,9 @@ type extension struct {
 	Name, Title, Group, Summary string
 	Link                        string // no README: point here (repo path) instead
 	guides                      []guide
+	site                        []string // ext/<name>/site, paths relative to it (extsite.go)
+	blog                        []string // ext/<name>/blog/*.md, file names
+	nav                         string   // the site's nav sections, ready for the docs nav
 }
 
 type guide struct {
@@ -198,6 +201,7 @@ func loadManifest(root string) (*manifest, error) {
 				slug: strings.ToLower(strings.TrimSuffix(n, ".md")),
 			})
 		}
+		problems = append(problems, loadSite(root, p)...)
 		m.Extensions = append(m.Extensions, p)
 	}
 	for name := range links {
@@ -274,7 +278,15 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 			pages[g.src] = "/docs/extensions/" + p.Name + "/" + g.slug
 		}
 	}
+	addSitePages(m, pages)
 	rw := &rewriter{root: root, pages: pages}
+	site, err := siteFiles(root, m, rw)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range site {
+		out[k] = v
+	}
 
 	for _, p := range m.Extensions {
 		if p.Link != "" {
@@ -287,7 +299,14 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 				return nil, err
 			}
 			g.title = title
-			out[extensionsOut+"/"+p.Name+"/"+g.slug+".md"] = frontMatter(title, p.Title+": "+title, g.src) + body
+			// a guide shares its extension's comment thread (see docs-footer.js)
+			fm := strings.Replace(frontMatter(title, p.Title+": "+title, g.src), "\n---\n", "\ndiscussion: \"pocketone.dev/docs/plugins/"+p.Name+"\"\n---\n", 1)
+			out[extensionsOut+"/"+p.Name+"/"+g.slug+".md"] = fm + body
+		}
+		if len(p.site) > 0 {
+			if p.nav, err = siteNav(root, p, rw); err != nil {
+				return nil, err
+			}
 		}
 		page, err := extensionPage(rw, p, secs)
 		if err != nil {
@@ -380,6 +399,14 @@ func nav(m *manifest) string {
 			fmt.Fprintf(&b, "- [%s](%s)\n", p.Title, link(p))
 			for _, gd := range p.guides {
 				fmt.Fprintf(&b, "- [%s: %s](/docs/extensions/%s/%s)\n", p.Title, gd.title, p.Name, gd.slug)
+			}
+		}
+	}
+	// extension sites' own sections, after the catalogue so it stays short
+	for _, g := range m.Groups {
+		for _, p := range m.Extensions {
+			if p.Group == g.ID {
+				b.WriteString(p.nav)
 			}
 		}
 	}
@@ -516,6 +543,17 @@ func diff(root string, want map[string]string) ([]string, error) {
 	for _, out1 := range append([]string{extensionsOut, contractsOut}, agentOutDirs()...) {
 		if err = staleUnder(root, out1, want, &out); err != nil {
 			return nil, err
+		}
+	}
+	// the blog holds hand-written posts too: only a generated post nothing makes any more is stale
+	posts, _ := os.ReadDir(filepath.Join(root, blogOut))
+	for _, e := range posts {
+		rel := blogOut + "/" + e.Name()
+		if _, ok := want[rel]; ok || e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		if raw, err := os.ReadFile(filepath.Join(root, rel)); err == nil && strings.Contains(string(raw), generatedPrefix+"ext/") {
+			out = append(out, rel)
 		}
 	}
 	sort.Strings(out)
