@@ -7,6 +7,7 @@ require (
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
+	github.com/evanw/esbuild v0.28.2
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.1

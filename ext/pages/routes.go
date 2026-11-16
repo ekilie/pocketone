@@ -98,10 +98,10 @@ func ignored(name string) bool {
 // wellKnown is the one dot folder that's served (RFC 8615: ACME challenges, security.txt, app links), at the top only.
 func wellKnown(p string) bool { return p == ".well-known" }
 
-// isHookFile reports a pb_hooks hook file (*.pb.js, *.pb.cjs, *.pb.mjs, *.pb.ts): never served from pb_pages, where it
+// isHookFile reports a pb_hooks hook file (*.pb.js, .cjs, .mjs, .ts, .cts, .mts): never served from pb_pages, where it
 // wouldn't run.
 func isHookFile(name string) bool {
-	for _, ext := range []string{".pb.js", ".pb.cjs", ".pb.mjs", ".pb.ts"} {
+	for _, ext := range []string{".pb.js", ".pb.cjs", ".pb.mjs", ".pb.ts", ".pb.cts", ".pb.mts"} {
 		if strings.HasSuffix(name, ext) {
 			return true
 		}

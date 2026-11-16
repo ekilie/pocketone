@@ -46,10 +46,10 @@ func Register(app core.App, config Config) error {
 		p.config.MigrationsDir = filepath.Join(app.DataDir(), "../pb_migrations")
 	}
 	if p.config.HooksFilesPattern == "" {
-		p.config.HooksFilesPattern = `^.*(\.pb\.js|\.pb\.cjs|\.pb\.mjs|\.pb\.ts)$`
+		p.config.HooksFilesPattern = `^.*\.pb\.(js|cjs|mjs|ts|cts|mts)$`
 	}
 	if p.config.MigrationsFilesPattern == "" {
-		p.config.MigrationsFilesPattern = `^.*(\.js|\.cjs|\.mjs|\.ts)$`
+		p.config.MigrationsFilesPattern = `^.*\.(js|cjs|mjs|ts|cts|mts)$`
 	}
 	if p.config.TypesDir == "" {
 		p.config.TypesDir = app.DataDir()
@@ -242,12 +242,23 @@ func (p *plugin) registerMigrations() error {
 			// each migration file gets its own scope, as with a VM per file in plugins/jsvm (an ES module has its own)
 			label := "pb_migrations/" + name
 			dir := filepath.Dir(filepath.Join(p.migrationsDir(), name))
-			if strings.HasSuffix(name, ".mjs") {
-				runErr = p.vm.evalModuleHere(string(files[name]), label, dir)
+			module := strings.HasSuffix(name, ".mjs") || strings.HasSuffix(name, ".mts")
+			code := string(files[name])
+			if isTS(name) {
+				format, offset := tsScript, 1
+				if module {
+					format, offset = tsESM, 0
+				}
+				if code, runErr = p.vm.transpile(code, label, format, offset); runErr != nil {
+					return
+				}
+			}
+			if module {
+				runErr = p.vm.evalModuleHere(code, label, dir)
 				return
 			}
 			p.vm.mods.base[label] = dir
-			runErr = p.vm.evalHere("(function(){\n"+string(files[name])+"\n})()", label)
+			runErr = p.vm.evalHere("(function(){\n"+code+"\n})()", label)
 		})
 		if err == nil {
 			err = runErr
@@ -320,11 +331,22 @@ func (p *plugin) registerHooks() error {
 			// are visible to every handler. A .pb.mjs file is an ES module: private top level, export/import.
 			label := "pb_hooks/" + name
 			dir := filepath.Dir(filepath.Join(p.hooksDir, name))
-			if strings.HasSuffix(name, ".mjs") {
-				runErr = p.vm.evalModuleHere(string(files[name]), label, dir)
-			} else {
+			module := strings.HasSuffix(name, ".mjs") || strings.HasSuffix(name, ".mts")
+			code := string(files[name])
+			if isTS(name) {
+				format := tsScript
+				if module {
+					format = tsESM
+				}
+				code, runErr = p.vm.transpile(code, label, format, 0)
+			}
+			switch {
+			case runErr != nil:
+			case module:
+				runErr = p.vm.evalModuleHere(code, label, dir)
+			default:
 				p.vm.mods.base[label] = dir
-				runErr = p.vm.evalHere(string(files[name]), label)
+				runErr = p.vm.evalHere(code, label)
 			}
 			for _, m := range mappers {
 				runErr = m(runErr)

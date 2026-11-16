@@ -53,7 +53,12 @@ func (m *moduleState) resolve(dir, spec string, esm bool) (string, []byte, bool)
 }
 
 func (m *moduleState) tryFile(p string, esm bool) (string, []byte, bool) {
-	for _, cand := range []string{p, p + ".js", p + ".mjs", p + ".cjs", p + ".json"} {
+	cands := []string{p, p + ".js", p + ".mjs", p + ".cjs", p + ".json", p + ".ts", p + ".mts", p + ".cts"}
+	// TypeScript imports name the compiled file: "./util.js" means ./util.ts when there's no util.js
+	if ts, ok := map[string]string{".js": ".ts", ".mjs": ".mts", ".cjs": ".cts"}[filepath.Ext(p)]; ok {
+		cands = append(cands, strings.TrimSuffix(p, filepath.Ext(p))+ts)
+	}
+	for _, cand := range cands {
 		if b, ok := m.read(cand); ok {
 			return cand, b, true
 		}
@@ -73,7 +78,7 @@ func (m *moduleState) tryFile(p string, esm bool) (string, []byte, bool) {
 			}
 			for _, e := range entries {
 				main := filepath.Join(p, e)
-				for _, cand := range []string{main, main + ".js", main + ".mjs", main + ".cjs", filepath.Join(main, "index.js")} {
+				for _, cand := range []string{main, main + ".js", main + ".mjs", main + ".cjs", main + ".ts", filepath.Join(main, "index.js")} {
 					if b, ok := m.read(cand); ok {
 						return cand, b, true
 					}
@@ -81,7 +86,7 @@ func (m *moduleState) tryFile(p string, esm bool) (string, []byte, bool) {
 			}
 		}
 	}
-	for _, idx := range []string{"index.js", "index.mjs", "index.cjs", "index.json"} {
+	for _, idx := range []string{"index.js", "index.mjs", "index.cjs", "index.json", "index.ts", "index.mts", "index.cts"} {
 		if b, ok := m.read(filepath.Join(p, idx)); ok {
 			return filepath.Join(p, idx), b, true
 		}
@@ -112,12 +117,12 @@ func pickExport(v any, esm bool) string {
 	return ""
 }
 
-// isESM: .mjs, or a .js file in a node_modules package whose package.json says "type": "module".
+// isESM: .mjs/.mts, or a .js/.ts file in a node_modules package whose package.json says "type": "module".
 func (m *moduleState) isESM(p string) bool {
 	switch filepath.Ext(p) {
-	case ".mjs":
+	case ".mjs", ".mts":
 		return true
-	case ".js":
+	case ".js", ".ts":
 		if !strings.Contains(p, string(filepath.Separator)+"node_modules"+string(filepath.Separator)) {
 			return false
 		}
@@ -180,7 +185,14 @@ func (vm *VM) loadModule(path string) (uintptr, error) {
 		if !ok {
 			return 0, fmt.Errorf("Cannot read module '%s'", path)
 		}
-		if m := C.avm_compile_module(vm.ctx, string(src), path, importMeta(path)); m != 0 {
+		code := string(src)
+		if isTS(path) {
+			var err error
+			if code, err = vm.transpile(code, path, tsESM, 0); err != nil {
+				return 0, err
+			}
+		}
+		if m := C.avm_compile_module(vm.ctx, code, path, importMeta(path)); m != 0 {
 			return m, nil
 		}
 		return 0, errThrown

@@ -87,8 +87,9 @@ type VM struct {
 	// Hider, when set, hides Go members from JS (an extension's js.Hider, e.g. the sandbox's).
 	Hider js.Hider
 
-	sliceProto JSValue      // prototype of Go slices: Array methods
-	mods       *moduleState // require() and import resolution (set by bindNode)
+	sliceProto JSValue               // prototype of Go slices: Array methods
+	mods       *moduleState          // require() and import resolution (set by bindNode)
+	srcMaps    map[string]*sourceMap // TypeScript files by the name in stack traces
 
 	slotsOnce sync.Once
 	slots     chan struct{} // MaxConcurrent
@@ -459,7 +460,7 @@ func (vm *VM) exception() error {
 			thrown = tv.Interface()
 		}
 		if C.avm_tag(stack) == C.JS_TAG_STRING {
-			return &JSError{Message: msg, Stack: vm.goString(stack), Value: thrown, Msg: short}
+			return &JSError{Message: msg, Stack: vm.remapStack(vm.goString(stack)), Value: thrown, Msg: short}
 		}
 		return &JSError{Message: msg, Value: thrown, Msg: short}
 	}

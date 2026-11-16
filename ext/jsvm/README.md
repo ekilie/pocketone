@@ -12,6 +12,8 @@ PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS AP
   visible to every handler. No more `require()` inside each handler.
 - **ES modules.** `*.pb.mjs` hook files and `.mjs` modules use `import`/`export`, including top-level `await`;
   `*.pb.js` and `*.pb.cjs` stay scripts with `require()`. Both share the same module instances.
+- **TypeScript.** `.ts`, `.mts` and `.cts` hooks, migrations and modules run directly (types stripped by esbuild,
+  linked into the binary), with error positions in your `.ts` source.
 - **Async.** Handlers can be `async`. Every Go function has an `.async(...)` twin that runs off the VM and returns a
   promise, so one app serves other requests while it waits: `await $app.findRecordById.async("posts", id)`.
 - **Hard limits per app.** A memory cap (JS heap plus Go objects JS holds), a CPU and a wall-clock budget per task, and
@@ -72,16 +74,16 @@ routerAdd("GET", "/post/{slug}", async (e) => {
 
 ### Modules: import and require
 
-Name a file for what it is: `.mjs` is an ES module, `.cjs` is CommonJS. A plain `.js` file is CommonJS, so existing
-PocketBase hooks run unchanged (inside `node_modules`, Node's rule applies: `"type": "module"` in the package's
-`package.json` makes its `.js` files ES modules).
+Name a file for what it is: `.mjs` (or `.mts`) is an ES module, `.cjs` (or `.cts`) is CommonJS. A plain `.js` or
+`.ts` file is CommonJS, so existing PocketBase hooks run unchanged (inside `node_modules`, Node's rule applies:
+`"type": "module"` in the package's `package.json` makes its `.js` files ES modules).
 
 | File | Runs as | Shares through |
 |---|---|---|
-| `pb_hooks/*.pb.mjs` | ES module: `import`, `export`, top-level `await`, `import.meta` | `export` / `import`; its top-level names are private |
-| `pb_hooks/*.pb.cjs`, `*.pb.js` | script in the app's one global scope, with `require()` | globals |
-| `pb_migrations/*.mjs` | ES module | each migration has its own scope either way |
-| `pb_migrations/*.cjs`, `*.js` | script in its own function scope | |
+| `pb_hooks/*.pb.mjs`, `*.pb.mts` | ES module: `import`, `export`, top-level `await`, `import.meta` | `export` / `import`; its top-level names are private |
+| `pb_hooks/*.pb.cjs`, `*.pb.cts`, `*.pb.js`, `*.pb.ts` | script in the app's one global scope, with `require()` | globals |
+| `pb_migrations/*.mjs`, `*.mts` | ES module | each migration has its own scope either way |
+| `pb_migrations/*.cjs`, `*.cts`, `*.js`, `*.ts` | script in its own function scope | |
 
 ```js
 // pb_hooks/lib/store.mjs
@@ -105,6 +107,18 @@ routerAdd("GET", "/hit", (e) => e.json(200, { hits: bump() }))
   instance `require()` returns.
 - A script reaches an ES module with `await import("./lib/store.mjs")`; `require()` of an ES module throws and says to
   use `import`.
+
+### TypeScript
+
+`.ts`, `.mts` and `.cts` files run as they are: esbuild strips the types when the file loads, and each file's source
+map is kept, so an error names `pb_hooks/main.pb.mts:12:5` in your source, not in the stripped code.
+
+- There's no type checking at runtime. Check with `tsc --noEmit` or your editor; `pb_data/types.d.ts` types the
+  whole JS API.
+- Imports may name the compiled file, as TypeScript's `NodeNext` style does: `import { add } from "./math.js"` loads
+  `math.ts` when there's no `math.js`.
+- `import type` and other type-only imports disappear, so a `*.pb.ts` script can use them and stay a script.
+- A `.ts` module that `require()` loads may still be written with `import`/`export`; it's turned into CommonJS.
 
 ## Integrations
 

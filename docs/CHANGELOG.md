@@ -35,6 +35,7 @@ repo root; each release here says which PocketBase version it's built on.
 
 ### Added
 
+- **jsvm:** TypeScript: `.ts`, `.mts` and `.cts` hooks (`*.pb.ts`, `*.pb.mts`, `*.pb.cts`), migrations and modules run directly, with types stripped by esbuild and error positions in the `.ts` source. `.mts` is an ES module, `.cts` CommonJS, `.ts` like `.js`; `import "./x.js"` finds `x.ts`. No runtime type checking: use `tsc --noEmit` with `pb_data/types.d.ts`.
 - **jsvm:** ES modules: `pb_hooks/*.pb.mjs` hook files, `pb_migrations/*.mjs` migrations and `.mjs` modules use `import`/`export` with top-level `await` and `import.meta`. `*.pb.js` and the new `*.pb.cjs` stay CommonJS scripts with `require()`. `import` and `require()` share one resolver (relative paths, `node_modules`, `package.json` `exports` conditions) and one instance per module.
 
 - **jsvm:** `jsvm: goja` under `app:` in `pocketone.yaml`, or `--jsvm goja`, runs a single app on PocketBase's own JS engine for pure PocketBase compatibility (pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts are off; the startup lines say so). The default is `quickjs`.

@@ -24,6 +24,7 @@ require (
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/evanw/esbuild v0.28.2 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect

@@ -94,6 +94,12 @@ var esmHooks = map[string]string{
 
 func esmApp(t *testing.T, extra map[string]string) (core.App, http.Handler, error) {
 	t.Helper()
+	return esmAppWith(t, esmHooks, extra)
+}
+
+// esmAppWith registers an app whose pb_hooks/pb_migrations hold base plus extra.
+func esmAppWith(t *testing.T, base, extra map[string]string) (core.App, http.Handler, error) {
+	t.Helper()
 	saved := core.AppMigrations
 	t.Cleanup(func() { core.AppMigrations = saved })
 	app, err := tests.NewTestApp()
@@ -103,7 +109,7 @@ func esmApp(t *testing.T, extra map[string]string) (core.App, http.Handler, erro
 	t.Cleanup(app.Cleanup)
 	dir := t.TempDir()
 	files := map[string]string{}
-	for k, v := range esmHooks {
+	for k, v := range base {
 		files[k] = v
 	}
 	for k, v := range extra {

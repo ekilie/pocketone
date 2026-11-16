@@ -76,7 +76,14 @@ func bindNode(vm *VM, root string, load func(string) ([]byte, error)) error {
 		if vm.mods.isESM(found) {
 			return nil, fmt.Errorf("require() of ES module %s: use import (or import() from CommonJS)", found)
 		}
-		return &resolvedModule{Path: found, Dir: filepath.Dir(found), Source: string(src)}, nil
+		code := string(src)
+		if isTS(found) {
+			var err error
+			if code, err = vm.transpile(code, found, tsCommonJS, 0); err != nil {
+				return nil, err
+			}
+		}
+		return &resolvedModule{Path: found, Dir: filepath.Dir(found), Source: code}, nil
 	}, false))
 
 	vm.setHidden("__compileModule", vm.nativeValue(func(c *call) (any, error) {
