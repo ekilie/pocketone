@@ -26,6 +26,7 @@ import (
 	"github.com/pockethost/pocketone/ext/mailrelay"
 	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/standard"
 )
 
 func main() {
@@ -49,7 +50,8 @@ func main() {
 	}
 
 	srv := &pocker.Server{
-		Config: cfg,
+		Config:   cfg,
+		Standard: standard.New(), // every instance gets the standard extensions
 		Extensions: []pocker.Extension{
 			mailrelay.New(mailrelay.Config{
 				Domain:   "mail.localhost",

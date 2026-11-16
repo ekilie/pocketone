@@ -14,7 +14,7 @@ import (
 func TestAppRestartRestartsOnlyThatApp(t *testing.T) {
 	var inits []string
 	a, b := Instance{ID: "a", Hosts: []string{"a.test"}}, Instance{ID: "b", Hosts: []string{"b.test"}}
-	m := NewManager(staticSource{a, b}, ManagerOptions{
+	m := NewManager(staticSource{a, b}, ManagerOptions{Standard: testStandard,
 		PBRoot: t.TempDir(),
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Init: func(inst Instance, app core.App) error {

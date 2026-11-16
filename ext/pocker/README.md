@@ -126,8 +126,9 @@ failure is written there too.
 
 ### Building on Pocker
 
-- **Standard set.** `pocker.Provider.Standard` (or `pocker.Server.Standard`) is [ext/standard](../standard/README.md)'s
-  set: every instance gets its members, each turned off per instance with `extensions.<name>.enabled: false`, and its
+- **Standard set (required).** `pocker.Provider.Standard` (or `pocker.Server.Standard`, `ManagerOptions.Standard`) is
+  [ext/standard](../standard/README.md)'s set, and Pocker won't start an instance without it: a server without one
+  refuses to run, so no host can make an instance that lacks the standard extensions. Every instance gets its members, each turned off per instance with `extensions.<name>.enabled: false`, and its
   startup lines (`standard: on: ...`) are in the instance's own log. Listing a member in `Extensions` too is an error.
 - **Contracts the host provides.** `Server.Host` (or `Provider.Host`) is the host's contract scope. A contract the
   host provides for its instances steps aside inside each instance's app, and the host answers it on the instance's
@@ -183,6 +184,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/standard"
 )
 
 //go:embed ui
@@ -195,7 +197,8 @@ func main() {
 	ui, _ := fs.Sub(uiFiles, "ui")
 
 	srv := &pocker.Server{
-		Config: cfg,
+		Config:   cfg,
+		Standard: standard.New(), // every instance gets the standard extensions (tokens, mcp, pages, pitr, ...)
 		// Runs for every instance's app after its migrations, before it serves.
 		SetupApp: func(inst pocker.Instance, app core.App) error {
 			// local testing: every instance gets superuser admin@example.com and user user@example.com, password "password"

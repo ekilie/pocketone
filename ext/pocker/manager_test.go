@@ -16,7 +16,7 @@ func (s staticSource) Watch(context.Context) (<-chan Change, error) { return nil
 
 func newTestManager(t *testing.T, dev bool, list ...Instance) *Manager {
 	t.Helper()
-	m := NewManager(staticSource(list), ManagerOptions{
+	m := NewManager(staticSource(list), ManagerOptions{Standard: testStandard,
 		PBRoot: t.TempDir(),
 		Dev:    dev,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),

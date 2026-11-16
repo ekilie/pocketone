@@ -17,6 +17,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/standard"
 )
 
 //go:embed ui
@@ -29,7 +30,8 @@ func main() {
 	ui, _ := fs.Sub(uiFiles, "ui")
 
 	srv := &pocker.Server{
-		Config: cfg,
+		Config:   cfg,
+		Standard: standard.New(), // every instance gets the standard extensions (tokens, mcp, pages, pitr, ...)
 		// Runs for every instance's app after its migrations, before it serves.
 		SetupApp: func(inst pocker.Instance, app core.App) error {
 			// local testing: every instance gets superuser admin@example.com and user user@example.com, password "password"

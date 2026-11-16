@@ -79,7 +79,7 @@ routerAdd("GET", "/say", (e) => {
 	b := Instance{ID: "b", Hosts: []string{"b.example.com"}}
 	broken := Instance{ID: "broken", Hosts: []string{"broken.example.com"}}
 
-	m := NewManager(staticSource{a, b, broken}, ManagerOptions{
+	m := NewManager(staticSource{a, b, broken}, ManagerOptions{Standard: testStandard,
 		PBRoot: root,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		// host Go code: a backup route checked against a private token

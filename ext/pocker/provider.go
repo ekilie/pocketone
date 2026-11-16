@@ -32,7 +32,7 @@ var Section = extkit.NewSectionFunc("pocker", func() SectionConfig {
 // Provider is pocker as a host extension for ext/multisite: it reads the `pocker` section and provides runtime/v1
 // (instances in-process). The fields are the host application's extensions, as on [Server].
 type Provider struct {
-	// Standard is the per-app extension set every instance gets (ext/standard's Set; see [Server.Standard]).
+	// Standard is the per-app extension set every instance gets (ext/standard's Set; see [Server.Standard]). Required.
 	Standard extkit.AppSet
 	// Host is the host's contract scope (see [Server.Host]).
 	Host *extkit.Scope

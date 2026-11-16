@@ -26,6 +26,14 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
+### Upgrading
+
+- **pocker:** if you build your own host on Pocker, set `Standard: standard.New()` on `pocker.Server`, `pocker.Provider` or `pocker.ManagerOptions`. Pocker now refuses to start instances without the standard set, so every instance has tokens, OAuth sign-in, MCP, pages and the rest. Drop standard members (pages, pitr, settings, ...) from `Extensions`; configure them on the set instead. The stock `pocketone` binary already does this.
+
+### Changed
+
+- **pocker:** every instance gets the standard extensions; there's no way to start one without them.
+
 ## v0.0.1-alpha.3 (2026-11-16)
 
 ### Upgrading

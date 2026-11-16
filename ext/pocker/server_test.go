@@ -90,7 +90,7 @@ instances:
 	addr := freeAddr(t)
 	cfg := DefaultConfig()
 	cfg.Listen, cfg.PBRoot, cfg.InstancesFile = addr, root, instances
-	srv := &Server{
+	srv := &Server{Standard: testStandard,
 		Config: cfg,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		SetupApp: func(inst Instance, app core.App) error {
@@ -228,7 +228,7 @@ func TestTLSRedirectAndReload(t *testing.T) {
 	cfg.PlainListen = []string{plainAddr}
 	cfg.InstancesFile = filepath.Join(dir, "none.yaml")
 	cfg.TLS = TLSConfig{Cert: certPath, Key: keyPath, HTTPListen: httpAddr}
-	srv := &Server{Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	srv := &Server{Standard: testStandard, Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx) }()
@@ -305,7 +305,7 @@ func TestServerAppIniterExtension(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Listen, cfg.PBRoot, cfg.InstancesFile = addr, root, instances
 	p := initExtension{calls: make(chan string, 4)}
-	srv := &Server{Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Extensions: []Extension{p}}
+	srv := &Server{Standard: testStandard, Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Extensions: []Extension{p}}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx) }()
@@ -348,7 +348,7 @@ func TestServerSnapshotsOnce(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Listen, cfg.PBRoot = addr, t.TempDir()
 	src := &countingSource{staticSource: staticSource{{ID: "one", Hosts: []string{"one.test"}}}}
-	srv := &Server{Config: cfg, Source: src, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	srv := &Server{Standard: testStandard, Config: cfg, Source: src, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx) }()
@@ -358,5 +358,21 @@ func TestServerSnapshotsOnce(t *testing.T) {
 	defer src.mu.Unlock()
 	if src.calls != 1 {
 		t.Fatalf("Snapshot calls: %d, want 1", src.calls)
+	}
+}
+
+// No host can start an instance without the standard extensions: a Server without Standard refuses to run, and so
+// does a hand-built Manager when it starts an app.
+func TestStandardRequired(t *testing.T) {
+	srv := &Server{Config: DefaultConfig(), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	if err := srv.Run(context.Background()); !errors.Is(err, errNoStandard) {
+		t.Fatalf("Server without Standard: %v", err)
+	}
+	list := []Instance{{ID: "a", Hosts: []string{"a.test"}}}
+	m := NewManager(staticSource(list), ManagerOptions{PBRoot: t.TempDir(), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	m.dir.Load(list)
+	defer m.Shutdown()
+	if err := m.StartInstance(context.Background(), "a"); !errors.Is(err, errNoStandard) {
+		t.Fatalf("Manager without Standard: %v", err)
 	}
 }

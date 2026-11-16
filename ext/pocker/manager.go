@@ -102,7 +102,7 @@ type ManagerOptions struct {
 	Directory *multisite.Directory
 	// Logger defaults to slog.Default().
 	Logger *slog.Logger
-	// Standard is registered on every app (see [Server.Standard]).
+	// Standard is registered on every app (see [Server.Standard]). Required: without it no instance starts.
 	Standard extkit.AppSet
 	// Host is the host's contract scope (see [Server.Host]).
 	Host *extkit.Scope

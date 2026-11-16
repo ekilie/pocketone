@@ -34,7 +34,7 @@ func TestPockerRestoreRestartsOnlyThatInstance(t *testing.T) {
 	apps := map[string][]core.App{} // every app started, by instance
 	a := pocker.Instance{ID: "a", Hosts: []string{"a.test"}, Extensions: map[string]any{"pitr": map[string]any{"retention": "168h"}}}
 	b := pocker.Instance{ID: "b", Hosts: []string{"b.test"}, Extensions: map[string]any{"pitr": map[string]any{"enabled": false}}}
-	m := pocker.NewManager(fixedSource{a, b}, pocker.ManagerOptions{
+	m := pocker.NewManager(fixedSource{a, b}, pocker.ManagerOptions{Standard: testStandard,
 		PBRoot: t.TempDir(),
 		Logger: quiet,
 		Init:   pocker.InitExtensions(p), // what pocker.Server does for extkit extensions

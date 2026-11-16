@@ -27,7 +27,7 @@ func TestRemoteInstanceIsForwarded(t *testing.T) {
 	}
 
 	// default: a reverse proxy to Remote; no app starts and no folder is created here
-	m := NewManager(staticSource{remote}, ManagerOptions{PBRoot: root, Logger: quiet})
+	m := NewManager(staticSource{remote}, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: quiet})
 	m.dir.Load([]Instance{remote})
 	if code, body := get(m); code != 200 || body != "upstream away.example.com/x" {
 		t.Fatalf("default forward: %d %q", code, body)
@@ -42,7 +42,7 @@ func TestRemoteInstanceIsForwarded(t *testing.T) {
 	// Forward replaces the proxy, after the gate admits the request
 	var forwarded []string
 	limited := remote
-	m = NewManager(staticSource{limited}, ManagerOptions{PBRoot: root, Logger: quiet, Gate: &onceGate{},
+	m = NewManager(staticSource{limited}, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: quiet, Gate: &onceGate{},
 		Forward: func(w http.ResponseWriter, r *http.Request, inst Instance) {
 			forwarded = append(forwarded, inst.ID)
 			_, _ = io.WriteString(w, "forwarded")

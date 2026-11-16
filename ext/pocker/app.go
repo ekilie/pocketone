@@ -132,20 +132,20 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 	if opts.Host != nil {
 		extkit.AttachHost(app, opts.Host, inst.ID)
 	}
-	var plan *extkit.Plan
-	if opts.Standard != nil {
-		if plan, err = opts.Standard.Prepare(app, func(name string) extkit.Config {
-			own, _ := extkit.Layer(inst.ExtensionConfig(name))
-			return extkit.Config{own}
-		}); err != nil {
-			return nil, fmt.Errorf("standard: %w", err)
-		}
+	// every instance gets the standard extensions; there's no way to make one without them
+	if opts.Standard == nil {
+		return nil, errNoStandard
+	}
+	plan, err := opts.Standard.Prepare(app, func(name string) extkit.Config {
+		own, _ := extkit.Layer(inst.ExtensionConfig(name))
+		return extkit.Config{own}
+	})
+	if err != nil {
+		return nil, fmt.Errorf("standard: %w", err)
 	}
 	jsExt := hookExtensions(sb, dev, openInstanceLog(dir))
-	if opts.Standard != nil {
-		for _, e := range opts.Standard.JSExtensions(app) {
-			jsExt = append(jsExt, e)
-		}
+	for _, e := range opts.Standard.JSExtensions(app) {
+		jsExt = append(jsExt, e)
 	}
 	err = jsvm.Register(app, jsvm.Config{
 		HooksDir:      filepath.Join(dir, "pb_hooks"),
@@ -155,9 +155,7 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 		// the sandbox (OnInit, OnCall, HTTPClient); hook errors name pb_hooks/<file>:<line>:<col> in the instance log
 		Extensions: jsExt,
 		OnInit: func(vm *goja.Runtime) {
-			if opts.Standard != nil {
-				opts.Standard.BindJS(app, vm)
-			}
+			opts.Standard.BindJS(app, vm)
 			if opts.InitJS != nil {
 				opts.InitJS(inst, app, vm)
 			}
@@ -166,14 +164,12 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
-	if opts.Standard != nil {
-		lines, err := opts.Standard.Finish(app, plan)
-		if err != nil {
-			return nil, fmt.Errorf("standard: %w", err)
-		}
-		for _, l := range lines { // the instance's own log, where its owner reads it
-			openInstanceLog(dir).Write("stdout", l)
-		}
+	lines, err := opts.Standard.Finish(app, plan)
+	if err != nil {
+		return nil, fmt.Errorf("standard: %w", err)
+	}
+	for _, l := range lines { // the instance's own log, where its owner reads it
+		openInstanceLog(dir).Write("stdout", l)
 	}
 
 	if err := app.Bootstrap(); err != nil {

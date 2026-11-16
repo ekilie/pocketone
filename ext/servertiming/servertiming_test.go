@@ -104,7 +104,7 @@ func TestManagerServerTiming(t *testing.T) {
 		t.Fatal(err)
 	}
 	inst := pocker.Instance{ID: "app", Hosts: []string{"app.example.com"}}
-	m := pocker.NewManager(staticSource{inst}, pocker.ManagerOptions{
+	m := pocker.NewManager(staticSource{inst}, pocker.ManagerOptions{Standard: testStandard,
 		PBRoot: root,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})

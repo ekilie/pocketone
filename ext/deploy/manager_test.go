@@ -25,7 +25,7 @@ func TestWithPockerManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	mgr := pocker.NewManager(&pocker.YAMLSource{Path: yaml, Required: true}, pocker.ManagerOptions{PBRoot: pbRoot, Logger: quiet})
+	mgr := pocker.NewManager(&pocker.YAMLSource{Path: yaml, Required: true}, pocker.ManagerOptions{Standard: testStandard, PBRoot: pbRoot, Logger: quiet})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go mgr.Run(ctx)

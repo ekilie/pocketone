@@ -27,20 +27,17 @@ connector, any Streamable HTTP client) can work with your app. No sidecar proces
 MCP is built into `pocketone` and always on, with [Tokens](../tokens/README.md) and
 [the OAuth server](../tokens/OAUTH.md) for sign-in and `$mcp` in `pb_hooks`. There's nothing to install or turn on.
 
-In your own Go build, register it before the app starts. Register Tokens (with its OAuth server) too for OAuth sign-in, and
-bind `$mcp` into the JS hooks if you use them:
+MCP is a member of the [standard set](../standard/README.md), so every PocketOne app has it: the stock binary, every
+[Pocker](../pocker/README.md) instance, and your own Go build made with `standard.New()`. The set also registers
+Tokens (with its OAuth server) for sign-in and binds `$mcp` in `pb_hooks`:
 
 ```go
-app := pocketbase.New()
-tokens.MustRegister(app, tokens.Config{})
-oauthserver.MustRegister(app, oauthserver.Config{})
-mcp.MustRegister(app, mcp.Config{})
-jsvm.MustRegister(app, jsvm.Config{OnInit: func(vm *goja.Runtime) { mcp.BindJS(vm, app) }})
+set := standard.New()
+app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-The order doesn't matter: MCP picks its sign-in on serve, and tools that `pb_hooks` declare before `mcp.Register`
-wait for it. The module is `github.com/pockethost/pocketone/ext/mcp`.
+Tools that `pb_hooks` declare before MCP registers wait for it. The module is `github.com/pockethost/pocketone/ext/mcp`.
 
 ## Configure
 
@@ -196,8 +193,8 @@ In `pocketone` it always is.
 | [S3 Redirect](../s3redirect/README.md) | `pb_download_file` follows its one redirect to storage. |
 | JS hooks | `$mcp` in `pb_hooks` (above). |
 
-Under [Pocker](../pocker/README.md), a Go build registers MCP (with Tokens (with its OAuth server)) in each instance's
-`SetupApp`; there's no extkit extension for it. The stock `pocketone` binary doesn't add it to pocker instances.
+Under [Pocker](../pocker/README.md), every instance gets MCP from the standard set, with its own tokens, OAuth sign-in
+and `/mcp`; an instance turns it off with `extensions.mcp.enabled: false`.
 
 ### Tools from Go
 

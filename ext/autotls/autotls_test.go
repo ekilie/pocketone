@@ -122,7 +122,7 @@ func TestServerAutoTLSRefusesUnmappedSNI(t *testing.T) {
 	cfg.TLS.HTTPListen = httpAddr
 	auto := New()
 	auto.Config = Config{Auto: true, Email: "ops@example.com", CA: "letsencrypt-staging"}
-	srv := &pocker.Server{Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Extensions: []pocker.Extension{auto}}
+	srv := &pocker.Server{Standard: testStandard, Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Extensions: []pocker.Extension{auto}}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx) }()

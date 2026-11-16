@@ -1,4 +1,4 @@
-// Command example serves many PocketPages sites from one process: pocker in dev mode, with the pages extension. Every
+// Command example serves many PocketPages sites from one process: pocker in dev mode, with the standard extensions (pages among them). Every
 // hostname is its own instance, with its own folder <pb_root>/<hostname> (created on first use), its own
 // database, its own pb_pages and its own sandboxed JS.
 //
@@ -20,8 +20,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/standard"
 )
 
 func main() {
@@ -35,8 +35,8 @@ func main() {
 	cfg.Listen = *listen
 
 	srv := &pocker.Server{
-		Config:     cfg,
-		Extensions: []pocker.Extension{pages.New(pages.Config{})},
+		Config:   cfg,
+		Standard: standard.New(), // the standard extensions, pages among them
 		SetupApp: func(inst pocker.Instance, app core.App) error {
 			return devusers.Ensure(app) // local testing: admin@example.com and user@example.com, password "password"
 		},

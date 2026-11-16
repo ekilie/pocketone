@@ -2,6 +2,7 @@ package pocker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
 	"log/slog"
@@ -47,7 +48,9 @@ type Server struct {
 	Extensions []Extension
 
 	// Standard is the per-app extension set every instance gets: ext/standard's Set, so every instance has tokens,
-	// mcp, pitr and the rest, each turned off per instance with `extensions.<name>.enabled: false`. Its members'
+	// mcp, pitr and the rest, each turned off per instance with `extensions.<name>.enabled: false`. Required: Run
+	// refuses to start without it, so no host can create an instance that lacks the standard extensions (pass
+	// standard.New(); pocker can't make one itself, since extensions don't import each other). Its members'
 	// Starters run like Extensions', and their Closers close once every app has stopped. A member also listed in Extensions is an error.
 	Standard extkit.AppSet
 
@@ -66,8 +69,14 @@ type Server struct {
 	OnStart func(m *Manager)
 }
 
+// errNoStandard: a Server, Provider or Manager without Standard can't start instances.
+var errNoStandard = errors.New("pocker: Standard is required: every instance gets the standard extensions (pass ext/standard's standard.New())")
+
 // Run serves until ctx is done, then shuts down in-flight requests and running apps.
 func (s *Server) Run(ctx context.Context) error {
+	if s.Standard == nil {
+		return errNoStandard
+	}
 	log := s.Logger
 	if log == nil {
 		log = slog.Default()
@@ -133,12 +142,10 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 		jsIniters []JSIniter
 	)
 	standardNames := map[string]bool{}
-	if s.Standard != nil {
-		for _, e := range s.Standard.Extensions() {
-			standardNames[e.Name()] = true
-			if st, ok := e.(Starter); ok {
-				starters = append(starters, st)
-			}
+	for _, e := range s.Standard.Extensions() {
+		standardNames[e.Name()] = true
+		if st, ok := e.(Starter); ok {
+			starters = append(starters, st)
 		}
 	}
 	for _, p := range s.Extensions {
@@ -170,11 +177,9 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 			hostExts = append(hostExts, he)
 		}
 	}
-	if s.Standard != nil {
-		for _, e := range s.Standard.Extensions() {
-			if c, ok := e.(extkit.Closer); ok {
-				h.Closers = append(h.Closers, c.Close)
-			}
+	for _, e := range s.Standard.Extensions() {
+		if c, ok := e.(extkit.Closer); ok {
+			h.Closers = append(h.Closers, c.Close)
 		}
 	}
 	if err := h.Use(hostExts...); err != nil {

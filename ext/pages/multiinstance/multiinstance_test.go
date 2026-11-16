@@ -52,7 +52,7 @@ func start(t *testing.T, insts []pocker.Instance, files map[string]map[string]st
 	for id, f := range files {
 		write(t, filepath.Join(h.root, id), f)
 	}
-	h.m = pocker.NewManager(fixedSource(insts), pocker.ManagerOptions{
+	h.m = pocker.NewManager(fixedSource(insts), pocker.ManagerOptions{Standard: testStandard,
 		PBRoot:   h.root,
 		Logger:   quiet,
 		Defaults: limits,

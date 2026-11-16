@@ -15,7 +15,7 @@ func TestBlockedInstanceStopsApp(t *testing.T) {
 	var mu sync.Mutex
 	var events []EventKind
 	inst := Instance{ID: "a", Hosts: []string{"a.test"}}
-	m := NewManager(staticSource{inst}, ManagerOptions{
+	m := NewManager(staticSource{inst}, ManagerOptions{Standard: testStandard,
 		PBRoot: t.TempDir(),
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		OnEvent: func(e Event) {

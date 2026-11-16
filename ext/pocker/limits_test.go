@@ -103,7 +103,7 @@ func TestSecretChangeRestartsApp(t *testing.T) {
 	src := &chanSource{list: []Instance{inst}, ch: make(chan Change)}
 	var restartedMu sync.Mutex
 	var restarted []string
-	m := NewManager(src, ManagerOptions{
+	m := NewManager(src, ManagerOptions{Standard: testStandard,
 		PBRoot: root,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		OnEvent: func(e Event) {
@@ -173,7 +173,7 @@ func TestWithInstanceStopped(t *testing.T) {
 	}
 	write("v1")
 	inst := Instance{ID: "app", Hosts: []string{"app.example.com"}}
-	m := NewManager(staticSource{inst}, ManagerOptions{PBRoot: root, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	m := NewManager(staticSource{inst}, ManagerOptions{Standard: testStandard, PBRoot: root, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go m.Run(ctx)
