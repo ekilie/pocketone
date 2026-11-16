@@ -91,6 +91,7 @@ type site struct {
 	t       *testing.T
 	Dir     string // the app folder (pb_data, pb_hooks, ... inside)
 	URL     string
+	Host    string // the Host header, for an instance on a multisite host ("" for a single app)
 	TrapURL string // the dev mail trap's inbox (dev mode only)
 	Env     []string
 	Log     *syncBuffer
@@ -214,10 +215,15 @@ func (s *site) Token(scopes ...string) string {
 
 // raw sends one request (body: nil, a string, or anything JSON-encodable) and returns status and body.
 func (s *site) raw(method, path, auth string, body any) (int, []byte) {
-	return rawRequest(s.URL, method, path, auth, body)
+	return rawRequestHost(s.URL, s.Host, method, path, auth, body)
 }
 
 func rawRequest(base, method, path, auth string, body any) (int, []byte) {
+	return rawRequestHost(base, "", method, path, auth, body)
+}
+
+// rawRequestHost is rawRequest with a Host header (none when host is "").
+func rawRequestHost(base, host, method, path, auth string, body any) (int, []byte) {
 	var r io.Reader
 	ctype := ""
 	switch b := body.(type) {
@@ -234,6 +240,9 @@ func rawRequest(base, method, path, auth string, body any) (int, []byte) {
 	}
 	if ctype != "" {
 		req.Header.Set("Content-Type", ctype)
+	}
+	if host != "" {
+		req.Host = host
 	}
 	if auth != "" {
 		req.Header.Set("Authorization", auth)
