@@ -328,6 +328,13 @@ func (cshim) avm_throw(ctx *JSContext, msg uintptr, n uint64) JSValue {
 	return lib.XJS_Throw(ctx.tls, ctx.p, e)
 }
 
+// throwString throws a plain Error with message s.
+func (c cshim) throwString(ctx *JSContext, s string) JSValue {
+	e := lib.XJS_NewError(ctx.tls, ctx.p)
+	lib.XJS_SetPropertyStr(ctx.tls, ctx.p, e, cMessage, c.JS_NewStringLen(ctx, s))
+	return lib.XJS_Throw(ctx.tls, ctx.p, e)
+}
+
 var cPercentS = mustCString("%s")
 
 // throwType throws a TypeError with message s.
@@ -398,6 +405,81 @@ func (cshim) avm_is_promise(ctx *JSContext, v JSValue) int32 {
 		return 0
 	}
 	return b2i(lib.XJS_PromiseState(ctx.tls, ctx.p, v) >= 0)
+}
+
+// ---- ES modules ----
+
+// avm_eval_module compiles code as the ES module file, sets its import.meta and runs it: the result is a promise (top-level
+// await) or an exception.
+func (c cshim) avm_eval_module(ctx *JSContext, code, file string, meta map[string]string) JSValue {
+	cc, cf := mustCString(code), mustCString(file)
+	defer c.free(cc)
+	defer c.free(cf)
+	v := lib.XJS_Eval(ctx.tls, ctx.p, cc, uint64(len(code)), cf, lib.MJS_EVAL_TYPE_MODULE|lib.MJS_EVAL_FLAG_COMPILE_ONLY)
+	if int32(v.Ftag) != lib.EJS_TAG_MODULE {
+		return v
+	}
+	c.setImportMeta(ctx, uintptr(v.Fu.Fuint641), meta)
+	return lib.XJS_EvalFunction(ctx.tls, ctx.p, v) // takes v
+}
+
+func (c cshim) setImportMeta(ctx *JSContext, m uintptr, meta map[string]string) {
+	mv := lib.XJS_GetImportMeta(ctx.tls, ctx.p, m)
+	if int32(mv.Ftag) == lib.EJS_TAG_OBJECT {
+		for k, val := range meta {
+			ck := mustCString(k)
+			lib.XJS_SetPropertyStr(ctx.tls, ctx.p, mv, ck, c.JS_NewStringLen(ctx, val))
+			c.free(ck)
+		}
+	}
+	lib.XFreeValue(ctx.tls, ctx.p, mv)
+}
+
+// avm_compile_module compiles code as the ES module name (not run yet: QuickJS links and runs it with its importer)
+// and sets its import.meta; 0 when it throws.
+func (c cshim) avm_compile_module(ctx *JSContext, code, name string, meta map[string]string) uintptr {
+	cc, cf := mustCString(code), mustCString(name)
+	defer c.free(cc)
+	defer c.free(cf)
+	v := lib.XJS_Eval(ctx.tls, ctx.p, cc, uint64(len(code)), cf, lib.MJS_EVAL_TYPE_MODULE|lib.MJS_EVAL_FLAG_COMPILE_ONLY)
+	if int32(v.Ftag) != lib.EJS_TAG_MODULE {
+		if int32(v.Ftag) != lib.EJS_TAG_EXCEPTION {
+			lib.XFreeValue(ctx.tls, ctx.p, v)
+		}
+		return 0
+	}
+	m := uintptr(v.Fu.Fuint641)
+	lib.XFreeValue(ctx.tls, ctx.p, v)
+	c.setImportMeta(ctx, m, meta)
+	return m
+}
+
+// moduleNormalize resolves an import specifier against the importing module's name (QuickJS's JSModuleNormalizeFunc).
+// It returns the module's name in js_malloc'd memory, or 0 with an exception thrown.
+func moduleNormalize(tls *libc.TLS, ctx, base, name, opaque uintptr) uintptr {
+	vm := lookupVM(opaque)
+	resolved, err := vm.normalizeModule(libc.GoString(base), libc.GoString(name))
+	if err != nil {
+		C.throwString(vm.ctx, err.Error())
+		return 0
+	}
+	cs := mustCString(resolved)
+	defer libc.Xfree(tls, cs)
+	return lib.Xjs_strdup(tls, ctx, cs)
+}
+
+// moduleLoad compiles the module with a normalized name (QuickJS's JSModuleLoaderFunc): its JSModuleDef, or 0 with
+// an exception thrown.
+func moduleLoad(tls *libc.TLS, ctx, name, opaque uintptr) uintptr {
+	vm := lookupVM(opaque)
+	m, err := vm.loadModule(libc.GoString(name))
+	if err != nil {
+		if !C.JS_HasException(vm.ctx) {
+			C.throwString(vm.ctx, err.Error())
+		}
+		return 0
+	}
+	return m
 }
 
 // ---- runtime ----
@@ -513,6 +595,7 @@ func (cshim) avm_new(id uintptr, memLimit, stackSlots uint64) *AVM {
 		lib.XJS_SetMemoryLimit(tls, a.rt, memLimit)
 	}
 	lib.XJS_SetInterruptHandler(tls, a.rt, fp(interruptHandler), id)
+	lib.XJS_SetModuleLoaderFunc(tls, a.rt, fp(moduleNormalize), fp(moduleLoad), id)
 	lib.XJS_NewClass(tls, a.rt, a.obj_class, classes.objDef)
 	lib.XJS_NewClass(tls, a.rt, a.fn_class, classes.fnDef)
 	ctx := lib.XJS_NewContext(tls, a.rt)

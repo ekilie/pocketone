@@ -46,10 +46,10 @@ func Register(app core.App, config Config) error {
 		p.config.MigrationsDir = filepath.Join(app.DataDir(), "../pb_migrations")
 	}
 	if p.config.HooksFilesPattern == "" {
-		p.config.HooksFilesPattern = `^.*(\.pb\.js|\.pb\.ts)$`
+		p.config.HooksFilesPattern = `^.*(\.pb\.js|\.pb\.cjs|\.pb\.mjs|\.pb\.ts)$`
 	}
 	if p.config.MigrationsFilesPattern == "" {
-		p.config.MigrationsFilesPattern = `^.*(\.js|\.ts)$`
+		p.config.MigrationsFilesPattern = `^.*(\.js|\.cjs|\.mjs|\.ts)$`
 	}
 	if p.config.TypesDir == "" {
 		p.config.TypesDir = app.DataDir()
@@ -239,8 +239,15 @@ func (p *plugin) registerMigrations() error {
 		err := p.vm.Do(func() {
 			p.loadingMigration = name
 			defer func() { p.loadingMigration = "" }()
-			// each migration file gets its own scope, as with a VM per file in plugins/jsvm
-			runErr = p.vm.evalHere("(function(){\n"+string(files[name])+"\n})()", "pb_migrations/"+name)
+			// each migration file gets its own scope, as with a VM per file in plugins/jsvm (an ES module has its own)
+			label := "pb_migrations/" + name
+			dir := filepath.Dir(filepath.Join(p.migrationsDir(), name))
+			if strings.HasSuffix(name, ".mjs") {
+				runErr = p.vm.evalModuleHere(string(files[name]), label, dir)
+				return
+			}
+			p.vm.mods.base[label] = dir
+			runErr = p.vm.evalHere("(function(){\n"+string(files[name])+"\n})()", label)
 		})
 		if err == nil {
 			err = runErr
@@ -309,9 +316,16 @@ func (p *plugin) registerHooks() error {
 					mappers = append(mappers, mapErr)
 				}
 			}
-			// every hook file runs in the app's one global scope: its top-level functions and variables are
-			// visible to every handler
-			runErr = p.vm.evalHere(string(files[name]), "pb_hooks/"+name)
+			// a .pb.js/.pb.cjs hook file runs in the app's one global scope: its top-level functions and variables
+			// are visible to every handler. A .pb.mjs file is an ES module: private top level, export/import.
+			label := "pb_hooks/" + name
+			dir := filepath.Dir(filepath.Join(p.hooksDir, name))
+			if strings.HasSuffix(name, ".mjs") {
+				runErr = p.vm.evalModuleHere(string(files[name]), label, dir)
+			} else {
+				p.vm.mods.base[label] = dir
+				runErr = p.vm.evalHere(string(files[name]), label)
+			}
 			for _, m := range mappers {
 				runErr = m(runErr)
 			}
@@ -503,3 +517,11 @@ func filesContent(dirPath string, pattern string) (map[string][]byte, error) {
 }
 
 var _ = unsafe.Pointer(nil)
+
+// migrationsDir is the migrations folder as an absolute path (where a migration's imports resolve from).
+func (p *plugin) migrationsDir() string {
+	if abs, err := filepath.Abs(p.config.MigrationsDir); err == nil {
+		return abs
+	}
+	return p.config.MigrationsDir
+}

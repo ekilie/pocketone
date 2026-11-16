@@ -8,6 +8,8 @@ PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS AP
 
 - **Real globals.** Every hook file runs in the app's one global scope, so top-level helpers, constants and state are
   visible to every handler. No more `require()` inside each handler.
+- **ES modules.** `*.pb.mjs` hook files and `.mjs` modules use `import`/`export`, including top-level `await`;
+  `*.pb.js` and `*.pb.cjs` stay scripts with `require()`. Both share the same module instances.
 - **Async.** Handlers can be `async`. Every Go function has an `.async(...)` twin that runs off the VM and returns a
   promise, so one app serves other requests while it waits: `await $app.findRecordById.async("posts", id)`.
 - **Hard limits per app.** A memory cap (JS heap plus Go objects JS holds), a CPU and a wall-clock budget per task, and
@@ -66,8 +68,43 @@ routerAdd("GET", "/post/{slug}", async (e) => {
   `await`s (they hold SQLite's write lock).
 - Calls that wait on I/O (`$app` methods, DB queries, `$http.send`, `sleep`) let the app's other requests run even
   without `.async`.
-- `require()` loads CommonJS modules from `pb_hooks` and its `node_modules` (`.js`, `.json`, `index.js`,
-  `package.json` `main`). `process.env` and a small `Buffer` (`from`, `toString` with utf8, base64, hex) are there.
+- `process.env` and a small `Buffer` (`from`, `toString` with utf8, base64, hex) are there.
+
+### Modules: import and require
+
+Name a file for what it is: `.mjs` is an ES module, `.cjs` is CommonJS. A plain `.js` file is CommonJS, so existing
+PocketBase hooks run unchanged (inside `node_modules`, Node's rule applies: `"type": "module"` in the package's
+`package.json` makes its `.js` files ES modules).
+
+| File | Runs as | Shares through |
+|---|---|---|
+| `pb_hooks/*.pb.mjs` | ES module: `import`, `export`, top-level `await`, `import.meta` | `export` / `import`; its top-level names are private |
+| `pb_hooks/*.pb.cjs`, `*.pb.js` | script in the app's one global scope, with `require()` | globals |
+| `pb_migrations/*.mjs` | ES module | each migration has its own scope either way |
+| `pb_migrations/*.cjs`, `*.js` | script in its own function scope | |
+
+```js
+// pb_hooks/lib/store.mjs
+export const state = { hits: 0 }
+export const bump = () => ++state.hits
+
+// pb_hooks/main.pb.mjs
+import { bump } from "./lib/store.mjs"
+import legacy from "./lib/legacy.cjs"      // CommonJS: module.exports is the default export
+import { hello } from "some-package"       // node_modules, CommonJS or ES
+const posts = await $app.findCollectionByNameOrId.async("posts")  // top-level await: done before the app serves
+
+routerAdd("GET", "/hit", (e) => e.json(200, { hits: bump() }))
+```
+
+- `import` and `require()` resolve the same way: relative paths (`.js`, `.mjs`, `.cjs`, `.json` and `index.*`
+  tried in turn), then `node_modules` packages by `package.json` `exports` (the `import` or `require` condition) or
+  `main`.
+- A module loads once per app, however many files import or require it, so its state is shared by every request.
+  Importing a CommonJS module gives its `module.exports` as the default export, its keys as named exports, and the same
+  instance `require()` returns.
+- A script reaches an ES module with `await import("./lib/store.mjs")`; `require()` of an ES module throws and says to
+  use `import`.
 
 ## Integrations
 

@@ -87,7 +87,8 @@ type VM struct {
 	// Hider, when set, hides Go members from JS (an extension's js.Hider, e.g. the sandbox's).
 	Hider js.Hider
 
-	sliceProto JSValue // prototype of Go slices: Array methods
+	sliceProto JSValue      // prototype of Go slices: Array methods
+	mods       *moduleState // require() and import resolution (set by bindNode)
 
 	slotsOnce sync.Once
 	slots     chan struct{} // MaxConcurrent

@@ -840,6 +840,11 @@ func (vm *VM) callHere(fn JSValue, args []reflect.Value, resT reflect.Type) (set
 	if C.avm_is_promise(vm.ctx, ret) == 0 {
 		return vm.settleValue(ret, resT), nil
 	}
+	return vm.settlePromise(ret, resT)
+}
+
+// settlePromise takes ownership of the promise ret: its settled value now, or a channel that gets it once it settles.
+func (vm *VM) settlePromise(ret JSValue, resT reflect.Type) (settled, chan settled) {
 	vm.runJobs()
 	switch C.avm_promise_state(vm.ctx, ret) {
 	case C.JS_PROMISE_FULFILLED:

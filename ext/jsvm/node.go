@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -35,6 +35,8 @@ const nodeJS = `
 		return mod.exports
 	}
 	Object.defineProperty(globalThis, "require", { value: makeRequire(__hooks), writable: true, configurable: true })
+	// import of a CommonJS module: the same instance require() returns
+	Object.defineProperty(globalThis, "__requireAbs", { value: makeRequire("/"), configurable: true })
 
 	class Buffer extends Uint8Array {
 		static from(v, enc) {
@@ -64,60 +66,15 @@ type resolvedModule struct {
 // bindNode installs require, process and Buffer. load reads a module file by its path (disk by default, or an
 // extension's js.Moduler source); root is __hooks.
 func bindNode(vm *VM, root string, load func(string) ([]byte, error)) error {
-	exists := func(p string) ([]byte, bool) {
-		b, err := load(p)
-		if err != nil {
-			return nil, false
-		}
-		return b, true
-	}
-	tryFile := func(p string) (string, []byte, bool) {
-		for _, cand := range []string{p, p + ".js", p + ".json", path.Join(p, "index.js"), path.Join(p, "index.json")} {
-			if b, ok := exists(cand); ok && !strings.HasSuffix(cand, "/") {
-				return cand, b, true
-			}
-		}
-		if pkg, ok := exists(path.Join(p, "package.json")); ok {
-			var meta struct {
-				Main string `json:"main"`
-			}
-			if json.Unmarshal(pkg, &meta) == nil && meta.Main != "" {
-				main := path.Join(p, meta.Main)
-				for _, cand := range []string{main, main + ".js", path.Join(main, "index.js")} {
-					if b, ok := exists(cand); ok {
-						return cand, b, true
-					}
-				}
-			}
-		}
-		return "", nil, false
-	}
-	join := func(dir, p string) string {
-		if filepath.IsAbs(p) {
-			return filepath.Clean(p)
-		}
-		return filepath.Join(dir, p)
-	}
-
+	vm.mods = &moduleState{root: root, load: load, base: map[string]string{}}
 	vm.setHidden("__resolveModule", vm.nativeValue(func(c *call) (any, error) {
 		dir, spec := c.str(0), c.str(1)
-		var found string
-		var src []byte
-		var ok bool
-		if strings.HasPrefix(spec, "./") || strings.HasPrefix(spec, "../") || strings.HasPrefix(spec, "/") || filepath.IsAbs(spec) {
-			found, src, ok = tryFile(join(dir, spec))
-		} else {
-			for d := dir; ; d = filepath.Dir(d) {
-				if found, src, ok = tryFile(filepath.Join(d, "node_modules", spec)); ok {
-					break
-				}
-				if parent := filepath.Dir(d); parent == d {
-					break
-				}
-			}
-		}
+		found, src, ok := vm.mods.resolve(dir, spec, false)
 		if !ok {
 			return nil, nil
+		}
+		if vm.mods.isESM(found) {
+			return nil, fmt.Errorf("require() of ES module %s: use import (or import() from CommonJS)", found)
 		}
 		return &resolvedModule{Path: found, Dir: filepath.Dir(found), Source: string(src)}, nil
 	}, false))
