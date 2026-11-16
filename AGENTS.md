@@ -63,9 +63,12 @@ git config remote.upstream.fetch '+refs/heads/upstream/*:refs/remotes/upstream/*
 git config remote.upstream.tagopt --no-tags
 ```
 
-Refresh those branches from `https://ganigeorgiev.com/git/pocketbase/pocketbase` only when merging a PocketBase
-release, by hand and once: fetch it into `refs/remotes/upstream/*`, then
-`git push origin refs/remotes/upstream/develop:refs/heads/upstream/develop refs/remotes/upstream/master:refs/heads/upstream/master`.
+`.github/workflows/upstream-mirror.yml` refreshes those branches from
+`https://ganigeorgiev.com/git/pocketbase/pocketbase` once a day (fast-forward only; run it now with
+`gh workflow run upstream-mirror`). Never fetch PocketBase's server from your own machine. If the workflow fails
+because upstream rewrote history, mirror by hand from a machine that can reach it: fetch into
+`refs/remotes/upstream/*`, then
+`git push --force origin refs/remotes/upstream/develop:refs/heads/upstream/develop refs/remotes/upstream/master:refs/heads/upstream/master`.
 
 ## Core changes that aren't hooks
 
