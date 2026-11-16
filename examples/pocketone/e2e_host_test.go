@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -113,6 +114,62 @@ func TestE2EPockerHost(t *testing.T) {
 	}
 }
 
+// A settings change (here a secret) restarts the instance the way a process restarts: the running app stops before
+// the new one starts, so two apps never have the instance's folder open at once.
+func TestE2EPockerSettingsChangeStopsFirst(t *testing.T) {
+	h := startHost(t, map[string]string{"app1": "one"})
+	app1 := h.instance("app1")
+	if got := hello(app1); !strings.Contains(got, ": one |") {
+		t.Fatalf("/hello: %q", got)
+	}
+
+	h.greetings["app1"] = "two"
+	h.writeInstances(nil)
+	waitFor(t, context.Background(), "app1 serves its new secret", 20*time.Second, func() (bool, string) {
+		got := hello(app1)
+		return strings.Contains(got, ": two |"), got
+	})
+	var lines []string
+	waitFor(t, context.Background(), "the old app's down line", 15*time.Second, func() (bool, string) {
+		lines = lifecycleLines(t, filepath.Join(h.Dir, "pb_root", "app1"))
+		return indexOf(lines, "down one") >= 0, strings.Join(lines, ", ")
+	})
+	down, up := indexOf(lines, "down one"), indexOf(lines, "up two")
+	if up < 0 || down > up {
+		t.Fatalf("the new app started before the old one stopped: %s", strings.Join(lines, ", "))
+	}
+}
+
+// lifecycleLines reads the "lifecycle: ..." messages from an instance's exec.log, in order, without the prefix.
+func lifecycleLines(t *testing.T, instDir string) []string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(instDir, "logs", "exec.log"))
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, line := range strings.Split(string(b), "\n") {
+		var rec struct {
+			Message string `json:"message"`
+		}
+		if json.Unmarshal([]byte(line), &rec) == nil {
+			if m, ok := strings.CutPrefix(strings.TrimSpace(rec.Message), "lifecycle: "); ok {
+				out = append(out, m)
+			}
+		}
+	}
+	return out
+}
+
+func indexOf(list []string, s string) int {
+	for i, v := range list {
+		if v == s {
+			return i
+		}
+	}
+	return -1
+}
+
 // host is one `pocketone serve` running a Pocker host.
 type host struct {
 	*site
@@ -221,6 +278,16 @@ func helloHook(version string) string {
 	const v = "` + version + `"
 	const tag = v === "v1" ? "" : v + " "
 	return e.string(200, tag + e.request.host + ": " + $os.getenv("GREETING") + " | host secret: [" + $os.getenv("P1_E2E_HOST_SECRET") + "]")
+})
+
+// lifecycle lines in the instance's exec.log, so a test can see one app stop before the next starts
+onBootstrap((e) => {
+	e.next()
+	console.log("lifecycle: up " + $os.getenv("GREETING"))
+})
+onTerminate((e) => {
+	console.log("lifecycle: down " + $os.getenv("GREETING"))
+	e.next()
 })
 `
 }

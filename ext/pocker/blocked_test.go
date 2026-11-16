@@ -40,9 +40,7 @@ func TestBlockedInstanceStopsApp(t *testing.T) {
 	src.Set(off)
 	waitUntil(t, "a blocked", func() bool { i, _ := m.dir.Get("a"); return i.Blocked != nil })
 
-	if m.Running("a") {
-		t.Fatal("a blocked instance's app is still registered")
-	}
+	waitUntil(t, "the blocked instance's app to stop", func() bool { return !m.Running("a") })
 	if err := m.StartInstance(ctx, "a"); err == nil {
 		t.Fatal("a blocked instance must not start")
 	}

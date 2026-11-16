@@ -67,6 +67,42 @@ type appSlot struct {
 	done chan struct{}
 	app  *runningApp
 	err  error
+
+	mu       sync.Mutex
+	stopping bool           // set by stop: new requests get 503 instead of reaching an app that's going away
+	inflight sync.WaitGroup // requests the app is serving
+	stopOnce sync.Once
+}
+
+// enter counts a request in, unless the app is stopping.
+func (s *appSlot) enter() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stopping {
+		return false
+	}
+	s.inflight.Add(1)
+	return true
+}
+
+// stop stops the slot's app once: new requests are turned away, the ones it is serving get up to 10s to finish, then
+// the app stops. Concurrent callers wait for the one stop.
+func (s *appSlot) stop() {
+	s.stopOnce.Do(func() {
+		<-s.done
+		s.mu.Lock()
+		s.stopping = true
+		s.mu.Unlock()
+		drained := make(chan struct{})
+		go func() { s.inflight.Wait(); close(drained) }()
+		select {
+		case <-drained:
+		case <-time.After(10 * time.Second):
+		}
+		if s.app != nil {
+			stopApp(s.app)
+		}
+	})
 }
 
 // ManagerOptions configures a [Manager].
@@ -161,8 +197,8 @@ func (m *Manager) Run(ctx context.Context) error {
 	return m.dir.Run(ctx, src, nil)
 }
 
-// Sync implements [multisite.Syncer]: a changed instance (env, limits, dev mode, folder) gets a fresh app on its next
-// request; a removed one is stopped.
+// Sync implements [multisite.Syncer]: a changed instance (env, limits, dev mode, folder) is recycled if it's running
+// (see recycle); a blocked or removed one is stopped.
 func (m *Manager) Sync(c Change, prev *Instance) {
 	switch c.Kind {
 	case Upsert:
@@ -170,22 +206,16 @@ func (m *Manager) Sync(c Change, prev *Instance) {
 		// background work stop with the app, and unblocking starts a fresh app (re-reading pb_hooks) on the next
 		// request or StartInstance.
 		blocked := c.Instance.Blocked != nil
-		var stale *appSlot
-		if prev != nil && (blocked || !sameRuntime(*prev, c.Instance)) {
-			m.mu.Lock()
-			stale = m.apps[c.Instance.ID]
-			delete(m.apps, c.Instance.ID)
-			m.mu.Unlock()
+		switch {
+		case prev == nil:
+		case blocked:
+			if m.stopInstance(c.Instance.ID) {
+				m.emit(Event{Kind: EventStopped, InstanceID: c.Instance.ID, Reason: c.Instance.Blocked.Message})
+			}
+		case !sameRuntime(*prev, c.Instance):
+			go m.recycle(c.Instance.ID, "settings changed")
 		}
 		m.log.Info("pocker: instance updated", "id", c.Instance.ID)
-		if stale != nil {
-			if blocked {
-				m.emit(Event{Kind: EventStopped, InstanceID: c.Instance.ID, Reason: c.Instance.Blocked.Message})
-			} else {
-				m.emit(Event{Kind: EventRestarted, InstanceID: c.Instance.ID, Reason: "settings changed"})
-			}
-			go retire(stale)
-		}
 	case Delete:
 		m.mu.Lock()
 		slot := m.apps[c.Instance.ID]
@@ -194,10 +224,7 @@ func (m *Manager) Sync(c Change, prev *Instance) {
 		m.log.Info("pocker: instance removed", "id", c.Instance.ID)
 		if slot != nil {
 			go func() {
-				<-slot.done
-				if slot.app != nil {
-					stopApp(slot.app)
-				}
+				slot.stop()
 			}()
 		}
 	}
@@ -215,6 +242,13 @@ func (m *Manager) Serves(inst Instance) bool { return inst.Runtime == "" || inst
 // app returns the instance's running app, starting it (once, shared by concurrent callers) if needed.
 // A failed start is not cached: the next request tries again.
 func (m *Manager) app(inst Instance) (*runningApp, error) {
+	slot := m.slot(inst)
+	return slot.app, slot.err
+}
+
+// slot returns the instance's app slot once its start has finished, starting the app (once, shared by concurrent
+// callers) if needed.
+func (m *Manager) slot(inst Instance) *appSlot {
 	m.mu.Lock()
 	slot, ok := m.apps[inst.ID]
 	if !ok {
@@ -240,11 +274,11 @@ func (m *Manager) app(inst Instance) (*runningApp, error) {
 			m.log.Info("pocker: instance started", "id", inst.ID, "ms", time.Since(t).Milliseconds())
 			m.emit(Event{Kind: EventStarted, InstanceID: inst.ID})
 		}
-		return slot.app, slot.err
+		return slot
 	}
 	m.mu.Unlock()
 	<-slot.done
-	return slot.app, slot.err
+	return slot
 }
 
 // ServeHTTP serves the edge pipeline (resolve by Host, gates, forwarding) with the Manager as the only runtime.
@@ -263,11 +297,18 @@ func (m *Manager) Precheck(w http.ResponseWriter, r *http.Request, inst Instance
 // ServeInstance implements [multisite.Runtime]: start the app on demand and serve the request.
 func (m *Manager) ServeInstance(w http.ResponseWriter, r *http.Request, inst Instance) {
 	wakeStart := time.Now()
-	app, err := m.app(inst)
-	if err != nil {
-		http.Error(w, "instance failed to start: "+err.Error(), http.StatusBadGateway)
+	slot := m.slot(inst)
+	if slot.err != nil {
+		http.Error(w, "instance failed to start: "+slot.err.Error(), http.StatusBadGateway)
 		return
 	}
+	if !slot.enter() {
+		w.Header().Set("Retry-After", "1")
+		http.Error(w, "this instance is restarting; retry shortly", http.StatusServiceUnavailable)
+		return
+	}
+	defer slot.inflight.Done()
+	app := slot.app
 	readyAt := time.Now()
 	Timing(r.Context(), func() []TimingEntry {
 		return []TimingEntry{{Name: "origin", Dur: time.Since(readyAt)}, {Name: "wake", Dur: readyAt.Sub(wakeStart)}}
@@ -325,38 +366,41 @@ func (m *Manager) watchHooks(inst Instance, slot *appSlot) {
 	})
 }
 
-// hooksChanged restarts the instance after its pb_hooks change, as PocketBase's hooks watcher restarts its process:
-// the running app stops (requests in flight are cut off), then a fresh app starts with the new files. Only one app
-// ever has the instance's folder open, so migrations and bootstrap code never run beside a live app. A hook file that
-// fails to load is skipped in dev mode; otherwise the instance doesn't start: the error goes to its log, requests get
-// 502, and the next request after a fix starts it.
-func (m *Manager) hooksChanged(id string) {
+// hooksChanged recycles the instance after its pb_hooks change, as PocketBase's watcher restarts its process. A hook
+// file that fails to load is skipped in dev mode; otherwise the instance doesn't start: the error goes to its log,
+// requests get 502, and the next request after a fix starts it.
+func (m *Manager) hooksChanged(id string) { go m.recycle(id, "pb_hooks changed") }
+
+// recycle restarts the instance if its app is running, as PocketBase restarts its process: the app stops, then a
+// fresh one starts with the current files and settings. An instance that isn't running is left alone. Requests that
+// reach it while it restarts fail; two apps never have its folder open.
+func (m *Manager) recycle(id, reason string) {
+	if !m.stopInstance(id) {
+		return
+	}
+	m.log.Info("pocker: "+reason+", restarting", "id", id)
+	if dir, ok := m.InstanceDir(id); ok {
+		openInstanceLog(dir).Write("stdout", reason+", restarting")
+	}
+	m.emit(Event{Kind: EventRestarted, InstanceID: id, Reason: reason})
+	_ = m.StartInstance(context.Background(), id) // a start error is logged and reported by app()
+}
+
+// stopInstance stops the instance's running app and drops it; it reports whether an app was running.
+func (m *Manager) stopInstance(id string) bool {
 	m.mu.RLock()
 	slot := m.apps[id]
 	m.mu.RUnlock()
 	if slot == nil {
-		return
+		return false
 	}
-	select {
-	case <-slot.done:
-	default:
-		return // still starting: it reads the current files
+	slot.stop()
+	m.mu.Lock()
+	if m.apps[id] == slot {
+		delete(m.apps, id)
 	}
-	if slot.app == nil {
-		return
-	}
-	go func() {
-		m.log.Info("pocker: pb_hooks changed, restarting", "id", id)
-		if dir, ok := m.InstanceDir(id); ok {
-			openInstanceLog(dir).Write("stdout", "pb_hooks changed, restarting")
-		}
-		if err := m.WithInstanceStopped(context.Background(), id, func(string) error { return nil }); err != nil {
-			m.log.Info("pocker: pb_hooks restart skipped", "id", id, "reason", err)
-			return
-		}
-		m.emit(Event{Kind: EventRestarted, InstanceID: id, Reason: "pb_hooks changed"})
-		_ = m.StartInstance(context.Background(), id) // a start error is logged and reported by app()
-	}()
+	m.mu.Unlock()
+	return slot.app != nil
 }
 
 // Shutdown stops every running app.
@@ -370,10 +414,7 @@ func (m *Manager) Shutdown() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			<-s.done
-			if s.app != nil {
-				stopApp(s.app)
-			}
+			s.stop()
 		}()
 	}
 	wg.Wait()
@@ -410,16 +451,6 @@ func sameRuntime(a, b Instance) bool {
 		reflect.DeepEqual(a.Access, b.Access) && reflect.DeepEqual(a.Limits, b.Limits) &&
 		reflect.DeepEqual(a.Superusers, b.Superusers) && reflect.DeepEqual(a.Private, b.Private) &&
 		reflect.DeepEqual(a.Extensions, b.Extensions)
-}
-
-// retire stops an app that new requests no longer reach, after giving in-flight requests time to finish.
-func retire(slot *appSlot) {
-	<-slot.done
-	if slot.app == nil {
-		return
-	}
-	time.Sleep(10 * time.Second)
-	stopApp(slot.app)
 }
 
 // InstanceDir returns the folder of a known instance (<pbRoot>/<id> unless the instance sets Dir).
@@ -466,9 +497,7 @@ func (m *Manager) WithInstanceStopped(ctx context.Context, id string, fn func(di
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-		if slot.app != nil {
-			stopApp(slot.app)
-		}
+		slot.stop()
 	}
 	return fn(instanceDir(m.opts, inst))
 }
