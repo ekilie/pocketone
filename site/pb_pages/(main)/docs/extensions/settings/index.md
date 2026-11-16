@@ -45,7 +45,7 @@ Agents get the same through MCP (`settings_list`, `settings_get`, `settings_save
 |---|---|
 | [PITR](/docs/extensions/pitr) | Its S3 destination is a section. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Its sending settings are a section. |
-| [Contracts](/docs/contracts) | settings/v1 is the contract; a host could provide it instead. |
+| [Contracts](/docs/contracts/all) | settings/v1 is the contract; a host could provide it instead. |
 
 ## Example
 

@@ -78,7 +78,7 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 
 | Extension | How they fit |
 |---|---|
-| [Contracts](/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); Mail Relay sends it within the instance's limits. |
+| [Contracts](/docs/contracts/all) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); Mail Relay sends it within the instance's limits. |
 | [Pocker](/docs/extensions/pocker) | The host it's built for. Every instance gets the relay, its own address and its own limits. |
 | [Mail Trap](/docs/extensions/mailtrap) | In development, point `SMTPUpstream` at the trap's SMTP port and every relayed message lands in one inbox, tagged with the instance. The example below does this. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Campaigns go through PocketBase's mailer by default, so with SMTP off they are relayed and count against the instance's limits. |

@@ -30,6 +30,21 @@ Start a site from a starter kit with `pocketone pages create myapp` ([pages](ext
 In dev mode (`serve --dev`), an app without SMTP doesn't use the host's `sendmail`: its mail is caught in-process and
 you read it at http://127.0.0.1:8025 ([mailtrap](ext/mailtrap/README.md)).
 
+## How it fits together: contracts
+
+Extensions in PocketOne don't know about each other. They meet through **contracts**: named, versioned promises such
+as `restore/v1`, "put this app's data back as it was at a moment". An extension *provides* a contract, and everything
+else calls the contract, never the extension behind it: the dashboard, the `pocketone` command, AI agents over MCP,
+your `pb_hooks`, other extensions.
+
+So PITR and plain backups both answer `pocketone remote restore to --at -2h` (PITR to the second, backups from the
+latest one before that), and anything better can replace either without changing a single caller. Every API an
+extension offers is a contract under `/api/_c/<id>/`, and one Go interface gives it an HTTP API, CLI commands, MCP
+tools and hooks, all behind the same checks.
+
+Read [How PocketOne fits together](docs/contracts.md), or browse [all contracts](ext/contracts/README.md) with the
+extensions that provide each one.
+
 ## Standard Extensions
 
 These extensions ship with every `pocketone` binary. They do not add runtime overhead if you
@@ -38,6 +53,8 @@ choose not to use them.
 | Extension | Description |
 |---|---|
 | **[PITR](ext/pitr/README.md)** (Litestream) | Point-in-time restore of your database, from Settings → Backups or `pocketone pitr restore`. On by default; `--pitr=false` turns it off. |
+| **[Backups](ext/backups/README.md)** | Restore to a moment from your own backups (the latest one before it) when PITR is off. |
+| **[Settings](ext/settings/README.md)** | One API for the settings your extensions keep (PITR's bucket, Bulk Mail's sender). |
 | **[Auto TLS](ext/autotls/README.md)** | On-demand certificates and wildcards through ACME. |
 | **[Bulk Mail](ext/bulkmail/README.md)** | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
 | **[Pages](ext/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. |
@@ -62,7 +79,7 @@ own custom PocketOne experience.
 | **[Schedules](ext/schedules/README.md)** | Scheduled webhooks that wake sleeping instances (headed into Pocker). |
 | **[Mothership](ext/mothership/README.md)** | A control plane and its edges, across regions. Needs Pocker. |
 | **[Sandbox](ext/sandbox/README.md)** | Confines untrusted JS hooks, SQL and outbound network ([how is this safe?](ext/sandbox/README.md#how-is-this-safe)). Required for Multitenant. |
-| **[Multisite](ext/multisite/README.md)** | Many instances behind one listener, routed by hostname, run by one provider (Pocker or Docker). |
+| **[Multisite](ext/multisite/README.md)** | Many instances behind one listener, routed by hostname, run in-process (Pocker), in containers (Docker), or both. |
 | **[Firewall](ext/firewall/README.md)** | Peer allow-lists, trusted proxies and rate limits for a host. |
 | **[Edge](ext/edge/README.md)** | The fleet layer: forward to the edge that owns an instance. |
 
@@ -95,9 +112,10 @@ code, still changing · **Planned** a plan and a README so far.
 ## Contribute an extension
 
 Extensions are welcome. Read [Create your own extension](docs/extensions.md), then open a pull request that adds
-`ext/<your-extension>/`. Write it against the extension contract ([`ext/extkit`](ext/extkit/extkit.go)) and the same extension works at
-every level: on a single app and on every instance under pocker. Keep changes to PocketBase's own code to the minimum hook your extension needs, and include a small
-`example/main.go` that builds and shows the feature.
+`ext/<your-extension>/`. Write it with [`extkit`](ext/extkit/extkit.go) and the same extension works on a single app
+and on every instance of a multisite host. Its API is [contracts](docs/contracts.md): use the ones that exist, and if
+yours needs a new one, add it to `ext/contracts/` first; you own both. Keep changes to PocketBase's own code to the
+minimum hook your extension needs, and include a small `example/main.go` that builds and shows the feature.
 
 ## Changes we made to PocketBase
 

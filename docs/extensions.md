@@ -61,6 +61,20 @@ func (p *Extension) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello",
 
 ## Working together: contracts
 
+> Start with [How PocketOne fits together](contracts.md) for the idea: every API an extension offers is a named,
+> versioned contract, any extension can provide one, and everything else (the dashboard, the CLI, agents, `pb_hooks`,
+> other extensions) calls the contract, never the extension. This section is how to do it in code.
+
+In short, when you design an extension:
+
+1. **Find the contracts you need** in the [catalogue](../ext/contracts/README.md). Use them; don't reach into another
+   extension.
+2. **Decide what you offer.** Anything a client calls is a contract. If one already promises it, provide that one
+   (your extension then stands in for the current provider). If not, write the contract first, named for what it
+   does, not for your extension.
+3. **Declare it** in `Contracts()` and **provide it** in `Register`. The startup lines, whoami and the catalogue show
+   it from then on.
+
 Extensions never depend on each other by name. They depend on **contracts**: versioned Go interfaces in
 [`ext/contracts`](../ext/contracts/README.md), such as `deploy/v1` or `mail.fallback/v1`. Every API an extension
 offers is a contract too, served at `/api/_c/<id>/`: extensions have no routes of their own.

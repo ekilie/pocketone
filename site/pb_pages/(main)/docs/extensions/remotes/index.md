@@ -23,7 +23,7 @@ pocketone deploy prod          # Deploy
 ## Install
 
 Remotes is built into `pocketone` and **on**: the `remote`, `login`, `logout` and `link` commands are always there, and
-every app provides [remote/v1](/docs/contracts): whoami at `GET /api/_c/remote/v1` (so other machines can sign
+every app provides [remote/v1](/docs/contracts/all): whoami at `GET /api/_c/remote/v1` (so other machines can sign
 in to it), status, restart and logs. There's nothing to install: it's in the [standard set](/docs/extensions/standard).
 
 In your own Go build, use the standard set, or register it through its contracts yourself:

@@ -28,6 +28,24 @@ This is where we think most people will spend their time. We have already added 
 
 The `/ext/*` folder is where your extension(s) live, and generally you own the code in your community extension's folder. It must pass a few CI checks (inspired by DefinitelyTyped) but is otherwise up to you in terms of code quality and approach. The standard extensions (the ones every `pocketone` binary ships with) also live in `ext/`, but changes to them get maintainer review.
 
+### Contracts
+
+Extensions never talk to each other directly. They meet through **contracts**: named, versioned promises such as
+`restore/v1` or `mail.fallback/v1`, each a Go interface that PocketOne turns into an HTTP API, CLI commands, MCP tools
+and hooks. Every API an extension offers is a contract; extensions have no routes of their own and never import each
+other. [How PocketOne fits together](docs/contracts.md) explains why.
+
+What that means for a contribution:
+
+- **Look in [`ext/contracts`](ext/contracts/README.md) first.** If a contract already promises what your extension
+  does, provide it; yours can then replace the current provider on any app that picks it.
+- **A new contract comes first.** If nothing fits, add one to `ext/contracts/<id path>/vN/` in the same pull request,
+  with its README. Name it for what it does (`restore/v1`), not for your extension.
+- **You own what you create.** Whoever first creates a contract owns it, listed in its README's front matter. Add a
+  contract with your extension and you own both.
+- **Contracts are promises.** Many extensions and clients rely on one, so a contract's promise never changes inside a
+  version. Changing it means a new major version (`v2`) beside the old one, and contract changes get careful review.
+
 ## LLM Policy
 
 Here, we take a major departure from PocketBase. LLMs are allowed and encouraged. You, the human, are responsible for the content of your PRs. Whether you use an LLM to achieve your desired result does not matter, but clean PRs do matter, especially if they touch the standard extensions or the core PocketBase code. 

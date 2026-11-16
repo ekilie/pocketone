@@ -191,8 +191,9 @@ func loadManifest(root string) (*manifest, error) {
 func generate(root string, m *manifest, secs []section) (map[string]string, error) {
 	out := map[string]string{}
 	pages := map[string]string{"docs/extensions.md": "/docs/writing-an-extension"} // repo path -> site URL
-	pages["ext/contracts/README.md"] = "/docs/contracts"
-	pages["ext/contracts"] = "/docs/contracts"
+	pages["docs/contracts.md"] = "/docs/contracts"
+	pages["ext/contracts/README.md"] = "/docs/contracts/all"
+	pages["ext/contracts"] = "/docs/contracts/all"
 	for _, c := range m.contracts {
 		pages[c.Src] = "/docs/contracts/" + c.ID
 		pages[path.Dir(c.Src)] = "/docs/contracts/" + c.ID
@@ -237,8 +238,13 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		}
 		out[contractsOut+"/"+c.ID+"/index.md"] = frontMatter(title, c.Summary, c.Src) + stripFront(body)
 	}
-	if body, title, err := rw.page("ext/contracts/README.md", ""); err == nil {
-		out[contractsOut+"/index.md"] = frontMatter(title, "Every contract in PocketOne: what it promises and which extensions provide, require and work with it.", "ext/contracts/README.md") + body
+	if body, title, err := rw.page("docs/contracts.md", ""); err == nil {
+		out[contractsOut+"/index.md"] = frontMatter(title, "How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.", "docs/contracts.md") + body
+	} else {
+		return nil, err
+	}
+	if body, _, err := rw.page("ext/contracts/README.md", "All contracts"); err == nil {
+		out[contractsOut+"/all.md"] = frontMatter("All contracts", "Every contract in PocketOne: what it promises and which extensions provide, require and work with it.", "ext/contracts/README.md") + body
 	} else {
 		return nil, err
 	}
@@ -292,7 +298,7 @@ func index(m *manifest) string {
 func nav(m *manifest) string {
 	var b strings.Builder
 	b.WriteString("# Extensions\n\n- [All extensions](/docs/extensions)\n- [Writing an extension](/docs/writing-an-extension)\n")
-	b.WriteString("\n# Contracts\n\n- [All contracts](/docs/contracts)\n")
+	b.WriteString("\n# Contracts\n\n- [How PocketOne fits together](/docs/contracts)\n- [All contracts](/docs/contracts/all)\n")
 	for _, c := range m.contracts {
 		fmt.Fprintf(&b, "- [%s](/docs/contracts/%s)\n", c.ID, c.ID)
 	}

@@ -1,5 +1,8 @@
 # Contracts
 
+New to the idea? Read [How PocketOne fits together](../../docs/contracts.md) first. This page is the list of every
+contract and how to write one.
+
 Every API a PocketOne extension offers is a contract: a versioned Go interface, and the HTTP API, hooks and MCP tools
 that come with it, at `/api/_c/<id>/`. Extensions have no routes of their own. An extension says what it
 **implements**, **requires** and **works with** in terms of these contracts, never another extension's name, so any
