@@ -251,15 +251,3 @@ The module path stays `ganigeorgiev.com/pocketbase/pocketbase`, so a build pins 
 ```
 replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone v0.0.1
 ```
-
-## Upstream tracking
-
-Fetch upstream without its tags: PocketBase's `v0.x` tags must never land in this repo, or Go would take `v0.41.1` for
-the newest PocketOne.
-
-```sh
-git remote add upstream https://github.com/pockethost/pocketbase.git   # PocketHost's mirror of PocketBase
-git config remote.upstream.tagOpt --no-tags
-git fetch upstream refs/tags/v0.41.2   # one release, without creating the tag here
-git merge FETCH_HEAD   # resolve conflicts in the PocketOne-marked spots, rerun `go test ./core/... ./plugins/jsvm/...` and `go test ./...` in `ext/pocker` and `ext/sandbox`
-```
