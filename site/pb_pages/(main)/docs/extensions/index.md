@@ -15,12 +15,13 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | Extension | What it does |
 |---|---|
 | [PITR](/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |
+| [Settings](/docs/extensions/settings) | One API for the settings an app's admins change for its extensions. On by default. |
+| [Backups](/docs/extensions/backups) | Restore an app to a moment from its own backups: the latest one before it. On by default. |
 | [Auto TLS](/docs/extensions/autotls) | Certificates on demand and wildcards through ACME. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
 | [Pages](/docs/extensions/pages) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [Vacuum](/docs/extensions/vacuum) | Scheduled SQLite VACUUM. |
 | [MCP](/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
-| [OAuth Server](/docs/extensions/oauth-server) | Your app as an OAuth provider; pocketone login and MCP sign-in use it. |
 | [S3 Redirect](/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Tokens](/docs/extensions/tokens) | Long-lived API tokens with scopes. |
 | [Deploy](/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
@@ -72,6 +73,8 @@ The extension contract and tools for building and testing extensions.
 | Extension | What it does |
 |---|---|
 | [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
+| [Standard Set](/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
+| [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
 | [Mail Trap](/docs/extensions/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
 | [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
 | [JS Embed](/docs/extensions/jsembed) | JS hooks and migrations embedded in the binary. |

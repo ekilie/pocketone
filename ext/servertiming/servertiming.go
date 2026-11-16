@@ -1,19 +1,21 @@
-// Package servertiming is a PocketOne extension for the pocker host: a Server-Timing response header with the
-// timings the host and other extensions register for each request (see pocker.Timing).
+// Package servertiming is a host extension for a multisite host (any runtime): a Server-Timing response header with
+// the timings the host and other extensions register for each request (see multisite.Timing).
 //
-//	srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{servertiming.New()}}
+//	multisite.FromConfig(multisite.Options{Extensions: []multisite.Extension{servertiming.New()}})
 package servertiming
 
 import (
 	"bufio"
 	"fmt"
+	wrapv1 "github.com/pockethost/pocketone/ext/contracts/http/wrap/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/multisite"
 )
 
 // Header carries per-hop timing in the standard Server-Timing response header. Each hop measures from
@@ -23,14 +25,14 @@ import (
 //   - origin: the instance's own handler, from handing it the request until it sent its response headers
 //   - wake:   starting the instance for this request (0 when it was already running)
 //
-// Host code and extensions add their own entries with pocker.Timing (e.g. a total for the server).
+// Host code and extensions add their own entries with multisite.Timing (e.g. a total for the server).
 // A hop's own overhead is its dur minus the entry it wraps. Only names go in desc, never addresses.
 const Header = "Server-Timing"
 
 // TimingEntry is one Server-Timing metric.
-type TimingEntry = pocker.TimingEntry
+type TimingEntry = multisite.TimingEntry
 
-// Extension adds the header ([pocker.Wrapper]). List it before extensions and host code whose timings it should include:
+// Extension adds the header ([multisite.Wrapper]). List it before extensions and host code whose timings it should include:
 // the first listed wrapper is the outermost.
 type Extension struct{}
 
@@ -40,11 +42,22 @@ func New() *Extension { return &Extension{} }
 // Name is the extension's name.
 func (*Extension) Name() string { return "servertiming" }
 
+// RegisterHost implements multisite.Extension: http.wrap/v1. List it first so its header includes every other hop.
+func (e *Extension) RegisterHost(h *multisite.Host) error {
+	wrapv1.Contract.ProvideIn(h.Scope, e)
+	return nil
+}
+
+// Contracts implements extkit.Declarer.
+func (*Extension) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("http.wrap/v1")}
+}
+
 // Wrap collects the request's timings and appends them to the response's Server-Timing header just before the
 // headers go out, after any values an upstream hop already sent.
 func (*Extension) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, eval := pocker.WithTimings(r.Context())
+		ctx, eval := multisite.WithTimings(r.Context())
 		next.ServeHTTP(WithServerTiming(w, eval), r.WithContext(ctx))
 	})
 }

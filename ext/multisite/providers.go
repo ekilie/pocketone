@@ -2,69 +2,22 @@ package multisite
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
-	"sort"
-	"sync"
 
 	"github.com/pockethost/pocketone/ext/config"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
-// Provider is a runtime provider: it turns a host into a multi-instance server by supplying its one runtime
-// (ext/pocker in-process, ext/docker in containers). A binary registers the providers it links; the config's
-// `provider` section picks one.
-type Provider interface {
-	// Name is the value of `provider:` that selects it ("pocker", "docker").
-	Name() string
-	// Prepare reads the provider's own config section and fills in h.Runtime (and may add wrappers, TLS, background
-	// work, OnListen/OnShutdown). h's Source, Directory, Gates, Forward, Dev, Listeners and Logger are already set.
-	Prepare(h *Host) error
-}
+// Config is the `multisite` section (pocketone.yaml): having it makes the binary a multi-instance host instead of a
+// single app. Which runtimes run the instances is `providers: { runtime/v1: [pocker, docker] }` (default: every
+// linked runtime that's configured, in link order).
+//
+//	multisite: {}
+type Config struct{}
 
-var (
-	provMu    sync.Mutex
-	providers = map[string]Provider{}
-)
-
-// RegisterProvider makes a provider selectable by name; registering a name twice replaces the earlier one.
-func RegisterProvider(p Provider) {
-	provMu.Lock()
-	defer provMu.Unlock()
-	providers[p.Name()] = p
-}
-
-// Providers lists the registered provider names.
-func Providers() []string {
-	provMu.Lock()
-	defer provMu.Unlock()
-	out := make([]string, 0, len(providers))
-	for n := range providers {
-		out = append(out, n)
-	}
-	sort.Strings(out)
-	return out
-}
-
-// SectionGate is a gate configured from its own config sections (e.g. ext/firewall's `firewall` / `rate_limits`):
-// linking its package registers it, and FromConfig turns it on when New reports it enabled.
-type SectionGate struct {
-	Name string
-	New  func(dev bool) (g Gate, enabled bool, err error)
-}
-
-var (
-	sgMu         sync.Mutex
-	sectionGates []SectionGate
-)
-
-// RegisterSectionGate registers a gate configured from config sections.
-func RegisterSectionGate(g SectionGate) {
-	sgMu.Lock()
-	defer sgMu.Unlock()
-	sectionGates = append(sectionGates, g)
-}
+// Section is the key of the `multisite` section.
+var Section = extkit.NewSection("multisite", Config{}, "Serve many instances (a multisite host) instead of a single app. The runtimes are the providers of runtime/v1.")
 
 // InstancesConfig is the `instances` section: where a host's instances come from when the binary doesn't supply a
 // source of its own (e.g. a control plane's mirror).
@@ -84,33 +37,31 @@ var Instances = extkit.NewSection("instances", InstancesConfig{File: "instances.
 type Options struct {
 	Source   InstanceSource                                              // nil = the `instances` section's file
 	Forward  func(w http.ResponseWriter, r *http.Request, inst Instance) // the fleet hook (ext/edge)
-	Gates    []Gate                                                      // after the section gates
-	Wrappers []func(http.Handler) http.Handler                           // outermost first
+	Gates    []Gate                                                      // after the gate/v1 providers'
+	Wrappers []func(http.Handler) http.Handler                           // inside the http.wrap/v1 providers'
 	Logger   *slog.Logger
 	// Resolve makes a relative path from the config file relative to the file's folder (ext/config's
 	// Config.ResolvePath); nil = paths as written.
 	Resolve func(string) string
+	// Extensions are host extensions (see [Extension]): runtimes (pocker, docker), servertiming, autotls, ...
+	// registered after the linked ones ([Link]), in order.
+	Extensions []Extension
+	// Choices is the `providers:` section (the host-scope contracts in it apply here).
+	Choices extkit.Choices
 }
 
-// ErrNoProvider means the config names no provider: the binary should serve a single app instead.
-var ErrNoProvider = errors.New("no runtime provider configured")
+// ErrNoProvider means the config has no `multisite` section: the binary should serve a single app instead.
+var ErrNoProvider = errors.New("no multisite section: not a multi-instance host")
 
-// FromConfig builds a host from the loaded config sections: the provider named in `provider`, listeners from
-// `server`, instances from `instances` (unless o.Source), and every section gate that is enabled. It returns
-// ErrNoProvider when `provider` is empty, and an error when it names a provider this binary doesn't link.
+// FromConfig builds a host from the loaded config sections: listeners from `server`, instances from `instances`
+// (unless o.Source), then every host extension (linked, then o.Extensions) and the seal. It returns ErrNoProvider
+// without a `multisite` section, and an error when no runtime/v1 provider is configured.
 func FromConfig(o Options) (*Host, error) {
-	name, _ := config.Provider.Get()
-	if name == "" {
+	if _, on := Section.Get(); !on {
 		return nil, ErrNoProvider
 	}
-	provMu.Lock()
-	p, ok := providers[name]
-	provMu.Unlock()
-	if !ok {
-		return nil, fmt.Errorf("provider %q is not linked in this binary (linked: %v)", name, Providers())
-	}
 	if app, found := config.App.Get(); found && (app.Dir != "" || app.HooksDir != "" || app.MigrationsDir != "" || app.PublicDir != "") {
-		return nil, errors.New("app: applies to a single app; with a provider each instance has its own folder under the provider's root")
+		return nil, errors.New("app: applies to a single app; on a multisite host each instance has its own folder under its runtime's root")
 	}
 	resolve := o.Resolve
 	if resolve == nil {
@@ -122,7 +73,7 @@ func FromConfig(o Options) (*Host, error) {
 	}
 	srv, _ := config.Server.Get()
 	inst, _ := Instances.Get()
-	h := &Host{Logger: log, Dev: inst.Dev, Forward: o.Forward, Wrappers: o.Wrappers}
+	h := &Host{Logger: log, Dev: inst.Dev, Forward: o.Forward, Wrappers: o.Wrappers, Gates: o.Gates}
 	h.Listeners = Listeners{
 		Listen:          srv.HTTPS,
 		PlainListen:     srv.Plain,
@@ -142,26 +93,15 @@ func FromConfig(o Options) (*Host, error) {
 	if h.Source == nil {
 		h.Source = &YAMLSource{Path: resolve(inst.File), Required: !inst.Dev}
 	}
-	sgMu.Lock()
-	sgs := append([]SectionGate(nil), sectionGates...)
-	sgMu.Unlock()
-	sort.SliceStable(sgs, func(i, j int) bool { return sgs[i].Name < sgs[j].Name })
-	for _, sg := range sgs {
-		g, enabled, err := sg.New(inst.Dev)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", sg.Name, err)
-		}
-		if enabled {
-			h.Gates = append(h.Gates, g)
-		}
-	}
-	h.Gates = append(h.Gates, o.Gates...)
 	h.Directory = NewDirectory(log)
-	if err := p.Prepare(h); err != nil {
-		return nil, fmt.Errorf("provider %s: %w", name, err)
+	if err := h.Use(append(Linked(), o.Extensions...)...); err != nil {
+		return nil, err
 	}
-	if h.Runtime == nil {
-		return nil, fmt.Errorf("provider %s set no runtime", name)
+	if _, err := h.Setup(o.Choices); err != nil {
+		return nil, err
+	}
+	if len(h.Runtimes) == 0 {
+		return nil, errors.New("multisite: no runtime: link one (pocker, docker) and configure it, or check `providers: { runtime/v1: ... }`")
 	}
 	return h, nil
 }

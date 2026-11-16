@@ -1,0 +1,91 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
+# Backups
+
+Restore an app to a moment from its own backups. Ask for "Tuesday 15:00" and the app restores the latest backup made
+at or before it, wherever its backups are kept (pb_data/backups or S3). Every app gets this; with
+[PITR](../pitr/README.md) on, PITR answers instead and restores any second in its window.
+
+## Install
+
+Backups is built into `pocketone` and **on by default**; there's nothing to install. In your own Go build:
+
+```go
+extkit.Setup(app, []extkit.Extension{backups.New()}, nil, nil)
+```
+
+The module is `github.com/pockethost/pocketone/ext/backups`.
+
+## Configure
+
+There's nothing to configure: it reads the backups PocketBase already makes (Settings → Backups, including the
+automatic schedule and S3). An app turns it off with `extensions: { backups: { enabled: false } }`.
+
+## Use
+
+It's the default provider of the [restore/v1](../contracts/restore/v1/README.md) contract:
+
+```bash
+# what can be restored (superuser token)
+curl -H "Authorization: $TOKEN" https://app.example.com/api/_c/restore/v1
+# restore the latest backup at or before a moment
+curl -X POST -H "Authorization: $TOKEN" -H "Content-Type: application/json" \
+  -d '{"at":"2026-11-10T15:00:00Z"}' https://app.example.com/api/_c/restore/v1/restore
+```
+
+The answer names the backup it restores. The app restarts to apply it, as a restore from Settings → Backups does.
+In the dashboard, Settings → Backups has a "Restore to a moment" section (restore/v1's own screen) that shows which
+backup a moment uses.
+Agents get the same through MCP (`restore_points`, `restore_restore_to`).
+
+## Integrations
+
+| Extension | How they fit |
+|---|---|
+| [PITR](../pitr/README.md) | Also provides restore/v1, at any second rather than at backup times; when it's on for an app, Backups steps aside. |
+| [S3 Fallback](../s3-fallback/README.md) | Backups kept on the host's storage are listed and restored the same way. |
+| [Contracts](../contracts/README.md) | restore/v1 is the contract; any extension or host can provide it instead. |
+
+## Example
+
+```go
+// Command example is a PocketBase app whose restore/v1 comes from its backups: create a backup in the dashboard
+// (Settings → Backups), then `curl -H "Authorization: <superuser token>" http://127.0.0.1:8090/api/_c/restore/v1`
+// lists it, and POST /api/_c/restore/v1/restore with {"at": "<RFC 3339 time>"} restores the latest backup before it.
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password.
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/backups"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/extkit"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+	if _, err := extkit.Setup(app, []extkit.Extension{backups.New()}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## How it works
+
+`Points` lists the backups filesystem (`app.NewBackupsFilesystem()`), newest first, by each file's time. `RestoreTo`
+picks the newest backup at or before the moment and runs PocketBase's own `RestoreBackup`, which swaps pb_data and
+restarts the app.
+
+## License
+
+MIT

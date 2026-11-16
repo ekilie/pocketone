@@ -6,6 +6,7 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.19.0
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/mod v0.42.0
 )
 
 require (

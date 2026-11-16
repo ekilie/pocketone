@@ -1,13 +1,14 @@
 package pitr
 
 import (
+	"context"
 	"embed"
+	"encoding/json"
 	"io/fs"
-	"net/http"
-	"time"
 
-	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 //go:embed ui
@@ -19,72 +20,62 @@ func UI() fs.FS {
 	return sub
 }
 
+// PITR has no routes of its own: restores go through restore/v1 and its S3 destination through settings/v1.
 func (a *appPITR) onServe(se *core.ServeEvent) error {
 	if err := a.attach(); err != nil {
 		return err
 	}
-	g := se.Router.Group("/api/" + Name)
-	g.Bind(apis.RequireSuperuserAuth())
-	g.GET("", func(e *core.RequestEvent) error {
-		st, err := a.Status(e.Request.Context())
-		if err != nil {
-			return e.InternalServerError("", err)
-		}
-		return e.JSON(http.StatusOK, st)
-	})
-	g.POST("/restore", func(e *core.RequestEvent) error {
-		var body struct {
-			At time.Time `json:"at"`
-		}
-		if err := e.BindBody(&body); err != nil {
-			return e.BadRequestError("Expected {\"at\": \"<RFC 3339 time>\"}.", err)
-		}
-		if err := a.Restore(e.Request.Context(), body.At); err != nil {
-			return e.BadRequestError(err.Error(), nil)
-		}
-		return e.JSON(http.StatusAccepted, map[string]any{"restoring": true, "at": body.At})
-	})
-	g.GET("/settings", func(e *core.RequestEvent) error {
-		s, err := LoadSettings(e.App)
-		if err != nil {
-			return e.InternalServerError("", err)
-		}
-		return e.JSON(http.StatusOK, toPublic(s))
-	})
-	g.PATCH("/settings", func(e *core.RequestEvent) error {
-		prev, err := LoadSettings(e.App)
-		if err != nil {
-			return e.InternalServerError("", err)
-		}
-		var next Settings
-		if err := e.BindBody(&next); err != nil {
-			return e.BadRequestError("Expected {\"s3\": {...}}.", err)
-		}
-		next = mergeSecret(next, prev)
-		if err := SaveSettings(e.App, next); err != nil {
-			return e.BadRequestError(err.Error(), nil)
-		}
-		// the history keeps going, now to the new destination (a fresh snapshot there)
-		if err := a.reattach(); err != nil {
-			return e.InternalServerError("Saved, but replication didn't restart: "+err.Error(), err)
-		}
-		return e.JSON(http.StatusOK, toPublic(next))
-	})
-	g.POST("/settings/test-s3", func(e *core.RequestEvent) error {
-		prev, err := LoadSettings(e.App)
-		if err != nil {
-			return e.InternalServerError("", err)
-		}
-		var body Settings
-		if err := e.BindBody(&body); err != nil {
-			return e.BadRequestError("Expected {\"s3\": {...}}.", err)
-		}
-		body = mergeSecret(body, prev)
-		if err := testS3(body.S3); err != nil {
-			return e.BadRequestError("S3 test failed: "+err.Error(), nil)
-		}
-		return e.NoContent(http.StatusNoContent)
-	})
 	se.UIExtensions = append(se.UIExtensions, core.UIExtension{Name: Name, FS: UI()})
 	return se.Next()
+}
+
+// settingsSection is pitr's settings/v1 section: where its history goes (the app's own S3 bucket).
+type settingsSection struct{ a *appPITR }
+
+func (s settingsSection) Info() settingsv1.Info {
+	return settingsv1.Info{Extension: Name, Title: "Point-in-time restore",
+		Description: "Keep the history in your own S3 bucket instead of the server's storage or disk."}
+}
+
+func (s settingsSection) Get(context.Context) (json.RawMessage, error) {
+	cur, err := LoadSettings(s.a.app)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(toPublic(cur))
+}
+
+func (s settingsSection) parse(values json.RawMessage) (Settings, error) {
+	prev, err := LoadSettings(s.a.app)
+	if err != nil {
+		return Settings{}, err
+	}
+	var next Settings
+	if err := json.Unmarshal(values, &next); err != nil {
+		return Settings{}, &extkit.Error{Code: "bad_request", Message: `expected {"s3": {...}}`, Status: 400}
+	}
+	return mergeSecret(next, prev), nil
+}
+
+func (s settingsSection) Save(_ context.Context, values json.RawMessage) (json.RawMessage, error) {
+	next, err := s.parse(values)
+	if err != nil {
+		return nil, err
+	}
+	if err := SaveSettings(s.a.app, next); err != nil {
+		return nil, &extkit.Error{Code: "bad_request", Message: err.Error(), Status: 400}
+	}
+	// the history keeps going, now to the new destination (a fresh snapshot there)
+	if err := s.a.reattach(); err != nil {
+		return nil, &extkit.Error{Code: "reattach_failed", Message: "saved, but replication didn't restart: " + err.Error(), Status: 500}
+	}
+	return json.Marshal(toPublic(next))
+}
+
+func (s settingsSection) Test(_ context.Context, values json.RawMessage) error {
+	next, err := s.parse(values)
+	if err != nil {
+		return err
+	}
+	return testS3(next.S3)
 }

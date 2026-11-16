@@ -40,7 +40,11 @@ myapp/
     looked up in the nearest `node_modules` folder, the same way up. A package resolves through its `package.json`: `exports` (a string,
     or conditions, where `require`, then `node`, then `default` are used), else `main`, else `index.js`. With
     `exports`, only what it lists can be required, and no entry may point outside the package.
-  - Anything not found that way goes to the app's own module loader.
+  - Then `pb_hooks/node_modules`, then the app folder's `node_modules` (the folder that holds `pb_pages`, where 0.x
+    sites keep `package.json`).
+  - Anything not found that way goes to the app's own module loader. If that fails too, the error lists the folders
+    searched.
+  - A require cycle (`a` requires `b`, which requires `a`) gets the exports as they are so far, as in Node.
   - `node_modules` is never routed or served, and isn't watched: after changing files in it, change any file in
     `pb_pages` (or restart) to reload.
 - Page code runs in the app's JS VM, so PocketBase's JSVM globals (`$app`, `Record`, `$dbx`, `$security`, ...) are
@@ -58,9 +62,10 @@ A path segment (file or folder name) starting with one of these characters is ne
 | `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ejs`, `.jsx` or `.tsx`). One of each per folder. Any other `+` name is an error at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
-| `.` | Ignored (dotfiles). |
+| `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
 
-`node_modules/` is never routed.
+`node_modules/` is never routed. Hook files (`*.pb.js`, `*.pb.ts`) belong in `pb_hooks`: in `pb_pages` they're a
+startup error and never served.
 
 ### 1.2 Groups
 
@@ -125,7 +130,8 @@ previous table keeps serving if there was one.
 
 For a URL that matches a page or API route, one JS call does all of this, in order:
 
-1. **Plugins' `onRequest`** (built-in and JS plugins, in config order).
+1. **Plugins:** every plugin's `extendContext`, then every plugin's `onRequest` (built-in and JS plugins, in config
+   order), so an `onRequest` can use what any plugin added to `ctx`.
 2. **Middleware**, root first: every `+middleware.js` from `pb_pages/` down to the route's folder (groups included).
 3. **Handlers**: the folder's `+page.js` (or `+api.js`): `load`, then the handler for the request method.
 4. **Template** (pages only), then **layouts**, innermost first.
@@ -231,8 +237,10 @@ A template returns its text. There is no `echo`; anything you want in the output
   isn't escaped.
 - Lookup: `_private/` in the current template's folder, then each parent folder up to `pb_pages/`. For a template
   that is itself inside a `_private/` folder, the search starts at the folder containing that `_private/` (so its
-  siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`. `..` is not allowed.
-- `name` may include its extension; without one, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
+  siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`, unless it names a `_private/` folder itself
+  (`/_private/card`, `/blog/_private/card`, as in 0.x), which is a path from the top of `pb_pages`. `..` is not allowed.
+- `name` may include its extension. The exact name is tried first; then `.ejs`, `.md`, `.jsx` and `.tsx` are added, in
+  that order, so a dotted name such as `nav.main` finds `nav.main.ejs`.
 - The partial sees the same `ctx`, plus `locals` as top-level variables. As in EJS, `locals` is also the whole object,
   so an optional one can be tested without a `ReferenceError`: `<%% if (locals.subtitle) { %>`. A page or layout gets an
   empty `locals`.
@@ -515,6 +523,8 @@ module.exports = (config) => ({
 
 - `config` is the plugin's entry in `+config.js` when it's an object (`{ factory, ...options }`), else `{}`.
 - `name` is required and unique.
+- 0.x hook names (`onExtendContextApi`, `onRender`, `onResponse`, `handles`) are an error that names the v1 hook to
+  use.
 - There's no hook for treating other kinds of files as pages: a page's inner extension already does that
   (`robots.txt.ejs` serves `/robots.txt` as `text/plain`, 4.5).
 - Hooks run in config order. Every hook is optional.
@@ -574,6 +584,7 @@ inside `ext/pages` (`starters/`).
 | Cookies JSON-parsed on read | Strings; `{ json: true }` to parse |
 | Middleware: return a value, or call `next(extra)`, chosen by arity | `(ctx, next)`, data on `ctx.data` |
 | `+load.js`, `+get.js`, `+post.js`, ... per folder, results deep-merged | One `+page.js` exporting `load`, `get`, `post`, ...; returned objects shallow-assigned |
+| `+config.js` may export `(api) => ({...})` | It must export an object; a function is an error |
 | Template output that parses as JSON is sent as JSON | Only `ctx.res.json` or `+api.js` |
 | `<!-- slot:name -->` comments; layouts read `slot` / `slots` | `slot(name, fn)` to define, `slot(name)` / `slot()` to read |
 | `echo()` writes during render | Templates return text; streaming only through `ctx.res.sse()` |

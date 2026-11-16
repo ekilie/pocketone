@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.0
+---
+
 # tenants
 
 Accounts that own instances, for hosting other people (level 4): each instance has an owner; accounts have quotas and

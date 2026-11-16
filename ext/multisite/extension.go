@@ -2,37 +2,135 @@ package multisite
 
 import (
 	"context"
-	"crypto/tls"
+	"fmt"
 	"net/http"
 	"net/netip"
+	"sync"
+
+	gatev1 "github.com/pockethost/pocketone/ext/contracts/gate/v1"
+	wrapv1 "github.com/pockethost/pocketone/ext/contracts/http/wrap/v1"
+	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
+	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
+	tlsv1 "github.com/pockethost/pocketone/ext/contracts/tls/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
-// Gate admits requests (e.g. a firewall). AllowPeer runs before routing and refuses with 403; Admit runs before an
-// instance's request is served here or forwarded to another server, may answer it itself (ok=false), and otherwise
-// returns a release function called when the response ends (long-lived responses hold it until they end).
-type Gate interface {
-	AllowPeer(r *http.Request) bool
-	Admit(w http.ResponseWriter, r *http.Request, inst Instance) (release func(), ok bool)
+// Extension is a host extension: it works on the multisite process, whatever runs its instances. RegisterHost
+// provides its contracts on the host's scope (h.Scope): runtime/v1 (pocker, docker), gate/v1 (firewall), tls/v1
+// (autotls), http.wrap/v1 (servertiming), instance.source/v1. It may also add background work (h.Background). An
+// extension with nothing to do on this host (its section absent, turned off) provides nothing. An extension that
+// also implements Close(ctx) error is closed once the host has stopped every app.
+type Extension interface {
+	Name() string
+	RegisterHost(h *Host) error
 }
 
-// ClientIPResolver is an optional [Gate] extension: the request's real client (e.g. from CF-Connecting-IP when the
-// peer is a trusted proxy). When the gate implements it, a request served here reaches the app with RemoteAddr set
-// to that client, so PocketBase's logs, e.RealIP() and its own rate limits see the visitor instead of the proxy,
-// without the app having to trust any header.
-type ClientIPResolver interface {
-	ClientIP(r *http.Request) netip.Addr
+var (
+	linkMu sync.Mutex
+	linked []Extension
+)
+
+// Link makes e part of every host this binary builds from config (FromConfig), e.g. from the init of a package that
+// turns itself on from its own config sections (ext/firewall). Linked extensions register before [Options] Extensions.
+func Link(e Extension) {
+	linkMu.Lock()
+	defer linkMu.Unlock()
+	linked = append(linked, e)
 }
 
-// TLSProvider supplies the main listener's TLS (e.g. automatic certificates). served reports whether a hostname
-// belongs to an instance, for providers that must not issue certificates for anything else. httpHandler, if not
-// nil, wraps the plain-HTTP listener's handler (tls.http_listen), e.g. to answer ACME challenges.
-type TLSProvider interface {
-	TLS(ctx context.Context, served func(host string) bool) (cfg *tls.Config, httpHandler func(http.Handler) http.Handler, err error)
+// Linked lists the extensions linked with [Link], in link order.
+func Linked() []Extension {
+	linkMu.Lock()
+	defer linkMu.Unlock()
+	return append([]Extension(nil), linked...)
 }
 
-// Wrapper wraps the server's handler. Wrappers nest in the order given: the first listed is the outermost.
-type Wrapper interface {
-	Wrap(next http.Handler) http.Handler
+// Use registers host extensions on h, in order (the order of a Many contract's providers). Call it before [Host.Setup].
+func (h *Host) Use(exts ...Extension) error {
+	s := h.scope()
+	for _, e := range exts {
+		prev := s.Registering(e.Name())
+		err := e.RegisterHost(h)
+		s.Registering(prev)
+		if err != nil {
+			return fmt.Errorf("%s: %w", e.Name(), err)
+		}
+		if c, ok := e.(interface{ Close(context.Context) error }); ok {
+			h.Closers = append(h.Closers, c.Close)
+		}
+	}
+	return nil
+}
+
+// Setup seals h's contracts, with `providers:` choices for the host-scope ones (`runtime/v1: [pocker, docker]`), and
+// takes h's source, runtimes, gates, wrappers and TLS from them. h.Source, if set, is the default source; gates and
+// wrappers set on h directly come after the contracts' (inside them). It returns the startup lines, also logged.
+func (h *Host) Setup(choices extkit.Choices) ([]string, error) {
+	s := h.scope()
+	if h.Source != nil {
+		prev := s.Registering(defaultName(h.Source))
+		sourcev1.Contract.ProvideDefaultIn(s, h.Source)
+		s.Registering(prev)
+	}
+	if err := s.Seal(choices); err != nil {
+		return nil, err
+	}
+	if src, ok := sourcev1.Contract.In(s); ok {
+		h.Source = src
+	}
+	h.Runtimes = append(runtimev1.Contract.AllIn(s), h.Runtimes...)
+	h.Gates = append(gatev1.Contract.AllIn(s), h.Gates...)
+	var wraps []func(http.Handler) http.Handler
+	for _, w := range wrapv1.Contract.AllIn(s) {
+		wraps = append(wraps, w.Wrap)
+	}
+	h.Wrappers = append(wraps, h.Wrappers...)
+	if t, ok := tlsv1.Contract.In(s); ok {
+		h.TLS = t
+	}
+	lines := make([]string, 0, len(s.Lines))
+	for _, l := range s.Lines {
+		lines = append(lines, "multisite: "+l)
+		h.log().Info("multisite: " + l)
+	}
+	return lines, nil
+}
+
+func defaultName(src InstanceSource) string {
+	if _, ok := src.(*YAMLSource); ok {
+		return "instances file"
+	}
+	return "host"
+}
+
+func (h *Host) scope() *extkit.Scope {
+	if h.Scope == nil {
+		h.Scope = extkit.NewScope("multisite")
+	}
+	return h.Scope
+}
+
+// HostGate is a gate that runs h's gates as they are when a request comes (a runtime built before [Host.Setup], or
+// before host code appends gates, still sees all of them).
+func HostGate(h *Host) Gate { return hostGate{h} }
+
+type hostGate struct{ h *Host }
+
+func (g hostGate) chain() Gate {
+	if c := chainGates(g.h.Gates); c != nil {
+		return c
+	}
+	return gateChain(nil)
+}
+func (g hostGate) AllowPeer(r *http.Request) bool { return g.chain().AllowPeer(r) }
+func (g hostGate) Admit(w http.ResponseWriter, r *http.Request, inst Instance) (func(), bool) {
+	return g.chain().Admit(w, r, inst)
+}
+func (g hostGate) ClientIP(r *http.Request) netip.Addr {
+	if cr, ok := g.chain().(ClientIPResolver); ok {
+		return cr.ClientIP(r)
+	}
+	return netip.Addr{}
 }
 
 // chainGates combines gates: AllowPeer needs every gate, Admit runs them in order and releases in reverse.

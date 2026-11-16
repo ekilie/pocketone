@@ -7,6 +7,8 @@ source: "ext/edge/README.md"
 
 # Edge
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 The fleet layer for a [Multisite](/docs/extensions/multisite): several servers (edges) share one set of instances, any edge accepts
 any request, and a request for an instance another edge runs is forwarded there over the private network. Works with
 either runtime provider, [pocker](/docs/extensions/pocker) or [docker](/docs/extensions/docker).
@@ -15,7 +17,7 @@ either runtime provider, [pocker](/docs/extensions/pocker) or [docker](/docs/ext
 
 ## Install
 
-Edge is built into `pocketone`. It turns on in host mode (a `provider` in `pocketone.yaml`) when the file has an
+Edge is built into `pocketone`. It turns on in host mode (a `multisite` section in `pocketone.yaml`) when the file has an
 `edges` section, or a `mothership` section ([Mothership](/docs/extensions/mothership)), which lists the edges too.
 
 In your own Go build, give the host a router as its forward hook:
@@ -72,7 +74,7 @@ There's nothing to run by hand. A load balancer sends visitors to any edge, and 
 runs its instance:
 
 - **Owner healthy:** the request is forwarded to its `internal_url`, with the original hostname. An edge is healthy
-  when its source heard from it in the last 30 seconds, or else when it answers `/_pocker/health` (an edge the
+  when its source heard from it in the last 30 seconds, or else when it answers `/.well-known/health` (an edge the
   source marks offline never is).
 - **Owner briefly unreachable but healthy:** requests are held and retried every 250 ms until it answers. Only
   requests without a body (GET, HEAD, OPTIONS) are replayed after a failed connection.

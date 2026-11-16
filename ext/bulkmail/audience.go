@@ -1,9 +1,12 @@
 package bulkmail
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	suppressionv1 "github.com/pockethost/pocketone/ext/contracts/mail/suppression/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -216,7 +219,7 @@ func (bm *BulkMail) eachSQLRecipient(sql string, fn func(Recipient) error) error
 // sampleSize of them.
 func (bm *BulkMail) CountAudience(a Audience, sampleSize int) (count int, suppressed int, sample []string, err error) {
 	seen := map[string]bool{}
-	sup, err := bm.suppressedSet()
+	isSuppressed, err := bm.suppressedCheck()
 	if err != nil {
 		return 0, 0, nil, err
 	}
@@ -226,7 +229,7 @@ func (bm *BulkMail) CountAudience(a Audience, sampleSize int) (count int, suppre
 			return nil
 		}
 		seen[e] = true
-		if sup[e] {
+		if isSuppressed(e) {
 			suppressed++
 			return nil
 		}
@@ -237,6 +240,34 @@ func (bm *BulkMail) CountAudience(a Audience, sampleSize int) (count int, suppre
 		return nil
 	})
 	return count, suppressed, sample, err
+}
+
+// suppressedCheck returns how to tell a suppressed address: whoever provides mail.suppression/v1 decides. When bulk
+// mail provides it, its own list is read once (fast for large audiences); when another extension does, that
+// provider is asked per address (an error counts as suppressed: better to skip than to mail someone who left).
+func (bm *BulkMail) suppressedCheck() (func(email string) bool, error) {
+	if p, ok := suppressionv1.Contract.Provider(bm.app); ok && p != Name {
+		list := suppressionv1.Contract.Must(bm.app)
+		return func(email string) bool {
+			st, err := list.Check(context.Background(), extkit.Internal, suppressionv1.Address{Email: email})
+			return err != nil || st.Suppressed
+		}, nil
+	}
+	set, err := bm.suppressedSet()
+	if err != nil {
+		return nil, err
+	}
+	return func(email string) bool { return set[email] }, nil
+}
+
+// suppressedNow checks one address, as [BulkMail.suppressedCheck] does.
+func (bm *BulkMail) suppressedNow(email string) bool {
+	if p, ok := suppressionv1.Contract.Provider(bm.app); ok && p != Name {
+		st, err := suppressionv1.Contract.Must(bm.app).Check(context.Background(), extkit.Internal, suppressionv1.Address{Email: email})
+		return err != nil || st.Suppressed
+	}
+	sup, _ := bm.IsSuppressed(email)
+	return sup
 }
 
 func (bm *BulkMail) suppressedSet() (map[string]bool, error) {

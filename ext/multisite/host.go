@@ -4,28 +4,42 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
-// Host serves many instances with one runtime: it follows the instance source into a directory, runs the request
-// front (health, peer check, resolve, blocked, then the forward hook or the runtime, with the gates) behind the
-// wrappers, and listens. Fill it in and call Run.
+// Host serves many instances: it follows the instance source into a directory, runs the request front (health, peer
+// check, resolve, blocked, then the forward hook or the instance routes and a runtime, with the gates) behind the
+// wrappers, and listens.
+// Build it from config ([FromConfig]), or fill it in (Use and Setup, or the fields directly), then call Run.
 type Host struct {
-	Source  InstanceSource // required
-	Runtime Runtime        // the provider's runtime (required)
+	Source   InstanceSource // instance.source/v1 (required)
+	Runtimes []Runtime      // runtime/v1, in preference order (at least one)
+
+	// Scope is the host's contract scope: host extensions provide runtime/v1, gate/v1, tls/v1, http.wrap/v1 and
+	// instance.source/v1 on it ([Host.Use]); [Host.Setup] seals it. Its instances can be given contracts too
+	// (extkit's ProvideForInstances).
+	Scope *extkit.Scope
 
 	// Directory is shared with the runtime when the runtime needs it at construction (e.g. pocker's Manager); nil =
 	// a new one.
 	Directory *Directory
+	// DataRoot is where the first runtime keeps its instances' folders (set while it registers), for host extensions
+	// that keep files next to them (autotls's certificates); read it once the host runs.
+	DataRoot string
 	// First, if set, is a snapshot already taken from Source (so it isn't loaded twice).
 	First []Instance
 
-	Gates    []Gate                                                      // in order; a ConfigurableGate is configured by its owner
-	Wrappers []func(http.Handler) http.Handler                           // the first is the outermost
-	TLS      TLSProvider                                                 // nil = Listeners.TLS cert files, or plain HTTP
-	Forward  func(w http.ResponseWriter, r *http.Request, inst Instance) // instances another server runs (ext/edge); nil = plain proxy to Remote
-	Dev      bool                                                        // also serve unknown hostnames (dev ids)
+	Gates    []Gate                            // in order; a ConfigurableGate is configured by its owner
+	Wrappers []func(http.Handler) http.Handler // the first is the outermost
+	// InstanceRoutes run after the gates, for instances this host runs (see [Handler.InstanceRoutes]): where
+	// host-provided contracts answer. Add them before Run.
+	InstanceRoutes []func(http.Handler) http.Handler
+	TLS            TLSProvider                                                 // nil = Listeners.TLS cert files, or plain HTTP
+	Forward        func(w http.ResponseWriter, r *http.Request, inst Instance) // instances another server runs (ext/edge); nil = plain proxy to Remote
+	Dev            bool                                                        // also serve unknown hostnames (dev ids)
 
 	Listeners  Listeners
 	HealthPath string // default [DefaultHealthPath]
@@ -36,6 +50,8 @@ type Host struct {
 	OnListen func(addr string)
 	// OnShutdown runs after the listeners closed (in-flight requests done or cut), e.g. to stop running apps.
 	OnShutdown func()
+	// Closers release process-wide resources (extensions' stores) last, once the runtime has stopped every app.
+	Closers []func(context.Context) error
 
 	Logger *slog.Logger
 
@@ -45,8 +61,8 @@ type Host struct {
 // Handler returns the request front (before the wrappers), built on first use.
 func (h *Host) Handler() *Handler {
 	if h.handler == nil {
-		h.handler = &Handler{Dir: h.dir(), Gate: ChainGates(h.Gates...), Runtimes: []Runtime{h.Runtime}, Forward: h.Forward,
-			Dev: h.Dev, HealthPath: h.HealthPath, Logger: h.log()}
+		h.handler = &Handler{Dir: h.dir(), Gate: ChainGates(h.Gates...), Runtimes: h.Runtimes, Forward: h.Forward,
+			InstanceRoutes: h.InstanceRoutes, Dev: h.Dev, HealthPath: h.HealthPath, Logger: h.log()}
 	}
 	return h.handler
 }
@@ -68,13 +84,15 @@ func (h *Host) log() *slog.Logger {
 // Run serves until ctx is done or the source fails, then shuts down: the listeners (in-flight requests get
 // ShutdownTimeout), background work, the runtime.
 func (h *Host) Run(ctx context.Context) error {
-	if h.Source == nil || h.Runtime == nil {
-		return errors.New("host: Source and Runtime are required")
+	if h.Source == nil || len(h.Runtimes) == 0 {
+		return errors.New("host: a Source and at least one runtime are required")
 	}
 	log := h.log()
 	dir := h.dir()
-	if s, ok := h.Runtime.(Syncer); ok {
-		dir.Subscribe(s.Sync)
+	for _, rt := range h.Runtimes {
+		if s, ok := rt.(Syncer); ok {
+			dir.Subscribe(s.Sync)
+		}
 	}
 	var handler http.Handler = h.Handler()
 	for i := len(h.Wrappers) - 1; i >= 0; i-- {
@@ -83,9 +101,11 @@ func (h *Host) Run(ctx context.Context) error {
 
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	if st, ok := h.Runtime.(RuntimeStarter); ok {
-		if err := st.Start(runCtx); err != nil {
-			return fmt.Errorf("host: runtime %s: %w", h.Runtime.Name(), err)
+	for _, rt := range h.Runtimes {
+		if st, ok := rt.(RuntimeStarter); ok {
+			if err := st.Start(runCtx); err != nil {
+				return fmt.Errorf("host: runtime %s: %w", rt.Name(), err)
+			}
 		}
 	}
 	sourceErr := make(chan error, 1)
@@ -119,8 +139,19 @@ func (h *Host) Run(ctx context.Context) error {
 	if h.OnShutdown != nil {
 		h.OnShutdown()
 	}
-	if s, ok := h.Runtime.(Shutdowner); ok {
-		s.Shutdown()
+	for _, rt := range h.Runtimes {
+		if s, ok := rt.(Shutdowner); ok {
+			s.Shutdown()
+		}
+	}
+	if len(h.Closers) > 0 {
+		cctx, ccancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer ccancel()
+		for _, c := range h.Closers {
+			if cerr := c(cctx); cerr != nil && !errors.Is(cerr, context.Canceled) {
+				log.Warn("host: close", "error", cerr)
+			}
+		}
 	}
 	return err
 }

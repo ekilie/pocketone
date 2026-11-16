@@ -83,12 +83,12 @@ func TestPockerRestoreRestartsOnlyThatInstance(t *testing.T) {
 	if _, err := appA.DB().NewQuery(`DELETE FROM notes`).Execute(); err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "http://a.test/api/pitr/restore", strings.NewReader(`{"at":"`+t1.UTC().Format(time.RFC3339Nano)+`"}`))
+	req := httptest.NewRequest(http.MethodPost, "http://a.test/api/_c/restore/v1/restore", strings.NewReader(`{"at":"`+t1.UTC().Format(time.RFC3339Nano)+`"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", tok)
 	rec := httptest.NewRecorder()
 	m.ServeHTTP(rec, req)
-	if rec.Code != http.StatusAccepted {
+	if rec.Code != http.StatusOK {
 		t.Fatalf("restore: %d %s", rec.Code, rec.Body)
 	}
 
@@ -107,11 +107,11 @@ func TestPockerRestoreRestartsOnlyThatInstance(t *testing.T) {
 	}
 
 	// status from the new app reports the restore
-	req = httptest.NewRequest(http.MethodGet, "http://a.test/api/pitr", nil)
+	req = httptest.NewRequest(http.MethodGet, "http://a.test/api/_c/restore/v1", nil)
 	req.Header.Set("Authorization", tok)
 	rec = httptest.NewRecorder()
 	m.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"lastRestore"`) {
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"last"`) {
 		t.Fatalf("status after restore: %d %s", rec.Code, rec.Body)
 	}
 
@@ -163,16 +163,14 @@ func TestConfigureAndInstanceConfig(t *testing.T) {
 	extkit.SetSectionSource(sectionSource{"pitr": "enabled: false\nretention: 48h\n"})
 	t.Cleanup(func() { extkit.SetSectionSource(nil) })
 	p := New(Config{SnapshotInterval: time.Hour, Logger: quiet})
-	if err := p.Configure(pocker.Config{}); err != nil {
-		t.Fatal(err)
-	}
+	p.applySection() // what its first Register does
 	c := p.Config()
 	if c.Enabled == nil || *c.Enabled || c.Retention != 48*time.Hour || c.SnapshotInterval != time.Hour {
 		t.Fatalf("configured: %+v", c)
 	}
 	// Go-set values win over the file
 	p2 := New(Config{Retention: 24 * time.Hour, Logger: quiet})
-	_ = p2.Configure(pocker.Config{})
+	p2.applySection()
 	if p2.Config().Retention != 24*time.Hour {
 		t.Fatalf("file overrode a Go-set retention: %v", p2.Config().Retention)
 	}

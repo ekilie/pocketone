@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.0
+---
+
 # Vacuum
 
 Scheduled database compaction: online SQLite `VACUUM` for a single app; under pocker, one stopped instance at a time.

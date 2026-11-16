@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Firewall
 
 Peer allow-lists, trusted proxies and client IPs, and per-IP and per-instance rate limits for a
@@ -6,7 +11,7 @@ serves it or it's forwarded to another edge.
 
 ## Install
 
-The firewall is built into `pocketone`. It turns on in host mode (a `provider` in `pocketone.yaml`) when the file has
+The firewall is built into `pocketone`. It turns on in host mode (a `multisite` section in `pocketone.yaml`), as the host's [gate/v1](../contracts/gate/v1/README.md), when the file has
 a `firewall` or `rate_limits` section; there's nothing else to install.
 
 In your own Go build, importing the package registers it with the host, with the same rule:
@@ -139,7 +144,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: okRuntime{}, Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{okRuntime{}}, Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

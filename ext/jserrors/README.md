@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # JS Errors
 
 JS hook errors that point at the `.pb.js` file they come from. When a hook in `pb_hooks` throws, the error says

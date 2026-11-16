@@ -42,6 +42,12 @@ the file, PocketOne behaves like stock PocketBase. `pocketone config` lists ever
 - Long-lived API tokens (`pbt_…`) with scopes, for scripts and integrations.
 - Your app can act as an OAuth provider; `pocketone login` and MCP sign-in use it.
 
+## Extensions that fit together
+
+PocketOne's extensions meet through contracts: named, versioned promises like `restore/v1` that any extension can
+keep. The dashboard, the `pocketone` command, agents and your `pb_hooks` call the contract, so you can swap the
+extension behind it without changing anything else. [How PocketOne fits together](/docs/contracts) explains it.
+
 ## Everything else
 
 Automatic TLS certificates, bulk mail to your own users, scheduled VACUUM, signed S3 download redirects, and more. See

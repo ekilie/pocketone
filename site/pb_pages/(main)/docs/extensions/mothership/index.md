@@ -7,6 +7,8 @@ source: "ext/mothership/README.md"
 
 # Mothership
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 A control plane for a fleet of edges. The mothership is a PocketOne app that records which edges exist and which
 instances run where. Each edge follows it, serves its own instances and forwards requests for the rest to the edge
 that runs them.
@@ -38,10 +40,10 @@ router's edge source, as [`examples/pocketone/multi.go`](../../examples/pocketon
 
 ## Configure
 
-On each edge, add a `mothership` section next to the provider. Logins come from the private `.env`:
+On each edge, add a `mothership` section to the host's config; the mirror becomes the host's [instance.source/v1](/docs/contracts/instance.source/v1). Logins come from the private `.env`:
 
 ```yaml
-provider: docker                    # or pocker
+multisite: {}
 mothership:
   url: http://10.88.0.10:8090
   email: $MOTHERSHIP_EMAIL

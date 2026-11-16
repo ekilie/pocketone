@@ -49,8 +49,8 @@ type JSBinder interface {
 }
 
 // Closer is an extension that holds process-wide resources shared by all its apps (a pool, a store, a connection) and
-// releases them once every app has stopped. A single app closes it from OnTerminate; under pocker the extension closes
-// itself when the server stops (today through pocker.Starter, as ext/pitr does). The conformance test calls it
+// releases them once every app has stopped. A single app closes it from OnTerminate; on a multisite host the runtime
+// closes it once the host has stopped every app (multisite.Host.Closers). The conformance test calls it
 // after stopping its apps, so an extension that keeps goroutines across apps implements it.
 type Closer interface {
 	Close(ctx context.Context) error

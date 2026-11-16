@@ -31,7 +31,7 @@ func newApp(t *testing.T, cfg Config) (*tests.TestApp, *Tokens) {
 		se.Router.GET("/api/deploytest/ping", func(e *core.RequestEvent) error {
 			return e.String(http.StatusOK, "pong "+e.Auth.Email())
 		}).Bind(apis.RequireSuperuserAuth(), RequireScope("deploy"))
-		se.Router.GET("/_pocker/whoami", func(e *core.RequestEvent) error {
+		se.Router.GET("/api/_c/remote/v1", func(e *core.RequestEvent) error {
 			if e.Auth == nil {
 				return e.String(http.StatusOK, "anon")
 			}
@@ -166,11 +166,11 @@ func TestBearerAuthAndScopes(t *testing.T) {
 			Headers: authHeader(scoped), ExpectedStatus: 403, ExpectedContent: []string{"scopes"},
 		},
 		{
-			Name: "scoped token may ask who it is", Method: http.MethodGet, URL: "/_pocker/whoami",
+			Name: "scoped token may ask who it is", Method: http.MethodGet, URL: "/api/_c/remote/v1",
 			Headers: authHeader(scoped), ExpectedStatus: 200, ExpectedContent: []string{"me test@example.com"},
 		},
 		{
-			Name: "invalid token is anonymous", Method: http.MethodGet, URL: "/_pocker/whoami",
+			Name: "invalid token is anonymous", Method: http.MethodGet, URL: "/api/_c/remote/v1",
 			Headers: authHeader(Prefix + strings.Repeat("a", secretLen)), ExpectedStatus: 200, ExpectedContent: []string{"anon"},
 		},
 		{
@@ -186,39 +186,39 @@ func TestBearerAuthAndScopes(t *testing.T) {
 			Headers: authHeader(userTok), ExpectedStatus: 403, ExpectedContent: []string{`"status":403`},
 		},
 		{
-			Name: "a user lists only its own tokens", Method: http.MethodGet, URL: "/api/tokens",
+			Name: "a user lists only its own tokens", Method: http.MethodGet, URL: "/api/_c/tokens/v1",
 			Headers: authHeader(userTok), ExpectedStatus: 200, ExpectedContent: []string{`"ownerCollection":"users"`},
 			NotExpectedContent: []string{`"name":"full"`, `"hash"`},
 		},
 		{
-			Name: "a user can't create tokens for others", Method: http.MethodPost, URL: "/api/tokens",
+			Name: "a user can't create tokens for others", Method: http.MethodPost, URL: "/api/_c/tokens/v1",
 			Body:    strings.NewReader(`{"name":"x","owner":"` + su.Id + `","ownerCollection":"_superusers"}`),
 			Headers: authHeader(userTok), ExpectedStatus: 403, ExpectedContent: []string{`"status":403`},
 		},
 		{
-			Name: "superuser creates a scoped token for a user", Method: http.MethodPost, URL: "/api/tokens",
+			Name: "superuser creates a scoped token for a user", Method: http.MethodPost, URL: "/api/_c/tokens/v1",
 			Body:    strings.NewReader(`{"name":"made","owner":"test@example.com","ownerCollection":"users","scopes":["deploy"],"ttl":60}`),
 			Headers: authHeader(full), ExpectedStatus: 200,
 			ExpectedContent: []string{`"token":"pbt_`, `"scopes":["deploy"]`, `"ownerEmail":"test@example.com"`},
 		},
 		{
-			Name: "superuser lists everything", Method: http.MethodGet, URL: "/api/tokens",
+			Name: "superuser lists everything", Method: http.MethodGet, URL: "/api/_c/tokens/v1",
 			Headers: authHeader(full), ExpectedStatus: 200, ExpectedContent: []string{`"name":"full"`, `"name":"made"`},
 		},
 		{
-			Name: "scopes route", Method: http.MethodGet, URL: "/api/tokens/scopes",
+			Name: "scopes route", Method: http.MethodGet, URL: "/api/_c/tokens/v1/scopes",
 			Headers: authHeader(full), ExpectedStatus: 200, ExpectedContent: []string{`"name":"deploy"`, `"canCreate":true`},
 		},
 		{
-			Name: "a user can't revoke another's token", Method: http.MethodDelete, URL: "/api/tokens/" + scopedRec.Id,
+			Name: "a user can't revoke another's token", Method: http.MethodDelete, URL: "/api/_c/tokens/v1/" + scopedRec.Id,
 			Headers: authHeader(userTok), ExpectedStatus: 404, ExpectedContent: []string{"not found"},
 		},
 		{
-			Name: "revoke-all for self", Method: http.MethodPost, URL: "/api/tokens/revoke-all",
+			Name: "revoke-all for self", Method: http.MethodPost, URL: "/api/_c/tokens/v1/revoke-all",
 			Headers: authHeader(userTok), ExpectedStatus: 200, ExpectedContent: []string{`"revoked":2`},
 		},
 		{
-			Name: "the revoked token is anonymous", Method: http.MethodGet, URL: "/api/tokens",
+			Name: "the revoked token is anonymous", Method: http.MethodGet, URL: "/api/_c/tokens/v1",
 			Headers: authHeader(userTok), ExpectedStatus: 401, ExpectedContent: []string{`"status":401`},
 		},
 	}
@@ -294,7 +294,7 @@ func TestAudienceBinding(t *testing.T) {
 			Headers: authHeader(scopedMcp), ExpectedStatus: 403, ExpectedContent: []string{"bound to another resource"}},
 		{Name: "a token bound to the whole host is held to its scopes", Method: http.MethodGet, URL: "/mcp",
 			Headers: authHeader(hostTok), ExpectedStatus: 403, ExpectedContent: []string{"scopes (deploy)"}},
-		{Name: "bound token may ask who it is", Method: http.MethodGet, URL: "/_pocker/whoami", Headers: authHeader(mcpTok),
+		{Name: "bound token may ask who it is", Method: http.MethodGet, URL: "/api/_c/remote/v1", Headers: authHeader(mcpTok),
 			ExpectedStatus: 200, ExpectedContent: []string{"me test@example.com"}},
 	} {
 		s.TestAppFactory = factory

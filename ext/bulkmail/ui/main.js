@@ -20,8 +20,15 @@
         label: "Mail",
     });
 
-    function api(path, method = "POST", body) {
-        return app.pb.send("/api/bulkmail" + path, { method, body });
+    // bulk mail's API is contracts: bulkmail/v1 for campaigns, settings/v1 for its settings
+    function api(op, body) {
+        return app.pb.send("/api/_c/bulkmail/v1/" + op, { method: "POST", body });
+    }
+    async function getSettings() {
+        return (await app.pb.send("/api/_c/settings/v1/get", { query: { extension: "bulkmail" } })).values;
+    }
+    async function saveSettings(values) {
+        return (await app.pb.send("/api/_c/settings/v1/save", { method: "POST", body: { extension: "bulkmail", values } })).values;
     }
 
     function fail(err) {
@@ -309,21 +316,21 @@
 
         const doSave = () => run("save", async () => { if (await save()) app.toasts.success("Saved."); });
         const doCount = () => run("count", async () => {
-            data.count = await api("/audience/count", "POST", { audience: audience() });
+            data.count = await api("count", { audience: audience() });
         });
         const doPreview = () => run("preview", async () => {
-            if (await save()) data.preview = await api(`/campaigns/${id}/preview`);
+            if (await save()) data.preview = await api("preview", { campaign: id });
         });
         const doTest = () => run("test", async () => {
             if (await save()) {
-                await api(`/campaigns/${id}/test`);
+                await api("test", { campaign: id });
                 app.toasts.success("Test sent to " + (data.c.test_to || "the test address") + ".");
             }
         });
         const action = (name, confirmText) => () => {
             const go = () => run(name, async () => {
                 if (name === "start" && !(await save())) return;
-                init(await api(`/campaigns/${id}/${name}`));
+                init((await api(name, { campaign: id })).campaign);
                 loadLedger();
             });
             if (confirmText) {
@@ -618,7 +625,7 @@
         }
         async function load() {
             try {
-                data.s = await api("/settings", "GET");
+                data.s = await getSettings();
                 data.initSerialized = snapshot();
             } catch (err) {
                 fail(err);
@@ -629,7 +636,7 @@
             e.preventDefault();
             data.saving = true;
             try {
-                data.s = await api("/settings", "PATCH", {
+                data.s = await saveSettings({
                     postalAddress: data.s.postalAddress,
                     unsubscribeMailto: data.s.unsubscribeMailto,
                     snsTopicArns: (data.s.snsTopicArns || []).filter(Boolean),

@@ -6,6 +6,7 @@ require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/benbjohnson/litestream v0.5.18
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
@@ -48,8 +49,8 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -93,3 +94,5 @@ replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 
 replace github.com/pockethost/pocketone/ext/config => ../config
+
+replace github.com/pockethost/pocketone/ext/contracts => ../contracts

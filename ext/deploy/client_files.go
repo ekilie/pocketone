@@ -1,20 +1,20 @@
 package deploy
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
+	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/remotes"
+	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 )
 
 // FileEntry is one entry of a remote listing.
@@ -51,7 +51,7 @@ func (c *Client) Download(ctx context.Context, path, dest string) error {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return remotes.DecodeResponse(res, nil)
+		return remoteclient.DecodeResponse(res, nil)
 	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return err
@@ -100,7 +100,7 @@ func Pull(ctx context.Context, c *Client, opts PullOptions) (int, error) {
 		p = strings.Trim(p, "/")
 		entries, truncated, err := c.ListFiles(ctx, p, true)
 		if err != nil {
-			if !explicit && remotes.IsStatus(err, http.StatusNotFound) {
+			if !explicit && remoteclient.IsStatus(err, http.StatusNotFound) {
 				continue // a default folder the remote doesn't have
 			}
 			return n, fmt.Errorf("%s: %w", p, err)
@@ -149,48 +149,45 @@ type LogEntry struct {
 	Time    string `json:"time"`
 }
 
-// StreamLogs replays the last n log entries, then follows new ones until ctx ends or the stream closes.
+// StreamLogs replays the last n log entries, then follows new ones until ctx ends or the stream closes. It reads
+// remote/v1's log stream.
 func (c *Client) StreamLogs(ctx context.Context, n int, fn func(LogEntry)) error {
-	req, err := c.NewRequest(ctx, http.MethodGet, c.Prefix+"/logs?n="+strconv.Itoa(n), nil)
+	st, err := c.remote().Logs(ctx, extkit.Auth{}, remotev1.LogsInput{N: n})
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Accept", "text/event-stream")
-	res, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return remotes.DecodeResponse(res, nil)
-	}
-	sc := bufio.NewScanner(res.Body)
-	sc.Buffer(make([]byte, 64<<10), 4<<20)
-	event := ""
-	var data strings.Builder
-	for sc.Scan() {
-		line := sc.Text()
-		switch {
-		case line == "":
-			if event == "log" || (event == "" && data.Len() > 0) {
-				var e LogEntry
-				if json.Unmarshal([]byte(data.String()), &e) == nil {
-					fn(e)
-				}
+	defer st.Close()
+	emit := func() {
+		for _, raw := range st.Poll() {
+			m, _ := raw.(map[string]any)
+			e := LogEntry{Message: fmt.Sprint(m["message"]), Time: fmt.Sprint(m["time"])}
+			e.Stream, _ = m["stream"].(string)
+			if lvl, _ := m["level"].(string); e.Stream == "" && (lvl == "error" || lvl == "warn") {
+				e.Stream = "stderr"
 			}
-			event = ""
-			data.Reset()
-		case strings.HasPrefix(line, "event:"):
-			event = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
-		case strings.HasPrefix(line, "data:"):
-			if data.Len() > 0 {
-				data.WriteByte('\n')
-			}
-			data.WriteString(strings.TrimPrefix(strings.TrimPrefix(line, "data:"), " "))
+			fn(e)
 		}
 	}
-	if ctx.Err() != nil {
-		return nil
+	tick := time.NewTicker(200 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-st.Done:
+			emit()
+			return errors.New("the log stream ended")
+		case <-tick.C:
+			emit()
+		}
 	}
-	return sc.Err()
+}
+
+// remote is remote/v1 on this client's remote, with its login.
+func (c *Client) remote() *remotev1.Client {
+	tok := ""
+	if c.Token != "" {
+		tok = "Bearer " + c.Token
+	}
+	return remotev1.NewClient(c.Remote.URL, tok, c.HTTP)
 }

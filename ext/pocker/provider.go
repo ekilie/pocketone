@@ -2,6 +2,7 @@ package pocker
 
 import (
 	"log/slog"
+	"net/http"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -28,25 +29,36 @@ var Section = extkit.NewSectionFunc("pocker", func() SectionConfig {
 	return SectionConfig{Root: d.PBRoot, HooksPoolSize: d.HooksPoolSize, Limits: d.Limits}
 }, "Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).")
 
-// Provider is pocker as a runtime provider for ext/multisite (`provider: pocker`). The fields are the host application's
-// extensions, as on [Server].
+// Provider is pocker as a host extension for ext/multisite: it reads the `pocker` section and provides runtime/v1
+// (instances in-process). The fields are the host application's extensions, as on [Server].
 type Provider struct {
-	Extensions []Extension
-	SetupApp   func(inst Instance, app core.App) error
-	OnEvent    func(Event)
-	OnStart    func(m *Manager)
+	// Standard is the per-app extension set every instance gets (ext/standard's Set; see [Server.Standard]).
+	Standard extkit.AppSet
+	// Host is the host's contract scope (see [Server.Host]).
+	Host *extkit.Scope
+	// InstanceRoutes serve the host's contracts for its instances, after the gates (see [Server.InstanceRoutes]).
+	InstanceRoutes []func(http.Handler) http.Handler
+	Extensions     []Extension
+	SetupApp       func(inst Instance, app core.App) error
+	OnEvent        func(Event)
+	OnStart        func(m *Manager)
 	// Resolve makes relative paths in the section absolute (e.g. ext/config's Config.ResolvePath, relative to the
 	// config file); nil = as written (relative to the working directory).
 	Resolve func(string) string
 }
 
-var _ multisite.Provider = (*Provider)(nil)
+var _ multisite.Extension = (*Provider)(nil)
 
-// Name implements multisite.Provider.
+// Name implements multisite.Extension.
 func (p *Provider) Name() string { return "pocker" }
 
-// Prepare implements multisite.Provider: it reads the `pocker` section and makes h run its instances in-process.
-func (p *Provider) Prepare(h *multisite.Host) error {
+// Contracts implements extkit.Declarer: pocker is runtime/v1 (and remote/v1 for its instances, with [Remote]).
+func (p *Provider) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("runtime/v1")}
+}
+
+// RegisterHost implements multisite.Extension: it reads the `pocker` section and makes h run instances in-process.
+func (p *Provider) RegisterHost(h *multisite.Host) error {
 	sc, _ := Section.Get()
 	cfg := DefaultConfig()
 	root := sc.Root
@@ -61,6 +73,6 @@ func (p *Provider) Prepare(h *multisite.Host) error {
 	if h.Logger == nil {
 		h.Logger = slog.Default()
 	}
-	s := &Server{Config: cfg, Extensions: p.Extensions, SetupApp: p.SetupApp, OnEvent: p.OnEvent, OnStart: p.OnStart, Logger: h.Logger}
-	return s.prepare(h)
+	s := &Server{Config: cfg, Standard: p.Standard, Host: p.Host, InstanceRoutes: p.InstanceRoutes, Extensions: p.Extensions, SetupApp: p.SetupApp, OnEvent: p.OnEvent, OnStart: p.OnStart, Logger: h.Logger}
+	return s.RegisterHost(h)
 }

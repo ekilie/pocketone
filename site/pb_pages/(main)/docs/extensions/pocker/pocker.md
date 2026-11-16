@@ -9,7 +9,8 @@ source: "ext/pocker/POCKER.md"
 
 Pocker hosts many PocketOne instances in one process. It is PocketOne itself (this repo tracks
 [upstream PocketBase](https://ganigeorgiev.com/git/pocketbase/pocketbase) and shares its history) plus a small engine in
-this folder, run by the stock `pocketone` binary as a runtime provider (`provider: pocker` in pocketone.yaml).
+this folder, run by the stock `pocketone` binary as a [runtime/v1](/docs/contracts/runtime/v1) provider (a `multisite`
+section in pocketone.yaml).
 
 - One port, many instances. Each request's hostname maps to a canonical instance id.
 - Each instance is a normal app folder, `<root>/<id>` (`pb_data`, `pb_hooks`, `pb_migrations`, `pb_public`),
@@ -22,7 +23,7 @@ this folder, run by the stock `pocketone` binary as a runtime provider (`provide
 ```yaml
 # pocketone.yaml
 server: { http: "127.0.0.1:8090" }
-provider: pocker
+multisite: {}
 instances: { dev: true }
 pocker: { root: ./pb_root }
 ```
@@ -71,7 +72,7 @@ server:
   plain: []                 # extra plain-HTTP listeners (no TLS, no redirect), e.g. a private network other servers forward on
   tls: { cert: /path/fullchain.pem, key: /path/privkey.pem }   # re-read when they change; or the autotls section
 
-provider: pocker
+multisite: {}
 instances: { file: ./instances.yaml }
 
 pocker:
@@ -151,18 +152,16 @@ any of:
 | Interface | Used for |
 |---|---|
 | `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [pitr](/docs/extensions/pitr), [storage](/docs/extensions/s3-fallback), [tokens](/docs/extensions/tokens), [s3redirect](/docs/extensions/s3redirect), [mailrelay](/docs/extensions/mailrelay), [bulkmail](/docs/extensions/bulkmail). `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a single app. |
-| `Configurer` | reading its own pocketone.yaml section before the server starts (`Configure(cfg)`) |
-| `Gate` | a peer check before routing, and admission (e.g. rate limits) before an instance is served or forwarded |
-| `TLSProvider` | the main listener's TLS (e.g. automatic certificates) |
-| `Wrapper` | wrapping the server's handler (the first listed is outermost) |
-| `Starter` | background work once the Manager exists |
+| `multisite.Extension` | a host extension (`RegisterHost`): it provides host contracts (gate/v1, tls/v1, http.wrap/v1, ...) as on any runtime ([docs/extensions.md](/docs/writing-an-extension#host-extensions)) |
+| `Starter` | background work that needs pocker's Manager |
 | `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a single app too and pass the [conformance test](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go). |
 
 Per-instance settings for an extension go under the instance's `extensions.<name>` (read them with `pocker.DecodeExtensionConfig`).
 `app.Restart()` (a backup restore, pitr) restarts only that instance, not the process.
-Timings for the Server-Timing header are registered with `pocker.Timing(ctx, fn)`. The stock `pocketone` binary runs
-pocker with [servertiming](/docs/extensions/servertiming), [autotls](/docs/extensions/autotls) and
-[mailtrap](/docs/extensions/mailtrap); the [firewall](/docs/extensions/firewall) turns on from its sections.
+Timings for the Server-Timing header are registered with `multisite.Timing(ctx, fn)`. The stock `pocketone` binary runs
+pocker with [mailtrap](/docs/extensions/mailtrap), and its host with [servertiming](/docs/extensions/servertiming) and
+[autotls](/docs/extensions/autotls) (`multisite.Options.Extensions`, the same under docker); the
+[firewall](/docs/extensions/firewall) turns on from its sections.
 
 ## Platform values and logs
 
@@ -186,7 +185,7 @@ pocker with [servertiming](/docs/extensions/servertiming), [autotls](/docs/exten
 When an instance's `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private` or `remote` changes, its app restarts on the next request (the old one finishes
 in-flight requests first), so a rotated secret takes effect immediately. Host changes apply without a restart.
 
-`GET /_pocker/health` on any host reports `{status, instances, running}`.
+`GET /.well-known/health` on any host reports `{status, instances, running}`.
 
 **Changing an instance's files from host code** (deploys, restores): `Manager.WithInstanceStopped(ctx, id, fn)` stops
 the app, holds new requests for that instance, runs `fn(dir)`, then lets them through to a fresh app.
@@ -222,7 +221,7 @@ route from one instance against another instance and the host; all of these are 
 
 **Limits of the memory controls:** only one-shot allocations are capped. A hook that grows memory gradually slows or,
 past swap, restarts the whole process (every instance in it) rather than failing alone; per-instance memory accounting
-needs a goja with a memory API, or one process per instance (the docker provider).
+needs a goja with a memory API, or one process per instance (docker).
 
 **Not covered yet:** per-instance concurrency limits, and OS-level defence in depth: run Pocker as a non-root user with an
 OS firewall that only lets that user reach public addresses (a second, independent egress layer), plus seccomp and

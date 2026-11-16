@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -15,9 +16,9 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/remotes"
 	"github.com/spf13/cobra"
 )
 
@@ -60,11 +61,11 @@ func (f *setFlags) collect(dir string) CollectOptions {
 
 func projectRoot() string {
 	d, _ := os.Getwd()
-	return remotes.FindProjectRoot(d)
+	return remoteclient.FindProjectRoot(d)
 }
 
 func open(ctx context.Context, remote string) (*Client, error) {
-	rc, err := remotes.Open(projectRoot(), remote)
+	rc, err := remoteclient.Open(projectRoot(), remote)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +76,8 @@ func open(ctx context.Context, remote string) (*Client, error) {
 		return nil, err
 	}
 	// fail fast on a bad login before collecting files
-	if _, err := c.DeployWhoami(wctx); err != nil {
-		return nil, err
+	if _, err := c.remote().Status(wctx, extkit.Auth{}); err != nil && !remoteclient.IsStatus(err, http.StatusForbidden) {
+		return nil, err // a deploy-only token may lack remote:read; any other failure is a bad login
 	}
 	return c, nil
 }

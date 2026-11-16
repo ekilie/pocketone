@@ -7,6 +7,8 @@ source: "ext/upgrade/README.md"
 
 # Upgrade
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 `pocketone upgrade` replaces the `pocketone` executable with the latest PocketOne release and keeps the old one beside
 it as `<name>-<version>` (for example `pocketone-0.0.3`), so a project can keep running the engine it was built with.
 
@@ -34,6 +36,7 @@ flag:
 | Flag | Default | What it does |
 |---|---|---|
 | `--backup` | `true` | Back up `pb_data` after upgrading, if the current folder has one. `--backup=false` skips it. |
+| `--yes`, `-y` | `false` | Move from a stable release to a prerelease without asking. |
 
 ## Use
 
@@ -45,7 +48,13 @@ pocketone upgrade
 
 It:
 
-1. Checks the latest release on GitHub. If you already have it (or something newer), it says so and stops.
+1. Picks the newest release on GitHub that fits what you're running, and stops if you already have it:
+   - The newest release is offered, prereleases included: `0.1.0-alpha.2` goes to `0.1.0-alpha.3` or `0.1.0`,
+     whichever is newest.
+   - **From one prerelease to the next** (or to a stable release), it just upgrades.
+   - **From a stable release to a prerelease** (`0.1.0` to `0.1.1-alpha.1`), it asks first. No means the newest stable
+     release instead, if there's a newer one. `--yes` answers yes for you; with no answer (no terminal), it's no.
+   - A local build upgrades to the newest release without asking.
 2. Downloads the archive for your platform and checks it against the release's `checksums.txt` before touching
    anything.
 3. Renames the current executable to `<name>-<version>` and puts the new one in its place. **Old copies are never
@@ -72,7 +81,10 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 - **Custom builds** that publish their own releases set `Owner`, `Repo`, `ArchivePrefix` and `ArchiveExecutable` in
   `upgrade.Config`. Release archives are named `<prefix>_<version>_<os>_<arch>.zip`, with a goreleaser-style
   `checksums.txt` in the same release.
-- **Go API.** `Config.FetchRelease(ctx, tag)` fetches the latest release (tag `""`) or a given one;
+- **Go API.** `Config.FetchReleases(ctx)` lists the published releases, prereleases included, and
+  `upgrade.UpgradeFor(current, releases, stableOnly)` picks the one to upgrade to and `upgrade.NeedsConfirm(current, release)`
+  says whether to ask first. `Config.FetchRelease(ctx, tag)`
+  fetches GitHub's latest stable release (tag `""`) or a given one;
   `Config.DownloadArchive(ctx, release, goos, goarch, dir)` downloads and checks a platform's archive.
   `upgrade.KeptName(exe, version)` is the name an old executable is kept under.
 

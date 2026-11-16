@@ -5,7 +5,7 @@
 
     async function load() {
         try {
-            status = await app.pb.send("/api/mailrelay");
+            status = (await app.pb.send("/api/_c/settings/v1/get", { query: { extension: "mailrelay" } })).values;
         } catch {
             status = null;
         }

@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
+	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/remotes"
 )
 
 // Two-way sync for `dev`: the project's code set (pb_* folders except pb_data, package.json, bun.lock(b), patches/)
@@ -457,7 +457,7 @@ func (s *Syncer) pull(ctx context.Context, paths []string, localFiles map[string
 			}
 		}
 		if err := s.c.Download(ctx, p, dest); err != nil {
-			var ae *remotes.APIError
+			var ae *remoteclient.APIError
 			if errors.As(err, &ae) && ae.Status == http.StatusNotFound {
 				continue // gone since the listing
 			}

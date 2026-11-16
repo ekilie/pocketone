@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Pages
 
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
@@ -133,43 +138,43 @@ cd example && go run . serve --dir=./pb_data
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | `pockerext` serves each instance's own `pb_pages` (below). |
-| [OAuth Server](../oauth-server/README.md) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
+| [Pocker](../pocker/README.md) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
+| [OAuth](../tokens/OAUTH.md) (in Tokens) | Renders its sign-in screens from `pb_pages/_private/oauth/` when you have them there (`pocketone oauth eject` writes them). |
 | [Deploy](../deploy/README.md) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 | [JS Errors](../jserrors/README.md) | Both run in the same JS VM; JS Errors covers `pb_hooks`, pages report their own file and line. |
 
 ### Under pocker
 
-`pockerext.New(pages.Config{})` serves every instance's `<instance dir>/pb_pages`:
+Pages is a member of the [standard set](../standard/README.md), so every instance serves its own
+`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. A host without
+the standard set adds it like any extension:
 
 ```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pockerext.New(pages.Config{})}}
+srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(pages.Config{})}}
 ```
 
-- The stock `pocketone` binary doesn't add it in multi-instance mode yet; a custom build does, as above.
 - Each start of an instance's app gets its own route table, compiled templates and caches. An instance that sleeps
   drops them; nothing is shared between instances.
 - Page code runs in the instance's own sandboxed JS runtimes, under its limits (execution time, single allocations,
   call stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
   `pb_pages`; `$os` file access stays inside the instance folder. Tests:
-  [pockerext_test.go](pockerext/pockerext_test.go).
+  [multiinstance_test.go](multiinstance/multiinstance_test.go).
 - An instance turns pages off in its settings with `extensions: { pages: { enabled: false } }`.
-- It's its own package ([pockerext](pockerext/pockerext.go)), so single-app builds don't link pocker.
 
 Measured (same machine as [Speed](#speed), docs kit): each awake instance adds about **2.3 MB** (50 instances: 41 MB
 idle to 155 MB). One instance under pocker serves about **4,000 requests/s** (p50 5.6 ms, p99 80 ms at 50
 concurrent): less than a single app because pocker keeps 2 prewarmed JS runtimes per instance (`hooks_pool_size`; a
 single app has 15) and every call goes through the sandbox.
 
-To try it: copy sites into `pockerext/example/pb_root/<name>.localhost/pb_pages`, run
-`go run ./pockerext/example`, and open `http://<name>.localhost:8791`.
+To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pages`, run
+`go run ./multiinstance/example`, and open `http://<name>.localhost:8791`.
 
 ### Building on pages
 
 - **Render a template from Go.** `pages.For(app).RenderTemplate(e, "oauth/signin", status, data)` renders
   `pb_pages/_private/oauth/signin.ejs` (or `.md`, `.jsx`, `.tsx`) as the whole response, with `data` as `ctx.data`
   and no middleware, layouts or `+page.js`, for any method. It returns `handled=false` when the project has no such
-  template. OAuth Server uses it.
+  template. The OAuth server uses it.
 - **Read the routes.** `pages.For(app)` returns the service: `Dir()` is the folder, `Table()` the current route
   table, `Errors()` the problems from the last build.
 - **JS plugins.** A factory in `+config.js` can add to `ctx`, run on each request and transform rendered HTML

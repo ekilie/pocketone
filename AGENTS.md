@@ -65,6 +65,46 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
 - `core/notify_watcher.go`: stops the watcher goroutine (and waits for it) before `ClearBootstrap`, which it raced
   (`TestNotifyWatcher_StoppedBeforeClearBootstrap`, `TestNotifyWatcher_QueuedReloadAfterClearBootstrap`).
 
+## Writing an extension
+
+Read [docs/contracts.md](docs/contracts.md) (the idea) and [docs/extensions.md](docs/extensions.md) (the code) first.
+Extensions meet only through **contracts**: named, versioned Go interfaces in `ext/contracts/<id path>/vN/`, listed in
+the catalogue [ext/contracts/README.md](ext/contracts/README.md). Design the contracts before the extension, in this
+order of preference:
+
+1. **Use an existing contract.** Search the catalogue first. If a contract already promises what your extension
+   needs, put it in `Requires` or `WorksWith`. If one already promises what your extension offers, provide that one:
+   your extension then stands in for the current provider (a default steps aside; otherwise `providers:` in
+   `pocketone.yaml` picks).
+2. **Extend an existing contract.** These leave its promise unchanged:
+   - Provide it alongside others, for contracts that take a chain (`mail.fallback/v1`).
+   - Decorate whatever provides it (`Contract.Wrap`, declared in `Wraps`).
+   - Add or replace `pocketone` commands through `cli.commands/v1`.
+   - Give it a dashboard screen (`Contract.UI`).
+
+   If the promise itself has to change, add `vN+1` beside `vN`, reviewed with the contract's owners. Never change what
+   a published `vN` promises.
+3. **Invent a new contract only when none fits.** In the commit message, name the contracts you checked and say why
+   none fits. Keep it small and name it for what it does (`restore/v1`), never for your extension. A new optional
+   ability next to an existing contract is a small companion contract (`mail.suppression/v1` beside `bulkmail/v1`),
+   not a second copy of the contract with changes. Add it with its README (front matter `owners`, `summary`; sections
+   `Use`, `Provide`, `Extensions`, `License`), per
+   [Add a contract](ext/contracts/README.md#add-a-contract). Contracts are reviewed like core: every provider and
+   caller relies on the promise.
+
+Rules every extension follows:
+
+- **Every API a client can call is a contract operation** under `/api/_c/<id>/`. Extensions register no routes of their
+  own; only paths a standard fixes stay at the root (`/.well-known/*`, `/mcp`).
+- **Never import another extension's module** (tests and examples may). Anything shared, such as helpers, scopes or a
+  client, belongs in the contract package.
+- **Declare by contract id, never by extension name**, in `Contracts()` (`Implements`, `Defaults`, `Wraps`, `Requires`,
+  `WorksWith`). Provide in `Register` (`Provide` / `ProvideDefault`); look contracts up only after registration
+  (`Of`, `Must` in hooks or at serve time). A lookup inside `Register` panics.
+- **After changing a contract interface**, run `go generate ./...` in `ext/contracts`. Then run
+  `go run ./.github/extensions contracts` to regenerate the catalogue and each contract's Extensions section, and
+  `go run ./.github/extensions check`. CI fails if either is stale.
+
 ## Other rules
 
 - Extensions are their own Go modules under `ext/<name>/` with a README and a minimal `example/main.go`
@@ -77,4 +117,8 @@ Bug fixes to upstream behavior, each tested and meant for upstream; drop each on
   `cd site/sync && go run .` (CI checks it).
 - Build checks: `go build -o /dev/null ./...` (a plain `go build` in a single-main module writes a binary into the
   tree). Stage files by name; never commit built binaries.
+- **Changelog:** every commit to `main` with a user-visible change adds its line under `## Unreleased` in
+  [docs/CHANGELOG.md](docs/CHANGELOG.md), in the same commit (policy at its top; breaking changes need an
+  **Upgrading** step). Release notes are that file's section for the version, printed by
+  `examples/pocketone/release-notes.sh vX.Y.Z`. The root `CHANGELOG.md` is upstream PocketBase's; leave it alone.
 - Plans and internal notes go in a private maintainer repo, never here.

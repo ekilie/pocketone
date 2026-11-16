@@ -7,6 +7,8 @@ source: "ext/mcp/README.md"
 
 # MCP
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 A [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp`, so an agent (Claude Code, a Claude
 connector, any Streamable HTTP client) can work with your app. No sidecar process.
 
@@ -17,7 +19,11 @@ connector, any Streamable HTTP client) can work with your app. No sidecar proces
   backups). An app that only uses the stock API needs nothing else.
 - **Your own endpoints get tools the same way:** write the REST endpoint, then the tool wrapper (`$mcp.addEndpoint`
   in `pb_hooks`, or `AddEndpoint` from Go).
-- **Sign-in with OAuth** through [OAuth Server](/docs/extensions/oauth-server): add `https://<host>/mcp` to Claude and sign
+- **Every contract the app provides is there too.** Its operations are tools (`restore_points`,
+  `bulkmail_start`, `remote_status`, ...), with input schemas from the contract's types, called through the contract
+  so its superuser check, scopes and hooks apply. MCP provides the [mcp/v1](/docs/contracts/mcp/v1) contract:
+  another MCP server can replace this one, and serves the same contract tools.
+- **Sign-in with OAuth** through [the OAuth server](/docs/extensions/tokens/oauth): add `https://<host>/mcp` to Claude and sign
   in in a browser, as a superuser or an app user. The connection stays signed in until you revoke it.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
@@ -25,9 +31,9 @@ connector, any Streamable HTTP client) can work with your app. No sidecar proces
 ## Install
 
 MCP is built into `pocketone` and always on, with [Tokens](/docs/extensions/tokens) and
-[OAuth Server](/docs/extensions/oauth-server) for sign-in and `$mcp` in `pb_hooks`. There's nothing to install or turn on.
+[the OAuth server](/docs/extensions/tokens/oauth) for sign-in and `$mcp` in `pb_hooks`. There's nothing to install or turn on.
 
-In your own Go build, register it before the app starts. Register Tokens and OAuth Server too for OAuth sign-in, and
+In your own Go build, register it before the app starts. Register Tokens (with its OAuth server) too for OAuth sign-in, and
 bind `$mcp` into the JS hooks if you use them:
 
 ```go
@@ -46,7 +52,7 @@ wait for it. The module is `github.com/pockethost/pocketone/ext/mcp`.
 
 There is no `pocketone.yaml` section, flag, environment variable or settings screen for MCP. In `pocketone` it serves
 `/mcp` with every built-in tool, and:
-- anyone who can sign in through [OAuth Server](/docs/extensions/oauth-server) can connect: superusers and app users of
+- anyone who can sign in through [the OAuth server](/docs/extensions/tokens/oauth) can connect: superusers and app users of
   any auth collection, each with their own rights;
 - an agent's connection doesn't expire; it lasts until you revoke it;
 - the server's name for clients comes from **Settings → Application → Application name**.
@@ -57,7 +63,7 @@ A Go build can change the path, the tools, the caps and the sign-in (see [Go con
 
 MCP registers no scopes of its own. When an agent connects, the consent page offers **Full access** (the account's
 rights, like a PocketBase auth token) or **Only these**, with a box for each of your
-[token scopes](/docs/extensions/tokens#your-own-scopes) (scopes that only reach `/_pocker/` routes, like `deploy`, aren't
+[token scopes](/docs/extensions/tokens#your-own-scopes) (scopes that only reach contract APIs under `/api/_c/`, like `deploy`, aren't
 offered unless the client asks for them). The protected resource metadata lists the same scopes in
 `scopes_supported`, so a client can ask for some up front; the user can still change the ticks.
 
@@ -179,8 +185,8 @@ endpoint too, to give it the app's meaning (for example `notes_add_note` over `P
 
 ### In the logs
 
-Without OAuth Server on the app, MCP logs a warning on serve:
-`mcp: ext/oauth-server isn't registered; /mcp accepts pasted PocketBase auth tokens only, and clients can't sign in by themselves`.
+Without the OAuth server on the app, MCP logs a warning on serve:
+`mcp: the OAuth server (ext/tokens) is off; /mcp accepts pasted PocketBase auth tokens only, and clients can't sign in by themselves`.
 In `pocketone` it always is.
 
 ## Integrations
@@ -189,14 +195,14 @@ In `pocketone` it always is.
 
 | Extension | How they fit |
 |---|---|
-| [OAuth Server](/docs/extensions/oauth-server) | Signs MCP clients in. MCP points clients at it from the protected resource metadata, turns on its client self-registration, and makes tokens bound to `/mcp` never expire. Who may sign in comes from its `Collections` (default: superusers and every auth collection). |
+| [OAuth](/docs/extensions/tokens/oauth) (in Tokens) | Signs MCP clients in. MCP points clients at it from the protected resource metadata, turns on its client self-registration, and makes tokens bound to `/mcp` never expire. Who may sign in comes from its `Collections` (default: superusers and every auth collection). |
 | [Tokens](/docs/extensions/tokens) | The access tokens are API tokens bound to `https://<host>/mcp` (RFC 8707): they work nowhere else, and are listed and revoked under Settings → API tokens. |
 | Your token scopes | On a full-access connection a tool call holds every scope you registered (except ones its collection can't hold): `$tokens.requireScope` guards pass, and `@request.headers.x_token_scope_<name>` is `"1"` in collection rules. On a connection limited to scopes it holds only those, and requests they don't cover are refused (see [Scopes](#scopes)). |
 | [Pages](/docs/extensions/pages) | A `pb_pages` `+api.js` route is a REST endpoint like any other; declare its tool with `$mcp.addEndpoint`. |
 | [S3 Redirect](/docs/extensions/s3redirect) | `pb_download_file` follows its one redirect to storage. |
 | JS hooks | `$mcp` in `pb_hooks` (above). |
 
-Under [Pocker](/docs/extensions/pocker), a Go build registers MCP (with Tokens and OAuth Server) in each instance's
+Under [Pocker](/docs/extensions/pocker), a Go build registers MCP (with Tokens (with its OAuth server)) in each instance's
 `SetupApp`; there's no extkit extension for it. The stock `pocketone` binary doesn't add it to pocker instances.
 
 ### Tools from Go
@@ -250,6 +256,10 @@ callers' tool list.
 
 ### Tools from an extension
 
+An extension's API is contracts, and a contract's operations are already tools: nothing to add. For a tool that
+isn't a contract operation, an extension calls `mcpv1.AddTool(app, mcpv1.Tool{...})` (and `mcpv1.AddInstructions`)
+in its `Register`, which works with whichever extension provides mcp/v1.
+
 A PocketOne extension that adds tools names them `<extension>_<verb>_<noun>`: its name (with `-` as `_`), then at least two
 lowercase words, such as `notes_list_notes` or `oauth_server_revoke_client`. Each has a description, and an input
 schema, when it has one, is a JSON Schema object. The [conformance test](/docs/writing-an-extension) checks all of this
@@ -264,20 +274,20 @@ conformance.Run(t, newExtension, conformance.Options{Setup: func(app core.App) e
 
 ### How sign-in works
 
-With Tokens and OAuth Server on the app, `/mcp` uses OAuth the way Claude connectors and Claude Code expect:
+With Tokens (with its OAuth server) on the app, `/mcp` uses OAuth the way Claude connectors and Claude Code expect:
 
 1. A request without a token gets `401` with
    `WWW-Authenticate: Bearer resource_metadata="https://<host>/.well-known/oauth-protected-resource/mcp"`.
-2. The protected resource metadata names the app as its authorization server (OAuth Server's issuer). OAuth Server
+2. The protected resource metadata names the app as its authorization server (the OAuth server's issuer). The OAuth server
    publishes the authorization server metadata, with PKCE S256, client metadata documents and dynamic registration.
 3. The client registers itself (Claude's published identity through a client metadata document, or dynamic
    registration), and the user signs in in a browser.
 4. The access token is an API token bound to `https://<host>/mcp`. It carries the account's rights but works only on
    `/mcp`. Each MCP request makes a PocketBase auth token for the same account, and tool calls reach the REST API
    with it (as Pages' `ctx.pb()` does). For a token limited to scopes, those requests carry the scopes
-   (`tokens.WithScopes`), and Tokens checks them as it would a scoped token's request.
+   (`tokensv1.WithScopes`, through the tokens/v1 contract), and Tokens checks them as it would a scoped token's request.
 
-Without OAuth Server, `/mcp` falls back to `PocketBaseTokenAuth`: pasted PocketBase auth tokens (`Collections` limits
+Without the OAuth server, `/mcp` falls back to `PocketBaseTokenAuth`: pasted PocketBase auth tokens (`Collections` limits
 which auth collections, default any), and the warning above. `Config.Auth` overrides the choice; `mcp.OAuth{Issuer}`
 overrides the authorization server listed in the metadata.
 
@@ -291,7 +301,7 @@ go run . serve
 ```
 
 The example registers [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go), so the logins are `admin@example.com` / `password`
-(superuser) and `user@example.com` / `password` (user). It also registers Tokens and OAuth Server for OAuth sign-in,
+(superuser) and `user@example.com` / `password` (user). It also registers Tokens (with its OAuth server) for OAuth sign-in,
 and adds a tool over a Go route (`example_get_whoami`) and one over a JS route (`example_list_recent_users`, in
 [`pb_hooks/mcp.pb.js`](example/pb_hooks/mcp.pb.js)). Then:
 
@@ -308,7 +318,7 @@ claude mcp login pb-example
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 //
-// Sign-in is OAuth (ext/oauth-server + ext/tokens): add the endpoint to Claude Code and sign in in the browser when it
+// Sign-in is OAuth (the OAuth server in ext/tokens): add the endpoint to Claude Code and sign in in the browser when it
 // asks. Tool calls run as whoever signed in.
 //
 //	claude mcp add --transport http pb-example http://127.0.0.1:8090/mcp
@@ -326,7 +336,6 @@ import (
 	"github.com/dop251/goja"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/mcp"
-	oauthserver "github.com/pockethost/pocketone/ext/oauth-server"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
 
@@ -336,8 +345,7 @@ func main() {
 
 	// OAuth sign-in: API tokens + the authorization server. ext/mcp picks it up on serve and turns on dynamic client
 	// registration.
-	tokens.MustRegister(app, tokens.Config{})
-	oauthserver.MustRegister(app, oauthserver.Config{})
+	tokens.MustRegister(app, tokens.Config{}) // its OAuth server comes with it
 
 	server := mcp.MustRegister(app, mcp.Config{
 		Name:        "pb-example",
@@ -374,11 +382,10 @@ func main() {
 
 | Field | Default | |
 |---|---|---|
-| `Path` | `/mcp` | endpoint path |
 | `Name`, `Version`, `Description`, `Icons` | app name slug, `dev` | `serverInfo` |
 | `Instructions` | generated | first paragraph of the instructions sent on connect |
 | `PublicURL` | the request's host | origin used for the OAuth resource URL; set it when a proxy rewrites the host |
-| `Auth` | `OAuth{}` with OAuth Server and Tokens, else `PocketBaseTokenAuth{}` | the `Authenticator` |
+| `Auth` | `OAuth{}` with Tokens' OAuth server on, else `PocketBaseTokenAuth{}` | the `Authenticator` |
 | `BuiltinGroups` | all | which `pb_*` groups (`mcp.BuiltinGroups`) |
 | `ReadOnlyBuiltins` | `false` | keep only the read-only `pb_*` tools |
 | `NoBuiltins` | `false` | drop every `pb_*` tool |

@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.0
+---
+
 # tenant-billing-ls
 
 The [Lemon Squeezy](https://www.lemonsqueezy.com) adapter for [tenant-billing](../tenant-billing/README.md): checkout

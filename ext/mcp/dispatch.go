@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/tokens"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -197,7 +197,7 @@ func (s *Server) send(c *Call, req *Request, max int) (*Response, error) {
 	if !strings.HasPrefix(req.Path, "/") || strings.Contains(req.Path, "?") || strings.Contains(req.Path, "#") {
 		return nil, fmt.Errorf("invalid request path %q", req.Path)
 	}
-	if req.Path == s.cfg.Path || strings.HasPrefix(req.Path, s.cfg.Path+"/") {
+	if req.Path == DefaultPath || strings.HasPrefix(req.Path, DefaultPath+"/") {
 		return nil, errors.New("a tool can't call the MCP endpoint")
 	}
 	method := req.Method
@@ -258,7 +258,7 @@ func (s *Server) send(c *Call, req *Request, max int) (*Response, error) {
 	ctx := orig.Context()
 	if c.Grant != nil && len(c.Grant.Scopes) > 0 {
 		// a scoped connection: ext/tokens checks this request like a scoped token's
-		ctx = tokens.WithScopes(ctx, c.Grant.Scopes)
+		ctx = tokensv1.WithScopes(ctx, c.Grant.Scopes)
 	}
 	r := httptest.NewRequestWithContext(ctx, method, target, body)
 	r.Host = orig.Host

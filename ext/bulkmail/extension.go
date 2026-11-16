@@ -35,6 +35,15 @@ type settings struct {
 	Daily *int     `json:"daily"`
 }
 
+// Contracts implements [extkit.Declarer]: bulk mail's API is these contracts.
+func (p *Extension) Contracts() extkit.Contracts {
+	return extkit.Contracts{
+		Implements: extkit.IDs("bulkmail/v1", "mail.suppression/v1", "mail.feedback/v1"),
+		Defaults:   extkit.IDs("mail.suppression/v1", "mail.feedback/v1"),
+		WorksWith:  extkit.IDs("settings/v1"),
+	}
+}
+
 // Register implements [extkit.Extension].
 func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 	var s settings

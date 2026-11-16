@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"fmt"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/http"
 	"regexp"
 	"slices"
@@ -23,7 +24,7 @@ type Scope struct {
 	// Description is shown on the consent page and in the token screens.
 	Description string `json:"description"`
 
-	// Paths are URL path prefixes (e.g. "/_pocker/deploy/") where a token with this scope authenticates as its
+	// Paths are URL path prefixes (e.g. "/api/_c/deploy/v1/") where a token with this scope authenticates as its
 	// owner. Elsewhere a scoped token is refused.
 	Paths []string `json:"paths,omitempty"`
 
@@ -41,19 +42,9 @@ type Scope struct {
 	Collections []string `json:"collections,omitempty"`
 }
 
-// Infrastructure reports whether the scope only reaches PocketOne's own /_pocker/ routes (deploy, logs): a client
-// that needs one asks for it; consent pages and MCP don't offer it otherwise.
-func (s Scope) Infrastructure() bool {
-	if s.Match != nil || len(s.Paths) == 0 {
-		return false
-	}
-	for _, p := range s.Paths {
-		if !strings.HasPrefix(p, "/_pocker/") {
-			return false
-		}
-	}
-	return true
-}
+// Infrastructure reports whether the scope only reaches PocketOne's own routes (contract APIs under /api/_c/): a
+// client that needs one asks for it; consent pages and MCP don't offer it otherwise.
+func (s Scope) Infrastructure() bool { return tokensv1.Scope(s).Infrastructure() }
 
 // HeaderPrefix starts the request headers that tell rules and hooks which scopes a request holds.
 const HeaderPrefix = "X-Token-Scope-"
@@ -81,8 +72,13 @@ func ScopeRuleField(name string) string {
 	return "@request.headers." + strings.ReplaceAll(strings.ToLower(ScopeHeader(name)), "-", "_")
 }
 
-// AnyTokenPaths authenticate every token, whatever its scopes: discovery routes that only tell the caller who it is.
-var AnyTokenPaths = []string{"/_pocker/whoami"}
+// AnyTokenPaths authenticate every token, whatever its scopes: discovery routes that only tell the caller who it is
+// (remote/v1's whoami). They match exactly, never their sub-paths.
+var AnyTokenPaths = []string{"/api/_c/remote/v1"}
+
+func anyTokenPath(path string) bool {
+	return slices.Contains(AnyTokenPaths, strings.TrimSuffix(path, "/"))
+}
 
 type registry struct {
 	mu     sync.RWMutex
@@ -169,10 +165,8 @@ func (r *registry) allows(scopes []string, e *core.RequestEvent) bool {
 		return true
 	}
 	path := e.Request.URL.Path
-	for _, p := range AnyTokenPaths {
-		if pathUnder(path, p) {
-			return true
-		}
+	if anyTokenPath(path) {
+		return true
 	}
 	for _, name := range scopes {
 		s, ok := r.get(name)
@@ -186,10 +180,8 @@ func (r *registry) allows(scopes []string, e *core.RequestEvent) bool {
 // allowsLimit is allows for a WithScopes limit, where no scopes means nothing (not full rights).
 func (r *registry) allowsLimit(limit []string, e *core.RequestEvent) bool {
 	if len(limit) == 0 {
-		for _, p := range AnyTokenPaths {
-			if pathUnder(e.Request.URL.Path, p) {
-				return true
-			}
+		if anyTokenPath(e.Request.URL.Path) {
+			return true
 		}
 		return false
 	}
@@ -231,10 +223,8 @@ func pathUnder(path, prefix string) bool {
 // might allow anything, so it counts as reaching. It's for listing (ext/mcp hides tools a connection can't use);
 // the middleware's check on the real request is what enforces.
 func (t *Tokens) Reaches(scopes []string, method, pattern string) bool {
-	for _, p := range AnyTokenPaths {
-		if pathUnder(pattern, p) {
-			return true
-		}
+	if anyTokenPath(pattern) {
+		return true
 	}
 	for _, name := range scopes {
 		s, ok := t.registry.get(name)

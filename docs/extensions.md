@@ -1,17 +1,20 @@
 # Create your own extension
 
-A PocketOne extension is Go code compiled into your build. It can add, to every instance:
-- Go routes;
-- PocketBase hooks;
-- collections;
-- admin dashboard screens.
+A PocketOne extension is Go code compiled into your build. There are two kinds, by where they run:
 
-It can also run process-wide jobs and middleware.
+- **App extensions** add to an app: Go routes, PocketBase hooks, collections, admin dashboard screens, a JS API for
+  `pb_hooks`, contracts other extensions use. They run on every app: a standalone app, or each instance of a
+  multisite host. Almost every extension is one.
+- **Host extensions** add to a multisite host, the process that serves many instances: request gates (firewall, rate
+  limits), TLS, middleware around every instance, instance sources, background jobs.
 
-## The extension contract: `extkit`
+How a multisite host runs its instances (in-process with [pocker](../ext/pocker/README.md), in containers with
+[docker](../ext/docker/README.md), or both) is the host's `runtime/v1` contract. App extensions don't depend on it.
 
-Write an extension once, against [`extkit`](../ext/extkit/extkit.go) (its own module, `github.com/pockethost/pocketone/ext/extkit`; core has no part in it), and the same value runs on a single app
-and on every instance under pocker:
+## App extensions: `extkit`
+
+Write an extension once, against [`extkit`](../ext/extkit/extkit.go) (its own module,
+`github.com/pockethost/pocketone/ext/extkit`; core has no part in it), and the same value runs on every app:
 
 ```go
 type Extension struct{ cfg Config }
@@ -33,33 +36,120 @@ func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 func (p *Extension) BindJS(app core.App, vm *goja.Runtime) { /* vm.Set("$hello", ...) */ }
 ```
 
-- **Single app:** `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's
-  `OnInit`. The standard binary does this for the extensions it ships ([`examples/pocketone`](../examples/pocketone/main.go)).
-- **Pocker:** put the extension in `Server.Extensions`. Pocker calls `Register` for every instance with that instance's
-  settings (its `extensions.<name>`), over the defaults given to your constructor; process-wide settings come from a
-  pocketone.yaml section your extension owns (`extkit.NewSection`). `enabled: false` means `Register` and `BindJS`
-  are never called for that instance.
-- **No pocker import:** a contract extension doesn't depend on ext/pocker, so single-app builds don't link it. Reach for
-  the host interfaces below only for what's process-wide (a request gate, TLS, background jobs).
+- **Every app has the [standard set](../ext/standard/README.md)** (tokens, mcp, pitr, deploy and the rest). Add yours
+  to it: `set.Add(myextension.New(...))`. On a standalone app, build the app with `set.NewApp(...)`, as the stock
+  binary does ([`examples/pocketone`](../examples/pocketone/main.go)). Without the set:
+  `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
+- **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
+  constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
+  What runs inside an instance depends on its runtime: pocker registers the set in-process; a docker instance runs
+  the `pocketone` binary in its container, so it has the stock set (your own extras need your own image); an instance
+  on a stock PocketBase image runs none, and gets only the contracts the host provides for it
+  ([Working together](#working-together-contracts)).
+- **Routes:** an extension has none of its own. Its API is contracts, mounted for you under `/api/_c/<id>/`; design
+  the contract in `ext/contracts` first ([Working together](#working-together-contracts)). Admin settings go through
+  `settings/v1` (`settingsv1.Add`). Only paths a standard fixes stay at the root (`/.well-known/*`, `/mcp`). The
+  conformance test fails any other route unless `conformance.Options.AllowRoutes` lists it with a reason.
+- **Process-wide settings** come from a `pocketone.yaml` section your extension owns (`extkit.NewSection`).
+- **State per app:** keep it in `app.Store()`. Something shared across apps (a pool, a client) closes through
+  `extkit.Closer`.
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
   (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/extkit.Command=pockethost"`.
-- [bulkmail](../ext/bulkmail/extension.go) is the reference implementation.
+- [bulkmail](../ext/bulkmail/extension.go) is the reference implementation, and
+  [`ext/standard/example`](../ext/standard/example/main.go) a complete program.
 
-> **Status.** `extkit` covers per-app extensions. The process-wide host interfaces below (`pocker.Server` fields and
-> `Server.Extensions` host interfaces) are pocker's for now; a `pocketbase.Main(extensions...)` entry point is planned.
+## Working together: contracts
 
-A complete, runnable example is in [`ext/pocker/example`](../ext/pocker/example).
+> Start with [How PocketOne fits together](contracts.md) for the idea: every API an extension offers is a named,
+> versioned contract, any extension can provide one, and everything else (the dashboard, the CLI, agents, `pb_hooks`,
+> other extensions) calls the contract, never the extension. This section is how to do it in code.
+
+In short, when you design an extension:
+
+1. **Find the contracts you need** in the [catalogue](../ext/contracts/README.md). Use them; don't reach into another
+   extension.
+2. **Decide what you offer.** Anything a client calls is a contract. If one already promises it, provide that one
+   (your extension then stands in for the current provider). If not, write the contract first, named for what it
+   does, not for your extension.
+3. **Declare it** in `Contracts()` and **provide it** in `Register`. The startup lines, whoami and the catalogue show
+   it from then on.
+
+Extensions never depend on each other by name. They depend on **contracts**: versioned Go interfaces in
+[`ext/contracts`](../ext/contracts/README.md), such as `deploy/v1` or `mail.fallback/v1`. Every API an extension
+offers is a contract too, served at `/api/_c/<id>/`: extensions have no routes of their own.
+
+Every contract, standard or community, lives in `ext/contracts/<id path>/vN/` with a README like an extension's
+(owners and a one-line summary in its front matter; `## Use`, `## Provide`, `## Extensions`, `## License`). Its
+Extensions section is generated from every extension's `Contracts()`: who provides it, requires it and works with
+it (`go run ./.github/extensions contracts`; CI fails when it's stale or when an extension names a contract that
+doesn't exist). Whoever first creates a contract owns it, so an extension author who adds one owns both. Design the
+contract first, then the extension that provides it.
+
+An extension declares what it implements, requires and works with:
+
+```go
+func (e *Extension) Contracts() extkit.Contracts {
+    return extkit.Contracts{
+        Implements: extkit.IDs("deploy/v1"),
+        Defaults:   extkit.IDs("deploy/v1"), // steps aside if another extension provides it
+        WorksWith:  extkit.IDs("tokens/v1"), // used when present
+    }
+}
+
+func (e *Extension) Register(app core.App, cfg extkit.Config) error {
+    deployv1.Contract.ProvideDefault(app, myDeployer{})
+    return nil
+}
+```
+
+At startup PocketOne resolves every contract and prints who provides it:
+
+```
+standard: deploy/v1 ← fastdeploy (default deploy stepped aside)
+standard: bulkmail off: needs mail.fallback/v1, which nothing provides
+```
+
+- **Look contracts up after registration** (in hooks, at serve time): `deployv1.Contract.Must(app)`. A lookup inside
+  `Register` panics.
+- **Defaults, conflicts, choices.** A default steps aside for any other provider. Two other providers of a contract that
+  allows one fail the start until `pocketone.yaml` picks one (`providers: { mail.fallback/v1: mailrelay }`).
+- **Wrappers** decorate whatever provides a contract (`Contract.Wrap`), in registration order.
+- **Wire contracts** have an HTTP API at `/api/_c/<id>/<op>`, action hooks in Go (`deployv1.OnUpload`) and JS
+  (`onDeployUpload`), an MCP tool per operation and a client. Every caller passes the same scope check and hooks.
+- **From pb_hooks:** an app's JS declares and provides its contracts in `onContracts`, which runs once after
+  `pb_hooks` load and before the seal (so before bootstrap):
+
+  ```js
+  onContracts((e) => {
+    e.provide("mail.fallback/v1", { send(m) { /* ... */ } }) // a contract open to JS
+    e.require("restore/v1")   // the start fails (dev mode: warns) when nothing provides it
+    e.worksWith("tokens/v1")  // shown in the startup lines
+    e.next()
+  })
+  ```
+
+  The startup lines show it (`pb_hooks: provides mail.fallback/v1; requires restore/v1`). Methods run on pooled
+  runtimes like any hook handler, so they can't use the file's local variables. A Go extension that *requires* a
+  contract only JS provides is resolved before the JS runs: name `pb_hooks` under `providers:` for it in
+  `pocketone.yaml`.
+- **CLI:** every operation of a wire contract is a `pocketone remote ...` command with no code (`remote restore to
+  --at -2h`), flags from its input. Provide [cli.commands/v1](../ext/contracts/cli/commands/v1/README.md) to replace
+  one with your own, or to add one (`remote rehash`).
+- **No imports between extensions.** An extension imports `extkit` and contract packages, never another extension's
+  module (tests and examples may). What it needs from another goes in the contract package: tokens/v1 has
+  `RegisterScope`, `FromRequest` and `WithScopes`; remote/v1 has its CLI client (`remoteclient`), which deploy's
+  commands use.
 
 ## Compiled in, not loaded at run time
 
-Extensions are Go packages linked into the binary, the way Caddy modules work. Go's `extension` package (`.so` files)
+Extensions are Go packages linked into the binary, the way Caddy modules work. Go's `plugin` package (`.so` files)
 isn't used:
 - it needs identical toolchain and dependency versions;
 - it can't unload;
 - it rules out static `CGO_ENABLED=0` builds.
 
-A build is a small `main.go` that starts a `pocker.Server` with your code.
+A build is a small `main.go`: the standard set with your extensions added, as a standalone app or a multisite host.
 
 ## Your module
 
@@ -73,37 +163,6 @@ replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketon
 
 Go only honors `replace` in the main module, so the final binary's `go.mod` needs this line, not only your
 extension's.
-
-## Per instance: `Server.SetupApp`
-
-`SetupApp` runs for every instance's app after its migrations and before it serves. Bind hooks and routes there, as
-you would in a stand-alone PocketBase `main.go`:
-
-```go
-srv := &pocker.Server{
-    Config: cfg,
-    SetupApp: func(inst pocker.Instance, app core.App) error {
-        app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-            se.Router.GET("/api/hello", func(e *core.RequestEvent) error {
-                return e.JSON(http.StatusOK, map[string]string{"instance": inst.ID})
-            }).Bind(apis.RequireSuperuserAuth())
-            return se.Next()
-        })
-
-        app.OnRecordCreate("posts").BindFunc(func(e *core.RecordEvent) error {
-            // ...
-            return e.Next()
-        })
-        return nil
-    },
-}
-```
-
-- `inst` is the instance's config from the instances file or your provider: id, hosts and `inst.Private`.
-- Private values are for your Go code only and are never visible to the instance's JS. Use them for per-instance
-  tokens your extension needs.
-- If your extension needs its own collections, create them in a migration or on bootstrap. Prefix them with `_<extension>_`
-  so they never collide with the app's collections, and make them superuser-only unless they must be public.
 
 ## Admin screens: `UIExtensions`
 
@@ -146,29 +205,65 @@ document.addEventListener("mount:pageBackupsSettings", (e) => {
 - **Experimental upstream:** this UI extension API is undocumented and can change between PocketBase releases
   (`ui/README.md`). Keep `main.js` small, and test it after each upstream update.
 
-## Process-wide: middleware, jobs, events
+## Host extensions
 
-| Field | Use it for |
-|---|---|
-| `Server.Extensions` | Extensions: any `extkit.Extension` (registered on every instance), plus host-only extras (`Configurer`, `Gate`, `TLSProvider`, `Wrapper`, `Starter`; see [POCKER.md](../ext/pocker/POCKER.md#extensions)), e.g. [pitr](../ext/pitr), [storage](../ext/s3-fallback), [mailrelay](../ext/mailrelay), [autotls](../ext/autotls), [servertiming](../ext/servertiming). |
-| `Server.Wrap` | Middleware around every instance request, e.g. auth in front of all instances, metrics, headers. |
-| `Server.OnStart` | Gets the `Manager` before the first request: start background jobs (schedules, sweeps) in your own goroutines. |
-| `Server.OnEvent` | Instance events: started, stopped, restarted, failed. |
-| `Server.Source` | Your own `InstanceSource`: instances from a database or control plane instead of `instances.yaml`. |
-| `Server.Forward` | How requests for instances running on another server are forwarded. |
+A multisite host is one process serving many instances. A host extension works on that process, for every instance.
+Like app extensions, host extensions work together through contracts, on the host's own scope:
 
-From the `Manager`, host code can:
-- change an instance's files safely: `WithInstanceStopped(ctx, id, fn)` stops it, holds its requests, runs `fn`, then
-  starts a fresh app;
-- start it: `StartInstance`;
-- find its folder: `InstanceDir`;
-- write to its log: `LogInstance`.
+| Concern | Contract | Providers |
+|---|---|---|
+| What runs the instances (one or several, in preference order) | [runtime/v1](../ext/contracts/runtime/v1/README.md) | [pocker](../ext/pocker), [docker](../ext/docker) |
+| Which instances exist (the instance record) | [instance.source/v1](../ext/contracts/instance/source/v1/README.md) | `instances.yaml` (default), [mothership](../ext/mothership) |
+| Admit requests (firewall, rate limits) | [gate/v1](../ext/contracts/gate/v1/README.md) | [firewall](../ext/firewall) |
+| TLS for the host's listener | [tls/v1](../ext/contracts/tls/v1/README.md) | [autotls](../ext/autotls) |
+| Middleware around everything | [http.wrap/v1](../ext/contracts/http/wrap/v1/README.md) | [servertiming](../ext/servertiming) |
 
-## Rules for extensions that host untrusted instances
+A host extension is a `multisite.Extension`: `Name()` and `RegisterHost(h)`, which provides its contracts on
+`h.Scope` and provides nothing when it isn't configured (no section). Pass it in `multisite.Options.Extensions` (in
+preference order), or `multisite.Link` it from an `init` so linking its package is enough. The host seals its scope
+once, with `providers:` choices for host contracts, and logs who provides what:
 
-Your Go code runs with the host's full power, outside the JS sandbox:
-- **Act only for the instance you were called for.** Use `inst.ID` and `Manager.InstanceDir(inst.ID)`; never build a
-  path from request input.
+```go
+h, err := multisite.FromConfig(multisite.Options{Choices: providers, Extensions: []multisite.Extension{
+	servertiming.New(),         // http.wrap/v1, outermost
+	autotls.New(),              // tls/v1 from the `autotls` section
+	&pocker.Provider{},         // runtime/v1
+	&docker.Provider{},         // runtime/v1 too, when there's a `docker` section
+}})
+```
+
+```
+multisite: runtime/v1 ← pocker, docker
+multisite: tls/v1 ← autotls
+```
+
+Background work goes on `h.Background`, and an extension with `Close(ctx) error` is closed once every app has
+stopped.
+
+Some contracts are provided by the host for its instances (host-provided contracts), because the instance can't
+answer them itself: docker runs stock PocketBase images, so the host answers remote/v1 for them. The host serves them
+in `h.InstanceRoutes`, which run after the peer check, the blocked answer and the gates (firewall, rate limits) and
+before the runtime, with the resolved instance in `multisite.InstanceOf(r)`:
+
+```go
+remotev1.Contract.ProvideForInstances(h.Scope, myRemote)
+h.InstanceRoutes = append(h.InstanceRoutes, func(next http.Handler) http.Handler {
+	return remotev1.W.HostHandler(h.Scope, multisite.InstanceID, myAuth, next)
+})
+``` Other servers in the fleet are [edge](../ext/edge) (`edge.EdgeSource`, the host's `Forward`), and
+runtime-only hooks are pocker's `Starter`, `SetupApp`, `OnStart`, `OnEvent` and `Manager`
+([POCKER.md](../ext/pocker/POCKER.md#extensions)).
+
+App extensions that only need settings shared by every instance (mailrelay, s3-fallback, pitr) read their own
+`pocketone.yaml` section on first use and stay app extensions: they work on any host and on a single app.
+
+## Rules on a multisite host
+
+On a multisite host, instances can belong to people who don't trust each other, and your Go code runs with the host's
+full power, outside the JS sandbox:
+- **Act only for the app you were called for.** Keep per-app state in `app.Store()`, and use `extkit.AppID(app)` for
+  anything shared that must differ per instance (a bucket prefix, a rate-limit key); never build a path from request
+  input.
 - **Instance data needs instance auth.** Protect routes that read or change it with PocketBase's auth middlewares
   (`apis.RequireSuperuserAuth()`, record auth).
 - **Exposing something to JS is a sandbox decision.** Expose a function to an instance's JS only if it's safe for a
@@ -211,11 +306,11 @@ ext/<name>/
 
 - **`example/main.go` is required.** Keep it as small as possible: just enough to build a binary that shows the
   feature working, with no extra harness. `go build ./example` and `go vet ./...` must pass with no warnings.
-  [`ext/pocker/example`](../ext/pocker/example) and [`ext/sandbox/example`](../ext/sandbox/example) are the size to aim for.
+  [`ext/standard/example`](../ext/standard/example) and [`ext/sandbox/example`](../ext/sandbox/example) are the size to aim for.
 - **Examples come with two logins:** superuser `admin@example.com` and user `user@example.com` (verified, in
   `users`), both with password `password`. Every `example/main.go` calls
-  `devusers.Register(app)` right after `pocketbase.New()` (under pocker, `devusers.Ensure(app)` in
-  `SetupApp`), from [`ext/devusers`](../ext/devusers/devusers.go). A fresh data dir is then ready to log
+  `devusers.Register(app)` right after the app is created (on a multisite host, `devusers.Ensure(app)` in the
+  host's per-instance setup), from [`ext/devusers`](../ext/devusers/devusers.go). A fresh data dir is then ready to log
   in to, with no installer page and no CLI step. Never register it in a production build.
 - **`conformance_test.go` is required.** It runs the shared extension test from
   [`ext/extkit/conformance`](../ext/extkit/conformance/conformance.go) once:
@@ -227,19 +322,29 @@ ext/<name>/
   ```
 
   It checks that the extension registers, migrates, serves and shuts down on a fresh app with no goroutines left
-  behind; that PocketBase's own collections are unchanged and every collection it adds is named `_<name>` or `_<name>_…`; and
-  that one extension value serves several apps at once (as under pocker) without registering on one app touching
-  another's hooks. An extension that adds MCP tools ([`ext/mcp`](../ext/mcp/README.md#tools-from-an-extension)) also passes
+  behind; that its only routes are contracts' (`/api/_c/<id>/`); that PocketBase's own collections are unchanged and every collection it adds is named `_<name>` or `_<name>_…`; and
+  that one extension value serves several apps at once (as on a multisite host) without registering on one app
+  touching another's hooks. An extension that requires another (`Contracts().Requires`) lists it in
+  `conformance.Options{Deps: ...}`. An extension that adds MCP tools ([`ext/mcp`](../ext/mcp/README.md#tools-from-an-extension)) also passes
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every extension passes; your own tests cover the
   feature.
+- **The README starts with front matter**: who owns the extension and its version (see [Ownership](#ownership)).
+
+  ```markdown
+  ---
+  owners: ["@your-github-handle"]
+  version: 0.1.0
+  ---
+  ```
+
 - **The README has five required sections**, in this order. It is also your extension's page on pocketone.dev.
   - `## Install`: how to get it (built into `pocketone`, or the lines to add to a Go build).
   - `## Configure`: the `pocketone.yaml` section, flags and settings screens. The site adds a table of your section's
     keys, generated from your `extkit.NewSection` defaults; describe each key with a `doc:"…"` struct tag.
   - `## Use`: day to day: the admin screens and what to click, the commands.
-  - `## Integrations`: the extensions yours works with and how (pocker and multi-instance hosting go here, not in the
-    sections above), and how other extensions can build on yours (hooks, filesystem kinds, per-instance settings, Go
+  - `## Integrations`: the extensions yours works with and how (multisite hosting goes here, not in the sections
+    above), and how other extensions can build on yours (hooks, filesystem kinds, per-instance settings, Go
     and REST APIs).
   - `## Example`: the code that uses it. A sentence on what your `example/main.go` runs, then the whole file in a
     ```` ```go ```` block, exactly as it is; `go run ./.github/extensions examples` copies it in, and CI fails when the two
@@ -252,7 +357,7 @@ ext/<name>/
   Add your extension to [`site/extensions.json`](../site/extensions.json) and run `cd site/sync && go run .` to build its page.
   [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
 - **CI enforces all of this.** [`.github/workflows/extensions.yml`](../.github/workflows/extensions.yml) fails when an extension
-  README is missing one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, or when a module that implements `extkit.Extension` has no conformance
+  README is missing its owners and version, one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, or when a module that implements `extkit.Extension` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
   for a core change. Run the same checks locally from the repository root:
@@ -264,9 +369,34 @@ ext/<name>/
 
   Tests that need an external tool (MinIO, Docker) skip themselves when it isn't installed, so they don't block CI.
 - **Dependencies stay in your module.** Heavy libraries go in your extension's `go.mod`, never in core's.
-- **Single app first.** Where it makes sense, an extension should work on one app, and add more under the
-  pocker (multitenant) host.
+- **Standalone first.** Where it makes sense, an extension works on one standalone app, and adds more on a multisite
+  host.
 - **MIT**, like PocketBase and the rest of this repo.
+
+### Ownership
+
+Every extension and every contract has owners, listed in its README's front matter (GitHub handles); an extension
+also has a version there. Whoever submits an extension or first creates a contract owns it, so an author who adds a
+contract with their extension owns both.
+
+Who approves an outside pull request:
+
+| What it changes | Who approves |
+|---|---|
+| PocketBase's own code, the standard extensions, the site, docs, examples, CI | a maintainer |
+| A community extension | one of its owners, or a maintainer |
+| A contract | one of its owners, or a maintainer |
+| A new extension or a new contract | a maintainer |
+
+Owners are read from the base branch, never from the pull request, so a pull request can't make its author an owner
+and approve itself. Nothing merges unless the checks pass. Every merge that changes an extension's code raises its
+version, and its Go module tag (`ext/<name>/vX.Y.Z`) follows that version. A planned extension (a README and no code
+yet) stays at `0.0.0`.
+
+```bash
+go run ./.github/extensions approvers origin/main HEAD   # who may approve each area a change touches
+go run ./.github/extensions versions origin/main HEAD    # every extension whose code changed raised its version
+```
 
 ## Planned extensions
 

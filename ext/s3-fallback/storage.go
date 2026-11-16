@@ -30,11 +30,11 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/pocker"
 	"github.com/pockethost/pocketone/ext/s3redirect/sigv4"
 )
 
@@ -73,17 +73,14 @@ type Bucket struct {
 	ForcePathStyle bool   `yaml:"force_path_style" doc:"Path-style addressing, for MinIO and similar servers."`
 }
 
-// Extension is the pocker extension.
+// Extension is the extension: an app extension, registered on each instance (or a single app).
 type Extension struct {
-	cfg Config
-	log *slog.Logger
+	cfg  Config
+	log  *slog.Logger
+	once sync.Once // the `storage` section is read on first use
 }
 
-var (
-	_ pocker.Extension  = (*Extension)(nil)
-	_ pocker.Configurer = (*Extension)(nil)
-	_ extkit.Extension  = (*Extension)(nil)
-)
+var _ extkit.Extension = (*Extension)(nil)
 
 // New returns the extension for cfg.
 func New(cfg Config) *Extension {
@@ -94,17 +91,22 @@ func New(cfg Config) *Extension {
 	return &Extension{cfg: cfg, log: log.With("extension", Name)}
 }
 
-// Name implements pocker.Extension.
+// Name implements extkit.Extension.
 func (p *Extension) Name() string { return Name }
 
 // Config returns the effective configuration.
-func (p *Extension) Config() Config { return p.cfg }
+func (p *Extension) Config() Config {
+	p.configure()
+	return p.cfg
+}
 
-// Configure reads pocketone.yaml's `storage` section; fields set in Go are kept.
-func (p *Extension) Configure(pocker.Config) error {
+// configure reads pocketone.yaml's `storage` section once; fields set in Go are kept.
+func (p *Extension) configure() { p.once.Do(p.readSection) }
+
+func (p *Extension) readSection() {
 	c, found := Section.Get()
 	if !found {
-		return nil
+		return
 	}
 	if p.cfg.Enabled == nil {
 		p.cfg.Enabled = c.Enabled
@@ -124,13 +126,13 @@ func (p *Extension) Configure(pocker.Config) error {
 	if p.cfg.Bucket == nil {
 		p.cfg.Bucket = c.Bucket
 	}
-	return nil
 }
 
 func on(b *bool) bool { return b == nil || *b }
 
 // mounts returns kind → backend, with the deprecated single-bucket shape folded in and every mount checked.
 func (p *Extension) mounts() (map[string]*Bucket, error) {
+	p.configure()
 	backends := map[string]*Bucket{}
 	for name, b := range p.cfg.Backends {
 		if b == nil {
@@ -229,7 +231,7 @@ func (p *Extension) Bind(app core.App, root string) error {
 }
 
 // settings is the shape of an app's settings layers (an instance's `extensions.storage`). Only `enabled` is read per
-// app; backends and mounts are the operator's, from [Configure] or the Config given to [New].
+// app; backends and mounts are the operator's, from the `storage` section or the Config given to [New].
 type settings struct {
 	Enabled *bool `json:"enabled"`
 }
@@ -237,6 +239,7 @@ type settings struct {
 // Register implements [extkit.Extension]: binds app to the mounts under "instances/<id>/" (its [extkit.AppID])
 // under pocker, or at the backends' roots on a single app, unless the app has the extension off.
 func (p *Extension) Register(app core.App, layers extkit.Config) error {
+	p.configure()
 	var s settings
 	if err := layers.Decode(&s); err != nil {
 		return err
@@ -266,5 +269,5 @@ func open(b *Bucket, prefix string) (*filesystem.System, error) {
 	return filesystem.New(prefixDriver{Driver: s3.Driver(), prefix: prefix, sign: sign}), nil
 }
 
-// Section is the key of the `storage` section (pocketone.yaml): storage backends and mounts for a pocker host.
-var Section = extkit.NewSection(Name, Config{}, "S3 storage backends and mounts for a pocker host's instances: uploads, backups, PITR history.")
+// Section is the key of the `storage` section (pocketone.yaml): storage backends and mounts for a multisite host.
+var Section = extkit.NewSection(Name, Config{}, "S3 storage backends and mounts for a multisite host's instances: uploads, backups, PITR history.")

@@ -19,7 +19,6 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	oauthserver "github.com/pockethost/pocketone/ext/oauth-server"
 	"github.com/pockethost/pocketone/ext/tokens"
 )
 
@@ -43,8 +42,7 @@ func newOAuthEnv(t *testing.T) *oauthEnv {
 	t.Cleanup(app.Cleanup)
 	// mcp first: the authenticator is picked on serve, so registration order doesn't matter
 	MustRegister(app, Config{})
-	tk := tokens.MustRegister(app, tokens.Config{})
-	oauthserver.MustRegister(app, oauthserver.Config{})
+	tk := tokens.MustRegister(app, tokens.Config{}) // its OAuth server comes with it
 	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(*core.BootstrapEvent) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +101,7 @@ func (o *oauthEnv) mcp(token, method string, params any) (*http.Response, map[st
 
 func (o *oauthEnv) tokenRequest(form url.Values) (int, map[string]any) {
 	o.t.Helper()
-	res, err := o.http.PostForm(o.url+"/oauth/token", form)
+	res, err := o.http.PostForm(o.url+"/api/_c/oauth/v1/token", form)
 	if err != nil {
 		o.t.Fatal(err)
 	}
@@ -375,12 +373,11 @@ func TestSameResource(t *testing.T) {
 
 func TestOAuthIssuerFromOAuthServer(t *testing.T) {
 	h := newHarness(t, Config{}, func(s *Server) {
-		tokens.MustRegister(s.App(), tokens.Config{})
-		oauthserver.MustRegister(s.App(), oauthserver.Config{Issuer: "https://auth.example.com/"})
+		tokens.MustRegister(s.App(), tokens.Config{OAuth: tokens.OAuthConfig{Issuer: "https://auth.example.com/"}})
 	})
 	r := h.do(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", "", "")
 	if as := r.body["authorization_servers"].([]any); len(as) != 1 || as[0] != "https://auth.example.com" {
-		t.Fatalf("authorization_servers should be oauth-server's issuer: %s", r.raw)
+		t.Fatalf("authorization_servers should be the OAuth server's issuer: %s", r.raw)
 	}
 }
 
@@ -403,7 +400,7 @@ func TestScopedConnection(t *testing.T) {
 	recs := "/api/collections/notes/records"
 	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:read", Description: "Read notes", Paths: []string{recs}, Methods: []string{"GET"}})
 	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:write", Description: "Add notes", Paths: []string{recs}, Methods: []string{"POST"}})
-	o.tk.MustRegisterScope(tokens.Scope{Name: "deploy", Description: "Deploy", Paths: []string{"/_pocker/deploy/"}})
+	o.tk.MustRegisterScope(tokens.Scope{Name: "deploy", Description: "Deploy", Paths: []string{"/api/_c/deploy/v1/"}})
 	s := For(o.app)
 	s.MustAddEndpoint(Endpoint{Name: "notes_list", Description: "List notes.", Method: "GET", Path: recs})
 	s.MustAddEndpoint(Endpoint{Name: "notes_add", Description: "Add a note.", Method: "POST", Path: recs,

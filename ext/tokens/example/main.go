@@ -1,5 +1,5 @@
-// Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the /api/tokens
-// routes, and the `token` command.
+// Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the token API (/api/_c/tokens/v1)
+// and the `token` command.
 //
 //	go run ./example serve
 //	go run ./example token create --superuser admin@example.com --name ci

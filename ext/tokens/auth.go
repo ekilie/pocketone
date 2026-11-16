@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"context"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/http"
 	"net/url"
 	"slices"
@@ -64,6 +65,8 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 			}
 			e.Auth = info.Owner
 			e.Set(RequestKeyInfo, info)
+			g := info.grant()
+			e.Set(tokensv1.RequestKey, &g)
 			e.Set(RequestKeyScopes, info.Scopes)
 			e.Set(RequestKeyId, info.Token.Id)
 			t.touch(info.Token, e.RealIP())
@@ -130,10 +133,8 @@ func audienceAllows(audience, path string) bool {
 	if audience == "" {
 		return true
 	}
-	for _, p := range AnyTokenPaths {
-		if pathUnder(path, p) {
-			return true
-		}
+	if anyTokenPath(path) {
+		return true
 	}
 	u, err := url.Parse(audience)
 	if err != nil {
@@ -213,30 +214,14 @@ func RequireScope(scope string) *hook.Handler[*core.RequestEvent] {
 	}
 }
 
-type scopesKey struct{}
-
-// WithScopes limits in-process requests made with ctx to these scopes, the way a token limited to them would be:
-// the tokens middleware refuses requests the scopes don't match (403) and sets the X-Token-Scope-* headers to only
-// these (and only those the signed-in account holds). ext/mcp uses it for tool calls on a scoped connection.
-// Requests made inside such a request with its context inherit the limit; a nested WithScopes can only narrow it.
-// No HTTP header or client value reaches it. An empty (or nil) list allows nothing but AnyTokenPaths, so call it
-// only for a scoped connection.
+// WithScopes is tokens/v1's [tokensv1.WithScopes]: it limits in-process requests made with ctx to these scopes, the
+// way a token limited to them would be; the tokens middleware refuses requests the scopes don't match (403).
 func WithScopes(ctx context.Context, scopes []string) context.Context {
-	next := slices.Clone(scopes)
-	if prev, ok := ScopesFromContext(ctx); ok {
-		next = slices.DeleteFunc(next, func(n string) bool { return !slices.Contains(prev, n) })
-	}
-	if next == nil {
-		next = []string{}
-	}
-	return context.WithValue(ctx, scopesKey{}, next)
+	return tokensv1.WithScopes(ctx, scopes)
 }
 
 // ScopesFromContext returns the scopes set with WithScopes, and whether there are any limits.
-func ScopesFromContext(ctx context.Context) ([]string, bool) {
-	s, ok := ctx.Value(scopesKey{}).([]string)
-	return s, ok
-}
+func ScopesFromContext(ctx context.Context) ([]string, bool) { return tokensv1.ScopesFromContext(ctx) }
 
 func requestLimit(e *core.RequestEvent) ([]string, bool) {
 	if e.Request == nil {

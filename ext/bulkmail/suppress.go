@@ -121,7 +121,7 @@ func (bm *BulkMail) UnsubscribeToken(email, campaignId string) string {
 
 // UnsubscribeURL is the link put in every message and in List-Unsubscribe.
 func (bm *BulkMail) UnsubscribeURL(email, campaignId string) string {
-	return bm.publicURL() + "/api/bulkmail/unsubscribe?t=" + url.QueryEscape(bm.UnsubscribeToken(email, campaignId))
+	return bm.publicURL() + unsubscribePath + "?t=" + url.QueryEscape(bm.UnsubscribeToken(email, campaignId))
 }
 
 // ParseUnsubscribeToken checks a token and returns what it was signed for.

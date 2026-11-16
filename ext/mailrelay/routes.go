@@ -1,18 +1,20 @@
 package mailrelay
 
 import (
+	"context"
 	"embed"
+	"encoding/json"
 	"io/fs"
-	"net/http"
 
-	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 )
 
 //go:embed ui
 var uiFiles embed.FS
 
-// Status is what GET /api/mailrelay returns to the instance's superusers (and what Settings → Mail shows).
+// Status is the relay as one app sees it: its read-only settings/v1 section (`?extension=mailrelay`), which Settings
+// → Mail shows.
 type Status struct {
 	// Active is true when this instance's mail goes through the relay (SMTP off and sending allowed for it).
 	// Send is false when the instance's `send: false` refuses its mail.
@@ -36,14 +38,23 @@ func (r *appRelay) status(app core.App) Status {
 	}
 }
 
+// bindRoutes adds the relay's read-only settings/v1 section and its Settings → Mail note; it has no routes of its own.
 func (r *appRelay) bindRoutes(app core.App) {
+	settingsv1.Add(app, relaySection{r})
 	ui, _ := fs.Sub(uiFiles, "ui")
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		se.Router.GET("/api/mailrelay", func(e *core.RequestEvent) error {
-			return e.JSON(http.StatusOK, r.status(e.App))
-		}).Bind(apis.RequireSuperuserAuth())
-
 		se.UIExtensions = append(se.UIExtensions, core.UIExtension{Name: Name, FS: ui})
 		return se.Next()
 	})
+}
+
+// relaySection is the relay's settings/v1 section: read-only, the host sets it.
+type relaySection struct{ r *appRelay }
+
+func (s relaySection) Info() settingsv1.Info {
+	return settingsv1.Info{Extension: Name, Title: "Mail relay", Description: "Where mail goes while SMTP is off; the host sets it."}
+}
+
+func (s relaySection) Get(context.Context) (json.RawMessage, error) {
+	return json.Marshal(s.r.status(s.r.app))
 }

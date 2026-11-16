@@ -3,17 +3,17 @@ module github.com/pockethost/pocketone/ext/mcp
 go 1.27
 
 require (
-	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/oauth-server v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 )
 
 require (
 	ganigeorgiev.com/fexpr v0.7.0 // indirect
+	ganigeorgiev.com/pocketbase/dbx v1.13.0 // indirect
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
@@ -33,7 +33,6 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
-	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
@@ -44,7 +43,6 @@ require (
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	modernc.org/libc v1.77.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
@@ -57,8 +55,6 @@ replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 replace github.com/pockethost/pocketone/ext/devusers => ../devusers
 
 replace github.com/pockethost/pocketone/ext/tokens => ../tokens
-
-replace github.com/pockethost/pocketone/ext/oauth-server => ../oauth-server
 
 replace github.com/pockethost/pocketone/ext/remotes => ../remotes
 
@@ -77,3 +73,35 @@ replace github.com/pockethost/pocketone/ext/extkit => ../extkit
 replace github.com/pockethost/pocketone/ext/jserrors => ../jserrors
 
 replace github.com/pockethost/pocketone/ext/config => ../config
+
+replace github.com/pockethost/pocketone/ext/contracts => ../contracts
+
+replace github.com/pockethost/pocketone/ext/mailtrap => ../mailtrap
+
+replace github.com/pockethost/pocketone/ext/autotls => ../autotls
+
+replace github.com/pockethost/pocketone/ext/upgrade => ../upgrade
+
+replace github.com/pockethost/pocketone/ext/docker => ../docker
+
+replace github.com/pockethost/pocketone/ext/deploy => ../deploy
+
+replace github.com/pockethost/pocketone/ext/firewall => ../firewall
+
+replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
+
+replace github.com/pockethost/pocketone/ext/jsembed => ../jsembed
+
+replace github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
+
+replace github.com/pockethost/pocketone/ext/mailrelay => ../mailrelay
+
+replace github.com/pockethost/pocketone/ext/s3-fallback => ../s3-fallback
+
+replace github.com/pockethost/pocketone/ext/pitr => ../pitr
+
+replace github.com/pockethost/pocketone/ext/stats => ../stats
+
+replace github.com/pockethost/pocketone/ext/s3redirect => ../s3redirect
+
+replace github.com/pockethost/pocketone/ext/mothership => ../mothership

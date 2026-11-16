@@ -7,6 +7,8 @@ source: "ext/tenant-billing/README.md"
 
 # Multitenant Billing
 
+Version 0.0.0 · Owners: [@benallfree](https://github.com/benallfree)
+
 Billing for [tenants](/docs/extensions/tenants), independent of any payment provider: plans and their quotas, the
 provider hook that adapters implement (checkout links, webhooks, renewals, cancellations, refunds), applying a
 subscription's plan to an account, and a reconcile job that compares accounts with the provider.

@@ -22,7 +22,7 @@ func tokensCollection() *core.Collection {
 	c.System = true
 	own := ownRule
 	c.ListRule, c.ViewRule, c.DeleteRule = &own, &own, &own
-	c.CreateRule, c.UpdateRule = nil, nil // superusers only; tokens are created through POST /api/tokens
+	c.CreateRule, c.UpdateRule = nil, nil // superusers only; tokens are created through POST /api/_c/tokens/v1
 	c.Fields.Add(
 		&core.TextField{Id: "tok_owner_collection", Name: "owner_collection", Required: true, Max: 100,
 			Help: "Id of the owner's auth collection."},

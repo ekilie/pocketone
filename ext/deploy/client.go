@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"io/fs"
@@ -20,16 +21,9 @@ import (
 	"strings"
 	"sync"
 
+	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
 	"github.com/pockethost/pocketone/ext/deploy/nodemodules"
-	"github.com/pockethost/pocketone/ext/remotes"
-)
-
-// API paths. A PocketOne remote serves PockerPrefix; PocketHost edges serve LegacyPrefix (the npm CLI's), which the client
-// falls back to.
-const (
-	PockerPrefix = "/_pocker/deploy/v1"
-	LegacyPrefix = "/_ph/deploy/v1"
 )
 
 // UploadBatchBytes is the raw size of one upload request (gzip shrinks it; Cloudflare allows 100 MB).
@@ -294,47 +288,35 @@ func BatchBySize(files []LocalFile, max int64) [][]LocalFile {
 
 // Client is the deploy API of one remote.
 type Client struct {
-	*remotes.Client
-	// Prefix is the API path (PockerPrefix or LegacyPrefix).
+	*remoteclient.Client
+	// Prefix is the deploy API's path: deploy/v1's (/api/_c/deploy/v1).
 	Prefix string
 }
 
-// NewClient finds the remote's deploy API: the path its /_pocker/whoami advertises, else the PocketHost path.
-func NewClient(ctx context.Context, rc *remotes.Client) (*Client, error) {
+// NewClient finds the remote's deploy API: the remote must offer remote/v1 (restart, logs) and deploy/v1 (files).
+func NewClient(ctx context.Context, rc *remoteclient.Client) (*Client, error) {
 	w, err := rc.Whoami(ctx)
-	switch {
-	case errors.Is(err, remotes.ErrNoWhoami):
-		return &Client{Client: rc, Prefix: LegacyPrefix}, nil
-	case err != nil:
+	if errors.Is(err, remoteclient.ErrNoWhoami) {
+		return nil, fmt.Errorf("%s doesn't offer remote/v1 (it isn't a PocketOne app, or runs an older one)", rc.Remote.URL)
+	}
+	if err != nil {
 		return nil, err
 	}
-	p := w.Features["deploy"]
-	if p == "" {
-		return nil, fmt.Errorf("%s doesn't offer a deploy API (no deploy extension)", rc.Remote.URL)
+	if !w.Offers("deploy/v1") {
+		return nil, fmt.Errorf("%s doesn't offer deploy/v1 (no deploy extension)", rc.Remote.URL)
 	}
-	return &Client{Client: rc, Prefix: strings.TrimSuffix(p, "/")}, nil
-}
-
-// Whoami is the deploy API's own whoami.
-type Whoami struct {
-	Instance struct {
-		Id        string `json:"id"`
-		Subdomain string `json:"subdomain"`
-	} `json:"instance"`
-	Via    string   `json:"via"`
-	Token  *string  `json:"token"`
-	Scopes []string `json:"scopes"`
+	return &Client{Client: rc, Prefix: deployv1.Prefix}, nil
 }
 
 func (c *Client) call(ctx context.Context, method, path string, in, out any) error {
 	err := c.JSON(ctx, method, c.Prefix+path, in, out)
-	var ae *remotes.APIError
+	var ae *remoteclient.APIError
 	if errors.As(err, &ae) {
 		switch ae.Status {
 		case http.StatusUnauthorized:
 			ae.Message = fmt.Sprintf("authentication failed (%s): %s", orStr(c.TokenSource, "no login"), ae.Message)
 		case http.StatusNotFound:
-			if path == "/whoami" || path == "/check" {
+			if path == "/check" {
 				ae.Message = fmt.Sprintf("%s: not found, or this login can't reach it (%s)", c.Remote.URL, ae.Message)
 			}
 		}
@@ -347,12 +329,6 @@ func orStr(s, d string) string {
 		return d
 	}
 	return s
-}
-
-// DeployWhoami checks the login can reach the deploy API.
-func (c *Client) DeployWhoami(ctx context.Context) (*Whoami, error) {
-	var w Whoami
-	return &w, c.call(ctx, http.MethodGet, "/whoami", nil, &w)
 }
 
 // Check returns the hashes the remote doesn't have.
@@ -397,21 +373,23 @@ type RestartResult struct {
 // ErrNoRestartAPI: the remote can't restart on request (an older PocketOne or PocketHost edge).
 var ErrNoRestartAPI = errors.New("this remote can't restart on request")
 
-// Restart restarts the remote app so it applies migrations and packages. An app that isn't running is left alone.
+// Restart restarts the remote app so it applies migrations and packages, through remote/v1.
 func (c *Client) Restart(ctx context.Context) (*RestartResult, error) {
-	var res RestartResult
-	err := c.call(ctx, http.MethodPost, "/restart", map[string]any{}, &res)
-	if isNotFound(err) {
+	r, err := c.remote().Restart(ctx, extkit.Auth{})
+	if remoteclient.IsStatus(err, http.StatusNotFound) {
 		return nil, ErrNoRestartAPI
 	}
-	return &res, err
+	if err != nil {
+		return nil, err
+	}
+	return &RestartResult{Restarted: r.Restarting}, nil
 }
 
 // Message describes the restart for the user.
 func (r *RestartResult) Message() string {
 	switch {
 	case r.Restarted:
-		return "Restarted the app."
+		return "Restarting the app (follow it with '" + extkit.Command + " logs')."
 	case r.StartError != "":
 		return "The app failed to start: " + r.StartError + " (see '" + extkit.Command + " logs')."
 	default:
@@ -421,7 +399,7 @@ func (r *RestartResult) Message() string {
 
 // isNotFound: the remote doesn't have the route (an older server).
 func isNotFound(err error) bool {
-	var ae *remotes.APIError
+	var ae *remoteclient.APIError
 	return errors.As(err, &ae) && (ae.Status == http.StatusNotFound || ae.Status == http.StatusMethodNotAllowed)
 }
 
@@ -589,7 +567,7 @@ func (u *uploader) send(ctx context.Context, hashes []string) error {
 func (u *uploader) commit(ctx context.Context, body map[string]any) (*CommitResult, error) {
 	body["uploadedCount"], body["uploadedBytes"] = u.count, u.bytes
 	res, err := u.c.Commit(ctx, body)
-	var ae *remotes.APIError
+	var ae *remoteclient.APIError
 	// blobs can be garbage-collected by a concurrent deploy between upload and commit: upload again once
 	if errors.As(err, &ae) && ae.Status == http.StatusConflict {
 		if raw, ok := ae.Body["missing"].([]any); ok {

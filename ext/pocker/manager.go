@@ -16,6 +16,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"github.com/dop251/goja"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // HealthPath answers on any host with the engine's status (see [multisite.DefaultHealthPath]).
@@ -93,11 +94,18 @@ type ManagerOptions struct {
 	// Forward serves requests for instances with [Instance.Remote] set, after the firewall checks. Nil = a plain
 	// reverse proxy to Remote.
 	Forward func(w http.ResponseWriter, r *http.Request, inst Instance)
+	// InstanceRoutes answer requests for instances run here, after the gates and before the app (see
+	// multisite.Handler's InstanceRoutes): host-provided contracts such as remote/v1 with [Remote].
+	InstanceRoutes []func(http.Handler) http.Handler
 	// Directory, when set, is shared with the rest of the edge (the host feeds it); the Manager then doesn't load
 	// the source itself and [Manager.Run] only waits.
 	Directory *multisite.Directory
 	// Logger defaults to slog.Default().
 	Logger *slog.Logger
+	// Standard is registered on every app (see [Server.Standard]).
+	Standard extkit.AppSet
+	// Host is the host's contract scope (see [Server.Host]).
+	Host *extkit.Scope
 }
 
 // NewManager creates a Manager. Call [Manager.Run] to load instances and follow changes.
@@ -108,7 +116,7 @@ func NewManager(source InstanceSource, opts ManagerOptions) *Manager {
 	defaults := opts.Defaults.Over(DefaultLimits())
 	m := &Manager{
 		source:    source,
-		opts:      appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup},
+		opts:      appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup, Standard: opts.Standard, Host: opts.Host},
 		defaults:  defaults,
 		onEvent:   opts.OnEvent,
 		gate:      opts.Gate,
@@ -124,7 +132,8 @@ func NewManager(source InstanceSource, opts ManagerOptions) *Manager {
 		m.dir.Subscribe(m.Sync) // with a shared directory, the host subscribes its runtime
 	}
 	m.hooks = multisite.NewScriptWatcher(opts.Logger, m.hooksChanged)
-	m.handler = &multisite.Handler{Dir: m.dir, Gate: opts.Gate, Runtimes: []multisite.Runtime{m}, Forward: opts.Forward, Dev: opts.Dev, Logger: opts.Logger}
+	m.handler = &multisite.Handler{Dir: m.dir, Gate: opts.Gate, Runtimes: []multisite.Runtime{m}, Forward: opts.Forward,
+		InstanceRoutes: opts.InstanceRoutes, Dev: opts.Dev, Logger: opts.Logger}
 	return m
 }
 

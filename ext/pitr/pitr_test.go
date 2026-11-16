@@ -171,15 +171,15 @@ func TestSingleAppLifecycleAndStagedRestore(t *testing.T) {
 	}
 
 	// routes: superuser only
-	if rec := do(t, ta.handler, http.MethodGet, "/api/pitr", "", ""); rec.Code != http.StatusUnauthorized && rec.Code != http.StatusForbidden {
+	if rec := do(t, ta.handler, http.MethodGet, "/api/_c/restore/v1", "", ""); rec.Code != http.StatusUnauthorized && rec.Code != http.StatusForbidden {
 		t.Fatalf("anonymous status: %d", rec.Code)
 	}
 	tok := superuserToken(t, ta.app)
-	rec := do(t, ta.handler, http.MethodGet, "/api/pitr", tok, "")
+	rec := do(t, ta.handler, http.MethodGet, "/api/_c/restore/v1", tok, "")
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"window"`) {
 		t.Fatalf("status: %d %s", rec.Code, rec.Body)
 	}
-	if rec := do(t, ta.handler, http.MethodPost, "/api/pitr/restore", tok, `{"at":"2000-01-01T00:00:00Z"}`); rec.Code != http.StatusBadRequest {
+	if rec := do(t, ta.handler, http.MethodPost, "/api/_c/restore/v1/restore", tok, `{"at":"2000-01-01T00:00:00Z"}`); rec.Code != 422 {
 		t.Fatalf("out of window: %d %s", rec.Code, rec.Body)
 	}
 
@@ -262,8 +262,8 @@ func TestDisabledAddsNothing(t *testing.T) {
 	ta := startTestApp(t, p, dir)
 	defer ta.stop()
 	tok := superuserToken(t, ta.app)
-	if rec := do(t, ta.handler, http.MethodGet, "/api/pitr", tok, ""); rec.Code != http.StatusNotFound {
-		t.Fatalf("disabled: GET /api/pitr = %d", rec.Code)
+	if rec := do(t, ta.handler, http.MethodGet, "/api/_c/restore/v1", tok, ""); rec.Code != http.StatusNotFound {
+		t.Fatalf("disabled: GET /api/_c/restore/v1 = %d", rec.Code)
 	}
 	if _, err := os.Stat(filepath.Join(dir, DirName)); err == nil {
 		t.Error("disabled app got a history folder")
@@ -490,5 +490,14 @@ func TestSettingsAPIAndEncryption(t *testing.T) {
 	}
 	if err := SaveSettings(app, Settings{S3: S3Settings{Enabled: true, Bucket: "b"}}); err == nil {
 		t.Fatal("S3 on with empty fields should be refused")
+	}
+}
+
+// Off for the whole process, pitr declares nothing, so the app starts and restore/v1 falls to the default.
+func TestDisabledDeclaresNothing(t *testing.T) {
+	off := false
+	p := New(Config{Enabled: &off, Logger: quiet})
+	if c := p.Contracts(); len(c.Implements) != 0 || len(c.WorksWith) != 0 {
+		t.Fatalf("disabled pitr declares %+v", c)
 	}
 }

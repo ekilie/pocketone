@@ -13,13 +13,14 @@
 // on [For](app); an app's pb_hooks add them with $mcp.addEndpoint (see [BindJS]). The shape is always the same:
 // write the REST endpoint, then the tool wrapper.
 //
-// Sign-in is an [Authenticator]. With ext/oauth-server + ext/tokens on the app it's [OAuth]: OAuth 2.1 the way Claude
+// Sign-in is an [Authenticator]. With the OAuth server in ext/tokens on the app it's [OAuth]: OAuth 2.1 the way Claude
 // connectors expect, so a user adds https://<host>/mcp to Claude and signs in in a browser. Without them it falls
 // back to [PocketBaseTokenAuth] (pasted PocketBase auth tokens).
 package mcp
 
 import (
 	"fmt"
+	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -35,8 +36,8 @@ import (
 const (
 	storeKey = "mcp"
 
-	// DefaultPath is where the endpoint is served when [Config.Path] is empty.
-	DefaultPath = "/mcp"
+	// DefaultPath is where the endpoint is served: mcp/v1 fixes it at /mcp.
+	DefaultPath = mcpv1.Path
 
 	// DefaultMaxResponse caps a JSON tool result (1 MB).
 	DefaultMaxResponse = 1 << 20
@@ -49,9 +50,6 @@ var SupportedVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26"}
 
 // Config is set by whoever builds the binary (or, under pocker, per instance).
 type Config struct {
-	// Path of the endpoint (default [DefaultPath]).
-	Path string
-
 	// Name is serverInfo.name (default: a slug of Settings → Application name, or "pocketbase").
 	Name string
 	// Version is serverInfo.version (default "dev").
@@ -67,7 +65,7 @@ type Config struct {
 	// (default: derived from the request).
 	PublicURL string
 
-	// Auth signs requests in. Default: [OAuth] when ext/oauth-server and ext/tokens are registered on the app (decided
+	// Auth signs requests in. Default: [OAuth] when ext/tokens (with its OAuth server) is registered on the app (decided
 	// on serve, so registration order doesn't matter), else [PocketBaseTokenAuth].
 	Auth Authenticator
 
@@ -242,12 +240,6 @@ func MustRegister(app core.App, cfg Config) *Server {
 // Register adds the MCP endpoint and protected resource metadata to app (on serve) and the built-in tools. Call it
 // before app.Start(), or from pocker's SetupApp. Extensions registered later add their tools through [For].
 func Register(app core.App, cfg Config) (*Server, error) {
-	if cfg.Path == "" {
-		cfg.Path = DefaultPath
-	}
-	if !strings.HasPrefix(cfg.Path, "/") {
-		cfg.Path = "/" + cfg.Path
-	}
 	if cfg.Version == "" {
 		cfg.Version = "dev"
 	}
@@ -282,10 +274,13 @@ func Register(app core.App, cfg Config) (*Server, error) {
 	app.Store().Set(storeKey, s)
 	extkit.SetToolLister(app, s) // lets checks such as the extension conformance test see the tools
 
+	// mcp/v1: the endpoint at /mcp, its metadata, and the tools of every contract the app provides
+	mcpv1.Contract.ProvideDefault(app, endpoint{s})
+	mcpv1.Bind(app)
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		s.setupAuth()
 		s.router = se.Router
-		s.bindRoutes(se)
 		return se.Next()
 	})
 	return s, nil
@@ -300,8 +295,8 @@ func For(app core.App) *Server {
 // App returns the app this server belongs to.
 func (s *Server) App() core.App { return s.app }
 
-// Path returns the endpoint path.
-func (s *Server) Path() string { return s.cfg.Path }
+// Path returns the endpoint path (/mcp).
+func (s *Server) Path() string { return DefaultPath }
 
 // AddEndpoint registers a tool. It fails on an invalid or duplicate name, or a missing method or path.
 func (s *Server) AddEndpoint(t Endpoint) error {
@@ -368,14 +363,56 @@ func (s *Server) Tools() []*Endpoint {
 
 func isBuiltin(name string) bool { return strings.HasPrefix(name, "pb_") }
 
-// ToolInfos implements [extkit.ToolLister].
+// ToolInfos implements [extkit.ToolLister]: its own tools, then mcp/v1's (contracts' and extensions').
 func (s *Server) ToolInfos() []extkit.ToolInfo {
-	tools := s.Tools()
-	out := make([]extkit.ToolInfo, len(tools))
-	for i, t := range tools {
-		out[i] = extkit.ToolInfo{Name: t.Name, Description: t.Description, InputSchema: t.InputSchema}
+	var out []extkit.ToolInfo
+	for _, t := range s.Tools() {
+		out = append(out, extkit.ToolInfo{Name: t.Name, Description: t.Description, InputSchema: t.InputSchema})
+	}
+	for _, t := range s.contractTools() {
+		out = append(out, extkit.ToolInfo{Name: t.Name, Description: t.Description, InputSchema: t.InputSchema})
 	}
 	return out
+}
+
+// contractTools are mcp/v1's tools this server serves next to its own (an own tool wins on a name clash). Before the
+// app's contracts are sealed (during registration) there are none yet.
+func (s *Server) contractTools() (out []mcpv1.Tool) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.app.Logger().Warn("mcp: contract tools unavailable", "error", fmt.Sprint(r))
+			out = nil
+		}
+	}()
+	for _, t := range mcpv1.Tools(s.app) {
+		if s.tool(t.Name) == nil {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+func (s *Server) contractTool(name string) (mcpv1.Tool, bool) {
+	for _, t := range s.contractTools() {
+		if t.Name == name {
+			return t, true
+		}
+	}
+	return mcpv1.Tool{}, false
+}
+
+// endpoint is ext/mcp's mcp/v1 provider.
+type endpoint struct{ s *Server }
+
+func (p endpoint) ServeMCP(e *core.RequestEvent) error {
+	if e.Request.Method != http.MethodPost {
+		return methodNotAllowed(e)
+	}
+	return p.s.handlePost(e)
+}
+
+func (p endpoint) Metadata(e *core.RequestEvent) map[string]any {
+	return p.s.ProtectedResourceMetadata(e)
 }
 
 func (s *Server) tool(name string) *Endpoint {
@@ -402,6 +439,10 @@ func (s *Server) instructionsText() string {
 			break
 		}
 	}
+	if len(s.contractTools()) > 0 {
+		own = true
+	}
+	extra := mcpv1.Instructions(s.app)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	parts := []string{}
@@ -423,6 +464,7 @@ func (s *Server) instructionsText() string {
 			"tools for anything they don't cover.")
 	}
 	parts = append(parts, s.instructions...)
+	parts = append(parts, extra...)
 	return strings.Join(parts, "\n\n")
 }
 
@@ -445,7 +487,7 @@ func (s *Server) publicOrigin(e *core.RequestEvent) string {
 }
 
 // ResourceURL is the canonical URL of the endpoint (the OAuth resource / token audience).
-func (s *Server) ResourceURL(e *core.RequestEvent) string { return s.publicOrigin(e) + s.cfg.Path }
+func (s *Server) ResourceURL(e *core.RequestEvent) string { return s.publicOrigin(e) + DefaultPath }
 
 func methodNotAllowed(e *core.RequestEvent) error {
 	e.Response.Header().Set("Allow", http.MethodPost)

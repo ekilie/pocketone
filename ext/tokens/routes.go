@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"errors"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 	"net/http"
 	"time"
 
@@ -69,8 +70,10 @@ type ownerBody struct {
 	Owner           string `json:"owner"`
 }
 
-func (t *Tokens) bindRoutes(se *core.ServeEvent) {
-	g := se.Router.Group("/api/tokens")
+// BindRoutes implements extkit.RouteBinder: tokens/v1's API, on a group at /api/_c/tokens/v1.
+func (i issuer) BindRoutes(g *router.RouterGroup[*core.RequestEvent]) { i.t.bindAPI(g) }
+
+func (t *Tokens) bindAPI(g *router.RouterGroup[*core.RequestEvent]) {
 	g.Bind(apis.RequireAuth())
 
 	g.GET("/scopes", func(e *core.RequestEvent) error {

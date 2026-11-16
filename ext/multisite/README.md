@@ -1,29 +1,41 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Multisite
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
-request passes the gates (such as the [firewall](../firewall/README.md)), and one runtime provider serves it:
-[pocker](../pocker/README.md) runs instances in-process, [docker](../docker/README.md) runs each in its own container.
+request passes the gates (such as the [firewall](../firewall/README.md)), and a runtime serves it:
+[pocker](../pocker/README.md) runs instances in-process, [docker](../docker/README.md) runs each in its own container,
+and a host can run both. Everything a host plugs in is a host-scope contract: [runtime/v1](../contracts/runtime/v1/README.md),
+[gate/v1](../contracts/gate/v1/README.md), [tls/v1](../contracts/tls/v1/README.md),
+[http.wrap/v1](../contracts/http/wrap/v1/README.md) and [instance.source/v1](../contracts/instance/source/v1/README.md).
 
 ## Install
 
-Host is built into `pocketone`. It takes over `serve` when `pocketone.yaml` names a `provider`; without one,
-`pocketone serve` runs a single app as usual.
+Multisite is built into `pocketone`. It takes over `serve` when `pocketone.yaml` has a `multisite` section; without
+one, `pocketone serve` runs a single app as usual.
 
 ```yaml
-provider: pocker   # or docker
+multisite: {}
+providers:
+  runtime/v1: [pocker, docker]   # optional: which runtimes, in preference order (default: every configured one)
 ```
 
-In your own Go build, register the providers you link, build the host from the config and run it.
-[`examples/pocketone/multi.go`](../../examples/pocketone/multi.go) is the stock binary's version:
+In your own Go build, pass the host extensions you link (runtimes in preference order), build the host from the
+config and run it. [`examples/pocketone/multi.go`](../../examples/pocketone/multi.go) is the stock binary's version:
 
 ```go
-multisite.RegisterProvider(&pocker.Provider{Resolve: cfg.ResolvePath})
-h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath})
+h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Choices: providersSection,
+	Extensions: []multisite.Extension{servertiming.New(), autotls.New(), &pocker.Provider{Resolve: cfg.ResolvePath}}})
 if errors.Is(err, multisite.ErrNoProvider) {
-	// no provider in pocketone.yaml: serve a single app instead
+	// no multisite section in pocketone.yaml: serve a single app instead
 }
 err = h.Run(ctx)
 ```
+
+At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker, docker`.
 
 The module is `github.com/pockethost/pocketone/ext/multisite`.
 
@@ -32,7 +44,7 @@ The module is `github.com/pockethost/pocketone/ext/multisite`.
 A host reads these `pocketone.yaml` sections:
 
 ```yaml
-provider: pocker                     # which runtime provider runs the instances
+multisite: {}                        # host mode
 server:
   https: ":443"                      # the main address
   http: ":80"                        # redirects to https (alone: serves plain HTTP)
@@ -41,16 +53,16 @@ server:
 instances:
   file: ./instances.yaml             # where the instances come from
   dev: false                         # also serve unknown hostnames
-pocker: { root: ./pb_root }          # the provider's own section (pocker or docker)
+pocker: { root: ./pb_root }          # a runtime's own section (pocker; docker only runs with its section)
 firewall: { allow_cidrs: [10.0.0.0/8] }  # any gate's section turns that gate on
 ```
 
-- `provider` and `server` belong to [Config](../config/README.md). With no `https` or `http`, the host listens on
+- `server` belongs to [Config](../config/README.md); `providers` is the contracts' section. With no `https` or `http`, the host listens on
   `127.0.0.1:8090`.
 - The `instances` section is this extension's (keys below). In production the instances file is required; with
   `dev: true` it's optional.
-- The `app` section is for a single app and is refused when a provider is set: each instance has its own folder under
-  the provider's root.
+- The `app` section is for a single app and is refused on a multisite host: each instance has its own folder under its
+  runtime's root.
 
 ## Use
 
@@ -65,7 +77,7 @@ instances:
     secrets: { STRIPE_KEY: sk_live_... }               # the app's environment, seen by its JS hooks
     encryption_key: 0123456789abcdef0123456789abcdef   # encrypts the app's stored settings
     access: { cors_origins: [https://shop.example.com] }
-    limits: { max_js_execution: 60s }                  # over the provider's defaults
+    limits: { max_js_execution: 60s }                  # over the runtime's defaults
     extensions: { firewall: { trusted_ips: [203.0.113.0/24] } }   # settings for extensions, by name
   - id: old
     hosts: [old.example.com]
@@ -73,7 +85,7 @@ instances:
 ```
 
 The file is checked for changes every 2 seconds; edits apply without restarting the host. Ids are lowercase
-letters, digits, dots and dashes. Other fields: `version` and `runtime` (which release or provider runs it), `dir`
+letters, digits, dots and dashes. Other fields: `version` and `runtime` (which release or runtime runs it), `dir`
 (another folder), `dev`, `superusers` (pocker upserts them when the app starts), `private` (for host Go code, never seen by JS) and `remote`
 (another server runs it).
 
@@ -84,12 +96,15 @@ letters, digits, dots and dashes. Other fields: `version` and `runtime` (which r
 - A `blocked` instance answers every request with its status and message.
 - An instance with `remote` set is forwarded there after the gates (a plain proxy to the URL, or
   [Edge](../edge/README.md) for a fleet).
-- `GET /_pocker/health` on any hostname reports the host's status, how many instances it knows and how many are
+- Contracts the host provides for its instances (docker's remote/v1) answer after the gates and the blocked check,
+  so the firewall, rate limits and a powered-off answer apply to them too.
+- `GET /.well-known/health` on any hostname reports the host's status, how many instances it knows and how many are
   running.
 
-### Switching provider
+### Switching runtime
 
-Switching between pocker and docker is a config change: both keep instances in `<root>/<id>`. Stop the containers
+Switching between pocker and docker is a config change (`providers: { runtime/v1: [docker] }`, or an instance's own
+`runtime: docker`): both keep instances in `<root>/<id>`. Stop the containers
 first when leaving docker (they keep running across a host restart on purpose). Data only moves forward: an instance
 started on a newer version than wrote its data is upgraded.
 
@@ -99,28 +114,41 @@ started on a newer version than wrote its data is upgraded.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | Runtime provider: every instance runs in this process (`provider: pocker`). |
-| [Docker](../docker/README.md) | Runtime provider: each instance runs in its own container (`provider: docker`). |
+| [Pocker](../pocker/README.md) | runtime/v1: every instance runs in this process. |
+| [Docker](../docker/README.md) | runtime/v1: each instance runs in its own container (with a `docker` section). |
 | [Firewall](../firewall/README.md) | A gate: peer allow-list, client IPs and rate limits. On when the config has `firewall` or `rate_limits`. |
 | [Edge](../edge/README.md) | Forwards requests for instances another edge runs (the `edges` section). |
-| [Mothership](../mothership/README.md) | Its mirror replaces the instances file as the instance source, and lists the other edges. |
+| [Mothership](../mothership/README.md) | Its mirror is instance.source/v1 instead of the instances file, and lists the other edges. |
 | [Auto TLS](../autotls/README.md) | Certificates for the main listener, issued for the hostnames instances map. |
 | [Stats](../stats/README.md) | Measures disk use and last request for each instance. |
 | [Server Timing](../servertiming/README.md) | Server-Timing headers for each step of a request. |
 
 ### Building on Host
 
-- **Runtime provider.** Implement `multisite.Provider` (`Name`, `Prepare`) and call `multisite.RegisterProvider`; `provider:`
-  picks it by name. `Prepare` sets `h.Runtime`, a `multisite.Runtime` (`Name`, `Serves`, `ServeInstance`, `Ready`), with
-  optional `Prechecker`, `Syncer`, `Statser` and `Shutdowner`.
-- **Instance source.** Implement `multisite.InstanceSource` (`Snapshot`, `Watch`) to feed instances from anywhere, such as
-  a control plane, and pass it as `multisite.Options.Source`. `YAMLSource` is the built-in one.
-- **Gates.** A `multisite.Gate` checks the peer (`AllowPeer`) and admits each request (`Admit`). `RegisterSectionGate`
-  turns one on from its own config sections, as the firewall does; `ClientIPResolver` passes the real client IP on to
-  the app.
+- **Host extensions.** A `multisite.Extension` (`Name`, `RegisterHost(h)`) provides host-scope contracts on `h.Scope`:
+  a runtime (`runtimev1.Contract.ProvideIn(h.Scope, rt)`), a gate, TLS, a wrapper, an instance source. It provides
+  nothing when it isn't configured (no section). Pass it in `Options.Extensions`, or `multisite.Link` it from an
+  `init` so linking the package is enough (the firewall does). By hand: `h.Use(exts...)`, then `h.Setup(choices)`.
+- **Runtime.** `runtimev1.Runtime` (`Name`, `Serves`, `ServeInstance`, `Ready`), with optional `Prechecker`, `Syncer`,
+  `Starter`, `Statser` and `Shutdowner`. Each instance runs on the runtime it names, else the first that serves it.
+- **Instance source.** `sourcev1.Source` (`Snapshot`, `Watch`) feeds instances from anywhere, such as a control plane.
+  The instances file (`YAMLSource`) is the default and steps aside for any other provider.
+- **Gates.** A `gatev1.Gate` checks the peer (`AllowPeer`) and admits each request (`Admit`); `ClientIPResolver`
+  passes the real client IP on to the app. Gates set on `h.Gates` directly run after the contract's.
 - **Forwarding.** `multisite.Options.Forward` serves requests for instances with `remote` set (Edge fills it).
-- **Listeners and wrappers.** `Host.TLS` takes a `TLSProvider`, `Host.Wrappers` wrap the whole handler, and
-  `Host.Background` runs jobs until shutdown.
+- **Instance routes.** `Host.InstanceRoutes` wrap the runtime for instances this host runs: they run after the
+  peer check, the blocked answer and the gates, and before the runtime (never for forwarded instances).
+  `multisite.InstanceOf(r)` is the resolved instance and `multisite.InstanceID` fits extkit's host handlers, so a
+  contract the host provides for its instances goes here:
+
+  ```go
+  remotev1.Contract.ProvideForInstances(h.Scope, myRemote)
+  h.InstanceRoutes = append(h.InstanceRoutes, func(next http.Handler) http.Handler {
+  	return remotev1.W.HostHandler(h.Scope, multisite.InstanceID, myAuth, next)
+  })
+  ```
+- **Listeners and wrappers.** tls/v1 (or `Host.TLS`) sets the listener's TLS, http.wrap/v1 providers wrap the whole
+  handler (outside `Host.Wrappers`), and `Host.Background` runs jobs until shutdown.
 - **Per-instance settings.** An extension reads its own `extensions.<name>` with `inst.ExtensionConfig(name)` and
   `multisite.DecodeExtensionConfig`.
 
@@ -164,7 +192,7 @@ func main() {
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: echoRuntime{}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{echoRuntime{}}, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -176,11 +204,12 @@ func main() {
 
 | Piece | What it does |
 |---|---|
-| `Instance`, `InstanceSource`, `YAMLSource` | The instance model and where instances come from. |
+| `Instance`, `InstanceSource`, `YAMLSource` | The instance record (instance.source/v1) and where instances come from. |
 | `Directory` | Instances by hostname and id, kept current from the source. |
-| `Handler` | Health path, peer check, hostname, blocked, then remote (the `Forward` hook) or local (the runtime), with the gates. |
-| `Runtime` | What a provider implements. Exactly one per process. |
-| `Gate`, `RegisterSectionGate`, `ChainGates` | Request gates. |
+| `Handler` | Health path, peer check, hostname, blocked, then remote (the `Forward` hook) or local (the instance routes, then the runtime), with the gates. |
+| `Runtime` | runtime/v1: what runs instances. One or more per host, in preference order. |
+| `Gate`, `ChainGates`, `HostGate` | Request gates (gate/v1). |
+| `Extension`, `Link`, `Host.Use`, `Host.Setup` | Host extensions and the host's contract scope. |
 | `Serve`, `TLSProvider` | Listeners: plain, TLS (a provider such as autotls, or cert files reloaded on change), redirect, graceful shutdown. |
 | `Host`, `FromConfig` | All of the above assembled, by hand or from `pocketone.yaml`. |
 

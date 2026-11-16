@@ -7,6 +7,8 @@ source: "ext/tenant-billing-ls/README.md"
 
 # Lemon Squeezy Adapter
 
+Version 0.0.0 · Owners: [@benallfree](https://github.com/benallfree)
+
 The [Lemon Squeezy](https://www.lemonsqueezy.com) adapter for [tenant-billing](/docs/extensions/tenant-billing): checkout
 links, signature-verified webhooks mapped to subscriptions, renewals, cancellations and refunds, and the Lemon Squeezy
 side of the reconcile job. Plans, quotas and applying them to accounts live in tenant-billing.

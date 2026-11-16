@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
 	"io"
 	"log/slog"
 	"net"
@@ -16,10 +17,6 @@ import (
 	"sync"
 	"time"
 )
-
-// Prefix is the API path of the PocketHost edge (the npm CLI's); [PockerPrefix] is the PocketOne default. Options.Prefix
-// picks one.
-const Prefix = LegacyPrefix
 
 const (
 	maxJSONBytes      = 20 << 20
@@ -74,7 +71,7 @@ type Instances interface {
 
 // Options configure the API.
 type Options struct {
-	// Prefix is the API path (default [PockerPrefix]).
+	// Prefix is the API path (default deploy/v1's, /api/_c/deploy/v1). Whoami, restart and logs are remote/v1's.
 	Prefix  string
 	Backend Backend
 	// Instances returns the running Manager (nil until the server has started).
@@ -88,9 +85,7 @@ type Options struct {
 	// IsRemote, if set, reports hosts whose instance another edge runs: their requests go to next (which forwards
 	// them) instead of being answered here.
 	IsRemote func(host string) bool
-	// Logs feeds GET /logs (default: each instance's logs/exec.log, see [FileLogs]).
-	Logs   LogSource
-	Logger *slog.Logger
+	Logger   *slog.Logger
 }
 
 // API serves the deploy API.
@@ -110,12 +105,9 @@ func New(opts Options) *API {
 		log = slog.Default()
 	}
 	if opts.Prefix == "" {
-		opts.Prefix = PockerPrefix
+		opts.Prefix = deployv1.Prefix
 	}
 	opts.Prefix = strings.TrimSuffix(opts.Prefix, "/")
-	if opts.Logs == nil {
-		opts.Logs = FileLogs{}
-	}
 	return &API{opts: opts, log: log.With("component", "deploy"), stores: map[string]*Store{}}
 }
 
@@ -332,8 +324,6 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, a.opts.Prefix), "/")
 	var err error
 	switch {
-	case path == "/whoami" && r.Method == http.MethodGet:
-		err = a.whoami(w, r)
 	case path == "/check" && r.Method == http.MethodPost:
 		err = a.check(w, r)
 	case path == "/blobs" && r.Method == http.MethodPost:
@@ -348,12 +338,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.readFile(w, r)
 	case path == "/files/raw" && r.Method == http.MethodPut:
 		err = a.writeFile(w, r)
-	case path == "/restart" && r.Method == http.MethodPost:
-		err = a.restart(w, r)
 	case path == "/tree" && r.Method == http.MethodGet:
 		err = a.tree(w, r)
-	case path == "/logs" && r.Method == http.MethodGet:
-		err = a.logs(w, r)
 	default:
 		err = errf(404, "Not found")
 	}
@@ -364,22 +350,6 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // errHeadersSent: a streaming handler failed after answering; nothing more to write.
 var errHeadersSent = errors.New("headers sent")
-
-func (a *API) whoami(w http.ResponseWriter, r *http.Request) error {
-	c, err := a.authorize(r, false)
-	if err != nil {
-		return err
-	}
-	var token any
-	if c.auth.TokenLabel != "" {
-		token = c.auth.TokenLabel
-	}
-	writeJSON(w, 200, map[string]any{
-		"instance": map[string]any{"id": c.inst.ID, "subdomain": c.inst.Subdomain},
-		"via":      c.auth.Via, "token": token, "scopes": c.auth.Scopes,
-	})
-	return nil
-}
 
 func (a *API) check(w http.ResponseWriter, r *http.Request) error {
 	c, err := a.authorize(r, true)

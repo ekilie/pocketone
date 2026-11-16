@@ -6,6 +6,7 @@ package firewall
 
 import (
 	"fmt"
+	gatev1 "github.com/pockethost/pocketone/ext/contracts/gate/v1"
 	"math"
 	"net/http"
 	"net/netip"
@@ -516,16 +517,31 @@ func FromSections(dev bool) (fw *Firewall, enabled bool, err error) {
 	return fw, true, fw.apply(c, haveConfig, rl, haveLimits, dev)
 }
 
-// Linking this package makes the firewall available to every host (ext/multisite): it turns on when pocketone.yaml has
-// a `firewall` or `rate_limits` section.
-func init() {
-	multisite.RegisterSectionGate(multisite.SectionGate{Name: "firewall", New: func(dev bool) (multisite.Gate, bool, error) {
-		fw, enabled, err := FromSections(dev)
-		if fw == nil {
-			return nil, enabled, err
-		}
-		return fw, enabled, err
-	}})
+// Linking this package makes the firewall part of every host built from config (ext/multisite): it provides gate/v1
+// when pocketone.yaml has a `firewall` or `rate_limits` section.
+func init() { multisite.Link(HostExtension{}) }
+
+// HostExtension is the firewall as a host extension: gate/v1 from the `firewall` and `rate_limits` sections.
+type HostExtension struct{}
+
+// Name implements multisite.Extension.
+func (HostExtension) Name() string { return "firewall" }
+
+// Contracts implements extkit.Declarer.
+func (HostExtension) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("gate/v1")}
+}
+
+// RegisterHost implements multisite.Extension.
+func (HostExtension) RegisterHost(h *multisite.Host) error {
+	fw, enabled, err := FromSections(h.Dev)
+	if err != nil {
+		return err
+	}
+	if enabled && fw != nil {
+		gatev1.Contract.ProvideIn(h.Scope, fw)
+	}
+	return nil
 }
 
 var _ multisite.Gate = (*Firewall)(nil)

@@ -7,6 +7,8 @@ source: "ext/sandbox/README.md"
 
 # Sandbox
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Confines one PocketOne app's JS hooks and migrations, so apps from people you don't know can share one process.
 File access stays inside the app's folder, host primitives are gone, every JS call has a time limit, raw SQL can't
 leave the app's own database files, and outbound connections reach public addresses only.
@@ -16,8 +18,8 @@ leave the app's own database files, and outbound connections reach public addres
 ## Install
 
 Sandbox isn't a switch in `pocketone`: [Pocker](/docs/extensions/pocker) applies it to every instance it runs. With
-`provider: pocker` in `pocketone.yaml`, every instance is sandboxed and there's nothing to install. A single app
-served by `pocketone` without a provider is not sandboxed.
+a `multisite` section in `pocketone.yaml` (pocker as the runtime), every instance is sandboxed and there's nothing to install. A single app
+served by `pocketone` without a `multisite` section is not sandboxed.
 
 In your own Go build, give it to PocketBase's JS plugin as an extension:
 

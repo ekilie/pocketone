@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Docker
 
 Run every instance on a host in its own container, with the official PocketBase or PocketOne binary of the version
@@ -13,11 +18,12 @@ Docker is built into `pocketone`. It needs a Docker daemon on the same machine; 
 It's off until `pocketone.yaml` names it as the provider (below). Then `pocketone serve` runs the host instead of a
 single app.
 
-In your own Go build, register it as a provider of the host before building the host from the config:
+In your own Go build, add it to the host's extensions; it provides the [runtime/v1](../contracts/runtime/v1/README.md)
+contract when `pocketone.yaml` has a `docker` section:
 
 ```go
-multisite.RegisterProvider(&docker.Provider{Resolve: cfg.ResolvePath})
-h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath})
+h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath,
+	Extensions: []multisite.Extension{&docker.Provider{Resolve: cfg.ResolvePath}}})
 ```
 
 The module is `github.com/pockethost/pocketone/ext/docker`. Add `docker.NewCommand(...)` to your root command for the
@@ -25,11 +31,13 @@ The module is `github.com/pockethost/pocketone/ext/docker`. Add `docker.NewComma
 
 ## Configure
 
-Set `provider: docker` and a `docker` section in `pocketone.yaml`. Listeners (`server`), instances (`instances`) and
-the firewall are the host's sections.
+Add a `multisite` section (host mode) and a `docker` section to `pocketone.yaml`. Listeners (`server`), instances
+(`instances`) and the firewall are the host's sections. With pocker linked too, both run: each instance on the one
+its record names (`runtime: docker`), else the first that serves its version; `providers: { runtime/v1: [docker] }`
+keeps docker alone.
 
 ```yaml
-provider: docker
+multisite: {}
 docker:
   image: alpine:3.20                 # base image the binaries run in
   binaries: /var/lib/pocketbase      # release binary cache
@@ -98,6 +106,20 @@ it's safe to repeat (GET, HEAD or OPTIONS without a body). Migrations run when a
 Instance folders are ordinary folders under `root`. To work on one while nothing has it open, a host's Go code calls
 `WithInstanceStopped` (below); requests for that instance wait up to 30 s, then get a 503 with `Retry-After`.
 
+### Remote control
+
+Containers run stock images with no PocketOne extensions, so the host answers
+[remote/v1](../contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
+`pocketone remote` commands work the same as against a Pocker instance or a single app. It answers after the host's
+gates (firewall, rate limits) and blocked check, so a blocked instance's remote/v1 gets the blocked answer and the
+container stays stopped.
+
+- `GET /api/_c/remote/v1` (whoami) is public and lists `remote/v1`.
+- `status`, `restart` and `logs` need a superuser token of that instance (`pocketone remote login` with a superuser
+  email and password). The host asks the instance itself to check it.
+- `restart` replaces the container; `logs` replays and follows the container's output, the last 1000 lines per
+  instance kept by this host since it started following the container.
+
 ### Switching provider
 
 Docker and Pocker both use `<root>/<id>`, so switching is a config change. Stop the containers first when leaving
@@ -115,6 +137,7 @@ newer PocketBase than wrote its data is upgraded.
 | [Edge](../edge/README.md) | For a fleet: requests for instances on another edge are forwarded there. |
 | [Mothership](../mothership/README.md) | Instances (and their versions) come from a mothership instead of a file. |
 | [Firewall](../firewall/README.md) | Rate limits and allow lists in front of every instance. |
+| [Remotes](../remotes/README.md) | The host provides remote/v1 for every container, so the CLI's whoami, status, restart and logs work. |
 
 ### Building on Docker
 
@@ -128,7 +151,9 @@ newer PocketBase than wrote its data is upgraded.
   download and sha256. `YAMLVersions` (the `versions` key) is the built-in one.
 - **Runtime API**: `docker.New(docker.Config{...})` builds the runtime without the config file.
   `WithInstanceStopped(ctx, id, fn)` stops an instance, holds its requests and runs `fn` on its folder (for deploys
-  and restores); `StartInstance` starts one now; `InstanceDir` returns its folder.
+  and restores); `StartInstance` starts one now; `InstanceDir` returns its folder. `Remote(host, dir)` and `SuperuserAuth()` are the
+  remote/v1 provider and the host-side auth that `Provider` wires in, for a host built by hand
+  (`remotev1.W.HostHandler(host, multisite.InstanceID, rt.SuperuserAuth(), next)` in `Host.InstanceRoutes`).
 - **Release helpers**: `ParseVersion`, `Pick` / `PickMin`, `LatestPatches`, `Update` and `Seed` are what the commands
   use.
 
@@ -160,8 +185,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/multisite"
 	"github.com/pockethost/pocketone/ext/docker"
+	"github.com/pockethost/pocketone/ext/multisite"
 )
 
 func main() {
@@ -186,7 +211,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: rt, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{rt}, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		slog.Error("host", "error", err)
 		os.Exit(1)

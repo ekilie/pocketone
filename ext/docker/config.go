@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"errors"
+	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
 	"log/slog"
 	"time"
 
@@ -75,7 +76,7 @@ func ConfigFromSection(sc SectionConfig, resolve func(string) string, log *slog.
 	return cfg, nil
 }
 
-// Provider is docker as a runtime provider for ext/multisite (`provider: docker`). Its fields are the host
+// Provider is docker as a host extension for ext/multisite: runtime/v1 from the `docker` section. Its fields are the host
 // application's extensions.
 type Provider struct {
 	// Container adds host-specific mounts, environment and labels to each container (see [Config.Prepare]).
@@ -93,14 +94,23 @@ type Provider struct {
 	MinUpstream string
 }
 
-var _ multisite.Provider = (*Provider)(nil)
+var _ multisite.Extension = (*Provider)(nil)
 
-// Name implements multisite.Provider.
+// Name implements multisite.Extension.
 func (p *Provider) Name() string { return "docker" }
 
-// Prepare implements multisite.Provider: it reads the `docker` section and makes h run each instance in a container.
-func (p *Provider) Prepare(h *multisite.Host) error {
-	sc, _ := Section.Get()
+// Contracts implements extkit.Declarer.
+func (p *Provider) Contracts() extkit.Contracts {
+	return extkit.Contracts{Implements: extkit.IDs("runtime/v1", "remote/v1")}
+}
+
+// RegisterHost implements multisite.Extension: with a `docker` section it provides runtime/v1 (each instance in a
+// container); without one it does nothing.
+func (p *Provider) RegisterHost(h *multisite.Host) error {
+	sc, found := Section.Get()
+	if !found {
+		return nil
+	}
 	cfg, err := ConfigFromSection(sc, p.Resolve, h.Logger)
 	if err != nil {
 		return err
@@ -116,6 +126,11 @@ func (p *Provider) Prepare(h *multisite.Host) error {
 	if err != nil {
 		return err
 	}
-	h.Runtime = rt
+	runtimev1.Contract.ProvideIn(h.Scope, rt)
+	if h.DataRoot == "" {
+		h.DataRoot = cfg.DataRoot
+	}
+	// stock images have no PocketOne extensions: the host answers remote/v1 for them, after its gates
+	h.InstanceRoutes = append(h.InstanceRoutes, rt.serveRemote(h.Directory))
 	return nil
 }

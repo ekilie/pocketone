@@ -7,6 +7,8 @@ source: "ext/vacuum/README.md"
 
 # Vacuum
 
+Version 0.0.0 · Owners: [@benallfree](https://github.com/benallfree)
+
 Scheduled database compaction: online SQLite `VACUUM` for a single app; under pocker, one stopped instance at a time.
 
 > **Planned.** Nothing is published here yet. This folder will hold the extension's Go module

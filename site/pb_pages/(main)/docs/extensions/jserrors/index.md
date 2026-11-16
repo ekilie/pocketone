@@ -7,6 +7,8 @@ source: "ext/jserrors/README.md"
 
 # JS Errors
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 JS hook errors that point at the `.pb.js` file they come from. When a hook in `pb_hooks` throws, the error says
 `pb_hooks/main.pb.js:12:3` instead of `/your/cwd/pb.js:1:40`, so you can go straight to the line.
 

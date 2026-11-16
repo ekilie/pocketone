@@ -100,7 +100,7 @@ func TestReadIgnore(t *testing.T) {
 func TestSyncP1(t *testing.T) {
 	r := newP1Remote(t)
 	ctx := context.Background()
-	c := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeDeploy))
+	c := r.client(t, r.token(t, "_superusers", "test@example.com", ScopeDeploy, "remote", "remote:read"))
 	project := t.TempDir()
 	write := func(root, rel, content string) {
 		t.Helper()
@@ -200,7 +200,7 @@ func TestSyncP1(t *testing.T) {
 	if !strings.Contains(strings.Join(logged, "\n"), "Migrations or packages changed") {
 		t.Fatalf("no restart hint: %q", logged)
 	}
-	if _, err := c.Restart(ctx); err != nil || r.restarts.Load() != 1 {
+	if _, err := c.Restart(ctx); err != nil || !r.waitRestarts(1) {
 		t.Fatalf("restart: %v (restarts %d)", err, r.restarts.Load())
 	}
 

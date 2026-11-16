@@ -32,6 +32,7 @@ import (
 const (
 	repoURL       = "https://github.com/pockethost/pocketone"
 	extensionsOut = "site/pb_pages/(main)/docs/extensions"
+	contractsOut  = "site/pb_pages/(main)/docs/contracts"
 	authorsOut    = "site/pb_pages/(main)/docs/writing-an-extension.md"
 	configOut     = "site/pb_pages/(main)/docs/config-reference.md"
 	tocFile       = "site/pb_pages/(main)/_private/toc.md"
@@ -56,6 +57,12 @@ type guide struct {
 type manifest struct {
 	Groups     []group
 	Extensions []*extension
+	contracts  []contractPage
+}
+
+// contractPage is a contract's README (ext/contracts/<id path>/vN/README.md), published at /docs/contracts/<id>.
+type contractPage struct {
+	ID, Src, Summary string
 }
 
 func main() {
@@ -71,6 +78,9 @@ func main() {
 func run(root string, check bool) error {
 	m, err := loadManifest(root)
 	if err != nil {
+		return err
+	}
+	if m.contracts, err = loadContracts(root); err != nil {
 		return err
 	}
 	secs, err := loadSections(root)
@@ -181,6 +191,13 @@ func loadManifest(root string) (*manifest, error) {
 func generate(root string, m *manifest, secs []section) (map[string]string, error) {
 	out := map[string]string{}
 	pages := map[string]string{"docs/extensions.md": "/docs/writing-an-extension"} // repo path -> site URL
+	pages["docs/contracts.md"] = "/docs/contracts"
+	pages["ext/contracts/README.md"] = "/docs/contracts/all"
+	pages["ext/contracts"] = "/docs/contracts/all"
+	for _, c := range m.contracts {
+		pages[c.Src] = "/docs/contracts/" + c.ID
+		pages[path.Dir(c.Src)] = "/docs/contracts/" + c.ID
+	}
 	for _, p := range m.Extensions {
 		if p.Link != "" {
 			continue
@@ -213,6 +230,24 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		out[extensionsOut+"/"+p.Name+"/index.md"] = page
 	}
 	out[configOut] = configReference(m, secs)
+
+	for _, c := range m.contracts {
+		body, title, err := rw.page(c.Src, "")
+		if err != nil {
+			return nil, err
+		}
+		out[contractsOut+"/"+c.ID+"/index.md"] = frontMatter(title, c.Summary, c.Src) + stripFront(body)
+	}
+	if body, title, err := rw.page("docs/contracts.md", ""); err == nil {
+		out[contractsOut+"/index.md"] = frontMatter(title, "How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.", "docs/contracts.md") + body
+	} else {
+		return nil, err
+	}
+	if body, _, err := rw.page("ext/contracts/README.md", "All contracts"); err == nil {
+		out[contractsOut+"/all.md"] = frontMatter("All contracts", "Every contract in PocketOne: what it promises and which extensions provide, require and work with it.", "ext/contracts/README.md") + body
+	} else {
+		return nil, err
+	}
 
 	body, title, err := rw.page("docs/extensions.md", "")
 	if err != nil {
@@ -263,6 +298,10 @@ func index(m *manifest) string {
 func nav(m *manifest) string {
 	var b strings.Builder
 	b.WriteString("# Extensions\n\n- [All extensions](/docs/extensions)\n- [Writing an extension](/docs/writing-an-extension)\n")
+	b.WriteString("\n# Contracts\n\n- [How PocketOne fits together](/docs/contracts)\n- [All contracts](/docs/contracts/all)\n")
+	for _, c := range m.contracts {
+		fmt.Fprintf(&b, "- [%s](/docs/contracts/%s)\n", c.ID, c.ID)
+	}
 	for _, g := range m.Groups {
 		fmt.Fprintf(&b, "\n# %s\n\n", g.Nav)
 		for _, p := range m.Extensions {
@@ -404,8 +443,19 @@ func diff(root string, want map[string]string) ([]string, error) {
 			out = append(out, p)
 		}
 	}
-	dir := filepath.Join(root, extensionsOut)
-	err := filepath.WalkDir(dir, func(full string, d fs.DirEntry, err error) error {
+	var err error
+	for _, out1 := range []string{extensionsOut, contractsOut} {
+		if err = staleUnder(root, out1, want, &out); err != nil {
+			return nil, err
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// staleUnder adds the files under dir that nothing generates any more.
+func staleUnder(root, dir string, want map[string]string, out *[]string) error {
+	return filepath.WalkDir(filepath.Join(root, dir), func(full string, d fs.DirEntry, err error) error {
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
@@ -418,10 +468,60 @@ func diff(root string, want map[string]string) ([]string, error) {
 		rel, _ := filepath.Rel(root, full)
 		rel = filepath.ToSlash(rel)
 		if _, ok := want[rel]; !ok {
-			out = append(out, rel)
+			*out = append(*out, rel)
 		}
 		return nil
 	})
-	sort.Strings(out)
+}
+
+var frontStripRe = regexp.MustCompile(`(?s)\A---\n.*?\n---\n\s*`)
+
+// stripFront drops a README's own front matter (owners, summary); the page gets the site's.
+func stripFront(s string) string { return frontStripRe.ReplaceAllString(s, "") }
+
+// loadContracts finds every contract README (ext/contracts/<id path>/vN/README.md), sorted by id.
+func loadContracts(root string) ([]contractPage, error) {
+	var out []contractPage
+	base := filepath.Join(root, "ext/contracts")
+	err := filepath.WalkDir(base, func(full string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(base, full)
+		rel = filepath.ToSlash(rel)
+		if d.IsDir() && (rel == "internal" || rel == "cmd") {
+			return filepath.SkipDir
+		}
+		if d.IsDir() || d.Name() != "README.md" {
+			return nil
+		}
+		dir := path.Dir(rel)
+		parts := strings.Split(dir, "/")
+		if len(parts) < 2 || !versionRe.MatchString(parts[len(parts)-1]) {
+			return nil
+		}
+		raw, err := os.ReadFile(full)
+		if err != nil {
+			return err
+		}
+		c := contractPage{ID: strings.Join(parts[:len(parts)-1], ".") + "/" + parts[len(parts)-1], Src: "ext/contracts/" + rel}
+		if m := frontStripRe.FindString(string(raw)); m != "" {
+			for _, line := range strings.Split(m, "\n") {
+				if v, ok := strings.CutPrefix(line, "summary:"); ok {
+					v = strings.TrimSpace(v)
+					var u string
+					if json.Unmarshal([]byte(v), &u) == nil {
+						v = u
+					}
+					c.Summary = v
+				}
+			}
+		}
+		out = append(out, c)
+		return nil
+	})
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, err
 }
+
+var versionRe = regexp.MustCompile(`^v[0-9]+$`)

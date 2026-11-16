@@ -3,7 +3,10 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/pockethost/pocketone/ext/tokens"
+	"fmt"
+	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
+	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
+	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"net/http"
 	"net/url"
@@ -53,19 +56,6 @@ func rpcError(id any, code int, message string) map[string]any {
 
 func rpcResult(id any, result any) map[string]any {
 	return map[string]any{"jsonrpc": "2.0", "id": rawID(id), "result": result}
-}
-
-func (s *Server) bindRoutes(se *core.ServeEvent) {
-	se.Router.POST(s.cfg.Path, s.handlePost)
-	se.Router.GET(s.cfg.Path, methodNotAllowed)
-	se.Router.DELETE(s.cfg.Path, methodNotAllowed)
-
-	prm := func(e *core.RequestEvent) error {
-		e.Response.Header().Set("Access-Control-Allow-Origin", "*")
-		return e.JSON(http.StatusOK, s.ProtectedResourceMetadata(e))
-	}
-	se.Router.GET(wellKnownPRM, prm)
-	se.Router.GET(wellKnownPRM+s.cfg.Path, prm)
 }
 
 func (s *Server) originAllowed(e *core.RequestEvent) bool {
@@ -160,6 +150,15 @@ func (s *Server) dispatch(e *core.RequestEvent, grant *Grant, msg *rpcRequest) e
 			}
 			list = append(list, toolDef(t))
 		}
+		for _, t := range s.contractTools() {
+			if t.SuperuserOnly && !super {
+				continue
+			}
+			if !scopeAllows(grant, t.Scope) {
+				continue
+			}
+			list = append(list, contractToolDef(t))
+		}
 		return e.JSON(http.StatusOK, rpcResult(id, map[string]any{"tools": list}))
 
 	case "tools/call":
@@ -175,6 +174,9 @@ func (s *Server) dispatch(e *core.RequestEvent, grant *Grant, msg *rpcRequest) e
 		}
 		t := s.tool(p.Name)
 		if t == nil {
+			if ct, ok := s.contractTool(p.Name); ok {
+				return e.JSON(http.StatusOK, rpcResult(id, s.runContractTool(e, grant, ct, p.Arguments)))
+			}
 			return e.JSON(http.StatusOK, rpcError(id, codeInvalidParams, "Unknown tool: "+p.Name))
 		}
 		c := &Call{App: s.app, Event: e, Grant: grant, Tool: t, Args: p.Arguments, s: s}
@@ -245,14 +247,80 @@ func toolDef(t *Endpoint) map[string]any {
 	return def
 }
 
+// contractToolDef is an mcp/v1 tool as tools/list describes it.
+func contractToolDef(t mcpv1.Tool) map[string]any {
+	def := map[string]any{"name": t.Name, "description": t.Description, "inputSchema": noArgs}
+	if t.InputSchema != nil {
+		def["inputSchema"] = t.InputSchema
+	}
+	if t.Title != "" {
+		def["title"] = t.Title
+	}
+	switch {
+	case t.ReadOnly:
+		def["annotations"] = Read
+	case t.Destructive:
+		def["annotations"] = Destroy
+	default:
+		def["annotations"] = Write
+	}
+	return def
+}
+
+// scopeAllows: a connection limited to scopes sees a contract tool only when it holds the tool's scope.
+func scopeAllows(g *Grant, scope string) bool {
+	if g == nil || len(g.Scopes) == 0 || scope == "" || scope == extkit.ScopePublic || scope == extkit.ScopeAny {
+		return true
+	}
+	return slices.Contains(g.Scopes, scope)
+}
+
+// grantAuth is who an MCP connection acts as, the way contracts see a caller.
+func grantAuth(g *Grant) extkit.Auth {
+	a := extkit.Auth{Via: "mcp"}
+	if g == nil || g.Auth == nil {
+		return a
+	}
+	a.Kind, a.ID = "record", g.Auth.Id
+	a.Collection, a.RecordID, a.Email = g.Auth.Collection().Name, g.Auth.Id, g.Auth.Email()
+	if g.Auth.IsSuperuser() {
+		a.Kind = "superuser"
+	}
+	if len(g.Scopes) > 0 {
+		a.Scopes = g.Scopes
+	}
+	return a
+}
+
+// runContractTool calls an mcp/v1 tool: a contract operation (scope check and hooks included) or an extension's tool.
+func (s *Server) runContractTool(e *core.RequestEvent, g *Grant, t mcpv1.Tool, args map[string]any) (result map[string]any) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = errorResult(fmt.Errorf("%v", r))
+		}
+	}()
+	if err := checkArgs(t.InputSchema, args); err != nil {
+		return errorResult(err)
+	}
+	raw, err := json.Marshal(args)
+	if err != nil {
+		return errorResult(err)
+	}
+	v, err := t.Call(e.Request.Context(), grantAuth(g), raw)
+	if err != nil {
+		return errorResult(err)
+	}
+	return toolResult(v)
+}
+
 // reaches: the tool can work on this connection. A scoped connection doesn't list tools none of its scopes reaches
 // (method + path, "{name}" segments matching anything); the check on each real request is what enforces.
 func (s *Server) reaches(g *Grant, t *Endpoint) bool {
 	if g == nil || len(g.Scopes) == 0 || t.Path == "" {
 		return true
 	}
-	tk := tokens.For(s.app)
-	if tk == nil {
+	tk, ok := tokensv1.Contract.Of(s.app)
+	if !ok {
 		return true
 	}
 	method := t.Method

@@ -7,6 +7,8 @@ source: "ext/jsembed/README.md"
 
 # JS Embed
 
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
 Ship an extension's or app's JS hooks and migrations inside the binary, instead of `pb_hooks` and `pb_migrations` on
 disk. Nothing is written to disk and nothing on disk can override them. PocketHost's mothership binary uses it for its
 own hooks.

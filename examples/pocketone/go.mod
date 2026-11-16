@@ -4,29 +4,23 @@ go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29
 	github.com/pockethost/pocketone/ext/autotls v0.0.0-20261112000927-b078fd50496e
-	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/docker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/edge v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/firewall v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/jserrors v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/stats v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/mailtrap v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/mothership v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/oauth-server v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pitr v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/servertiming v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/standard v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/stats v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/upgrade v0.0.0-00010101000000-000000000000
 )
 
@@ -45,6 +39,7 @@ require (
 	github.com/dlclark/regexp2/v2 v2.9.1 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
 	github.com/dop251/base64dec v0.0.0-20231022112746-c6c9f9a96217 // indirect
+	github.com/dop251/goja v0.0.0-20261023121931-6ace4dde0b29 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20260212111938-1f56ff5bcf14 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/evanw/esbuild v0.28.2 // indirect
@@ -73,7 +68,15 @@ require (
 	github.com/miekg/dns v1.1.73 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
+	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -93,6 +96,7 @@ require (
 	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/image v0.47.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
@@ -121,7 +125,6 @@ replace github.com/pockethost/pocketone/ext/devusers => ../../ext/devusers
 
 replace (
 	github.com/pockethost/pocketone/ext/deploy => ../../ext/deploy
-	github.com/pockethost/pocketone/ext/oauth-server => ../../ext/oauth-server
 	github.com/pockethost/pocketone/ext/remotes => ../../ext/remotes
 	github.com/pockethost/pocketone/ext/tokens => ../../ext/tokens
 )
@@ -158,3 +161,17 @@ replace github.com/pockethost/pocketone/ext/servertiming => ../../ext/servertimi
 replace github.com/pockethost/pocketone/ext/upgrade => ../../ext/upgrade
 
 replace github.com/pockethost/pocketone/ext/stats => ../../ext/stats
+
+replace github.com/pockethost/pocketone/ext/contracts => ../../ext/contracts
+
+replace github.com/pockethost/pocketone/ext/standard => ../../ext/standard
+
+replace github.com/pockethost/pocketone/ext/jsembed => ../../ext/jsembed
+
+replace github.com/pockethost/pocketone/ext/mailrelay => ../../ext/mailrelay
+
+replace github.com/pockethost/pocketone/ext/s3-fallback => ../../ext/s3-fallback
+
+replace github.com/pockethost/pocketone/ext/backups => ../../ext/backups
+
+replace github.com/pockethost/pocketone/ext/settings => ../../ext/settings

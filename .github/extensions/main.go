@@ -4,6 +4,9 @@
 //	go run ./.github/extensions affected <base> <head>   # module dirs to build and test, one per line
 //	go run ./.github/extensions check [dir...]            # extension rules (default: every module)
 //	go run ./.github/extensions examples                  # copy each example/main.go into its README's ## Example
+//	go run ./.github/extensions contracts                 # write each contract README's provides/requires/works-with index
+//	go run ./.github/extensions approvers <base> <head>   # who may approve each area a change touches (owners at base)
+//	go run ./.github/extensions versions <base> <head>    # every extension whose code changed bumped its version
 //
 // A module is affected when a file in it changes (Markdown aside), or when a module it reaches through a `replace`
 // is affected. A change to core (the root module) or to this tool affects every module.
@@ -14,6 +17,10 @@
 //   - every extension (ext/<name>) has a README.md with `## Install`, `## Configure`, `## Use`, `## Integrations` and
 //     `## Example` sections, in that order; it is the extension's page on pocketone.dev (docs/extensions.md). When the
 //     extension has example/main.go, the Example section shows it exactly, in a ```go block (`examples` writes it).
+//   - every contract (ext/contracts/<id path>/vN) has a README with owners and a summary in its front matter and
+//     `## Use`, `## Provide`, `## Extensions` and `## License` sections; its Extensions section lists, generated from
+//     every extension's Contracts(), who provides, requires and works with it (`contracts` writes it). Every contract
+//     an extension declares exists. These run with every `check`.
 package main
 
 import (
@@ -53,13 +60,51 @@ func main() {
 			}
 			dirs = mods
 		}
-		if problems := check(dirs); len(problems) > 0 {
+		problems := check(dirs)
+		problems = append(problems, checkContracts()...)
+		problems = append(problems, checkOwnership()...)
+		if len(problems) > 0 {
 			for _, p := range problems {
 				fmt.Println("::error::" + p)
 			}
 			os.Exit(1)
 		}
 		fmt.Printf("ok: %d modules follow the extension rules\n", len(dirs))
+	case "approvers":
+		if len(os.Args) != 4 {
+			usage()
+		}
+		list, err := approvers(os.Args[2], os.Args[3])
+		if err != nil {
+			fail(err)
+		}
+		for _, a := range list {
+			fmt.Printf("%s: any of %s (%s)\n", a.Area, strings.Join(a.AnyOf, ", "), a.Reason)
+		}
+	case "versions":
+		if len(os.Args) != 4 {
+			usage()
+		}
+		problems, err := versionBumps(os.Args[2], os.Args[3])
+		if err != nil {
+			fail(err)
+		}
+		for _, p := range problems {
+			fmt.Println("::error::" + p)
+		}
+		if len(problems) > 0 {
+			os.Exit(1)
+		}
+		fmt.Println("ok: every changed extension bumped its version")
+	case "contracts":
+		changed, err := syncContracts()
+		if err != nil {
+			fail(err)
+		}
+		for _, f := range changed {
+			fmt.Println("wrote", f)
+		}
+		fmt.Printf("ok: %d contract READMEs updated\n", len(changed))
 	case "examples":
 		changed, err := syncExamples()
 		if err != nil {
@@ -75,7 +120,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples")
+	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples | extensions contracts | extensions approvers <base> <head> | extensions versions <base> <head>")
 	os.Exit(2)
 }
 
@@ -282,8 +327,9 @@ func check(dirs []string) []string {
 
 // docsExempt are extension folders that aren't something a user installs, configures or uses, with the reason.
 var docsExempt = map[string]string{
-	"extkit":   "the extension contract, a library for extension authors (docs/extensions.md covers it)",
-	"devusers": "test users for examples and tests only; never in a production build",
+	"extkit":    "the extension contract, a library for extension authors (docs/extensions.md covers it)",
+	"contracts": "the interfaces extensions use to work together, a library (its README and docs/extensions.md cover it)",
+	"devusers":  "test users for examples and tests only; never in a production build",
 }
 
 // docsPending are extensions written before the README sections were required; remove each when its README has them.

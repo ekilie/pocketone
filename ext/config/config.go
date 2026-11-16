@@ -11,7 +11,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -296,9 +295,6 @@ func dedupe(s []string) []string {
 	}
 	return out
 }
-
-// ErrNoProvider is returned when the config names a runtime provider this binary doesn't link.
-var ErrNoProvider = errors.New("this binary links no runtime provider")
 
 // ResolvePath makes a relative path from the config file absolute, relative to the file's folder (so a config file
 // works from any working directory, and paths handed to other processes, such as docker bind mounts, are absolute).

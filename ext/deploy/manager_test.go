@@ -110,7 +110,9 @@ func TestWithPockerManager(t *testing.T) {
 	if r.status != 200 || r.body["restartNeeded"] != true || r.body["restarted"] != false {
 		t.Fatalf("migration: %s", r.raw)
 	}
-	r = f.do("POST", Prefix+"/restart", map[string]any{})
+	// asked for on the next commit (remote/v1's restart is the other way)
+	files["pb_migrations/2_tags.js"] = `migrate((app) => { app.save(new Collection({name: "tags", type: "base"})) })`
+	r = f.deploy(files, map[string]any{"restart": true})
 	if r.status != 200 || r.body["restarted"] != true || !mgr.Running("inst1") {
 		t.Fatalf("restart: %d %s", r.status, r.raw)
 	}

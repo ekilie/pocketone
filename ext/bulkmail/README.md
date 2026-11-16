@@ -1,3 +1,8 @@
+---
+owners: ["@benallfree"]
+version: 0.0.1
+---
+
 # Bulk Mail
 
 Campaigns to your app's own users, from the dashboard. You pick who gets the mail with a collection, a view or SQL,
@@ -177,25 +182,21 @@ $bulkmail.limits()               // {rate, daily, sentToday}
 React to activity with record hooks on the collections below, for example
 `onRecordAfterCreateSuccess((e) => { … }, "_bulkmail_suppressions")`.
 
-### REST API
+### API: contracts
 
-Superusers only:
+Bulk Mail has no routes of its own. Its API is three contracts it provides, plus a section in
+[settings/v1](../contracts/settings/v1/README.md) (`?extension=bulkmail`: sender details, limits and the feedback
+endpoint URLs; secrets are never returned):
 
-| Route | What it does |
+| Contract | What it covers |
 |---|---|
-| `GET`/`PATCH /api/bulkmail/settings` | Settings (secrets are never returned), limits and feedback endpoint URLs. |
-| `POST /api/bulkmail/audience/count` | `{"audience": {...}}` → count, suppressed, sample. |
-| `POST /api/bulkmail/campaigns/{id}/start\|pause\|resume\|cancel` | Campaign actions. `start` takes an optional `{"limit": N}` to queue only the next N new recipients. |
-| `POST /api/bulkmail/campaigns/{id}/preview` | The rendered message for one recipient. |
-| `POST /api/bulkmail/campaigns/{id}/test` | Send to `test_to` (no ledger rows). |
+| [bulkmail/v1](../contracts/bulkmail/v1/README.md) | Count an audience; start, pause, resume, cancel, preview and test a campaign (superusers). |
+| [mail.suppression/v1](../contracts/mail/suppression/v1/README.md) | The suppression list (check, suppress, unsuppress) and the unsubscribe link in every message (public, signed). Bulk Mail keeps it by default; when another extension provides it, Bulk Mail asks that one before queueing and before each send. |
+| [mail.feedback/v1](../contracts/mail/feedback/v1/README.md) | Bounce and complaint reports from SES (SNS) or a webhook (public; `X-Feedback-Secret`). Any extension can act on them. |
 
 Campaigns and suppressions are created and edited through the regular records API. A campaign's `from_name` and
 `from_address` override the app's sender, but only through the records API, JS or Go (the dashboard doesn't show
 them), since the app's mail account can usually send only as identities it has verified.
-
-Public routes: `GET`/`POST /api/bulkmail/unsubscribe?t=…`, `POST /api/bulkmail/feedback/ses` and
-`POST /api/bulkmail/feedback/webhook`. The webhook takes `{"type": "bounce|complaint|unsubscribe", "email": "…"}`
-with an `X-Bulkmail-Secret` header.
 
 ## Example
 
