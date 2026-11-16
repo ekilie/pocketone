@@ -257,6 +257,18 @@ func (vm *VM) fromJS(v C.JSValue, t reflect.Type) (reflect.Value, error) {
 		}
 		return reflect.Value{}, fmt.Errorf("cannot use %s as %s", gv.Type(), t)
 	}
+	switch tag := C.avm_tag(v); {
+	case t.Kind() == reflect.Pointer && t.Elem().Kind() != reflect.Struct && tag != C.JS_TAG_UNDEFINED &&
+		tag != C.JS_TAG_NULL && tag != C.JS_TAG_OBJECT:
+		// a primitive where Go wants a pointer to one (a *string collection rule): allocate it, as goja does
+		ev, err := vm.fromJS(v, t.Elem())
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		p := reflect.New(t.Elem())
+		p.Elem().Set(ev)
+		return p, nil
+	}
 	switch C.avm_tag(v) {
 	case C.JS_TAG_UNDEFINED, C.JS_TAG_NULL:
 		return reflect.Zero(t), nil
@@ -409,6 +421,12 @@ func (vm *VM) exportStruct(src reflect.Value, st reflect.Type) reflect.Value {
 	return dst
 }
 
+// isPlainObject: a JS object that isn't a Go value, an array or a function.
+func (vm *VM) isPlainObject(v C.JSValue) bool {
+	return C.avm_tag(v) == C.JS_TAG_OBJECT && C.avm_handle_of(vm.a, v) == 0 && C.avm_is_array(v) == 0 &&
+		C.avm_is_function(vm.ctx, v) == 0
+}
+
 // ---- property access from JS ----
 
 func deref(v reflect.Value) reflect.Value {
@@ -531,6 +549,26 @@ func avmGoSet(ctx *C.JSContext, h C.uint32_t, name *C.char, n C.size_t, val C.JS
 			if !f.CanSet() {
 				vm.throw(fmt.Errorf("field %s is read-only", key))
 				return -1
+			}
+			// a plain object assigned to a struct field merges into it, as goja does (o.otp = {enabled: false}
+			// keeps OTP's other settings)
+			if target := f; vm.isPlainObject(val) && (target.Kind() == reflect.Struct || (target.Kind() == reflect.Pointer &&
+				target.Type().Elem().Kind() == reflect.Struct)) {
+				if target.Kind() == reflect.Pointer {
+					if target.IsNil() {
+						target.Set(reflect.New(target.Type().Elem()))
+					}
+				} else {
+					target = target.Addr()
+				}
+				obj, err := vm.toJS(target)
+				if err != nil {
+					vm.throw(err)
+					return -1
+				}
+				vm.loadInto(obj, val)
+				vm.free_(obj)
+				return 1
 			}
 			gv, err := vm.fromJS(val, f.Type())
 			if err != nil {
