@@ -170,8 +170,9 @@ func TestBearerAuthAndScopes(t *testing.T) {
 			Headers: authHeader(scoped), ExpectedStatus: 200, ExpectedContent: []string{"me test@example.com"},
 		},
 		{
-			Name: "invalid token is anonymous", Method: http.MethodGet, URL: "/api/_c/remote/v1",
-			Headers: authHeader(Prefix + strings.Repeat("a", secretLen)), ExpectedStatus: 200, ExpectedContent: []string{"anon"},
+			// like an unknown JWT: PocketBase's pbRejectUnknownToken answers 401
+			Name: "invalid token is rejected", Method: http.MethodGet, URL: "/api/_c/remote/v1",
+			Headers: authHeader(Prefix + strings.Repeat("a", secretLen)), ExpectedStatus: 401, ExpectedContent: []string{`"status":401`},
 		},
 		{
 			Name: "a token can't mint a JWT", Method: http.MethodPost, URL: "/api/collections/_superusers/auth-refresh",

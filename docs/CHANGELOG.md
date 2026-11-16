@@ -45,10 +45,15 @@ repo root; each release here says which PocketBase version it's built on.
 
 ### Changed
 
+- A request with an unknown or expired `Authorization` token now gets a 401 instead of going on as a guest (PocketBase v0.42.0). Clients that send a stale token should drop it and sign in again. `/mcp` keeps answering with its own sign-in challenge, so MCP clients still re-authenticate.
 - **jsvm:** the `pocketone` binary and every Pocker instance run JS on `ext/jsvm` (QuickJS, one VM per app) instead of goja. Hooks, routes and migrations run as before; hook files now share one global scope, handlers can be `async`, and errors name `pb_hooks/<file>:<line>:<col>` on their own (`ext/jserrors` is no longer used). `--hooksPool` is accepted and ignored.
 - **sandbox, pocker:** each instance's JS has a hard memory cap (64 MiB: JS heap plus Go objects it holds); gradual growth is now limited per instance, not only one-shot allocations. Process-reaching Go methods are also hidden when an app type embeds `*core.BaseApp`.
 - **contracts:** contract providers and `on<Contract><Op>` handlers written in pb_hooks can use the file's top-level variables.
 - **pages:** runs on `ext/jsvm`. Templates can include each other at most 32 deep (was 64). A page that runs away now fails with the engine's "interrupted" or "out of memory" error.
+
+### PocketBase
+
+- Built on PocketBase v0.42.2 (was v0.41.1). See its [changelog](../CHANGELOG.md) for v0.42.0 to v0.42.2.
 
 ## v0.0.1-alpha.4 (2026-11-16)
 

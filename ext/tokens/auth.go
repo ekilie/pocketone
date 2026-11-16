@@ -47,7 +47,7 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 			}
 			info, err := t.Verify(secret)
 			if err != nil {
-				// like an invalid JWT: the request goes on unauthenticated
+				// like an invalid JWT: no auth is loaded, so PocketBase's pbRejectUnknownToken answers 401
 				e.App.Logger().Debug("tokens: rejected API token", "error", err)
 				return e.Next()
 			}

@@ -16,6 +16,7 @@ import (
 	"sort"
 	"sync"
 
+	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -63,9 +64,12 @@ func Bind(app core.App) {
 				}
 				return p.ServeMCP(e)
 			}
-			se.Router.POST(Path, serve)
-			se.Router.GET(Path, serve)
-			se.Router.DELETE(Path, serve)
+			// The provider answers an unknown or expired token itself, with the WWW-Authenticate challenge MCP clients
+			// need to sign in again; PocketBase's catch-all 401 for unknown tokens would leave that header out.
+			reject := apis.DefaultRejectUnknownTokenMiddlewareId
+			se.Router.POST(Path, serve).Unbind(reject)
+			se.Router.GET(Path, serve).Unbind(reject)
+			se.Router.DELETE(Path, serve).Unbind(reject)
 			meta := func(e *core.RequestEvent) error {
 				p, err := ep(e)
 				if err != nil {
@@ -74,8 +78,9 @@ func Bind(app core.App) {
 				e.Response.Header().Set("Access-Control-Allow-Origin", "*")
 				return e.JSON(http.StatusOK, p.Metadata(e))
 			}
-			se.Router.GET("/.well-known/oauth-protected-resource", meta)
-			se.Router.GET(MetadataPath, meta)
+			// public metadata: a stale token on the request mustn't hide where to sign in
+			se.Router.GET("/.well-known/oauth-protected-resource", meta).Unbind(reject)
+			se.Router.GET(MetadataPath, meta).Unbind(reject)
 			return se.Next()
 		},
 	})
