@@ -10,7 +10,7 @@ Create `pb_pages/+config.js` to configure PocketPages for the app:
 ```js
 // pb_pages/+config.js
 module.exports = {
-  plugins: ['auth', 'datastar', require('./_private/my-plugin.js')],
+  plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
 }
 ```
@@ -22,14 +22,21 @@ module.exports = {
 | `plugins` | `[]` | Built-in plugins by name, or JS plugin factories. EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-Unknown keys, unknown built-in names and duplicates are startup errors.
+`+config.js` must export an object; exporting a function (0.x's `(api) => ({...})` form) is an error.
+
+`+config.js` runs on each page request, so these aren't caught at startup: unknown keys, names that are neither a
+module nor a built-in, or a plugin listed twice make every page answer with an error (a 500; dev mode shows the
+reason on the page), and the reason goes to the log.
 
 ## Plugins
 
 Each entry in `plugins` is one of:
 
-- **A built-in name**: `'auth'`, `'realtime'` or `'datastar'`. See [Plugins](/docs/plugins).
-- **A JS plugin factory**: a function that returns hooks.
+- **A name**, loaded with `require`: a `_private/` file (`'datastar'` for the [Datastar add-on](/docs/plugins/datastar)),
+  then a package in `node_modules`, then a built-in (`'auth'` or `'realtime'`). It must export a plugin factory. See
+  [Plugins](/docs/plugins).
+- **A JS plugin factory**: a function that returns hooks, such as `require('./_private/my-plugin.js')`. A `require`
+  with a path loads exactly that file, skipping the name lookup, so it's how you choose one copy over another.
 - **An object with a factory and options**: `{ factory, ...options }`. The object is passed to the factory as its `config`.
 
 ```js

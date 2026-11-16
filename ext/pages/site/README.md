@@ -1,6 +1,6 @@
 # pocketpages.dev
 
-The PocketPages website and docs, written as a PocketPages v1 app. It runs on PocketOne with the pages plugin
+The PocketPages website and docs, written as a PocketPages v1 app. It runs on PocketOne with the pages extension
 (`ext/pages`) and follows [`../SPEC.md`](../SPEC.md).
 
 ## Layout

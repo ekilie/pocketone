@@ -5,7 +5,7 @@ description: What changed between the PocketPages npm package (0.x) and PocketPa
 
 # Moving from PocketPages 0.x
 
-PocketPages v1 is part of PocketOne (the `pages` plugin). It keeps the ideas of the npm package (a folder of files that become routes, EJS, layouts, middleware, private partials) and changes the shapes. Apps written for 0.x don't run unchanged.
+PocketPages v1 is part of PocketOne (the `pages` extension). It keeps the ideas of the npm package (a folder of files that become routes, EJS, layouts, middleware, private partials) and changes the shapes. Apps written for 0.x don't run unchanged.
 
 There is no migration tool. Start a new app with `pocketone pages create <name>`, then move your pages over using the list below. The npm package is being retired.
 
@@ -27,10 +27,14 @@ Delete the `.pb.js` boot file and the `pocketpages` dependencies, and move the c
 | `request`, `response` | `ctx.req`, `ctx.res` |
 | `body()`, `formData` | `ctx.req.body()` |
 | `redirect(path)` | `ctx.res.redirect(path)` |
+| `response.redirect(path, status)` | `ctx.res.redirect(path, status)` (unchanged) |
 | `env()`, `store()`, `dbg()`, `info()`, `warn()`, `error()` | `ctx.env()`, `ctx.store()`, `ctx.log.debug()` / `info()` / `warn()` / `error()` |
 | `auth`, `request.auth` | `ctx.auth` |
+| `resolve(name)` | `ctx.resolve(name)` |
 
-Inside templates, `data`, `params`, `asset` and `meta` are still available without the `ctx.` prefix.
+Inside templates, `data`, `params`, `asset` and `meta` are still available without the `ctx.` prefix. The other
+0.x template globals are gone, including `resolve`, `redirect` and `env`: use `ctx.resolve()`, `ctx.res.redirect()` and
+`ctx.env()`.
 
 ## Parameters, query strings and cookies
 
@@ -52,7 +56,7 @@ Put shared data on `ctx.data`. See [Middleware](/docs/middleware).
 
 ## Loaders
 
-`+load.js`, `+get.js`, `+post.js` and friends are replaced by one `+page.js` per folder that exports `load`, `get`, `post`, `put`, `patch` and `delete`. Returned objects are shallow-assigned into `ctx.data` (no deep merge).
+`+load.js`, `+get.js`, `+post.js` and friends are replaced by one `+page.js` per folder that exports `load`, `get`, `post`, `put`, `patch` and `delete`. Returned objects are shallow-assigned into `ctx.data` (no deep merge). As in 0.x, every handler is optional and a page renders for any method, so templates that check the request method keep working (`request.method` becomes `ctx.req.method`).
 
 ```js
 // 0.x: +load.js
@@ -101,11 +105,26 @@ Read it on the next request with `ctx.flash()`. See [flash](/docs/ctx/flash).
 
 ## Configuration and plugins
 
-- `+config.js` lists built-in plugins by name (`auth`, `realtime`, `datastar`) or JS plugin factories. npm plugin package names and EJS options are gone.
+- `+config.js` still takes plugin package names, which are loaded with `require` as before, but the packages must be
+  v1 plugins: the 0.x `pocketpages-plugin-*` packages don't run on v1. `auth` and `realtime` are built in, EJS and
+  Markdown are always on, and Datastar is an [add-on](/docs/plugins/datastar) you copy into `pb_pages/_private/` and list as `'datastar'`. Its API is 0.x's, with `signals()` added alongside `readSignals`. npm plugin package names and EJS options are gone.
+- `+config.js` must export an object (`module.exports = { ... }`). 0.x's function form, `module.exports = (api) => ({ ... })`, is an error.
+- A `package.json` at the app's root still works: bare `require('pkg')` looks in the app folder's `node_modules` after `pb_pages`.
 - EJS and Markdown are always on. `pocketpages-plugin-ejs` and `pocketpages-plugin-marked` have no v1 equivalent because they aren't needed.
 - The auth plugin no longer goes through the JS SDK over HTTP (`api.pb()`). Use `ctx.session.*`, which calls the app directly. See [Authentication](/docs/plugins/auth).
 
 See [+config.js](/docs/config) and [Plugins](/docs/plugins).
+
+## Behavior that changed quietly
+
+These don't fail with an error, so check for them when porting:
+
+- **Cookies are `HttpOnly` by default.** Pass `{ httpOnly: false }` to `ctx.res.cookie` for a cookie your page's JS reads. The `pb_auth` cookie stays `HttpOnly`, so `pb.authStore.loadFromCookie(document.cookie)` in the browser no longer works.
+- **Realtime messages are JSON-encoded.** `ctx.realtime.send(topic, data)` sends `JSON.stringify(data)`, so a string (such as an HTML fragment) arrives in quotes: `JSON.parse` it on the client. A `filter` now gets one argument, the client, and only narrows clients already subscribed to the topic.
+- **`.md`, `.jsx` and `.tsx` files are always pages**, never served as static files.
+- **Front matter is plain YAML.** EJS tags inside it aren't run.
+- **`require` never leaves `pb_pages`.** To load code from `pb_hooks`, use `require(__hooks + '/lib/x')`.
+- **Hook files (`*.pb.js`) go in `pb_hooks`.** In `pb_pages` they're an error and aren't served.
 
 ## Removed globals
 

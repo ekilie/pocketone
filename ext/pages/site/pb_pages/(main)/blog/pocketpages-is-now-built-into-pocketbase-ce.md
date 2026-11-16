@@ -12,9 +12,9 @@ PocketHost maintains. Put a `pb_pages` folder next to `pb_data` and it's served.
 
 ```bash
 brew install pockethost/tap/pocketone
-pocketbase pages create myapp --starter daisyui-docs
+pocketone pages create myapp --starter daisyui-docs
 cd myapp
-pocketbase serve --dir ./pb_data
+pocketone serve --dir ./pb_data
 ```
 
 ## What's new in v1

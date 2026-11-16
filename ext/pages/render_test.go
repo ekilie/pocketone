@@ -186,7 +186,8 @@ func TestAuthSession(t *testing.T) {
 		"logout/+api.js":  "module.exports = { post(ctx) { ctx.session.signOut(); return ctx.res.json({ id: ctx.auth }) } }",
 		"methods/+api.js": "module.exports = { get(ctx) { return ctx.res.json(ctx.session.authMethods()) } }",
 	})
-	h, _ := newServer(t, dir)
+	h, p := newServer(t, dir)
+	setMFA(t, p, false, "")
 	do := func(method, path, body, cookie string) *httptest.ResponseRecorder {
 		var rd io.Reader
 		if body != "" {
@@ -291,6 +292,7 @@ func TestJSSDKAppliesAPIRules(t *testing.T) {
 		} }`,
 	})
 	h, p := newServer(t, dir)
+	setMFA(t, p, false, "")
 	dev := true
 	p.cfg.Dev = &dev
 	users, err := p.app.FindCollectionByNameOrId("users")

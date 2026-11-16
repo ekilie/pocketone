@@ -93,9 +93,15 @@
       return ctx.res
     },
     redirect: function (location, opts) {
+      // redirect(location, 301) as in 0.x, or redirect(location, { status, flash })
+      if (typeof opts === 'number') opts = { status: opts }
       opts = opts || {}
+      var status = opts.status === undefined ? 302 : opts.status
+      if (typeof status !== 'number' || status < 300 || status > 399 || status % 1 !== 0) {
+        throw new Error('ctx.res.redirect: status must be a 3xx code, got ' + status)
+      }
       if (opts.flash !== undefined) rt.setCookie('pp_flash', JSON.stringify(opts.flash), { maxAge: 300 })
-      rt.redirect(opts.status || 302, String(location))
+      rt.redirect(status, String(location))
       return ctx.res
     },
     json: function (a, b) {
@@ -294,16 +300,18 @@
     if (typeof h === 'function') {
       assign(h(ctx))
       if (rt.sent()) return
-    } else if (route.kind === 'api' || m !== 'get') {
+    } else if (route.kind === 'api' || route.kind === 'page-js') {
+      // nothing to render, so a method without a handler is a 405. A page with a template renders for any
+      // method (like PHP); the template can branch on ctx.req.method.
       var allow = ['GET', 'HEAD']
       for (var i = 1; i < methods.length; i++) {
         if (mod && typeof mod[methods[i]] === 'function') allow.push(methods[i].toUpperCase())
       }
-      if (route.kind === 'api' && !(mod && typeof mod.get === 'function')) allow = allow.slice(2)
+      if ((route.kind === 'api' || route.kind === 'page-js') && !(mod && typeof mod.get === 'function')) allow = allow.slice(2)
       rt.methodNotAllowed(allow.join(', '))
       return
     }
-    if (route.kind === 'api') {
+    if (route.kind === 'api' || route.kind === 'page-js') {
       if (!rt.sent()) throw new Error(route.file + ': the ' + m + ' handler returned without sending a response')
       return
     }

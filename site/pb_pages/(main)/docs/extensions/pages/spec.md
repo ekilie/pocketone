@@ -31,15 +31,20 @@ myapp/
   exists (it starts serving if the folder appears later). There is no on/off switch; no folder, no pages.
 - Under the multitenant host every instance has its own `pb_pages`.
 - If the folder doesn't exist, the extension does nothing for that app.
-- Page code can `require()` modules from `pb_pages/node_modules`, then from the app's usual module paths. The same
-  `require` works in modules, JSX/TSX components and EJS templates:
+- Page code can `require()` modules from `pb_pages` (`_private/` folders, then `node_modules`), then from the app's
+  usual module paths. The same `require` works in modules, JSX/TSX components and EJS templates:
   - `./x` and `../x` are files in `pb_pages`, relative to the requiring file, never above `pb_pages`. Without an
     extension, `.js`, `.ts`, `.tsx`, `.jsx`, `.json` and `.cjs` are tried, then a folder's `package.json` or `index`.
-  - A bare name (`pkg`, `pkg/sub`, `@scope/pkg`) is looked up in the nearest `node_modules` folder from the requiring
-    file's folder up to the top of `pb_pages`. A package resolves through its `package.json`: `exports` (a string,
+  - A bare name (`pkg`, `pkg/sub`, `@scope/pkg`) is looked up first in `_private/` folders, from the requiring file's
+    folder up to the top of `pb_pages`, the same lookup as `include` (4.2; the extensions above are tried). Then it's
+    looked up in the nearest `node_modules` folder, the same way up. A package resolves through its `package.json`: `exports` (a string,
     or conditions, where `require`, then `node`, then `default` are used), else `main`, else `index.js`. With
     `exports`, only what it lists can be required, and no entry may point outside the package.
-  - Anything not found that way goes to the app's own module loader.
+  - Then `pb_hooks/node_modules`, then the app folder's `node_modules` (the folder that holds `pb_pages`, where 0.x
+    sites keep `package.json`).
+  - Anything not found that way goes to the app's own module loader. If that fails too, the error lists the folders
+    searched.
+  - A require cycle (`a` requires `b`, which requires `a`) gets the exports as they are so far, as in Node.
   - `node_modules` is never routed or served, and isn't watched: after changing files in it, change any file in
     `pb_pages` (or restart) to reload.
 - Page code runs in the app's JS VM, so PocketBase's JSVM globals (`$app`, `Record`, `$dbx`, `$security`, ...) are
@@ -57,9 +62,10 @@ A path segment (file or folder name) starting with one of these characters is ne
 | `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ejs`, `.jsx` or `.tsx`). One of each per folder. Any other `+` name is an error at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
-| `.` | Ignored (dotfiles). |
+| `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
 
-`node_modules/` is never routed.
+`node_modules/` is never routed. Hook files (`*.pb.js`, `*.pb.ts`) belong in `pb_hooks`: in `pb_pages` they're a
+startup error and never served.
 
 ### 1.2 Groups
 
@@ -92,6 +98,9 @@ A **page** is a template file: `.ejs`, `.md`, `.jsx` or `.tsx` (4.5).
 A `+api.js` file serves its folder's URL without a template: `feeds/rss/+api.js` serves `/feeds/rss`.
 `[param]` folders work as for pages. If a folder has both `+api.js` and an `index` page, startup fails.
 
+A `+page.js` in a folder with no page (no template file) and no `+api.js` serves the folder's URL the same way, from
+JS: `logout/+page.js` serves `/logout` (3.2).
+
 ### 2.3 Static files
 
 Every other file is served as-is at its path (groups removed): `assets/app.css` serves `/assets/app.css`. Files that
@@ -121,7 +130,8 @@ previous table keeps serving if there was one.
 
 For a URL that matches a page or API route, one JS call does all of this, in order:
 
-1. **Plugins' `onRequest`** (built-in and JS plugins, in config order).
+1. **Plugins:** every plugin's `extendContext`, then every plugin's `onRequest` (built-in and JS plugins, in config
+   order), so an `onRequest` can use what any plugin added to `ctx`.
 2. **Middleware**, root first: every `+middleware.js` from `pb_pages/` down to the route's folder (groups included).
 3. **Handlers**: the folder's `+page.js` (or `+api.js`): `load`, then the handler for the request method.
 4. **Template** (pages only), then **layouts**, innermost first.
@@ -162,16 +172,21 @@ module.exports = {
 }
 ```
 
-- Exports any of `load`, `get`, `post`, `put`, `patch`, `delete`. A page that only renders but must accept a form
-  post still needs `post() {}`: methods without a handler answer `405`.
+- Exports any of `load`, `get`, `post`, `put`, `patch`, `delete`. All are optional: a page renders for any method.
 - `load` runs for every method; then the method's handler, if there is one. `HEAD` runs `load` and `get` like
   `GET` (only the body is dropped), so keep side effects in `post`/`put`/`patch`/`delete`.
 - A handler may set `ctx.data` fields, or return a plain object, which is shallow-assigned into `ctx.data`
   (`Object.assign`). There is no deep merge.
 - A `+page.js` applies to every page in its folder. `ctx.route.name` tells them apart.
-- A method with no handler still renders the page for `GET` and `HEAD`. Other methods without a handler answer
-  `405` with an `Allow` header listing `GET, HEAD` and the methods that have handlers, in the order
-  `GET, HEAD, POST, PUT, PATCH, DELETE`.
+- A method with no handler still renders the page, for every method (like PHP): a template can handle a form itself
+  by checking `ctx.req.method`, with no `+page.js`.
+- Only routes with nothing to render (`+api.js`, and a `+page.js` without a page) answer `405` for a method with no
+  handler, with an `Allow` header listing the methods that have handlers (`GET, HEAD` when there's a `get`), in the
+  order `GET, HEAD, POST, PUT, PATCH, DELETE`.
+- **Without a page.** A `+page.js` in a folder with no template serves the folder's URL from JS (2.2): there's nothing
+  to render, so a handler must send a response (`ctx.res.html`, `ctx.res.redirect`, `ctx.res.json`, ...), and
+  returning without one is a 500. Methods without a handler answer `405`, `GET` included. Unlike `+api.js`, errors
+  are pages (`+error.ejs` or the HTML error page), not JSON. Folder middleware runs; layouts don't.
 
 ### 3.3 API handlers: `+api.js`
 
@@ -222,9 +237,13 @@ A template returns its text. There is no `echo`; anything you want in the output
   isn't escaped.
 - Lookup: `_private/` in the current template's folder, then each parent folder up to `pb_pages/`. For a template
   that is itself inside a `_private/` folder, the search starts at the folder containing that `_private/` (so its
-  siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`. `..` is not allowed.
-- `name` may include its extension; without one, `.ejs` then `.md` are tried.
-- The partial sees the same `ctx`, plus `locals` as top-level variables.
+  siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`, unless it names a `_private/` folder itself
+  (`/_private/card`, `/blog/_private/card`, as in 0.x), which is a path from the top of `pb_pages`. `..` is not allowed.
+- `name` may include its extension. The exact name is tried first; then `.ejs`, `.md`, `.jsx` and `.tsx` are added, in
+  that order, so a dotted name such as `nav.main` finds `nav.main.ejs`.
+- The partial sees the same `ctx`, plus `locals` as top-level variables. As in EJS, `locals` is also the whole object,
+  so an optional one can be tested without a `ReferenceError`: `<%% if (locals.subtitle) { %>`. A page or layout gets an
+  empty `locals`.
 - Including more than 64 levels deep is an error (recursion guard).
 
 ### 4.3 Slots and layouts
@@ -318,7 +337,7 @@ export default function Product({ data, slot }: any) {
 | A handler or middleware sent one | That one |
 | Page rendered | `200 text/html; charset=utf-8` (or the status set with `ctx.res.status`) |
 | `HEAD` | As `GET`, without a body |
-| Handler for another method missing | `405` + `Allow` |
+| No handler for the method | Page: rendered as usual. `+api.js` or a `+page.js` without a page: `405` + `Allow` |
 | Error thrown | `500` (see 8) |
 
 JSON is only sent through `ctx.res.json` (or `+api.js`). Template output is never parsed as JSON.
@@ -353,9 +372,9 @@ Query values and cookies are strings unless you ask for JSON. Nothing is parsed 
 |---|---|
 | `status(code)` | Status for the rendered page. Returns `ctx.res`. |
 | `header(name, value)` | Set a response header; returns `ctx.res`. `header(name)` reads it back. |
-| `cookie(name, value, options?)` | Set a cookie. Non-string values are `JSON.stringify`'d; the value is then percent-encoded (`encodeURIComponent`), and `ctx.req.cookie` decodes it. Defaults: `path=/`, `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS. Options: `path`, `domain`, `maxAge` (seconds), `expires` (Date), `httpOnly`, `secure`, `sameSite`. |
+| `cookie(name, value, options?)` | Set a cookie. Non-string values are `JSON.stringify`'d; the value is then percent-encoded (`encodeURIComponent`), and `ctx.req.cookie` decodes it. Defaults: `path=/`, `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS. Options: `path`, `domain`, `maxAge` (seconds), `expires` (a `Date`, milliseconds since the epoch, or a date string; with `maxAge` too, browsers use `maxAge`), `httpOnly`, `secure`, `sameSite`. |
 | `clearCookie(name, options?)` | Expire a cookie (same `path`/`domain` as when set). |
-| `redirect(location, { status = 302, flash }?)` | Send a redirect. `flash` sets a one-time message (6.4). |
+| `redirect(location, { status = 302, flash }?)` or `redirect(location, status)` | Send a redirect. `status` must be a 3xx code. `flash` sets a one-time message (6.4). |
 | `json(data)` / `json(status, data)` | Send JSON. |
 | `html(html)` / `html(status, html)` | Send HTML as-is (no layouts). |
 | `text(text)` / `text(status, text)` | Send plain text. |
@@ -392,7 +411,7 @@ Query values and cookies are strings unless you ask for JSON. Nothing is parsed 
 | `ctx.meta(key, value?)` | Per-request key/value store for page metadata (title, description). Set with two arguments, read with one. |
 | `ctx.asset(path)` | URL for a static file in `pb_pages`, with its content hash: `asset('app.css')` → `/assets/app.3f9a1c2b7d4e.css`. Relative paths resolve from the current file's folder; `/`-paths from `pb_pages`. A path that isn't a file in `pb_pages` is returned unchanged. |
 | `ctx.include(name, locals?)` | Render a `_private/` partial from JS (handlers, middleware, plugins) and get its text; same lookup as the template `include`, from the route's folder. |
-| `ctx.resolve(name, { mode }?)` | Load a module from `_private/` (same lookup as `include`; without an extension, the name, then `.js`, then `.json` are tried). Modes: `require` (default, the module's exports), `raw` (file text), `script` (text wrapped in `<script>`), `style` (wrapped in `<style>`). |
+| `ctx.resolve(name, { mode }?)` | Load a module from `_private/`, looked up from the route's folder up (like `ctx.include`; wherever it's called from); without an extension, the name, then `.js`, `.ts` and `.json` are tried. Modes: `require` (default, the module's exports), `raw` (file text), `script` (text wrapped in `<script>`), `style` (wrapped in `<style>`). |
 | `ctx.pagesDir` | The absolute path of this app's `pb_pages` folder, e.g. for listing files with `$os.readDir`. Read-only. |
 | `ctx.store(name, value?)` | The app's in-memory store (`$app.store()`): set with two arguments, read with one. |
 | `ctx.dev` | `true` in dev mode. |
@@ -404,17 +423,26 @@ Fingerprinted asset names carry the first 12 hex characters of the file's SHA-25
 ```js
 // pb_pages/+config.js
 module.exports = {
-  plugins: ['auth', 'realtime', require('./_private/datastar.js')],
+  plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
 }
 ```
 
 | Key | Default | |
 |---|---|---|
-| `plugins` | `[]` | Built-ins by name (`auth`, `realtime`), or JS plugin factories such as add-ons (9). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names, built-in names (`auth`, `realtime`), or JS plugin factories such as add-ons (9). EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-Unknown keys, unknown built-in names and duplicates are startup errors.
+A string in `plugins` is a module name, required from `+config.js` (1): a `_private/` file (`'datastar'` finds
+`_private/datastar.js`), a package in `node_modules` (`'my-plugin'`) or a path (`'./plugins/my-plugin.js'`). Its export, or its `default` export, must be a
+plugin factory (9.2). Only when no module by that name is found is the string a built-in (9.1), so a
+`_private/auth.js` or a package named `auth` would replace the built-in `auth`. To skip that order and load one exact
+file, list `require('./path')` instead of the name: a `./` path is never looked up in `_private/` or `node_modules`. A module that is found but fails to load is an error; it never falls back to
+the built-in.
+
+`+config.js` runs on each page request, so these aren't caught at startup: unknown keys, names that are neither a
+module nor a built-in, or a plugin listed twice make every page answer with an error (a 500; dev mode shows the
+reason on the page), and the reason goes to the log.
 
 ## 8. Errors
 
@@ -431,13 +459,18 @@ Unknown keys, unknown built-in names and duplicates are startup errors.
 
 ### 9.1 Built-in
 
-Turned on by name in `+config.js`.
+Turned on by name in `+config.js` when no module by that name is found (7).
 
 **`auth`:** cookie sessions on PocketBase auth, without calling the app over HTTP.
 - Every request: reads the `pb_auth` cookie, validates the token, sets `ctx.auth` (or clears a bad cookie).
 - The cookie holds `{ token, record }` as JSON (the JS SDK's cookie format), `HttpOnly`, `SameSite=Lax`, `Secure` on
   HTTPS, lasting as long as the collection's auth token.
 - `identity` arguments accept any of the collection's identity fields (email by default).
+- **MFA:** pages has no second sign-in step yet, so every sign-in method (password, OTP, anonymous, OAuth2, and
+  `register`'s sign-in) refuses an account that needs MFA, as PocketBase decides it: the collection has MFA on and its
+  MFA rule matches the record (an empty rule matches everyone; a rule that can't be checked counts as a match). The
+  error says so; nothing is signed in and an OTP isn't used up. A wrong password still says only that the credentials
+  are invalid. `ctx.session.signIn(record)` is the exception: it signs in a record the app authenticated itself.
 - `ctx.session.authMethods({ collection })` → `{ password: { enabled, identityFields }, otp: { enabled }, mfa:
   { enabled }, oauth2: { enabled, providers: [{ name, displayName }] } }`, as PocketBase's auth-methods API.
 - `ctx.session.register(email, password, { collection = 'users', data, verify = true, signIn = true })`: creates the
@@ -490,6 +523,8 @@ module.exports = (config) => ({
 
 - `config` is the plugin's entry in `+config.js` when it's an object (`{ factory, ...options }`), else `{}`.
 - `name` is required and unique.
+- 0.x hook names (`onExtendContextApi`, `onRender`, `onResponse`, `handles`) are an error that names the v1 hook to
+  use.
 - There's no hook for treating other kinds of files as pages: a page's inner extension already does that
   (`robots.txt.ejs` serves `/robots.txt` as `text/plain`, 4.5).
 - Hooks run in config order. Every hook is optional.
@@ -498,7 +533,7 @@ module.exports = (config) => ({
 ### 9.3 Add-ons
 
 Plugins for third-party libraries ship as JS files in `ext/pages/addons/`, not built into `ext/pages`. Copy one into
-`pb_pages` (usually `_private/`) and list it in `+config.js` with `require`.
+`pb_pages/_private/` and list it in `+config.js` by name (`'datastar'`).
 
 **`datastar.js`** ([Datastar](https://data-star.dev)) adds `ctx.datastar`:
 - `ctx.datastar.scripts({ spa: { scope, selector }, realtime }?)` returns the script tags (`spa` turns on
@@ -509,7 +544,12 @@ Plugins for third-party libraries ship as JS files in `ext/pages/addons/`, not b
   starts the stream (`ctx.res.sent` becomes `true`); later steps still run, but their output isn't sent and the
   automatic patch below doesn't happen. The stream closes when the request ends.
 - `ctx.datastar.signals()` returns the request's signals as an object (from the `datastar` query parameter on
-  `GET`, the JSON body otherwise).
+  `GET`, the JSON body otherwise). `readSignals(target)` (or 0.x's `readSignals(request, target)`) merges them into
+  `target` and returns it.
+- Script helpers, each an `executeScript` (options `{ eventId, retryDuration }`): `consoleLog(msg)`,
+  `consoleError(err)`, `redirect(url)` (a full page load), `dispatchCustomEvent(name, detail, { selector, bubbles,
+  cancelable, composed }?)` (on `document` by default), `replaceURL(url)` (`history.replaceState`) and
+  `prefetch(urls)` (a `speculationrules` script that stays in the page).
 - `mode` is one of `outer` (default), `inner`, `replace`, `prepend`, `append`, `before`, `after`, `remove`.
 - When a request has `Datastar-Request: true`, the rendered page (without layouts) is sent as a `patchElements`
   event, into `Datastar-Selector` if given.
@@ -544,12 +584,20 @@ inside `ext/pages` (`starters/`).
 | Cookies JSON-parsed on read | Strings; `{ json: true }` to parse |
 | Middleware: return a value, or call `next(extra)`, chosen by arity | `(ctx, next)`, data on `ctx.data` |
 | `+load.js`, `+get.js`, `+post.js`, ... per folder, results deep-merged | One `+page.js` exporting `load`, `get`, `post`, ...; returned objects shallow-assigned |
+| `+config.js` may export `(api) => ({...})` | It must export an object; a function is an error |
 | Template output that parses as JSON is sent as JSON | Only `ctx.res.json` or `+api.js` |
 | `<!-- slot:name -->` comments; layouts read `slot` / `slots` | `slot(name, fn)` to define, `slot(name)` / `slot()` to read |
 | `echo()` writes during render | Templates return text; streaming only through `ctx.res.sse()` |
 | `redirect(path, { message })` puts the flash in `?__flash=` | `ctx.res.redirect(path, { flash })`, one-time cookie, `ctx.flash()` |
 | `asset()` fingerprint: full SHA-256 | First 12 hex characters |
-| `+config.js` plugins: npm package names, EJS options | Built-in names or JS factories; EJS and Markdown always on |
+| `+config.js` plugins: npm package names, EJS options | A name is required first (a `_private/` file or package), then a built-in; or a JS factory. EJS and Markdown always on |
+| Plugin hooks `onRequest({ request, response })`, `onExtendContextApi`, `onRender`, `onResponse`, `handles` | `extendContext(ctx)`, `onRequest(ctx)`, `transform`; a 0.x hook name is an error |
+| `*.pb.js` beside pages in `pb_hooks/pages/` | Hook files stay in `pb_hooks`; in `pb_pages` they're a startup error |
+| `require('../lib/x')` could reach `pb_hooks` from the pages folder | `require` never leaves `pb_pages`; use `require(__hooks + '/lib/x')` |
+| Cookies (and `pb_auth`) readable by browser JS | `HttpOnly` by default; pass `{ httpOnly: false }` for a cookie the page's JS reads. `pb_auth` stays `HttpOnly`, so `pb.authStore.loadFromCookie(document.cookie)` no longer works |
+| Realtime `send(topic, message)` sent the message as is; `filter(clientId, client, topic, message)` replaced the subscription check | The data is JSON-encoded (a string arrives quoted: `JSON.parse` it); `filter(client)` narrows clients that are subscribed to the topic |
+| `.md`, `.jsx`, `.tsx` were static files unless a plugin handled them | Always pages |
+| EJS ran over the whole `.md` file, front matter included | Front matter is plain YAML, read before EJS runs |
 | auth plugin through the JS SDK over HTTP (`api.pb()`) | `ctx.session.*`, direct app calls |
 | `url()`, `stringify()`, micro-dash globals | Removed: use `ctx.req.url`, `JSON.stringify`, plain JS |
 | `pb()` (js-sdk plugin over HTTP to `localhost:8090`) | `ctx.pb()`: same SDK, built in, in-process, as the signed-in user |

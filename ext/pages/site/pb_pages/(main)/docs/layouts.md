@@ -5,7 +5,7 @@ description: Wrap pages with +layout.ejs files, and pass content between pages a
 
 # Layouts and Slots
 
-`+layout.ejs` files wrap pages. A page's layouts are every `+layout.ejs` from its own folder up to `pb_pages/`, applied innermost first. A folder may have one layout.
+`+layout.ejs` files wrap pages. A page's layouts are every `+layout` from its own folder up to `pb_pages/`, applied innermost first. A folder may have one layout, written as `+layout.ejs`, `+layout.jsx` or `+layout.tsx`. A layout can't be Markdown: `+layout.md` is an error at startup.
 
 ```plaintext
 pb_pages/
@@ -73,6 +73,6 @@ Layouts render after the page, with the same `ctx`. Everything middleware, `+pag
 - When the response isn't HTML (a handler set another `Content-Type`).
 - When a handler or middleware sent the response itself (`ctx.res.json`, `ctx.res.html`, `ctx.res.redirect`, ...).
 - For `+api.js` routes, which have no template.
-- With the [datastar plugin](/docs/plugins/datastar), for requests that carry `Datastar-Request: true`.
+- With the [Datastar add-on](/docs/plugins/datastar), for requests that carry `Datastar-Request: true`.
 
 To serve HTML fragments without the site layout, put the layout in a group (`(site)/+layout.ejs`) and the fragments outside it, or send them with `ctx.res.html()`.

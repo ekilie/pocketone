@@ -45,6 +45,7 @@ Inside a template you can use:
 | `slot` | Define or read a [slot](/docs/layouts) |
 | `asset` | `ctx.asset` |
 | `meta` | `ctx.meta` |
+| `require` | Load a module: a path, or a name looked up in `_private/` then `node_modules` (see [JavaScript Runtime](/docs/jsvm)) |
 
 ## Output
 

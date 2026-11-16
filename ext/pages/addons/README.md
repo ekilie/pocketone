@@ -1,10 +1,10 @@
 # pages add-ons
 
-JS plugins for libraries that don't belong in `ext/pages` itself. Copy a file into your `pb_pages` (for example
-`pb_pages/_private/`) and list it in `+config.js`:
+JS plugins for libraries that don't belong in `ext/pages` itself. Copy a file into `pb_pages/_private/` and list it in
+`+config.js` by name:
 
 ```js
-module.exports = { plugins: ['realtime', require('./_private/datastar.js')] }
+module.exports = { plugins: ['realtime', 'datastar'] }
 ```
 
 | Add-on | What it adds |

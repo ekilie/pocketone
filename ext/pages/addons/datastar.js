@@ -1,19 +1,22 @@
 // Datastar add-on for PocketPages v1 (ext/pages). https://data-star.dev
 //
-// Copy this file into pb_pages (for example pb_pages/_private/datastar.js) and list it in +config.js:
+// Copy this file into pb_pages/_private/datastar.js and list it in +config.js by name:
 //
-//   module.exports = { plugins: ['realtime', require('./_private/datastar.js')] }
+//   module.exports = { plugins: ['realtime', 'datastar'] }
 //
 // It adds ctx.datastar (see the PocketPages docs). The realtime helpers need the built-in 'realtime' plugin.
 // Maintained in ext/pages/addons/datastar.js; starter kits carry a copy.
 
-var LOADER = "<script\n  type=\"module\"\n  defer\n  src=\"https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.4/bundles/datastar.js\"\n></script>\n<script language=\"javascript\">\n  const patchSignals = (signals) => {\n    document.dispatchEvent(\n      new CustomEvent('datastar-fetch', {\n        detail: {\n          type: 'datastar-patch-signals',\n          el: null,\n          argsRaw: {\n            signals: JSON.stringify(signals),\n          },\n        },\n      })\n    )\n  }\n</script>\n"
+var LOADER = "<script\n  type=\"module\"\n  defer\n  src=\"https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.5/bundles/datastar.js\"\n></script>\n<script language=\"javascript\">\n  const patchSignals = (signals) => {\n    document.dispatchEvent(\n      new CustomEvent('datastar-fetch', {\n        detail: {\n          type: 'datastar-patch-signals',\n          el: null,\n          argsRaw: {\n            signals: JSON.stringify(signals),\n          },\n        },\n      })\n    )\n  }\n</script>\n"
 var SPA = "<script>\n  {\n    // Datastar 1.x attribute syntax: data-on:<event>__<modifier>.\n    // Note: Datastar rewrites `$name` in expressions to signal reads, so the\n    // expressions below must not contain `$`.\n    const headers = {}\n    if ('{{selector}}') {\n      headers['Datastar-Selector'] = '{{selector}}'\n    }\n    const getOptions = JSON.stringify({ headers })\n\n    // We restore scroll ourselves after the new content arrives; the browser's\n    // automatic restoration would fire before the swap and land in the wrong place.\n    history.scrollRestoration = 'manual'\n\n    // Record the landing page in history state so navigating back to it\n    // re-fetches its content.\n    if (!history.state?.datastar?.url) {\n      history.replaceState(\n        {\n          ...history.state,\n          datastar: { url: location.pathname + location.search },\n        },\n        '',\n        location.href\n      )\n    }\n\n    // Keep the current entry's scroll position in history state so Back/Forward\n    // can return to it.\n    let scrollTimer\n    window.addEventListener(\n      'scroll',\n      () => {\n        clearTimeout(scrollTimer)\n        scrollTimer = setTimeout(() => {\n          if (!history.state?.datastar) return\n          history.replaceState(\n            { ...history.state, scrollY: window.scrollY },\n            ''\n          )\n        }, 150)\n      },\n      { passive: true }\n    )\n\n    const setup = () => {\n      const popstateDiv = document.createElement('div')\n      popstateDiv.setAttribute(\n        'data-on:popstate__window',\n        `const url = evt.state?.datastar?.url; if (!url) return; const y = evt.state.scrollY || 0; @get(url, ${getOptions}).then(() => window.scrollTo({ top: y, behavior: 'instant' }))`\n      )\n      document.body.appendChild(popstateDiv)\n\n      const scope = document.querySelector('{{scope}}')\n      if (!scope) return\n      scope.querySelectorAll('a[href]').forEach((a) => {\n        a.setAttribute(\n          'data-on:click',\n          `if (evt.button !== 0 || evt.metaKey || evt.ctrlKey || evt.shiftKey || evt.altKey || el.target || el.origin !== location.origin) return; evt.preventDefault(); const href = el.getAttribute('href'); history.replaceState({ ...history.state, scrollY: window.scrollY }, ''); history.pushState({ datastar: { url: href } }, '', href); window.scrollTo({ top: 0, behavior: 'instant' }); @get(href, ${getOptions})`\n        )\n      })\n    }\n\n    if (document.readyState === 'loading') {\n      document.addEventListener('DOMContentLoaded', setup)\n    } else {\n      setup()\n    }\n  }\n</script>\n"
 var REALTIME = "<script>\n  {\n    const source = new EventSource('/api/realtime') // URL to your SSE endpoint\n    source.addEventListener('PB_CONNECT', function (event) {\n      const e = JSON.parse(event.data)\n      // console.log('PB_CONNECT event:', e)\n      const { clientId } = e\n      fetch(`/api/realtime`, {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n        },\n        body: JSON.stringify({\n          clientId,\n          subscriptions: ['datastar'],\n        }),\n      }).catch(console.error)\n\n      patchSignals({ clientId })\n    })\n\n    source.addEventListener('datastar', function (event) {\n      const e = JSON.parse(event.data)\n      // console.log('datastar event:', e)\n      document.dispatchEvent(\n        new CustomEvent('datastar-fetch', {\n          detail: e,\n        })\n      )\n    })\n  }\n</script>\n"
 
 var PATCH_ELEMENTS = 'datastar-patch-elements'
 var PATCH_SIGNALS = 'datastar-patch-signals'
 var MODES = ['outer', 'inner', 'replace', 'prepend', 'append', 'before', 'after', 'remove']
+var NAMESPACES = ['html', 'svg', 'mathml']
+// Datastar's default SSE retry; the SDK spec leaves it out of the stream.
+var DEFAULT_RETRY = 1000
 
 function elementLines(html, opts) {
   var lines = []
@@ -22,7 +25,14 @@ function elementLines(html, opts) {
     if (MODES.indexOf(opts.mode) < 0) throw new Error('datastar: unknown mode ' + opts.mode)
     lines.push('mode ' + opts.mode)
   }
-  if (opts.useViewTransition) lines.push('useViewTransition true')
+  if (opts.useViewTransition) {
+    lines.push('useViewTransition true')
+    if (opts.viewTransitionSelector) lines.push('viewTransitionSelector ' + opts.viewTransitionSelector)
+  }
+  if (opts.namespace && opts.namespace !== 'html') {
+    if (NAMESPACES.indexOf(opts.namespace) < 0) throw new Error('datastar: unknown namespace ' + opts.namespace)
+    lines.push('namespace ' + opts.namespace)
+  }
   if (html) {
     String(html)
       .split('\n')
@@ -59,7 +69,8 @@ module.exports = function () {
       var stream = null
       function send(event, lines, opts) {
         if (!stream) stream = ctx.res.sse()
-        stream.send(event, lines.join('\n'), { id: opts.eventId, retry: opts.retryDuration })
+        var retry = opts.retryDuration === DEFAULT_RETRY ? undefined : opts.retryDuration
+        stream.send(event, lines.join('\n'), { id: opts.eventId, retry: retry })
       }
       function broadcast(type, argsRaw, realtimeOpts) {
         if (!ctx.realtime) throw new Error("datastar: the realtime helpers need the 'realtime' plugin")
@@ -87,9 +98,47 @@ module.exports = function () {
           opts = opts || {}
           ds.patchElements(scriptTag(js, opts), { selector: 'body', mode: 'append', eventId: opts.eventId, retryDuration: opts.retryDuration })
         },
+        consoleLog: function (msg, opts) {
+          ds.executeScript('console.log(' + JSON.stringify(String(msg)) + ')', opts)
+        },
+        consoleError: function (err, opts) {
+          var msg = err && typeof err === 'object' && 'message' in err ? err.message : String(err)
+          ds.executeScript('console.error(' + JSON.stringify(msg) + ')', opts)
+        },
+        // Navigates the browser (a full page load), unlike ctx.res.redirect, which a Datastar fetch can't follow.
+        redirect: function (url, opts) {
+          ds.executeScript('setTimeout(function () { window.location.href = ' + JSON.stringify(String(url)) + ' })', opts)
+        },
+        dispatchCustomEvent: function (name, detail, opts) {
+          if (!name) throw new Error('datastar: dispatchCustomEvent needs an event name')
+          opts = opts || {}
+          var selector = opts.selector || 'document'
+          var targets = selector === 'document' ? '[document]' : 'document.querySelectorAll(' + JSON.stringify(selector) + ')'
+          var init = {
+            bubbles: opts.bubbles !== false,
+            cancelable: opts.cancelable !== false,
+            composed: opts.composed !== false,
+            detail: detail === undefined ? null : detail,
+          }
+          ds.executeScript(
+            targets + '.forEach(function (el) { el.dispatchEvent(new CustomEvent(' + JSON.stringify(String(name)) + ', ' + JSON.stringify(init) + ')) })',
+            { eventId: opts.eventId, retryDuration: opts.retryDuration }
+          )
+        },
+        replaceURL: function (url, opts) {
+          ds.executeScript('window.history.replaceState({}, "", ' + JSON.stringify(String(url)) + ')', opts)
+        },
+        // Speculation rules that let the browser prefetch these URLs.
+        prefetch: function (urls, opts) {
+          var rules = JSON.stringify({ prefetch: [{ source: 'list', urls: (urls || []).map(String) }] })
+          var o = { autoRemove: false, attributes: ['type="speculationrules"'] }
+          for (var k in opts || {}) o[k] = opts[k]
+          ds.executeScript(rules, o)
+        },
         signals: function () {
           var raw
-          if (ctx.req.method === 'GET') {
+          // GET and DELETE carry signals in the datastar query parameter; the other methods in the body (SDK spec)
+          if (ctx.req.method === 'GET' || ctx.req.method === 'DELETE') {
             raw = ctx.req.query('datastar')
             if (!raw) return {}
             try {
@@ -107,6 +156,14 @@ module.exports = function () {
             }
           }
           return body || {}
+        },
+        // 0.x's readSignals(request, target): merges the request's signals into target and returns it. The request
+        // argument is optional (it's always the current request): readSignals(target) works too.
+        readSignals: function (a, b) {
+          var target = b !== undefined ? b : a && a !== ctx.req ? a : {}
+          var sig = ds.signals()
+          for (var k in sig) target[k] = sig[k]
+          return target
         },
         realtime: {
           patchElements: function (html, opts, realtimeOpts) {

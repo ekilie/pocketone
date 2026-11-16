@@ -26,9 +26,38 @@ repo root; each release here says which PocketBase version it's built on.
 
 ## Unreleased
 
+### Upgrading
+
+- **pages:** a `+config.js` must export an object (`module.exports = { ... }`); the 0.x function form is now an error instead of being ignored.
+- **pages:** JS plugins that still use 0.x hooks (`onExtendContextApi`, `onRender`, `onResponse`, `handles`) are now an error that names the v1 hook to use (`extendContext`, `transform`).
+- **pages:** move any `*.pb.js` / `*.pb.ts` file out of `pb_pages` into `pb_hooks`; in `pb_pages` it's now a startup error and isn't served.
+
 ### Added
 
 - **docker:** a host with its own accounts decides who may call `remote/v1` (status, restart, logs) for its containers with `docker.Provider.RemoteAuth`; without it, the instance's own superuser login is checked as before. `remote/v1` now lives on the host's contract scope, so `pocketone remote whoami` also lists the host's other contracts for the instance (a host's `deploy/v1`).
+
+### Changed
+
+- **pages:** a plugin name in `+config.js` is required first (a `_private/` file or package, such as the Datastar add-on as `'datastar'`), then a built-in.
+- **pages:** a bare `require('pkg')` looks in `_private/` folders first, then `node_modules` in `pb_pages`, then `pb_hooks/node_modules` and the app folder's `node_modules`; a miss lists the folders searched.
+- **pages:** a page renders for any HTTP method, as in 0.x.
+- **pages:** an `Authorization` header login wins over the `pb_auth` cookie, as in 0.x.
+- **pages:** sign-in refuses accounts that need MFA.
+- **pages:** `pocketone pages create` and every starter README show the `superuser upsert` step before the first `serve`.
+- **pages:** the daisyui starters' Tailwind input is `-app.tailwind.css`, so it isn't served.
+- **pages:** the Datastar add-on follows the Datastar 1.0.5 SDK spec (`viewTransitionSelector`, `namespace`, signals from the query for DELETE) and has 0.x's helpers back.
+
+### Fixed
+
+- **pages:** a circular `require` no longer crashes the process; it gets the exports built so far, as in Node.
+- **pages:** a new page is served after a build that still has errors, instead of 404 until restart.
+- **pages:** `__dirname` and `__filename` are absolute paths.
+- **pages:** `/.well-known/` is served again (ACME challenges, `security.txt`, app links).
+- **pages:** `include('nav.main')` finds `nav.main.ejs`, and 0.x's `include('/blog/_private/x')` form works.
+- **pages:** a layout that prints `<%- slot %>` shows the page instead of the slot function's source.
+- **pages:** a `+page.js` with no page beside it serves its folder's URL.
+- **pages:** `ctx.res.redirect(location, status)` takes a number and `ctx.res.cookie` takes `expires`.
+- **pages:** EJS templates get `locals`, as in EJS and 0.x.
 
 ## v0.0.1-alpha.2 (2026-11-16)
 

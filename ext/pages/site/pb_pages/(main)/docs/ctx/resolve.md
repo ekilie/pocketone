@@ -5,7 +5,7 @@ description: Load a module or file from a _private folder.
 
 # `ctx.resolve(name, { mode }?)`
 
-Loads a module from a `_private/` folder. The lookup is the same as [`include()`](/docs/partials): `_private/` in the current file's folder, then each parent folder up to `pb_pages/`. A name starting with `/` looks only in `pb_pages/_private/`.
+Loads a module from a `_private/` folder. The lookup starts at the **route's** folder (the page being served), wherever `ctx.resolve` is called from, so a layout or partial gets the same answer as the page: `_private/` in the route's folder, then each parent folder up to `pb_pages/`. A name starting with `/` looks only in `pb_pages/_private/`. Without an extension, the name, then `.js`, `.ts` and `.json` are tried.
 
 ```js
 // pb_pages/_private/shout.js
@@ -34,4 +34,4 @@ module.exports = (s) => String(s).toUpperCase()
 
 ## Modules from `node_modules`
 
-Page code can also `require()` packages from `pb_pages/node_modules`, then from the app's usual module paths. See [JavaScript Runtime](/docs/jsvm).
+Page code can also `require()` by name: `_private/` folders first (nearest to the file calling `require`), then packages from `pb_pages/node_modules`, then the app's usual module paths. See [JavaScript Runtime](/docs/jsvm).

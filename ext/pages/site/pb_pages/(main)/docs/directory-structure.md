@@ -34,10 +34,10 @@ A file or folder name starting with one of these characters is never a URL:
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+config.js`, `+layout.ejs`, `+middleware.js`, `+page.js`, `+api.js`. Any other `+` name is an error at startup. |
+| `+` | Framework file: `+config.js`, `+layout.ejs` (or `.jsx`, `.tsx`), `+middleware.js`, `+page.js`, `+api.js`. Any other `+` name, and any other extension (such as `+layout.md`), is an error at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
-| `.` | Ignored (dotfiles). |
+| `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
 
 `node_modules/` is never routed either.
 
@@ -48,6 +48,7 @@ A folder named `(name)` groups files without adding a URL segment: `(marketing)/
 ## What else
 
 - Every other file is a [static file](/docs/static-content), served as-is.
-- Page code can `require()` modules from `pb_pages/node_modules`, then from the app's usual module paths.
+- Page code can `require()` modules by name from `_private/` folders (nearest first), then `pb_pages/node_modules`, then
+  `pb_hooks/node_modules` and the app folder's `node_modules`, then the app's usual module paths.
 - Pages' own file access (routes, static files, includes, assets) never leaves `pb_pages`.
 - A `pb_pages/api/` folder is an error at startup, because `/api/` belongs to PocketBase.

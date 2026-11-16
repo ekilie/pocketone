@@ -136,7 +136,9 @@ func RegisterCommand(rootCmd *cobra.Command) {
 			fmt.Fprintf(w, "Created %s from the %s starter.\n\n", dir, kit)
 			// --dir: PocketBase keeps pb_data next to its executable by default; pb_pages and pb_migrations are found
 			// next to pb_data
-			fmt.Fprintf(w, "  cd %s\n  %s serve --dir ./pb_data\n\n", dir, filepath.Base(os.Args[0]))
+			// the superuser first: a first serve without one opens the browser on the superuser installer
+			bin := filepath.Base(os.Args[0])
+			fmt.Fprintf(w, "  cd %s\n  %s superuser upsert you@example.com <password> --dir ./pb_data\n  %s serve --dir ./pb_data\n\n", dir, bin, bin)
 			fmt.Fprintf(w, "Then open http://127.0.0.1:8090. Edit files in %s and reload.\n",
 				filepath.Join(dir, "pb_pages"))
 			return nil

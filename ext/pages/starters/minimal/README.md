@@ -5,6 +5,7 @@ A single `index.ejs` page: a Tailwind (CDN) splash screen with no layout, no con
 ```bash
 pocketone pages create myapp --starter minimal
 cd myapp
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
 pocketone serve --dir ./pb_data
 ```
 

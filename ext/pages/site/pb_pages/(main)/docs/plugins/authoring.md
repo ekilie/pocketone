@@ -21,7 +21,7 @@ Turn it on in `+config.js`:
 
 ```js
 module.exports = {
-  plugins: [require('./_private/my-plugin.js')],
+  plugins: ['my-plugin'], // pb_pages/_private/my-plugin.js
 }
 ```
 

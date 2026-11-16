@@ -16,6 +16,7 @@ import (
 // to end: form posts, the email PocketBase sends (captured by the test mailer), and the confirm pages.
 func TestAuthKitEmailFlows(t *testing.T) {
 	h, p := newServer(t, "starters/auth/pb_pages")
+	setMFA(t, p, false, "") // these flows are single-factor; TestSignInRefusesMFA covers MFA
 	mailer := p.app.(*tests.TestApp).TestMailer
 
 	type resp struct {

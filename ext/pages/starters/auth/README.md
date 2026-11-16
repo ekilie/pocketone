@@ -5,6 +5,7 @@ Multi-page app (MPA) auth with the built-in `auth` plugin: register, password, a
 ```bash
 pocketone pages create myapp --starter auth
 cd myapp
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
 pocketone serve --dir ./pb_data
 ```
 

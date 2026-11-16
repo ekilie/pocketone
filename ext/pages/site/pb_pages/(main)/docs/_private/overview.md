@@ -5,7 +5,7 @@ description: PocketPages is server-rendered multi-page apps for PocketOne, from 
 
 # Overview
 
-PocketPages turns a folder of files into a server-rendered website, inside PocketOne. It is built in as the `pages` plugin (`ext/pages`): no npm package, no boot file, no build step.
+PocketPages turns a folder of files into a server-rendered website, inside PocketOne. It is built in as the `pages` extension (`ext/pages`): no npm package, no boot file, no build step.
 
 Use PocketPages to create slim and modern web apps:
 

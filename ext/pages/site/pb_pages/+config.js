@@ -1,4 +1,4 @@
 module.exports = {
-  plugins: [require('./_private/datastar.js')],
+  plugins: ['datastar'],
   debug: false,
 }

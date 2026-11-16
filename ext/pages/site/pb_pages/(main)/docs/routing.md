@@ -44,6 +44,8 @@ pb_pages/
 
 A `+api.js` file serves its folder's URL without a template: `feeds/rss/+api.js` serves `/feeds/rss`. `[param]` folders work as for pages. A folder can't have both a `+api.js` and an `index` page. See [API Routes and JSON](/docs/api-routes).
 
+A `+page.js` in a folder with no page serves the folder's URL from JS too: `logout/+page.js` serves `/logout`. See [Pages without a template](/docs/loading-data#pages-without-a-template).
+
 ## Static files
 
 Every other file is served as-is at its path, with groups removed: `assets/app.css` serves `/assets/app.css`. See [Static content](/docs/static-content).

@@ -5,6 +5,7 @@ A realtime demo with [htmx](https://htmx.org/) and the built-in `realtime` plugi
 ```bash
 pocketone pages create myapp --starter htmx
 cd myapp
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
 pocketone serve --dir ./pb_data
 ```
 

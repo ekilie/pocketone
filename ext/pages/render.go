@@ -13,8 +13,10 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
@@ -171,7 +173,8 @@ func (r *request) run(t *Table) (err error) {
 	r.plugins = plugins
 	r.builtins = cfg.Builtins
 	r.auth = r.e.Auth
-	if r.builtins["auth"] {
+	// an Authorization header login wins over the pb_auth cookie (as in 0.x)
+	if r.builtins["auth"] && r.auth == nil {
 		r.readAuthCookie()
 	}
 
@@ -317,22 +320,35 @@ func (r *request) lookupPrivate(from, name string, exts []string) (string, error
 	if name == "" || strings.Contains(name, "..") || strings.Contains(name, "\\") {
 		return "", fmt.Errorf("include %q: invalid name", name)
 	}
-	candidates := func(dir string) []string {
-		base := path.Join(dir, "_private", strings.TrimPrefix(name, "/"))
-		if path.Ext(name) != "" {
-			return []string{base}
-		}
+	withExts := func(base string) []string {
 		var out []string
+		if path.Ext(base) != "" {
+			out = append(out, base) // exact first; a dotted name (nav.main) still gets the extensions below
+		}
 		for _, e := range exts {
-			out = append(out, base+e)
+			if e != "" || path.Ext(base) == "" {
+				out = append(out, base+e)
+			}
 		}
 		return out
+	}
+	candidates := func(dir string) []string {
+		return withExts(path.Join(dir, "_private", strings.TrimPrefix(name, "/")))
 	}
 	exists := func(f string) bool {
 		st, err := r.root.Stat(f)
 		return err == nil && st.Mode().IsRegular()
 	}
 	if strings.HasPrefix(name, "/") {
+		// 0.x's form names the _private folder itself, from the top of pb_pages: /_private/x, /blog/_private/x
+		if rel := strings.TrimPrefix(name, "/"); strings.HasPrefix(rel, "_private/") || strings.Contains(rel, "/_private/") {
+			for _, c := range withExts(path.Clean(rel)) {
+				if exists(c) {
+					return c, nil
+				}
+			}
+			return "", fmt.Errorf("%q not found", name)
+		}
 		for _, c := range candidates(".") {
 			if exists(c) {
 				return c, nil
@@ -412,6 +428,14 @@ func (r *request) load(file string) goja.Value {
 	module := r.vm.NewObject()
 	exports := r.vm.NewObject()
 	module.Set("exports", exports)
+	// A require cycle (a -> b -> a) gets a's exports as they are so far, as in Node and 0.x, instead of recursing
+	// until the Go stack overflows and kills the process.
+	loadingKey := "l:" + exportsKey
+	if m, ok := r.cache.Get(loadingKey).(*goja.Object); ok && m != nil {
+		return m.Get("exports")
+	}
+	r.cache.Set(loadingKey, module)
+	defer r.cache.Delete(loadingKey)
 	dir := path.Dir(file)
 	requireFn := r.vm.ToValue(func(name string) goja.Value { return r.requireFrom(file, name) })
 	var h, frag goja.Value = goja.Undefined(), goja.Undefined()
@@ -419,7 +443,7 @@ func (r *request) load(file string) goja.Value {
 		rt := r.jsxRuntime()
 		h, frag = rt.Get("h"), rt.Get("Fragment")
 	}
-	if _, err := fn(goja.Undefined(), module, exports, requireFn, r.vm.ToValue(file), r.vm.ToValue(dir), h, frag); err != nil {
+	if _, err := fn(goja.Undefined(), module, exports, requireFn, r.vm.ToValue(r.absPath(file)), r.vm.ToValue(r.absPath(dir)), h, frag); err != nil {
 		panic(err)
 	}
 	out := module.Get("exports")
@@ -431,6 +455,15 @@ func (r *request) load(file string) goja.Value {
 	}
 	r.cache.Set(exportsKey, out)
 	return out
+}
+
+// absPath turns a pb_pages slash path into an absolute OS path (for __filename and __dirname, as in Node and 0.x).
+func (r *request) absPath(p string) string {
+	base, err := filepath.Abs(r.p.dir)
+	if err != nil {
+		base = r.p.dir
+	}
+	return filepath.Join(base, filepath.FromSlash(p))
 }
 
 // ---- responses ----
@@ -504,6 +537,10 @@ func applyCookieOpts(c *http.Cookie, opts map[string]any) {
 					c.MaxAge = n
 				}
 			}
+		case "expires":
+			if t, ok := toTime(v); ok {
+				c.Expires = t.UTC()
+			}
 		case "httpOnly":
 			c.HttpOnly, _ = v.(bool)
 		case "secure":
@@ -519,6 +556,29 @@ func applyCookieOpts(c *http.Cookie, opts map[string]any) {
 			}
 		}
 	}
+}
+
+// toTime reads a cookie's expires option: a JS Date (exported as time.Time), milliseconds since the epoch (as
+// Date.now() gives), or a date string (RFC 3339 or an HTTP date).
+func toTime(v any) (time.Time, bool) {
+	switch t := v.(type) {
+	case time.Time:
+		return t, !t.IsZero()
+	case int64:
+		return time.UnixMilli(t), true
+	case int:
+		return time.UnixMilli(int64(t)), true
+	case float64:
+		return time.UnixMilli(int64(t)), true
+	case string:
+		if p, err := time.Parse(time.RFC3339, t); err == nil {
+			return p, true
+		}
+		if p, err := http.ParseTime(t); err == nil {
+			return p, true
+		}
+	}
+	return time.Time{}, false
 }
 
 func toInt(v any) (int, bool) {

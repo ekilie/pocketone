@@ -21,6 +21,7 @@
 
 - [EJS](/docs/ejs)
 - [Markdown](/docs/markdown)
+- [JSX and TSX](/docs/jsx)
 - [Partials](/docs/partials)
 - [Layouts and Slots](/docs/layouts)
 

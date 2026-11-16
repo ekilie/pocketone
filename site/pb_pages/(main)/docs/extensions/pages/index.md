@@ -51,17 +51,17 @@ Settings for your pages live in the folder itself, in `pb_pages/+config.js`:
 
 ```js
 module.exports = {
-  plugins: ['auth', 'realtime', require('./_private/datastar.js')],
+  plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
 }
 ```
 
 | Key | Default | What it does |
 |---|---|---|
-| `plugins` | `[]` | Built-in plugins by name (`auth`, `realtime`), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-`+config.js` runs on each page request. Unknown keys, unknown built-in names or a plugin listed twice make every page
+`+config.js` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
 answer with an error, and the reason goes to the log.
 
 ### Dev mode
@@ -121,7 +121,7 @@ Highlights:
 - `ctx.pb()` is the bundled PocketBase JS SDK, called in-process as the visitor.
 - `ctx.res.sse()` streams server-sent events.
 - The `auth` plugin gives cookie sessions on PocketBase auth: password, OTP, anonymous, register, OAuth2 and the email
-  flows (verification, password reset, email change). Accounts that need MFA can't sign in through pages yet.
+  flows (verification, password reset, email change). Accounts that need MFA (the collection's MFA is on and its rule matches) are refused by every pages sign-in method; pages has no second sign-in step yet.
 
 ### What you'll see in the log
 

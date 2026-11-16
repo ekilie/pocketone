@@ -222,16 +222,13 @@
       "needs": "render"
     },
     {
-      "name": "method without a handler: 405 with Allow",
+      "name": "method without a handler still renders the page (like PHP)",
       "request": {
         "method": "PUT",
         "path": "/products/42"
       },
       "expect": {
-        "status": 405,
-        "headers": {
-          "Allow": "GET, HEAD, POST"
-        }
+        "status": 200
       },
       "needs": "render"
     },

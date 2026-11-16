@@ -72,6 +72,20 @@ func newServer(t *testing.T, dir string) (http.Handler, *Pages) {
 	return mux, p
 }
 
+// setMFA turns MFA on or off for the test app's users collection (on by default in PocketBase's test data).
+func setMFA(t *testing.T, p *Pages, enabled bool, rule string) {
+	t.Helper()
+	col, err := p.app.FindCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	col.MFA.Enabled = enabled
+	col.MFA.Rule = rule
+	if err := p.app.Save(col); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestFixtures(t *testing.T) {
 	dirs, _ := filepath.Glob("fixtures/*/cases.json")
 	if len(dirs) == 0 {

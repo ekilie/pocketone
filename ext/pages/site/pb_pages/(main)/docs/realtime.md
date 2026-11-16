@@ -53,4 +53,4 @@ The SDK reconnects on its own and resubscribes to its topics after a reconnect.
 
 ## Hypermedia
 
-To push HTML instead of data, see [HTMX Integration](/docs/htmx#realtime-updates) and the [Datastar plugin](/docs/plugins/datastar#broadcasting).
+To push HTML instead of data, see [HTMX Integration](/docs/htmx#realtime-updates) and the [Datastar add-on](/docs/plugins/datastar#broadcasting).

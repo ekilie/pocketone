@@ -55,17 +55,23 @@ If you haven't set up a consent screen before, you'll need to configure it:
 
 ## 3. Configure OAuth2 in the dashboard
 
-1. Open your app's dashboard (`/_/`)
-2. Make sure your site URL is set correctly. It must match the `redirect URL` domain you configured in the Google Cloud Console.
-3. Navigate to Settings > Auth Providers
-4. Enable OAuth2 authentication
-5. Add Google as a new provider
+OAuth2 providers belong to an auth collection, usually `users`:
 
-![Application URL in the dashboard settings](2025-02-08-15-28-44.png)
+1. Open your app's dashboard (`/_/`) and go to **Collections**.
+2. Open the `users` collection's settings (the gear icon) and its **Options** tab.
+3. Under **OAuth2**, turn it on.
+4. Click **Add provider** and pick **Google**.
+
 ![OAuth2 settings for the users collection](2025-02-08-06-59-00.png)
 ![OAuth2 providers section](2025-02-08-06-59-09.png)
 ![Adding new provider](2025-02-08-06-59-17.png)
 ![Selecting Google provider](2025-02-08-06-59-24.png)
+
+There's no site URL to set for this. The `auth` plugin builds the redirect URL from the address the request came in
+on: the scheme and host the browser used, plus `/auth/oauth/confirm`. So the redirect URI in Google must match that
+address exactly. `http://localhost:8090` and `http://127.0.0.1:8090` are different to Google, so add each one you
+use, plus your live domain (`https://example.com/auth/oauth/confirm`). Behind a proxy, the host is the one the
+browser asked for, and HTTPS is detected from `X-Forwarded-Proto`.
 
 ### Provider Configuration
 
