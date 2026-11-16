@@ -21,8 +21,12 @@ import (
 	lib "modernc.org/libquickjs"
 )
 
-// JSValue is QuickJS's value: a 16-byte struct (union + tag), passed by value.
+// JSValue is QuickJS's value, passed by value: a 16-byte struct (union + tag) on 64-bit platforms, a NaN-boxed uint64
+// on 32-bit ones. capi_value64.go and capi_value32.go build and read it (mkval, mkfloat, valTag, valPtr).
 type JSValue = lib.TJSValue
+
+// jsValueSize is sizeof(JSValue).
+var jsValueSize = func() int { var v JSValue; return int(unsafe.Sizeof(v)) }()
 
 // JSContext is the raw context plus the thread-local state every translated call takes.
 type JSContext struct {
@@ -93,19 +97,12 @@ func curGoroutineID() uint64 {
 
 // ---- values ----
 
-func mkval(tag int32, bits uint64) JSValue {
-	var v JSValue
-	v.Ftag = int64(tag)
-	v.Fu.Fuint641 = bits
-	return v
-}
-
-func (cshim) avm_tag(v JSValue) int32          { return int32(v.Ftag) }
+func (cshim) avm_tag(v JSValue) int32          { return valTag(v) }
 func (cshim) avm_undefined() JSValue           { return mkval(lib.EJS_TAG_UNDEFINED, 0) }
 func (cshim) avm_null() JSValue                { return mkval(lib.EJS_TAG_NULL, 0) }
 func (cshim) avm_exception() JSValue           { return mkval(lib.EJS_TAG_EXCEPTION, 0) }
-func (cshim) avm_float(d float64) JSValue      { return mkval(lib.EJS_TAG_FLOAT64, math.Float64bits(d)) }
-func (cshim) avm_is_exception(v JSValue) int32 { return b2i(int32(v.Ftag) == lib.EJS_TAG_EXCEPTION) }
+func (cshim) avm_float(d float64) JSValue      { return mkfloat(d) }
+func (cshim) avm_is_exception(v JSValue) int32 { return b2i(valTag(v) == lib.EJS_TAG_EXCEPTION) }
 func (cshim) avm_bool(b int32) JSValue {
 	if b != 0 {
 		return mkval(lib.EJS_TAG_BOOL, 1)
@@ -132,6 +129,14 @@ func (cshim) avm_dup(ctx *JSContext, v JSValue) JSValue { return lib.XDupValue(c
 func (cshim) JS_FreeValue(ctx *JSContext, v JSValue)    { lib.XFreeValue(ctx.tls, ctx.p, v) }
 
 // ---- C memory ----
+
+// tsize is n as a C size_t, clamped to the largest one (a memory limit above 4 GiB on a 32-bit platform).
+func tsize(n uint64) lib.Tsize_t {
+	if uint64(lib.Tsize_t(n)) != n {
+		return ^lib.Tsize_t(0)
+	}
+	return lib.Tsize_t(n)
+}
 
 // CString copies s into C memory; free it with C.free.
 func (cshim) CString(s string) uintptr { return mustCString(s) }
@@ -181,7 +186,7 @@ func (cshim) goString(ctx *JSContext, v JSValue) string {
 	if p == 0 {
 		return ""
 	}
-	s := string(unsafe.Slice((*byte)(ptr(p)), int(*(*uint64)(ptr(pn)))))
+	s := string(unsafe.Slice((*byte)(ptr(p)), int(*(*lib.Tsize_t)(ptr(pn)))))
 	lib.XJS_FreeCString(ctx.tls, ctx.p, p)
 	return s
 }
@@ -214,7 +219,7 @@ var cLength = mustCString("length")
 // avm_length is ToLength(v.length), -1 when reading it throws.
 func (cshim) avm_length(ctx *JSContext, v JSValue) int64 {
 	lv := lib.XJS_GetPropertyStr(ctx.tls, ctx.p, v, cLength)
-	if int32(lv.Ftag) == lib.EJS_TAG_EXCEPTION {
+	if valTag(lv) == lib.EJS_TAG_EXCEPTION {
 		lib.XFreeValue(ctx.tls, ctx.p, lib.XJS_GetException(ctx.tls, ctx.p))
 		return -1
 	}
@@ -234,7 +239,7 @@ func (cshim) avm_length(ctx *JSContext, v JSValue) int64 {
 }
 
 func (cshim) avm_is_array(ctx *JSContext, v JSValue) int32 {
-	if int32(v.Ftag) != lib.EJS_TAG_OBJECT {
+	if valTag(v) != lib.EJS_TAG_OBJECT {
 		return 0
 	}
 	r := lib.XJS_IsArray(ctx.tls, ctx.p, v)
@@ -309,7 +314,7 @@ func (cshim) JS_JSONStringify(ctx *JSContext, v, replacer, space JSValue) JSValu
 var cGoFile = mustCString("<go>")
 
 func (cshim) avm_parse_json(ctx *JSContext, buf uintptr, n uint64) JSValue {
-	return lib.XJS_ParseJSON(ctx.tls, ctx.p, buf, n, cGoFile)
+	return lib.XJS_ParseJSON(ctx.tls, ctx.p, buf, lib.Tsize_t(n), cGoFile)
 }
 
 // ---- exceptions ----
@@ -324,7 +329,7 @@ var cMessage = mustCString("message")
 // avm_throw throws a plain Error with message msg[:n].
 func (cshim) avm_throw(ctx *JSContext, msg uintptr, n uint64) JSValue {
 	e := lib.XJS_NewError(ctx.tls, ctx.p)
-	lib.XJS_SetPropertyStr(ctx.tls, ctx.p, e, cMessage, lib.XJS_NewStringLen(ctx.tls, ctx.p, msg, n))
+	lib.XJS_SetPropertyStr(ctx.tls, ctx.p, e, cMessage, lib.XJS_NewStringLen(ctx.tls, ctx.p, msg, lib.Tsize_t(n)))
 	return lib.XJS_Throw(ctx.tls, ctx.p, e)
 }
 
@@ -349,7 +354,7 @@ func (cshim) throwType(ctx *JSContext, s string) JSValue {
 // ---- eval, calls, jobs, promises ----
 
 func (cshim) avm_eval(ctx *JSContext, code uintptr, n uint64, file uintptr) JSValue {
-	return lib.XJS_Eval(ctx.tls, ctx.p, code, n, file, lib.MJS_EVAL_TYPE_GLOBAL)
+	return lib.XJS_Eval(ctx.tls, ctx.p, code, lib.Tsize_t(n), file, lib.MJS_EVAL_TYPE_GLOBAL)
 }
 
 // avm_call calls fn; argv points at argc values in Go memory, copied to C memory for the call.
@@ -357,7 +362,7 @@ func (cshim) avm_call(ctx *JSContext, fn, this JSValue, argc int32, argv *JSValu
 	if argc == 0 {
 		return lib.XJS_Call(ctx.tls, ctx.p, fn, this, 0, 0)
 	}
-	size := int(argc) * int(unsafe.Sizeof(JSValue{}))
+	size := int(argc) * jsValueSize
 	p := ctx.scratch(size)
 	copy(unsafe.Slice((*JSValue)(ptr(p)), int(argc)), unsafe.Slice(argv, int(argc)))
 	r := lib.XJS_Call(ctx.tls, ctx.p, fn, this, argc, p)
@@ -386,7 +391,7 @@ func (cshim) avm_run_jobs(a *AVM) int32 {
 
 // avm_new_promise returns a promise and writes its resolve and reject functions to funcs[0:2].
 func (cshim) avm_new_promise(ctx *JSContext, funcs *JSValue) JSValue {
-	size := 2 * int(unsafe.Sizeof(JSValue{}))
+	size := 2 * jsValueSize
 	p := ctx.scratch(size)
 	defer ctx.done(size)
 	r := lib.XJS_NewPromiseCapability(ctx.tls, ctx.p, p)
@@ -401,7 +406,7 @@ func (cshim) avm_promise_result(ctx *JSContext, p JSValue) JSValue {
 	return lib.XJS_PromiseResult(ctx.tls, ctx.p, p)
 }
 func (cshim) avm_is_promise(ctx *JSContext, v JSValue) int32 {
-	if int32(v.Ftag) != lib.EJS_TAG_OBJECT {
+	if valTag(v) != lib.EJS_TAG_OBJECT {
 		return 0
 	}
 	return b2i(lib.XJS_PromiseState(ctx.tls, ctx.p, v) >= 0)
@@ -415,17 +420,17 @@ func (c cshim) avm_eval_module(ctx *JSContext, code, file string, meta map[strin
 	cc, cf := mustCString(code), mustCString(file)
 	defer c.free(cc)
 	defer c.free(cf)
-	v := lib.XJS_Eval(ctx.tls, ctx.p, cc, uint64(len(code)), cf, lib.MJS_EVAL_TYPE_MODULE|lib.MJS_EVAL_FLAG_COMPILE_ONLY)
-	if int32(v.Ftag) != lib.EJS_TAG_MODULE {
+	v := lib.XJS_Eval(ctx.tls, ctx.p, cc, lib.Tsize_t(len(code)), cf, lib.MJS_EVAL_TYPE_MODULE|lib.MJS_EVAL_FLAG_COMPILE_ONLY)
+	if valTag(v) != lib.EJS_TAG_MODULE {
 		return v
 	}
-	c.setImportMeta(ctx, uintptr(v.Fu.Fuint641), meta)
+	c.setImportMeta(ctx, valPtr(v), meta)
 	return lib.XJS_EvalFunction(ctx.tls, ctx.p, v) // takes v
 }
 
 func (c cshim) setImportMeta(ctx *JSContext, m uintptr, meta map[string]string) {
 	mv := lib.XJS_GetImportMeta(ctx.tls, ctx.p, m)
-	if int32(mv.Ftag) == lib.EJS_TAG_OBJECT {
+	if valTag(mv) == lib.EJS_TAG_OBJECT {
 		for k, val := range meta {
 			ck := mustCString(k)
 			lib.XJS_SetPropertyStr(ctx.tls, ctx.p, mv, ck, c.JS_NewStringLen(ctx, val))
@@ -441,14 +446,14 @@ func (c cshim) avm_compile_module(ctx *JSContext, code, name string, meta map[st
 	cc, cf := mustCString(code), mustCString(name)
 	defer c.free(cc)
 	defer c.free(cf)
-	v := lib.XJS_Eval(ctx.tls, ctx.p, cc, uint64(len(code)), cf, lib.MJS_EVAL_TYPE_MODULE|lib.MJS_EVAL_FLAG_COMPILE_ONLY)
-	if int32(v.Ftag) != lib.EJS_TAG_MODULE {
-		if int32(v.Ftag) != lib.EJS_TAG_EXCEPTION {
+	v := lib.XJS_Eval(ctx.tls, ctx.p, cc, lib.Tsize_t(len(code)), cf, lib.MJS_EVAL_TYPE_MODULE|lib.MJS_EVAL_FLAG_COMPILE_ONLY)
+	if valTag(v) != lib.EJS_TAG_MODULE {
+		if valTag(v) != lib.EJS_TAG_EXCEPTION {
 			lib.XFreeValue(ctx.tls, ctx.p, v)
 		}
 		return 0
 	}
-	m := uintptr(v.Fu.Fuint641)
+	m := valPtr(v)
 	lib.XFreeValue(ctx.tls, ctx.p, v)
 	c.setImportMeta(ctx, m, meta)
 	return m
@@ -485,7 +490,7 @@ func moduleLoad(tls *libc.TLS, ctx, name, opaque uintptr) uintptr {
 // ---- runtime ----
 
 func (cshim) JS_RunGC(a *AVM)                    { lib.XJS_RunGC(a.tls, a.rt) }
-func (cshim) JS_SetMemoryLimit(a *AVM, n uint64) { lib.XJS_SetMemoryLimit(a.tls, a.rt, n) }
+func (cshim) JS_SetMemoryLimit(a *AVM, n uint64) { lib.XJS_SetMemoryLimit(a.tls, a.rt, tsize(n)) }
 
 func (cshim) avm_mem_used(a *AVM) uint64 {
 	size := int(unsafe.Sizeof(lib.TJSMemoryUsage{}))
@@ -508,7 +513,7 @@ func (cshim) avm_on_thread(a *AVM) int32 { return b2i(curGoroutineID() == a.goid
 
 func (cshim) avm_new_object(a *AVM, h uint32) JSValue {
 	o := lib.XJS_NewObjectClass(a.tls, a.ctx.p, int32(a.obj_class))
-	if int32(o.Ftag) != lib.EJS_TAG_EXCEPTION {
+	if valTag(o) != lib.EJS_TAG_EXCEPTION {
 		lib.XJS_SetOpaque(a.tls, o, uintptr(h))
 	}
 	return o
@@ -516,7 +521,7 @@ func (cshim) avm_new_object(a *AVM, h uint32) JSValue {
 
 func (cshim) avm_new_func(a *AVM, h uint32, ctor int32) JSValue {
 	o := lib.XJS_NewObjectClass(a.tls, a.ctx.p, int32(a.fn_class))
-	if int32(o.Ftag) != lib.EJS_TAG_EXCEPTION {
+	if valTag(o) != lib.EJS_TAG_EXCEPTION {
 		lib.XJS_SetOpaque(a.tls, o, uintptr(h))
 		if ctor != 0 {
 			lib.XJS_SetConstructorBit(a.tls, a.ctx.p, o, 1)
@@ -527,7 +532,7 @@ func (cshim) avm_new_func(a *AVM, h uint32, ctor int32) JSValue {
 
 // avm_handle_of is the handle of a GoObject/GoFunc, 0 for anything else.
 func (cshim) avm_handle_of(a *AVM, v JSValue) uint32 {
-	if int32(v.Ftag) != lib.EJS_TAG_OBJECT {
+	if valTag(v) != lib.EJS_TAG_OBJECT {
 		return 0
 	}
 	switch id := lib.XJS_GetClassID(a.tls, v); id {
@@ -590,9 +595,9 @@ func (cshim) avm_new(id uintptr, memLimit, stackSlots uint64) *AVM {
 	if stackSlots == 0 {
 		stackSlots = defaultStackSlots
 	}
-	lib.XJS_SetMaxStackSize(tls, a.rt, stackSlots)
+	lib.XJS_SetMaxStackSize(tls, a.rt, tsize(stackSlots))
 	if memLimit > 0 {
-		lib.XJS_SetMemoryLimit(tls, a.rt, memLimit)
+		lib.XJS_SetMemoryLimit(tls, a.rt, tsize(memLimit))
 	}
 	lib.XJS_SetInterruptHandler(tls, a.rt, fp(interruptHandler), id)
 	lib.XJS_SetModuleLoaderFunc(tls, a.rt, fp(moduleNormalize), fp(moduleLoad), id)
@@ -644,7 +649,7 @@ func interruptHandler(tls *libc.TLS, rt, opaque uintptr) int32 {
 func atomName(tls *libc.TLS, ctx uintptr, atom uint32) (string, bool) {
 	k := lib.XJS_AtomToValue(tls, ctx, atom)
 	defer lib.XFreeValue(tls, ctx, k)
-	if int32(k.Ftag) == lib.EJS_TAG_SYMBOL {
+	if valTag(k) == lib.EJS_TAG_SYMBOL {
 		return "", false
 	}
 	pn := tls.Alloc(8)
@@ -654,17 +659,17 @@ func atomName(tls *libc.TLS, ctx uintptr, atom uint32) (string, bool) {
 		lib.XFreeValue(tls, ctx, lib.XJS_GetException(tls, ctx))
 		return "", false
 	}
-	s := string(unsafe.Slice((*byte)(ptr(p)), int(*(*uint64)(ptr(pn)))))
+	s := string(unsafe.Slice((*byte)(ptr(p)), int(*(*lib.Tsize_t)(ptr(pn)))))
 	lib.XJS_FreeCString(tls, ctx, p)
 	return s, true
 }
 
 func protoGet(tls *libc.TLS, ctx uintptr, obj JSValue, atom uint32) JSValue {
 	proto := lib.XJS_GetPrototype(tls, ctx, obj)
-	if int32(proto.Ftag) == lib.EJS_TAG_EXCEPTION {
+	if valTag(proto) == lib.EJS_TAG_EXCEPTION {
 		return proto
 	}
-	if int32(proto.Ftag) != lib.EJS_TAG_OBJECT {
+	if valTag(proto) != lib.EJS_TAG_OBJECT {
 		lib.XFreeValue(tls, ctx, proto)
 		return C.avm_undefined()
 	}
