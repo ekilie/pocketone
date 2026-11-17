@@ -7,7 +7,7 @@ source: "ext/vacuum/README.md"
 
 # Vacuum
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 SQLite doesn't give space back to the disk when records are deleted; the file stays as big as it ever was. Vacuum
 compacts your app's databases on a schedule (SQLite's `VACUUM`), so the space comes back. It only compacts a database

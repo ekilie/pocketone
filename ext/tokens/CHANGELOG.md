@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.0 (2026-11-17)
+
 ### Upgrading
 
 - `pocketone oauth eject` is gone: run `pocketone template eject oauth`. The OAuth pages are now Go templates in `pb_templates/oauth/` (`signin.tpl`, `head.tpl`, ...); copies in `pb_pages/_private/oauth/` are no longer read, so carry your edits over to the new files.

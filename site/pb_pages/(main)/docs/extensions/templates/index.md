@@ -7,7 +7,7 @@ source: "ext/templates/README.md"
 
 # Templates
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Some extensions serve pages of their own, such as the OAuth sign-in, consent and MFA screens the CLI and MCP agents
 sign in through. Templates lets you restyle them: eject an extension's templates into your app's `pb_templates`

@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.2 (2026-11-17)
+
 ### Changed
 
 - `pocketone pull` also fetches `pb_templates` by default (ejected page templates, ext/templates). `deploy` and `dev` already sync it with the other `pb_*` folders.

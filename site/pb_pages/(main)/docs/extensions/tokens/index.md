@@ -7,7 +7,7 @@ source: "ext/tokens/README.md"
 
 # Tokens
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 Long-lived API tokens for your app: secrets that start with `pbt_`, for CI, deploys, scripts and agents. Each token
 belongs to an account and acts as that account. It can be limited to scopes, given an expiry, and revoked on its own.

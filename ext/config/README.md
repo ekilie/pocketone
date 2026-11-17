@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.1.0
 title: "Config"
 group: binary
 summary: "The pocketone.yaml config file, with secrets in a .env beside it."

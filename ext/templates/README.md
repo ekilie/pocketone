@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "Templates"
 group: binary
 summary: "Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them."

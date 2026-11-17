@@ -7,7 +7,7 @@ source: "ext/pocker/README.md"
 
 # Pocker
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
 normal app folder and starts on its first request, in tens of milliseconds. Pocker provides

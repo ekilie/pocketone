@@ -7,7 +7,7 @@ source: "ext/pages/README.md"
 
 # Pages
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
 JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it

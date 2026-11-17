@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.1.0
 title: "Pocker"
 group: many
 summary: "Hundreds of PocketBase instances in one Go process, routed by hostname."

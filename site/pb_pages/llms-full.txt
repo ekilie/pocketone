@@ -5590,7 +5590,7 @@ Source: https://pocketone.dev/docs/extensions/cache
 
 # Cache
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Extensions and apps often compute the same thing many times: a rendered page, an answer from another API, a compiled
 module. Cache gives them named buckets to keep those results in, as bytes or as the Go values themselves, from one
@@ -5830,7 +5830,7 @@ Source: https://pocketone.dev/docs/extensions/config
 
 # Config
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketOne's config file: `pocketone.yaml`, with secrets in a `.env` beside it. Put your app's settings in one file
 instead of a long line of flags. Each extension has its own section in the file.
@@ -6088,7 +6088,7 @@ Source: https://pocketone.dev/docs/extensions/deploy
 
 # Deploy
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
 `pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded and the app swaps them
@@ -6394,7 +6394,7 @@ Source: https://pocketone.dev/docs/extensions/jsvm
 
 # JSVM
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS API as PocketBase (`$app`, `onX`,
 `routerAdd`, `cronAdd`, `$http`, `$security`, ...) on QuickJS, with one VM per app:
@@ -7025,7 +7025,7 @@ Source: https://pocketone.dev/docs/extensions/pages/extension
 
 # Pages
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
 JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it
@@ -8103,7 +8103,7 @@ Source: https://pocketone.dev/docs/extensions/templates
 
 # Templates
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Some extensions serve pages of their own, such as the OAuth sign-in, consent and MFA screens the CLI and MCP agents
 sign in through. Templates lets you restyle them: eject an extension's templates into your app's `pb_templates`
@@ -8228,7 +8228,7 @@ Source: https://pocketone.dev/docs/extensions/tokens
 
 # Tokens
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 Long-lived API tokens for your app: secrets that start with `pbt_`, for CI, deploys, scripts and agents. Each token
 belongs to an account and acts as that account. It can be limited to scopes, given an expiry, and revoked on its own.
@@ -8956,7 +8956,7 @@ Source: https://pocketone.dev/docs/extensions/vacuum
 
 # Vacuum
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 SQLite doesn't give space back to the disk when records are deleted; the file stays as big as it ever was. Vacuum
 compacts your app's databases on a schedule (SQLite's `VACUUM`), so the space comes back. It only compacts a database
@@ -9081,7 +9081,7 @@ Source: https://pocketone.dev/docs/extensions/docker
 
 # Docker
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Run every instance on a host in its own container, with the official PocketBase or PocketOne binary of the version
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
@@ -9833,7 +9833,7 @@ Source: https://pocketone.dev/docs/extensions/multisite
 
 # Multisite
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](https://pocketone.dev/docs/extensions/firewall)), and a runtime serves it:
@@ -10071,7 +10071,7 @@ Source: https://pocketone.dev/docs/extensions/pocker
 
 # Pocker
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
 normal app folder and starts on its first request, in tens of milliseconds. Pocker provides
@@ -11971,7 +11971,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 
 # Standard Set
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,

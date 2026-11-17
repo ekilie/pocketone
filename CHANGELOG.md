@@ -33,6 +33,8 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+## v0.0.1-alpha.7 (2026-11-17)
+
 ### Upgrading
 
 1. Put app and serve flags after the command name: `pocketone serve --hooksDir x`, not `pocketone --hooksDir x serve`. Only `--config` and `--env-file` (and core's `--dir`, `--dev`, `--encryptionEnv`, `--queryTimeout`, still accepted anywhere) can come before it.
@@ -49,6 +51,21 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 ### Changed
 
 - Each flag is now on the commands that read it instead of on every command: `--dir`, `--dev`, `--encryptionEnv`, `--queryTimeout`, `--jsvm`, `--hooksDir`, `--hooksPool` and `--migrationsDir` on the commands that open the app (`serve`, `migrate`, `superuser`, `pitr`, `token`, `oauth`, `template`); `--hooksWatch`, `--automigrate`, `--publicDir`, `--indexFallback`, `--pagesDir`, `--pitr*`, `--s3Redirect*` and `--autotls*` on `serve` only. Remote commands such as `deploy` and `link` list just their own flags plus `--config` and `--env-file`, and reject the others.
+
+### Extensions
+
+- [Cache](ext/cache/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
+- [Config](ext/config/CHANGELOG.md#010-2026-11-17) 0.0.1 → 0.1.0 (has upgrade steps)
+- [Deploy](ext/deploy/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
+- [Docker](ext/docker/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
+- [JSVM](ext/jsvm/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
+- [Multisite](ext/multisite/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
+- [Pages](ext/pages/CHANGELOG.md#010-2026-11-17) 0.0.1 → 0.1.0 (has upgrade steps)
+- [Pocker](ext/pocker/CHANGELOG.md#010-2026-11-17) 0.0.1 → 0.1.0 (has upgrade steps)
+- [Standard Set](ext/standard/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
+- [Templates](ext/templates/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
+- [Tokens](ext/tokens/CHANGELOG.md#010-2026-11-17) 0.0.1 → 0.1.0 (has upgrade steps)
+- [Vacuum](ext/vacuum/CHANGELOG.md#002-2026-11-17) 0.0.1 → 0.0.2
 
 ## v0.0.1-alpha.6 (2026-11-16)
 

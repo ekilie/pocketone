@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.2 (2026-11-17)
+
 ### Fixed
 
 - A container that exits right after it starts no longer loses what it printed: the runtime attaches to its output before starting it, so the reason it exited reaches `OnLog` (and `remote/v1`'s logs) even though Docker removes it at once.

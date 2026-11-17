@@ -12,6 +12,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.0 (2026-11-17)
+
 ### Upgrading
 
 - `pocker.NewManager(scope, opts)` takes the host's contract scope instead of an instance source: the Manager runs the instances instance.source/v1 supplies there. Provide your source with `sourcev1.Contract.ProvideIn(scope, src)` (in tests, `sourcetest.Scope(instances...)` from `ext/contracts/instance/source/v1/sourcetest`). `pocker.Server` and `pocker.Provider` are unchanged.

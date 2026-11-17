@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "Vacuum"
 group: binary
 summary: "Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk."

@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.0 (2026-11-17)
+
 ### Fixed
 
 - A long-running app no longer runs out of JS memory serving pages. Each page request stayed in the VM (its `rt` object and about 55 handles), so after a few thousand renders every page failed with `InternalError: out of memory` until the app restarted. Requests now free what they leave behind when they end.

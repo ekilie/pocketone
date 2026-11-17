@@ -7,7 +7,7 @@ source: "ext/cache/README.md"
 
 # Cache
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Extensions and apps often compute the same thing many times: a rendered page, an answer from another API, a compiled
 module. Cache gives them named buckets to keep those results in, as bytes or as the Go values themselves, from one

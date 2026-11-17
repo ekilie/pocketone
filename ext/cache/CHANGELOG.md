@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.0.2 (2026-11-17)
+
 ### Added
 
 - New standard extension: cache buckets for an app and its extensions (cache/v1) from one store per process. On a
@@ -16,3 +18,4 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
   go to disk, and read back only by a decoder of its `CacheVersion` (`cachev1.OpenItems`, `cachev1.ItemBucket`).
 - Emptying the cache: `cachev1.Clear` (every bucket of the app), cache.clear/v1 for the app's admins
   (`pocketone remote cache clear [--bucket <name>]`), and the extension's `Clear` for a host (the whole store).
+

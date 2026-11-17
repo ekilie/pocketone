@@ -7,7 +7,7 @@ source: "ext/docker/README.md"
 
 # Docker
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Run every instance on a host in its own container, with the official PocketBase or PocketOne binary of the version
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.

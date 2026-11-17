@@ -7,7 +7,7 @@ source: "ext/standard/README.md"
 
 # Standard Set
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,

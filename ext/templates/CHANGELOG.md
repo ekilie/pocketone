@@ -6,6 +6,9 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.0.2 (2026-11-17)
+
 ### Added
 
 - New standard extension: `pocketone template list` shows the template sets extensions offer and what you've changed; `pocketone template eject [set]` copies an extension's page templates (Go `html/template` files) into `pb_templates/<set>/`, where your edits replace the built-in pages. It asks before overwriting files you changed (`--force` doesn't ask). Provides templates/v1.
+

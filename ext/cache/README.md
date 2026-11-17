@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "Cache"
 group: binary
 summary: "Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once."

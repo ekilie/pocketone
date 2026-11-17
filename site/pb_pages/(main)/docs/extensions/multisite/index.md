@@ -7,7 +7,7 @@ source: "ext/multisite/README.md"
 
 # Multisite
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](/docs/extensions/firewall)), and a runtime serves it:

@@ -7,7 +7,7 @@ source: "ext/config/README.md"
 
 # Config
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketOne's config file: `pocketone.yaml`, with secrets in a `.env` beside it. Put your app's settings in one file
 instead of a long line of flags. Each extension has its own section in the file.
