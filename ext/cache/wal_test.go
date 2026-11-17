@@ -204,3 +204,64 @@ func lines(t *testing.T, path string) int {
 	}
 	return n
 }
+
+// A crash with a Set still in flight loses the new value but never brings back the one it replaced: the Set records
+// the old value's removal in the index before it returns, and only the new value's file waits for the IO goroutine.
+func TestCrashMidSetNeverStale(t *testing.T) {
+	for _, item := range []bool{false, true} {
+		t.Run(fmt.Sprintf("item=%v", item), func(t *testing.T) {
+			dir := t.TempDir()
+			s := newTestStore(t, wtLimits(dir))
+			sp := s.open("/x", lru(0))
+			put(s, sp, "k", "old")
+			put(s, sp, "other", "untouched")
+			s.flush()
+
+			release := make(chan struct{})
+			s.io.beforeOp = func() { <-release } // the new value's write never runs before the "crash"
+			if item {
+				s.setItem(sp, "k", &thing{s: "new"}, 0)
+			} else {
+				put(s, sp, "k", "new")
+			}
+			crashed := t.TempDir() // the disk as it is at this moment
+			if err := copyDir(dir, crashed); err != nil {
+				t.Fatal(err)
+			}
+			close(release)
+
+			s2, err := newStore(wtLimits(crashed), slog.New(slog.DiscardHandler))
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(s2.close)
+			sp2 := s2.open("/x", lru(0))
+			if v, ok := s2.get(sp2, "k"); ok {
+				t.Fatalf("after the crash k is %q: want a miss (the new value was in flight)", v)
+			}
+			if val(s2, sp2, "other") != "untouched" {
+				t.Fatal("a key the crash didn't touch was lost")
+			}
+			if err := checkFiles(s2); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func copyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(src, p)
+		if d.IsDir() {
+			return os.MkdirAll(filepath.Join(dst, rel), 0o755)
+		}
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(dst, rel), b, 0o644)
+	})
+}
