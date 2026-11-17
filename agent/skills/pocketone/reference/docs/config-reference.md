@@ -40,6 +40,26 @@ Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certifica
 
 Owned by [Auto TLS](https://pocketone.dev/docs/extensions/autotls).
 
+#### `cache:`
+
+The cache (cache/v1): one store for every app in the process (memory, disk tier), and caps per bucket.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
+| `eviction` | string |  | Which values leave memory first when the store is full: lru, mru, fifo or lifo. |
+| `max_items` | int |  | Most distinct values kept in memory (identical bytes count once). |
+| `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
+| `disk_path` | string |  | Turns on a disk tier there for what memory evicts (in a p1cache folder, emptied when the process starts). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `max_disk` | int |  | Size of the disk tier, such as 10GiB. Default 1GiB. |
+| `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
+| `defaults.max_items` | int |  | Most entries the bucket holds. |
+| `defaults.max_memory` | int |  | Most bytes of keys and values the bucket holds, such as 32MiB (shared values count in full). |
+| `defaults.ttl` | int |  | How long an entry lives unless the code says otherwise, such as 10m. |
+| `buckets` | map of object |  | Caps per bucket name, over what its code asks for. |
+
+Owned by [Cache](https://pocketone.dev/docs/extensions/cache).
+
 #### `docker:`
 
 Runtime provider docker: each instance in its own container with the PocketBase (pb:) or PocketOne (p1:) binary of its version (image, binary cache and manifest, instance root, default version, idle stop, limits).

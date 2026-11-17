@@ -2,7 +2,9 @@ package pages
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,10 +17,12 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"gopkg.in/yaml.v3"
+
+	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
 	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
@@ -33,31 +37,68 @@ const callSource = "(function (get, name) { var o = get(); return o[name].apply(
 // (about 50 levels at jsvm's default 256 KiB), so a loop gets this error rather than a stack overflow.
 const maxIncludeDepth = 32
 
-// programs caches compiled JS sources (templates and modules) by kind and content hash, for every VM. Each VM
-// evaluates a source once and keeps the function in its own cache (see vmCache).
-type programs struct {
-	mu sync.Mutex
-	m  map[string]*compiledFile
-}
-
+// compiledFile is a template or module compiled to JS source, as kept in the pages.compiled cache bucket (cache/v1)
+// under its kind and content hash. Each VM evaluates a source once and keeps the function in its own cache (see
+// vmCache), so the bucket is only read the first time a VM meets a file.
 type compiledFile struct {
 	src         string         // evaluates to a function
-	frontMatter map[string]any // .md pages
+	fmRaw       string         // .md pages: the front matter's YAML, as written
+	frontMatter map[string]any // fmRaw parsed
 }
 
-func (c *programs) get(key string) *compiledFile {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.m[key]
+// encode is c as a cache value: the front matter's length (4 bytes), the front matter, the source.
+func (c *compiledFile) encode() []byte {
+	b := make([]byte, 4, 4+len(c.fmRaw)+len(c.src))
+	binary.BigEndian.PutUint32(b, uint32(len(c.fmRaw)))
+	return append(append(b, c.fmRaw...), c.src...)
 }
 
-func (c *programs) put(key string, f *compiledFile) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.m == nil {
-		c.m = map[string]*compiledFile{}
+func decodeCompiled(b []byte) (*compiledFile, error) {
+	if len(b) < 4 || uint64(binary.BigEndian.Uint32(b)) > uint64(len(b)-4) {
+		return nil, errors.New("pages: bad compiled cache entry")
 	}
-	c.m[key] = f
+	n := 4 + int(binary.BigEndian.Uint32(b))
+	c := &compiledFile{fmRaw: string(b[4:n]), src: string(b[n:])}
+	if c.fmRaw != "" {
+		if err := yaml.Unmarshal([]byte(c.fmRaw), &c.frontMatter); err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
+}
+
+// compiledBucketName is pages' cache/v1 bucket of compiled templates and modules.
+const compiledBucketName = "pages.compiled"
+
+// compiledBucket opens pages.compiled on first use (at request time, after contracts are sealed). Without a cache/v1
+// provider it keeps nothing, and each VM compiles a file the first time it meets it.
+func (p *Pages) compiledBucket() cachev1.Bucket {
+	p.bucketOnce.Do(func() {
+		b, err := cachev1.Open(p.app, compiledBucketName, cachev1.Options{MaxMemory: 32 << 20})
+		if err != nil {
+			p.logger().Warn("pages: compiled files won't be cached", "error", err)
+			b = cachev1.None{}
+		}
+		p.bucket = b
+	})
+	return p.bucket
+}
+
+// compiled returns key's compiled file from the cache, else builds it with build and caches it. A cache error is a
+// miss: the file is compiled again.
+func (p *Pages) compiled(ctx context.Context, key string, build func() (*compiledFile, error)) (*compiledFile, error) {
+	b := p.compiledBucket()
+	if v, ok, _ := b.Get(ctx, key); ok {
+		if c, err := decodeCompiled(v); err == nil {
+			return c, nil
+		}
+	}
+	c, err := build()
+	if err != nil {
+		return nil, err
+	}
+	_ = b.Set(ctx, key, c.encode(), 0)
+	return c, nil
 }
 
 // httpError is a ctx.httpError() thrown by page code.
@@ -68,7 +109,8 @@ type httpError struct {
 
 // vmState is pages' Go state for one VM, kept in the VM's cache object so it lives and dies with the VM.
 type vmState struct {
-	call js.Func // callSource
+	call        js.Func                   // callSource
+	frontMatter map[string]map[string]any // .md pages' front matter by template key, beside their functions
 }
 
 // request is one page request's state.
@@ -158,7 +200,7 @@ func (r *request) vmCache() (js.Object, *vmState, error) {
 		return nil, nil, err
 	}
 	o := r.rt.NewObject()
-	st := &vmState{call: call.Func()}
+	st := &vmState{call: call.Func(), frontMatter: map[string]map[string]any{}}
 	if err := errors.Join(o.Set("driver", driver), o.Set("go", st), r.rt.Set("__ppCache", o)); err != nil {
 		return nil, nil, err
 	}
@@ -216,27 +258,41 @@ func (r *request) template(file string) (js.Value, error) {
 		return nil, fmt.Errorf("%s: not found", file)
 	}
 	key := "t:" + hash
-	c := r.p.programs.get(key)
-	if c == nil {
+	if v := r.cache.Get(key); !v.Nullish() { // this VM has it
+		for k, val := range r.st.frontMatter[key] {
+			r.meta[k] = val
+		}
+		return v, nil
+	}
+	c, err := r.p.compiled(r.e.Request.Context(), key, func() (*compiledFile, error) {
 		src, err := r.readFile(file)
 		if err != nil {
 			return nil, err
 		}
 		text := string(src)
-		c = &compiledFile{}
+		c := &compiledFile{}
 		if path.Ext(file) == ".md" {
-			fm, body, err := splitFrontMatter(text)
-			if err != nil {
-				return nil, fmt.Errorf("%s: front matter: %w", file, err)
+			raw, body, ok := cutFrontMatter(text)
+			if ok {
+				var fm map[string]any
+				if err := yaml.Unmarshal([]byte(raw), &fm); err != nil {
+					return nil, fmt.Errorf("%s: front matter: %w", file, err)
+				}
+				c.fmRaw, c.frontMatter, text = raw, fm, body
 			}
-			c.frontMatter, text = fm, body
 		}
 		code, err := CompileEJS(text)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", file, err)
 		}
 		c.src = code
-		r.p.programs.put(key, c)
+		return c, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if c.frontMatter != nil {
+		r.st.frontMatter[key] = c.frontMatter
 	}
 	for k, v := range c.frontMatter {
 		r.meta[k] = v
@@ -357,22 +413,25 @@ func (r *request) module(file string) (js.Object, error) {
 		return o, o.Set("json", string(src))
 	}
 	key := "m:" + hash
-	c := r.p.programs.get(key)
-	if c == nil {
-		src, err := r.readFile(file)
+	fn := r.cache.Get(key) // this VM's, when it has met the file
+	if fn.Nullish() {
+		c, err := r.p.compiled(r.e.Request.Context(), key, func() (*compiledFile, error) {
+			src, err := r.readFile(file)
+			if err != nil {
+				return nil, err
+			}
+			code, err := transpile(file, src)
+			if err != nil {
+				return nil, err
+			}
+			return &compiledFile{src: "(function (module, exports, require, __filename, __dirname, __h, __Fragment) {\n" + code + "\n})"}, nil
+		})
 		if err != nil {
 			return nil, err
 		}
-		code, err := transpile(file, src)
-		if err != nil {
+		if fn, err = r.program(key, file, c.src); err != nil {
 			return nil, err
 		}
-		c = &compiledFile{src: "(function (module, exports, require, __filename, __dirname, __h, __Fragment) {\n" + code + "\n})"}
-		r.p.programs.put(key, c)
-	}
-	fn, err := r.program(key, file, c.src)
-	if err != nil {
-		return nil, err
 	}
 	_, ts := tsExts[path.Ext(file)]
 	return o, errors.Join(o.Set("fn", fn), o.Set("filename", r.absPath(file)), o.Set("dirname", r.absPath(path.Dir(file))), o.Set("ts", ts))

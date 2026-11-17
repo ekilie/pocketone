@@ -17,6 +17,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
+
+	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
 )
 
 // MiddlewareID is the id of the router middleware that serves pages.
@@ -55,8 +57,9 @@ type Pages struct {
 	buildErrs []error
 	tableErrs bool // the current table was built with errors (a partial build)
 
-	hashes   hashCache
-	programs programs
+	hashes     hashCache
+	bucketOnce sync.Once
+	bucket     cachev1.Bucket // pages.compiled (cache/v1)
 
 	router  *router.Router[*core.RequestEvent] // for ctx.pb()'s in-process transport
 	muxOnce sync.Once

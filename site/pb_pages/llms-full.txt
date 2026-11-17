@@ -231,6 +231,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Auto TLS](https://pocketone.dev/docs/extensions/autotls) | Certificates on demand and wildcards through ACME. |
 | [Backups](https://pocketone.dev/docs/extensions/backups) | Restore an app to a moment from its own backups: the latest one before it. On by default. |
 | [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
+| [Cache](https://pocketone.dev/docs/extensions/cache) | Cache buckets for every app in the process from one shared store: identical values kept once, LRU/MRU/FIFO/LIFO eviction, TTLs, an optional disk tier. |
 | [Config](https://pocketone.dev/docs/extensions/config) | The pocketone.yaml config file, with secrets in a .env beside it. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
 | [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
@@ -933,6 +934,7 @@ The table is generated from each contract's README and every extension's `Contra
 | Contract | What it promises | Provided by | Required by | Works with | Owners |
 |---|---|---|---|---|---|
 | [`bulkmail/v1`](bulkmail/v1/README.md) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
+| [`cache/v1`](cache/v1/README.md) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
 | [`cli.commands/v1`](cli/commands/v1/README.md) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. |  |  |  | @benallfree |
 | [`deploy/v1`](deploy/v1/README.md) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](gate/v1/README.md) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
@@ -1091,6 +1093,83 @@ Implement `bulkmailv1.Campaigns` and provide it in your extension's `Register`.
 | Extension | |
 |---|---|
 | [bulkmail](https://pocketone.dev/docs/extensions/bulkmail) | provides |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/contracts/cache/v1
+
+# cache/v1
+
+A place for an app and its extensions to keep what was expensive to compute: rendered pages, API answers, resized
+images. Code opens a **bucket** by name with the limits it wants and gets and sets keys in it. Who keeps the bytes
+(memory and disk in this process, or Redis or Memcached shared between servers) is up to the provider, so a new one
+replaces the old without any caller changing.
+
+A bucket has its own caps, inside whatever room the provider has in all:
+
+| Option | What it does |
+|---|---|
+| `Eviction` | Which of the bucket's entries go first when it's full: `lru` (default), `mru`, `fifo`, `lifo` |
+| `MaxItems` | Most entries the bucket holds |
+| `MaxMemory` | Most bytes of keys and values the bucket holds |
+| `TTL` | How long an entry lives unless `Set` says otherwise |
+
+Where entries live (memory, disk, another server) and how much room there is in all are the provider's and the
+operator's business, not the bucket's.
+
+The promise is a cache's: a provider may drop any entry at any time, and a `Get` may miss. It never returns a value
+that was deleted, cleared or replaced since, nor one past its TTL. Each app has its own buckets, on a multisite host
+too, even when the provider keeps every app's entries in one shared store.
+
+An app service contract, one provider ([cache.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cache/v1/cache.go)).
+
+## Use
+
+Open a bucket after registration (in a hook or at serve time), keep it, and use it:
+
+```go
+b, err := cachev1.Open(app, "myext.answers", cachev1.Options{MaxItems: 1000, TTL: 10 * time.Minute})
+if err != nil {
+	return err
+}
+if v, ok, _ := b.Get(ctx, key); ok {
+	return v
+}
+v := compute()
+_ = b.Set(ctx, key, v, 0) // 0 = the bucket's TTL
+```
+
+Name buckets after your extension (`myext.answers`) so two extensions never share one. Declare cache/v1 in
+`WorksWith`: when nothing provides it, `Open` returns a bucket that keeps nothing, so the same code runs uncached.
+
+## Provide
+
+Implement `cachev1.Cache` (`Bucket`) and `cachev1.Bucket` (`Get`, `Set`, `Delete`, `Clear`), and provide it in
+`Register`, as the default if another provider should replace yours:
+
+```go
+cachev1.Contract.Provide(app, myCache)
+```
+
+Keep each app's buckets apart: on a shared store (one per process, or Redis), prefix keys with `extkit.AppID(app)` and
+the bucket name. Treat `Options` as caps you keep as well as your storage allows (Redis has its own eviction), and
+say in your README which ones you honour.
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [cache](https://pocketone.dev/docs/extensions/cache) | provides (default) |
+| [pages](https://pocketone.dev/docs/extensions/pages/extension) | works with |
 
 <!-- /contracts:index -->
 
@@ -2571,6 +2650,214 @@ func main() {
 All are superuser-only system collections with fixed collection and field ids ([`schema.go`](schema.go)).
 `LegacyJSMigration()` emits a PocketBase JS migration that creates the same collections, for apps that move onto this
 schema before they run this extension.
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/cache
+
+# Cache
+
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+Extensions and apps often compute the same thing many times: a rendered page, an answer from another API, a compiled
+module. Cache gives them named buckets to keep those results in, from one store in your app's process, with an
+optional folder on disk for more than fits in memory. Each bucket has its own caps, and you can change them without
+touching the code that uses them.
+
+On a multisite host the store is shared by every instance: one memory budget and one disk tier for all of them. Each
+instance still sees only its own buckets, and identical bytes (the same compiled template, the same `.wasm` file) are
+kept once however many instances or keys hold them.
+
+Cache provides [cache/v1](https://pocketone.dev/docs/contracts/cache/v1). Code that caches talks only to that contract, so a cache
+shared between servers (Redis, Memcached) can replace this one later without any of it changing.
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+Cache is built into `pocketone` and on by default; there's nothing to install. Turn it off with
+`cache: {enabled: false}` in `pocketone.yaml`. In your own Go build it comes with the standard set, or on its own:
+
+```go
+extkit.Setup(app, []extkit.Extension{cache.New(cache.Config{})}, nil, nil)
+```
+
+## Configure
+
+Nothing to configure: the store has 128 MiB of memory for every bucket together, and each bucket takes the caps its
+code asks for. To change them, add a `cache` section to `pocketone.yaml`. The top keys size the store; `defaults` fill
+in what a bucket's code leaves unset; `buckets` set a named bucket's caps over what its code asks for:
+
+```yaml
+cache:
+  max_memory: 512MiB       # the store: every bucket together
+  disk_path: cache         # overflow for what memory evicts; leave out for memory only
+  max_disk: 10GiB
+  defaults:
+    ttl: 10m
+  buckets:
+    pages.compiled:
+      max_memory: 64MiB    # one app's bucket
+```
+
+The store:
+
+| Key | What it does |
+|---|---|
+| `max_memory` | Memory for every bucket together (default 128MiB) |
+| `max_items` | Most distinct values kept in memory; identical bytes count once |
+| `eviction` | Which values leave memory first when the store is full: `lru` (default), `mru`, `fifo`, `lifo` |
+| `disk_path` | Turns on the disk tier there, in a `p1cache` folder that is emptied when the process starts. Relative paths are under `pb_data` on a single app, and under the working directory on a multisite host |
+| `max_disk` | Size of the disk tier (default 1GiB) |
+
+Each bucket (`defaults` and `buckets.<name>`):
+
+| Key | What it does |
+|---|---|
+| `max_items` | Most entries the bucket holds |
+| `max_memory` | Most bytes of keys and values the bucket holds; a value it shares with others counts in full |
+| `eviction` | Which of its entries go first when the bucket is full |
+| `ttl` | How long an entry lives unless its code says otherwise |
+
+Sizes take `KiB`, `MiB`, `GiB` (or `KB`, `MB`, `GB`); durations take `s`, `m`, `h`.
+
+A disk tier inside `pb_data` is part of your backups (as throwaway files). To keep it out, give `disk_path` an
+absolute folder outside `pb_data`.
+
+### pocketone.yaml reference
+
+#### `cache:`
+
+The cache (cache/v1): one store for every app in the process (memory, disk tier), and caps per bucket.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
+| `eviction` | string |  | Which values leave memory first when the store is full: lru, mru, fifo or lifo. |
+| `max_items` | int |  | Most distinct values kept in memory (identical bytes count once). |
+| `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
+| `disk_path` | string |  | Turns on a disk tier there for what memory evicts (in a p1cache folder, emptied when the process starts). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `max_disk` | int |  | Size of the disk tier, such as 10GiB. Default 1GiB. |
+| `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
+| `defaults.max_items` | int |  | Most entries the bucket holds. |
+| `defaults.max_memory` | int |  | Most bytes of keys and values the bucket holds, such as 32MiB (shared values count in full). |
+| `defaults.ttl` | int |  | How long an entry lives unless the code says otherwise, such as 10m. |
+| `buckets` | map of object |  | Caps per bucket name, over what its code asks for. |
+
+## Use
+
+Nothing to click. Values evicted from memory move to the disk tier when there is one, and a read brings them back.
+The cache starts empty with the process, disk tier included. On a multisite host, an instance that restarts or
+sleeps keeps its entries: the store belongs to the host.
+
+## Integrations
+
+| Extension | How they fit |
+|---|---|
+| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Every instance shares the host's one store (its memory, its disk tier), and sees only its own buckets: keys live under the instance's id. An instance that sleeps keeps its entries, so it wakes to a warm cache. An instance's `extensions.cache` may set `enabled`, `defaults` and `buckets` for itself; the store's keys are the host's only. |
+| [Docker](https://pocketone.dev/docs/extensions/docker) | Each container runs its own `pocketone`, so it has its own store. |
+
+### Building on Cache
+
+Open a bucket through [cache/v1](https://pocketone.dev/docs/contracts/cache/v1) at serve time, keep it, and get and set keys:
+
+```go
+b, err := cachev1.Open(app, "myext.answers", cachev1.Options{MaxItems: 1000, TTL: 10 * time.Minute})
+```
+
+Declare cache/v1 in `WorksWith`: when nothing provides it, `Open` returns a bucket that keeps nothing, so your code
+runs uncached. Name buckets after your extension so they never collide.
+
+Cache provides cache/v1 as the default: another extension that provides it (a Redis cache, say) replaces it without
+any `providers:` line.
+
+## Example
+
+A PocketBase app with one bucket, `example.slow`. `GET /slow` takes a second the first time and
+answers from the cache for the next minute.
+
+```go
+// Command example is a PocketBase app with cache/v1 and one bucket, "example.slow". GET /slow takes a second the first
+// time and answers from the cache for the next minute:
+//
+//	go run ./example serve --http=127.0.0.1:8090
+//	curl http://127.0.0.1:8090/slow   # slow
+//	curl http://127.0.0.1:8090/slow   # cached
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
+package main
+
+import (
+	"log"
+	"net/http"
+	"time"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+
+	"github.com/pockethost/pocketone/ext/cache"
+	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
+	"github.com/pockethost/pocketone/ext/devusers"
+	"github.com/pockethost/pocketone/ext/extkit"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+	if _, err := extkit.Setup(app, []extkit.Extension{cache.New(cache.Config{})}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		b, err := cachev1.Open(app, "example.slow", cachev1.Options{MaxItems: 100, TTL: time.Minute})
+		if err != nil {
+			return err
+		}
+		se.Router.GET("/slow", func(e *core.RequestEvent) error {
+			ctx := e.Request.Context()
+			if v, ok, _ := b.Get(ctx, "answer"); ok {
+				return e.String(http.StatusOK, "cached: "+string(v)+"\n")
+			}
+			time.Sleep(time.Second) // the expensive part
+			v := time.Now().Format(time.RFC3339)
+			_ = b.Set(ctx, "answer", []byte(v), 0)
+			return e.String(http.StatusOK, "computed: "+v+"\n")
+		})
+		return se.Next()
+	})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## How it works
+
+One store per process. Each app's buckets are namespaces in it, `<instance id>/<bucket>` (just `/<bucket>` on a
+single app), so no app can read another's keys. Keys point at values stored by their SHA-256: the same bytes under
+any number of keys, from any number of instances, are one value with a reference count, and count once against the
+store's memory and item limits. A value goes when the last key pointing at it does.
+
+There are two kinds of eviction. When the store is over its limits, a value leaves memory (by the store's strategy):
+to the disk tier when there is one, else together with every key pointing at it. When one bucket is over its own
+caps, one of its keys goes (by the bucket's strategy), and the value only if nothing else points at it.
+
+The key index stays in memory and counts against `max_memory`. The disk tier is overflow for memory: one file per
+value, named by its hash, written atomically and emptied when the process starts.
+
+One lock guards the index, and it's never held across disk IO. One IO goroutine, running only while it has work,
+writes and removes files in the order the lock decided them. A value waiting to be written stays readable from
+memory (at most a quarter of `max_memory` waits; past that, evicted values are dropped). Reads from disk happen off
+the lock, many readers of one value share one read, and a read is checked against the index again before it's
+returned, so a key changed meanwhile never gets its old value back.
+
+The store is tested against a model under fuzzing (no value deleted, replaced, expired or belonging to another key
+ever comes back; every count and list stays consistent; the disk tier holds exactly the files it should) and under
+concurrent load with the race detector.
 
 ## License
 
@@ -8933,7 +9220,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
-The extensions every PocketOne app has: settings, page templates, API tokens (with the OAuth server), remotes (remote/v1), MCP,
+The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,
 so an app never misses one because its host forgot to list it. Members can be reconfigured or turned off per app,
 never removed.
@@ -8975,7 +9262,7 @@ Which extension provides a contract when several do.
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy
 standard: tokens/v1 ← tokens
 ```
 
@@ -9071,6 +9358,26 @@ Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certifica
 | `dns.api_token_env` | string |  | Or: the environment variable holding the token. Default CF_API_TOKEN. Flag: --autotlsDNSTokenEnv. |
 
 Owned by [Auto TLS](https://pocketone.dev/docs/extensions/autotls).
+
+#### `cache:`
+
+The cache (cache/v1): one store for every app in the process (memory, disk tier), and caps per bucket.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
+| `eviction` | string |  | Which values leave memory first when the store is full: lru, mru, fifo or lifo. |
+| `max_items` | int |  | Most distinct values kept in memory (identical bytes count once). |
+| `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
+| `disk_path` | string |  | Turns on a disk tier there for what memory evicts (in a p1cache folder, emptied when the process starts). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `max_disk` | int |  | Size of the disk tier, such as 10GiB. Default 1GiB. |
+| `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
+| `defaults.max_items` | int |  | Most entries the bucket holds. |
+| `defaults.max_memory` | int |  | Most bytes of keys and values the bucket holds, such as 32MiB (shared values count in full). |
+| `defaults.ttl` | int |  | How long an entry lives unless the code says otherwise, such as 10m. |
+| `buckets` | map of object |  | Caps per bucket name, over what its code asks for. |
+
+Owned by [Cache](https://pocketone.dev/docs/extensions/cache).
 
 #### `docker:`
 
@@ -9423,6 +9730,7 @@ cd example && go run . serve --dir=./pb_data
 | Extension | How they fit |
 |---|---|
 | [Pocker](https://pocketone.dev/docs/extensions/pocker) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
+| [Cache](https://pocketone.dev/docs/extensions/cache) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. On a multisite host they also outlive an instance's restarts, since the cache belongs to the host. With the cache off, each JS VM compiles a file the first time it meets it. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
 ### Under pocker
@@ -9435,7 +9743,7 @@ the standard set adds it like any extension:
 srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(pages.Config{})}}
 ```
 
-- Each start of an instance's app gets its own route table, compiled templates and caches. An instance that sleeps
+- Each start of an instance's app gets its own route table, compiled templates (in its own `pages.compiled` bucket; identical files share one copy in the host's cache) and caches. An instance that sleeps
   drops them; nothing is shared between instances.
 - Page code runs in the instance's own sandboxed JS VM ([jsvm](https://pocketone.dev/docs/extensions/jsvm)), under its limits (execution time,
   memory, stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's

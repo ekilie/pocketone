@@ -17,6 +17,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Auto TLS](/docs/extensions/autotls) | Certificates on demand and wildcards through ACME. |
 | [Backups](/docs/extensions/backups) | Restore an app to a moment from its own backups: the latest one before it. On by default. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
+| [Cache](/docs/extensions/cache) | Cache buckets for every app in the process from one shared store: identical values kept once, LRU/MRU/FIFO/LIFO eviction, TTLs, an optional disk tier. |
 | [Config](/docs/extensions/config) | The pocketone.yaml config file, with secrets in a .env beside it. |
 | [Deploy](/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
 | [JSVM](/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
