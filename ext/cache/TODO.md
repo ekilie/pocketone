@@ -47,3 +47,24 @@ looking again isn't enough:
 - A content blob (Set as bytes) read through `GetItem` is decoded on every call today, since the item can't replace
   bytes other keys share. Keep that, but coalesce concurrent decodes of it the same way.
 - Covered by a test with a blocking decoder: N concurrent `GetItem`s, one file read, one decode, N identical items.
+
+## Limits per bucket, not for the whole store
+
+**Waits on:** `cachev1.Item` / `cachev1.ItemBucket` and their support in this store on `main` (branch `cache-items`).
+
+Today the store has the limits that matter (`max_memory`, `max_items`, `eviction`, `max_disk` for every bucket of
+every app together), and a bucket's own caps only trim it further inside that pool, so one busy bucket evicts every
+other bucket's values. Make each bucket's limits its own budget instead:
+
+- A bucket's `max_memory`, `max_items` and `eviction` (from its code, then `defaults`, then `buckets.<name>`) decide
+  alone what it keeps in memory; the store-wide `max_memory`, `max_items` and `eviction` keys go (greenfield: no
+  shim).
+- The disk tier goes per bucket too: a `max_disk` cap per bucket (and in `defaults`), so what memory evicts from a
+  bucket spills within that bucket's disk budget, and evicting from it touches only that bucket.
+- Every bucket needs a bound: `defaults` gets built-in values (today's 128MiB memory and 1GiB disk are the starting
+  point to size down from), so a bucket whose code and config set nothing is still capped.
+- Values stay stored once by content. A value shared by several buckets counts in full against each bucket that
+  holds it (as a bucket's `max_memory` counts it today), and leaves memory or disk only when no bucket still wants
+  it there.
+- On a multisite host, each instance's buckets have their own budgets; an instance may set `defaults` and `buckets`
+  for itself as now, under any ceiling the host sets for its instances.
