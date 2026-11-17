@@ -3,7 +3,20 @@
   <aside class="docs-sidebar">
     <div>
       <nav class="docs-nav-scroll" aria-label="Documentation navigation">
-        <div class="docs-toc-navigation" id="toc" data-nav="<%= ctx.docsNav() %>" data-navs="<%= ctx.docsNavs().join(',') %>"><%- include(ctx.docsToc()) %></div>
+        <%
+  // the nav this page shows (ctx.docsNav, _private/docs-footer.js); any failure falls back to the main nav
+  let nav = '', navs = [], tocHtml = '', navErr = ''
+  try {
+    nav = ctx.docsNav()
+    navs = ctx.docsNavs()
+    tocHtml = include(nav ? 'toc-' + nav : 'toc')
+  } catch (e) {
+    navErr = String(e)
+    nav = ''
+    tocHtml = include('toc')
+  }
+%>
+        <div class="docs-toc-navigation" id="toc" data-nav="<%= nav %>" data-navs="<%= navs.join(',') %>"><%- tocHtml %></div><% if (navErr) { %><!-- docs nav: <%= navErr %> --><% } %>
       </nav>
     </div>
   </aside>
