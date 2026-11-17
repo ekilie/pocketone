@@ -73,6 +73,10 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+### Added
+
+- `app: js_limits:` in `pocketone.yaml` sets the JS engine's limits for the app: `memory` (default 64MiB), `task_time` (JS time per task, default 5s) and `task_wall` (wall time per task, default 30s).
+
 ## v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading

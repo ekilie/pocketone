@@ -281,6 +281,11 @@ func main() {
 		HooksDir:      hooksDir,
 		HooksWatch:    hooksWatch,
 		HooksPoolSize: hooksPool,
+		VM: jsvm.VMConfig{ // app: js_limits: in pocketone.yaml; 0 keeps each default
+			MemoryLimit: int64(appCfg.JSLimits.Memory),
+			TaskBudget:  appCfg.JSLimits.TaskTime,
+			TaskWall:    appCfg.JSLimits.TaskWall,
+		},
 	}); err != nil {
 		log.Fatal(err)
 	}

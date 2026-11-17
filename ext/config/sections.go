@@ -45,6 +45,10 @@ type ServerTLS struct {
 //	  migrations_dir: ./pb_migrations
 //	  public_dir: ./pb_public
 //	  env_allow: [STRIPE_KEY]       # .env names the app (and its JS hooks) may read; default none
+//	  js_limits:                    # QuickJS limits; each defaults when left out
+//	    memory: 128MiB
+//	    task_time: 10s
+//	    task_wall: 60s
 type AppConfig struct {
 	Dir           string        `yaml:"dir" doc:"The data folder (pb_data). Default: pb_data next to the executable. The --dir flag wins."`
 	Dev           *bool         `yaml:"dev" doc:"Dev mode: logs and SQL statements printed to the console. The --dev flag wins."`
@@ -59,6 +63,14 @@ type AppConfig struct {
 	PublicDir     string        `yaml:"public_dir" doc:"The static files folder. Default: pb_public next to the executable. The --publicDir flag wins."`
 	IndexFallback *bool         `yaml:"index_fallback" doc:"Serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins."`
 	EnvAllow      []string      `yaml:"env_allow" doc:"Names from the .env the app and its JS hooks may read. Default none."`
+	JSLimits      JSLimits      `yaml:"js_limits" doc:"Limits on the JS engine (jsvm: quickjs): a runaway hook stops with an error and the app keeps serving."`
+}
+
+// JSLimits are the QuickJS engine's limits for the app (ext/jsvm's VMConfig); 0 keeps each default.
+type JSLimits struct {
+	Memory   Size          `yaml:"memory" doc:"The app's JS memory: the JS heap plus the Go objects JS holds, such as 128MiB. Default 64MiB."`
+	TaskTime time.Duration `yaml:"task_time" doc:"JS time one task (a request, a hook, a cron job) may use, Go calls and waits not counted, such as 10s. Default 5s."`
+	TaskWall time.Duration `yaml:"task_wall" doc:"Wall time one task may take, Go calls included, such as 60s. Default 30s."`
 }
 
 // Server and App are the sections this package owns. (A multisite host is the `multisite` section, ext/multisite;

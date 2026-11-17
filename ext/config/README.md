@@ -60,6 +60,9 @@ app:
   dir: ./pb_data
   hooks_dir: ./pb_hooks
   env_allow: [STRIPE_KEY]
+  js_limits:          # the JS engine's limits for the app
+    memory: 128MiB
+    task_time: 10s
 pitr:
   retention: 168h
 ```
