@@ -1,0 +1,4 @@
+# Upstream tests that run.sh skips, because they check something PocketOne deliberately changes. One test name per line
+# (matched exactly, in every package), then "#" and why. Keep this list short: a hook that leaves upstream's behavior
+# alone when nothing uses it shouldn't need a line here. When it changes, update site/pb_pages/(main)/docs/compatibility.md.
+TestHooksBindsCount  # plugins/jsvm: counts the JS hook binds; PocketOne adds one, onFilesystemCreate (84, upstream 83)

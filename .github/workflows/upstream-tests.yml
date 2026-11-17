@@ -1,0 +1,53 @@
+# PocketBase's own test suite, exactly as upstream wrote it, run against PocketOne's core: the proof behind the README
+# badge and pocketone.dev/docs/compatibility that our core changes (hooks and bug fixes) leave PocketBase's behavior
+# alone. `upstream` restores upstream's test files and skips only the tests in .github/upstream-tests/known-deviations.txt
+# (see run.sh); `core` runs the core module's tests as they are on main, ours included (run.sh --as-is). Both retry a failed test
+# twice on its own and list it as flaky if it then passes. The badge is green when both pass.
+# Runs daily too, so the badge always shows a recent run.
+name: PocketBase tests
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['ext/**', 'site/**', 'docs/**', 'agent/**', 'examples/pocketone/**', '**.md']
+  pull_request:
+    paths-ignore: ['ext/**', 'site/**', 'docs/**', 'agent/**', 'examples/pocketone/**', '**.md']
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  upstream:
+    name: upstream's tests, unmodified
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      # PocketHost's mirror of PocketBase, without tags (PocketBase's v0.x tags must never land in this repo).
+      - name: Fetch upstream master
+        run: git fetch --no-tags https://github.com/pockethost/pocketbase.git +master:refs/remotes/upstream/master
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: PocketBase test suite on PocketOne core
+        run: .github/upstream-tests/run.sh
+
+  core:
+    name: core tests, ours included
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Fetch upstream master
+        run: git fetch --no-tags https://github.com/pockethost/pocketbase.git +master:refs/remotes/upstream/master
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Core tests as they are on main
+        run: .github/upstream-tests/run.sh --as-is

@@ -25,3 +25,4 @@
 # Going Further
 
 - [PocketBase docs](/docs/pocketbase)
+- [PocketBase compatibility](/docs/compatibility)
