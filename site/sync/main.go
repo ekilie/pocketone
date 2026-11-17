@@ -194,7 +194,7 @@ func loadManifest(root string) (*manifest, error) {
 		}
 		for _, e := range entries {
 			n := e.Name()
-			if e.IsDir() || !strings.HasSuffix(n, ".md") || n == "README.md" || n == "CHANGELOG.md" {
+			if e.IsDir() || !strings.HasSuffix(n, ".md") || n == "README.md" || n == "CHANGELOG.md" || n == "TODO.md" {
 				continue
 			}
 			p.guides = append(p.guides, guide{

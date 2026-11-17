@@ -48,6 +48,7 @@ and declares `WorksWith: extkit.IDs("settings/v1")`.
 | [bulkmail](../../../../ext/bulkmail/README.md) | works with |
 | [mailrelay](../../../../ext/mailrelay/README.md) | works with |
 | [pitr](../../../../ext/pitr/README.md) | works with |
+| [vacuum](../../../../ext/vacuum/README.md) | works with |
 
 <!-- /contracts:index -->
 

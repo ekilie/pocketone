@@ -50,6 +50,7 @@ and declares `WorksWith: extkit.IDs("settings/v1")`.
 | [bulkmail](/docs/extensions/bulkmail) | works with |
 | [mailrelay](/docs/extensions/mailrelay) | works with |
 | [pitr](/docs/extensions/pitr) | works with |
+| [vacuum](/docs/extensions/vacuum) | works with |
 
 <!-- /contracts:index -->
 

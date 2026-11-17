@@ -302,6 +302,7 @@ ext/<name>/
   go.mod            module github.com/pockethost/pocketone/ext/<name>
   README.md         the extension's docs, and its page on pocketone.dev (below)
   CHANGELOG.md      its changes, newest first (see Changelogs)
+  TODO.md           optional: work that waits for something else to exist first (see Blocked work)
   <name>.go         the extension
   <name>_test.go
   conformance_test.go  the shared extension test (below)
@@ -452,6 +453,14 @@ else. The root [CHANGELOG.md](../CHANGELOG.md) is for the rest: core, the `pocke
 
 - `myext.retries` in `pocketone.yaml`: how many times to retry a failed delivery (default 3).
 ```
+
+### Blocked work
+
+An extension may keep a `TODO.md` in its folder: the work on it that waits for something else to exist first (a
+contract, another extension's change, a host feature). Each item says what it waits on, under a `**Waits on:**` line,
+and what to do once that lands; delete the item when it's done. Work that isn't blocked doesn't go here: do it, or
+leave it out. So a look across `ext/*/TODO.md` shows what each missing piece would unblock. The file isn't published:
+pocketone.dev skips it.
 
 ### Ownership
 

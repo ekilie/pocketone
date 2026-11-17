@@ -30,7 +30,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Templates](/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
 | [Tokens](/docs/extensions/tokens) | Long-lived API tokens with scopes. |
 | [Upgrade](/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
-| [Vacuum](/docs/extensions/vacuum) | Planned. Scheduled SQLite VACUUM. |
+| [Vacuum](/docs/extensions/vacuum) | Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk. |
 
 ## Run many instances
 

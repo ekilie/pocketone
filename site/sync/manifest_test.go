@@ -32,6 +32,7 @@ func TestManifestFromFrontMatter(t *testing.T) {
 		"ext/zeta/README.md":    "---\nowners: [\"@a\"]\nversion: 0.1.0\ntitle: \"Zeta\"\ngroup: services\nsummary: \"Does z: with a colon.\"\n---\n\n# Zeta\n",
 		"ext/zeta/CHANGELOG.md": "# Zeta changelog\n\n## Unreleased\n",
 		"ext/zeta/GUIDE.md":     "# A guide\n",
+		"ext/zeta/TODO.md":      "# Zeta: blocked work\n",
 		"ext/alpha/README.md":   "---\ntitle: Alpha\ngroup: services\nsummary: First.\n---\n# Alpha\n",
 	})
 	m, err := loadManifest(root)
@@ -50,7 +51,7 @@ func TestManifestFromFrontMatter(t *testing.T) {
 		t.Fatalf("zeta: %+v", z)
 	}
 	if len(z.guides) != 1 || z.guides[0].slug != "guide" {
-		t.Fatalf("zeta's guides (CHANGELOG.md isn't one): %+v", z.guides)
+		t.Fatalf("zeta's guides (CHANGELOG.md and TODO.md aren't ones): %+v", z.guides)
 	}
 }
 

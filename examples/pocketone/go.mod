@@ -23,6 +23,7 @@ require (
 	github.com/pockethost/pocketone/ext/stats v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/upgrade v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/vacuum v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -182,3 +183,4 @@ replace github.com/pockethost/pocketone/ext/jsvm => ../../ext/jsvm
 replace github.com/pockethost/pocketone/ext/templates => ../../ext/templates
 
 replace github.com/pockethost/pocketone/ext/cache => ../../ext/cache
+replace github.com/pockethost/pocketone/ext/vacuum => ../../ext/vacuum

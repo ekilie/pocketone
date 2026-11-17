@@ -151,7 +151,9 @@ Rules every extension follows:
   conformance test, and each module a change affects builds, vets and passes `go test -race`. Run what CI runs on a
   pull request with `go run ./.github/extensions test` (or `test ext/<name>`).
 - **An extension is self-contained:** its catalogue entry (`title`, `group`, `summary`) is in its README's front
-  matter beside `owners` and `version`, and its changelog is `ext/<name>/CHANGELOG.md`. `site/extensions.json` holds
+  matter beside `owners` and `version`, its changelog is `ext/<name>/CHANGELOG.md`, and work on it that waits for something
+else to exist first goes in an optional `ext/<name>/TODO.md`, each item under a `**Waits on:**` line naming what it
+waits for (not published on pocketone.dev). `site/extensions.json` holds
   only the catalogue groups and the few folders without a page (`links`). A change to an extension touches only its
   folder.
 - **Generated files land on `main` with the change that produces them.** pocketone.dev's pages (`site/`), nav,

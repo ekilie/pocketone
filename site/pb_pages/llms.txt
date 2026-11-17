@@ -41,6 +41,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [templates/v1](https://pocketone.dev/docs/contracts/templates/v1): An extension's own pages as Go templates a project can eject and edit.
 - [tls/v1](https://pocketone.dev/docs/contracts/tls/v1): The TLS of a multisite host's listener: automatic certificates instead of certificate files.
 - [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
+- [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1): Compacting an app's databases so freed space goes back to the disk, and when it last happened.
 
 ## Extensions: standard
 
@@ -62,7 +63,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Tokens](https://pocketone.dev/docs/extensions/tokens): Long-lived API tokens with scopes.
 - [Tokens: OAuth](https://pocketone.dev/docs/extensions/tokens/oauth): Tokens: OAuth
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
-- [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Planned. Scheduled SQLite VACUUM.
+- [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk.
 
 ## Extensions: many instances
 

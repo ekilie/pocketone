@@ -244,7 +244,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Templates](https://pocketone.dev/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
 | [Tokens](https://pocketone.dev/docs/extensions/tokens) | Long-lived API tokens with scopes. |
 | [Upgrade](https://pocketone.dev/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
-| [Vacuum](https://pocketone.dev/docs/extensions/vacuum) | Planned. Scheduled SQLite VACUUM. |
+| [Vacuum](https://pocketone.dev/docs/extensions/vacuum) | Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk. |
 
 ## Run many instances
 
@@ -604,6 +604,7 @@ ext/<name>/
   go.mod            module github.com/pockethost/pocketone/ext/<name>
   README.md         the extension's docs, and its page on pocketone.dev (below)
   CHANGELOG.md      its changes, newest first (see Changelogs)
+  TODO.md           optional: work that waits for something else to exist first (see Blocked work)
   <name>.go         the extension
   <name>_test.go
   conformance_test.go  the shared extension test (below)
@@ -754,6 +755,14 @@ else. The root [CHANGELOG.md](../CHANGELOG.md) is for the rest: core, the `pocke
 
 - `myext.retries` in `pocketone.yaml`: how many times to retry a failed delivery (default 3).
 ```
+
+### Blocked work
+
+An extension may keep a `TODO.md` in its folder: the work on it that waits for something else to exist first (a
+contract, another extension's change, a host feature). Each item says what it waits on, under a `**Waits on:**` line,
+and what to do once that lands; delete the item when it's done. Work that isn't blocked doesn't go here: do it, or
+leave it out. So a look across `ext/*/TODO.md` shows what each missing piece would unblock. The file isn't published:
+pocketone.dev skips it.
 
 ### Ownership
 
@@ -969,10 +978,11 @@ The table is generated from each contract's README and every extension's `Contra
 | [`remote/v1`](remote/v1/README.md) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](restore/v1/README.md) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
 | [`runtime/v1`](runtime/v1/README.md) | What runs a multisite host's instances (in-process, in containers), in preference order. | docker, pocker |  |  | @benallfree |
-| [`settings/v1`](settings/v1/README.md) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr | @benallfree |
+| [`settings/v1`](settings/v1/README.md) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr, vacuum | @benallfree |
 | [`templates/v1`](templates/v1/README.md) | An extension's own pages as Go templates a project can eject and edit. | templates |  | tokens | @benallfree |
 | [`tls/v1`](tls/v1/README.md) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |
 | [`tokens/v1`](tokens/v1/README.md) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | tokens |  | deploy, mcp, remotes | @benallfree |
+| [`vacuum/v1`](vacuum/v1/README.md) | Compacting an app's databases so freed space goes back to the disk, and when it last happened. | vacuum |  |  | @benallfree |
 
 <!-- /contracts:catalogue -->
 
@@ -1955,6 +1965,7 @@ and declares `WorksWith: extkit.IDs("settings/v1")`.
 | [bulkmail](https://pocketone.dev/docs/extensions/bulkmail) | works with |
 | [mailrelay](https://pocketone.dev/docs/extensions/mailrelay) | works with |
 | [pitr](https://pocketone.dev/docs/extensions/pitr) | works with |
+| [vacuum](https://pocketone.dev/docs/extensions/vacuum) | works with |
 
 <!-- /contracts:index -->
 
@@ -2119,6 +2130,51 @@ provider binds its own routes, `extkit.RouteBinder`).
 | [deploy](https://pocketone.dev/docs/extensions/deploy) | works with |
 | [mcp](https://pocketone.dev/docs/extensions/mcp) | works with |
 | [remotes](https://pocketone.dev/docs/extensions/remotes) | works with |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/contracts/vacuum/v1
+
+# vacuum/v1
+
+SQLite keeps a database file as big as it ever was; compacting it (`VACUUM`) gives the space freed by deleted records
+back to the disk. This contract says who does that for an app, how often, and how the last run went.
+
+A wire contract at `/api/_c/vacuum/v1` ([vacuum.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/vacuum/v1/vacuum.go)), one provider. On a single app the
+[vacuum](https://pocketone.dev/docs/extensions/vacuum) extension provides it, on the schedule the app's admins set. A multisite host may
+provide it for its instances instead: then the host compacts them on its own schedule, the app's vacuum extension steps
+aside (no settings, no schedule of its own), and the app's admins see the host's status.
+
+## Use
+
+```sh
+curl -H "Authorization: <token with vacuum:read>" https://your.app/api/_c/vacuum/v1
+```
+
+`provider` is who compacts (`vacuum` for the app itself, or the host), `enabled` and `every` the schedule, `last` the
+last run (bytes saved, databases skipped as not worth it, any error) and `next` the next one.
+
+## Provide
+
+Implement `vacuumv1.Vacuum` and provide it in `Register` (`vacuumv1.Contract.Provide(app, v)`), or on a host for every
+instance (`vacuumv1.Contract.ProvideForInstances(hostScope, func(id string) vacuumv1.Vacuum {...})`). An app half that
+also has settings or a schedule checks `extkit.HostProvides(app, "vacuum/v1")` in `Register` and leaves them out when
+the host owns it.
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [vacuum](https://pocketone.dev/docs/extensions/vacuum) | provides |
 
 <!-- /contracts:index -->
 
@@ -6329,36 +6385,109 @@ Source: https://pocketone.dev/docs/extensions/vacuum
 
 # Vacuum
 
-Version 0.0.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
-Scheduled database compaction: online SQLite `VACUUM` for a single app; under pocker, one stopped instance at a time.
-
-> **Planned.** Nothing is published here yet. This folder will hold the extension's Go module
-> (`github.com/pockethost/pocketone/ext/vacuum`), its tests and a minimal `example/main.go` that builds and shows the
-> feature. See [Create your own extension](https://pocketone.dev/docs/writing-an-extension).
+SQLite doesn't give space back to the disk when records are deleted; the file stays as big as it ever was. Vacuum
+compacts your app's databases on a schedule (SQLite's `VACUUM`), so the space comes back. It only compacts a database
+when enough of it is free space (10%, or 64 MB), so a busy, tidy app is left alone.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
-Not available yet: Vacuum isn't in `pocketone` and has no Go module to add to a custom build.
+Vacuum is built into `pocketone`. In your own Go build:
+
+```go
+extkit.Setup(app, []extkit.Extension{vacuum.New()}, nil, nil)
+```
 
 ## Configure
 
-Nothing to configure yet. Its settings will be documented here when it ships.
+The app's admins turn it on and set how often in the dashboard, in the **Vacuum** section at the bottom of
+**Settings → Backups** (a settings/v1 section, so the CLI and agents can change it too). `pocketone.yaml` sets the
+defaults until they do:
+
+```yaml
+vacuum:
+  enabled: true
+  every: 168h   # weekly; at least 1h
+```
+
+Without either, it's off.
+
+### pocketone.yaml reference
+
+#### `vacuum:`
+
+Defaults for compacting the app's SQLite databases (VACUUM): on or off, and how often. The app's admins change them in Settings.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | Compact the databases on a schedule, until the app's admins change it in Settings. |
+| `every` | string | `168h` | How often, e.g. 24h or 168h (weekly). |
 
 ## Use
 
-Nothing to use yet.
+Once on, every `every` while the app serves, Vacuum checks `data.db` and `auxiliary.db` and compacts the ones with
+enough free space (PocketBase's own online `VACUUM`; writes wait while it runs). `VACUUM` needs free disk space about the
+size of the database it compacts.
+
+The same section shows its status: whether it's on, how often, the next run, and the last run's bytes given back and
+databases skipped. It's [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1), also on the command line:
+
+```sh
+pocketone remote vacuum status
+```
 
 ## Integrations
 
-Nothing yet. It is planned to run on a single app and, under [pocker](https://pocketone.dev/docs/extensions/pocker), on many instances, one
-stopped instance at a time.
+| Extension | How they fit |
+|---|---|
+| [Settings](https://pocketone.dev/docs/extensions/settings) | Its on/off and schedule are a settings/v1 section, in the dashboard, the CLI and for agents. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | A host may compact its instances itself: when it provides [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1) for them, Vacuum steps aside in each instance: the Vacuum section shows the host's status, read-only, with no setting. |
+| [PITR](https://pocketone.dev/docs/extensions/pitr) | A compacted database is a new file to Litestream, so the next replication starts a fresh generation. |
+
+### Building on Vacuum
+
+`vacuum.App(app)` compacts a running app now and returns what it did. `LoadSettings`/`SaveSettings` read and change the
+app's settings.
 
 ## Example
 
-No example yet; it will come with the extension.
+A PocketBase app that compacts its databases once when it starts serving.
+
+```go
+// Command example is a PocketBase app that compacts its databases once when it starts serving (vacuum.App), the work
+// the extension does on its admins' schedule. Run `go run . serve` and watch the log for "vacuum: once".
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+
+	"github.com/pockethost/pocketone/ext/extkit"
+	"github.com/pockethost/pocketone/ext/vacuum"
+)
+
+func main() {
+	app := pocketbase.New()
+	if _, err := extkit.Setup(app, []extkit.Extension{vacuum.New()}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		go func() {
+			run := vacuum.App(app)
+			app.Logger().Info("vacuum: once", "saved_bytes", run.Saved, "skipped", run.Skipped, "error", run.Error)
+		}()
+		return e.Next()
+	})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## License
 
@@ -9581,6 +9710,17 @@ How the binary listens: http, https and CORS origins (single-app mode: the serve
 | `tls.cert` | string |  | Many instances only: the certificate file, reloaded when it changes. |
 | `tls.key` | string |  | Many instances only: the private key file, reloaded when it changes. |
 | `shutdown_timeout` | duration |  | Many instances only: how long in-flight requests get to finish at stop. |
+
+#### `vacuum:`
+
+Defaults for compacting the app's SQLite databases (VACUUM): on or off, and how often. The app's admins change them in Settings.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | Compact the databases on a schedule, until the app's admins change it in Settings. |
+| `every` | string | `168h` | How often, e.g. 24h or 168h (weekly). |
+
+Owned by [Vacuum](https://pocketone.dev/docs/extensions/vacuum).
 
 
 ---

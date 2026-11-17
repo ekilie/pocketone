@@ -247,3 +247,14 @@ How the binary listens: http, https and CORS origins (single-app mode: the serve
 | `tls.key` | string |  | Many instances only: the private key file, reloaded when it changes. |
 | `shutdown_timeout` | duration |  | Many instances only: how long in-flight requests get to finish at stop. |
 
+#### `vacuum:`
+
+Defaults for compacting the app's SQLite databases (VACUUM): on or off, and how often. The app's admins change them in Settings.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | Compact the databases on a schedule, until the app's admins change it in Settings. |
+| `every` | string | `168h` | How often, e.g. 24h or 168h (weekly). |
+
+Owned by [Vacuum](/docs/extensions/vacuum).
+

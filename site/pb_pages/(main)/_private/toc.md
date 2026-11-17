@@ -35,6 +35,7 @@
 - [templates/v1](/docs/contracts/templates/v1)
 - [tls/v1](/docs/contracts/tls/v1)
 - [tokens/v1](/docs/contracts/tokens/v1)
+- [vacuum/v1](/docs/contracts/vacuum/v1)
 
 # Extensions: standard
 

@@ -44,6 +44,7 @@ and declares `WorksWith: extkit.IDs("settings/v1")`.
 | [bulkmail](https://pocketone.dev/docs/extensions/bulkmail) | works with |
 | [mailrelay](https://pocketone.dev/docs/extensions/mailrelay) | works with |
 | [pitr](https://pocketone.dev/docs/extensions/pitr) | works with |
+| [vacuum](https://pocketone.dev/docs/extensions/vacuum) | works with |
 
 <!-- /contracts:index -->
 
