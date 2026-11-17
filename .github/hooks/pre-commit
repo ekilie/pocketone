@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Refuses a commit whose generated files are stale: runs .github/regenerate.sh on exactly what is being committed
+# (the index, not the working tree) and fails if that would change any file. So main never carries stale generated
+# files, and running regenerate on a branch shows only that branch's changes.
+#
+# Turn on once per clone:  git config core.hooksPath .github/hooks
+#
+# The staged files are copied to <git dir>/regen-check (a fixed path, so Go's build cache stays warm: ~3 s, ~10 s
+# after a dependency change). Your working tree is never touched.
+set -euo pipefail
+
+# Nothing staged: nothing to check (git itself refuses the commit unless --allow-empty).
+if git diff --cached --quiet; then
+  exit 0
+fi
+
+gitdir=$(git rev-parse --absolute-git-dir)
+copy="$gitdir/regen-check"
+index=$(git rev-parse --path-format=absolute --git-path index)
+index=${GIT_INDEX_FILE:-$index}
+case "$index" in /*) ;; *) index="$(git rev-parse --show-toplevel)/$index" ;; esac
+log="$gitdir/regen-check.log"
+
+echo "$(date +%T) regenerate check: copying the staged files" >&2
+rm -rf "$copy"
+git checkout-index -a --prefix="$copy/"
+
+echo "$(date +%T) regenerate check: running .github/regenerate.sh on them" >&2
+limit=()
+command -v timeout >/dev/null && limit=(timeout 300)
+if ! (cd "$copy" && env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE ${limit[@]+"${limit[@]}"} .github/regenerate.sh) >"$log" 2>&1; then
+  echo "regenerate check: .github/regenerate.sh failed on the staged files; its output:" >&2
+  tail -30 "$log" >&2
+  exit 1
+fi
+
+# Compare the regenerated copy with the index, through a throwaway copy of the index so the real one isn't refreshed.
+cp "$index" "$copy.index"
+stale=$(
+  export GIT_INDEX_FILE="$copy.index"
+  git --work-tree="$copy" diff --name-status
+  git --work-tree="$copy" ls-files --others --exclude-standard | sed 's/^/new	/'
+)
+rm -f "$copy.index"
+
+if [ -n "$stale" ]; then
+  {
+    echo "$(date +%T) regenerate check: commit refused, these generated files are stale:"
+    echo "$stale" | sed 's/^/  /'
+    echo
+    echo "Run .github/regenerate.sh, then git add the files above and commit again."
+  } >&2
+  exit 1
+fi
+echo "$(date +%T) regenerate check: generated files are up to date" >&2

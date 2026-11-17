@@ -140,8 +140,8 @@ Rules every extension follows:
   (`Of`, `Must` in hooks or at serve time). A lookup inside `Register` panics.
 - **After changing a contract interface**, run `go generate ./...` in `ext/contracts`. Then run
   `go run ./.github/extensions contracts` to regenerate the catalogue and each contract's Extensions section, and
-  `go run ./.github/extensions check`. The catalogue and Extensions sections are regenerated on `main`
-  (`.github/regenerate.sh`), so committing them is optional.
+  `go run ./.github/extensions check`. The catalogue and Extensions sections are generated files (`.github/regenerate.sh`,
+  see below).
 
 ## Other rules
 
@@ -154,11 +154,15 @@ Rules every extension follows:
   matter beside `owners` and `version`, and its changelog is `ext/<name>/CHANGELOG.md`. `site/extensions.json` holds
   only the catalogue groups and the few folders without a page (`links`). A change to an extension touches only its
   folder.
-- Generated files are never required in a commit: pocketone.dev's pages (`site/`), nav, search index, both sites'
-  `llms.txt` / `llms-full.txt`, the Agent Skills' `reference/` folders and the contract indexes are rebuilt by
-  `.github/regenerate.sh`, which CI runs on `main` after every push and commits as github-actions[bot]. Pull requests
-  only check that the site builds (`cd site/sync && go run . --validate`). Run `.github/regenerate.sh` yourself to see
-  the result; committing its output is fine.
+- **Generated files go in the same commit as the change that produces them.** pocketone.dev's pages (`site/`), nav,
+  search index, both sites' `llms.txt` / `llms-full.txt`, the Agent Skills' `reference/` folders and the contract
+  indexes are built by `.github/regenerate.sh`. Every clone turns on the repo's hooks once with
+  `git config core.hooksPath .github/hooks`: the `pre-commit` and `pre-merge-commit` hooks run `regenerate.sh` on the
+  staged files and refuse a commit that would leave any generated file stale (about 3 s). When one is refused, run
+  `.github/regenerate.sh`, `git add` the files it lists and commit again. So `main` never carries stale generated
+  files, and regenerating on a branch shows only that branch's changes. Outside pull requests are the exception: their
+  authors never commit generated files (they only check that the site builds, `cd site/sync && go run . --validate`),
+  and CI regenerates on `main` after the merge and commits as github-actions[bot].
 - Agent Skills (`agent/`, listed in `.claude-plugin/marketplace.json`): `site/sync` also writes each skill's `reference/`
   folder and both sites' `llms.txt` / `llms-full.txt` from the docs pages (regenerated on `main`, as above). The `SKILL.md` files are hand-written: a change
   that makes one wrong (a command, a `pocketone.yaml` key, an extension, a PocketPages API) fixes it in the same commit.

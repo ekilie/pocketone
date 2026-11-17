@@ -6,7 +6,8 @@
 # list the generated files main will commit; they never commit one themselves, so an extension author's pull request
 # touches only their extension's folder.
 # On main, `regenerate` runs .github/regenerate.sh and commits what changed as github-actions[bot] (only generated
-# files, never core), then deploys site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev) and
+# files, never core; local commits already include them through .github/hooks/pre-commit, so this only finds work after
+# an outside pull request merges), then deploys site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev) and
 # ext/pages/site/pb_pages to the `pocketpages` instance (pocketpages.dev).
 # The deploys need the POCKETHOST_TOKEN repository secret (a PocketHost personal access token that can write to
 # those instances); without it the job says so and skips.

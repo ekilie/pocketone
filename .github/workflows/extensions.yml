@@ -6,7 +6,8 @@
 # `plan` checks the rules and lists the affected modules; `test` builds, vets and tests each one in its own job, in
 # parallel (a change to core or to .github/extensions tests all ~30); `extensions` is the single overall result.
 # An extension author runs the same checks locally with `go run ./.github/extensions test`. Generated files (the site,
-# contract indexes) are never checked here: main regenerates them (.github/regenerate.sh).
+# contract indexes) are never checked here: local commits include them (.github/hooks/pre-commit) and main
+# regenerates them after an outside pull request merges (.github/regenerate.sh).
 name: extensions
 
 on:
