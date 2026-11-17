@@ -41,6 +41,8 @@ type BucketConfig struct {
 // Config is the `cache` section of pocketone.yaml, and the shape of an instance's `extensions.cache` on a multisite
 // host (whose keys replace the section's).
 type Config struct {
+	// Enabled false turns the extension off (the host checks it before Register).
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" doc:"Turns the cache off when false; extensions then run uncached."`
 	// Defaults fill what a bucket's code leaves unset.
 	Defaults BucketConfig `yaml:"defaults,omitempty" json:"defaults,omitempty" doc:"Limits for any bucket whose code leaves them unset."`
 	// Buckets override named buckets' limits, over what their code asks for.

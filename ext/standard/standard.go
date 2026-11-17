@@ -23,6 +23,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pockethost/pocketone/ext/backups"
 	"github.com/pockethost/pocketone/ext/bulkmail"
+	"github.com/pockethost/pocketone/ext/cache"
 	"github.com/pockethost/pocketone/ext/deploy"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/extkit/js"
@@ -42,6 +43,7 @@ import (
 type Set struct {
 	Settings   *settings.Extension
 	Templates  *templates.Extension
+	Cache      *cache.Extension
 	Tokens     *tokens.Extension
 	Remotes    *remotes.Extension
 	MCP        *mcp.Extension
@@ -65,6 +67,7 @@ func New() *Set {
 	return &Set{
 		Settings:   settings.New(),
 		Templates:  templates.New(templates.Config{}),
+		Cache:      cache.New(cache.Config{}),
 		Tokens:     tokens.New(tokens.Config{}),
 		Remotes:    remotes.New(remotes.Config{}),
 		MCP:        mcp.New(mcp.Config{}),
@@ -85,7 +88,7 @@ func (s *Set) Add(e ...extkit.Extension) *Set {
 
 // Extensions lists the members then the extras.
 func (s *Set) Extensions() []extkit.Extension {
-	out := make([]extkit.Extension, 0, 12+len(s.extras))
+	out := make([]extkit.Extension, 0, 13+len(s.extras))
 	for _, m := range s.members() {
 		if m.ext != nil {
 			out = append(out, m.ext)
@@ -101,7 +104,7 @@ type member struct {
 
 func (s *Set) members() []member {
 	m := []member{
-		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
+		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
 		{"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
@@ -117,6 +120,8 @@ func isNil(e extkit.Extension) bool {
 	case *settings.Extension:
 		return v == nil
 	case *templates.Extension:
+		return v == nil
+	case *cache.Extension:
 		return v == nil
 	case *tokens.Extension:
 		return v == nil

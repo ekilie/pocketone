@@ -48,6 +48,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
@@ -150,3 +151,5 @@ replace github.com/pockethost/pocketone/ext/standard => ../standard
 replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
 
 replace github.com/pockethost/pocketone/ext/templates => ../templates
+
+replace github.com/pockethost/pocketone/ext/cache => ../cache

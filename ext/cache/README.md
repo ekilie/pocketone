@@ -2,7 +2,7 @@
 owners: ["@benallfree"]
 version: 0.0.1
 title: "Cache"
-group: services
+group: binary
 summary: "Cache buckets in the app's own memory, with LRU/MRU/FIFO/LIFO eviction, TTLs and an optional disk tier."
 ---
 
@@ -18,13 +18,12 @@ shared between servers (Redis, Memcached) can replace this one later without any
 
 ## Install
 
-In your own Go build, add it to your extensions:
+Cache is built into `pocketone` and on by default; there's nothing to install. Turn it off with
+`cache: {enabled: false}` in `pocketone.yaml`. In your own Go build it comes with the standard set, or on its own:
 
 ```go
 extkit.Setup(app, []extkit.Extension{cache.New(cache.Config{})}, nil, nil)
 ```
-
-or to the standard set: `set.Add(cache.New(cache.Config{}))`.
 
 ## Configure
 
