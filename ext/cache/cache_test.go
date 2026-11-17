@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -543,5 +544,115 @@ func TestClearContract(t *testing.T) {
 	other, _ := cachev1.Open(apps[1], "a", cachev1.Options{})
 	if _, ok, _ := other.Get(ctx, "k1"); !ok {
 		t.Fatal("one app's clear reached another app")
+	}
+}
+
+// The two run modes. A single instance has its own store and its buckets as they're named; on a multisite host one
+// store serves every instance, each instance's buckets prefixed with its id without its code knowing. Either way each
+// key holds its own value in memory, and identical marshaled bytes are one file on disk: per app on a single instance,
+// across every app and bucket on a host.
+func TestRunModes(t *testing.T) {
+	for _, mode := range []string{"single", "multisite"} {
+		t.Run(mode, func(t *testing.T) {
+			var exts []*Extension
+			newExt := func() *Extension {
+				x := New(Config{DiskPath: t.TempDir()})
+				t.Cleanup(func() { x.Close(ctx) })
+				exts = append(exts, x)
+				return x
+			}
+			var shared *Extension
+			if mode == "multisite" {
+				shared = newExt()
+			}
+			apps := make([]core.App, 2)
+			for i := range apps {
+				app, err := tests.NewTestApp()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer app.Cleanup()
+				x := shared
+				if mode == "single" {
+					x = newExt() // each instance its own binary, its own store
+				} else {
+					extkit.SetAppID(app, fmt.Sprintf("inst%d", i))
+				}
+				if err := x.Register(app, nil); err != nil {
+					t.Fatal(err)
+				}
+				extkit.AppScope(app).Seal(nil)
+				apps[i] = app
+			}
+
+			// every app sets the same compiled template, too big for its buckets' memory, in two buckets
+			items := map[string]cachev1.Item{}
+			for i, app := range apps {
+				for _, name := range []string{"tpl.one", "tpl.two"} {
+					b, err := cachev1.OpenItems(app, name, cachev1.Options{MaxMemory: 1 << 10}, "", func(b []byte) (*thing, error) {
+						return &thing{s: string(b), size: 4 << 10}, nil
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := b.Set(ctx, "page", &thing{s: "<compiled template>", size: 4 << 10}, 0); err != nil {
+						t.Fatal(err)
+					}
+					_ = b.Set(ctx, "mine", &thing{s: fmt.Sprint("app ", i), size: 4 << 10}, 0)
+					x := exts[0]
+					if mode == "single" {
+						x = exts[i]
+					}
+					x.store.flush()
+					got, ok, err := b.Get(ctx, "page")
+					if err != nil || !ok || got.s != "<compiled template>" {
+						t.Fatalf("app %d bucket %s: %+v %v %v", i, name, got, ok, err)
+					}
+					items[fmt.Sprint(i, name)] = got
+					if mine, ok, _ := b.Get(ctx, "mine"); !ok || mine.s != fmt.Sprint("app ", i) {
+						t.Fatalf("app %d bucket %s read another app's key: %+v", i, name, mine)
+					}
+				}
+			}
+			seen := map[cachev1.Item]bool{}
+			for k, it := range items {
+				if seen[it] {
+					t.Fatalf("%s: two keys got the same object", k)
+				}
+				seen[it] = true
+			}
+
+			for i, x := range exts {
+				x.store.flush()
+				if err := checkFiles(x.store); err != nil {
+					t.Fatal(err)
+				}
+				pages := 0
+				for _, b := range x.store.blobs {
+					if b.hash == sha256Of("<compiled template>") {
+						pages++
+						want := 2 // the app's two buckets
+						if mode == "multisite" {
+							want = 4 // two apps, two buckets each
+						}
+						if len(b.refs) != want {
+							t.Fatalf("store %d: the template's file has %d keys, want %d", i, len(b.refs), want)
+						}
+					}
+				}
+				if pages != 1 {
+					t.Fatalf("store %d: %d files of the same template, want 1", i, pages)
+				}
+				for id := range x.store.spaces {
+					wantPrefix := "/"
+					if mode == "multisite" {
+						wantPrefix = "inst"
+					}
+					if !strings.HasPrefix(id, wantPrefix) {
+						t.Fatalf("store %d has space %q", i, id)
+					}
+				}
+			}
+		})
 	}
 }

@@ -128,6 +128,7 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 		HTTPSendMaxBody:    int64(lim.HTTPSendMaxBody),
 		Console:            openInstanceLog(dir).Write,
 	}
+	extkit.SetAppID(app, inst.ID) // before anything registers: the standard set keeps per-instance state under it
 	if opts.Host != nil {
 		extkit.AttachHost(app, opts.Host, inst.ID)
 	}

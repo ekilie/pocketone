@@ -360,3 +360,17 @@ func TestWritesSlotted(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// An item's disk budget counts its marshaled bytes, not its CacheSize (memory): a large object with small bytes spills.
+func TestItemDiskSizeIsMarshaled(t *testing.T) {
+	s := newTestStore(t, poolLimits{maxMem: 64 << 20, dir: t.TempDir(), maxDisk: 1 << 20})
+	sp := s.open("/x", spaceLimits{eviction: cachev1.LRU, maxMem: 1 << 10, maxDisk: 1 << 10})
+	s.setItem(sp, "k", &thing{s: "small bytes", size: 8 << 20}, 0) // 8MiB in memory (within what may wait for disk), 11 bytes on disk
+	s.flush()
+	if got := getThing(t, s, sp, "k"); got == nil || got.s != "small bytes" {
+		t.Fatal("an item whose bytes fit the disk budget was dropped for its memory size")
+	}
+	if err := checkFiles(s); err != nil {
+		t.Fatal(err)
+	}
+}

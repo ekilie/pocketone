@@ -624,8 +624,8 @@ func (s *store) spill(e *entry) {
 	if e.inMem {
 		s.removeMem(e)
 	}
-	if s.lim.dir == "" || !e.v.canMarshal() || over(s.lim.maxDisk, e.size) || over(e.sp.lim.maxDisk, e.size) ||
-		s.pending+e.size > s.lim.maxPending() {
+	tooBig := e.v.item == nil && (over(s.lim.maxDisk, e.size) || over(e.sp.lim.maxDisk, e.size)) // an item's size on disk is known once marshaled
+	if s.lim.dir == "" || !e.v.canMarshal() || tooBig || s.pending+e.size > s.lim.maxPending() {
 		e.v = nil // not held for a write: nothing pending to give back
 		s.removeEntry(e)
 		return
