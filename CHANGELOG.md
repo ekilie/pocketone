@@ -44,6 +44,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 - `app: js_limits:` in `pocketone.yaml` sets the JS engine's limits for the app: `memory` (default 64MiB), `task_time` (JS time per task, default 5s) and `task_wall` (wall time per task, default 30s).
 - pocketone.dev has a [Remote administration](https://pocketone.dev/docs/remote) page and [CLI](https://pocketone.dev/docs/reference/cli), [REST](https://pocketone.dev/docs/reference/rest) and [MCP](https://pocketone.dev/docs/reference/mcp) references generated from the `pocketone` binary; every contract and extension page lists its commands, endpoints and MCP tools.
 - pocketone.dev has a Tutorials section: [QuickJS](https://pocketone.dev/docs/quickjs) (limits, why there's no VM pool, a benchmark against goja) and [Configure with pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml).
+- pocketone.dev shows the current release in its header, linked to its release notes.
 
 ### Changed
 

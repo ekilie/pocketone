@@ -89,8 +89,9 @@ routerAdd("GET", "/post/{slug}", async (e) => {
   durable data in the database.
 - After an `await`, other requests may have run: use `e.app`, not the global `$app`, and keep transactions short across
   `await`s (they hold SQLite's write lock).
-- Calls that wait on I/O (`$app` methods, DB queries, `$http.send`, `sleep`) let the app's other requests run even
-  without `.async`.
+- Use `.async` for anything slow (`$http.send`, `sleep`, slow queries). Without it, other requests still run while a
+  call waits, but they nest on one stack and wait on each other: under load, a plain `sleep(100)` served 19 requests a
+  second where `await sleep.async(100)` served 481 ([benchmark](https://pocketone.dev/docs/quickjs#how-it-performs)).
 - `process.env` and a small `Buffer` (`from`, `toString` with utf8, base64, hex) are there.
 
 ### Modules: import and require
