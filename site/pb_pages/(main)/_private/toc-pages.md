@@ -3,7 +3,8 @@
 # Pages
 
 - [← PocketOne docs](/docs)
-- [Pages extension](/docs/extensions/pages)
+- [Home](/docs/extensions/pages)
+- [Pages extension](/docs/extensions/pages/extension)
 - [PocketPages v1 specification](/docs/extensions/pages/spec)
 
 # Introduction

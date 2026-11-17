@@ -375,8 +375,10 @@ ext/<name>/
     literal `<%`. Partials go in `site/_private/`; the site's own (`browser`, for one) are found too.
   - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `shot.png` beside the page); the
     site turns them into site URLs, and a link to a file that doesn't exist fails the build.
-  - Content only: no `+` files (layouts, `+config.js`, middleware, API routes) and no `index` page at the root of
-    `site/`, which is your README's page.
+  - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
+  - An `index.md` at the root of `site/` becomes your extension's landing page (`/docs/extensions/<name>`, where the
+    catalogue links), and your README moves to `/docs/extensions/<name>/extension`. Without one, the README is the
+    landing page. PocketPages' landing is a splash written with the site's `splash inset` and `announce` styles.
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another

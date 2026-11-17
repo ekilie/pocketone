@@ -57,6 +57,7 @@ type extension struct {
 	site                        []string // ext/<name>/site, paths relative to it (extsite.go)
 	blog                        []string // ext/<name>/blog/*.md, file names
 	nav                         string   // the site's nav sections, ready for the docs nav
+	landing                     bool     // site/ has its own index page: it's /docs/extensions/<name>, the README moves under it
 }
 
 type guide struct {
@@ -272,8 +273,8 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		if p.Link != "" {
 			continue
 		}
-		pages["ext/"+p.Name+"/README.md"] = "/docs/extensions/" + p.Name
-		pages["ext/"+p.Name] = "/docs/extensions/" + p.Name
+		pages["ext/"+p.Name+"/README.md"] = readmeURL(p)
+		pages["ext/"+p.Name] = readmeURL(p)
 		for _, g := range p.guides {
 			pages[g.src] = "/docs/extensions/" + p.Name + "/" + g.slug
 		}
@@ -312,7 +313,11 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		if err != nil {
 			return nil, err
 		}
-		out[extensionsOut+"/"+p.Name+"/index.md"] = page
+		if p.landing {
+			out[extensionsOut+"/"+p.Name+"/"+readmeSlug+".md"] = page
+		} else {
+			out[extensionsOut+"/"+p.Name+"/index.md"] = page
+		}
 	}
 	out[configOut] = configReference(m, secs)
 
