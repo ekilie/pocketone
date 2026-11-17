@@ -1,6 +1,6 @@
 {
   "name": "pocketone",
-  "description": "Build with PocketOne (the pocketone binary, pocketone.yaml, extensions and contracts) and PocketPages v1 server-rendered sites.",
+  "description": "Build with PocketOne (the pocketone binary, pocketone.yaml, deploying, writing extensions and contracts) and PocketPages v1 server-rendered sites.",
   "author": {
     "name": "PocketHost",
     "url": "https://pocketone.dev"

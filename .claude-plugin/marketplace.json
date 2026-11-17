@@ -11,7 +11,7 @@
     {
       "name": "pocketone",
       "source": "./agent",
-      "description": "Build with PocketOne (the pocketone binary, pocketone.yaml, its extensions and contracts) and PocketPages v1 server-rendered sites.",
+      "description": "Build with PocketOne (the pocketone binary, pocketone.yaml, deploying, writing extensions and contracts) and PocketPages v1 server-rendered sites.",
       "category": "development"
     }
   ]

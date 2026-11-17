@@ -73,6 +73,10 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+### Added
+
+- Agent Skills: a third skill, `pocketone-extensions`, for writing an extension and contributing it as a pull request; the `pocketone` skill now covers only using PocketOne in an app, and no longer carries its own copy of the PocketPages docs (the `pocketpages` skill has them). Update with `/plugin marketplace update pocketone` or `npx skills add pockethost/pocketone`.
+
 ## v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading

@@ -9,10 +9,11 @@ PocketOne is new, so coding agents haven't seen much of it. Two things close tha
 
 ## Agent Skills
 
-The `pocketone` plugin has two skills:
+The `pocketone` plugin has three skills:
 
-- **pocketone:** the `pocketone` binary and its commands, `pocketone.yaml`, every extension, and writing your own extension with contracts.
+- **pocketone:** using PocketOne in an app: the `pocketone` binary and its commands, `pocketone.yaml`, deploying, and every extension.
 - **pocketpages:** building PocketPages v1 sites in `pb_pages/`: routing, `ctx`, templates, layouts, auth and deploying.
+- **pocketone-extensions:** writing your own extension and contributing it as a pull request: contracts, `extkit`, tests, and the README and changelog CI checks.
 
 Each skill carries a copy of the docs in its `reference/` folder, so it works offline.
 
