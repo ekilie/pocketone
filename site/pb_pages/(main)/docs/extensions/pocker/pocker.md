@@ -184,8 +184,9 @@ pocker with [mailtrap](/docs/extensions/mailtrap), and its host with [servertimi
   for warn/error), rotated to `exec.log.1` at 10 MiB. A start failure (e.g. a broken hooks file) is written there too,
   and only that instance fails.
 
-When an instance's `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private` or `remote` changes, its app restarts on the next request (the old one finishes
-in-flight requests first), so a rotated secret takes effect immediately. Host changes apply without a restart.
+When an instance's `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private` or `remote` changes, a running app restarts (it
+stops, then a fresh one starts, as in a process restart), so a rotated secret takes effect immediately and two apps
+never have the instance's folder open. Host changes apply without a restart.
 
 `GET /.well-known/health` on any host reports `{status, instances, running}`.
 

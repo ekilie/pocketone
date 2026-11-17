@@ -110,7 +110,7 @@ runs in dev mode. In production only the hostnames in the instances file are ser
   `https://<its hostname>/_/`.
 - Its JS hooks see only its own `secrets`, through `$os.getenv` and `process.env`.
 - A change to its `secrets`, `encryption_key`, `access`, `limits`, `dev`, `dir`, `superusers`, `private`, `extensions` or `remote`
-  restarts its app on the next request, after in-flight requests finish. A hostname change doesn't restart it.
+  restarts it if it's running (the app stops, then a fresh one starts, as in a process restart). A hostname change doesn't restart it.
 - A change in `pb_hooks` restarts just that instance. A broken hooks file affects only that instance (below).
 
 ### Broken hook files

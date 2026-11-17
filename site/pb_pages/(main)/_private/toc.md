@@ -31,6 +31,7 @@
 - [restore/v1](/docs/contracts/restore/v1)
 - [runtime/v1](/docs/contracts/runtime/v1)
 - [settings/v1](/docs/contracts/settings/v1)
+- [templates/v1](/docs/contracts/templates/v1)
 - [tls/v1](/docs/contracts/tls/v1)
 - [tokens/v1](/docs/contracts/tokens/v1)
 
@@ -49,6 +50,7 @@
 - [Remotes](/docs/extensions/remotes)
 - [S3 Redirect](/docs/extensions/s3redirect)
 - [Settings](/docs/extensions/settings)
+- [Templates](/docs/extensions/templates)
 - [Tokens](/docs/extensions/tokens)
 - [Tokens: OAuth](/docs/extensions/tokens/oauth)
 - [Upgrade](/docs/extensions/upgrade)

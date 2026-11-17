@@ -152,7 +152,7 @@ It takes the same file flags as `deploy`.
 ### `pull`
 
 ```bash
-pocketone pull prod                              # pb_hooks, pb_migrations, pb_pages, pb_public, package.json
+pocketone pull prod                              # pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json
 pocketone pull prod pb_hooks pb_public/index.html
 pocketone pull prod --dry-run
 ```

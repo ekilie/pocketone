@@ -26,6 +26,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Remotes](/docs/extensions/remotes) | Named remotes and saved logins for the pocketone command. |
 | [S3 Redirect](/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Settings](/docs/extensions/settings) | One API for the settings an app's admins change for its extensions. On by default. |
+| [Templates](/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
 | [Tokens](/docs/extensions/tokens) | Long-lived API tokens with scopes. |
 | [Upgrade](/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
 | [Vacuum](/docs/extensions/vacuum) | Planned. Scheduled SQLite VACUUM. |
