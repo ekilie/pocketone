@@ -369,8 +369,9 @@ ext/<name>/
 - **More docs than a README holds go in `site/`:** a folder of [PocketPages](https://pocketone.dev/docs/extensions/pages) pages that
   pocketone.dev serves under your extension's page, so `site/ctx/req.md` is `/docs/extensions/<name>/ctx/req`.
   [`ext/pages/site`](../ext/pages/site) (PocketPages' own docs) is the example.
-  - `site/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. It's added to the docs nav
-    after the extension catalogue, each section titled `<your extension's title>: <section>`.
+  - `site/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. Your extension's pages
+    show it as their sidebar, in place of the main docs nav (with a link back, your README page and your guides on
+    top); the main nav lists your extension once, like any other.
   - Pages are templates: EJS runs in `.md` files as in any PocketPages app, so a code sample writes `<%%` for a
     literal `<%`. Partials go in `site/_private/`; the site's own (`browser`, for one) are found too.
   - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `shot.png` beside the page); the

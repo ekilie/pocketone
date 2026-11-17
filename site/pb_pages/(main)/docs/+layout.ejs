@@ -3,7 +3,7 @@
   <aside class="docs-sidebar">
     <div>
       <nav class="docs-nav-scroll" aria-label="Documentation navigation">
-        <div class="docs-toc-navigation" id="toc"><%- include('toc') %></div>
+        <div class="docs-toc-navigation" id="toc" data-nav="<%= ctx.docsNav() %>" data-navs="<%= ctx.docsNavs.join(',') %>"><%- include(ctx.docsToc()) %></div>
       </nav>
     </div>
   </aside>

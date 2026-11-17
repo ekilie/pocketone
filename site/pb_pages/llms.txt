@@ -96,6 +96,11 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 
+## Going Further
+
+- [pocketone.yaml reference](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
+- [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.
+
 ## Pages: Introduction
 
 - [Overview of PocketPages](https://pocketone.dev/docs/extensions/pages/overview): PocketPages is server-rendered multi-page apps for PocketOne, from a pb_pages folder of EJS and Markdown files.
@@ -178,8 +183,3 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Google OAuth2](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketPages app with the auth plugin.
 - [Outgoing Email with Amazon SES](https://pocketone.dev/docs/extensions/pages/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
 - [Setting up a new email domain in Google Suite](https://pocketone.dev/docs/extensions/pages/speedruns/gs-gmail): Complete walkthrough for configuring email domains in Google Suite, including domain verification, Gmail activation, catch-all email setup, MX record configuration, and sender account integration.
-
-## Going Further
-
-- [pocketone.yaml reference](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
-- [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.

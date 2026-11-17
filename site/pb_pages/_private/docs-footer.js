@@ -11,6 +11,11 @@
 // Docs links swap only #content, and a Datastar request gets the page without its layouts. So besides
 // ctx.docsFooter() for the docs layout, this sends the footer (carrying the page title) along with
 // each swap.
+// Docs nav: the pages of an extension with a site of its own (ext/<name>/site) show its nav, toc-<name>, in place of
+// the main one (toc). site/sync writes both and lists those extensions in site-navs.js. ctx.docsNav() is the name of
+// the extension whose nav a page shows ('' for the main nav); the layouts include the matching partial.
+const siteNavs = require('./site-navs.js')
+
 module.exports = function () {
   const esc = (s) =>
     String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
@@ -44,6 +49,12 @@ module.exports = function () {
     name: 'docs-footer',
     extendContext(ctx) {
       ctx.docsFooter = () => footer(ctx)
+      ctx.docsNavs = siteNavs
+      ctx.docsNav = () => {
+        const m = ctx.req.url.pathname.match(/^\/docs\/extensions\/([^/]+)/)
+        return m && siteNavs.includes(m[1]) ? m[1] : ''
+      }
+      ctx.docsToc = () => (ctx.docsNav() ? `toc-${ctx.docsNav()}` : 'toc')
     },
     transform({ html, ctx, file }) {
       if (file !== ctx.route.file || ctx.req.header('Datastar-Request') !== 'true') return html

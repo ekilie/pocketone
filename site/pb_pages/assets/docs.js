@@ -50,6 +50,18 @@
     box.append(s)
   }
 
+  // A nav link to a page with another nav (into an extension site such as Pages, or back out) loads the whole page,
+  // so the sidebar changes too: a swap replaces only #content. The swap script skips links with a target.
+  const toc = document.getElementById('toc')
+  const navs = new Set((toc?.dataset.navs || '').split(',').filter(Boolean))
+  const navOf = (href) => {
+    const m = href.match(/^\/docs\/extensions\/([^/?#]+)/)
+    return m && navs.has(m[1]) ? m[1] : ''
+  }
+  document.querySelectorAll('.docs-toc-navigation a[href^="/"]').forEach((a) => {
+    if (navOf(a.getAttribute('href')) !== (toc?.dataset.nav || '')) a.target = '_self'
+  })
+
   let timer
   new MutationObserver(() => {
     clearTimeout(timer)

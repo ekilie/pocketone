@@ -351,6 +351,7 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		return nil, fmt.Errorf("%s: missing the extensions markers", tocFile)
 	}
 	out[tocFile] = t[:i+len(tocStart)] + "\n\n" + nav(m) + "\n" + t[j:]
+	siteNavs(m, out)
 
 	if out[searchOut], err = searchIndex(root, out); err != nil {
 		return nil, err
@@ -399,14 +400,6 @@ func nav(m *manifest) string {
 			fmt.Fprintf(&b, "- [%s](%s)\n", p.Title, link(p))
 			for _, gd := range p.guides {
 				fmt.Fprintf(&b, "- [%s: %s](/docs/extensions/%s/%s)\n", p.Title, gd.title, p.Name, gd.slug)
-			}
-		}
-	}
-	// extension sites' own sections, after the catalogue so it stays short
-	for _, g := range m.Groups {
-		for _, p := range m.Extensions {
-			if p.Group == g.ID {
-				b.WriteString(p.nav)
 			}
 		}
 	}
@@ -543,6 +536,14 @@ func diff(root string, want map[string]string) ([]string, error) {
 	for _, out1 := range append([]string{extensionsOut, contractsOut}, agentOutDirs()...) {
 		if err = staleUnder(root, out1, want, &out); err != nil {
 			return nil, err
+		}
+	}
+	// extension site navs (toc-<name>.md) beside the main nav
+	navs, _ := os.ReadDir(filepath.Join(root, path.Dir(tocFile)))
+	for _, e := range navs {
+		rel := path.Dir(tocFile) + "/" + e.Name()
+		if _, ok := want[rel]; !ok && strings.HasPrefix(e.Name(), "toc-") && strings.HasSuffix(e.Name(), ".md") {
+			out = append(out, rel)
 		}
 	}
 	// the blog holds hand-written posts too: only a generated post nothing makes any more is stale

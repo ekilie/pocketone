@@ -96,6 +96,25 @@ func agentFiles(root string, out map[string]string) error {
 			toc = string(raw)
 		}
 		sections := parseToc(toc)
+		if s.Within == "" {
+			// extension sites' own navs (toc-<name>.md), each section titled "<extension>: <section>"
+			var navFiles []string
+			for p := range out {
+				if path.Dir(p) == path.Dir(s.Toc) && strings.HasPrefix(path.Base(p), "toc-") {
+					navFiles = append(navFiles, p)
+				}
+			}
+			sort.Strings(navFiles)
+			for _, f := range navFiles {
+				secs := parseToc(out[f])
+				for i := range secs {
+					if i > 0 {
+						secs[i].title = secs[0].title + ": " + secs[i].title
+					}
+				}
+				sections = append(sections, secs...)
+			}
+		}
 
 		// Reference files: every docs page, at its path under the site's docs folder.
 		urls := make([]string, 0, len(pages))

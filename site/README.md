@@ -34,8 +34,10 @@ cd site/sync && go run .
   in the extension folder (`CHANGELOG.md` aside) become guides under it; `docs/extensions.md` becomes `/docs/writing-an-extension`.
 - An extension's `site/` folder (PocketPages pages, see `extsite.go` and
   [Writing an extension](../docs/extensions.md#what-an-extension-folder-contains)) is copied under
-  `/docs/extensions/<name>/`, with its relative links pointed at site URLs and `source:` added for the edit link; its
-  `site/_private/toc.md` becomes nav sections after the extension catalogue. Its `blog/*.md` posts are copied into
+  `/docs/extensions/<name>/`, with its relative links pointed at site URLs and `source:` added for the edit link. Its
+  `site/_private/toc.md` becomes `(main)/_private/toc-<name>.md`, the sidebar of every page under
+  `/docs/extensions/<name>` (`ctx.docsNav()` in `_private/docs-footer.js` picks it; `_private/site-navs.js` lists
+  them). A nav link into or out of such a site loads the whole page (`assets/docs.js`), so the sidebar changes. Its `blog/*.md` posts are copied into
   `(main)/blog/` (only files sync wrote are ever removed there).
 - It also writes `/docs/config-reference`: every `pocketone.yaml` section.
 - Links between extensions and docs point at the site pages; links to source files point at GitHub.
