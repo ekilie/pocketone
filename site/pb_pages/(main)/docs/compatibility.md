@@ -18,17 +18,6 @@ Tests skipped because PocketOne changes what they check on purpose. Everything e
 |---|---|---|
 | `TestHooksBindsCount` | `plugins/jsvm` | Counts JS hook binds: 84 with our `onFilesystemCreate`, 83 upstream |
 
-## What runs
-
-| Job | Test files | Skipped | A failed test |
-|---|---|---|---|
-| upstream's tests, unmodified | PocketBase's, from the release PocketOne is built on; ours removed | [known exceptions](#known-exceptions) | gets 2 more tries alone; a pass there is listed as flaky |
-| core tests, ours included | as on `main` | none | same |
-
-| Runs on | Covers | Doesn't cover |
-|---|---|---|
-| a core change on `main`, pull requests, daily at 14:00 UTC | the core Go module: 35 packages | extensions (tested on their own) |
-
 ## Run it yourself
 
 On a scratch checkout (the script rewrites test files):
