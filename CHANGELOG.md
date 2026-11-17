@@ -31,46 +31,6 @@ every extension that got a new version, with a link to its changes. Upstream Poc
   The release header adds the install and upgrade steps on top. Release notes are this file's section for the version,
   with its links pointing at the release on GitHub.
 
-## Unreleased` in the same commit:** a
-  feature, a fix, a changed behavior or default, a removal, or a new upstream PocketBase version. Docs-only and
-  internal changes don't need one. **A change to one extension goes in that extension's `CHANGELOG.md` instead**, under
-  its own `## Unreleased`, with the same headings ([Changelogs](extensions.md#changelogs)).
-- **Group lines under these headings, in this order, and leave out empty ones:**
-  - **Upgrading:** what someone on the previous release must do, as steps. Required for anything breaking.
-  - **Added**
-  - **Changed**
-  - **Fixed**
-  - **PocketBase:** the upstream version this is built on, when it changes.
-- **Write for someone running the binary:** what changed and what to do, with the command, flag or config key.
-- **One line per change.** GitHub shows every newline as a line break, so don't hard-wrap lines.
-- **Cutting a release:**
-  1. Rename `## Unreleased` to `## vX.Y.Z (YYYY-MM-DD)`, put a new empty `## Unreleased` above it, and commit.
-  2. Run `examples/pocketone/release-notes.sh vX.Y.Z > /tmp/notes.md`.
-  3. Run `goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes /tmp/notes.md`.
-
-  The release header adds the install and upgrade steps on top. Release notes are this section, plus every line the
-  extensions built into `pocketone` added to their own changelogs since the previous release, each under its heading
-  and starting with the extension's name ("**pages:**").
-
-## Unreleased` in the same commit:** a
-  feature, a fix, a changed behavior or default, a removal, or a new upstream PocketBase version. Docs-only and
-  internal changes don't need one.
-- **Group lines under these headings, in this order, and leave out empty ones:**
-  - **Upgrading:** what someone on the previous release must do, as steps. Required for anything breaking.
-  - **Added**
-  - **Changed**
-  - **Fixed**
-  - **PocketBase:** the upstream version this is built on, when it changes.
-- **Write for someone running the binary:** what changed and what to do, with the command, flag or config key. Start
-  extension-specific lines with the extension's name, for example "**pages:**".
-- **One line per change.** GitHub shows every newline as a line break, so don't hard-wrap lines.
-- **Cutting a release:**
-  1. Rename `## Unreleased` to `## vX.Y.Z (YYYY-MM-DD)`, put a new empty `## Unreleased` above it, and commit.
-  2. Run `examples/pocketone/release-notes.sh vX.Y.Z > /tmp/notes.md`.
-  3. Run `goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes /tmp/notes.md`.
-
-  The release header adds the install and upgrade steps on top. Release notes are this section and nothing else.
-
 ## Unreleased
 
 **Upgrading:**
