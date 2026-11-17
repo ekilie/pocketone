@@ -31,3 +31,11 @@ func TestParseToc(t *testing.T) {
 		t.Fatalf("got %+v", secs)
 	}
 }
+
+func TestLiveEJSStripped(t *testing.T) {
+	in := "Intro.\n\n<%- include('live.ejs') %>\n\nA sample: <%%= x %> stays.\n"
+	want := "Intro.\n\n\n\nA sample: <%= x %> stays.\n"
+	if got := unescapeEJS(liveEJSRe.ReplaceAllString(in, "")); got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}

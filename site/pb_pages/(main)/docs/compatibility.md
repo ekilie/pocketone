@@ -1,65 +1,48 @@
 ---
 title: PocketBase compatibility
-description: PocketOne's core runs PocketBase's own test suite, unmodified, on every change and every day. What runs, the one known exception, and the latest result.
+description: Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.
 ---
 
 # PocketBase compatibility
 
-[![PocketBase tests](https://github.com/pockethost/pocketone/actions/workflows/upstream-tests.yml/badge.svg?branch=main)](https://github.com/pockethost/pocketone/actions/workflows/upstream-tests.yml?query=branch%3Amain)
+PocketBase's own test suite, exactly as PocketBase wrote it, runs against PocketOne's core on every core change and
+every day.
 
-PocketOne changes PocketBase's own code only to add hooks for extensions and to fix a few bugs. Those changes must
-leave PocketBase working as PocketBase does. We check that by running PocketBase's own test suite, exactly as PocketBase
-wrote it, against PocketOne's core.
-
-The badge above is the latest run on `main`. Click it for every run and its results: the PocketBase commit the tests
-came from, and how many passed, failed and were skipped.
-
-## What runs
-
-The [`PocketBase tests`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/upstream-tests.yml)
-workflow runs on every change to PocketOne's core and once a day. It has two jobs, and the badge is green only when
-both pass:
-
-- **Upstream's tests, unmodified.** Every test file is put back to the version in the PocketBase release PocketOne is
-  built on. Test files we changed are restored and test files we added are removed. Then the whole suite runs: more than
-  5,000 tests across 35 packages.
-- **Core tests, ours included.** The same suite as it is in PocketOne, with our tests for each hook and bug fix.
-
-A few upstream tests wait a fixed time for events and can miss it when the whole suite runs at once on a busy
-machine. A test that fails gets two more tries on its own. If it passes on one, the run still passes, and the run's
-summary lists the test as flaky.
-
-Extensions aren't part of either job. They have their own tests, which run separately.
+<%- include('compat-live.ejs') %>
 
 ## Known exceptions
 
-One upstream test checks something PocketOne changes on purpose, so it's skipped:
+Tests skipped because PocketOne changes what they check on purpose. Everything else must pass.
 
-| Test | Why it's skipped |
-|---|---|
-| `TestHooksBindsCount` (`plugins/jsvm`) | It counts the hooks JavaScript can bind to. PocketOne adds one, `onFilesystemCreate`, so there are 84 instead of 83. |
+| Test | Package | Why |
+|---|---|---|
+| `TestHooksBindsCount` | `plugins/jsvm` | Counts JS hook binds: 84 with our `onFilesystemCreate`, 83 upstream |
 
-The list lives in
-[`known-deviations.txt`](https://github.com/pockethost/pocketone/blob/main/.github/upstream-tests/known-deviations.txt).
-Anything not on it must pass.
+## What runs
+
+| Job | Test files | Skipped | A failed test |
+|---|---|---|---|
+| upstream's tests, unmodified | PocketBase's, from the release PocketOne is built on; ours removed | [known exceptions](#known-exceptions) | gets 2 more tries alone; a pass there is listed as flaky |
+| core tests, ours included | as on `main` | none | same |
+
+| Runs on | Covers | Doesn't cover |
+|---|---|---|
+| a core change on `main`, pull requests, daily at 14:00 UTC | the core Go module: 35 packages | extensions (tested on their own) |
 
 ## Run it yourself
 
-In a PocketOne clone, add PocketHost's mirror of PocketBase as `upstream`, without its tags:
+On a scratch checkout (the script rewrites test files):
 
 ```bash
 git remote add upstream https://github.com/pockethost/pocketbase.git
 git config remote.upstream.tagopt --no-tags
 git fetch upstream master
-```
-
-Then, on a checkout you don't mind changing (the script rewrites test files):
-
-```bash
 .github/upstream-tests/run.sh
 ```
 
-## What changed in core
-
-Every core change is listed, with a diff for each, in the README's
-[Changes we made to PocketBase](https://github.com/pockethost/pocketone#changes-we-made-to-pocketbase).
+| Source | |
+|---|---|
+| Workflow | [`upstream-tests.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/upstream-tests.yml) |
+| Script | [`run.sh`](https://github.com/pockethost/pocketone/blob/main/.github/upstream-tests/run.sh) |
+| Exceptions | [`known-deviations.txt`](https://github.com/pockethost/pocketone/blob/main/.github/upstream-tests/known-deviations.txt) |
+| Every core change | [Changes we made to PocketBase](https://github.com/pockethost/pocketone#changes-we-made-to-pocketbase) |

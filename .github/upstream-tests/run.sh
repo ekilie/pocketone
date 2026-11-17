@@ -40,6 +40,7 @@ skipargs=()
 
 out=$(mktemp)
 echo "$(date +%T) go test ./... (skipping: ${skip:-none})"
+export SKIP="$skip"
 set +e
 go test -json -count=1 -timeout 20m ${skipargs[@]+"${skipargs[@]}"} ./... >"$out"
 code=$?
@@ -85,4 +86,15 @@ summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
   if [ ${#flaky[@]} -gt 0 ]; then echo; echo "Failed, then passed on retry (flaky):"; echo; printf -- '- `%s`\n' "${flaky[@]}"; fi
   if [ ${#failed[@]} -gt 0 ]; then echo; echo "Failed:"; echo; printf -- '- `%s`\n' "${failed[@]}"; fi
 } >>"$summary"
+
+# The counts as a run annotation, which GitHub's API serves without a token: pocketone.dev/docs/compatibility reads it.
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
+  counts=$(jq -sc --arg code "$code" --arg asis "$asis" --argjson flaky "$(printf '%s\n' ${flaky[@]+"${flaky[@]}"} | jq -Rsc 'split("\n") | map(select(length > 0))')" '
+    def tests(a): map(select(.Test and .Action == a)) | map(.Package + " " + .Test) | unique | length;
+    {mode: (if $asis == "1" then "as-is" else "upstream" end), result: (if $code == "0" then "pass" else "fail" end),
+     packages: (map(select(.Test == null and (.Action == "pass" or .Action == "fail"))) | map(.Package) | unique | length),
+     passed: tests("pass"), failed: tests("fail"), skipped: tests("skip"), flaky: $flaky,
+     known: ($ENV.SKIP // "" | split("|") | map(select(length > 0)))}' "$out")
+  echo "::notice title=pocketone-test-counts::$counts"
+fi
 exit "$code"

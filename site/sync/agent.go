@@ -253,6 +253,9 @@ func docsPages(root string, s docsSite, generated map[string]string) (map[string
 			if strings.Contains(content, "<%") { // a real template, not a Markdown wrapper: nothing to copy
 				return nil
 			}
+		} else {
+			// A Markdown page that runs code (live data, as /docs/compatibility does): the copy keeps the prose only.
+			content = liveEJSRe.ReplaceAllString(content, "")
 		}
 		raw[rel] = content
 		return nil
@@ -359,6 +362,9 @@ func splitFront(s string) (map[string]string, string) {
 	}
 	return fm, s[len(m):]
 }
+
+// liveEJSRe matches a real EJS tag in a Markdown page, never an escaped "<%%" (a literal "<%").
+var liveEJSRe = regexp.MustCompile(`(?s)<%[^%].*?%>`)
 
 // unescapeEJS undoes escapeEJS: the copies are read as Markdown, never run as templates.
 func unescapeEJS(s string) string {
