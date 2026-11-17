@@ -8,9 +8,11 @@ package vacuum
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -113,9 +115,23 @@ func (*Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{Implements: extkit.IDs("vacuum/v1"), WorksWith: extkit.IDs("settings/v1")}
 }
 
+//go:embed ui
+var uiFiles embed.FS
+
+// UI is the dashboard's Vacuum section on Settings → Backups (main.js): the status, and the schedule form unless the
+// host compacts the app's databases.
+func UI() fs.FS {
+	sub, _ := fs.Sub(uiFiles, "ui")
+	return sub
+}
+
 // Register implements extkit.Extension: vacuum/v1, a settings/v1 section and the schedule, unless the app's host
-// provides vacuum/v1 for its instances (then the host does it, and nothing here shows).
+// provides vacuum/v1 for its instances (then the host does it, and only its status shows, read-only).
 func (*Extension) Register(app core.App, _ extkit.Config) error {
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		se.UIExtensions = append(se.UIExtensions, core.UIExtension{Name: Name, FS: UI()})
+		return se.Next()
+	})
 	if extkit.HostProvides(app, vacuumv1.Contract.ID()) {
 		return nil
 	}

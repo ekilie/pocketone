@@ -22,7 +22,8 @@ extkit.Setup(app, []extkit.Extension{vacuum.New()}, nil, nil)
 
 ## Configure
 
-The app's admins turn it on and set how often under **Settings → Vacuum** (settings/v1). `pocketone.yaml` sets the
+The app's admins turn it on and set how often in the dashboard, in the **Vacuum** section at the bottom of
+**Settings → Backups** (a settings/v1 section, so the CLI and agents can change it too). `pocketone.yaml` sets the
 defaults until they do:
 
 ```yaml
@@ -39,8 +40,8 @@ Once on, every `every` while the app serves, Vacuum checks `data.db` and `auxili
 enough free space (PocketBase's own online `VACUUM`; writes wait while it runs). `VACUUM` needs free disk space about the
 size of the database it compacts.
 
-Its status (whether it's on, how often, the last run's bytes saved and skipped databases, the next run) is
-[vacuum/v1](../contracts/vacuum/v1/README.md):
+The same section shows its status: whether it's on, how often, the next run, and the last run's bytes given back and
+databases skipped. It's [vacuum/v1](../contracts/vacuum/v1/README.md), also on the command line:
 
 ```sh
 pocketone remote vacuum status
@@ -51,7 +52,7 @@ pocketone remote vacuum status
 | Extension | How they fit |
 |---|---|
 | [Settings](../settings/README.md) | Its on/off and schedule are a settings/v1 section, in the dashboard, the CLI and for agents. |
-| [Multisite](../multisite/README.md) | A host may compact its instances itself: when it provides [vacuum/v1](../contracts/vacuum/v1/README.md) for them, Vacuum steps aside in each instance, so its admins have no setting and see the host's status. |
+| [Multisite](../multisite/README.md) | A host may compact its instances itself: when it provides [vacuum/v1](../contracts/vacuum/v1/README.md) for them, Vacuum steps aside in each instance: the Vacuum section shows the host's status, read-only, with no setting. |
 | [PITR](../pitr/README.md) | A compacted database is a new file to Litestream, so the next replication starts a fresh generation. |
 
 ### Building on Vacuum
