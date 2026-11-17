@@ -11,6 +11,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 - Go API: `js.Release(v)` (`ext/extkit/js`) frees a JS value now instead of when Go collects its wrapper, for values a Go closure held by the VM can reach (otherwise a cycle neither GC frees). `(*jsvm.VM).GC()` runs a Go collection, the frees it posts and QuickJS's cycle collector, for tests and diagnostics.
 
+### Fixed
+
+- A `$app` database call at a hook file's top level, which fails because hook files load before the database opens (as in PocketBase), now says so and points to `onBootstrap`, instead of a bare nil pointer error.
+
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading
