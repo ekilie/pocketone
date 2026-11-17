@@ -60,8 +60,11 @@ func FromConfig(o Options) (*Host, error) {
 	if _, on := Section.Get(); !on {
 		return nil, ErrNoProvider
 	}
-	if app, found := config.App.Get(); found && (app.Dir != "" || app.HooksDir != "" || app.MigrationsDir != "" || app.PublicDir != "") {
+	if app, found := config.App.Get(); found && (app.Dir != "" || app.HooksDir != "" || app.MigrationsDir != "") {
 		return nil, errors.New("app: applies to a single app; on a multisite host each instance has its own folder under its runtime's root")
+	}
+	if srv, _ := config.Server.Get(); srv.PublicDir != "" || srv.IndexFallback != nil || srv.PagesDir != "" || srv.HooksWatch != nil || srv.Automigrate != nil {
+		return nil, errors.New("server: public_dir, index_fallback, pages_dir, hooks_watch and automigrate apply to a single app; on a multisite host each instance has its own")
 	}
 	resolve := o.Resolve
 	if resolve == nil {

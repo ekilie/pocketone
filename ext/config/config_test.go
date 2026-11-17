@@ -161,3 +161,22 @@ func TestResolvePathIsAbsolute(t *testing.T) {
 		t.Fatalf("absolute path changed: %q", got)
 	}
 }
+
+// A key under the wrong one of this package's sections (public_dir moved from app to server) stops startup.
+func TestStrictSections(t *testing.T) {
+	defer extkit.SetSectionSource(nil)
+	dir := t.TempDir()
+	bad := write(t, dir, FileName, "app:\n  public_dir: ./web\n")
+	_, err := Load(Options{ConfigPath: bad})
+	if err == nil || !strings.Contains(err.Error(), "public_dir") || !strings.Contains(err.Error(), "under server") {
+		t.Fatalf("app.public_dir: %v", err)
+	}
+	good := write(t, dir, "ok.yaml", "app:\n  dir: ./data\nserver:\n  public_dir: ./web\n  automigrate: false\n")
+	if _, err := Load(Options{ConfigPath: good}); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := Server.Get()
+	if s.PublicDir != "./web" || s.Automigrate == nil || *s.Automigrate {
+		t.Fatalf("server: %+v", s)
+	}
+}

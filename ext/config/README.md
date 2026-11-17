@@ -45,10 +45,12 @@ shows the full wiring: every `app` key as a flag default, and the `server` keys 
 
 Each top-level key is one section, owned by the extension that uses it. This package owns three:
 
-- `server`: how the app listens. `http`, `https` and `origins` are the defaults for `serve --http`, `--https` and
-  `--origins`.
-- `app`: your app's folders and options: the same settings as the root flags (`--dir`, `--dev`, `--hooksDir`,
-  `--publicDir` and the rest), plus `env_allow`.
+- `app`: your app, as every command that opens it reads it (`serve`, `migrate`, `superuser`, `pitr`, `token`,
+  `oauth`, `template`): `dir`, `dev`, `encryption_env`, `query_timeout`, `jsvm`, `hooks_dir`, `hooks_pool`,
+  `migrations_dir`, the defaults of those commands' flags of the same name, plus `env_allow`.
+- `server`: what `serve` reads. `http`, `https` and `origins` are the defaults for `serve --http`, `--https` and
+  `--origins`; for a single app, `public_dir`, `index_fallback`, `pages_dir`, `hooks_watch` and `automigrate` are the
+  defaults for `--publicDir`, `--indexFallback`, `--pagesDir`, `--hooksWatch` and `--automigrate`.
 - `multisite`: add it only to run many instances from one binary (see [Integrations](#integrations)); `providers:
   { runtime/v1: [...] }` picks which runtimes.
 
@@ -56,6 +58,7 @@ Each top-level key is one section, owned by the extension that uses it. This pac
 server:
   http: 127.0.0.1:8090
   origins: ["*"]
+  public_dir: ./pb_public
 app:
   dir: ./pb_data
   hooks_dir: ./pb_hooks

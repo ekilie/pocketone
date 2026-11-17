@@ -32,6 +32,7 @@ import (
 	"github.com/pockethost/pocketone/ext/s3redirect"
 	"github.com/pockethost/pocketone/ext/standard"
 	"github.com/pockethost/pocketone/ext/upgrade"
+	"github.com/spf13/pflag"
 )
 
 // PoweredBy is the X-Powered-By this binary sends on every response: "PocketOne 0.0.2" (see pocker.Version).
@@ -85,11 +86,18 @@ func main() {
 	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
 
 	// ---------------------------------------------------------------
-	// Optional extension flags:
+	// Flags: each lives on the commands that read it (flags.go). The app flags go on every command that opens this
+	// app (pocketone.yaml's app section is their defaults), the serve flags on serve (the server section and the
+	// extensions' own sections are theirs). Only --config and --env-file are on every command.
 	// ---------------------------------------------------------------
 
+	appFlags := pflag.NewFlagSet("app", pflag.ContinueOnError)
+	serveFlags := pflag.NewFlagSet("serve", pflag.ContinueOnError)
+	moveCoreFlags(app.RootCmd, appFlags) // --dir, --dev, --encryptionEnv, --queryTimeout
+	srv, _ := config.Server.Get()
+
 	var hooksDir string
-	app.RootCmd.PersistentFlags().StringVar(
+	appFlags.StringVar(
 		&hooksDir,
 		"hooksDir",
 		cfg.ResolvePath(appCfg.HooksDir),
@@ -97,15 +105,15 @@ func main() {
 	)
 
 	var hooksWatch bool
-	app.RootCmd.PersistentFlags().BoolVar(
+	serveFlags.BoolVar(
 		&hooksWatch,
 		"hooksWatch",
-		or(appCfg.HooksWatch, true),
+		or(srv.HooksWatch, true),
 		"auto restart the app on pb_hooks file change; it has no effect on Windows",
 	)
 
 	var jsEngine string
-	app.RootCmd.PersistentFlags().StringVar(
+	appFlags.StringVar(
 		&jsEngine,
 		"jsvm",
 		orStr(appCfg.JSVM, defaultJSEngine()),
@@ -113,7 +121,7 @@ func main() {
 	)
 
 	var hooksPool int
-	app.RootCmd.PersistentFlags().IntVar(
+	appFlags.IntVar(
 		&hooksPool,
 		"hooksPool",
 		orInt(appCfg.HooksPool, 15),
@@ -121,7 +129,7 @@ func main() {
 	)
 
 	var migrationsDir string
-	app.RootCmd.PersistentFlags().StringVar(
+	appFlags.StringVar(
 		&migrationsDir,
 		"migrationsDir",
 		cfg.ResolvePath(appCfg.MigrationsDir),
@@ -129,41 +137,41 @@ func main() {
 	)
 
 	var automigrate bool
-	app.RootCmd.PersistentFlags().BoolVar(
+	serveFlags.BoolVar(
 		&automigrate,
 		"automigrate",
-		or(appCfg.Automigrate, true),
+		or(srv.Automigrate, true),
 		"enable/disable auto migrations",
 	)
 
 	var publicDir string
-	app.RootCmd.PersistentFlags().StringVar(
+	serveFlags.StringVar(
 		&publicDir,
 		"publicDir",
-		orStr(cfg.ResolvePath(appCfg.PublicDir), defaultPublicDir()),
+		orStr(cfg.ResolvePath(srv.PublicDir), defaultPublicDir()),
 		"the directory to serve static files",
 	)
 
 	var indexFallback bool
-	app.RootCmd.PersistentFlags().BoolVar(
+	serveFlags.BoolVar(
 		&indexFallback,
 		"indexFallback",
-		or(appCfg.IndexFallback, true),
+		or(srv.IndexFallback, true),
 		"fallback the request to index.html on missing static path, e.g. when pretty urls are used with SPA",
 	)
 
 	var pagesDir string
-	app.RootCmd.PersistentFlags().StringVar(
+	serveFlags.StringVar(
 		&pagesDir,
 		"pagesDir",
-		"",
+		cfg.ResolvePath(srv.PagesDir),
 		"the directory with the PocketPages app (default pb_pages next to pb_data); served when it exists",
 	)
 
 	// pocketone.yaml's s3redirect section sets the defaults for --s3Redirect and --s3RedirectTTL
 	s3Cfg, _ := s3redirect.Section.Get()
 	var s3Redirect bool
-	app.RootCmd.PersistentFlags().BoolVar(
+	serveFlags.BoolVar(
 		&s3Redirect,
 		"s3Redirect",
 		or(s3Cfg.Enabled, true),
@@ -171,7 +179,7 @@ func main() {
 	)
 
 	var s3RedirectTTL time.Duration
-	app.RootCmd.PersistentFlags().DurationVar(
+	serveFlags.DurationVar(
 		&s3RedirectTTL,
 		"s3RedirectTTL",
 		orDur(s3Cfg.TTL, s3redirect.DefaultTTL),
@@ -181,7 +189,7 @@ func main() {
 	// pocketone.yaml's pitr section sets the defaults for --pitr and --pitrRetention, and the snapshot interval
 	pitrCfg, _ := pitr.Section.Get()
 	var pitrEnabled bool
-	app.RootCmd.PersistentFlags().BoolVar(
+	serveFlags.BoolVar(
 		&pitrEnabled,
 		"pitr",
 		or(pitrCfg.Enabled, true),
@@ -189,7 +197,7 @@ func main() {
 	)
 
 	var pitrRetention time.Duration
-	app.RootCmd.PersistentFlags().DurationVar(
+	serveFlags.DurationVar(
 		&pitrRetention,
 		"pitrRetention",
 		orDur(pitrCfg.Retention, pitr.DefaultRetention),
@@ -203,7 +211,7 @@ func main() {
 		tlsDNS = *tlsCfg.DNS
 	}
 	var autoTLS bool
-	app.RootCmd.PersistentFlags().BoolVar(
+	serveFlags.BoolVar(
 		&autoTLS,
 		"autotls",
 		tlsCfg.Auto,
@@ -211,7 +219,7 @@ func main() {
 	)
 
 	var autoTLSEmail string
-	app.RootCmd.PersistentFlags().StringVar(
+	serveFlags.StringVar(
 		&autoTLSEmail,
 		"autotlsEmail",
 		tlsCfg.Email,
@@ -219,7 +227,7 @@ func main() {
 	)
 
 	var autoTLSCA string
-	app.RootCmd.PersistentFlags().StringVar(
+	serveFlags.StringVar(
 		&autoTLSCA,
 		"autotlsCA",
 		tlsCfg.CA,
@@ -227,7 +235,7 @@ func main() {
 	)
 
 	var autoTLSDomains []string
-	app.RootCmd.PersistentFlags().StringSliceVar(
+	serveFlags.StringSliceVar(
 		&autoTLSDomains,
 		"autotlsDomains",
 		tlsCfg.Domains,
@@ -235,7 +243,7 @@ func main() {
 	)
 
 	var autoTLSDNS string
-	app.RootCmd.PersistentFlags().StringVar(
+	serveFlags.StringVar(
 		&autoTLSDNS,
 		"autotlsDNS",
 		tlsDNS.Provider,
@@ -243,14 +251,14 @@ func main() {
 	)
 
 	var autoTLSDNSTokenEnv string
-	app.RootCmd.PersistentFlags().StringVar(
+	serveFlags.StringVar(
 		&autoTLSDNSTokenEnv,
 		"autotlsDNSTokenEnv",
 		orStr(tlsDNS.APITokenEnv, "CF_API_TOKEN"),
 		"environment variable holding the DNS provider's API token for --autotlsDNS",
 	)
 
-	app.RootCmd.ParseFlags(os.Args[1:])
+	parseEarly(os.Args[1:], appFlags, serveFlags) // the extensions below are built from these, before cobra runs
 
 	autoTLSConfig := autotls.Config{Auto: autoTLS, Email: autoTLSEmail, CA: autoTLSCA, Domains: autoTLSDomains,
 		Storage: cfg.ResolvePath(tlsCfg.Storage)}
@@ -320,7 +328,6 @@ func main() {
 
 	// system commands (what app.Start registers), with the server section as the serve command's defaults
 	serveCmd := cmd.NewServeCommand(app, true)
-	srv, _ := config.Server.Get()
 	for flag, v := range map[string]string{"http": srv.HTTP, "https": srv.HTTPS, "origins": strings.Join(srv.Origins, ",")} {
 		if v != "" {
 			if err := serveCmd.PersistentFlags().Set(flag, v); err != nil {
@@ -329,6 +336,7 @@ func main() {
 		}
 	}
 	app.RootCmd.AddCommand(cmd.NewSuperuserCommand(app), serveCmd)
+	attachFlags(app.RootCmd, appFlags, serveFlags)
 	if err := app.Execute(); err != nil {
 		log.Fatal(err)
 	}
