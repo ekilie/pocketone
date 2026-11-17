@@ -37,7 +37,7 @@ By default the folder is `pb_pages` next to `pb_data`. To use another one:
 pocketone serve --pagesDir /path/to/pb_pages
 ```
 
-A relative path resolves against the working directory, like `--hooksDir`. Pages has no `pocketone.yaml` section.
+A relative path resolves against the working directory, like `--hooksDir`. Its `pocketone.yaml` key is `server.pages_dir`.
 
 ### +config.js
 

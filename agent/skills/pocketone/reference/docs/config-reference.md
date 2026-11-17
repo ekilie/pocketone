@@ -5,7 +5,7 @@ Every section the `pocketone` binary understands, from `pocketone config --json`
 
 #### `app:`
 
-The single app: data dir, dev mode, encryption, hooks, migrations, public dir, and the .env names it may read (env_allow). Not used on a multisite host.
+The single app, for every command that opens it: data dir, dev mode, encryption, JS engine, hooks, migrations, and the .env names it may read (env_allow). Not used on a multisite host.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -14,13 +14,9 @@ The single app: data dir, dev mode, encryption, hooks, migrations, public dir, a
 | `encryption_env` | string |  | Name of the environment variable holding a 32-character key that encrypts the app settings. The --encryptionEnv flag wins. |
 | `query_timeout` | duration |  | Default timeout for SELECT queries, such as 30s. The --queryTimeout flag wins. |
 | `hooks_dir` | string |  | The JS hooks folder. Default: pb_hooks next to pb_data. The --hooksDir flag wins. |
-| `hooks_watch` | bool |  | Restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
 | `jsvm` | string |  | The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $tokens and JS contracts are off). The --jsvm flag wins. |
 | `hooks_pool` | int |  | Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
 | `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
-| `automigrate` | bool |  | Write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
-| `public_dir` | string |  | The static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |
-| `index_fallback` | bool |  | Serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins. |
 | `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |
 
 #### `autotls:`
@@ -230,7 +226,7 @@ Owned by [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect).
 
 #### `server:`
 
-How the binary listens: http, https and CORS origins (single-app mode: the serve command's defaults).
+The serve command: http, https and CORS origins, and for a single app its static files, pages, hooks watching and automigrate.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -241,6 +237,11 @@ How the binary listens: http, https and CORS origins (single-app mode: the serve
 | `tls.cert` | string |  | Many instances only: the certificate file, reloaded when it changes. |
 | `tls.key` | string |  | Many instances only: the private key file, reloaded when it changes. |
 | `shutdown_timeout` | duration |  | Many instances only: how long in-flight requests get to finish at stop. |
+| `public_dir` | string |  | Single app only: the static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |
+| `index_fallback` | bool |  | Single app only: serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins. |
+| `pages_dir` | string |  | Single app only: the PocketPages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
+| `hooks_watch` | bool |  | Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
+| `automigrate` | bool |  | Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
 
 #### `vacuum:`
 

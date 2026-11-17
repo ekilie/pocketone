@@ -73,6 +73,15 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+**Upgrading:**
+
+1. Put app and serve flags after the command name: `pocketone serve --hooksDir x`, not `pocketone --hooksDir x serve`. Only `--config` and `--env-file` (and core's `--dir`, `--dev`, `--encryptionEnv`, `--queryTimeout`, still accepted anywhere) can come before it.
+2. In `pocketone.yaml`, move `public_dir`, `index_fallback`, `hooks_watch` and `automigrate` from `app:` to `server:` (see the config changelog).
+
+**Changed:**
+
+- Each flag is now on the commands that read it instead of on every command: `--dir`, `--dev`, `--encryptionEnv`, `--queryTimeout`, `--jsvm`, `--hooksDir`, `--hooksPool` and `--migrationsDir` on the commands that open the app (`serve`, `migrate`, `superuser`, `pitr`, `token`, `oauth`, `template`); `--hooksWatch`, `--automigrate`, `--publicDir`, `--indexFallback`, `--pagesDir`, `--pitr*`, `--s3Redirect*` and `--autotls*` on `serve` only. Remote commands such as `deploy` and `link` list just their own flags plus `--config` and `--env-file`, and reject the others.
+
 ## v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading

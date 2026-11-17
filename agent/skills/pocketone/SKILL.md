@@ -81,12 +81,13 @@ those. What changes:
 
 ### Commands
 
-The `pocketone` binary has PocketBase's commands (`serve`, `superuser`, `migrate`) and flags, plus these. Run
-`pocketone <command> --help` for the full list.
+The `pocketone` binary has PocketBase's commands (`serve`, `superuser`, `migrate`) and flags, plus these. Each flag is
+on the commands that read it, so put it after the command name; only `--config` and `--env-file` are on every command.
+Run `pocketone <command> --help` for the full list.
 
 | Command | What it does |
 |---|---|
-| `serve [domains]` | Starts the server. `--http`, `--https`, `--origins`; root flags such as `--dir`, `--dev`, `--hooksDir`, `--pitr`, `--autotls`. |
+| `serve [domains]` | Starts the server. `--http`, `--https`, `--origins`, `--publicDir`, `--pagesDir`, `--pitr`, `--autotls`, and the app flags (`--dir`, `--dev`, `--hooksDir`, `--migrationsDir`, `--jsvm`). |
 | `superuser create\|upsert\|update\|delete\|otp\|ips` | Manage superusers. |
 | `pages create <name> [--starter kit]`, `pages starters` | A new PocketPages folder from a starter kit. |
 | `config [--json]`, `config check` | List every `pocketone.yaml` section with defaults; check a file and its `$VAR`s. |
@@ -137,10 +138,11 @@ pocketone logs -n 200
   the process environment, so JS hooks (`$os.getenv`) don't see it unless the name is in `app.env_allow`.
 
 ```yaml
-server:
+server:                          # what serve reads
   http: 127.0.0.1:8090
   origins: ["*"]
-app:
+  public_dir: ./pb_public
+app:                             # what every command that opens the app reads
   dir: ./pb_data
   hooks_dir: ./pb_hooks
   env_allow: [STRIPE_KEY]

@@ -11,6 +11,7 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -158,6 +159,32 @@ func (c *Config) Check() error {
 	}
 	if err := extkit.CheckSections(c); err != nil {
 		return fmt.Errorf("%s: %w", c.Path, err)
+	}
+	// this package's own sections refuse unknown keys, so a key in the wrong one (public_dir under app) stops startup
+	// instead of being ignored
+	if err := c.strict(App.Name(), &AppConfig{}, "settings only serve reads are under server"); err != nil {
+		return err
+	}
+	if err := c.strict(Server.Name(), &ServerConfig{}, "settings every command that opens the app reads are under app"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// strict decodes section name into out, failing on keys out doesn't have.
+func (c *Config) strict(name string, out any, hint string) error {
+	n, ok := c.sections[name]
+	if !ok || (n.Kind == yaml.ScalarNode && n.Tag == "!!null") {
+		return nil
+	}
+	b, err := yaml.Marshal(n)
+	if err != nil {
+		return err
+	}
+	d := yaml.NewDecoder(bytes.NewReader(b))
+	d.KnownFields(true)
+	if err := d.Decode(out); err != nil {
+		return fmt.Errorf("%s: %s: %v (%s; `pocketone config` lists every key)", c.Path, name, err, hint)
 	}
 	return nil
 }

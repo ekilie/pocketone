@@ -21,9 +21,10 @@ require (
 	github.com/pockethost/pocketone/ext/servertiming v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/standard v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/stats v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/upgrade v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/vacuum v0.0.0-00010101000000-000000000000
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.1.0
 )
 
 require (
@@ -80,6 +81,7 @@ require (
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -87,8 +89,6 @@ require (
 	github.com/psanford/sqlite3vfs v0.0.0-20260519004904-f9180fa2acc9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
-	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/superfly/ltx v0.5.2 // indirect
 	github.com/tetratelabs/wazero v1.2.1 // indirect
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
@@ -183,4 +183,5 @@ replace github.com/pockethost/pocketone/ext/jsvm => ../../ext/jsvm
 replace github.com/pockethost/pocketone/ext/templates => ../../ext/templates
 
 replace github.com/pockethost/pocketone/ext/cache => ../../ext/cache
+
 replace github.com/pockethost/pocketone/ext/vacuum => ../../ext/vacuum

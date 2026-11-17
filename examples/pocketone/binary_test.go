@@ -268,3 +268,43 @@ func TestProductionMode(t *testing.T) {
 		}
 	})
 }
+
+// Flags are on the commands that read them: the root lists only --config and --env-file, serve lists the serve and
+// app flags, an app command the app flags, and a remote command refuses an app or serve flag.
+func TestFlagScopes(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	dir := t.TempDir()
+	help := func(args ...string) string {
+		out, err := modetest.Command(ctx, t, dir, modetest.Env(t), append(args, "--help")...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("%v --help: %v\n%s", args, err, out)
+		}
+		return string(out)
+	}
+	for _, c := range []struct {
+		args       []string
+		has, lacks []string
+	}{
+		{nil, []string{"--config", "--env-file"}, []string{"--dir", "--hooksDir", "--pitr", "--autotls"}},
+		{[]string{"serve"}, []string{"--dir", "--hooksDir", "--publicDir", "--pitr", "--autotls", "--http", "--config"}, nil},
+		{[]string{"migrate"}, []string{"--dir", "--hooksDir", "--migrationsDir"}, []string{"--publicDir", "--pitr"}},
+		{[]string{"deploy"}, []string{"--config"}, []string{"--dir", "--hooksDir", "--pitr"}},
+	} {
+		out := help(c.args...)
+		for _, f := range c.has {
+			if !strings.Contains(out, f+" ") && !strings.Contains(out, f+"[") {
+				t.Errorf("%v --help lacks %s", c.args, f)
+			}
+		}
+		for _, f := range c.lacks {
+			if strings.Contains(out, f+" ") || strings.Contains(out, f+"[") {
+				t.Errorf("%v --help lists %s", c.args, f)
+			}
+		}
+	}
+	out, err := modetest.Command(ctx, t, dir, modetest.Env(t), "deploy", "--pitr=false").CombinedOutput()
+	if err == nil || !strings.Contains(string(out), "unknown flag: --pitr") {
+		t.Fatalf("deploy --pitr=false: %v\n%s", err, out)
+	}
+}
