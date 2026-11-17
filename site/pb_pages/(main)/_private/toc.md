@@ -17,6 +17,7 @@
 - [How PocketOne fits together](/docs/contracts)
 - [All contracts](/docs/contracts/all)
 - [bulkmail/v1](/docs/contracts/bulkmail/v1)
+- [cache.clear/v1](/docs/contracts/cache.clear/v1)
 - [cache/v1](/docs/contracts/cache/v1)
 - [cli.commands/v1](/docs/contracts/cli.commands/v1)
 - [deploy/v1](/docs/contracts/deploy/v1)

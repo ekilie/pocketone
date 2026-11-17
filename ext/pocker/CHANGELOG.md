@@ -5,6 +5,11 @@ commit. Each PocketOne release raises this extension's `version:` when there's s
 renames the section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 Sections named after a PocketOne release are from before extensions had versions of their own.
 
+### Fixed
+
+- Standard extensions keep their per-instance state apart: every instance's app has its instance id (`extkit.AppID`) before the standard set registers. It used to be set only for the host's own extensions, so every instance shared one cache bucket of each name (one budget, and one instance's clear emptied everyone's).
+
+
 ## Unreleased
 
 ### Upgrading

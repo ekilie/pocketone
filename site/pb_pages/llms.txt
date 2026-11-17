@@ -23,6 +23,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [How PocketOne fits together](https://pocketone.dev/docs/contracts): How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.
 - [All contracts](https://pocketone.dev/docs/contracts/all): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
 - [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1): Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign.
+- [cache.clear/v1](https://pocketone.dev/docs/contracts/cache.clear/v1): Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent.
 - [cache/v1](https://pocketone.dev/docs/contracts/cache/v1): Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it.
 - [cli.commands/v1](https://pocketone.dev/docs/contracts/cli.commands/v1): The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands.
 - [deploy/v1](https://pocketone.dev/docs/contracts/deploy/v1): A project's code files on an app: check, upload, commit, list, read, write, delete, tree.
@@ -48,7 +49,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Auto TLS](https://pocketone.dev/docs/extensions/autotls): Certificates on demand and wildcards through ACME.
 - [Backups](https://pocketone.dev/docs/extensions/backups): Restore an app to a moment from its own backups: the latest one before it. On by default.
 - [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail): Campaigns to your app's own users, with audiences from a collection, a view or SQL.
-- [Cache](https://pocketone.dev/docs/extensions/cache): Cache buckets for every app in the process from one shared store: identical values kept once, LRU/MRU/FIFO/LIFO eviction, TTLs, an optional disk tier.
+- [Cache](https://pocketone.dev/docs/extensions/cache): Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once.
 - [Config](https://pocketone.dev/docs/extensions/config): The pocketone.yaml config file, with secrets in a .env beside it.
 - [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
 - [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.

@@ -1,10 +1,11 @@
 // Package cache provides cache/v1 from one store per process. Each app gets its own provider, a view that keeps its
 // buckets apart from every other app's (keys live under "<app id>/<bucket>"), so on a multisite host every instance
-// shares one store, its limits and its disk tier. Underneath, values are stored by content: the same bytes under any
-// number of keys, from any number of instances, are kept once and count once.
+// shares one store and its disk tier. In memory every key holds its own value (bytes or a Go value); on disk the same
+// bytes under any number of keys, from any number of instances, are one file.
 //
-// The store's limits (memory, items, disk) are the operator's, from pocketone.yaml's `cache` section. A bucket's own
-// limits, from its code and the section's `defaults` and `buckets`, cap what one app's bucket may hold inside it.
+// Each bucket has its own budget (entries, memory, disk), from its code and pocketone.yaml's `cache` section
+// (`defaults`, `buckets`), with built-in defaults so none is unbounded. The store's own keys are ceilings over every
+// bucket together, and turn on the disk tier.
 package cache
 
 import (
@@ -21,6 +22,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"gopkg.in/yaml.v3"
 
+	clearv1 "github.com/pockethost/pocketone/ext/contracts/cache/clear/v1"
 	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
@@ -28,17 +30,20 @@ import (
 // Name is the extension's key: its pocketone.yaml section and an instance's `extensions.<name>`.
 const Name = "cache"
 
-// The store's built-in limits, for what the config doesn't set.
+// Built-in limits, for what the config doesn't set.
 const (
-	DefaultMaxMemory = 128 << 20 // 128 MiB for every app's buckets together
-	DefaultMaxDisk   = 1 << 30   // 1 GiB disk tier, when there is one
+	DefaultMaxMemory       = 128 << 20 // the store: 128 MiB for every app's buckets together
+	DefaultMaxDisk         = 1 << 30   // the store: 1 GiB disk tier, when there is one
+	DefaultBucketMaxMemory = 32 << 20  // one bucket
+	DefaultBucketMaxDisk   = 256 << 20 // one bucket
 )
 
 // BucketConfig caps one app's bucket. Unset (zero) fields keep what the code asked for.
 type BucketConfig struct {
 	Eviction  cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo."`
 	MaxItems  int              `yaml:"max_items,omitempty" json:"max_items,omitempty" doc:"Most entries the bucket holds."`
-	MaxMemory Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Most bytes of keys and values the bucket holds, such as 32MiB (shared values count in full)."`
+	MaxMemory Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Most bytes of keys and values the bucket holds in memory, such as 32MiB (the default)."`
+	MaxDisk   Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Most bytes of disk files the bucket's keys point at, each counted in full, such as 256MiB (the default)."`
 	TTL       Duration         `yaml:"ttl,omitempty" json:"ttl,omitempty" doc:"How long an entry lives unless the code says otherwise, such as 10m."`
 }
 
@@ -47,12 +52,11 @@ type BucketConfig struct {
 type Config struct {
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" doc:"Turns the cache off when false; extensions then run uncached."`
 
-	// The store, shared by every app in the process.
-	Eviction  cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which values leave memory first when the store is full: lru, mru, fifo or lifo."`
-	MaxItems  int              `yaml:"max_items,omitempty" json:"max_items,omitempty" doc:"Most distinct values kept in memory (identical bytes count once)."`
+	// The store, shared by every app in the process: ceilings over every bucket together.
+	Eviction  cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo."`
 	MaxMemory Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Memory for every bucket together, such as 512MiB. Default 128MiB."`
-	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there for what memory evicts (in a p1cache folder, emptied when the process starts). Relative: under pb_data on a single app, the working directory on a multisite host."`
-	MaxDisk   Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Size of the disk tier, such as 10GiB. Default 1GiB."`
+	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host."`
+	MaxDisk   Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB."`
 
 	// Each app's buckets.
 	Defaults BucketConfig            `yaml:"defaults,omitempty" json:"defaults,omitempty" doc:"Caps for any bucket whose code leaves them unset."`
@@ -63,8 +67,8 @@ type Config struct {
 var Section = extkit.NewSectionFunc(Name, func() Config { return Config{} },
 	"The cache (cache/v1): one store for every app in the process (memory, disk tier), and caps per bucket.")
 
-// Extension provides cache/v1 as the default, so another provider (Redis, say) replaces it. One Extension value is
-// one store: every app it's registered on shares it.
+// Extension provides cache/v1 and cache.clear/v1 as defaults, so another provider (Redis, say) replaces them. One
+// Extension value is one store: every app it's registered on shares it.
 type Extension struct {
 	cfg Config
 
@@ -88,17 +92,27 @@ func (x *Extension) Name() string { return Name }
 // stopped.
 func (x *Extension) Close(context.Context) error {
 	if x.store != nil {
-		x.store.flush()
+		x.store.close()
+	}
+	return nil
+}
+
+// Clear empties the whole store: every bucket of every app in the process, in memory, on disk and in the
+// On a multisite host it's the host's to call (an operator command), never an instance's.
+func (x *Extension) Clear(context.Context) error {
+	if x.store != nil {
+		x.store.clearPrefix("")
 	}
 	return nil
 }
 
 // Contracts implements [extkit.Declarer].
 func (x *Extension) Contracts() extkit.Contracts {
-	return extkit.Contracts{Implements: extkit.IDs("cache/v1"), Defaults: extkit.IDs("cache/v1")}
+	return extkit.Contracts{Implements: extkit.IDs("cache/v1", "cache.clear/v1"), Defaults: extkit.IDs("cache/v1", "cache.clear/v1")}
 }
 
-// Register implements [extkit.Extension]: it provides cache/v1 for app, a view of the process's store.
+// Register implements [extkit.Extension]: it provides cache/v1 and cache.clear/v1 for app, a view of the process's
+// store.
 func (x *Extension) Register(app core.App, layers extkit.Config) error {
 	c := x.cfg
 	if s, found := Section.Get(); found {
@@ -116,7 +130,9 @@ func (x *Extension) Register(app core.App, layers extkit.Config) error {
 	if err := c.validate(); err != nil {
 		return err
 	}
-	cachev1.Contract.ProvideDefault(app, &provider{store: st, app: extkit.AppID(app), cfg: c, buckets: map[string]*bucket{}})
+	p := &provider{store: st, app: extkit.AppID(app), cfg: c, buckets: map[string]*bucket{}}
+	cachev1.Contract.ProvideDefault(app, p)
+	clearv1.Contract.ProvideDefault(app, clearer{p})
 	return nil
 }
 
@@ -127,7 +143,7 @@ func (x *Extension) storeFor(app core.App, c Config) (*store, error) {
 			x.storeErr = err
 			return
 		}
-		lim := poolLimits{eviction: c.Eviction, maxItems: c.MaxItems, maxMem: int64(c.MaxMemory), maxDisk: int64(c.MaxDisk)}
+		lim := poolLimits{eviction: c.Eviction, maxMem: int64(c.MaxMemory), maxDisk: int64(c.MaxDisk)}
 		if lim.eviction == "" {
 			lim.eviction = cachev1.LRU
 		}
@@ -158,9 +174,6 @@ func merge(base, over Config) Config {
 	}
 	if over.Eviction != "" {
 		base.Eviction = over.Eviction
-	}
-	if over.MaxItems != 0 {
-		base.MaxItems = over.MaxItems
 	}
 	if over.MaxMemory != 0 {
 		base.MaxMemory = over.MaxMemory
@@ -217,6 +230,9 @@ func (b BucketConfig) over(o BucketConfig) BucketConfig {
 	if o.MaxMemory != 0 {
 		b.MaxMemory = o.MaxMemory
 	}
+	if o.MaxDisk != 0 {
+		b.MaxDisk = o.MaxDisk
+	}
 	if o.TTL != 0 {
 		b.TTL = o.TTL
 	}
@@ -235,8 +251,8 @@ type provider struct {
 
 var _ cachev1.Cache = (*provider)(nil)
 
-// Bucket implements cachev1.Cache. Caps, weakest first: the config's defaults, the code's options, the config's
-// entry for this bucket.
+// Bucket implements cachev1.Cache. Limits, weakest first: the built-in defaults, the config's defaults, the code's
+// options, the config's entry for this bucket.
 func (p *provider) Bucket(name string, opts cachev1.Options) (cachev1.Bucket, error) {
 	if err := cachev1.ValidName(name); err != nil {
 		return nil, err
@@ -250,14 +266,37 @@ func (p *provider) Bucket(name string, opts cachev1.Options) (cachev1.Bucket, er
 		return b, nil
 	}
 	code := BucketConfig{Eviction: opts.Eviction, MaxItems: opts.MaxItems, MaxMemory: Size(opts.MaxMemory), TTL: Duration(opts.TTL)}
-	bc := p.cfg.Defaults.over(code).over(p.cfg.Buckets[name])
-	lim := spaceLimits{eviction: bc.Eviction, maxItems: bc.MaxItems, maxMem: int64(bc.MaxMemory), ttl: time.Duration(bc.TTL)}
+	builtin := BucketConfig{MaxMemory: DefaultBucketMaxMemory, MaxDisk: DefaultBucketMaxDisk}
+	bc := builtin.over(p.cfg.Defaults).over(code).over(p.cfg.Buckets[name])
+	lim := spaceLimits{eviction: bc.Eviction, maxItems: bc.MaxItems, maxMem: int64(bc.MaxMemory), maxDisk: int64(bc.MaxDisk), ttl: time.Duration(bc.TTL)}
 	if lim.eviction == "" {
 		lim.eviction = cachev1.LRU
 	}
 	b := &bucket{store: p.store, sp: p.store.open(p.app+"/"+name, lim)}
 	p.buckets[name] = b
 	return b, nil
+}
+
+// Clear implements cachev1.Cache: every bucket of this app, opened since it started or not.
+func (p *provider) Clear(context.Context) error {
+	p.store.clearPrefix(p.app + "/")
+	return nil
+}
+
+// clearer is an app's cache.clear/v1.
+type clearer struct{ p *provider }
+
+var _ clearv1.Clearer = clearer{}
+
+// Clear implements clearv1.Clearer: one of this app's buckets, or all of them.
+func (c clearer) Clear(_ context.Context, _ extkit.Auth, in clearv1.ClearInput) (clearv1.ClearResult, error) {
+	if in.Bucket == "" {
+		return clearv1.ClearResult{Keys: c.p.store.clearPrefix(c.p.app + "/")}, nil
+	}
+	if err := cachev1.ValidName(in.Bucket); err != nil {
+		return clearv1.ClearResult{}, err
+	}
+	return clearv1.ClearResult{Keys: c.p.store.clearID(c.p.app + "/" + in.Bucket)}, nil
 }
 
 // Size is a byte count that reads "64MiB", "10MB", "512KiB" or a plain number from YAML and JSON.
