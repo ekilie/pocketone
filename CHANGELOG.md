@@ -41,6 +41,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 ### Added
 
 - Agent Skills: a third skill, `pocketone-extensions`, for writing an extension and contributing it as a pull request; the `pocketone` skill now covers only using PocketOne in an app, and no longer carries its own copy of the PocketPages docs (the `pocketpages` skill has them). Update with `/plugin marketplace update pocketone` or `npx skills add pockethost/pocketone`.
+- `app: js_limits:` in `pocketone.yaml` sets the JS engine's limits for the app: `memory` (default 64MiB), `task_time` (JS time per task, default 5s) and `task_wall` (wall time per task, default 30s).
 
 ### Changed
 
