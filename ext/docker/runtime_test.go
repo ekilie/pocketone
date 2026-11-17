@@ -252,6 +252,44 @@ func TestRuntime(t *testing.T) {
 	rt2.Shutdown()
 }
 
+// A container that exits at once (a 0.22-style migration on 0.23) is auto-removed, but what it printed still reaches
+// OnLog before the failed start is reported.
+func TestRuntimeCrashOutput(t *testing.T) {
+	socket := dockerSocket(t)
+	tb := testBinaries(t)
+	data := dataDir(t)
+	var mu sync.Mutex
+	var lines []string
+	rt, _ := New(Config{Socket: socket, Image: "alpine:3.20", DataRoot: data, Binaries: tb, Versions: testVersions(t, tb),
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		OnLog: func(_ string, _ bool, line string) {
+			mu.Lock()
+			lines = append(lines, line)
+			mu.Unlock()
+		}})
+	if err := rt.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer rt.Shutdown()
+	inst := multisite.Instance{ID: "cedockercrash", Version: "pb:0.23.*"}
+	t.Cleanup(func() { _ = rt.e.remove(context.Background(), inst.ID) })
+	if err := os.MkdirAll(filepath.Join(data, inst.ID, "pb_migrations"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mig := `migrate((db) => { new Dao(db) }, (db) => {})`
+	if err := os.WriteFile(filepath.Join(data, inst.ID, "pb_migrations", "1726243362_created_itens.js"), []byte(mig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code, body := get(t, rt, inst, "/api/health"); code != 503 || !strings.Contains(body, "exited during startup") {
+		t.Fatalf("%d %q", code, body)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if all := strings.Join(lines, "\n"); !strings.Contains(all, "Dao is not defined") {
+		t.Fatalf("crash output not in the log:\n%s", all)
+	}
+}
+
 // A container that can't start (no such version) answers 503 with the reason.
 func TestRuntimeBadVersion(t *testing.T) {
 	socket := dockerSocket(t)

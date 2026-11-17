@@ -730,20 +730,45 @@ func (rt *Runtime) startLocked(ctx context.Context, c *ctr, inst multisite.Insta
 	if err != nil {
 		return 0, fmt.Errorf("create: %w", err)
 	}
+	// Attach to its output before it starts: a container that exits at once is auto-removed, and following its logs
+	// after start would lose what it printed (the reason it exited).
+	var piped chan struct{} // closed once all of its output is read
+	out, aerr := rt.e.attach(rt.bg, id)
+	if aerr == nil {
+		piped = make(chan struct{})
+		go func() {
+			defer close(piped)
+			defer out.Close()
+			readMux(out, rt.output(inst.ID))
+		}()
+	} else {
+		rt.log.Warn("docker: attach before start; following logs after start instead", "instance", inst.ID, "error", aerr)
+	}
+	failed := func() {
+		_ = rt.e.remove(context.Background(), id)
+		if piped != nil { // let its last lines reach the log before the failure is reported
+			select {
+			case <-piped:
+			case <-time.After(2 * time.Second):
+			}
+		}
+	}
 	since := time.Now()
 	if err := rt.e.start(ctx, id); err != nil {
-		_ = rt.e.remove(context.Background(), id)
+		failed()
 		return 0, fmt.Errorf("start: %w", err)
 	}
-	go rt.follow(inst.ID, id, since.Add(-time.Second))
+	if piped == nil {
+		go rt.follow(inst.ID, id, since.Add(-time.Second))
+	}
 	info, err := rt.e.inspect(ctx, id)
 	if err != nil || info.hostPort() == 0 {
-		_ = rt.e.remove(context.Background(), id)
+		failed()
 		return 0, fmt.Errorf("no published port (running %v, ports %v, err %v)", info.State.Running, info.NetworkSettings.Ports, err)
 	}
 	port := info.hostPort()
 	if err := rt.waitHealthy(ctx, id, port, cfg.healthPath, cfg.healthAny); err != nil {
-		_ = rt.e.remove(context.Background(), id)
+		failed()
 		return 0, err
 	}
 	c.container, c.port, c.hash, c.dirty = id, port, cfg.Labels[LabelSpec], false
@@ -790,10 +815,16 @@ func (rt *Runtime) waitHealthy(ctx context.Context, id string, port int, path st
 	}
 }
 
-// follow sends a container's output to OnLog (and remote/v1's logs) until it stops.
+// follow sends an already running container's output to OnLog (and remote/v1's logs) until it stops. Containers this
+// runtime starts are attached before they start instead (startLocked), so a fast crash can't lose its output.
 func (rt *Runtime) follow(instID, containerID string, since time.Time) {
+	_ = rt.e.logs(rt.bg, containerID, rt.output(instID))
+}
+
+// output is the line sink for an instance's container output: its log ring, then OnLog (else the debug log).
+func (rt *Runtime) output(instID string) func(stream int, text string) {
 	ring := rt.ring(instID)
-	_ = rt.e.logs(rt.bg, containerID, func(stream int, text string) {
+	return func(stream int, text string) {
 		name := "stdout"
 		if stream == 2 {
 			name = "stderr"
@@ -804,7 +835,7 @@ func (rt *Runtime) follow(instID, containerID string, since time.Time) {
 			return
 		}
 		rt.log.Debug("docker: instance output", "instance", instID, "stderr", stream == 2, "line", text)
-	})
+	}
 }
 
 func (rt *Runtime) stopLocked(ctx context.Context, c *ctr) {
