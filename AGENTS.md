@@ -154,13 +154,14 @@ Rules every extension follows:
   matter beside `owners` and `version`, and its changelog is `ext/<name>/CHANGELOG.md`. `site/extensions.json` holds
   only the catalogue groups and the few folders without a page (`links`). A change to an extension touches only its
   folder.
-- **Generated files go in the same commit as the change that produces them.** pocketone.dev's pages (`site/`), nav,
+- **Generated files land on `main` with the change that produces them.** pocketone.dev's pages (`site/`), nav,
   search index, both sites' `llms.txt` / `llms-full.txt`, the Agent Skills' `reference/` folders and the contract
   indexes are built by `.github/regenerate.sh`. Every clone turns on the repo's hooks once with
-  `git config core.hooksPath .github/hooks`: the `pre-commit` and `pre-merge-commit` hooks run `regenerate.sh` on the
-  staged files and refuse a commit that would leave any generated file stale (about 3 s). When one is refused, run
-  `.github/regenerate.sh`, `git add` the files it lists and commit again. So `main` never carries stale generated
-  files, and regenerating on a branch shows only that branch's changes. Outside pull requests are the exception: their
+  `git config core.hooksPath .github/hooks`: on `main` only, the `pre-commit` and `pre-merge-commit` hooks run
+  `regenerate.sh` on the staged files and refuse a commit that would leave any generated file stale (about 3 s). When
+  one is refused, run `.github/regenerate.sh`, `git add` the files it lists and commit again. So `main` never carries
+  stale generated files. Commits on other branches skip the check and leave generated files alone, so a branch
+  touches only its own files; its generated files go in its merge commit into `main`. Outside pull requests are the exception: their
   authors never commit generated files (they only check that the site builds, `cd site/sync && go run . --validate`),
   and CI regenerates on `main` after the merge and commits as github-actions[bot].
 - Agent Skills (`agent/`, listed in `.claude-plugin/marketplace.json`): `site/sync` also writes each skill's `reference/`
