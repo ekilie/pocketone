@@ -357,6 +357,9 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 
 	sectionNavs(m, out)
 	siteNavs(m, out)
+	if err := versionFile(root, out); err != nil {
+		return nil, err
+	}
 
 	if out[searchOut], err = searchIndex(root, out); err != nil {
 		return nil, err
