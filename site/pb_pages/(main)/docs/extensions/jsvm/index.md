@@ -140,7 +140,7 @@ map is kept, so an error names `pb_hooks/main.pb.mts:12:5` in your source, not i
 When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS API, for your editor and `tsc`:
 
 - PocketBase's API generated from PocketOne's core (its extra hooks included), by PocketBase's own generator.
-- What this engine adds ([`pocketone.d.ts`](pocketone.d.ts)): `.async` on every Go function, fully typed
+- What this engine adds ([`pocketone.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
   (`await $app.findRecordById.async(...)` is a `Promise<core.Record>`), `require`, `process`, `Buffer`, `console`,
   `import.meta`.
 - Each extension's own API, for the extensions on in that app (`$mcp`, `$tokens`, `$bulkmail`, `onContracts` and
@@ -163,7 +163,7 @@ do).
 ## Integrations
 
 Extensions plug in through `Config.Extensions` with the engine-neutral types in
-[`ext/extkit/js`](../extkit/js/js.go). A value implements any of:
+[`ext/extkit/js`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/js/js.go). A value implements any of:
 
 - `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API. `TypeScript()`: declare it for editors and
   `tsc` (appended to `pb_data/types.d.ts`).

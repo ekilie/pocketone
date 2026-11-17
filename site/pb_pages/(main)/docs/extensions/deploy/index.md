@@ -182,6 +182,26 @@ reconnects by itself if it drops.
 Every deploy is recorded in the `_deploys` collection of the receiving app: status, file counts, bytes, commit,
 message, source, token name, superuser and any error. Superusers can browse it in the dashboard.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone deploy [remote]`](/docs/reference/cli#pocketone-deploy) | Deploys pb_hooks, pb_migrations, pb_pages, pb_public and packages to a remote |
+| [`pocketone dev [remote]`](/docs/reference/cli#pocketone-dev) | Keeps the project's code and a remote in step both ways (and streams the remote's logs) |
+| [`pocketone logs [remote]`](/docs/reference/cli#pocketone-logs) | Streams a remote's app logs |
+| [`pocketone pull [remote] [paths...]`](/docs/reference/cli#pocketone-pull) | Downloads files from a remote into the project (default: pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json) |
+| [`pocketone restart [remote]`](/docs/reference/cli#pocketone-restart) | Restarts a remote's app so it applies new migrations and packages |
+
+### [deploy/v1](/docs/contracts/deploy/v1)
+
+Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
+
 ## Integrations
 
 ### Works with
@@ -211,7 +231,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 
 ## Example
 
-[`example/main.go`](example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
 
 ```go
 // Command example is a PocketOne app that accepts deploys and can deploy: deploy/v1 (/api/_c/deploy/v1), remote/v1
@@ -273,14 +293,14 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/deploy`. [`example/main.go`](example/main.go) is an app that accepts
+- Go module `github.com/pockethost/pocketone/ext/deploy`. [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
   deploys and can deploy (logins from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
 - A deploy is a hash diff: the client sends a manifest, uploads only the missing files in bundles, then commits.
 - On a single app the files are swapped in while it runs; a restart (when a client asks) is `app.Restart()`, which
   re-executes the process (`Config.Restart` overrides it; not on Windows).
 - `Config.Dir` and `Config.StoreDir` move the deploy folder and the upload store; `Config.Prefix` moves the API.
 - Logs on a single app come from its own `_logs` table; entries at error level and above are marked as stderr.
-- The `node_modules` collector is [`nodemodules`](nodemodules/nodemodules.go), a port of the npm CLI's.
+- The `node_modules` collector is [`nodemodules`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/nodemodules/nodemodules.go), a port of the npm CLI's.
 
 ## License
 

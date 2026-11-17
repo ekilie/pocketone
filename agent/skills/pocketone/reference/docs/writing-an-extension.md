@@ -14,7 +14,7 @@ How a multisite host runs its instances (in-process with [pocker](https://pocket
 
 ## App extensions: `extkit`
 
-Write an extension once, against [`extkit`](../ext/extkit/extkit.go) (its own module,
+Write an extension once, against [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) (its own module,
 `github.com/pockethost/pocketone/ext/extkit`; core has no part in it), and the same value runs on every app:
 
 ```go
@@ -43,7 +43,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
 - **Every app has the [standard set](https://pocketone.dev/docs/extensions/standard)** (tokens, mcp, pitr, deploy and the rest). Add yours
   to it: `set.Add(myextension.New(...))`. On a standalone app, build the app with `set.NewApp(...)`, or build it
   yourself and call `set.Register(app, jsvm.Config{...})`. The stock binary does the second: `pocketbase.NewWithConfig`,
-  then `set.Register` ([`examples/pocketone`](../examples/pocketone/main.go)). Without the set:
+  then `set.Register` ([`examples/pocketone`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go)). Without the set:
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
@@ -62,17 +62,17 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
   (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/extkit.Command=pockethost"`.
 - [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
-  [`ext/standard/example`](../ext/standard/example/main.go) a complete program.
+  [`ext/standard/example`](https://github.com/pockethost/pocketone/blob/main/ext/standard/example/main.go) a complete program.
 
 ## Working together: contracts
 
-> Start with [How PocketOne fits together](https://pocketone.dev/docs/contracts) for the idea: every API an extension offers is a named,
+> Start with [How PocketOne fits together](https://pocketone.dev/docs/how-pocketone-fits-together) for the idea: every API an extension offers is a named,
 > versioned contract, any extension can provide one, and everything else (the dashboard, the CLI, agents, `pb_hooks`,
 > other extensions) calls the contract, never the extension. This section is how to do it in code.
 
 In short, when you design an extension:
 
-1. **Find the contracts you need** in the [catalogue](https://pocketone.dev/docs/contracts/all). Use them; don't reach into another
+1. **Find the contracts you need** in the [catalogue](https://pocketone.dev/docs/contracts). Use them; don't reach into another
    extension.
 2. **Decide what you offer.** Anything a client calls is a contract. If one already promises it, provide that one
    (your extension then stands in for the current provider). If not, write the contract first, named for what it
@@ -81,7 +81,7 @@ In short, when you design an extension:
    it from then on.
 
 Extensions never depend on each other by name. They depend on **contracts**: versioned Go interfaces in
-[`ext/contracts`](../ext/contracts/README.md), such as `deploy/v1` or `mail.fallback/v1`. Every API an extension
+[`ext/contracts`](https://pocketone.dev/docs/contracts), such as `deploy/v1` or `mail.fallback/v1`. Every API an extension
 offers is a contract too, served at `/api/_c/<id>/`: extensions have no routes of their own.
 
 Every contract, standard or community, lives in `ext/contracts/<id path>/vN/` with a README like an extension's
@@ -204,7 +204,7 @@ document.addEventListener("mount:pageBackupsSettings", (e) => {
 ```
 
 - **More hooks:** `app.store.settingsNavGroups` adds entries to the Settings sidebar. Search `pbEvent:` in
-  [`ui/src`](../ui/src) for every screen you can add to (Backups exposes `pageBackupsSettings`, `backupsList`,
+  [`ui/src`](https://github.com/pockethost/pocketone/tree/main/ui/src) for every screen you can add to (Backups exposes `pageBackupsSettings`, `backupsList`,
   `backupsSettingsForm`, `backupCreateModal` and `backupRestoreModal`).
 - **No build step:** plain JS works. Bundle with Vite if you prefer.
 - **Experimental upstream:** this UI extension API is undocumented and can change between PocketBase releases
@@ -316,14 +316,14 @@ ext/<name>/
 
 - **`example/main.go` is required.** Keep it as small as possible: just enough to build a binary that shows the
   feature working, with no extra harness. `go build ./example` and `go vet ./...` must pass with no warnings.
-  [`ext/standard/example`](../ext/standard/example) and [`ext/sandbox/example`](../ext/sandbox/example) are the size to aim for.
+  [`ext/standard/example`](https://github.com/pockethost/pocketone/tree/main/ext/standard/example) and [`ext/sandbox/example`](https://github.com/pockethost/pocketone/tree/main/ext/sandbox/example) are the size to aim for.
 - **Examples come with two logins:** superuser `admin@example.com` and user `user@example.com` (verified, in
   `users`), both with password `password`. Every `example/main.go` calls
   `devusers.Register(app)` right after the app is created (on a multisite host, `devusers.Ensure(app)` in the
-  host's per-instance setup), from [`ext/devusers`](../ext/devusers/devusers.go). A fresh data dir is then ready to log
+  host's per-instance setup), from [`ext/devusers`](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go). A fresh data dir is then ready to log
   in to, with no installer page and no CLI step. Never register it in a production build.
 - **`conformance_test.go` is required.** It runs the shared extension test from
-  [`ext/extkit/conformance`](../ext/extkit/conformance/conformance.go) once:
+  [`ext/extkit/conformance`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go) once:
 
   ```go
   func TestConformance(t *testing.T) {
@@ -335,12 +335,12 @@ ext/<name>/
   behind; that its only routes are contracts' (`/api/_c/<id>/`); that PocketBase's own collections are unchanged and every collection it adds is named `_<name>` or `_<name>_…`; and
   that one extension value serves several apps at once (as on a multisite host) without registering on one app
   touching another's hooks. An extension that requires another (`Contracts().Requires`) lists it in
-  `conformance.Options{Deps: ...}`. An extension that adds MCP tools ([`ext/mcp`](../ext/mcp/README.md#tools-from-an-extension)) also passes
+  `conformance.Options{Deps: ...}`. An extension that adds MCP tools ([`ext/mcp`](https://pocketone.dev/docs/extensions/mcp#tools-from-an-extension)) also passes
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every extension passes; your own tests cover the
   feature.
 - **`modes_test.go` tests the feature in every mode it runs in**, on the real `pocketone` binary, with
-  [`ext/extkit/modetest`](../ext/extkit/modetest/modetest.go). Declare the instances the test needs, each configured
+  [`ext/extkit/modetest`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/modetest/modetest.go). Declare the instances the test needs, each configured
   in full (files, extension settings, secrets), and the harness lays them out once per mode: `Single` (each its own
   `pocketone serve`), `Host` (one multisite host serving them all) and `Fleet` (several hosts that forward to each
   other). An app extension runs `modetest.AllApp` (Single and Host); a host extension picks Host and/or Fleet.
@@ -361,7 +361,7 @@ ext/<name>/
   why in a comment. `-short` skips mode tests.
 - **The README starts with front matter**: who owns the extension and its version (see [Ownership](#ownership)), and
   its entry in the [catalogue on pocketone.dev](https://pocketone.dev/docs/extensions): its `title`, its `group` (one
-  of the ids in [`site/extensions.json`](../site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and
+  of the ids in [`site/extensions.json`](https://github.com/pockethost/pocketone/blob/main/site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and
   a one-line `summary`. Nothing outside your folder lists your extension: the site finds it there.
 
   ```markdown

@@ -35,10 +35,12 @@ func Routed[T any](c *Contract[T]) string {
 	return opPath(c.id, "")
 }
 
-func (r routed[T]) id() ContractID        { return r.c.id }
-func (r routed[T]) info() WireInfo        { return WireInfo{ID: r.c.id} } // its own API shape: no ops to list
-func (r routed[T]) scopes() []WireScope   { return nil }                  // its provider registers its own token scopes
-func (r routed[T]) tools(core.App) []Tool { return nil }                  // its API's shape is its provider's: no generated tools
+func (r routed[T]) id() ContractID                       { return r.c.id }
+func (r routed[T]) info() WireInfo                       { return WireInfo{ID: r.c.id} } // its own API shape: no ops to list
+func (r routed[T]) scopes() []WireScope                  { return nil }                  // its provider registers its own token scopes
+func (r routed[T]) tools(core.App) []Tool                { return nil }                  // its API's shape is its provider's: no generated tools
+func (r routed[T]) isRouted()                            {}
+func (r routed[T]) provider(app core.App) (string, bool) { return r.c.Provider(app) }
 func (r routed[T]) provided(app core.App) bool {
 	_, ok := r.c.Of(app)
 	return ok

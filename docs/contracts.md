@@ -132,6 +132,6 @@ carefully, because every provider and every caller relies on the promise. Name a
 
 ## Next
 
-- [All contracts](../ext/contracts/README.md): what each one promises, and who provides, requires and works with it.
+- [Contracts](../ext/contracts/README.md): what each one promises, and who provides, requires and works with it.
 - [Writing an extension](extensions.md): declare, provide and use contracts in your extension.
 - [Add a contract](../ext/contracts/README.md#add-a-contract): the folder, the README and the generated code.

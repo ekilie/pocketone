@@ -70,4 +70,4 @@ Layouts in `.ejs`, `.jsx` and `.tsx` mix freely: an EJS page can sit inside a TS
 
 `+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and any `.ts` file reached by `require` or `import` work like their `.js` versions. A module whose only export is `export default` behaves like `module.exports = ...`.
 
-Components are ordinary modules, so `import Card from './_private/Card'` resolves the same way as [`require`](jsvm.md). When a partial name has no extension, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
+Components are ordinary modules, so `import Card from './_private/Card'` resolves the same way as [`require`](https://pocketone.dev/docs/extensions/pages/jsvm). When a partial name has no extension, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.

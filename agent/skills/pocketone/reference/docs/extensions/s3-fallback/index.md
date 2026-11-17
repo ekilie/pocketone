@@ -92,7 +92,7 @@ It applies to instances created with the extension on. Files already on an insta
 
 ## Example
 
-There's no `example/main.go` yet. [`storage_test.go`](storage_test.go) and [`mounts_test.go`](mounts_test.go) show
+There's no `example/main.go` yet. [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show
 it on a single app and under Pocker, against MinIO.
 
 ## How it works

@@ -129,6 +129,39 @@ http://127.0.0.1:8025:
 pocketone serve --dev
 ```
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [count](https://pocketone.dev/docs/contracts/bulkmail/v1#count) | `pocketone remote bulkmail count --audience <json>` | `POST /api/_c/bulkmail/v1/count` | `bulkmail_count` |
+| [start](https://pocketone.dev/docs/contracts/bulkmail/v1#start) | `pocketone remote bulkmail start --campaign <value> --limit <n>` | `POST /api/_c/bulkmail/v1/start` | `bulkmail_start` |
+| [pause](https://pocketone.dev/docs/contracts/bulkmail/v1#pause) | `pocketone remote bulkmail pause --campaign <value>` | `POST /api/_c/bulkmail/v1/pause` | `bulkmail_pause` |
+| [resume](https://pocketone.dev/docs/contracts/bulkmail/v1#resume) | `pocketone remote bulkmail resume --campaign <value>` | `POST /api/_c/bulkmail/v1/resume` | `bulkmail_resume` |
+| [cancel](https://pocketone.dev/docs/contracts/bulkmail/v1#cancel) | `pocketone remote bulkmail cancel --campaign <value>` | `POST /api/_c/bulkmail/v1/cancel` | `bulkmail_cancel` |
+| [preview](https://pocketone.dev/docs/contracts/bulkmail/v1#preview) | `pocketone remote bulkmail preview --campaign <value> --email <value>` | `POST /api/_c/bulkmail/v1/preview` | `bulkmail_preview` |
+| [test](https://pocketone.dev/docs/contracts/bulkmail/v1#test) | `pocketone remote bulkmail test --campaign <value> --to <value>` | `POST /api/_c/bulkmail/v1/test` | `bulkmail_test` |
+
+### [mail.feedback/v1](https://pocketone.dev/docs/contracts/mail.feedback/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [s_e_s](https://pocketone.dev/docs/contracts/mail.feedback/v1#s_e_s) | – | `POST /api/_c/mail.feedback/v1/ses` | – |
+| [webhook](https://pocketone.dev/docs/contracts/mail.feedback/v1#webhook) | – | `POST /api/_c/mail.feedback/v1/webhook` | – |
+
+### [mail.suppression/v1](https://pocketone.dev/docs/contracts/mail.suppression/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [check](https://pocketone.dev/docs/contracts/mail.suppression/v1#check) | `pocketone remote mail suppression check --email <value>` | `GET /api/_c/mail.suppression/v1/check` | `mail_suppression_check` |
+| [suppress](https://pocketone.dev/docs/contracts/mail.suppression/v1#suppress) | `pocketone remote mail suppression suppress --email <value> --reason <value> --source <value> --campaign <value>` | `POST /api/_c/mail.suppression/v1/suppress` | `mail_suppression_suppress` |
+| [unsuppress](https://pocketone.dev/docs/contracts/mail.suppression/v1#unsuppress) | `pocketone remote mail suppression unsuppress --email <value>` | `POST /api/_c/mail.suppression/v1/unsuppress` | `mail_suppression_unsuppress` |
+| [unsubscribe_page](https://pocketone.dev/docs/contracts/mail.suppression/v1#unsubscribe_page) | – | `GET /api/_c/mail.suppression/v1/unsubscribe` | – |
+| [unsubscribe](https://pocketone.dev/docs/contracts/mail.suppression/v1#unsubscribe) | – | `POST /api/_c/mail.suppression/v1/unsubscribe` | – |
+
 ## Integrations
 
 ### Works with
@@ -200,7 +233,7 @@ them), since the app's mail account can usually send only as identities it has v
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app with bulk mail: the Mail page, campaigns to the app's own users and `$bulkmail` in JS hooks. Run it with `go run ./example serve --dev` from this folder; the dev mail trap at http://127.0.0.1:8025 catches every mail.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with bulk mail: the Mail page, campaigns to the app's own users and `$bulkmail` in JS hooks. Run it with `go run ./example serve --dev` from this folder; the dev mail trap at http://127.0.0.1:8025 catches every mail.
 
 ```go
 // Command example runs one PocketOne app with bulk mail: a "Mail" page in the dashboard, campaigns to the app's
@@ -250,8 +283,8 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/bulkmail`, an [`extkit`](../extkit/extkit.go) extension.
-  [`example/main.go`](example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
+- Go module `github.com/pockethost/pocketone/ext/bulkmail`, an [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension.
+  [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
 - The audience is resolved when sending starts and queued into a ledger first (one row per campaign and address,
   unique). A background sender then mails one message at a time through the app's mail client, at the lower of the
   app's rate and the campaign's.
@@ -268,7 +301,7 @@ func main() {
 | `_bulkmail_sends` | The ledger: campaign, email, status (`queued`, `sent`, `skipped`, `failed`), reason, attempts. |
 | `_bulkmail_suppressions` | Addresses that never receive campaign mail, with the reason. |
 
-All are superuser-only system collections with fixed collection and field ids ([`schema.go`](schema.go)).
+All are superuser-only system collections with fixed collection and field ids ([`schema.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/schema.go)).
 `LegacyJSMigration()` emits a PocketBase JS migration that creates the same collections, for apps that move onto this
 schema before they run this extension.
 

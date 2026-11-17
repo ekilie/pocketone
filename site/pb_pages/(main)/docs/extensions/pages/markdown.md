@@ -40,7 +40,7 @@ Headings get `id`s, so you can link to them: the text is lowercased, characters 
 
 ## Images
 
-Relative image paths go through [`ctx.asset`](ctx/asset.md), so they get fingerprinted URLs:
+Relative image paths go through [`ctx.asset`](/docs/extensions/pages/ctx/asset), so they get fingerprinted URLs:
 
 ```markdown
 ![Logo](logo.png)

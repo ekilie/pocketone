@@ -124,6 +124,26 @@ next starts.
 About 176 KiB of memory per serving app, and the storage for your history. Replication runs only while the app is
 serving, never during CLI commands.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone pitr restore`](/docs/reference/cli#pocketone-pitr-restore) | Restore the database as it was at --at, into --to, or in place on the next start |
+| [`pocketone pitr status`](/docs/reference/cli#pocketone-pitr-status) | Show the restorable window and history size |
+
+### [restore/v1](/docs/contracts/restore/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [points](/docs/contracts/restore/v1#points) | `pocketone remote restore points` | `GET /api/_c/restore/v1` | `restore_points` |
+| [restore_to](/docs/contracts/restore/v1#restore_to) | `pocketone remote restore to --at <time>` | `POST /api/_c/restore/v1/restore` | `restore_restore_to` |
+
 ## Integrations
 
 ### Works with
@@ -166,7 +186,7 @@ A bucket in an instance's settings is refused, so credentials never sit in insta
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app with point-in-time restore on, keeping three days. Run it with `go run ./example serve` from this folder.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pitr/example/main.go) runs one app with point-in-time restore on, keeping three days. Run it with `go run ./example serve` from this folder.
 
 ```go
 // Command example runs one PocketOne app with point-in-time restore: Litestream copies data.db continuously into
@@ -206,7 +226,7 @@ func main() {
 ## How it works
 
 - Go module `github.com/pockethost/pocketone/ext/pitr`, Litestream v0.5.18 (pinned).
-  [`example/main.go`](example/main.go) runs one app with local history.
+  [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pitr/example/main.go) runs one app with local history.
 - Litestream continuously copies `data.db` to its destination: the app's own bucket (its PITR settings), else a
   filesystem of kind `litestream` (an `OnFilesystemCreate` handler, such as S3 Fallback), else `pb_data/litestream/`.
   Buckets go through PocketBase's own S3 client, not the AWS SDK. Each LTX file's timestamp is kept in object

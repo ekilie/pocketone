@@ -284,7 +284,7 @@ overrides the authorization server listed in the metadata.
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app with an MCP endpoint at `/mcp`: the built-in `pb_*` tools, a tool over a Go route and one over a JS route.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mcp/example/main.go) runs one app with an MCP endpoint at `/mcp`: the built-in `pb_*` tools, a tool over a Go route and one over a JS route.
 
 ```bash
 cd example
@@ -294,7 +294,7 @@ go run . serve
 The example registers [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go), so the logins are `admin@example.com` / `password`
 (superuser) and `user@example.com` / `password` (user). It also registers Tokens (with its OAuth server) for OAuth sign-in,
 and adds a tool over a Go route (`example_get_whoami`) and one over a JS route (`example_list_recent_users`, in
-[`pb_hooks/mcp.pb.js`](example/pb_hooks/mcp.pb.js)). Then:
+[`pb_hooks/mcp.pb.js`](https://github.com/pockethost/pocketone/blob/main/ext/mcp/example/pb_hooks/mcp.pb.js)). Then:
 
 ```bash
 claude mcp add --transport http pb-example http://127.0.0.1:8090/mcp

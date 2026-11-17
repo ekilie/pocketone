@@ -156,6 +156,28 @@ Docker and Pocker both use `<root>/<id>`, so switching is a config change. Stop 
 docker, since they keep running across a host restart on purpose. Data only moves forward: an instance started on a
 newer PocketBase than wrote its data is upgraded.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone docker seed`](https://pocketone.dev/docs/reference/cli#pocketone-docker-seed) | Downloads the releases docker.versions lists that the cache doesn't have yet |
+| [`pocketone docker update`](https://pocketone.dev/docs/reference/cli#pocketone-docker-update) | Finds the latest patch of each docker.versions minor, records and downloads it |
+
+### [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [whoami](https://pocketone.dev/docs/contracts/remote/v1#whoami) | `pocketone remote whoami` | `GET /api/_c/remote/v1` | `remote_whoami` |
+| [status](https://pocketone.dev/docs/contracts/remote/v1#status) | `pocketone remote status` | `GET /api/_c/remote/v1/status` | `remote_status` |
+| [restart](https://pocketone.dev/docs/contracts/remote/v1#restart) | `pocketone remote restart` | `POST /api/_c/remote/v1/restart` | `remote_restart` |
+| [logs](https://pocketone.dev/docs/contracts/remote/v1#logs) | `pocketone remote logs --n <n>` | `GET /api/_c/remote/v1/logs` | `remote_logs` |
+
 ## Integrations
 
 ### Works with

@@ -10,18 +10,32 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 - [What is PocketOne?](https://pocketone.dev/docs/overview): PocketOne is a community fork of PocketBase. Its core changes are kept small; everything else is an extension.
 - [Installation](https://pocketone.dev/docs/installation): Install PocketOne with Homebrew, a release download or go build, and keep it up to date.
-- [What PocketOne adds](https://pocketone.dev/docs/what-pocketone-adds): What changes when you run pocketone instead of pocketbase, and what's new.
+
+## Tutorials
+
+- [How PocketOne fits together](https://pocketone.dev/docs/how-pocketone-fits-together): How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.
+- [Remote administration](https://pocketone.dev/docs/remote): Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
 - [Coding agents](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and PocketPages with our Agent Skills and llms.txt.
-
-## Extensions
-
-- [All extensions](https://pocketone.dev/docs/extensions): Every extension in PocketOne, grouped by what it's for.
+- [Your hooks on QuickJS](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
+- [Configure with pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
 - [Writing an extension](https://pocketone.dev/docs/writing-an-extension): How to write a PocketOne extension.
 
-## Contracts
+## Reference
 
-- [How PocketOne fits together](https://pocketone.dev/docs/contracts): How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.
-- [All contracts](https://pocketone.dev/docs/contracts/all): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
+- [CLI](https://pocketone.dev/docs/reference/cli): Every command of the pocketone binary: PocketBase's own, the standard extensions', and one per contract operation.
+- [REST](https://pocketone.dev/docs/reference/rest): Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input.
+- [MCP](https://pocketone.dev/docs/reference/mcp): Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments.
+- [pocketone.yaml](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
+- [Pages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
+- [Contracts](https://pocketone.dev/docs/contracts): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
+- [Extensions](https://pocketone.dev/docs/extensions): Every extension in PocketOne, grouped by what it's for.
+
+## Going Further
+
+- [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.
+
+## Contracts: By name
+
 - [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1): Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign.
 - [cache/v1](https://pocketone.dev/docs/contracts/cache/v1): Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it.
 - [cli.commands/v1](https://pocketone.dev/docs/contracts/cli.commands/v1): The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands.
@@ -43,7 +57,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
 - [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1): Compacting an app's databases so freed space goes back to the disk, and when it last happened.
 
-## Extensions: standard
+## Extensions: Standard extensions
 
 - [Auto TLS](https://pocketone.dev/docs/extensions/autotls): Certificates on demand and wildcards through ACME.
 - [Backups](https://pocketone.dev/docs/extensions/backups): Restore an app to a moment from its own backups: the latest one before it. On by default.
@@ -53,8 +67,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
 - [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
-- [Pages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
-- [Pages: PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
+- [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
 - [PITR](https://pocketone.dev/docs/extensions/pitr): Point-in-time restore of your database with Litestream. On by default.
 - [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect): File downloads as short-lived signed S3 redirects.
@@ -65,7 +78,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
 - [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk.
 
-## Extensions: many instances
+## Extensions: Run many instances
 
 - [Docker](https://pocketone.dev/docs/extensions/docker): A host provider that runs each instance in its own container.
 - [Edge](https://pocketone.dev/docs/extensions/edge): Forwards each request to the edge that owns the instance.
@@ -78,19 +91,19 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Schedules](https://pocketone.dev/docs/extensions/schedules): Planned. Scheduled webhooks that wake sleeping instances.
 - [Stats](https://pocketone.dev/docs/extensions/stats): Measures disk use and last request for each instance a host serves.
 
-## Extensions: services
+## Extensions: Services for your instances
 
 - [Mail Relay](https://pocketone.dev/docs/extensions/mailrelay): Outgoing mail for instances without SMTP, through your relay, with limits.
 - [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback): A default bucket for uploads and backups when an instance has no S3 of its own.
 - [Server Timing](https://pocketone.dev/docs/extensions/servertiming): Server-Timing headers for each step of a request.
 
-## Extensions: sell it
+## Extensions: Sell it as a service
 
 - [Lemon Squeezy Adapter](https://pocketone.dev/docs/extensions/tenant-billing-ls): Planned. Lemon Squeezy as the billing provider.
 - [Multitenant](https://pocketone.dev/docs/extensions/tenants): Planned. Accounts that own instances: quotas, owner logins, tokens and an API.
 - [Multitenant Billing](https://pocketone.dev/docs/extensions/tenant-billing): Planned. Plans, quotas and the billing provider hook for Multitenant.
 
-## Extensions: for authors
+## Extensions: For extension authors
 
 - [Bundle](https://pocketone.dev/docs/extensions/bundle): An app's hooks, migrations and public files embedded in the binary.
 - [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
@@ -99,14 +112,9 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 
-## Going Further
-
-- [pocketone.yaml reference](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
-- [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.
-
 ## Pages
 
-- [Pages extension](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
+- [PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
 
 ## Pages: Introduction
 

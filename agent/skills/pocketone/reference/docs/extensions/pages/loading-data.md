@@ -112,7 +112,7 @@ Every handler is optional. A page renders for any method, like PHP, so a templat
 ```
 
 A `post` (or `put`, ...) handler in `+page.js` is the tidier place for form logic as a page grows, but you don't need
-one. Only routes with nothing to render, [`+api.js`](api-routes.md) and a `+page.js` without a page, answer `405`
+one. Only routes with nothing to render, [`+api.js`](https://pocketone.dev/docs/extensions/pages/api-routes) and a `+page.js` without a page, answer `405`
 for a method they have no handler for.
 
 ## Example: a contact form
@@ -184,7 +184,7 @@ module.exports = {
 - With no template to render, each handler must send a response; returning without one is a 500.
 - Methods without a handler answer `405`, `GET` included: `/logout` above only takes `POST`.
 - Folder middleware runs; layouts don't, so wrap HTML yourself (or render a partial with `ctx.include`).
-- Errors show your `+error.ejs` page. For JSON responses and JSON errors, use [`+api.js`](api-routes.md) instead.
+- Errors show your `+error.ejs` page. For JSON responses and JSON errors, use [`+api.js`](https://pocketone.dev/docs/extensions/pages/api-routes) instead.
 
 ## Middleware or `+page.js`?
 

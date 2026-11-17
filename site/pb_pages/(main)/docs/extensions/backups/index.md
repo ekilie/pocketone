@@ -47,13 +47,24 @@ In the dashboard, Settings → Backups has a "Restore to a moment" section (rest
 backup a moment uses.
 Agents get the same through MCP (`restore_points`, `restore_restore_to`).
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [restore/v1](/docs/contracts/restore/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [points](/docs/contracts/restore/v1#points) | `pocketone remote restore points` | `GET /api/_c/restore/v1` | `restore_points` |
+| [restore_to](/docs/contracts/restore/v1#restore_to) | `pocketone remote restore to --at <time>` | `POST /api/_c/restore/v1/restore` | `restore_restore_to` |
+
 ## Integrations
 
 | Extension | How they fit |
 |---|---|
 | [PITR](/docs/extensions/pitr) | Also provides restore/v1, at any second rather than at backup times; when it's on for an app, Backups steps aside. |
 | [S3 Fallback](/docs/extensions/s3-fallback) | Backups kept on the host's storage are listed and restored the same way. |
-| [Contracts](/docs/contracts/all) | restore/v1 is the contract; any extension or host can provide it instead. |
+| [Contracts](/docs/contracts) | restore/v1 is the contract; any extension or host can provide it instead. |
 
 ## Example
 

@@ -39,13 +39,26 @@ curl -H "Authorization: $TOKEN" "https://app.example.com/api/_c/settings/v1/get?
 
 Agents get the same through MCP (`settings_list`, `settings_get`, `settings_save`, `settings_test`).
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [settings/v1](/docs/contracts/settings/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [list](/docs/contracts/settings/v1#list) | `pocketone remote settings list` | `GET /api/_c/settings/v1` | `settings_list` |
+| [get](/docs/contracts/settings/v1#get) | `pocketone remote settings get --extension <value>` | `GET /api/_c/settings/v1/get` | `settings_get` |
+| [save](/docs/contracts/settings/v1#save) | `pocketone remote settings save --extension <value> --values <json>` | `POST /api/_c/settings/v1/save` | `settings_save` |
+| [test](/docs/contracts/settings/v1#test) | `pocketone remote settings test --extension <value> --values <json>` | `POST /api/_c/settings/v1/test` | `settings_test` |
+
 ## Integrations
 
 | Extension | How they fit |
 |---|---|
 | [PITR](/docs/extensions/pitr) | Its S3 destination is a section. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Its sending settings are a section. |
-| [Contracts](/docs/contracts/all) | settings/v1 is the contract; a host could provide it instead. |
+| [Contracts](/docs/contracts) | settings/v1 is the contract; a host could provide it instead. |
 
 ## Example
 

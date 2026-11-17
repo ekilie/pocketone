@@ -62,7 +62,7 @@ catches mail and prints each message in the terminal.
 
 | Extension | How they fit |
 |---|---|
-| [Contracts](/docs/contracts/all) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); in dev mode Mail Trap takes it, otherwise it passes it on. |
+| [Contracts](/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); in dev mode Mail Trap takes it, otherwise it passes it on. |
 | [Pocker](/docs/extensions/pocker) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
 | [Mail Relay](/docs/extensions/mailrelay) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |
 | [Bulk Mail](/docs/extensions/bulkmail) | In dev mode with SMTP off, campaign mail lands in the inbox instead of being sent. |
@@ -81,7 +81,7 @@ catches mail and prints each message in the terminal.
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailtrap/example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
 this folder, request a password reset for `user@example.com` (password `password`) from the dashboard (log in as
 `admin@example.com` / `password`), and read the mail at http://127.0.0.1:8025.
 

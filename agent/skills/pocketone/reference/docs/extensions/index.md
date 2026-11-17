@@ -17,7 +17,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
 | [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
-| [Pages](https://pocketone.dev/docs/extensions/pages) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
+| [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [PITR](https://pocketone.dev/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |
 | [Remotes](https://pocketone.dev/docs/extensions/remotes) | Named remotes and saved logins for the pocketone command. |
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |

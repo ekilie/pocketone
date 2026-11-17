@@ -26,7 +26,7 @@ pb_pages/
 - The `ETag` comes from the content hash; a matching `If-None-Match` gets `304`.
 - A static file and a page can't claim the same URL (startup error).
 
-For cache-friendly URLs, reference files through [`asset()`](asset-management.md).
+For cache-friendly URLs, reference files through [`asset()`](/docs/extensions/pages/asset-management).
 
 ## `pb_pages` and `pb_public`
 

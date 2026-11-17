@@ -15,38 +15,54 @@ type section struct {
 	Keys                        []struct{ Key, Type, Default, Doc string }
 }
 
-// loadSections builds the pocketone binary (examples/pocketone) and asks it for its config sections.
-func loadSections(root string) ([]section, error) {
+// loadBinary builds the pocketone binary (examples/pocketone) once and asks it for its config sections
+// (`pocketone config --json`) and its commands and contract APIs (`pocketone reference`).
+func loadBinary(root string) ([]section, *reference, error) {
 	tmp, err := os.MkdirTemp("", "site-sync-")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer os.RemoveAll(tmp)
 	bin := filepath.Join(tmp, "pocketone")
 	build := exec.Command("go", "build", "-o", bin, ".")
 	build.Dir = filepath.Join(root, "examples", "pocketone")
 	build.Stderr = os.Stderr
-	fmt.Fprintln(os.Stderr, "site/sync: building examples/pocketone for its config sections")
+	fmt.Fprintln(os.Stderr, "site/sync: building examples/pocketone for its config sections, commands and contract APIs")
 	if err := build.Run(); err != nil {
-		return nil, fmt.Errorf("building examples/pocketone: %w", err)
+		return nil, nil, fmt.Errorf("building examples/pocketone: %w", err)
 	}
-	cmd := exec.Command(bin, "config", "--json", "--dev=false", "--dir", filepath.Join(tmp, "pb_data"))
-	cmd.Dir = tmp
-	cmd.Stderr = os.Stderr
-	raw, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("pocketone config --json: %w", err)
+	ask := func(start string, v any, args ...string) error {
+		cmd := exec.Command(bin, append(args, "--dev=false", "--dir", filepath.Join(tmp, "pb_data"))...)
+		cmd.Dir = tmp
+		cmd.Stderr = os.Stderr
+		name := "pocketone " + strings.Join(args, " ")
+		raw, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+		// defaults computed from where the binary runs (--dir's pb_data beside it) don't belong in the docs
+		for _, dir := range []string{tmp, "/private" + tmp} {
+			raw = []byte(strings.ReplaceAll(string(raw), dir, "<the binary's folder>"))
+		}
+		// Decode only the JSON value (it starts with start alone on a line): extensions may log to stdout around it.
+		i := strings.Index(string(raw), start+"\n")
+		if i < 0 {
+			return fmt.Errorf("%s printed no JSON", name)
+		}
+		if err := json.NewDecoder(strings.NewReader(string(raw[i:]))).Decode(v); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+		return nil
 	}
-	// Decode only the JSON value (it starts with "[" alone on a line): extensions may log to stdout around it.
 	var secs []section
-	start := strings.Index(string(raw), "[\n")
-	if start < 0 {
-		return nil, fmt.Errorf("pocketone config --json printed no JSON")
+	if err := ask("[", &secs, "config", "--json"); err != nil {
+		return nil, nil, err
 	}
-	if err := json.NewDecoder(strings.NewReader(string(raw[start:]))).Decode(&secs); err != nil {
-		return nil, fmt.Errorf("pocketone config --json: %w", err)
+	ref := &reference{}
+	if err := ask("{", ref, "reference"); err != nil {
+		return nil, nil, err
 	}
-	return secs, nil
+	return secs, ref, nil
 }
 
 // requiredSections are the README sections every extension has, in this order (.github/extensions checks them).
@@ -140,7 +156,9 @@ func sectionTable(s section) string {
 	return b.String()
 }
 
-func cell(s string) string { return strings.ReplaceAll(s, "|", `\|`) }
+func cell(s string) string {
+	return strings.ReplaceAll(strings.Join(strings.Fields(s), " "), "|", `\|`)
+}
 
 // configReference is /docs/config-reference: every section the pocketone binary understands.
 func configReference(m *manifest, secs []section) string {

@@ -36,8 +36,8 @@ EJS and Markdown are always on; they aren't plugins.
 
 | Name | Adds |
 |---|---|
-| [`auth`](auth.md) | Cookie sessions on PocketBase auth: sets `ctx.auth` from the `pb_auth` cookie and adds `ctx.session.*` sign-in methods. |
-| [`realtime`](realtime.md) | `ctx.realtime.send()` to PocketBase realtime subscribers. |
+| [`auth`](/docs/extensions/pages/plugins/auth) | Cookie sessions on PocketBase auth: sets `ctx.auth` from the `pb_auth` cookie and adds `ctx.session.*` sign-in methods. |
+| [`realtime`](/docs/extensions/pages/plugins/realtime) | `ctx.realtime.send()` to PocketBase realtime subscribers. |
 
 ## JS plugins
 

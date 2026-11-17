@@ -234,6 +234,7 @@ type mounter interface {
 	info() WireInfo
 	scopes() []WireScope
 	provided(app core.App) bool
+	provider(app core.App) (string, bool)
 	Mount(app core.App, se *core.ServeEvent)
 	tools(app core.App) []Tool
 }
@@ -275,6 +276,49 @@ func Provided(app core.App) []ContractID {
 }
 
 func (w *Wire[T]) id() ContractID { return w.C.id }
+
+func (w *Wire[T]) provider(app core.App) (string, bool) { return w.C.Provider(app) }
+
+// APIInfo is a contract linked into the binary that has an HTTP API under its Prefix: a wire contract's generated
+// operations, or a routed contract's own API (Routed, no Ops). Provider names the extension that answers it on the app
+// it was read from ("" with Provided false: nothing does there).
+type APIInfo struct {
+	ID       ContractID
+	Prefix   string
+	Routed   bool
+	Ops      []OpInfo
+	Provider string
+	Provided bool
+}
+
+// APIs describes every contract with an HTTP API linked into the binary, by id, and who provides each on app (after
+// the seal). Generated docs read it (`pocketone reference --json`).
+func APIs(app core.App) []APIInfo {
+	wiresMu.Lock()
+	ws := append([]mounter(nil), wires...)
+	wiresMu.Unlock()
+	out := make([]APIInfo, 0, len(ws))
+	for _, w := range ws {
+		wi := w.info()
+		_, routed := w.(interface{ isRouted() })
+		ai := APIInfo{ID: w.id(), Prefix: opPath(w.id(), ""), Routed: routed, Ops: wi.Ops}
+		if app != nil {
+			ai.Provider, ai.Provided = w.provider(app)
+		}
+		out = append(out, ai)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+// ToolName is the MCP tool of operation op of contract id: the id's name with dots as underscores, then the op
+// (deploy/v1's check is deploy_check, mail.suppression/v1's check is mail_suppression_check).
+func ToolName(id ContractID, op string) string {
+	return strings.ReplaceAll(strings.SplitN(string(id), "/", 2)[0], ".", "_") + "_" + op
+}
+
+// HasTool says whether an operation gets an MCP tool: uploads and downloads don't.
+func (op OpInfo) HasTool() bool { return !op.RawIn && op.Out != OutRaw }
 
 func (w *Wire[T]) info() WireInfo {
 	wi := WireInfo{ID: w.C.id, Ops: make([]OpInfo, len(w.Ops))}
@@ -965,7 +1009,6 @@ type Tool struct {
 // Tools are the contract's MCP tools on app: <name>_<op>, e.g. deploy_check, remote_status. Uploads and downloads have
 // no tool; a stream's tool returns its initial entries.
 func (w *Wire[T]) Tools(app core.App) []Tool {
-	base := strings.ReplaceAll(strings.SplitN(string(w.C.id), "/", 2)[0], ".", "_")
 	out := make([]Tool, 0, len(w.Ops))
 	for _, op := range w.Ops {
 		op := op
@@ -977,7 +1020,7 @@ func (w *Wire[T]) Tools(app core.App) []Tool {
 			scope = w.Scope
 		}
 		out = append(out, Tool{
-			Name:        base + "_" + op.Name,
+			Name:        ToolName(w.C.id, op.Name),
 			Description: op.Desc,
 			Contract:    w.C.id,
 			Scope:       scope,

@@ -53,6 +53,19 @@ The files are Go templates (`html/template`): `{{.AppName}}` prints a value (HTM
 and `{{range .Providers}}…{{end}}` branch and loop, and `{{template "head" .}}` includes another file of the set
 (`head.tpl`). A broken file shows its error instead of the page, so you see what to fix.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone template eject [set]`](/docs/reference/cli#pocketone-template-eject) | Copies a template set (every set without a name) into pb_templates/&lt;set&gt;/ for you to edit |
+| [`pocketone template list`](/docs/reference/cli#pocketone-template-list) | Lists the template sets extensions offer, and what you've changed in pb_templates |
+
 ## Integrations
 
 | Extension | How they fit |
