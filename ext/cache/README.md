@@ -3,7 +3,7 @@ owners: ["@benallfree"]
 version: 0.0.1
 title: "Cache"
 group: binary
-summary: "Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a disk tier that keeps identical values once and can survive restarts."
+summary: "Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once."
 ---
 
 # Cache
@@ -15,8 +15,7 @@ budget, and you can change it without touching the code that uses it.
 
 On a multisite host the store is shared by every instance: one memory ceiling and one disk tier for all of them. Each
 instance still sees only its own buckets. On disk, identical bytes (the same compiled template, the same `.wasm`
-file) are one file however many instances or keys hold them. With write-behind on, the disk tier keeps the cache
-across restarts.
+file) are one file however many instances or keys hold them.
 
 Cache provides [cache/v1](../contracts/cache/v1/README.md) and [cache.clear/v1](../contracts/cache/clear/v1/README.md).
 Code that caches talks only to those contracts, so a cache shared between servers (Redis, Memcached) can replace this
@@ -43,7 +42,6 @@ cache:
   max_memory: 512MiB       # the store: every bucket together
   disk_path: cache         # a disk tier; leave out for memory only
   max_disk: 10GiB
-  write_behind: true      # keep the cache across restarts
   defaults:
     max_memory: 16MiB
     ttl: 10m
@@ -61,7 +59,6 @@ The store, ceilings over every bucket together:
 | `eviction` | Which values leave memory (or disk) first when the store reaches a ceiling: `lru` (default), `mru`, `fifo`, `lifo` |
 | `disk_path` | Turns on the disk tier there, in a `p1cache` folder. Relative paths are under `pb_data` on a single app, and under the working directory on a multisite host |
 | `max_disk` | Size of the disk tier (default 1GiB) |
-| `write_behind` | Writes every value that can be marshaled to disk in the background after it's set, and keeps the cache across restarts (needs `disk_path`). A replaced or deleted value is never brought back, even by a power cut. Off, the disk tier holds only what memory evicts and is emptied when the process starts |
 
 Each bucket (`defaults` and `buckets.<name>`), its own budget:
 
@@ -81,8 +78,7 @@ absolute folder outside `pb_data`.
 ## Use
 
 Nothing to click. A bucket that's full moves its values to the disk tier when there is one, and a read brings them
-back. Without write-behind the cache starts empty with the process; with it, every value that can be written to disk
-is still there after a restart. On a multisite host, an instance that restarts or sleeps keeps its entries: the store
+back. The cache, disk tier included, starts empty with the process. On a multisite host, an instance that restarts or sleeps keeps its entries: the store
 belongs to the host.
 
 To empty an app's cache, as a superuser: `pocketone remote cache clear` (every bucket) or
@@ -191,27 +187,19 @@ entries or its disk, its keys go. A busy bucket never evicts another bucket's va
 disk) hold over every bucket together, so the total stays bounded however many instances there are; reaching one
 evicts across buckets by the store's strategy.
 
-Without write-behind the disk tier is overflow for memory: a value reaches disk only when memory evicts it, goes back
-to memory and leaves disk when read, and the folder is emptied when the process starts. With write-behind every value
-that can be marshaled is written when it's set, memory eviction only drops the in-memory copy, and an index
-(`p1cache/index.log`, one JSON line per change) records what each key points at. Every record carries a sequence
-number taken when the change happened, so a restart (or a crash) replays the latest record per key. A `Set` returns
-before its new value reaches disk, but when it replaces a value that's on disk (and on every `Delete` and `Clear`) the
-index records the removal and fsyncs it first, sharing one fsync among calls that wait together. So a crash or a power
-cut can lose a new value still in flight (a miss) but never brings back one that was replaced or deleted; that fsync is
-the price of a replacing `Set` (a few milliseconds on macOS, usually under one on Linux with an SSD). On restart, expired keys and keys whose file is missing are
-dropped, and files no key points at are removed. The index is compacted once it holds far more records than keys.
+Memory is the hot tier and the disk tier the cold one: a value reaches disk only when memory evicts it (an item is
+marshaled then, never before), goes back to memory and leaves disk when it's read, and the folder is emptied when the
+process starts. Nothing on disk outlives the process, so nothing on disk can be stale after a restart or a crash.
 
 One lock guards the in-memory index, and it's never held across disk IO, marshaling or decoding. One IO goroutine, running only
-while it has work, marshals, writes and removes files in the order the lock decided them. A `Set` returns at once:
-its write waits in a slot of its key's, at most one per key, and writes whatever the key holds when its turn comes, so
-a key set many times in a row is marshaled and written once, with its latest value. A value waiting to be written
+while it has work, marshals, writes and removes files in the order the lock decided them. A write waits in a slot of
+its key's, at most one per key, and writes whatever the key holds when its turn comes, so a key evicted again and
+again before the disk catches up is marshaled and written once, with its latest value. A value waiting to be written
 stays readable from memory (at most a quarter of `max_memory` waits; past that, evicted values are dropped). A file is
 read once however many readers want it, and a key's bytes are decoded once however many readers want its item; both
 are checked against the index again before they're used, so a key changed meanwhile never gets its old value back.
 
-The store is tested against a model under fuzzing (bytes and items, with and without write-behind, restarts and
-crashes included: no value deleted, replaced, expired or belonging to another key ever comes back; no value is shared
+The store is tested against a model under fuzzing (bytes and items: no value deleted, replaced, expired or belonging to another key ever comes back; no value is shared
 between keys in memory; every count and list stays consistent; the disk tier holds exactly the files it should) and
 under concurrent load with the race detector.
 

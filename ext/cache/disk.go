@@ -59,15 +59,7 @@ func (s *store) dropBlob(b *blob) {
 		refs = append(refs, e)
 	}
 	for _, e := range refs {
-		if !e.inMem {
-			s.removeEntry(e)
-			continue
-		}
-		if s.idx != nil {
-			s.idx.queue(indexRec{Op: opDel, Space: e.sp.id, Key: e.key, Seq: s.idx.next()}) // no longer kept across a restart
-		}
-		e.writing = false
-		s.detachDisk(e)
+		s.removeEntry(e)
 	}
 	if s.blobs[b.hash] == b || b.el != nil {
 		s.freeBlob(b)
@@ -80,10 +72,6 @@ func (s *store) writeDone(e *entry) {
 	if !e.inMem {
 		s.pending -= e.size
 		e.v = nil
-	}
-	if s.idx != nil {
-		b := e.disk
-		s.idx.queue(indexRec{Op: opSet, Space: e.sp.id, Key: e.key, Ver: e.ver, Hash: b.hash.hex(), Size: b.size, Exp: e.exp, Seq: e.seq})
 	}
 }
 
@@ -101,24 +89,24 @@ func (s *store) runWrite(sl slot) {
 	s.mu.Lock()
 	e := sl.sp.entries[sl.key]
 	if e == nil || !e.writing {
-		s.unlock()
+		s.mu.Unlock()
 		return
 	}
 	v := e.v
-	s.unlock()
+	s.mu.Unlock()
 
 	data, err := v.bytes()
 	h := sum(sha256.Sum256(data))
 
 	s.mu.Lock()
 	if e.dead || !e.writing {
-		s.unlock()
+		s.mu.Unlock()
 		return
 	}
 	if err != nil {
 		s.log.Warn("cache: marshal failed, entry not written", "error", err)
 		s.writeFailed(e)
-		s.unlock()
+		s.mu.Unlock()
 		return
 	}
 	if b := s.blobs[h]; b != nil { // the same bytes are on disk already (or on their way)
@@ -127,13 +115,13 @@ func (s *store) runWrite(sl slot) {
 			s.writeDone(e)
 		}
 		s.fitSpace(e.sp, e)
-		s.unlock()
+		s.mu.Unlock()
 		return
 	}
 	size := int64(len(data))
 	if over(s.lim.maxDisk, size) || over(e.sp.lim.maxDisk, size) {
 		s.writeFailed(e)
-		s.unlock()
+		s.mu.Unlock()
 		return
 	}
 	for over(s.lim.maxDisk, s.diskBytes+size) {
@@ -150,12 +138,12 @@ func (s *store) runWrite(sl slot) {
 	s.attachDisk(e, b)
 	s.fitSpace(e.sp, e)
 	path := s.blobPath(h)
-	s.unlock()
+	s.mu.Unlock()
 
 	werr := writeAtomic(s.lim.dir, path, data)
 
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	if s.blobs[h] != b {
 		return // freed while written: its removal is queued after this write
 	}
@@ -178,7 +166,7 @@ func (s *store) runWrite(sl slot) {
 func (s *store) runRemove(h sum) {
 	s.mu.Lock()
 	live := s.blobs[h] != nil
-	s.unlock()
+	s.mu.Unlock()
 	if !live {
 		_ = os.Remove(s.blobPath(h))
 	}
@@ -206,15 +194,13 @@ type slot struct {
 }
 
 type ioOp struct {
-	write   *slot // write what this key holds
-	remove  *sum  // or remove this file
-	compact bool  // or compact the write-behind index
+	write  *slot // write what this key holds
+	remove *sum  // or remove this file
 }
 
 // write queues e's key for writing, unless a write of it is already waiting: that one writes e's value.
 func (q *ioQueue) write(s *store, e *entry) { q.push(s, ioOp{write: &slot{e.sp, e.key}}) }
 func (q *ioQueue) remove(s *store, h sum)   { q.push(s, ioOp{remove: &h}) }
-func (q *ioQueue) compact(s *store)         { q.push(s, ioOp{compact: true}) }
 
 func (q *ioQueue) push(s *store, op ioOp) {
 	q.mu.Lock()
@@ -260,10 +246,6 @@ func (q *ioQueue) run(s *store) {
 		switch {
 		case op.write != nil:
 			s.runWrite(*op.write)
-		case op.compact:
-			if err := s.idx.compact(s); err != nil {
-				s.log.Warn("cache: index compaction failed", "error", err)
-			}
 		default:
 			s.runRemove(*op.remove)
 		}
@@ -298,13 +280,9 @@ func writeAtomic(dir, path string, data []byte) error {
 	return nil
 }
 
-// wipe empties the disk tier's folder: only what the store writes there (two-hex-digit folders of blob files, temp
-// files, the index), so a disk_path pointed at the wrong place loses nothing else.
-func wipe(dir string) error { return prune(dir, nil) }
-
-// prune removes from the disk tier's folder every file the store wrote that keep doesn't hold (and, with keep nil, the
-// index too).
-func prune(dir string, keep map[sum]*blob) error {
+// wipe empties the disk tier's folder: only what the store writes there (two-hex-digit folders of blob files, and
+// temp files), so a disk_path pointed at the wrong place loses nothing else.
+func wipe(dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -317,44 +295,20 @@ func prune(dir string, keep map[sum]*blob) error {
 		switch {
 		case strings.HasPrefix(d.Name(), ".tmp-") && !d.IsDir():
 			_ = os.Remove(p)
-		case d.Name() == indexFile && !d.IsDir() && keep == nil:
-			_ = os.Remove(p)
 		case d.IsDir() && len(d.Name()) == 2 && isHex(d.Name()):
 			files, err := os.ReadDir(p)
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			for _, f := range files {
-				if f.IsDir() || len(f.Name()) != 2*sha256.Size || !isHex(f.Name()) || f.Name()[:2] != d.Name() {
-					continue
+				if !f.IsDir() && len(f.Name()) == 2*sha256.Size && isHex(f.Name()) && f.Name()[:2] == d.Name() {
+					_ = os.Remove(filepath.Join(p, f.Name()))
 				}
-				if h, ok := parseSum(f.Name()); ok && keep[h] != nil {
-					continue
-				}
-				_ = os.Remove(filepath.Join(p, f.Name()))
 			}
 			_ = os.Remove(p) // only if now empty
 		}
 	}
 	return nil
-}
-
-func parseSum(x string) (sum, bool) {
-	var h sum
-	if len(x) != 2*len(h) || !isHex(x) {
-		return h, false
-	}
-	for i := range h {
-		h[i] = unhex(x[2*i])<<4 | unhex(x[2*i+1])
-	}
-	return h, true
-}
-
-func unhex(c byte) byte {
-	if c <= '9' {
-		return c - '0'
-	}
-	return c - 'a' + 10
 }
 
 func isHex(s string) bool {

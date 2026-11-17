@@ -18,10 +18,8 @@ package cache
 // a ceiling for memory and one for disk over every bucket together, so the total stays bounded however many apps
 // there are; reaching one evicts by the store's strategy across buckets.
 //
-// Without write-behind the disk tier is overflow for memory: a value reaches disk only when memory evicts it, goes
-// back to memory (and leaves disk) when read, and the tier starts empty with the process. With write-behind every
-// value that can be marshaled is written when it's Set, memory eviction only drops the in-memory copy, and an index
-// of (space, key, version) -> sha (index.go) brings the cache back after a restart.
+// The disk tier is a cold tier for the hot one in memory: a value reaches disk only when memory evicts it (marshaled
+// then, for an item), goes back to memory (and leaves disk) when read, and the tier starts empty with the process.
 //
 // Locking: one mutex guards the index, the lists and the totals, and is never held across disk IO, marshaling or
 // decoding. Files are written and removed by one IO goroutine (disk.go), in the order the lock decided them. An entry
@@ -57,11 +55,10 @@ func (h sum) hex() string { return hex.EncodeToString(h[:]) }
 
 // poolLimits are the store's, from the operator: ceilings over every bucket together.
 type poolLimits struct {
-	eviction    cachev1.Eviction
-	maxMem      int64 // values and key index in memory
-	dir         string
-	maxDisk     int64
-	writeBehind bool
+	eviction cachev1.Eviction
+	maxMem   int64 // values and key index in memory
+	dir      string
+	maxDisk  int64
 }
 
 // maxPending is how many bytes evicted from memory may wait there for the disk tier; past it, they're dropped.
@@ -122,7 +119,6 @@ type entry struct {
 	key  string
 	ver  string // its value's version, kept with its file
 	exp  int64  // unix ns; 0 = never
-	seq  uint64 // when it was Set, for the write-behind index
 	dead bool   // removed: work queued for it is dropped
 
 	v     *value // in memory (inMem), or held while its file is written (spilling)
@@ -194,8 +190,7 @@ type store struct {
 	diskBytes  int64
 	sinceSweep int
 
-	io  ioQueue
-	idx *diskIndex // write-behind only
+	io ioQueue
 
 	beforeRead   func() // tests: called before a file read, off the lock
 	beforeDecode func() // tests: called before a decode, off the lock
@@ -205,36 +200,14 @@ func newStore(lim poolLimits, log *slog.Logger) (*store, error) {
 	s := &store{lim: lim, log: log, now: time.Now, spaces: map[string]*space{}, blobs: map[sum]*blob{},
 		mem: list.New(), disk: list.New()}
 	s.io.cond = sync.NewCond(&s.io.mu)
-	if lim.writeBehind && lim.dir == "" {
-		return nil, errors.New("cache: write_behind needs a disk_path")
-	}
 	if lim.dir == "" {
 		return s, nil
 	}
 	s.lim.dir = filepath.Join(lim.dir, blobsDir)
-	if !lim.writeBehind {
-		if err := wipe(s.lim.dir); err != nil {
-			return nil, fmt.Errorf("cache: disk tier %s: %w", s.lim.dir, err)
-		}
-		return s, nil
-	}
-	if err := s.replay(); err != nil {
+	if err := wipe(s.lim.dir); err != nil {
 		return nil, fmt.Errorf("cache: disk tier %s: %w", s.lim.dir, err)
 	}
 	return s, nil
-}
-
-// unlock releases the lock, then appends the index records queued under it (write-behind).
-func (s *store) unlock() {
-	var recs []indexRec
-	var sync bool
-	if s.idx != nil {
-		recs, sync = s.idx.take()
-	}
-	s.mu.Unlock()
-	if len(recs) > 0 {
-		s.idx.append(s, recs, sync)
-	}
 }
 
 func (s *store) space(id string) *space {
@@ -250,7 +223,7 @@ func (s *store) space(id string) *space {
 // its spaces with their current limits; what they hold stays.
 func (s *store) open(id string, lim spaceLimits) *space {
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	sp := s.space(id)
 	sp.lim = lim
 	s.fitSpace(sp, nil)
@@ -301,12 +274,12 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 	s.mu.Lock()
 	e, found := sp.entries[key]
 	if !found {
-		s.unlock()
+		s.mu.Unlock()
 		return value{}, false, false, nil
 	}
 	if e.expired(s.now().UnixNano()) {
 		s.removeEntry(e)
-		s.unlock()
+		s.mu.Unlock()
 		return value{}, false, false, nil
 	}
 	s.touch(e)
@@ -315,16 +288,16 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 		if v.item == nil {
 			v.data = bytes.Clone(v.data)
 		}
-		s.unlock()
+		s.mu.Unlock()
 		return v, true, false, nil
 	}
 	if dec != nil && e.ver != dec.Version { // bytes of another format
-		s.unlock()
+		s.mu.Unlock()
 		return value{}, false, false, nil
 	}
 	if dec != nil && e.decoding != nil { // someone is decoding this key: wait, then look again
 		ch := e.decoding
-		s.unlock()
+		s.mu.Unlock()
 		<-ch
 		return value{}, false, true, nil
 	}
@@ -338,7 +311,7 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 				e.decoding = nil
 			}
 			close(decoding)
-			s.unlock()
+			s.mu.Unlock()
 		}()
 	}
 
@@ -346,7 +319,7 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 		held := e.v
 		data := bytes.Clone(held.data)
 		dhook := s.beforeDecode
-		s.unlock()
+		s.mu.Unlock()
 		if dhook != nil {
 			dhook()
 		}
@@ -355,7 +328,7 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 			return value{}, false, false, err
 		}
 		s.mu.Lock()
-		defer s.unlock()
+		defer s.mu.Unlock()
 		if sp.entries[key] == e && e.v == held { // still the key's value: its item from now on
 			s.replaceValue(e, &value{item: it})
 		}
@@ -370,7 +343,7 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 		b.loading = fr
 	}
 	path, hook, dhook := s.blobPath(b.hash), s.beforeRead, s.beforeDecode
-	s.unlock()
+	s.mu.Unlock()
 	if reader {
 		if hook != nil {
 			hook()
@@ -381,7 +354,7 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 		}
 		s.mu.Lock()
 		b.loading = nil
-		s.unlock()
+		s.mu.Unlock()
 		close(fr.done)
 	} else {
 		<-fr.done
@@ -396,7 +369,7 @@ func (s *store) tryGet(sp *space, key string, dec *cachev1.Decoder) (value, bool
 	}
 
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	if fr.err != nil {
 		if s.blobs[b.hash] == b {
 			s.log.Warn("cache: unreadable disk entry dropped", "error", fr.err)
@@ -444,8 +417,7 @@ func (s *store) touch(e *entry) {
 	}
 }
 
-// promote brings e's value back to memory from its file, if it could fit. Without write-behind the file is
-// overflow only, so e lets go of it.
+// promote brings e's value back to memory from its file, if it could fit, and lets go of the file.
 func (s *store) promote(e *entry, v *value) {
 	size := v.size()
 	if !s.fits(e.sp, size) {
@@ -453,9 +425,7 @@ func (s *store) promote(e *entry, v *value) {
 	}
 	e.v, e.size = v, size
 	s.addMem(e)
-	if !s.lim.writeBehind {
-		s.detachDisk(e)
-	}
+	s.detachDisk(e) // the disk tier is overflow only
 	s.fitSpace(e.sp, e)
 	s.fitMem(e)
 }
@@ -487,9 +457,8 @@ func (s *store) setItem(sp *space, key string, item cachev1.Item, ttl time.Durat
 func (s *store) put(sp *space, key string, v *value, ttl time.Duration) {
 	ver, size := v.version(), v.size() // the item's own methods, off the lock
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	if old, ok := sp.entries[key]; ok {
-		s.mustSync(old)
 		s.removeEntry(old)
 	}
 	if ttl < 0 {
@@ -506,9 +475,6 @@ func (s *store) put(sp *space, key string, v *value, ttl time.Duration) {
 	if ttl > 0 {
 		e.exp = now + int64(ttl)
 	}
-	if s.idx != nil {
-		e.seq = s.idx.next()
-	}
 	if over(sp.lim.maxMem, e.cost()) || over(s.lim.maxMem, e.cost()+s.keyBytes) {
 		return // not even its key fits
 	}
@@ -517,10 +483,6 @@ func (s *store) put(sp *space, key string, v *value, ttl time.Duration) {
 		s.spill(e) // never fits in memory: straight to disk, or not kept
 	} else {
 		s.addMem(e)
-		if s.lim.writeBehind && v.canMarshal() {
-			e.writing = true
-			s.io.write(s, e)
-		}
 	}
 	if e.dead {
 		return
@@ -531,24 +493,15 @@ func (s *store) put(sp *space, key string, v *value, ttl time.Duration) {
 
 func (s *store) del(sp *space, key string) {
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	if e, ok := sp.entries[key]; ok {
-		s.mustSync(e)
 		s.removeEntry(e)
-	}
-}
-
-// mustSync makes the index dels this call queues durable before it returns, when removing e (or, nil, a bucket's
-// keys) lets go of a file: a replaced or deleted value must never come back after a crash or a power cut.
-func (s *store) mustSync(e *entry) {
-	if s.idx != nil && (e == nil || e.disk != nil || e.writing) {
-		s.idx.mustSync()
 	}
 }
 
 func (s *store) clear(sp *space) {
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	s.clearSpace(sp)
 }
 
@@ -556,7 +509,7 @@ func (s *store) clear(sp *space) {
 // and returns how many keys went.
 func (s *store) clearPrefix(prefix string) int {
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	n := 0
 	for id, sp := range s.spaces {
 		if strings.HasPrefix(id, prefix) {
@@ -569,7 +522,7 @@ func (s *store) clearPrefix(prefix string) int {
 // clearID empties space id, opened or not, and returns how many keys went.
 func (s *store) clearID(id string) int {
 	s.mu.Lock()
-	defer s.unlock()
+	defer s.mu.Unlock()
 	if sp, ok := s.spaces[id]; ok {
 		return s.clearSpace(sp)
 	}
@@ -577,7 +530,6 @@ func (s *store) clearID(id string) int {
 }
 
 func (s *store) clearSpace(sp *space) int {
-	s.mustSync(nil)
 	n := len(sp.entries)
 	for _, e := range sp.entries {
 		s.removeEntry(e)
@@ -649,9 +601,6 @@ func (s *store) removeEntry(e *entry) {
 		return
 	}
 	sp := e.sp
-	if s.idx != nil && (e.disk != nil || e.writing) {
-		s.idx.queue(indexRec{Op: opDel, Space: sp.id, Key: e.key, Seq: s.idx.next()})
-	}
 	if e.inMem {
 		s.removeMem(e)
 	} else if e.spilling() {
@@ -669,31 +618,21 @@ func (s *store) removeEntry(e *entry) {
 	e.dead, e.v, e.writing = true, nil, false
 }
 
-// spill moves e out of memory: onto its file when it has one, else into a new one (holding its value until written),
-// else away.
+// spill moves e out of memory (where it is, or would be): into a file, holding its value until it's written, or away
+// when there's no disk tier, it can't marshal, or too much already waits for the disk.
 func (s *store) spill(e *entry) {
 	if e.inMem {
 		s.removeMem(e)
 	}
-	switch {
-	case e.disk != nil && !e.writing:
-		e.v = nil
-		return
-	case s.lim.dir == "" || !e.v.canMarshal() || over(s.lim.maxDisk, e.size) || over(e.sp.lim.maxDisk, e.size) ||
-		s.pending+e.size > s.lim.maxPending():
-		if !e.writing {
-			e.v = nil // not held for a write: nothing pending to give back
-		} else {
-			s.pending += e.size // removeEntry gives back what a spilling entry holds
-		}
+	if s.lim.dir == "" || !e.v.canMarshal() || over(s.lim.maxDisk, e.size) || over(e.sp.lim.maxDisk, e.size) ||
+		s.pending+e.size > s.lim.maxPending() {
+		e.v = nil // not held for a write: nothing pending to give back
 		s.removeEntry(e)
 		return
 	}
 	s.pending += e.size
-	if !e.writing {
-		e.writing = true
-		s.io.write(s, e)
-	}
+	e.writing = true
+	s.io.write(s, e)
 }
 
 // fitSpace evicts sp's own entries (never keep) until it's within its budget.
@@ -748,13 +687,8 @@ func (s *store) sweep(now int64) {
 	}
 }
 
-// close waits for every queued disk write and removal, then closes the write-behind index.
-func (s *store) close() {
-	s.flush()
-	if s.idx != nil {
-		s.idx.close()
-	}
-}
+// close waits for every queued disk write and removal.
+func (s *store) close() { s.flush() }
 
 // flush waits until every queued disk write and removal is done.
 func (s *store) flush() { s.io.flush() }

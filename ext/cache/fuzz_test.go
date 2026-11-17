@@ -186,7 +186,7 @@ func checkFiles(s *store) error {
 	}
 	found := 0
 	err := filepath.WalkDir(s.lim.dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || p == filepath.Join(s.lim.dir, indexFile) {
+		if err != nil || d.IsDir() {
 			return err
 		}
 		b, ok := want[p]
@@ -243,24 +243,19 @@ func (r *fuzzReader) done() bool { return r.i >= len(r.b) }
 // FuzzStore runs random operations on a small store (tiny budgets, so everything evicts, spills and shares files)
 // against a model of what every key last held. The store may forget anything, but may never hold or return a value
 // the model doesn't have: not a deleted, replaced, expired or other key's value. Values go in as bytes and as items.
-// With write-behind the store also restarts (cleanly, or as after a crash), and must come back with nothing the model
-// doesn't have. Every structure is checked after each step, and the disk tier's files on every flush.
+// Every structure is checked after each step, and the disk tier's files on every flush.
 func FuzzStore(f *testing.F) {
 	f.Add([]byte{0, 1, 200, 1, 0, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
 	f.Add([]byte{3, 2, 100, 1, 50, 1, 2, 1, 0, 30, 2, 2, 3, 0, 0, 5, 1, 2, 3, 0, 5, 5, 5, 0, 1, 1, 1, 7, 0, 9, 1, 2, 0})
 	f.Add(bytes.Repeat([]byte{0, 5, 1, 5, 2, 4, 3, 1, 1, 0}, 12))
 	f.Add(bytes.Repeat([]byte{1, 3, 9, 0, 255, 7, 2, 2, 8, 4, 6, 1, 0, 11}, 20))
 	f.Add(bytes.Repeat([]byte{2, 1, 4, 1, 3, 12, 0, 1, 2, 10, 3, 0, 13, 1}, 20))
-	f.Add(bytes.Repeat([]byte{2, 2, 9, 2, 3, 1, 1, 10, 4, 2, 2, 12, 1, 0, 5, 3, 0, 13}, 16))
 	f.Fuzz(func(t *testing.T, in []byte) {
 		r := &fuzzReader{b: in}
 		evs := []cachev1.Eviction{cachev1.LRU, cachev1.MRU, cachev1.FIFO, cachev1.LIFO}
 		lim := poolLimits{eviction: evs[r.next()%4], maxMem: int64(600 + 8*r.next())}
-		switch r.next() % 3 {
-		case 1:
+		if r.next()%3 != 0 {
 			lim.dir, lim.maxDisk = t.TempDir(), int64(150+12*r.next())
-		case 2:
-			lim.dir, lim.maxDisk, lim.writeBehind = t.TempDir(), int64(150+12*r.next()), true
 		}
 		now := time.Unix(1000, 0)
 		var clock sync.Mutex
@@ -337,7 +332,7 @@ func FuzzStore(f *testing.F) {
 		for step := 0; !r.done() && step < 400; step++ {
 			i, k := r.next()%nSpaces, r.next()%nKeys
 			sp, key := spaces[i], fmt.Sprint(k)
-			switch op := r.next() % 14; op {
+			switch op := r.next() % 12; op {
 			case 0, 1, 2, 10: // set, as bytes or (10) as an item
 				v, ttl := r.next()%len(palette), ttls[r.next()%len(ttls)]
 				if op == 10 {
@@ -401,23 +396,6 @@ func FuzzStore(f *testing.F) {
 				if err := checkFiles(s); err != nil {
 					t.Fatalf("step %d: %v", step, err)
 				}
-			case 12, 13: // the process restarts
-				if !lim.writeBehind {
-					continue
-				}
-				if op == 12 {
-					s.close()
-				} else {
-					s.flush() // as after a crash: no close, only what reached disk
-					s.idx.close()
-				}
-				s = newS()
-				for j := range spaces {
-					spaces[j] = s.open(fmt.Sprintf("i%d/b", j), lims[j])
-				}
-				if err := checkFiles(s); err != nil {
-					t.Fatalf("step %d, after restart: %v", step, err)
-				}
 			}
 			agree(step)
 		}
@@ -444,13 +422,10 @@ func TestStress(t *testing.T) {
 	if testing.Short() {
 		ops = 800
 	}
-	for _, mode := range []string{"lru", "fifo", "mru", "write-behind"} {
+	for _, mode := range []string{"lru", "fifo", "mru"} {
 		t.Run(mode, func(t *testing.T) {
 			ev := cachev1.Eviction(mode)
-			if mode == "write-behind" {
-				ev = cachev1.LRU
-			}
-			s := newTestStore(t, poolLimits{eviction: ev, maxMem: 24 << 10, dir: t.TempDir(), maxDisk: 96 << 10, writeBehind: mode == "write-behind"})
+			s := newTestStore(t, poolLimits{eviction: ev, maxMem: 24 << 10, dir: t.TempDir(), maxDisk: 96 << 10})
 			shared := make([]*space, 4)
 			for i := range shared {
 				shared[i] = s.open(fmt.Sprintf("shared%d/b", i), spaceLimits{eviction: cachev1.LRU, maxItems: 12, maxMem: 6 << 10})
@@ -600,20 +575,11 @@ func TestDiskReadRacesAChange(t *testing.T) {
 // is shared until both move on, while tiny budgets push values through the disk tier. A reader that starts after
 // version v was written must see v or later, or miss; never an older one, and never one deleted before it started.
 func TestNoStaleReads(t *testing.T) {
-	for _, wt := range []bool{false, true} {
-		t.Run(fmt.Sprintf("write-behind=%v", wt), func(t *testing.T) { noStaleReads(t, wt) })
-	}
-}
-
-func noStaleReads(t *testing.T, writeBehind bool) {
 	ops := 3000
-	if writeBehind {
-		ops = 800 // every replacing Set waits for an fsync
-	}
 	if testing.Short() {
-		ops /= 5
+		ops = 600
 	}
-	s := newTestStore(t, poolLimits{maxMem: 8 << 10, dir: t.TempDir(), maxDisk: 64 << 10, writeBehind: writeBehind})
+	s := newTestStore(t, poolLimits{maxMem: 8 << 10, dir: t.TempDir(), maxDisk: 64 << 10})
 	spaces := []*space{s.open("a/x", room(2, 2400)), s.open("b/x", room(2, 2400))}
 	const nKeys = 6
 	type keyState struct {
