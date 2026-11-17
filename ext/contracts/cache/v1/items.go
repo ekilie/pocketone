@@ -113,3 +113,6 @@ func (it *Items[T]) Set(ctx context.Context, key string, v T, ttl time.Duration)
 
 // Delete removes key.
 func (it *Items[T]) Delete(ctx context.Context, key string) error { return it.b.Delete(ctx, key) }
+
+// Clear removes every key of the bucket, items and byte values alike.
+func (it *Items[T]) Clear(ctx context.Context) error { return it.b.Clear(ctx) }

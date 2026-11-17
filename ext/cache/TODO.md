@@ -68,3 +68,19 @@ other bucket's values. Make each bucket's limits its own budget instead:
   it there.
 - On a multisite host, each instance's buckets have their own budgets; an instance may set `defaults` and `buckets`
   for itself as now, under any ceiling the host sets for its instances.
+
+## Clearing more than one bucket
+
+**Waits on:** `cachev1.Item` / `cachev1.ItemBucket` and their support in this store on `main` (branch `cache-items`).
+
+`Bucket.Clear` empties one bucket. Nothing empties more:
+
+- **One app's buckets:** a `Clear(ctx)` on `cachev1.Cache` that empties every bucket the app has, opened or not
+  (every space under `<app id>/` in this store). It changes what cache/v1 promises, so it's a companion contract or
+  `cache/v2`, reviewed with the contract's owners, never a new method on `v1`'s `Cache`. `None`-style fallback: with no
+  provider, it does nothing.
+- **The whole store:** an operator command (through `cli.commands/v1`, such as `pocketone cache clear`, with
+  `--app <id>` and `--bucket <name>` to narrow it) and, on a multisite host, the host's only. It empties memory and the
+  disk tier, and with write-through on (above) the persisted index too.
+- Both keep the store's rules: values other keys still point at stay, a read in flight that races the clear misses,
+  and files are removed on the IO goroutine in the lock's order.
