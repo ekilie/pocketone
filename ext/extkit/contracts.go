@@ -676,3 +676,15 @@ func (c *Contract[T]) ProvidersIn(s *Scope) []string {
 	}
 	return out
 }
+
+// HostProvides reports whether the host app runs under (see [AttachHost]) provides id for its instances: the
+// capability is hoisted to the host, so the app's own provider steps aside. An extension's app half checks it in
+// Register to leave out its user-facing parts too (a settings section, a schedule): on a host that owns the
+// capability, the operator decides, not the app's admins. A single app has no host: always false.
+func HostProvides(app core.App, id ContractID) bool {
+	s := scopeOf(app)
+	s.mu.Lock()
+	host := s.host
+	s.mu.Unlock()
+	return host != nil && host.HostProvides(id)
+}

@@ -9,11 +9,12 @@ summary: "Compact your app's SQLite databases on a schedule, so space freed by d
 # Vacuum
 
 SQLite doesn't give space back to the disk when records are deleted; the file stays as big as it ever was. Vacuum
-compacts your app's databases on a schedule (SQLite's `VACUUM`), so the space comes back.
+compacts your app's databases on a schedule (SQLite's `VACUUM`), so the space comes back. It only compacts a database
+when enough of it is free space (10%, or 64 MB), so a busy, tidy app is left alone.
 
 ## Install
 
-Vacuum is built into `pocketone`; a `vacuum` section in `pocketone.yaml` turns it on. In your own Go build:
+Vacuum is built into `pocketone`. In your own Go build:
 
 ```go
 extkit.Setup(app, []extkit.Extension{vacuum.New()}, nil, nil)
@@ -21,29 +22,42 @@ extkit.Setup(app, []extkit.Extension{vacuum.New()}, nil, nil)
 
 ## Configure
 
+The app's admins turn it on and set how often under **Settings → Vacuum** (settings/v1). `pocketone.yaml` sets the
+defaults until they do:
+
 ```yaml
 vacuum:
-  every: 168h   # weekly; any duration like 24h
+  enabled: true
+  every: 168h   # weekly; at least 1h
 ```
 
-Without the section, nothing runs.
+Without either, it's off.
 
 ## Use
 
-There's nothing to click. Every `every`, while the app serves, Vacuum runs `VACUUM` on `data.db` and `auxiliary.db`
-(PocketBase's own, online). While it runs, writes wait. The log says when it's done. `VACUUM` needs free disk space
-about the size of the database it compacts.
+Once on, every `every` while the app serves, Vacuum checks `data.db` and `auxiliary.db` and compacts the ones with
+enough free space (PocketBase's own online `VACUUM`; writes wait while it runs). `VACUUM` needs free disk space about the
+size of the database it compacts.
+
+Its status (whether it's on, how often, the last run's bytes saved and skipped databases, the next run) is
+[vacuum/v1](../contracts/vacuum/v1/README.md):
+
+```sh
+pocketone remote vacuum status
+```
 
 ## Integrations
 
 | Extension | How they fit |
 |---|---|
+| [Settings](../settings/README.md) | Its on/off and schedule are a settings/v1 section, in the dashboard, the CLI and for agents. |
+| [Multisite](../multisite/README.md) | A host may compact its instances itself: when it provides [vacuum/v1](../contracts/vacuum/v1/README.md) for them, Vacuum steps aside in each instance, so its admins have no setting and see the host's status. |
 | [PITR](../pitr/README.md) | A compacted database is a new file to Litestream, so the next replication starts a fresh generation. |
 
 ### Building on Vacuum
 
-`vacuum.App(app)` compacts a running app now, and `vacuum.Dir(folder)` compacts an app folder's databases while the
-app isn't running.
+`vacuum.App(app)` compacts a running app now and returns what it did. `LoadSettings`/`SaveSettings` read and change the
+app's settings.
 
 ## Example
 
@@ -51,7 +65,7 @@ A PocketBase app that compacts its databases once when it starts serving.
 
 ```go
 // Command example is a PocketBase app that compacts its databases once when it starts serving (vacuum.App), the work
-// the extension does on the `vacuum` section's schedule. Run `go run . serve` and watch the log for "vacuum: done".
+// the extension does on its admins' schedule. Run `go run . serve` and watch the log for "vacuum: once".
 package main
 
 import (
@@ -71,9 +85,8 @@ func main() {
 	}
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		go func() {
-			if err := vacuum.App(app); err != nil {
-				app.Logger().Error("vacuum", "error", err)
-			}
+			run := vacuum.App(app)
+			app.Logger().Info("vacuum: once", "saved_bytes", run.Saved, "skipped", run.Skipped, "error", run.Error)
 		}()
 		return e.Next()
 	})

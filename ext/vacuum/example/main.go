@@ -1,5 +1,5 @@
 // Command example is a PocketBase app that compacts its databases once when it starts serving (vacuum.App), the work
-// the extension does on the `vacuum` section's schedule. Run `go run . serve` and watch the log for "vacuum: done".
+// the extension does on its admins' schedule. Run `go run . serve` and watch the log for "vacuum: once".
 package main
 
 import (
@@ -19,9 +19,8 @@ func main() {
 	}
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		go func() {
-			if err := vacuum.App(app); err != nil {
-				app.Logger().Error("vacuum", "error", err)
-			}
+			run := vacuum.App(app)
+			app.Logger().Info("vacuum: once", "saved_bytes", run.Saved, "skipped", run.Skipped, "error", run.Error)
 		}()
 		return e.Next()
 	})
