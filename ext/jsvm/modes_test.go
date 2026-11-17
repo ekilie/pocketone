@@ -2,7 +2,6 @@ package jsvm_test
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -117,9 +116,9 @@ func wantBody(t *testing.T, s *modetest.Site, path, want string) {
 // pb_migrations, as a single app and as an instance on a host, in each format the engine reads: a CommonJS script
 // (.js), an ES module that imports a helper (.mjs) and TypeScript (.ts). The first serve applies them in order; a
 // restart applies nothing again; `migrate down` in the app's folder reverts the newest and the next serve applies them
-// once more. The extensions' own tables (tokens' _tokens) are there without leaving a file in pb_migrations. A single
-// app in dev mode writes a migration for a collection made over the API (automigrate); an instance on a host doesn't
-// (no automigrate there, as with PocketBase's own prebuilt binary).
+// once more. The extensions' own tables (tokens' _tokens) are there without leaving a file in pb_migrations, while a
+// collection made over the API writes one (automigrate, in both modes, as on a PocketHost docker instance) without
+// restarting the app, so the empty result means something.
 func TestModesMigrations(t *testing.T) {
 	top := modetest.Topology{Instances: []modetest.Inst{{ID: "app", Files: migrations}}}
 	modetest.Run(t, top, modetest.AllApp, func(t *testing.T, w *modetest.World) {
@@ -137,27 +136,22 @@ func TestModesMigrations(t *testing.T) {
 			t.Fatalf("pb_migrations after the first serve: %v, want only ours %v", got, ours)
 		}
 
-		automigrate := w.Mode == modetest.Single
-		modetest.Step(t, fmt.Sprintf("a collection made over the API (automigrate: %v)", automigrate))
+		modetest.Step(t, "a collection made over the API writes its own migration (automigrate)")
 		s.MustJSON(http.MethodPost, "/api/collections", s.JWT(), map[string]any{
 			"name": "shelves", "type": "base", "fields": []map[string]any{{"name": "label", "type": "text"}},
 		}, 200, nil)
 		var shelvesFile string
-		if automigrate {
-			modetest.WaitFor(t, "the shelves migration file", 5*time.Second, func() (bool, string) {
-				for _, f := range migrationFiles(t, s.Dir) {
-					if strings.HasSuffix(f, "_created_shelves.js") {
-						shelvesFile = f
-						return true, f
-					}
+		modetest.WaitFor(t, "the shelves migration file", 5*time.Second, func() (bool, string) {
+			for _, f := range migrationFiles(t, s.Dir) {
+				if strings.HasSuffix(f, "_created_shelves.js") {
+					shelvesFile = f
+					return true, f
 				}
-				return false, strings.Join(migrationFiles(t, s.Dir), ",")
-			})
-		} else {
-			time.Sleep(time.Second)
-			if got := migrationFiles(t, s.Dir); strings.Join(got, ",") != strings.Join(ours, ",") {
-				t.Fatalf("pb_migrations on a host after a collection over the API: %v, want only ours", got)
 			}
+			return false, strings.Join(migrationFiles(t, s.Dir), ",")
+		})
+		if s.Restarted() {
+			t.Fatalf("writing the migration restarted the app (%d restarts)", s.Restarts())
 		}
 
 		modetest.Step(t, "restart: nothing applied twice")
@@ -166,27 +160,17 @@ func TestModesMigrations(t *testing.T) {
 			t.Fatalf("books after a restart: %q", got)
 		}
 
-		// a single app: the shelves migration then the seed; on a host: just the seed
-		n := "1"
-		if automigrate {
-			n = "2"
-		}
-		modetest.Step(t, "migrate down "+n+": newest first")
+		modetest.Step(t, "migrate down 2: the shelves and seed migrations revert, newest first")
 		w.Stop("app")
-		down := modetest.Command(context.Background(), t, s.Dir, s.Proc.Env, "migrate", "down", n, "--dir=pb_data", "--dev=false")
+		down := modetest.Command(context.Background(), t, s.Dir, s.Proc.Env, "migrate", "down", "2", "--dir=pb_data", "--dev=false")
 		down.Stdin = strings.NewReader("y\n")
 		out, err := down.CombinedOutput()
 		if err != nil {
-			t.Fatalf("migrate down %s: %v\n%s", n, err, out)
+			t.Fatalf("migrate down 2: %v\n%s", err, out)
 		}
-		rd := strings.Index(string(out), "Reverted 1700000002_seed.ts")
-		if rd < 0 {
-			t.Fatalf("migrate down %s didn't revert the seed:\n%s", n, out)
-		}
-		if automigrate {
-			if rs := strings.Index(string(out), "Reverted "+shelvesFile); rs < 0 || rs > rd {
-				t.Fatalf("migrate down 2 didn't revert %s before the seed:\n%s", shelvesFile, out)
-			}
+		rs, rd := strings.Index(string(out), "Reverted "+shelvesFile), strings.Index(string(out), "Reverted 1700000002_seed.ts")
+		if rs < 0 || rd < 0 || rs > rd {
+			t.Fatalf("migrate down 2 didn't revert %s then the seed:\n%s", shelvesFile, out)
 		}
 
 		modetest.Step(t, "serve again: both applied once more")
