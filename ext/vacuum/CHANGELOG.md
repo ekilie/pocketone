@@ -5,3 +5,7 @@ commit. Each PocketOne release raises this extension's `version:` when there's s
 renames the section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 
 ## Unreleased
+
+### Added
+
+- New extension: a `vacuum` section (`every: 168h`) compacts the app's SQLite databases (`data.db`, `auxiliary.db`) on a schedule, online.

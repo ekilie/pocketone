@@ -5,6 +5,7 @@ package main
 
 import (
 	"github.com/pockethost/pocketone/ext/multisite"
+	"github.com/pockethost/pocketone/ext/vacuum"
 	"log"
 	"net/http"
 	"os"
@@ -80,6 +81,7 @@ func main() {
 	// s3redirect, pitr, backups, bulkmail, deploy). The flags below reconfigure members; extras are added after them.
 	set := standard.New()
 	set.Providers = standard.ConfiguredProviders() // pocketone.yaml's providers: section
+	set.Add(vacuum.New())                          // compacts the app's databases on the `vacuum` section's schedule
 	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
 
 	// ---------------------------------------------------------------
