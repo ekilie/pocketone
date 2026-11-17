@@ -14,7 +14,15 @@
 // Docs nav: the pages of an extension with a site of its own (ext/<name>/site) show its nav, toc-<name>, in place of
 // the main one (toc). site/sync writes both and lists those extensions in site-navs.js. ctx.docsNav() is the name of
 // the extension whose nav a page shows ('' for the main nav); the layouts include the matching partial.
-const siteNavs = require('./site-navs.js')
+// Loaded through ctx.resolve (not require) and never fatal: hosts on an older ext/pages fall back to the main nav.
+const siteNavs = (ctx) => {
+  try {
+    const v = ctx.resolve('site-navs')
+    return Array.isArray(v) ? v : []
+  } catch (e) {
+    return []
+  }
+}
 
 module.exports = function () {
   const esc = (s) =>
@@ -49,10 +57,14 @@ module.exports = function () {
     name: 'docs-footer',
     extendContext(ctx) {
       ctx.docsFooter = () => footer(ctx)
-      ctx.docsNavs = siteNavs
+      let navs
+      ctx.docsNavs = () => {
+        if (!navs) navs = siteNavs(ctx)
+        return navs
+      }
       ctx.docsNav = () => {
         const m = ctx.req.url.pathname.match(/^\/docs\/extensions\/([^/]+)/)
-        return m && siteNavs.includes(m[1]) ? m[1] : ''
+        return m && ctx.docsNavs().includes(m[1]) ? m[1] : ''
       }
       ctx.docsToc = () => (ctx.docsNav() ? `toc-${ctx.docsNav()}` : 'toc')
     },
