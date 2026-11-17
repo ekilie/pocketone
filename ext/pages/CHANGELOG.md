@@ -7,9 +7,12 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Changed
+
 - The PocketPages docs and blog moved from pocketpages.dev into this folder (`site/`, `blog/`) and are now on
   pocketone.dev under [/docs/extensions/pages](https://pocketone.dev/docs/extensions/pages); the minimal starter links
   there.
+- Compiled templates and modules are kept in the `pages.compiled` cache bucket (cache/v1) instead of a map that only grew: memory is capped (32 MiB by default) and old versions are evicted. Set its limits, or a disk tier, under `cache.buckets.pages.compiled` in `pocketone.yaml`.
 
 ### Upgrading
 

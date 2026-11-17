@@ -66,6 +66,7 @@ say in your README which ones you honour.
 | Extension | |
 |---|---|
 | [cache](../../../../ext/cache/README.md) | provides (default) |
+| [pages](../../../../ext/pages/README.md) | works with |
 
 <!-- /contracts:index -->
 
