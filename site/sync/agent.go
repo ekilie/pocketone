@@ -27,6 +27,20 @@ type docsSite struct {
 	SkillRef                  string            // the skill's reference folder
 	Extra                     map[string]string // more reference files: reference path -> repo path
 	Within                    string            // a part of the site (a URL prefix): only its pages, and no llms.txt of its own
+	Pick                      []string          // only these pages (a URL, or a part of the site), at their usual paths, and no llms.txt
+	Skip                      []string          // parts of the site (URL prefixes) left out of the skill's reference (llms.txt keeps them)
+}
+
+// under reports whether URL u is p or a page below it.
+func under(u, p string) bool { return u == p || strings.HasPrefix(u, p+"/") }
+
+func underAny(u string, ps []string) bool {
+	for _, p := range ps {
+		if under(u, p) {
+			return true
+		}
+	}
+	return false
 }
 
 var docsSites = []docsSite{
@@ -39,6 +53,17 @@ var docsSites = []docsSite{
 		Pages:    "site/pb_pages",
 		Toc:      "site/pb_pages/(main)/_private/toc.md",
 		SkillRef: "agent/skills/pocketone/reference",
+		// each in its own skill
+		Skip: []string{"/docs/extensions/pages", "/docs/writing-an-extension"},
+	},
+	{
+		// writing an extension: the guide, the contracts, and the catalogue of extensions that exist
+		Name:     "PocketOne extensions",
+		URL:      "https://pocketone.dev",
+		Pages:    "site/pb_pages",
+		Pick:     []string{"/docs/writing-an-extension", "/docs/contracts", "/docs/extensions", "/docs/config-reference"},
+		Skip:     []string{"/docs/extensions/pages"},
+		SkillRef: "agent/skills/pocketone-extensions/reference",
 	},
 	{
 		// PocketPages' docs are the pages extension's site (ext/pages/site), part of pocketone.dev
@@ -71,7 +96,7 @@ func agentFiles(root string, out map[string]string) error {
 			// the skill gets only this part of the site, at paths relative to it (the landing page is docs/index.md)
 			sub := map[string]docsPage{}
 			for u, p := range pages {
-				if u == s.Within || strings.HasPrefix(u, s.Within+"/") {
+				if under(u, s.Within) {
 					rel := strings.TrimPrefix(strings.TrimPrefix(u, s.Within), "/")
 					if rel == "" {
 						rel = "index"
@@ -84,6 +109,14 @@ func agentFiles(root string, out map[string]string) error {
 			}
 			for _, p := range sub {
 				out[s.SkillRef+"/docs/"+p.file] = p.body
+			}
+			continue
+		}
+		if s.Pick != nil {
+			for u, p := range pages {
+				if underAny(u, s.Pick) && !underAny(u, s.Skip) {
+					out[s.SkillRef+"/docs/"+p.file] = p.body
+				}
 			}
 			continue
 		}
@@ -123,7 +156,9 @@ func agentFiles(root string, out map[string]string) error {
 		}
 		sort.Strings(urls)
 		for _, u := range urls {
-			out[s.SkillRef+"/docs/"+pages[u].file] = pages[u].body
+			if !underAny(u, s.Skip) {
+				out[s.SkillRef+"/docs/"+pages[u].file] = pages[u].body
+			}
 		}
 		for ref, src := range s.Extra {
 			raw, err := os.ReadFile(filepath.Join(root, src))
