@@ -141,7 +141,19 @@
     font-weight: 600;
   }
   .brand-name {
-    @media (width < 30rem) {
+    @media (width < 40rem) {
+      display: none;
+    }
+  }
+  /* The nav gives way before the page does: on a narrow screen it scrolls on its own instead of widening the page */
+  .site-header > nav {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  /* Discussions is one click away through the GitHub icon; phones keep Docs and Blog */
+  .nav-narrow-hide {
+    @media (width < 27rem) {
       display: none;
     }
   }
@@ -160,7 +172,8 @@
     &:hover {
       background: color-mix(in oklab, var(--color-primary) 14%, transparent);
     }
-    @media (width < 30rem) {
+    /* below this the header can't fit name, pill, nav and search on one line */
+    @media (width < 56rem) {
       display: none;
     }
   }
@@ -1413,7 +1426,7 @@
       border-color: color-mix(in oklab, var(--color-primary) 40%, var(--line));
       color: var(--color-base-content);
     }
-    @media (width < 40rem) {
+    @media (width < 56rem) {
       margin-right: 0;
       padding: 0.3rem;
       border-color: transparent;

@@ -6,10 +6,14 @@
 
 # PocketOne - A community fork of PocketBase
 
+[![PocketBase tests](https://github.com/pockethost/pocketone/actions/workflows/upstream-tests.yml/badge.svg?branch=main)](https://pocketone.dev/docs/compatibility)
+
 PocketOne is a community fork of [PocketBase](https://pocketbase.io). It tracks
 upstream and aims to keep its own changes to the core small: just the hooks that let extensions extend and override
 PocketBase. Everything else is an extension. Maintained by [PocketHost](https://pockethost.io); not affiliated with or
 endorsed by the PocketBase project.
+
+PocketOne's core passes PocketBase's own test suite, unmodified, on every change and every day, with one documented exception ([compatibility](https://pocketone.dev/docs/compatibility)).
 
 ## Install
 

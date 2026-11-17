@@ -33,6 +33,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Going Further
 
 - [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.
+- [PocketBase compatibility](https://pocketone.dev/docs/compatibility): Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.
 
 ## Contracts: By name
 

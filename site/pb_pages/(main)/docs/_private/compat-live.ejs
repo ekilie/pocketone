@@ -1,0 +1,52 @@
+<%
+  // Each block is one line of HTML: the page is Markdown, which would show indented HTML as code.
+  const d = require('compat.js')(ctx)
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+  const n = (x) => (x == null ? '–' : String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
+  const ago = (iso) => {
+    const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000))
+    if (s < 3600) return `${Math.max(1, Math.round(s / 60))} min ago`
+    if (s < 172800) return `${Math.round(s / 3600)} h ago`
+    return `${Math.round(s / 86400)} days ago`
+  }
+  const took = (s) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`)
+  const badge = (r) => {
+    const cls = r === 'success' || r === 'pass' ? 'ok' : r === 'failure' || r === 'fail' ? 'bad' : 'other'
+    const label = r === 'success' ? 'pass' : r === 'failure' ? 'fail' : String(r || '').replace('_', ' ')
+    return `<span class="compat-result compat-${cls}">${esc(label)}</span>`
+  }
+  const a = (href, text) => `<a href="${esc(href)}">${text}</a>`
+  const table = (head, rows) =>
+    '<table><thead><tr>' + head.map(([h, num]) => `<th${num ? ' class="compat-num"' : ''}>${h}</th>`).join('') + '</tr></thead><tbody>' +
+    rows.map((cells) => '<tr>' + cells.map((c, i) => `<td${head[i][1] ? ' class="compat-num"' : ''}>${c}</td>`).join('') + '</tr>').join('') +
+    '</tbody></table>'
+  const runsUrl = 'https://github.com/pockethost/pocketone/actions/workflows/upstream-tests.yml?query=branch%3Amain'
+
+  let latest = '<p>No finished run on <code>main</code> yet.</p>'
+  if (d.latest) {
+    latest = `<p>${badge(d.latest.result)} ${a(d.latest.url, 'Run')} on ${a(d.latest.shaUrl, `<code>${esc(d.latest.sha)}</code>`)}, ${ago(d.latest.at)}</p>` +
+      table([['Job'], ['Result'], ['Packages', 1], ['Passed', 1], ['Failed', 1], ['Skipped', 1], ['Flaky']],
+        d.jobs.map((j) => {
+          const c = j.counts || {}
+          const flaky = (c.flaky || []).map((t) => `<code>${esc(t.split(' ').pop())}</code>`).join(', ')
+          return [a(j.url, esc(j.name)), badge(c.result || j.result), n(c.packages), n(c.passed), n(c.failed),
+            n(c.known ? c.known.length : c.skipped), flaky || (j.counts ? 'none' : '–')]
+        }))
+  }
+  const trigger = (e) => (e === 'schedule' ? 'daily' : e.replace('_', ' '))
+  const recent = d.runs.length
+    ? table([['When'], ['Commit'], ['Trigger'], ['Result'], ['Took', 1]],
+        d.runs.map((r) => [a(r.url, ago(r.at)), a(r.shaUrl, `<code>${esc(r.sha)}</code>`), esc(trigger(r.event)), badge(r.result), took(r.seconds)]))
+    : '<p>None yet.</p>'
+%>
+<style>.compat-result{font-weight:600;padding:.1em .5em;border-radius:4px;font-size:.85em;white-space:nowrap}.compat-ok{background:#dcfce7;color:#166534}.compat-bad{background:#fee2e2;color:#991b1b}.compat-other{background:#f1f5f9;color:#475569}.compat-num{text-align:right;font-variant-numeric:tabular-nums}.compat-note{font-size:.85em;color:#64748b}</style>
+
+## Latest run
+
+<%- latest %>
+
+## Recent runs
+
+<%- recent %>
+
+<p class="compat-note">From GitHub, refreshed every 10 minutes<%= d.stale ? ' (GitHub unreachable: the last result)' : '' %>. <a href="<%= runsUrl %>">All runs</a></p>
