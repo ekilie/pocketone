@@ -10,19 +10,24 @@ package cache
 //	space "inst2/wasm", key "app.wasm"         ─┘
 //
 // Two kinds of eviction:
-//   - The store's: when the store is over its memory or item limit, a blob goes (by the store's strategy), to the disk
-//     tier when there is one, else with every key that points at it.
+//   - The store's: when the store is over its memory or item limit, a blob leaves memory (by the store's strategy):
+//     to the disk tier when there is one, else with every key that points at it.
 //   - A space's: when one app's bucket is over its own caps, one of its keys goes (by the bucket's strategy). The blob
 //     goes too only when nothing else points at it.
 //
-// A blob lives in exactly one tier. The index of keys stays in memory (and counts against the memory limit); keys
-// whose blob is on disk also have a record on disk, so the disk tier survives a restart. One lock covers it all.
+// The disk tier is overflow for memory: one file per blob, named by its hash. The key index is only in memory, so the
+// tier starts empty with the process (its folder is wiped then).
+//
+// Locking: one mutex guards the index, the lists and the totals, and is never held across disk IO. Files are written
+// and removed by one IO goroutine, in the order the lock decided them, so a write and a later removal of the same file
+// never swap; it runs only while it has work. A blob being written ("spilling") keeps its bytes in memory until the
+// file is there, and reads are served from them; reads of a blob on disk happen outside the lock, one per blob at a
+// time, and are checked against the index again before they're returned.
 
 import (
 	"bytes"
 	"container/list"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -30,7 +35,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -41,8 +45,8 @@ import (
 // keyOverhead is what a key costs in memory beyond its name: map slot, list element, struct.
 const keyOverhead = 96
 
-// recordMagic starts every key record: "P1K1", expiry (unix ns, 0 none), blob hash, space length, space, key.
-const recordMagic = "P1K1"
+// blobsDir is the disk tier's own folder inside disk_path: the only one the store ever wipes.
+const blobsDir = "p1cache"
 
 type sum [sha256.Size]byte
 
@@ -57,6 +61,9 @@ type poolLimits struct {
 	maxDisk  int64
 }
 
+// maxPending is how many bytes may wait in memory for the disk tier; past it, what memory evicts is dropped instead.
+func (l poolLimits) maxPending() int64 { return max(l.maxMem/4, 4<<20) }
+
 // spaceLimits are one app's bucket's caps inside the store.
 type spaceLimits struct {
 	eviction cachev1.Eviction
@@ -65,20 +72,29 @@ type spaceLimits struct {
 	ttl      time.Duration
 }
 
+type blobState uint8
+
+const (
+	inMemory blobState = iota // data held, in store.mem
+	spilling                  // data held, in store.disk, its file being written
+	onDisk                    // data nil, in store.disk, its file written
+)
+
 type blob struct {
-	hash sum
-	size int64
-	data []byte // nil while on disk
-	disk bool
-	refs map[*entry]struct{}
-	el   *list.Element // in store.mem or store.disk
+	hash    sum
+	size    int64
+	data    []byte
+	state   blobState
+	refs    map[*entry]struct{}
+	el      *list.Element // in store.mem or store.disk; nil once freed
+	loading chan struct{} // a read of its file in progress
 }
 
 type entry struct {
 	sp  *space
 	key string
 	b   *blob
-	exp int64 // unix ns; 0 = never
+	exp int64         // unix ns; 0 = never
 	el  *list.Element // in sp.order
 }
 
@@ -108,19 +124,26 @@ type store struct {
 	mu         sync.Mutex
 	blobs      map[sum]*blob
 	mem        blobList
-	disk       blobList
-	keyBytes   int64 // the key index, always in memory
+	disk       blobList // spilling and onDisk
+	pending    int64    // bytes of spilling blobs, held in memory until written
+	keyBytes   int64    // the key index, always in memory
 	keys       int
 	spaces     map[string]*space
 	sinceSweep int
+
+	io ioQueue
+
+	beforeRead func() // tests: called before a disk read, off the lock
 }
 
 func newStore(lim poolLimits, log *slog.Logger) (*store, error) {
 	s := &store{lim: lim, log: log, now: time.Now, blobs: map[sum]*blob{}, spaces: map[string]*space{},
 		mem: blobList{order: list.New()}, disk: blobList{order: list.New()}}
+	s.io.cond = sync.NewCond(&s.io.mu)
 	if lim.dir != "" {
-		if err := s.load(); err != nil {
-			return nil, fmt.Errorf("cache: disk tier %s: %w", lim.dir, err)
+		s.lim.dir = filepath.Join(lim.dir, blobsDir)
+		if err := wipe(s.lim.dir); err != nil {
+			return nil, fmt.Errorf("cache: disk tier %s: %w", s.lim.dir, err)
 		}
 	}
 	return s, nil
@@ -131,49 +154,97 @@ func newStore(lim poolLimits, log *slog.Logger) (*store, error) {
 func (s *store) open(id string, lim spaceLimits) *space {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	sp := s.spaceLocked(id)
-	sp.lim = lim
-	s.fitSpace(sp, nil)
-	return sp
-}
-
-func (s *store) spaceLocked(id string) *space {
 	sp, ok := s.spaces[id]
 	if !ok {
 		sp = &space{id: id, entries: map[string]*entry{}, order: list.New()}
 		s.spaces[id] = sp
 	}
+	sp.lim = lim
+	s.fitSpace(sp, nil)
 	return sp
 }
 
 func (s *store) get(sp *space, key string) ([]byte, bool) {
+	for range 4 { // a read that raced a change looks again; past a few, it's a miss
+		data, ok, retry := s.tryGet(sp, key)
+		if !retry {
+			return data, ok
+		}
+	}
+	return nil, false
+}
+
+func (s *store) tryGet(sp *space, key string) (data []byte, ok, retry bool) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	e, ok := sp.entries[key]
-	if !ok {
-		return nil, false
+	e, found := sp.entries[key]
+	if !found {
+		s.mu.Unlock()
+		return nil, false, false
 	}
 	if e.expired(s.now().UnixNano()) {
 		s.removeEntry(e)
-		return nil, false
+		s.mu.Unlock()
+		return nil, false, false
 	}
 	if touches(sp.lim.eviction) {
 		sp.order.MoveToFront(e.el)
 	}
 	b := e.b
-	if !b.disk {
-		if touches(s.lim.eviction) {
+	switch {
+	case b.state != onDisk: // in memory, or held while its file is written
+		if b.state == inMemory && touches(s.lim.eviction) {
 			s.mem.order.MoveToFront(b.el)
 		}
-		return bytes.Clone(b.data), true
+		data = bytes.Clone(b.data)
+		s.mu.Unlock()
+		return data, true, false
+	case b.loading != nil: // someone is reading it: wait, then look again
+		ch := b.loading
+		s.mu.Unlock()
+		<-ch
+		return nil, false, true
 	}
-	data, err := s.promote(b)
+	ch := make(chan struct{})
+	b.loading = ch
+	path, hook := s.blobPath(b.hash), s.beforeRead
+	s.mu.Unlock()
+
+	if hook != nil {
+		hook()
+	}
+	data, err := os.ReadFile(path)
+	if err == nil && sha256.Sum256(data) != b.hash {
+		err = errors.New("blob doesn't match its hash")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	b.loading = nil
+	close(ch)
+	if s.blobs[b.hash] != b || b.state != onDisk { // freed or moved while we read: the index decides
+		return nil, false, true
+	}
 	if err != nil {
 		s.log.Warn("cache: unreadable disk entry dropped", "error", err)
 		s.dropBlob(b)
-		return nil, false
+		return nil, false, false
 	}
-	return bytes.Clone(data), true
+	if sp.entries[key] != e { // replaced or deleted while we read
+		return nil, false, true
+	}
+	if touches(s.lim.eviction) {
+		s.disk.order.MoveToFront(b.el)
+	}
+	if !over(s.lim.maxMem, b.size+s.keyBytes) { // back to memory, unless it could never fit
+		s.disk.order.Remove(b.el)
+		s.disk.bytes -= b.size
+		s.io.remove(s, path)
+		b.data, b.state = data, inMemory
+		b.el = s.mem.order.PushFront(b)
+		s.mem.bytes += b.size
+		s.fitMem(b)
+	}
+	return bytes.Clone(data), true, false
 }
 
 func (s *store) set(sp *space, key string, value []byte, ttl time.Duration) {
@@ -208,10 +279,8 @@ func (s *store) set(sp *space, key string, value []byte, ttl time.Duration) {
 	}
 	s.attach(e, b)
 	switch {
-	case shared && b.disk:
-		s.writeRecord(e)
 	case shared:
-		if touches(s.lim.eviction) {
+		if b.state == inMemory && touches(s.lim.eviction) {
 			s.mem.order.MoveToFront(b.el)
 		}
 	case over(s.lim.maxMem, b.size+e.cost()): // never fits in memory: straight to disk, or not kept
@@ -291,29 +360,28 @@ func (s *store) removeEntry(e *entry) {
 	s.keys--
 	delete(b.refs, e)
 	e.b = nil
-	if b.disk {
-		_ = os.Remove(s.recordPath(sp.id, e.key))
-	}
 	if len(b.refs) == 0 {
 		s.freeBlob(b)
 	}
 }
 
-// freeBlob forgets b (no keys point at it any more).
+// freeBlob forgets b (no keys point at it any more), removing its file if it has or is getting one.
 func (s *store) freeBlob(b *blob) {
-	delete(s.blobs, b.hash)
+	if s.blobs[b.hash] == b {
+		delete(s.blobs, b.hash)
+	}
 	if b.el == nil {
 		return
 	}
-	if b.disk {
-		s.disk.order.Remove(b.el)
-		s.disk.bytes -= b.size
-		_ = os.Remove(s.blobPath(b.hash))
-	} else {
+	if b.state == inMemory {
 		s.mem.order.Remove(b.el)
 		s.mem.bytes -= b.size
+	} else {
+		s.disk.order.Remove(b.el)
+		s.disk.bytes -= b.size
+		s.io.remove(s, s.blobPath(b.hash))
 	}
-	b.el = nil
+	b.el, b.data = nil, nil
 }
 
 // dropBlob evicts b from the store with every key that points at it.
@@ -321,8 +389,8 @@ func (s *store) dropBlob(b *blob) {
 	for e := range b.refs {
 		s.removeEntry(e) // the last one frees b
 	}
-	if len(b.refs) == 0 && s.blobs[b.hash] == b {
-		s.freeBlob(b)
+	if len(b.refs) == 0 {
+		s.freeBlob(b) // a blob that had no keys (never attached)
 	}
 }
 
@@ -352,10 +420,10 @@ func (s *store) fitMem(keep *blob) {
 	}
 }
 
-// spill moves b (in no list) to the disk tier, writing its file and its keys' records; without a disk tier, or when
-// it doesn't fit, it drops b with its keys.
+// spill moves b (in no list) to the disk tier: it holds its bytes while the IO goroutine writes its file. Without a
+// disk tier, when it doesn't fit, or when too much is already waiting to be written, b goes with its keys.
 func (s *store) spill(b *blob) {
-	if s.lim.dir == "" || over(s.lim.maxDisk, b.size) {
+	if s.lim.dir == "" || over(s.lim.maxDisk, b.size) || s.pending+b.size > s.lim.maxPending() {
 		s.dropBlob(b)
 		return
 	}
@@ -366,45 +434,31 @@ func (s *store) spill(b *blob) {
 		}
 		s.dropBlob(el.Value.(*blob))
 	}
-	if err := writeAtomic(s.lim.dir, s.blobPath(b.hash), b.data); err != nil {
+	if len(b.refs) == 0 { // dropping others can't reach b (in no list), but stay safe
+		s.freeBlob(b)
+		return
+	}
+	b.state = spilling
+	b.el = s.disk.order.PushFront(b)
+	s.disk.bytes += b.size
+	s.pending += b.size
+	s.io.write(s, b)
+}
+
+// written is the IO goroutine's report on b's file: b is on disk now, unless it changed meanwhile.
+func (s *store) written(b *blob, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.pending -= b.size
+	if s.blobs[b.hash] != b || b.state != spilling {
+		return // freed meanwhile: its removal is queued after this write
+	}
+	if err != nil {
 		s.log.Warn("cache: disk write failed, entry dropped", "error", err)
 		s.dropBlob(b)
 		return
 	}
-	b.data, b.disk = nil, true
-	b.el = s.disk.order.PushFront(b)
-	s.disk.bytes += b.size
-	for e := range b.refs {
-		s.writeRecord(e)
-	}
-}
-
-// promote reads b from disk and moves it to memory when it fits there (else it stays on disk, read each time).
-func (s *store) promote(b *blob) ([]byte, error) {
-	data, err := os.ReadFile(s.blobPath(b.hash))
-	if err != nil {
-		return nil, err
-	}
-	if sha256.Sum256(data) != b.hash {
-		return nil, errors.New("blob doesn't match its hash")
-	}
-	if over(s.lim.maxMem, b.size+s.keyBytes) {
-		if touches(s.lim.eviction) {
-			s.disk.order.MoveToFront(b.el)
-		}
-		return data, nil
-	}
-	s.disk.order.Remove(b.el)
-	s.disk.bytes -= b.size
-	_ = os.Remove(s.blobPath(b.hash))
-	for e := range b.refs {
-		_ = os.Remove(s.recordPath(e.sp.id, e.key))
-	}
-	b.data, b.disk = data, false
-	b.el = s.mem.order.PushFront(b)
-	s.mem.bytes += b.size
-	s.fitMem(b)
-	return data, nil
+	b.state, b.data = onDisk, nil
 }
 
 // sweep drops every expired key.
@@ -419,49 +473,81 @@ func (s *store) sweep(now int64) {
 	}
 }
 
-// ---- disk ----
+// flush waits until every queued disk write and removal is done.
+func (s *store) flush() { s.io.flush() }
 
 func (s *store) blobPath(h sum) string {
 	x := h.hex()
-	return filepath.Join(s.lim.dir, "blobs", x[:2], x)
+	return filepath.Join(s.lim.dir, x[:2], x)
 }
 
-func (s *store) recordPath(spaceID, key string) string {
-	x := hex.EncodeToString(func() []byte { h := sha256.Sum256([]byte(spaceID + "\x00" + key)); return h[:] }())
-	return filepath.Join(s.lim.dir, "keys", x[:2], x)
+// ---- disk IO, off the lock ----
+
+// ioQueue runs file writes and removals in the order they were queued (under the store's lock), on one goroutine
+// that runs only while there is work.
+type ioQueue struct {
+	mu       sync.Mutex
+	cond     *sync.Cond
+	ops      []ioOp
+	running  bool
+	beforeOp func() // tests: called before each op, off every lock
 }
 
-func (s *store) writeRecord(e *entry) {
-	b := make([]byte, 0, 4+8+32+4+len(e.sp.id)+len(e.key))
-	b = append(b, recordMagic...)
-	b = binary.BigEndian.AppendUint64(b, uint64(e.exp))
-	b = append(b, e.b.hash[:]...)
-	b = binary.BigEndian.AppendUint32(b, uint32(len(e.sp.id)))
-	b = append(append(b, e.sp.id...), e.key...)
-	if err := writeAtomic(s.lim.dir, s.recordPath(e.sp.id, e.key), b); err != nil {
-		s.log.Warn("cache: disk record write failed", "error", err) // the key just won't survive a restart
+type ioOp struct {
+	path string
+	b    *blob  // write data to path, then report on b; nil = remove path
+	data []byte // the bytes to write (taken when queued)
+}
+
+func (q *ioQueue) write(s *store, b *blob) {
+	q.push(s, ioOp{path: s.blobPath(b.hash), b: b, data: b.data})
+}
+
+func (q *ioQueue) remove(s *store, path string) { q.push(s, ioOp{path: path}) }
+
+func (q *ioQueue) push(s *store, op ioOp) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.ops = append(q.ops, op)
+	if !q.running {
+		q.running = true
+		go q.run(s)
 	}
 }
 
-type record struct {
-	exp          int64
-	hash         sum
-	spaceID, key string
+func (q *ioQueue) run(s *store) {
+	for {
+		q.mu.Lock()
+		if len(q.ops) == 0 {
+			q.running = false
+			q.ops = nil
+			q.cond.Broadcast()
+			q.mu.Unlock()
+			return
+		}
+		op := q.ops[0]
+		q.ops[0] = ioOp{}
+		q.ops = q.ops[1:]
+		hook := q.beforeOp
+		q.mu.Unlock()
+
+		if hook != nil {
+			hook()
+		}
+		if op.b == nil {
+			_ = os.Remove(op.path)
+			continue
+		}
+		s.written(op.b, writeAtomic(s.lim.dir, op.path, op.data))
+	}
 }
 
-func parseRecord(b []byte) (record, error) {
-	var r record
-	if len(b) < 48 || string(b[:4]) != recordMagic {
-		return r, errors.New("not a cache key record")
+func (q *ioQueue) flush() {
+	q.mu.Lock()
+	for q.running {
+		q.cond.Wait()
 	}
-	r.exp = int64(binary.BigEndian.Uint64(b[4:]))
-	copy(r.hash[:], b[12:44])
-	n := int(binary.BigEndian.Uint32(b[44:]))
-	if n > len(b)-48 {
-		return r, errors.New("short cache key record")
-	}
-	r.spaceID, r.key = string(b[48:48+n]), string(b[48+n:])
-	return r, nil
+	q.mu.Unlock()
 }
 
 func writeAtomic(dir, path string, data []byte) error {
@@ -484,94 +570,42 @@ func writeAtomic(dir, path string, data []byte) error {
 	return nil
 }
 
-// load indexes what an earlier run left on disk: key records whose blob is there (oldest blob file last), dropping
-// temp files, broken or expired records, and blobs no record points at. Then it trims the tier to maxDisk.
-func (s *store) load() error {
-	if err := os.MkdirAll(s.lim.dir, 0o755); err != nil {
+// wipe empties the disk tier's folder: only what the store writes there (two-hex-digit folders of blob files, and
+// temp files), so a disk_path pointed at the wrong place loses nothing else.
+func wipe(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	if tops, err := os.ReadDir(s.lim.dir); err == nil {
-		for _, d := range tops {
-			if strings.HasPrefix(d.Name(), ".tmp-") {
-				_ = os.Remove(filepath.Join(s.lim.dir, d.Name()))
+	tops, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, d := range tops {
+		p := filepath.Join(dir, d.Name())
+		switch {
+		case strings.HasPrefix(d.Name(), ".tmp-") && !d.IsDir():
+			_ = os.Remove(p)
+		case d.IsDir() && len(d.Name()) == 2 && isHex(d.Name()):
+			files, err := os.ReadDir(p)
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
 			}
+			for _, f := range files {
+				if !f.IsDir() && len(f.Name()) == 2*sha256.Size && isHex(f.Name()) && f.Name()[:2] == d.Name() {
+					_ = os.Remove(filepath.Join(p, f.Name()))
+				}
+			}
+			_ = os.Remove(p) // only if now empty
 		}
-	}
-	now := s.now().UnixNano()
-	type found struct {
-		size int64
-		mod  time.Time
-	}
-	files := map[sum]found{}
-	blobsDir := filepath.Join(s.lim.dir, "blobs")
-	err := walkFiles(blobsDir, func(p string, info fs.FileInfo) {
-		h, err := hex.DecodeString(filepath.Base(p))
-		if err != nil || len(h) != len(sum{}) || p != s.blobPath(sum(h)) {
-			_ = os.Remove(p)
-			return
-		}
-		files[sum(h)] = found{info.Size(), info.ModTime()}
-	})
-	if err != nil {
-		return err
-	}
-	used := map[sum]bool{}
-	var recs []record
-	err = walkFiles(filepath.Join(s.lim.dir, "keys"), func(p string, _ fs.FileInfo) {
-		b, err := os.ReadFile(p)
-		r, perr := parseRecord(b)
-		_, have := files[r.hash]
-		if err != nil || perr != nil || !have || r.exp != 0 && now >= r.exp || p != s.recordPath(r.spaceID, r.key) {
-			_ = os.Remove(p)
-			return
-		}
-		used[r.hash] = true
-		recs = append(recs, r)
-	})
-	if err != nil {
-		return err
-	}
-	hashes := make([]sum, 0, len(used))
-	for h := range files {
-		if !used[h] {
-			_ = os.Remove(s.blobPath(h))
-			continue
-		}
-		hashes = append(hashes, h)
-	}
-	sort.Slice(hashes, func(i, j int) bool { return files[hashes[i]].mod.Before(files[hashes[j]].mod) })
-	for _, h := range hashes { // oldest first, so the newest ends at the front
-		b := &blob{hash: h, size: files[h].size, disk: true, refs: map[*entry]struct{}{}}
-		b.el = s.disk.order.PushFront(b)
-		s.disk.bytes += b.size
-		s.blobs[h] = b
-	}
-	for _, r := range recs {
-		s.attach(&entry{sp: s.spaceLocked(r.spaceID), key: r.key, exp: r.exp}, s.blobs[r.hash])
-	}
-	for over(s.lim.maxDisk, s.disk.bytes) {
-		s.dropBlob(victim(s.disk.order, s.lim.eviction, nil).Value.(*blob))
 	}
 	return nil
 }
 
-// walkFiles calls fn for every regular file under dir (a missing dir has none), removing leftover temp files.
-func walkFiles(dir string, fn func(p string, info fs.FileInfo)) error {
-	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
+func isHex(s string) bool {
+	for _, r := range s {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+			return false
 		}
-		if strings.HasPrefix(d.Name(), ".tmp-") {
-			_ = os.Remove(p)
-			return nil
-		}
-		if info, err := d.Info(); err == nil {
-			fn(p, info)
-		}
-		return nil
-	})
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
 	}
-	return err
+	return true
 }

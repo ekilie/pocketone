@@ -38,7 +38,7 @@ in what a bucket's code leaves unset; `buckets` set a named bucket's caps over w
 ```yaml
 cache:
   max_memory: 512MiB       # the store: every bucket together
-  disk_path: cache         # a disk tier for what memory evicts; leave out for memory only
+  disk_path: cache         # overflow for what memory evicts; leave out for memory only
   max_disk: 10GiB
   defaults:
     ttl: 10m
@@ -54,7 +54,7 @@ The store:
 | `max_memory` | Memory for every bucket together (default 128MiB) |
 | `max_items` | Most distinct values kept in memory; identical bytes count once |
 | `eviction` | Which values leave memory first when the store is full: `lru` (default), `mru`, `fifo`, `lifo` |
-| `disk_path` | Turns on the disk tier there. Relative paths are under `pb_data` on a single app, and under the working directory on a multisite host |
+| `disk_path` | Turns on the disk tier there, in a `p1cache` folder that is emptied when the process starts. Relative paths are under `pb_data` on a single app, and under the working directory on a multisite host |
 | `max_disk` | Size of the disk tier (default 1GiB) |
 
 Each bucket (`defaults` and `buckets.<name>`):
@@ -68,14 +68,14 @@ Each bucket (`defaults` and `buckets.<name>`):
 
 Sizes take `KiB`, `MiB`, `GiB` (or `KB`, `MB`, `GB`); durations take `s`, `m`, `h`.
 
-A disk tier inside `pb_data` is part of your backups. To keep it out, give `disk_path` an absolute folder outside
-`pb_data`.
+A disk tier inside `pb_data` is part of your backups (as throwaway files). To keep it out, give `disk_path` an
+absolute folder outside `pb_data`.
 
 ## Use
 
 Nothing to click. Values evicted from memory move to the disk tier when there is one, and a read brings them back.
-What's on disk is still there after a restart; what's in memory isn't. To empty a disk tier, stop the app and delete
-its folder.
+The cache starts empty with the process, disk tier included. On a multisite host, an instance that restarts or
+sleeps keeps its entries: the store belongs to the host.
 
 ## Integrations
 
@@ -100,12 +100,12 @@ any `providers:` line.
 
 ## Example
 
-A PocketBase app with one bucket, `example.slow`, with a disk tier. `GET /slow` takes a second the first time and
+A PocketBase app with one bucket, `example.slow`. `GET /slow` takes a second the first time and
 answers from the cache for the next minute.
 
 ```go
-// Command example is a PocketBase app with cache/v1 and one bucket, "example.slow", with a disk tier. GET /slow takes a
-// second the first time and answers from the cache for the next minute:
+// Command example is a PocketBase app with cache/v1 and one bucket, "example.slow". GET /slow takes a second the first
+// time and answers from the cache for the next minute:
 //
 //	go run ./example serve --http=127.0.0.1:8090
 //	curl http://127.0.0.1:8090/slow   # slow
@@ -168,10 +168,18 @@ There are two kinds of eviction. When the store is over its limits, a value leav
 to the disk tier when there is one, else together with every key pointing at it. When one bucket is over its own
 caps, one of its keys goes (by the bucket's strategy), and the value only if nothing else points at it.
 
-The key index stays in memory and counts against `max_memory`. On disk, each value is a file named by its hash, and
-each key whose value is on disk has a small record beside it, so the tier is indexed again on the next start. Files
-are written atomically. One lock covers the store, including its disk reads and writes, so a delete never races a
-write.
+The key index stays in memory and counts against `max_memory`. The disk tier is overflow for memory: one file per
+value, named by its hash, written atomically and emptied when the process starts.
+
+One lock guards the index, and it's never held across disk IO. One IO goroutine, running only while it has work,
+writes and removes files in the order the lock decided them. A value waiting to be written stays readable from
+memory (at most a quarter of `max_memory` waits; past that, evicted values are dropped). Reads from disk happen off
+the lock, many readers of one value share one read, and a read is checked against the index again before it's
+returned, so a key changed meanwhile never gets its old value back.
+
+The store is tested against a model under fuzzing (no value deleted, replaced, expired or belonging to another key
+ever comes back; every count and list stays consistent; the disk tier holds exactly the files it should) and under
+concurrent load with the race detector.
 
 ## License
 

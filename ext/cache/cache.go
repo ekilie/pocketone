@@ -8,6 +8,7 @@
 package cache
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -50,7 +51,7 @@ type Config struct {
 	Eviction  cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which values leave memory first when the store is full: lru, mru, fifo or lifo."`
 	MaxItems  int              `yaml:"max_items,omitempty" json:"max_items,omitempty" doc:"Most distinct values kept in memory (identical bytes count once)."`
 	MaxMemory Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Memory for every bucket together, such as 512MiB. Default 128MiB."`
-	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there for what memory evicts; it survives restarts. Relative: under pb_data on a single app, the working directory on a multisite host."`
+	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there for what memory evicts (in a p1cache folder, emptied when the process starts). Relative: under pb_data on a single app, the working directory on a multisite host."`
 	MaxDisk   Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Size of the disk tier, such as 10GiB. Default 1GiB."`
 
 	// Each app's buckets.
@@ -72,13 +73,25 @@ type Extension struct {
 	storeErr error
 }
 
-var _ extkit.Extension = (*Extension)(nil)
+var (
+	_ extkit.Extension = (*Extension)(nil)
+	_ extkit.Closer    = (*Extension)(nil)
+)
 
 // New returns the extension. cfg sits under pocketone.yaml's section (and, for bucket caps, an instance's settings).
 func New(cfg Config) *Extension { return &Extension{cfg: cfg} }
 
 // Name implements [extkit.Extension].
 func (x *Extension) Name() string { return Name }
+
+// Close implements [extkit.Closer]: it waits for the disk tier's queued writes and removals, once every app has
+// stopped.
+func (x *Extension) Close(context.Context) error {
+	if x.store != nil {
+		x.store.flush()
+	}
+	return nil
+}
 
 // Contracts implements [extkit.Declarer].
 func (x *Extension) Contracts() extkit.Contracts {

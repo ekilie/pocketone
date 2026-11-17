@@ -21,7 +21,7 @@ import (
 
 var ctx = context.Background()
 
-func newTestStore(t *testing.T, lim poolLimits) *store {
+func newTestStore(t testing.TB, lim poolLimits) *store {
 	t.Helper()
 	if lim.eviction == "" {
 		lim.eviction = cachev1.LRU
@@ -30,6 +30,7 @@ func newTestStore(t *testing.T, lim poolLimits) *store {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(s.flush) // before the disk tier's TempDir is removed (cleanups run last first)
 	return s
 }
 
@@ -183,46 +184,45 @@ func TestCopies(t *testing.T) {
 }
 
 func TestDiskTier(t *testing.T) {
-	dir := t.TempDir()
-	lim := poolLimits{maxMem: 1 << 20, maxItems: 1, dir: dir, maxDisk: 1 << 20}
-	s := newTestStore(t, lim)
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20, maxItems: 1, dir: t.TempDir(), maxDisk: 1 << 20})
 	a, b := s.open("inst1/x", lru(0)), s.open("inst2/x", lru(0))
 	put(s, a, "k", "shared")
 	put(s, b, "k", "shared")
-	put(s, a, "k2", "second") // the shared value spills, with both its keys
-	if bl := s.blobs[sum(sha256Of("shared"))]; bl == nil || !bl.disk {
-		t.Fatal("the shared value should be on disk")
+	put(s, a, "k2", "second") // the shared value spills, with both its keys still pointing at it
+	bl := s.blobs[sum(sha256Of("shared"))]
+	if bl == nil || bl.state == inMemory {
+		t.Fatal("the shared value should be spilling or on disk")
 	}
-	if val(s, b, "k") != "shared" { // back to memory; "second" spills
-		t.Fatal("shared value from disk")
+	if val(s, b, "k") != "shared" { // served while it's written, or read back from disk
+		t.Fatal("shared value from the disk tier")
+	}
+	s.flush()
+	if err := checkFiles(s); err != nil {
+		t.Fatal(err)
+	}
+	put(s, a, "k3", "third")
+	s.flush()
+	if val(s, a, "k") != "shared" || val(s, b, "k") != "shared" { // from disk, back to memory
+		t.Fatal("reading back from disk")
 	}
 	s.del(a, "k2")
-	if has(s, a, "k2") {
-		t.Fatal("a delete didn't reach the disk tier")
+	s.del(a, "k3")
+	s.clear(a)
+	s.clear(b)
+	if err := checkFiles(s); err != nil {
+		t.Fatal(err)
 	}
-
-	put(s, a, "k3", "third") // "shared" spills again
-	s2 := newTestStore(t, lim)
-	a2, b2 := s2.open("inst1/x", lru(0)), s2.open("inst2/x", lru(0))
-	if val(s2, a2, "k") != "shared" || val(s2, b2, "k") != "shared" || len(s2.blobs) != 1 {
-		t.Fatalf("after a restart: %q %q, %d blobs", val(s2, a2, "k"), val(s2, b2, "k"), len(s2.blobs))
-	}
-	if has(s2, a2, "k3") {
-		t.Fatal("a value that was only in memory survived a restart")
-	}
-	s2.clear(a2)
-	s2.clear(b2)
-	if n := countFiles(t, dir); n != 0 {
+	if n := countFiles(t, s.lim.dir); n != 0 {
 		t.Fatalf("%d files left after clearing every key", n)
 	}
 }
 
 func TestDiskLimit(t *testing.T) {
-	dir := t.TempDir()
-	s := newTestStore(t, poolLimits{eviction: cachev1.FIFO, maxMem: 1 << 20, maxItems: 1, dir: dir, maxDisk: 250})
+	s := newTestStore(t, poolLimits{eviction: cachev1.FIFO, maxMem: 1 << 20, maxItems: 1, dir: t.TempDir(), maxDisk: 250})
 	sp := s.open("/x", lru(0))
 	for i := range 5 {
 		s.set(sp, fmt.Sprint(i), []byte(fmt.Sprintf("%0100d", i)), 0)
+		s.flush()
 	}
 	if s.disk.order.Len() != 2 || s.disk.bytes > 250 {
 		t.Fatalf("disk holds %d values, %d bytes; want 2 within 250", s.disk.order.Len(), s.disk.bytes)
@@ -230,23 +230,56 @@ func TestDiskLimit(t *testing.T) {
 	if has(s, sp, "0") || !has(s, sp, "2") {
 		t.Fatal("FIFO on disk should drop the oldest")
 	}
+	if err := checkFiles(s); err != nil {
+		t.Fatal(err)
+	}
 }
 
-func TestLoadDropsJunkAndExpired(t *testing.T) {
+// The disk tier starts empty: what an earlier process left is removed, and nothing else in the folder is touched.
+func TestDiskWipedOnStart(t *testing.T) {
 	dir := t.TempDir()
-	now := time.Unix(1000, 0)
-	lim := poolLimits{maxMem: 1 << 20, maxItems: 1, dir: dir, maxDisk: 1 << 20}
-	s := newTestStore(t, lim)
-	s.now = func() time.Time { return now }
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20, maxItems: 1, dir: dir, maxDisk: 1 << 20})
 	sp := s.open("/x", lru(0))
-	s.set(sp, "a", []byte("x"), time.Second)
-	s.set(sp, "b", []byte("y"), 0) // a spills
-	os.MkdirAll(filepath.Join(dir, "keys", "zz"), 0o755)
-	os.WriteFile(filepath.Join(dir, "keys", "zz", "junk"), []byte("nope"), 0o644)
-	os.WriteFile(filepath.Join(dir, ".tmp-1"), []byte("half"), 0o644)
-	s2 := newTestStore(t, lim) // real time: a's expiry (1001s after 1970) has passed
-	if len(s2.blobs) != 0 || countFiles(t, dir) != 0 {
-		t.Fatalf("%d blobs, %d files: expired records, orphan blobs and junk should go", len(s2.blobs), countFiles(t, dir))
+	put(s, sp, "a", "one")
+	put(s, sp, "b", "two") // a spills
+	s.flush()
+	os.WriteFile(filepath.Join(s.lim.dir, ".tmp-1"), []byte("half"), 0o644)
+	os.WriteFile(filepath.Join(dir, "keep.txt"), []byte("mine"), 0o644)
+	os.MkdirAll(filepath.Join(s.lim.dir, "zz"), 0o755)
+	os.WriteFile(filepath.Join(s.lim.dir, "zz", "notes"), []byte("mine too"), 0o644)
+	if countFiles(t, s.lim.dir) != 3 {
+		t.Fatal("setup: want one blob file plus two others in the tier")
+	}
+	s2 := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: dir, maxDisk: 1 << 20})
+	if len(s2.blobs) != 0 {
+		t.Fatal("a new store should start empty")
+	}
+	if countFiles(t, s2.lim.dir) != 1 || countFiles(t, dir) != 2 {
+		t.Fatalf("wipe removed the wrong files: %d in the tier, %d in all", countFiles(t, s2.lim.dir), countFiles(t, dir))
+	}
+}
+
+// Values evicted from memory while the disk can't keep up are dropped, not held without bound.
+func TestPendingBounded(t *testing.T) {
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20, maxItems: 1, dir: t.TempDir(), maxDisk: 1 << 30})
+	sp := s.open("/x", lru(0))
+	big := s.lim.maxPending()/3 + 1
+	release := make(chan struct{})
+	s.io.beforeOp = func() { <-release } // hold the IO goroutine back
+	for i := range 6 {
+		v := make([]byte, big)
+		v[0] = byte(i)
+		s.set(sp, fmt.Sprint(i), v, 0) // each evicts the one before: queued while there's room, dropped after
+	}
+	s.mu.Lock()
+	pending := s.pending
+	s.mu.Unlock()
+	close(release)
+	if pending > s.lim.maxPending() {
+		t.Fatalf("pending %d over %d", pending, s.lim.maxPending())
+	}
+	if err := checkFiles(s); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -344,7 +377,7 @@ func TestSingleAppDiskUnderDataDir(t *testing.T) {
 	if err := x.Register(app, nil); err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(app.DataDir(), "cache"); x.store.lim.dir != want {
+	if want := filepath.Join(app.DataDir(), "cache", blobsDir); x.store.lim.dir != want {
 		t.Fatalf("disk tier at %s, want %s", x.store.lim.dir, want)
 	}
 }

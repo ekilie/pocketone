@@ -1,5 +1,5 @@
-// Command example is a PocketBase app with cache/v1 and one bucket, "example.slow", with a disk tier. GET /slow takes a
-// second the first time and answers from the cache for the next minute:
+// Command example is a PocketBase app with cache/v1 and one bucket, "example.slow". GET /slow takes a second the first
+// time and answers from the cache for the next minute:
 //
 //	go run ./example serve --http=127.0.0.1:8090
 //	curl http://127.0.0.1:8090/slow   # slow

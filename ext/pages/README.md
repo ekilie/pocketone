@@ -142,7 +142,7 @@ cd example && go run . serve --dir=./pb_data
 | Extension | How they fit |
 |---|---|
 | [Pocker](../pocker/README.md) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
-| [Cache](../cache/README.md) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. A disk tier for the cache (`cache: {disk_path: cache}`) keeps them across restarts. With the cache off, each JS VM compiles a file the first time it meets it. |
+| [Cache](../cache/README.md) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. On a multisite host they also outlive an instance's restarts, since the cache belongs to the host. With the cache off, each JS VM compiles a file the first time it meets it. |
 | [Deploy](../deploy/README.md) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
 ### Under pocker
