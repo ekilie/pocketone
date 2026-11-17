@@ -14,6 +14,7 @@ Sections named after a PocketOne release are from before extensions had versions
 ### Fixed
 
 - A `$app` database call at a hook file's top level, which fails because hook files load before the database opens (as in PocketBase), now says so and points to `onBootstrap`, instead of a bare nil pointer error.
+- The README no longer says a call that waits lets other requests run as well without `.async`; under load a plain `sleep(100)` served 19 requests a second against 481 with `await sleep.async(100)`.
 
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)
 
