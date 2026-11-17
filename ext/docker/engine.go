@@ -313,18 +313,43 @@ func (e *engine) logs(ctx context.Context, id string, line func(stream int, text
 	if res.StatusCode >= 300 {
 		return &apiError{Status: res.StatusCode, Message: "logs"}
 	}
-	r := bufio.NewReader(res.Body)
+	readMux(res.Body, line)
+	return nil
+}
+
+// attach connects to a created container's stdout/stderr before it starts, so even a process that exits at once (and
+// is auto-removed) can't take its output with it; Docker answers once the attach is in place. The returned stream
+// ends when the container stops; read it with readMux.
+func (e *engine) attach(ctx context.Context, id string) (io.ReadCloser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://docker"+e.prefix(ctx)+"/containers/"+id+"/attach?stream=1&stdout=1&stderr=1", nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := e.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode >= 300 {
+		res.Body.Close()
+		return nil, &apiError{Status: res.StatusCode, Message: "attach"}
+	}
+	return res.Body, nil
+}
+
+// readMux reads a non-TTY multiplexed stream (logs or attach) and calls line for each line until it ends.
+func readMux(body io.Reader, line func(stream int, text string)) {
+	r := bufio.NewReader(body)
 	var hdr [8]byte
 	partial := map[int]string{}
 	for {
 		if _, err := io.ReadFull(r, hdr[:]); err != nil {
-			return nil
+			break
 		}
 		stream := int(hdr[0])
 		n := binary.BigEndian.Uint32(hdr[4:])
 		buf := make([]byte, n)
 		if _, err := io.ReadFull(r, buf); err != nil {
-			return nil
+			break
 		}
 		text := partial[stream] + string(buf)
 		for {
@@ -336,5 +361,10 @@ func (e *engine) logs(ctx context.Context, id string, line func(stream int, text
 			text = text[i+1:]
 		}
 		partial[stream] = text
+	}
+	for stream, text := range partial { // a last line without a newline (a crash message often is one)
+		if text != "" {
+			line(stream, strings.TrimRight(text, "\r"))
+		}
 	}
 }
