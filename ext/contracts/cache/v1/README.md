@@ -47,6 +47,31 @@ _ = b.Set(ctx, key, v, 0) // 0 = the bucket's TTL
 Name buckets after your extension (`myext.answers`) so two extensions never share one. Declare cache/v1 in
 `WorksWith`: when nothing provides it, `Open` returns a bucket that keeps nothing, so the same code runs uncached.
 
+### Go values
+
+To cache a Go value (a parsed template, a compiled program) without turning it into bytes on every `Set` and back on
+every `Get`, make it a `cachev1.Item` and open the bucket with `OpenItems`:
+
+```go
+type compiled struct{ /* ... */ }
+
+func (c *compiled) MarshalCache() ([]byte, error) { /* bytes decode turns back into an equal value */ }
+func (c *compiled) CacheSize() int64              { /* roughly the bytes it holds in memory */ }
+
+items, err := cachev1.OpenItems(app, "myext.compiled", cachev1.Options{MaxMemory: 64 << 20},
+	func(b []byte) (*compiled, error) { /* ... */ })
+if c, ok, _ := items.Get(ctx, key); ok {
+	return c
+}
+c := compile()
+_ = items.Set(ctx, key, c, 0)
+```
+
+A provider that keeps items holds the value itself and marshals it only when it has to (to move it to disk, or to
+another server); `CacheSize` counts against the memory caps in place of a length. On a provider that keeps only
+bytes, `Items` marshals on `Set` and decodes on `Get`, so the code is the same either way. Once set, a value is
+shared by every `Get`: treat it as immutable.
+
 ## Provide
 
 Implement `cachev1.Cache` (`Bucket`) and `cachev1.Bucket` (`Get`, `Set`, `Delete`, `Clear`), and provide it in
@@ -55,6 +80,10 @@ Implement `cachev1.Cache` (`Bucket`) and `cachev1.Bucket` (`Get`, `Set`, `Delete
 ```go
 cachev1.Contract.Provide(app, myCache)
 ```
+
+To keep Go values without marshaling them, have your buckets also implement `cachev1.ItemBucket` (`GetItem`,
+`SetItem`). Items and bytes share a bucket's keys: `Get` of an item returns its `MarshalCache` bytes, and `GetItem` of
+bytes returns them decoded. A bucket that only keeps bytes needs nothing more: `Items` marshals for it.
 
 Keep each app's buckets apart: on a shared store (one per process, or Redis), prefix keys with `extkit.AppID(app)` and
 the bucket name. Treat `Options` as caps you keep as well as your storage allows (Redis has its own eviction), and

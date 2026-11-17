@@ -95,6 +95,10 @@ b, err := cachev1.Open(app, "myext.answers", cachev1.Options{MaxItems: 1000, TTL
 Declare cache/v1 in `WorksWith`: when nothing provides it, `Open` returns a bucket that keeps nothing, so your code
 runs uncached. Name buckets after your extension so they never collide.
 
+To cache Go values rather than bytes, make them `cachev1.Item`s and open the bucket with `cachev1.OpenItems`
+([Go values](../contracts/cache/v1/README.md#go-values)). Cache keeps each value as it is in memory and calls its
+`MarshalCache` only to move it to the disk tier; a read from disk decodes it and keeps it in memory as a value again.
+
 Cache provides cache/v1 as the default: another extension that provides it (a Redis cache, say) replaces it without
 any `providers:` line.
 
@@ -167,6 +171,10 @@ store's memory and item limits. A value goes when the last key pointing at it do
 There are two kinds of eviction. When the store is over its limits, a value leaves memory (by the store's strategy):
 to the disk tier when there is one, else together with every key pointing at it. When one bucket is over its own
 caps, one of its keys goes (by the bucket's strategy), and the value only if nothing else points at it.
+
+Go values (`cachev1.Item`) have no bytes to hash, so each is its own value under a random name, never shared, and
+counts its `CacheSize` against the limits. It's marshaled only when it spills to the disk tier, by the IO goroutine,
+which records the file's hash for later reads to check.
 
 The key index stays in memory and counts against `max_memory`. The disk tier is overflow for memory: one file per
 value, named by its hash, written atomically and emptied when the process starts.

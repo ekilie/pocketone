@@ -68,9 +68,13 @@ func checkIndex(s *store) error {
 			return fmt.Errorf("blob %s has no keys", h.hex()[:8])
 		case !mem[b] && !disk[b]:
 			return fmt.Errorf("blob %s in no list", h.hex()[:8])
-		case b.state != onDisk && (int64(len(b.data)) != b.size || sha256.Sum256(b.data) != b.hash):
+		case b.state != onDisk && !b.isItem && (int64(len(b.data)) != b.size || sha256.Sum256(b.data) != b.hash):
 			return fmt.Errorf("blob %s: held bytes don't match", h.hex()[:8])
-		case b.state == onDisk && b.data != nil:
+		case b.isItem && len(b.refs) != 1:
+			return fmt.Errorf("item %s shared by %d keys", h.hex()[:8], len(b.refs))
+		case b.state != onDisk && b.isItem && (b.item == nil) == (b.data == nil):
+			return fmt.Errorf("item %s in memory must hold exactly one of item or bytes", h.hex()[:8])
+		case b.state == onDisk && (b.data != nil || b.item != nil):
 			return fmt.Errorf("blob %s on disk still holds its bytes", h.hex()[:8])
 		}
 		if b.state == spilling {
@@ -161,7 +165,11 @@ func checkFiles(s *store) error {
 			return fmt.Errorf("stray file %s", strings.TrimPrefix(p, s.lim.dir))
 		}
 		data, err := os.ReadFile(p)
-		if err != nil || sha256.Sum256(data) != b.hash {
+		want := b.hash
+		if b.isItem {
+			want = b.fileSum
+		}
+		if err != nil || sha256.Sum256(data) != want {
 			return fmt.Errorf("file %s doesn't hold its blob", filepath.Base(p))
 		}
 		found++

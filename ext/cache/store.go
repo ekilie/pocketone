@@ -15,6 +15,10 @@ package cache
 //   - A space's: when one app's bucket is over its own caps, one of its keys goes (by the bucket's strategy). The blob
 //     goes too only when nothing else points at it.
 //
+// Items (Go values, cachev1.Item) are blobs too, but have no bytes to hash: each gets a random name instead, so it's
+// never shared, and memory holds the value itself. Only the disk tier needs its bytes: the IO goroutine marshals it
+// as it writes its file, and records the file's hash then. A read with a decoder brings it back to memory as an item.
+//
 // The disk tier is overflow for memory: one file per blob, named by its hash. The key index is only in memory, so the
 // tier starts empty with the process (its folder is wiped then).
 //
@@ -27,6 +31,7 @@ package cache
 import (
 	"bytes"
 	"container/list"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -81,9 +86,12 @@ const (
 )
 
 type blob struct {
-	hash    sum
+	hash    sum // of data; for an item, a random name
 	size    int64
 	data    []byte
+	item    cachev1.Item // an item held in memory, in place of data
+	isItem  bool         // set as an item: named at random, never shared
+	fileSum sum          // an item's file's hash, once written
 	state   blobState
 	refs    map[*entry]struct{}
 	el      *list.Element // in store.mem or store.disk; nil once freed
@@ -164,27 +172,65 @@ func (s *store) open(id string, lim spaceLimits) *space {
 	return sp
 }
 
-func (s *store) get(sp *space, key string) ([]byte, bool) {
-	for range 4 { // a read that raced a change looks again; past a few, it's a miss
-		data, ok, retry := s.tryGet(sp, key)
-		if !retry {
-			return data, ok
-		}
-	}
-	return nil, false
+// value is what a read found: bytes (the caller's own copy) or a shared item.
+type value struct {
+	data []byte
+	item cachev1.Item
 }
 
-func (s *store) tryGet(sp *space, key string) (data []byte, ok, retry bool) {
+// get returns key's bytes, marshaling an item; an item that fails to marshal is a miss.
+func (s *store) get(sp *space, key string) ([]byte, bool) {
+	data, ok, _ := s.getBytes(sp, key)
+	return data, ok
+}
+
+func (s *store) getBytes(sp *space, key string) ([]byte, bool, error) {
+	v, ok, err := s.load(sp, key, nil)
+	if err != nil || !ok || v.item == nil {
+		return v.data, ok, err
+	}
+	data, err := v.item.MarshalCache()
+	if err != nil {
+		return nil, false, err
+	}
+	return data, true, nil
+}
+
+// getItem returns key's value as an item, decoding bytes with decode.
+func (s *store) getItem(sp *space, key string, decode cachev1.Decoder) (cachev1.Item, bool, error) {
+	v, ok, err := s.load(sp, key, decode)
+	if err != nil || !ok || v.item != nil {
+		return v.item, ok, err
+	}
+	it, err := decode(v.data)
+	if err != nil {
+		return nil, false, err
+	}
+	return it, true, nil
+}
+
+// load reads key. decode, when given, brings an item blob read from disk back to memory as an item.
+func (s *store) load(sp *space, key string, decode cachev1.Decoder) (value, bool, error) {
+	for range 4 { // a read that raced a change looks again; past a few, it's a miss
+		v, ok, retry, err := s.tryGet(sp, key, decode)
+		if !retry {
+			return v, ok, err
+		}
+	}
+	return value{}, false, nil
+}
+
+func (s *store) tryGet(sp *space, key string, decode cachev1.Decoder) (v value, ok, retry bool, err error) {
 	s.mu.Lock()
 	e, found := sp.entries[key]
 	if !found {
 		s.mu.Unlock()
-		return nil, false, false
+		return value{}, false, false, nil
 	}
 	if e.expired(s.now().UnixNano()) {
 		s.removeEntry(e)
 		s.mu.Unlock()
-		return nil, false, false
+		return value{}, false, false, nil
 	}
 	if touches(sp.lim.eviction) {
 		sp.order.MoveToFront(e.el)
@@ -195,26 +241,40 @@ func (s *store) tryGet(sp *space, key string) (data []byte, ok, retry bool) {
 		if b.state == inMemory && touches(s.lim.eviction) {
 			s.mem.order.MoveToFront(b.el)
 		}
-		data = bytes.Clone(b.data)
+		if b.item != nil {
+			v.item = b.item
+		} else {
+			v.data = bytes.Clone(b.data)
+		}
 		s.mu.Unlock()
-		return data, true, false
+		return v, true, false, nil
 	case b.loading != nil: // someone is reading it: wait, then look again
 		ch := b.loading
 		s.mu.Unlock()
 		<-ch
-		return nil, false, true
+		return value{}, false, true, nil
 	}
 	ch := make(chan struct{})
 	b.loading = ch
-	path, hook := s.blobPath(b.hash), s.beforeRead
+	path, hook, want := s.blobPath(b.hash), s.beforeRead, b.hash
+	if b.isItem {
+		want = b.fileSum
+	} else {
+		decode = nil // shared bytes stay bytes
+	}
 	s.mu.Unlock()
 
 	if hook != nil {
 		hook()
 	}
-	data, err := os.ReadFile(path)
-	if err == nil && sha256.Sum256(data) != b.hash {
-		err = errors.New("blob doesn't match its hash")
+	data, rerr := os.ReadFile(path)
+	if rerr == nil && sha256.Sum256(data) != want {
+		rerr = errors.New("blob doesn't match its hash")
+	}
+	var item cachev1.Item
+	var derr error
+	if rerr == nil && decode != nil {
+		item, derr = decode(data)
 	}
 
 	s.mu.Lock()
@@ -222,15 +282,18 @@ func (s *store) tryGet(sp *space, key string) (data []byte, ok, retry bool) {
 	b.loading = nil
 	close(ch)
 	if s.blobs[b.hash] != b || b.state != onDisk { // freed or moved while we read: the index decides
-		return nil, false, true
+		return value{}, false, true, nil
 	}
-	if err != nil {
-		s.log.Warn("cache: unreadable disk entry dropped", "error", err)
+	if rerr != nil {
+		s.log.Warn("cache: unreadable disk entry dropped", "error", rerr)
 		s.dropBlob(b)
-		return nil, false, false
+		return value{}, false, false, nil
 	}
 	if sp.entries[key] != e { // replaced or deleted while we read
-		return nil, false, true
+		return value{}, false, true, nil
+	}
+	if derr != nil { // the file is fine; this caller's decoder isn't
+		return value{}, false, false, derr
 	}
 	if touches(s.lim.eviction) {
 		s.disk.order.MoveToFront(b.el)
@@ -239,15 +302,33 @@ func (s *store) tryGet(sp *space, key string) (data []byte, ok, retry bool) {
 		s.disk.order.Remove(b.el)
 		s.disk.bytes -= b.size
 		s.io.remove(s, path)
-		b.data, b.state = data, inMemory
+		if item != nil {
+			b.item = item
+		} else {
+			b.data = data
+		}
+		b.state = inMemory
 		b.el = s.mem.order.PushFront(b)
 		s.mem.bytes += b.size
 		s.fitMem(b)
 	}
-	return bytes.Clone(data), true, false
+	if item != nil {
+		return value{item: item}, true, false, nil
+	}
+	return value{data: bytes.Clone(data)}, true, false, nil
 }
 
 func (s *store) set(sp *space, key string, value []byte, ttl time.Duration) {
+	s.put(sp, key, value, nil, ttl)
+}
+
+// setItem stores item under key as it is; it's marshaled only if it spills to disk.
+func (s *store) setItem(sp *space, key string, item cachev1.Item, ttl time.Duration) {
+	s.put(sp, key, nil, item, ttl)
+}
+
+// put stores value, or item when it isn't nil.
+func (s *store) put(sp *space, key string, value []byte, item cachev1.Item, ttl time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if old, ok := sp.entries[key]; ok {
@@ -267,15 +348,28 @@ func (s *store) set(sp *space, key string, value []byte, ttl time.Duration) {
 	if ttl > 0 {
 		e.exp = now + int64(ttl)
 	}
-	if over(sp.lim.maxMem, e.cost()+int64(len(value))) {
+	size := int64(len(value))
+	if item != nil {
+		size = max(item.CacheSize(), 0)
+	}
+	if over(sp.lim.maxMem, e.cost()+size) {
 		return // larger than the bucket may hold
 	}
 
-	h := sum(sha256.Sum256(value))
-	b, shared := s.blobs[h]
-	if !shared {
-		b = &blob{hash: h, size: int64(len(value)), data: bytes.Clone(value), refs: map[*entry]struct{}{}}
-		s.blobs[h] = b
+	var b *blob
+	var shared bool
+	if item != nil {
+		b = &blob{hash: itemName(), size: size, item: item, isItem: true, refs: map[*entry]struct{}{}}
+		for s.blobs[b.hash] != nil {
+			b.hash = itemName()
+		}
+		s.blobs[b.hash] = b
+	} else {
+		h := sum(sha256.Sum256(value))
+		if b, shared = s.blobs[h]; !shared {
+			b = &blob{hash: h, size: size, data: bytes.Clone(value), refs: map[*entry]struct{}{}}
+			s.blobs[h] = b
+		}
 	}
 	s.attach(e, b)
 	switch {
@@ -310,6 +404,13 @@ func (s *store) clear(sp *space) {
 	for _, e := range sp.entries {
 		s.removeEntry(e)
 	}
+}
+
+// itemName is a random blob name for an item, which has no bytes to hash.
+func itemName() sum {
+	var h sum
+	_, _ = rand.Read(h[:])
+	return h
 }
 
 // touches reports whether reads reorder entries under ev (LRU, MRU) rather than only writes (FIFO, LIFO).
@@ -381,7 +482,7 @@ func (s *store) freeBlob(b *blob) {
 		s.disk.bytes -= b.size
 		s.io.remove(s, s.blobPath(b.hash))
 	}
-	b.el, b.data = nil, nil
+	b.el, b.data, b.item = nil, nil, nil
 }
 
 // dropBlob evicts b from the store with every key that points at it.
@@ -446,7 +547,7 @@ func (s *store) spill(b *blob) {
 }
 
 // written is the IO goroutine's report on b's file: b is on disk now, unless it changed meanwhile.
-func (s *store) written(b *blob, err error) {
+func (s *store) written(b *blob, fileSum sum, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pending -= b.size
@@ -458,7 +559,7 @@ func (s *store) written(b *blob, err error) {
 		s.dropBlob(b)
 		return
 	}
-	b.state, b.data = onDisk, nil
+	b.state, b.data, b.item, b.fileSum = onDisk, nil, nil, fileSum
 }
 
 // sweep drops every expired key.
@@ -495,12 +596,13 @@ type ioQueue struct {
 
 type ioOp struct {
 	path string
-	b    *blob  // write data to path, then report on b; nil = remove path
-	data []byte // the bytes to write (taken when queued)
+	b    *blob        // write data (or item's bytes) to path, then report on b; nil = remove path
+	data []byte       // the bytes to write (taken when queued)
+	item cachev1.Item // or the item to marshal and write
 }
 
 func (q *ioQueue) write(s *store, b *blob) {
-	q.push(s, ioOp{path: s.blobPath(b.hash), b: b, data: b.data})
+	q.push(s, ioOp{path: s.blobPath(b.hash), b: b, data: b.data, item: b.item})
 }
 
 func (q *ioQueue) remove(s *store, path string) { q.push(s, ioOp{path: path}) }
@@ -538,7 +640,14 @@ func (q *ioQueue) run(s *store) {
 			_ = os.Remove(op.path)
 			continue
 		}
-		s.written(op.b, writeAtomic(s.lim.dir, op.path, op.data))
+		data, err := op.data, error(nil)
+		if op.item != nil {
+			data, err = op.item.MarshalCache()
+		}
+		if err == nil {
+			err = writeAtomic(s.lim.dir, op.path, data)
+		}
+		s.written(op.b, sha256.Sum256(data), err)
 	}
 }
 

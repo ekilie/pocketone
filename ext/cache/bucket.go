@@ -13,12 +13,23 @@ type bucket struct {
 	sp    *space
 }
 
-var _ cachev1.Bucket = (*bucket)(nil)
+var _ cachev1.ItemBucket = (*bucket)(nil)
 
-// Get implements cachev1.Bucket.
+// Get implements cachev1.Bucket. An item is marshaled.
 func (b *bucket) Get(_ context.Context, key string) ([]byte, bool, error) {
-	v, ok := b.store.get(b.sp, key)
-	return v, ok, nil
+	return b.store.getBytes(b.sp, key)
+}
+
+// GetItem implements cachev1.ItemBucket.
+func (b *bucket) GetItem(_ context.Context, key string, decode cachev1.Decoder) (cachev1.Item, bool, error) {
+	return b.store.getItem(b.sp, key, decode)
+}
+
+// SetItem implements cachev1.ItemBucket: the item stays a Go value in memory and is marshaled only to move it to
+// the disk tier.
+func (b *bucket) SetItem(_ context.Context, key string, item cachev1.Item, ttl time.Duration) error {
+	b.store.setItem(b.sp, key, item, ttl)
+	return nil
 }
 
 // Set implements cachev1.Bucket.
