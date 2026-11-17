@@ -11,6 +11,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -23,116 +24,139 @@ import (
 func checkIndex(s *store) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	inList := func(l *list.List, state ...blobState) (map[*blob]bool, int64, error) {
-		seen, total := map[*blob]bool{}, int64(0)
-		for el := l.Front(); el != nil; el = el.Next() {
-			b := el.Value.(*blob)
-			if seen[b] {
-				return nil, 0, fmt.Errorf("blob %s twice in a list", b.hash.hex()[:8])
+	listed := func(l *list.List, name string, el func(*entry) *list.Element) (map[*entry]bool, error) {
+		seen := map[*entry]bool{}
+		for x := l.Front(); x != nil; x = x.Next() {
+			e := x.Value.(*entry)
+			if seen[e] || el(e) != x {
+				return nil, fmt.Errorf("%s: entry %q listed twice or its element doesn't match", name, e.key)
 			}
-			if b.el != el {
-				return nil, 0, fmt.Errorf("blob %s: el doesn't match its list element", b.hash.hex()[:8])
-			}
-			ok := false
-			for _, st := range state {
-				ok = ok || b.state == st
-			}
-			if !ok {
-				return nil, 0, fmt.Errorf("blob %s in the wrong list for state %d", b.hash.hex()[:8], b.state)
-			}
-			seen[b] = true
-			total += b.size
+			seen[e] = true
 		}
-		return seen, total, nil
+		return seen, nil
 	}
-	mem, memBytes, err := inList(s.mem.order, inMemory)
+	inMem, err := listed(s.mem, "store mem", func(e *entry) *list.Element { return e.gel })
 	if err != nil {
 		return err
 	}
-	disk, diskBytes, err := inList(s.disk.order, spilling, onDisk)
-	if err != nil {
-		return err
-	}
-	if memBytes != s.mem.bytes || diskBytes != s.disk.bytes {
-		return fmt.Errorf("totals: mem %d (counted %d), disk %d (counted %d)", s.mem.bytes, memBytes, s.disk.bytes, diskBytes)
-	}
-	if len(mem)+len(disk) != len(s.blobs) {
-		return fmt.Errorf("%d blobs indexed, %d in lists", len(s.blobs), len(mem)+len(disk))
-	}
-	var spillingBytes int64
-	for h, b := range s.blobs {
-		switch {
-		case b.hash != h:
-			return fmt.Errorf("blob indexed under the wrong hash")
-		case len(b.refs) == 0:
-			return fmt.Errorf("blob %s has no keys", h.hex()[:8])
-		case !mem[b] && !disk[b]:
-			return fmt.Errorf("blob %s in no list", h.hex()[:8])
-		case b.state != onDisk && !b.isItem && (int64(len(b.data)) != b.size || sha256.Sum256(b.data) != b.hash):
-			return fmt.Errorf("blob %s: held bytes don't match", h.hex()[:8])
-		case b.isItem && len(b.refs) != 1:
-			return fmt.Errorf("item %s shared by %d keys", h.hex()[:8], len(b.refs))
-		case b.state != onDisk && b.isItem && (b.item == nil) == (b.data == nil):
-			return fmt.Errorf("item %s in memory must hold exactly one of item or bytes", h.hex()[:8])
-		case b.state == onDisk && (b.data != nil || b.item != nil):
-			return fmt.Errorf("blob %s on disk still holds its bytes", h.hex()[:8])
-		}
-		if b.state == spilling {
-			spillingBytes += b.size
-		}
-		for e := range b.refs {
-			if e.b != b || e.sp.entries[e.key] != e {
-				return fmt.Errorf("blob %s: a ref isn't an indexed key pointing at it", h.hex()[:8])
-			}
-		}
-	}
-	if s.pending < spillingBytes { // pending also counts writes of blobs freed since
-		return fmt.Errorf("pending %d < spilling %d", s.pending, spillingBytes)
-	}
-	keys, keyBytes := 0, int64(0)
+	var memBytes, keyBytes, pending int64
+	keys := 0
+	values := map[*value]bool{}
+	items := map[any]bool{}
+	held := map[*byte]bool{}
 	for id, sp := range s.spaces {
 		if sp.id != id || len(sp.entries) != sp.order.Len() {
 			return fmt.Errorf("space %s: %d entries, %d in order", id, len(sp.entries), sp.order.Len())
 		}
-		var bytes int64
-		for el := sp.order.Front(); el != nil; el = el.Next() {
-			e := el.Value.(*entry)
-			if e.sp != sp || e.el != el || sp.entries[e.key] != e || e.b == nil || s.blobs[e.b.hash] != e.b {
+		mem, err := listed(sp.mem, id+" mem", func(e *entry) *list.Element { return e.mel })
+		if err != nil {
+			return err
+		}
+		dsk, err := listed(sp.disk, id+" disk", func(e *entry) *list.Element { return e.del })
+		if err != nil {
+			return err
+		}
+		var spMem, spKeys, spDisk int64
+		for x := sp.order.Front(); x != nil; x = x.Next() {
+			e := x.Value.(*entry)
+			switch {
+			case e.sp != sp || e.oel != x || sp.entries[e.key] != e || e.dead:
 				return fmt.Errorf("space %s key %q: broken links", id, e.key)
+			case e.inMem != mem[e] || e.inMem != inMem[e]:
+				return fmt.Errorf("space %s key %q: in memory %v, but listed %v/%v", id, e.key, e.inMem, mem[e], inMem[e])
+			case (e.disk != nil) != dsk[e]:
+				return fmt.Errorf("space %s key %q: has a file %v, listed %v", id, e.key, e.disk != nil, dsk[e])
+			case e.v == nil && e.disk == nil:
+				return fmt.Errorf("space %s key %q: neither a value nor a file", id, e.key)
+			case e.inMem && e.v == nil:
+				return fmt.Errorf("space %s key %q: in memory without a value", id, e.key)
+			case e.spilling() && !e.writing:
+				return fmt.Errorf("space %s key %q: held for a write that isn't queued", id, e.key)
+			case e.disk != nil && !e.disk.written && !e.writing:
+				return fmt.Errorf("space %s key %q: on an unwritten file without writing", id, e.key)
 			}
-			if _, ok := e.b.refs[e]; !ok {
-				return fmt.Errorf("space %s key %q: not among its blob's refs", id, e.key)
+			if e.disk != nil {
+				if _, ok := e.disk.refs[e]; !ok || s.blobs[e.disk.hash] != e.disk {
+					return fmt.Errorf("space %s key %q: its file doesn't know it, or isn't indexed", id, e.key)
+				}
+				spDisk += e.disk.size
 			}
-			bytes += e.cost() + e.b.size
+			if e.v != nil {
+				if values[e.v] {
+					return fmt.Errorf("space %s key %q: its value is shared with another key", id, e.key)
+				}
+				values[e.v] = true
+				if it := e.v.item; it != nil && reflect.TypeOf(it).Comparable() {
+					if items[it] {
+						return fmt.Errorf("space %s key %q: its item is held by another key", id, e.key)
+					}
+					items[it] = true
+				}
+				if len(e.v.data) > 0 {
+					if held[&e.v.data[0]] {
+						return fmt.Errorf("space %s key %q: its bytes are shared with another key", id, e.key)
+					}
+					held[&e.v.data[0]] = true
+				}
+			}
+			if e.inMem {
+				spMem += e.size
+				memBytes += e.size
+			}
+			if e.spilling() {
+				pending += e.size
+			}
+			spMem += e.cost()
+			spKeys += e.cost()
 			keyBytes += e.cost()
 			keys++
 		}
-		if bytes != sp.bytes {
-			return fmt.Errorf("space %s: bytes %d, counted %d", id, sp.bytes, bytes)
+		if spMem != sp.memBytes || spKeys != sp.keyBytes || spDisk != sp.diskBytes {
+			return fmt.Errorf("space %s: mem %d (counted %d), disk %d (counted %d)", id, sp.memBytes, spMem, sp.diskBytes, spDisk)
 		}
-		if over(sp.lim.maxMem, sp.bytes) || sp.lim.maxItems > 0 && len(sp.entries) > sp.lim.maxItems {
-			return fmt.Errorf("space %s over its caps: %d entries, %d bytes (%+v)", id, len(sp.entries), sp.bytes, sp.lim)
+		l := sp.lim
+		if l.maxItems > 0 && len(sp.entries) > l.maxItems || over(l.maxMem, sp.memBytes) || over(l.maxDisk, sp.diskBytes) {
+			return fmt.Errorf("space %s over its budget: %d entries, mem %d, disk %d (%+v)", id, len(sp.entries), sp.memBytes, sp.diskBytes, l)
 		}
 	}
-	if keys != s.keys || keyBytes != s.keyBytes {
-		return fmt.Errorf("keys %d (counted %d), key bytes %d (counted %d)", s.keys, keys, s.keyBytes, keyBytes)
+	if len(inMem) != s.mem.Len() || memBytes != s.memBytes || keyBytes != s.keyBytes || keys != s.keys || pending != s.pending {
+		return fmt.Errorf("totals: mem %d (counted %d), keys %d/%d (counted %d/%d), pending %d (counted %d)",
+			s.memBytes, memBytes, s.keys, s.keyBytes, keys, keyBytes, s.pending, pending)
 	}
-	if over(s.lim.maxMem, s.mem.bytes+s.keyBytes) && s.mem.order.Len() > 0 {
-		return fmt.Errorf("over memory with blobs still in memory: %d+%d > %d", s.mem.bytes, s.keyBytes, s.lim.maxMem)
+	var diskBytes int64
+	n := 0
+	for x := s.disk.Front(); x != nil; x = x.Next() {
+		b := x.Value.(*blob)
+		switch {
+		case b.el != x || s.blobs[b.hash] != b:
+			return fmt.Errorf("file %s: listed but not indexed", b.hash.hex()[:8])
+		case len(b.refs) == 0:
+			return fmt.Errorf("file %s has no keys", b.hash.hex()[:8])
+		}
+		for e := range b.refs {
+			if e.disk != b || e.dead {
+				return fmt.Errorf("file %s: a ref doesn't point at it", b.hash.hex()[:8])
+			}
+		}
+		diskBytes += b.size
+		n++
 	}
-	if s.lim.maxItems > 0 && s.mem.order.Len() > s.lim.maxItems {
-		return fmt.Errorf("%d blobs in memory, limit %d", s.mem.order.Len(), s.lim.maxItems)
+	if n != len(s.blobs) || diskBytes != s.diskBytes {
+		return fmt.Errorf("files: %d indexed, %d listed; %d bytes (counted %d)", len(s.blobs), n, s.diskBytes, diskBytes)
 	}
-	if over(s.lim.maxDisk, s.disk.bytes) {
-		return fmt.Errorf("disk %d over %d", s.disk.bytes, s.lim.maxDisk)
+	if over(s.lim.maxMem, s.memBytes+s.keyBytes) && s.mem.Len() > 0 {
+		return fmt.Errorf("over memory with values still in memory: %d+%d > %d", s.memBytes, s.keyBytes, s.lim.maxMem)
 	}
-	if s.lim.dir == "" && s.disk.order.Len() > 0 {
-		return fmt.Errorf("blobs on disk without a disk tier")
+	if over(s.lim.maxDisk, s.diskBytes) {
+		return fmt.Errorf("disk %d over %d", s.diskBytes, s.lim.maxDisk)
+	}
+	if s.lim.dir == "" && len(s.blobs) > 0 {
+		return fmt.Errorf("files without a disk tier")
 	}
 	return nil
 }
 
-// checkFiles verifies the disk tier's folder once IO is flushed: exactly one file per blob on disk, with its bytes.
+// checkFiles verifies the disk tier's folder once IO is flushed: exactly one file per indexed blob, with its bytes.
 func checkFiles(s *store) error {
 	s.flush()
 	if err := checkIndex(s); err != nil {
@@ -143,21 +167,26 @@ func checkFiles(s *store) error {
 	if s.pending != 0 {
 		return fmt.Errorf("pending %d after flush", s.pending)
 	}
+	for _, sp := range s.spaces {
+		for _, e := range sp.entries {
+			if e.writing {
+				return fmt.Errorf("key %q still writing after flush", e.key)
+			}
+		}
+	}
 	if s.lim.dir == "" {
 		return nil
 	}
 	want := map[string]*blob{}
 	for _, b := range s.blobs {
-		switch b.state {
-		case spilling:
-			return fmt.Errorf("blob %s still spilling after flush", b.hash.hex()[:8])
-		case onDisk:
-			want[s.blobPath(b.hash)] = b
+		if !b.written {
+			return fmt.Errorf("file %s unwritten after flush", b.hash.hex()[:8])
 		}
+		want[s.blobPath(b.hash)] = b
 	}
 	found := 0
 	err := filepath.WalkDir(s.lim.dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil || d.IsDir() || p == filepath.Join(s.lim.dir, walFile) {
 			return err
 		}
 		b, ok := want[p]
@@ -165,12 +194,8 @@ func checkFiles(s *store) error {
 			return fmt.Errorf("stray file %s", strings.TrimPrefix(p, s.lim.dir))
 		}
 		data, err := os.ReadFile(p)
-		want := b.hash
-		if b.isItem {
-			want = b.fileSum
-		}
-		if err != nil || sha256.Sum256(data) != want {
-			return fmt.Errorf("file %s doesn't hold its blob", filepath.Base(p))
+		if err != nil || sha256.Sum256(data) != b.hash {
+			return fmt.Errorf("file %s doesn't hold its bytes", filepath.Base(p))
 		}
 		found++
 		return nil
@@ -179,12 +204,13 @@ func checkFiles(s *store) error {
 		return err
 	}
 	if found != len(want) {
-		return fmt.Errorf("%d blobs on disk, %d files", len(want), found)
+		return fmt.Errorf("%d files indexed, %d on disk", len(want), found)
 	}
 	return nil
 }
 
-// palette are the values the fuzzer writes: few, so they're shared often; sizes from empty to larger than a small store.
+// palette are the values the fuzzer writes: few, so files are shared often; sizes from empty to larger than a small
+// store. A value is written as bytes or as a thing (an item) of the same bytes.
 var palette = func() [][]byte {
 	sizes := []int{0, 7, 40, 120, 300, 900}
 	out := make([][]byte, len(sizes))
@@ -214,47 +240,58 @@ func (r *fuzzReader) next() int {
 
 func (r *fuzzReader) done() bool { return r.i >= len(r.b) }
 
-// FuzzStore runs random operations on a small store (tiny limits, so everything evicts, spills and shares) against
-// a model of what every key last held. The store may forget anything, but may never hold or return a value the model
-// doesn't have: not a deleted, replaced, expired or other key's value. Every structure is checked after each step,
-// and the disk tier's files on every flush.
+// FuzzStore runs random operations on a small store (tiny budgets, so everything evicts, spills and shares files)
+// against a model of what every key last held. The store may forget anything, but may never hold or return a value
+// the model doesn't have: not a deleted, replaced, expired or other key's value. Values go in as bytes and as items.
+// With write-through the store also restarts (cleanly, or as after a crash), and must come back with nothing the model
+// doesn't have. Every structure is checked after each step, and the disk tier's files on every flush.
 func FuzzStore(f *testing.F) {
 	f.Add([]byte{0, 1, 200, 1, 0, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
 	f.Add([]byte{3, 2, 100, 1, 50, 1, 2, 1, 0, 30, 2, 2, 3, 0, 0, 5, 1, 2, 3, 0, 5, 5, 5, 0, 1, 1, 1, 7, 0, 9, 1, 2, 0})
 	f.Add(bytes.Repeat([]byte{0, 5, 1, 5, 2, 4, 3, 1, 1, 0}, 12))
-	f.Add(bytes.Repeat([]byte{1, 3, 9, 0, 255, 7, 2, 2, 8, 4, 6, 1, 0}, 20))
+	f.Add(bytes.Repeat([]byte{1, 3, 9, 0, 255, 7, 2, 2, 8, 4, 6, 1, 0, 11}, 20))
+	f.Add(bytes.Repeat([]byte{2, 1, 4, 1, 3, 12, 0, 1, 2, 10, 3, 0, 13, 1}, 20))
+	f.Add(bytes.Repeat([]byte{2, 2, 9, 2, 3, 1, 1, 10, 4, 2, 2, 12, 1, 0, 5, 3, 0, 13}, 16))
 	f.Fuzz(func(t *testing.T, in []byte) {
 		r := &fuzzReader{b: in}
 		evs := []cachev1.Eviction{cachev1.LRU, cachev1.MRU, cachev1.FIFO, cachev1.LIFO}
-		lim := poolLimits{
-			eviction: evs[r.next()%4],
-			maxItems: r.next() % 5,
-			maxMem:   int64(200 + 8*r.next()),
-		}
-		if r.next()%3 != 0 {
+		lim := poolLimits{eviction: evs[r.next()%4], maxMem: int64(600 + 8*r.next())}
+		switch r.next() % 3 {
+		case 1:
 			lim.dir, lim.maxDisk = t.TempDir(), int64(150+12*r.next())
-		}
-		s, err := newStore(lim, slog.New(slog.DiscardHandler))
-		if err != nil {
-			t.Fatal(err)
+		case 2:
+			lim.dir, lim.maxDisk, lim.writeThrough = t.TempDir(), int64(150+12*r.next()), true
 		}
 		now := time.Unix(1000, 0)
 		var clock sync.Mutex
-		s.now = func() time.Time { clock.Lock(); defer clock.Unlock(); return now }
-		defer s.flush()
+		newS := func() *store {
+			s, err := newStore(lim, slog.New(slog.DiscardHandler))
+			if err != nil {
+				t.Fatal(err)
+			}
+			s.now = func() time.Time { clock.Lock(); defer clock.Unlock(); return now }
+			return s
+		}
+		s := newS()
+		defer func() { s.close() }()
 
 		spaceLim := func() spaceLimits {
 			l := spaceLimits{eviction: evs[r.next()%4], maxItems: r.next() % 4}
 			if n := r.next() % 4; n > 0 {
 				l.maxMem = int64(150 + 250*n)
 			}
+			if n := r.next() % 3; n > 0 {
+				l.maxDisk = int64(300 * n)
+			}
 			l.ttl = time.Duration(r.next()%3) * time.Second
 			return l
 		}
 		const nSpaces, nKeys = 3, 4
+		lims := make([]spaceLimits, nSpaces)
 		spaces := make([]*space, nSpaces)
 		for i := range spaces {
-			spaces[i] = s.open(fmt.Sprintf("i%d/b", i), spaceLim())
+			lims[i] = spaceLim()
+			spaces[i] = s.open(fmt.Sprintf("i%d/b", i), lims[i])
 		}
 		model := map[[2]int]modelVal{}
 		ttls := []time.Duration{0, -1, time.Second, 3 * time.Second}
@@ -274,8 +311,10 @@ func FuzzStore(f *testing.F) {
 					switch {
 					case held && !known:
 						t.Fatalf("step %d: space %d key %d holds a value the model deleted", step, i, k)
-					case held && e.b.hash != sha256.Sum256(palette[m.v]):
-						t.Fatalf("step %d: space %d key %d holds the wrong value", step, i, k)
+					case held && e.v != nil && !holds(e.v, palette[m.v]):
+						t.Fatalf("step %d: space %d key %d holds the wrong value in memory", step, i, k)
+					case held && e.v == nil && e.disk.hash != sha256.Sum256(palette[m.v]):
+						t.Fatalf("step %d: space %d key %d points at the wrong file", step, i, k)
 					case held && e.exp != m.exp:
 						t.Fatalf("step %d: space %d key %d: expiry %d, model %d", step, i, k, e.exp, m.exp)
 					case !held && known:
@@ -284,14 +323,28 @@ func FuzzStore(f *testing.F) {
 				}
 			}
 		}
+		checkRead := func(step, i, k int, got []byte, ok bool) {
+			t.Helper()
+			m, known := model[[2]int{i, k}]
+			if ok && (!known || !bytes.Equal(got, palette[m.v])) {
+				t.Fatalf("step %d: read space %d key %d returned %d bytes the model doesn't have", step, i, k, len(got))
+			}
+			if ok && m.exp != 0 && now.UnixNano() >= m.exp {
+				t.Fatalf("step %d: read returned an expired value", step)
+			}
+		}
 
 		for step := 0; !r.done() && step < 400; step++ {
 			i, k := r.next()%nSpaces, r.next()%nKeys
 			sp, key := spaces[i], fmt.Sprint(k)
-			switch op := r.next() % 10; op {
-			case 0, 1, 2: // set
+			switch op := r.next() % 14; op {
+			case 0, 1, 2, 10: // set, as bytes or (10) as an item
 				v, ttl := r.next()%len(palette), ttls[r.next()%len(ttls)]
-				s.set(sp, key, palette[v], ttl)
+				if op == 10 {
+					s.setItem(sp, key, &thing{s: string(palette[v])}, ttl)
+				} else {
+					s.set(sp, key, palette[v], ttl)
+				}
 				switch {
 				case ttl < 0:
 					delete(model, [2]int{i, k})
@@ -305,37 +358,65 @@ func FuzzStore(f *testing.F) {
 					}
 					model[[2]int{i, k}] = m
 				}
-			case 3, 4, 5: // get
+			case 3, 4: // get
 				got, ok := s.get(sp, key)
-				m, known := model[[2]int{i, k}]
-				if ok && (!known || !bytes.Equal(got, palette[m.v])) {
-					t.Fatalf("step %d: get space %d key %d returned %d bytes the model doesn't have", step, i, k, len(got))
-				}
-				if ok && m.exp != 0 && now.UnixNano() >= m.exp {
-					t.Fatalf("step %d: get returned an expired value", step)
-				}
+				checkRead(step, i, k, got, ok)
 				if ok && len(got) > 0 {
 					got[0] ^= 0xff // the caller owns it: agree checks the change didn't reach the store
 				}
+			case 5, 11: // get as an item
+				it, ok, err := s.getItem(sp, key, thingDecoder)
+				if err != nil {
+					t.Fatalf("step %d: %v", step, err)
+				}
+				var got []byte
+				if ok {
+					got = []byte(it.(*thing).s)
+				}
+				checkRead(step, i, k, got, ok)
 			case 6:
 				s.del(sp, key)
 				delete(model, [2]int{i, k})
 			case 7:
-				if r.next()%4 == 0 {
+				switch r.next() % 5 {
+				case 0:
 					s.clear(sp)
 					for kk := range nKeys {
 						delete(model, [2]int{i, kk})
 					}
-				} else {
-					s.open(sp.id, spaceLim()) // an app restarting with other caps
+				case 1:
+					s.clearPrefix(fmt.Sprintf("i%d/", i)) // the app's buckets
+					for kk := range nKeys {
+						delete(model, [2]int{i, kk})
+					}
+				default:
+					lims[i] = spaceLim()
+					s.open(sp.id, lims[i]) // an app restarting with other caps
 				}
 			case 8:
 				clock.Lock()
 				now = now.Add(time.Duration(1+r.next()%3) * time.Second)
-				clock.Unlock() // expired keys may stay held until read or swept; agree checks their expiry, get that none is returned
+				clock.Unlock() // expired keys may stay held until read or swept; agree checks their expiry, reads that none is returned
 			case 9:
 				if err := checkFiles(s); err != nil {
 					t.Fatalf("step %d: %v", step, err)
+				}
+			case 12, 13: // the process restarts
+				if !lim.writeThrough {
+					continue
+				}
+				if op == 12 {
+					s.close()
+				} else {
+					s.flush() // as after a crash: no close, only what reached disk
+					s.wal.close()
+				}
+				s = newS()
+				for j := range spaces {
+					spaces[j] = s.open(fmt.Sprintf("i%d/b", j), lims[j])
+				}
+				if err := checkFiles(s); err != nil {
+					t.Fatalf("step %d, after restart: %v", step, err)
 				}
 			}
 			agree(step)
@@ -346,20 +427,33 @@ func FuzzStore(f *testing.F) {
 	})
 }
 
+// holds reports whether v is want: bytes, or a thing of those bytes.
+func holds(v *value, want []byte) bool {
+	if v.item != nil {
+		t, ok := v.item.(*thing)
+		return ok && t.s == string(want)
+	}
+	return bytes.Equal(v.data, want)
+}
+
 // TestStress runs readers and writers on one store with a small memory and a disk tier, so values keep moving between
 // memory, the IO queue and disk while others read them. Each worker owns keys no one else writes and checks every read
-// of them exactly; around them, shared spaces churn with shared values, deletes, clears and new caps.
+// of them exactly; around them, shared spaces churn with shared files, items, deletes, clears and new caps.
 func TestStress(t *testing.T) {
 	ops := 4000
 	if testing.Short() {
 		ops = 800
 	}
-	for _, ev := range []cachev1.Eviction{cachev1.LRU, cachev1.FIFO, cachev1.MRU} {
-		t.Run(string(ev), func(t *testing.T) {
-			s := newTestStore(t, poolLimits{eviction: ev, maxMem: 24 << 10, maxItems: 20, dir: t.TempDir(), maxDisk: 96 << 10})
+	for _, mode := range []string{"lru", "fifo", "mru", "write-through"} {
+		t.Run(mode, func(t *testing.T) {
+			ev := cachev1.Eviction(mode)
+			if mode == "write-through" {
+				ev = cachev1.LRU
+			}
+			s := newTestStore(t, poolLimits{eviction: ev, maxMem: 24 << 10, dir: t.TempDir(), maxDisk: 96 << 10, writeThrough: mode == "write-through"})
 			shared := make([]*space, 4)
 			for i := range shared {
-				shared[i] = s.open(fmt.Sprintf("shared%d/b", i), spaceLimits{eviction: cachev1.LRU, maxItems: 12})
+				shared[i] = s.open(fmt.Sprintf("shared%d/b", i), spaceLimits{eviction: cachev1.LRU, maxItems: 12, maxMem: 6 << 10})
 			}
 			const workers = 12
 			var wg sync.WaitGroup
@@ -367,14 +461,18 @@ func TestStress(t *testing.T) {
 			for w := range workers {
 				wg.Go(func() {
 					r := rand.New(rand.NewPCG(uint64(w), 7))
-					own := s.open(fmt.Sprintf("w%d/own", w), spaceLimits{eviction: cachev1.LRU, maxItems: 6})
+					own := s.open(fmt.Sprintf("w%d/own", w), spaceLimits{eviction: cachev1.LRU, maxItems: 6, maxMem: 4 << 10})
 					model := map[string][]byte{}
 					for n := range ops {
 						k := fmt.Sprint(r.IntN(10))
-						switch r.IntN(10) {
-						case 0, 1, 2: // own: set a value only this worker could have written
+						switch r.IntN(12) {
+						case 0, 1: // own: set a value only this worker could have written
 							v := ownValue(w, k, n, r.IntN(3000))
 							s.set(own, k, v, 0)
+							model[k] = v
+						case 2: // ... as an item
+							v := ownValue(w, k, n, r.IntN(3000))
+							s.setItem(own, k, &thing{s: string(v)}, 0)
 							model[k] = v
 						case 3, 4: // own: read exactly
 							got, ok := s.get(own, k)
@@ -386,22 +484,31 @@ func TestStress(t *testing.T) {
 							if !ok {
 								delete(model, k)
 							}
-						case 5:
+						case 5: // own: read as an item
+							it, ok, err := s.getItem(own, k, thingDecoder)
+							want, known := model[k]
+							if err != nil || ok && (!known || it.(*thing).s != string(want)) {
+								errs <- fmt.Errorf("worker %d key %s: item read wrong (known %v, err %v)", w, k, known, err)
+								return
+							}
+						case 6:
 							s.del(own, k)
 							delete(model, k)
-						case 6, 7: // shared churn: values shared across spaces and workers
+						case 7, 8: // shared churn: the same bytes from many spaces and workers
 							s.set(shared[r.IntN(len(shared))], k, palette[r.IntN(len(palette))], 0)
-						case 8:
+						case 9:
 							if got, ok := s.get(shared[r.IntN(len(shared))], k); ok && !inPalette(got) {
 								errs <- fmt.Errorf("shared read returned a value never written there")
 								return
 							}
-						case 9:
+						case 10:
+							s.setItem(shared[r.IntN(len(shared))], k, &thing{s: string(palette[r.IntN(len(palette))])}, 0)
+						case 11:
 							switch r.IntN(20) {
 							case 0:
 								s.clear(shared[r.IntN(len(shared))])
 							case 1:
-								s.open(shared[r.IntN(len(shared))].id, spaceLimits{eviction: cachev1.FIFO, maxItems: 1 + r.IntN(12)})
+								s.open(shared[r.IntN(len(shared))].id, spaceLimits{eviction: cachev1.FIFO, maxItems: 1 + r.IntN(12), maxMem: 6 << 10})
 							default:
 								s.del(shared[r.IntN(len(shared))], k)
 							}
@@ -443,18 +550,19 @@ func inPalette(v []byte) bool {
 }
 
 // A disk read happens off the lock. Whatever happens to the key meanwhile, the read never returns what the key no
-// longer holds, even when another key keeps that value alive.
+// longer holds, even when another key keeps that file alive.
 func TestDiskReadRacesAChange(t *testing.T) {
-	for _, change := range []string{"replace", "delete", "clear", "free the value"} {
+	for _, change := range []string{"replace", "delete", "clear", "free the file"} {
 		t.Run(change, func(t *testing.T) {
-			s := newTestStore(t, poolLimits{maxMem: 1 << 20, maxItems: 1, dir: t.TempDir(), maxDisk: 1 << 20})
-			a, b := s.open("inst1/x", lru(0)), s.open("inst2/x", lru(0))
+			s := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: t.TempDir(), maxDisk: 1 << 20})
+			a, b := s.open("inst1/x", room(2, 20)), s.open("inst2/x", room(2, 20))
 			put(s, a, "k", "old")
-			put(s, b, "k", "old") // keeps "old" alive whatever happens to a's key
-			put(s, a, "other", "pushes old to disk")
+			put(s, b, "k", "old") // keeps the file alive whatever happens to a's key
+			put(s, a, "o", "pushes old to disk")
+			put(s, b, "o", "pushes old to disk")
 			s.flush()
-			if bl := s.blobs[sum(sha256Of("old"))]; bl == nil || bl.state != onDisk {
-				t.Fatal("setup: old should be on disk")
+			if bl := s.blobs[sum(sha256Of("old"))]; bl == nil || !bl.written || len(bl.refs) != 2 {
+				t.Fatal("setup: old should be one file on disk for both keys")
 			}
 			once := false
 			s.beforeRead = func() {
@@ -469,7 +577,7 @@ func TestDiskReadRacesAChange(t *testing.T) {
 					s.del(a, "k")
 				case "clear":
 					s.clear(a)
-				case "free the value":
+				case "free the file":
 					s.del(a, "k")
 					s.del(b, "k")
 				}
@@ -488,16 +596,22 @@ func TestDiskReadRacesAChange(t *testing.T) {
 	}
 }
 
-// TestNoStaleReads: writers (one at a time per key) write rising versions to the same key in two spaces, so a value
-// is shared until both move on, while a tiny memory pushes values through the disk tier. A reader that starts after
+// TestNoStaleReads: writers (one at a time per key) write rising versions to the same key in two spaces, so a file
+// is shared until both move on, while tiny budgets push values through the disk tier. A reader that starts after
 // version v was written must see v or later, or miss; never an older one, and never one deleted before it started.
 func TestNoStaleReads(t *testing.T) {
+	for _, wt := range []bool{false, true} {
+		t.Run(fmt.Sprintf("write-through=%v", wt), func(t *testing.T) { noStaleReads(t, wt) })
+	}
+}
+
+func noStaleReads(t *testing.T, writeThrough bool) {
 	ops := 3000
 	if testing.Short() {
 		ops = 600
 	}
-	s := newTestStore(t, poolLimits{maxMem: 6 << 10, maxItems: 4, dir: t.TempDir(), maxDisk: 64 << 10})
-	spaces := []*space{s.open("a/x", lru(0)), s.open("b/x", lru(0))}
+	s := newTestStore(t, poolLimits{maxMem: 8 << 10, dir: t.TempDir(), maxDisk: 64 << 10, writeThrough: writeThrough})
+	spaces := []*space{s.open("a/x", room(2, 2400)), s.open("b/x", room(2, 2400))}
 	const nKeys = 6
 	type keyState struct {
 		mu    sync.Mutex // writers of this key
@@ -571,41 +685,5 @@ func TestNoStaleReads(t *testing.T) {
 	}
 	if err := checkFiles(s); err != nil {
 		t.Fatal(err)
-	}
-}
-
-// Many readers of one value on disk read its file once; the rest wait for that read.
-func TestDiskReadsCollapse(t *testing.T) {
-	s := newTestStore(t, poolLimits{maxMem: 1 << 20, maxItems: 1, dir: t.TempDir(), maxDisk: 1 << 20})
-	sp := s.open("/x", lru(0))
-	put(s, sp, "k", "on disk")
-	put(s, sp, "other", "pushes it out")
-	s.flush()
-	var mu sync.Mutex
-	reads := 0
-	arrived := make(chan struct{})
-	s.beforeRead = func() {
-		mu.Lock()
-		reads++
-		mu.Unlock()
-		<-arrived // hold the first read until every reader is in
-	}
-	var wg sync.WaitGroup
-	var waiting sync.WaitGroup
-	for range 20 {
-		waiting.Add(1)
-		wg.Go(func() {
-			waiting.Done()
-			if v, ok := s.get(sp, "k"); !ok || string(v) != "on disk" {
-				t.Errorf("reader got %q %v", v, ok)
-			}
-		})
-	}
-	waiting.Wait()
-	time.Sleep(50 * time.Millisecond) // let them reach the store
-	close(arrived)
-	wg.Wait()
-	if reads != 1 {
-		t.Fatalf("%d disk reads for one value, want 1", reads)
 	}
 }

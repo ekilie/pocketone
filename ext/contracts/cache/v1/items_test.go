@@ -10,8 +10,13 @@ type num struct{ n byte }
 
 func (v num) MarshalCache() ([]byte, error) { return []byte{v.n}, nil }
 func (v num) CacheSize() int64              { return 1 }
+func (v num) CacheVersion() string          { return "n1" }
 
 func decodeNum(b []byte) (num, error) { return num{b[0]}, nil }
+
+type live struct{}
+
+func (live) CacheSize() int64 { return 1 }
 
 // bytesOnly is a bucket that keeps only bytes, as a remote provider would.
 type bytesOnly map[string][]byte
@@ -36,11 +41,11 @@ func (m bytesOnly) Clear(context.Context) error              { clear(m); return 
 func TestItemsOverBytes(t *testing.T) {
 	ctx := context.Background()
 	b := bytesOnly{}
-	it := NewItems(b, decodeNum)
+	it := NewItems(b, "n1", decodeNum)
 	if err := it.Set(ctx, "k", num{7}, 0); err != nil {
 		t.Fatal(err)
 	}
-	if string(b["k"]) != "\x07" {
+	if string(b["k"]) != "n1\x00\x07" {
 		t.Fatalf("stored %q, want the marshaled bytes", b["k"])
 	}
 	if v, ok, err := it.Get(ctx, "k"); err != nil || !ok || v.n != 7 {
@@ -52,7 +57,28 @@ func TestItemsOverBytes(t *testing.T) {
 	if _, ok, _ := it.Get(ctx, "k"); ok {
 		t.Fatal("a negative ttl didn't delete")
 	}
-	if _, ok, _ := NewItems(None{}, decodeNum).Get(ctx, "k"); ok {
+	if _, ok, _ := NewItems(None{}, "n1", decodeNum).Get(ctx, "k"); ok {
 		t.Fatal("None kept an item")
+	}
+}
+
+func TestItemsNotMarshalerOverBytes(t *testing.T) {
+	ctx := context.Background()
+	b := bytesOnly{"k": []byte("old")}
+	it := NewItems(b, "", func([]byte) (live, error) { return live{}, nil })
+	if err := it.Set(ctx, "k", live{}, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := b["k"]; ok {
+		t.Fatal("a bytes-only bucket kept the old value under a key Set to an item it can't keep")
+	}
+}
+
+func TestItemsVersionOverBytes(t *testing.T) {
+	ctx := context.Background()
+	b := bytesOnly{}
+	_ = NewItems(b, "n1", decodeNum).Set(ctx, "k", num{7}, 0)
+	if _, ok, _ := NewItems(b, "n2", decodeNum).Get(ctx, "k"); ok {
+		t.Fatal("a reader of another version decoded the bytes")
 	}
 }

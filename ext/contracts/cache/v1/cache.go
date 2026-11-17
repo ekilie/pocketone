@@ -33,6 +33,8 @@ type Cache interface {
 	// same bucket and ignore their opts. name must pass [ValidName]. A provider may override opts with an
 	// operator's settings for that bucket, and treats each field as a hint it keeps as well as its storage allows.
 	Bucket(name string, opts Options) (Bucket, error)
+	// Clear empties every bucket the app has, opened since it started or not.
+	Clear(ctx context.Context) error
 }
 
 // Bucket is one named cache: keys to byte values.
@@ -79,7 +81,7 @@ type Options struct {
 	Eviction Eviction
 	// MaxItems caps the bucket's entries; 0 is no cap of its own.
 	MaxItems int
-	// MaxMemory caps the bytes of the bucket's keys and values; 0 is no cap of its own.
+	// MaxMemory caps the bytes of the bucket's keys and of the values it holds in memory; 0 is no cap of its own.
 	MaxMemory int64
 	// TTL is how long an entry lives when Set gives no ttl; 0 is until it's evicted.
 	TTL time.Duration
@@ -118,6 +120,15 @@ func Open(app core.App, name string, opts Options) (Bucket, error) {
 		return None{}, nil
 	}
 	return c.Bucket(name, opts)
+}
+
+// Clear empties every bucket app has, through whoever provides cache/v1; with no provider there's nothing to empty.
+func Clear(ctx context.Context, app core.App) error {
+	c, ok := Contract.Of(app)
+	if !ok {
+		return nil
+	}
+	return c.Clear(ctx)
 }
 
 // None is a bucket that keeps nothing: every Get misses.

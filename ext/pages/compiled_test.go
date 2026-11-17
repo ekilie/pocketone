@@ -21,6 +21,13 @@ type mapCache struct {
 
 func (c *mapCache) Bucket(name string, _ cachev1.Options) (cachev1.Bucket, error) { return mapBucket{c, name}, nil }
 
+func (c *mapCache) Clear(context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	clear(c.m)
+	return nil
+}
+
 type mapBucket struct {
 	c    *mapCache
 	name string

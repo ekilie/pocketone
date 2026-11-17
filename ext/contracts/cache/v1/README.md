@@ -47,6 +47,9 @@ _ = b.Set(ctx, key, v, 0) // 0 = the bucket's TTL
 Name buckets after your extension (`myext.answers`) so two extensions never share one. Declare cache/v1 in
 `WorksWith`: when nothing provides it, `Open` returns a bucket that keeps nothing, so the same code runs uncached.
 
+To empty every bucket the app has (after a change that left stale entries), call `cachev1.Clear(ctx, app)`; the
+app's admins can do the same from outside its code through [cache.clear/v1](../clear/v1/README.md).
+
 ### Go values
 
 To cache a Go value (a parsed template, a compiled program) without turning it into bytes on every `Set` and back on
@@ -55,10 +58,11 @@ every `Get`, make it a `cachev1.Item` and open the bucket with `OpenItems`:
 ```go
 type compiled struct{ /* ... */ }
 
-func (c *compiled) MarshalCache() ([]byte, error) { /* bytes decode turns back into an equal value */ }
 func (c *compiled) CacheSize() int64              { /* roughly the bytes it holds in memory */ }
+func (c *compiled) MarshalCache() ([]byte, error) { /* bytes decode turns back into an equal value */ }
+func (c *compiled) CacheVersion() string          { return "compiled/2" } // change it when the bytes' format changes
 
-items, err := cachev1.OpenItems(app, "myext.compiled", cachev1.Options{MaxMemory: 64 << 20},
+items, err := cachev1.OpenItems(app, "myext.compiled", cachev1.Options{MaxMemory: 64 << 20}, "compiled/2",
 	func(b []byte) (*compiled, error) { /* ... */ })
 if c, ok, _ := items.Get(ctx, key); ok {
 	return c
@@ -67,23 +71,38 @@ c := compile()
 _ = items.Set(ctx, key, c, 0)
 ```
 
-A provider that keeps items holds the value itself and marshals it only when it has to (to move it to disk, or to
-another server); `CacheSize` counts against the memory caps in place of a length. On a provider that keeps only
-bytes, `Items` marshals on `Set` and decodes on `Get`, so the code is the same either way. Once set, a value is
-shared by every `Get`: treat it as immutable.
+What a provider does with them:
+
+- **Each key holds its own item.** Nothing is shared between keys, buckets or apps: the code that owns the bucket owns
+  its items, and every `Get` of a key returns that key's item, not a copy. `CacheSize` counts against the memory caps
+  in place of a length.
+- **Only a `Marshaler` leaves memory.** `CacheSize` alone makes an item that lives in memory only: evicted, it's
+  gone. `MarshalCache` promises bytes that decode back to an equivalent item; the provider calls it only when it
+  moves the item (to disk, across a restart, to another server), and may keep identical bytes from many keys once,
+  there.
+- **Versions keep old bytes out.** The provider keeps `CacheVersion` beside the bytes (bucket, key, version ->
+  content), and a decoder of another version never sees them: a miss, so a code change that alters the format
+  doesn't decode stale bytes.
+
+On a provider that keeps only bytes, `Items` marshals on `Set` (with the version in front) and decodes on `Get`, so
+the code is the same either way.
 
 ## Provide
 
-Implement `cachev1.Cache` (`Bucket`) and `cachev1.Bucket` (`Get`, `Set`, `Delete`, `Clear`), and provide it in
-`Register`, as the default if another provider should replace yours:
+Implement `cachev1.Cache` (`Bucket`, `Clear`) and `cachev1.Bucket` (`Get`, `Set`, `Delete`, `Clear`), and provide it
+in `Register`, as the default if another provider should replace yours:
 
 ```go
 cachev1.Contract.Provide(app, myCache)
 ```
 
+`Cache.Clear` empties every bucket the app has, including ones it hasn't opened since it started. Provide
+[cache.clear/v1](../clear/v1/README.md) beside it.
+
 To keep Go values without marshaling them, have your buckets also implement `cachev1.ItemBucket` (`GetItem`,
-`SetItem`). Items and bytes share a bucket's keys: `Get` of an item returns its `MarshalCache` bytes, and `GetItem` of
-bytes returns them decoded. A bucket that only keeps bytes needs nothing more: `Items` marshals for it.
+`SetItem`). Items and bytes share a bucket's keys: `Get` of a `Marshaler` returns its bytes (and misses on an item that
+can't marshal), and `GetItem` of bytes of the decoder's version returns them decoded, as the key's item from then on.
+Never hand one key's item to another key. A bucket that only keeps bytes needs nothing more: `Items` marshals for it.
 
 Keep each app's buckets apart: on a shared store (one per process, or Redis), prefix keys with `extkit.AppID(app)` and
 the bucket name. Treat `Options` as caps you keep as well as your storage allows (Redis has its own eviction), and

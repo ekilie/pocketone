@@ -21,12 +21,12 @@ func (b *bucket) Get(_ context.Context, key string) ([]byte, bool, error) {
 }
 
 // GetItem implements cachev1.ItemBucket.
-func (b *bucket) GetItem(_ context.Context, key string, decode cachev1.Decoder) (cachev1.Item, bool, error) {
-	return b.store.getItem(b.sp, key, decode)
+func (b *bucket) GetItem(_ context.Context, key string, dec cachev1.Decoder) (cachev1.Item, bool, error) {
+	return b.store.getItem(b.sp, key, dec)
 }
 
-// SetItem implements cachev1.ItemBucket: the item stays a Go value in memory and is marshaled only to move it to
-// the disk tier.
+// SetItem implements cachev1.ItemBucket: the key keeps item itself in memory, marshaled only to write it to the
+// disk tier.
 func (b *bucket) SetItem(_ context.Context, key string, item cachev1.Item, ttl time.Duration) error {
 	b.store.setItem(b.sp, key, item, ttl)
 	return nil
