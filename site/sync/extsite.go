@@ -260,7 +260,7 @@ func siteNav(root string, p *extension, rw *rewriter) (string, error) {
 	return b.String(), nil
 }
 
-// siteNavsOut lists the extensions with a nav of their own, for the docs plugin (_private/docs-footer.js).
+// siteNavsOut lists the extensions with a nav of their own, for _private/docs-nav.js.
 const siteNavsOut = "site/pb_pages/_private/site-navs.js"
 
 // siteNavs writes each extension site's sidebar, (main)/_private/toc-<name>.md: a way back to the main docs, the

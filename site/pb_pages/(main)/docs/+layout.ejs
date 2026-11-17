@@ -4,12 +4,13 @@
     <div>
       <nav class="docs-nav-scroll" aria-label="Documentation navigation">
         <%
-  // the nav this page shows (ctx.docsNav, _private/docs-footer.js); any failure falls back to the main nav
+  // the nav this page shows (_private/docs-nav.js); any failure falls back to the main nav
   let nav = '', navs = [], tocHtml = '', navErr = ''
   try {
-    nav = ctx.docsNav()
-    navs = ctx.docsNavs()
-    tocHtml = include(nav ? 'toc-' + nav : 'toc')
+    const docsNav = ctx.resolve('docs-nav')(ctx)
+    nav = docsNav.name
+    navs = docsNav.names
+    tocHtml = include(docsNav.toc)
   } catch (e) {
     navErr = String(e)
     nav = ''
