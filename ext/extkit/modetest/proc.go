@@ -38,8 +38,16 @@ func newProc(t *testing.T, id, dir string, env []string) *Proc {
 	return p
 }
 
-// baseEnv is the environment for every process: its own config folder (saved logins), no tokens from the developer's
-// shell, never "over SSH".
+// Env is a clean environment for a pocketone process the test runs itself (the CLI: link, deploy, pages create): its
+// own config folder (saved logins), no tokens from the developer's shell, never "over SSH".
+func Env(t *testing.T) []string { return baseEnv(t) }
+
+// Command is a pocketone command in dir with env, stopped when ctx ends.
+func Command(ctx context.Context, t *testing.T, dir string, env []string, args ...string) *exec.Cmd {
+	t.Helper()
+	return command(ctx, Bin(t), dir, env, args...)
+}
+
 func baseEnv(t *testing.T) []string {
 	return append(os.Environ(),
 		"P1_CONFIG_DIR="+t.TempDir(), "P1_TOKEN=", "P1_TOKEN_DEFAULT=", "SSH_CONNECTION=", "SSH_TTY=")
@@ -110,6 +118,16 @@ func (p *Proc) Stop() {
 		<-p.exited
 	}
 	Step(p.t, "stopped "+p.ID)
+}
+
+// restart starts a stopped process again with the same flags (without waiting).
+func (p *Proc) restart() {
+	p.t.Helper()
+	if !p.stopped {
+		p.t.Fatalf("modetest: %s is running; stop it first", p.ID)
+	}
+	p.stopped = false
+	p.start(p.args...)
 }
 
 // Run runs a pocketone command in the process's folder with its environment (60s limit).

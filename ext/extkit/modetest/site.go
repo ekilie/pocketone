@@ -8,6 +8,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -16,19 +18,82 @@ import (
 
 // Site is one instance as a client sees it.
 type Site struct {
-	t     *testing.T
-	ID    string
-	Host  string // its hostname, <id>.test
-	URL   string // http://<id>.test:<port>, the same shape in every mode
-	Dir   string // its folder (pb_data, pb_hooks, ... inside)
-	Proc  *Proc  // the process that runs it (a single app, or its host)
-	owner string // the host id that runs it ("" for a single app)
-	dial  string // the address requests go to (its owner, or another host with World.Via)
-	jwt   string
+	t      *testing.T
+	ID     string
+	Host   string // its hostname, <id>.test
+	URL    string // http://<id>.test:<port>, the same shape in every mode
+	Dir    string // its folder (pb_data, pb_hooks, ... inside)
+	Proc   *Proc  // the process that runs it (a single app, or its host)
+	owner  string // the host id that runs it ("" for a single app)
+	dial   string // the address requests go to (its owner, or another host with World.Via)
+	jwt    string
+	starts int // Restarts() when last seen up
 }
 
 // TrapURL is the dev mail trap inbox of the process that runs the instance. On a host, every dev instance shares it.
 func (s *Site) TrapURL() string { return s.Proc.TrapURL }
+
+// OnHost reports whether the instance runs on a multisite host (Host or Fleet mode).
+func (s *Site) OnHost() bool { return s.owner != "" }
+
+// waitUp waits until the instance answers /api/health and notes its restart count.
+func (s *Site) waitUp() {
+	s.t.Helper()
+	where := s.ID
+	if s.owner != "" {
+		where += " on " + s.owner
+	}
+	s.Proc.waitHTTP(where+" answers /api/health", s.Host, "/api/health", readyLimit)
+	s.starts = s.Restarts()
+}
+
+// Restarts counts the times the instance's app has restarted, from its process's log: a single app's "Server started
+// at" lines (an execve restart keeps the PID), or the host's `pocker: event kind=restarted id=<id>` lines.
+func (s *Site) Restarts() int {
+	log := s.Proc.Log.String()
+	if s.owner == "" {
+		return strings.Count(log, "Server started at")
+	}
+	return strings.Count(log, "kind=restarted id="+s.ID+" ")
+}
+
+// Restarted reports whether the app restarted since the harness last saw it up.
+func (s *Site) Restarted() bool { return s.Restarts() > s.starts }
+
+// WaitRestarted waits until the instance's app has restarted (since it was last seen up) and answers again.
+func (s *Site) WaitRestarted(why string, limit time.Duration) {
+	s.t.Helper()
+	WaitFor(s.t, why+": "+s.ID+" restarted", limit, func() (bool, string) {
+		n := s.Restarts()
+		return n > s.starts, fmt.Sprintf("%d restarts", n)
+	})
+	s.waitUp()
+}
+
+// Logs is what the instance has logged: its process's output, plus its own exec.log on a host (an instance's hooks
+// log there, not to the host's output).
+func (s *Site) Logs() string {
+	out := s.Proc.Log.String()
+	if s.owner != "" {
+		if b, err := os.ReadFile(filepath.Join(s.Dir, "logs", "exec.log")); err == nil {
+			out += "\n" + string(b)
+		}
+	}
+	return out
+}
+
+// Run runs a pocketone command in the instance's folder with its process's environment (60s limit): the same command
+// a user runs in their app folder, or in an instance's folder on a host.
+func (s *Site) Run(args ...string) (string, error) {
+	s.t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	out, err := command(ctx, Bin(s.t), s.Dir, s.Proc.Env, args...).CombinedOutput()
+	return string(out), err
+}
+
+// Write writes a file into the instance's folder.
+func (s *Site) Write(rel, content string) { WriteFile(s.t, filepath.Join(s.Dir, rel), content) }
 
 // Client is an HTTP client that sends every request for any hostname to this site's process, so URLs the app builds
 // from its own URL (links in mail, redirects) work as they are.
