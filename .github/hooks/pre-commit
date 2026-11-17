@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
-# Refuses a commit whose generated files are stale: runs .github/regenerate.sh on exactly what is being committed
-# (the index, not the working tree) and fails if that would change any file. So main never carries stale generated
-# files, and running regenerate on a branch shows only that branch's changes.
+# Refuses a commit to main whose generated files are stale: runs .github/regenerate.sh on exactly what is being
+# committed (the index, not the working tree) and fails if that would change any file. So main never carries stale
+# generated files. Commits on any other branch skip the check: a branch (an extension's above all) changes only its
+# own files, and its generated files are rebuilt when it merges into main (this hook runs on that merge commit too).
 #
 # Turn on once per clone:  git config core.hooksPath .github/hooks
 #
 # The staged files are copied to <git dir>/regen-check (a fixed path, so Go's build cache stays warm: ~3 s, ~10 s
 # after a dependency change). Your working tree is never touched.
 set -euo pipefail
+
+# Only commits to main are checked.
+if [ "$(git symbolic-ref --short -q HEAD || true)" != "main" ]; then
+  exit 0
+fi
 
 # Nothing staged: nothing to check (git itself refuses the commit unless --allow-empty).
 if git diff --cached --quiet; then
