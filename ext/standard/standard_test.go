@@ -97,7 +97,7 @@ func TestStartupLines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(lines[0], "standard: on: settings, templates, tokens, ") || !strings.Contains(lines[0], "deploy") {
+	if !strings.HasPrefix(lines[0], "standard: on: settings, templates, cache, tokens, ") || !strings.Contains(lines[0], "deploy") {
 		t.Fatalf("lines %q", lines)
 	}
 	if !strings.Contains(strings.Join(lines, "\n"), "tokens/v1 ← tokens") {

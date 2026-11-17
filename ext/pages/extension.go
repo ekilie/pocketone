@@ -29,5 +29,5 @@ func (p *Extension) Register(app core.App, _ extkit.Config) error {
 
 // Contracts implements [extkit.Declarer].
 func (p *Extension) Contracts() extkit.Contracts {
-	return extkit.Contracts{}
+	return extkit.Contracts{WorksWith: extkit.IDs("cache/v1")}
 }

@@ -29,6 +29,7 @@ The table is generated from each contract's README and every extension's `Contra
 | Contract | What it promises | Provided by | Required by | Works with | Owners |
 |---|---|---|---|---|---|
 | [`bulkmail/v1`](bulkmail/v1/README.md) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
+| [`cache/v1`](cache/v1/README.md) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
 | [`cli.commands/v1`](cli/commands/v1/README.md) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. |  |  |  | @benallfree |
 | [`deploy/v1`](deploy/v1/README.md) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](gate/v1/README.md) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |

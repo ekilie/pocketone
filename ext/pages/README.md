@@ -142,6 +142,7 @@ cd example && go run . serve --dir=./pb_data
 | Extension | How they fit |
 |---|---|
 | [Pocker](../pocker/README.md) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
+| [Cache](../cache/README.md) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. On a multisite host they also outlive an instance's restarts, since the cache belongs to the host. With the cache off, each JS VM compiles a file the first time it meets it. |
 | [Deploy](../deploy/README.md) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
 ### Under pocker
@@ -154,7 +155,7 @@ the standard set adds it like any extension:
 srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(pages.Config{})}}
 ```
 
-- Each start of an instance's app gets its own route table, compiled templates and caches. An instance that sleeps
+- Each start of an instance's app gets its own route table, compiled templates (in its own `pages.compiled` bucket; identical files share one copy in the host's cache) and caches. An instance that sleeps
   drops them; nothing is shared between instances.
 - Page code runs in the instance's own sandboxed JS VM ([jsvm](../jsvm/README.md)), under its limits (execution time,
   memory, stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's

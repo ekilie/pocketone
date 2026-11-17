@@ -23,21 +23,27 @@ var md = goldmark.New(
 
 // splitFrontMatter removes YAML front matter (between --- lines at the very top) and returns it parsed.
 func splitFrontMatter(src string) (map[string]any, string, error) {
-	if !strings.HasPrefix(src, "---\n") {
+	raw, rest, ok := cutFrontMatter(src)
+	if !ok {
 		return nil, src, nil
 	}
-	end := strings.Index(src[4:], "\n---")
-	if end < 0 {
-		return nil, src, nil
-	}
-	raw := src[4 : 4+end]
-	rest := src[4+end+4:]
-	rest = strings.TrimPrefix(rest, "\n")
 	var fm map[string]any
 	if err := yaml.Unmarshal([]byte(raw), &fm); err != nil {
 		return nil, src, err
 	}
 	return fm, rest, nil
+}
+
+// cutFrontMatter splits a leading "---" block from src: its YAML and the rest. ok is false when there is none.
+func cutFrontMatter(src string) (raw, rest string, ok bool) {
+	if !strings.HasPrefix(src, "---\n") {
+		return "", src, false
+	}
+	end := strings.Index(src[4:], "\n---")
+	if end < 0 {
+		return "", src, false
+	}
+	return src[4 : 4+end], strings.TrimPrefix(src[4+end+4:], "\n"), true
 }
 
 // headingIDs implements the SPEC 4.4 id rule: lowercase, keep a-z 0-9 - _ space, spaces to -, repeats get -1, -2.

@@ -8,7 +8,7 @@ summary: "The extensions every PocketOne app has, as one set a host configures."
 
 # Standard Set
 
-The extensions every PocketOne app has: settings, page templates, API tokens (with the OAuth server), remotes (remote/v1), MCP,
+The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,
 so an app never misses one because its host forgot to list it. Members can be reconfigured or turned off per app,
 never removed.
@@ -42,7 +42,7 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy
 standard: tokens/v1 ← tokens
 ```
 
