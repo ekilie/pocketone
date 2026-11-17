@@ -18,10 +18,10 @@ package cache
 // a ceiling for memory and one for disk over every bucket together, so the total stays bounded however many apps
 // there are; reaching one evicts by the store's strategy across buckets.
 //
-// Without write-through the disk tier is overflow for memory: a value reaches disk only when memory evicts it, goes
-// back to memory (and leaves disk) when read, and the tier starts empty with the process. With write-through every
+// Without write-behind the disk tier is overflow for memory: a value reaches disk only when memory evicts it, goes
+// back to memory (and leaves disk) when read, and the tier starts empty with the process. With write-behind every
 // value that can be marshaled is written when it's Set, memory eviction only drops the in-memory copy, and an index
-// of (space, key, version) -> sha (wal.go) brings the cache back after a restart.
+// of (space, key, version) -> sha (index.go) brings the cache back after a restart.
 //
 // Locking: one mutex guards the index, the lists and the totals, and is never held across disk IO, marshaling or
 // decoding. Files are written and removed by one IO goroutine (disk.go), in the order the lock decided them. An entry
@@ -57,11 +57,11 @@ func (h sum) hex() string { return hex.EncodeToString(h[:]) }
 
 // poolLimits are the store's, from the operator: ceilings over every bucket together.
 type poolLimits struct {
-	eviction     cachev1.Eviction
-	maxMem       int64 // values and key index in memory
-	dir          string
-	maxDisk      int64
-	writeThrough bool
+	eviction    cachev1.Eviction
+	maxMem      int64 // values and key index in memory
+	dir         string
+	maxDisk     int64
+	writeBehind bool
 }
 
 // maxPending is how many bytes evicted from memory may wait there for the disk tier; past it, they're dropped.
@@ -122,7 +122,7 @@ type entry struct {
 	key  string
 	ver  string // its value's version, kept with its file
 	exp  int64  // unix ns; 0 = never
-	seq  uint64 // when it was Set, for the write-through index
+	seq  uint64 // when it was Set, for the write-behind index
 	dead bool   // removed: work queued for it is dropped
 
 	v     *value // in memory (inMem), or held while its file is written (spilling)
@@ -195,7 +195,7 @@ type store struct {
 	sinceSweep int
 
 	io  ioQueue
-	wal *wal // write-through only
+	idx *diskIndex // write-behind only
 
 	beforeRead   func() // tests: called before a file read, off the lock
 	beforeDecode func() // tests: called before a decode, off the lock
@@ -205,14 +205,14 @@ func newStore(lim poolLimits, log *slog.Logger) (*store, error) {
 	s := &store{lim: lim, log: log, now: time.Now, spaces: map[string]*space{}, blobs: map[sum]*blob{},
 		mem: list.New(), disk: list.New()}
 	s.io.cond = sync.NewCond(&s.io.mu)
-	if lim.writeThrough && lim.dir == "" {
-		return nil, errors.New("cache: write_through needs a disk_path")
+	if lim.writeBehind && lim.dir == "" {
+		return nil, errors.New("cache: write_behind needs a disk_path")
 	}
 	if lim.dir == "" {
 		return s, nil
 	}
 	s.lim.dir = filepath.Join(lim.dir, blobsDir)
-	if !lim.writeThrough {
+	if !lim.writeBehind {
 		if err := wipe(s.lim.dir); err != nil {
 			return nil, fmt.Errorf("cache: disk tier %s: %w", s.lim.dir, err)
 		}
@@ -224,15 +224,16 @@ func newStore(lim poolLimits, log *slog.Logger) (*store, error) {
 	return s, nil
 }
 
-// unlock releases the lock, then appends the index records queued under it (write-through).
+// unlock releases the lock, then appends the index records queued under it (write-behind).
 func (s *store) unlock() {
-	var recs []walRec
-	if s.wal != nil {
-		recs = s.wal.take()
+	var recs []indexRec
+	var sync bool
+	if s.idx != nil {
+		recs, sync = s.idx.take()
 	}
 	s.mu.Unlock()
 	if len(recs) > 0 {
-		s.wal.append(s, recs)
+		s.idx.append(s, recs, sync)
 	}
 }
 
@@ -443,7 +444,7 @@ func (s *store) touch(e *entry) {
 	}
 }
 
-// promote brings e's value back to memory from its file, if it could fit. Without write-through the file is
+// promote brings e's value back to memory from its file, if it could fit. Without write-behind the file is
 // overflow only, so e lets go of it.
 func (s *store) promote(e *entry, v *value) {
 	size := v.size()
@@ -452,7 +453,7 @@ func (s *store) promote(e *entry, v *value) {
 	}
 	e.v, e.size = v, size
 	s.addMem(e)
-	if !s.lim.writeThrough {
+	if !s.lim.writeBehind {
 		s.detachDisk(e)
 	}
 	s.fitSpace(e.sp, e)
@@ -488,6 +489,7 @@ func (s *store) put(sp *space, key string, v *value, ttl time.Duration) {
 	s.mu.Lock()
 	defer s.unlock()
 	if old, ok := sp.entries[key]; ok {
+		s.mustSync(old)
 		s.removeEntry(old)
 	}
 	if ttl < 0 {
@@ -504,8 +506,8 @@ func (s *store) put(sp *space, key string, v *value, ttl time.Duration) {
 	if ttl > 0 {
 		e.exp = now + int64(ttl)
 	}
-	if s.wal != nil {
-		e.seq = s.wal.next()
+	if s.idx != nil {
+		e.seq = s.idx.next()
 	}
 	if over(sp.lim.maxMem, e.cost()) || over(s.lim.maxMem, e.cost()+s.keyBytes) {
 		return // not even its key fits
@@ -515,7 +517,7 @@ func (s *store) put(sp *space, key string, v *value, ttl time.Duration) {
 		s.spill(e) // never fits in memory: straight to disk, or not kept
 	} else {
 		s.addMem(e)
-		if s.lim.writeThrough && v.canMarshal() {
+		if s.lim.writeBehind && v.canMarshal() {
 			e.writing = true
 			s.io.write(s, e)
 		}
@@ -531,7 +533,16 @@ func (s *store) del(sp *space, key string) {
 	s.mu.Lock()
 	defer s.unlock()
 	if e, ok := sp.entries[key]; ok {
+		s.mustSync(e)
 		s.removeEntry(e)
+	}
+}
+
+// mustSync makes the index dels this call queues durable before it returns, when removing e (or, nil, a bucket's
+// keys) lets go of a file: a replaced or deleted value must never come back after a crash or a power cut.
+func (s *store) mustSync(e *entry) {
+	if s.idx != nil && (e == nil || e.disk != nil || e.writing) {
+		s.idx.mustSync()
 	}
 }
 
@@ -566,6 +577,7 @@ func (s *store) clearID(id string) int {
 }
 
 func (s *store) clearSpace(sp *space) int {
+	s.mustSync(nil)
 	n := len(sp.entries)
 	for _, e := range sp.entries {
 		s.removeEntry(e)
@@ -637,8 +649,8 @@ func (s *store) removeEntry(e *entry) {
 		return
 	}
 	sp := e.sp
-	if s.wal != nil && (e.disk != nil || e.writing) {
-		s.wal.queue(walRec{Op: opDel, Space: sp.id, Key: e.key, Seq: s.wal.next()})
+	if s.idx != nil && (e.disk != nil || e.writing) {
+		s.idx.queue(indexRec{Op: opDel, Space: sp.id, Key: e.key, Seq: s.idx.next()})
 	}
 	if e.inMem {
 		s.removeMem(e)
@@ -736,11 +748,11 @@ func (s *store) sweep(now int64) {
 	}
 }
 
-// close waits for every queued disk write and removal, then closes the write-through index.
+// close waits for every queued disk write and removal, then closes the write-behind index.
 func (s *store) close() {
 	s.flush()
-	if s.wal != nil {
-		s.wal.close()
+	if s.idx != nil {
+		s.idx.close()
 	}
 }
 

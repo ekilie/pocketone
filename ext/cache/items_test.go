@@ -118,7 +118,7 @@ func TestItemSizeCounts(t *testing.T) {
 
 // An item that can't marshal lives in memory only: evicted, it's gone; Get of it misses.
 func TestItemMemoryOnly(t *testing.T) {
-	s := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: t.TempDir(), maxDisk: 1 << 20, writeThrough: true})
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: t.TempDir(), maxDisk: 1 << 20, writeBehind: true})
 	sp := s.open("/x", room(2, 15))
 	v := &live{n: 1}
 	s.setItem(sp, "a", v, 0)
@@ -286,14 +286,18 @@ func TestReadsAndDecodesCoalesce(t *testing.T) {
 // every structure and file.
 func TestItemsConcurrent(t *testing.T) {
 	for _, wt := range []bool{false, true} {
-		t.Run(fmt.Sprintf("write-through=%v", wt), func(t *testing.T) {
-			s := newTestStore(t, poolLimits{maxMem: 4 << 10, dir: t.TempDir(), maxDisk: 16 << 10, writeThrough: wt})
+		t.Run(fmt.Sprintf("write-behind=%v", wt), func(t *testing.T) {
+			s := newTestStore(t, poolLimits{maxMem: 4 << 10, dir: t.TempDir(), maxDisk: 16 << 10, writeBehind: wt})
 			sp := s.open("/x", room(4, 1200))
 			var wg sync.WaitGroup
 			for g := range 8 {
 				wg.Go(func() {
 					r := rand.New(rand.NewPCG(uint64(g), 1))
-					for range 2000 {
+					n := 2000
+					if wt {
+						n = 500 // every replacing Set waits for an fsync
+					}
+					for range n {
 						k := fmt.Sprint(r.IntN(12))
 						want := "v" + k
 						switch r.IntN(7) {
@@ -330,7 +334,7 @@ func TestItemsConcurrent(t *testing.T) {
 
 // Writes are slotted: a key Set many times before the IO goroutine reaches it is marshaled once, with its latest value.
 func TestWritesSlotted(t *testing.T) {
-	s := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: t.TempDir(), maxDisk: 1 << 20, writeThrough: true})
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: t.TempDir(), maxDisk: 1 << 20, writeBehind: true})
 	sp := s.open("/x", lru(0))
 	release := make(chan struct{})
 	s.io.beforeOp = func() { <-release }

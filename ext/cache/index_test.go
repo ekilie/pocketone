@@ -12,8 +12,8 @@ import (
 	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
 )
 
-func wtLimits(dir string) poolLimits {
-	return poolLimits{eviction: cachev1.LRU, maxMem: 1 << 20, dir: dir, maxDisk: 1 << 20, writeThrough: true}
+func wbLimits(dir string) poolLimits {
+	return poolLimits{eviction: cachev1.LRU, maxMem: 1 << 20, dir: dir, maxDisk: 1 << 20, writeBehind: true}
 }
 
 // reopen closes s (cleanly, or as after a crash) and starts a store on the same folder.
@@ -21,11 +21,11 @@ func reopen(t *testing.T, s *store, crash bool) *store {
 	t.Helper()
 	if crash {
 		s.flush()
-		s.wal.close()
+		s.idx.close()
 	} else {
 		s.close()
 	}
-	s2, err := newStore(wtLimits(filepath.Dir(s.lim.dir)), slog.New(slog.DiscardHandler))
+	s2, err := newStore(wbLimits(filepath.Dir(s.lim.dir)), slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestWriteThroughSurvivesRestart(t *testing.T) {
 	for _, crash := range []bool{false, true} {
 		t.Run(fmt.Sprintf("crash=%v", crash), func(t *testing.T) {
 			dir := t.TempDir()
-			s := newTestStore(t, wtLimits(dir))
+			s := newTestStore(t, wbLimits(dir))
 			a, b := s.open("inst1/x", lru(0)), s.open("inst2/y", lru(0))
 			put(s, a, "bytes", "kept")
 			s.setItem(a, "item", &thing{s: "tpl", ver: "t1"}, 0)
@@ -77,15 +77,15 @@ func TestWriteThroughSurvivesRestart(t *testing.T) {
 	}
 }
 
-// Under write-through, memory eviction only drops the in-memory copy: the file is already there.
+// Under write-behind, memory eviction only drops the in-memory copy: the file is already there.
 func TestWriteThroughEvictionKeepsFile(t *testing.T) {
-	s := newTestStore(t, wtLimits(t.TempDir()))
+	s := newTestStore(t, wbLimits(t.TempDir()))
 	sp := s.open("/x", room(2, 10))
 	v := &thing{s: "first"}
 	s.setItem(sp, "a", v, 0)
 	s.flush()
 	if v.marshals.Load() != 1 || sp.entries["a"].disk == nil {
-		t.Fatal("write-through should write on Set")
+		t.Fatal("write-behind should write on Set")
 	}
 	s.setItem(sp, "b", &thing{s: "second"}, 0) // a leaves memory
 	s.flush()
@@ -96,7 +96,7 @@ func TestWriteThroughEvictionKeepsFile(t *testing.T) {
 		t.Fatal("eviction marshaled again")
 	}
 	if getThing(t, s, sp, "a").s != "first" || sp.entries["a"].disk == nil {
-		t.Fatal("read back keeps the file under write-through")
+		t.Fatal("read back keeps the file under write-behind")
 	}
 	if err := checkFiles(s); err != nil {
 		t.Fatal(err)
@@ -105,7 +105,7 @@ func TestWriteThroughEvictionKeepsFile(t *testing.T) {
 
 func TestReplayDropsMissingAndStray(t *testing.T) {
 	dir := t.TempDir()
-	s := newTestStore(t, wtLimits(dir))
+	s := newTestStore(t, wbLimits(dir))
 	sp := s.open("/x", lru(0))
 	put(s, sp, "lost", "its file goes missing")
 	put(s, sp, "kept", "fine")
@@ -133,7 +133,7 @@ func TestReplayDropsMissingAndStray(t *testing.T) {
 
 // Replay drops what expired while the process was down.
 func TestReplayDropsExpired(t *testing.T) {
-	lim := wtLimits(t.TempDir())
+	lim := wbLimits(t.TempDir())
 	now := time.Now()
 	s, err := newStore(lim, slog.New(slog.DiscardHandler))
 	if err != nil {
@@ -162,17 +162,20 @@ func TestReplayDropsExpired(t *testing.T) {
 
 // The index is rewritten once it holds far more records than keys.
 func TestIndexCompacts(t *testing.T) {
+	old := compactAt
+	compactAt = 64
+	t.Cleanup(func() { compactAt = old })
 	dir := t.TempDir()
-	s := newTestStore(t, wtLimits(dir))
+	s := newTestStore(t, wbLimits(dir))
 	sp := s.open("/x", lru(0))
 	for i := range 3 * compactAt {
 		s.set(sp, fmt.Sprint(i%10), []byte(fmt.Sprint(i)), 0)
-		if i%100 == 0 {
+		if i%20 == 0 {
 			s.flush()
 		}
 	}
 	s.flush()
-	n := lines(t, filepath.Join(s.lim.dir, walFile))
+	n := lines(t, filepath.Join(s.lim.dir, indexFile))
 	if n > compactAt+4*10+100 {
 		t.Fatalf("index has %d lines for 10 keys: not compacted", n)
 	}
@@ -186,7 +189,7 @@ func TestIndexCompacts(t *testing.T) {
 	if got := val(s, sp, "9"); got != fmt.Sprint((3*compactAt-1)/10*10-1) {
 		t.Fatalf("key 9 is %q after restart", got)
 	}
-	if n := lines(t, filepath.Join(s.lim.dir, walFile)); n != 10 {
+	if n := lines(t, filepath.Join(s.lim.dir, indexFile)); n != 10 {
 		t.Fatalf("index has %d lines after replay, want 10", n)
 	}
 }
@@ -211,7 +214,7 @@ func TestCrashMidSetNeverStale(t *testing.T) {
 	for _, item := range []bool{false, true} {
 		t.Run(fmt.Sprintf("item=%v", item), func(t *testing.T) {
 			dir := t.TempDir()
-			s := newTestStore(t, wtLimits(dir))
+			s := newTestStore(t, wbLimits(dir))
 			sp := s.open("/x", lru(0))
 			put(s, sp, "k", "old")
 			put(s, sp, "other", "untouched")
@@ -230,7 +233,7 @@ func TestCrashMidSetNeverStale(t *testing.T) {
 			}
 			close(release)
 
-			s2, err := newStore(wtLimits(crashed), slog.New(slog.DiscardHandler))
+			s2, err := newStore(wbLimits(crashed), slog.New(slog.DiscardHandler))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -264,4 +267,31 @@ func copyDir(src, dst string) error {
 		}
 		return os.WriteFile(filepath.Join(dst, rel), b, 0o644)
 	})
+}
+
+// A Set that replaces a key on disk, a Delete and a Clear fsync the index before they return; a Set of a new key, or
+// of a key only in memory, doesn't.
+func TestIndexSyncs(t *testing.T) {
+	s := newTestStore(t, wbLimits(t.TempDir()))
+	sp := s.open("/x", lru(0))
+	syncs := func() int { s.idx.mu.Lock(); defer s.idx.mu.Unlock(); return s.idx.syncs }
+	put(s, sp, "a", "1")
+	s.setItem(sp, "m", &live{}, 0)
+	s.setItem(sp, "m", &live{}, 0) // memory only: no file to let go of
+	if n := syncs(); n != 0 {
+		t.Fatalf("%d syncs for new keys and memory-only values, want 0", n)
+	}
+	s.flush()
+	put(s, sp, "a", "2") // replaces a value on disk
+	if n := syncs(); n != 1 {
+		t.Fatalf("%d syncs after replacing a key on disk, want 1", n)
+	}
+	s.flush()
+	s.del(sp, "a")
+	put(s, sp, "b", "x")
+	s.flush()
+	s.clear(sp)
+	if n := syncs(); n != 3 {
+		t.Fatalf("%d syncs after a Delete and a Clear, want 3", n)
+	}
 }

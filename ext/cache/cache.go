@@ -5,7 +5,7 @@
 //
 // Each bucket has its own budget (entries, memory, disk), from its code and pocketone.yaml's `cache` section
 // (`defaults`, `buckets`), with built-in defaults so none is unbounded. The store's own keys are ceilings over every
-// bucket together, and turn on the disk tier and write-through.
+// bucket together, and turn on the disk tier and write-behind.
 package cache
 
 import (
@@ -53,11 +53,11 @@ type Config struct {
 	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" doc:"Turns the cache off when false; extensions then run uncached."`
 
 	// The store, shared by every app in the process: ceilings over every bucket together.
-	Eviction     cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo."`
-	MaxMemory    Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Memory for every bucket together, such as 512MiB. Default 128MiB."`
-	DiskPath     string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host."`
-	MaxDisk      Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB."`
-	WriteThrough bool             `yaml:"write_through,omitempty" json:"write_through,omitempty" doc:"Writes every value to the disk tier when it's set, and keeps the cache across restarts. Needs disk_path. Off: the disk tier holds only what memory evicts, and starts empty."`
+	Eviction    cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo."`
+	MaxMemory   Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Memory for every bucket together, such as 512MiB. Default 128MiB."`
+	DiskPath    string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host."`
+	MaxDisk     Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB."`
+	WriteBehind bool             `yaml:"write_behind,omitempty" json:"write_behind,omitempty" doc:"Writes every value that can be marshaled to the disk tier in the background after it's set, and keeps the cache across restarts; a replaced or deleted value never comes back, even after a power cut. Needs disk_path. Off: the disk tier holds only what memory evicts, and starts empty."`
 
 	// Each app's buckets.
 	Defaults BucketConfig            `yaml:"defaults,omitempty" json:"defaults,omitempty" doc:"Caps for any bucket whose code leaves them unset."`
@@ -90,7 +90,7 @@ func New(cfg Config) *Extension { return &Extension{cfg: cfg} }
 func (x *Extension) Name() string { return Name }
 
 // Close implements [extkit.Closer]: it waits for the disk tier's queued writes and removals, once every app has
-// stopped, and closes the write-through index.
+// stopped, and closes the write-behind index.
 func (x *Extension) Close(context.Context) error {
 	if x.store != nil {
 		x.store.close()
@@ -99,7 +99,7 @@ func (x *Extension) Close(context.Context) error {
 }
 
 // Clear empties the whole store: every bucket of every app in the process, in memory, on disk and in the
-// write-through index. On a multisite host it's the host's to call (an operator command), never an instance's.
+// write-behind index. On a multisite host it's the host's to call (an operator command), never an instance's.
 func (x *Extension) Clear(context.Context) error {
 	if x.store != nil {
 		x.store.clearPrefix("")
@@ -144,7 +144,7 @@ func (x *Extension) storeFor(app core.App, c Config) (*store, error) {
 			x.storeErr = err
 			return
 		}
-		lim := poolLimits{eviction: c.Eviction, maxMem: int64(c.MaxMemory), maxDisk: int64(c.MaxDisk), writeThrough: c.WriteThrough}
+		lim := poolLimits{eviction: c.Eviction, maxMem: int64(c.MaxMemory), maxDisk: int64(c.MaxDisk), writeBehind: c.WriteBehind}
 		if lim.eviction == "" {
 			lim.eviction = cachev1.LRU
 		}
@@ -179,8 +179,8 @@ func merge(base, over Config) Config {
 	if over.MaxMemory != 0 {
 		base.MaxMemory = over.MaxMemory
 	}
-	if over.WriteThrough {
-		base.WriteThrough = true
+	if over.WriteBehind {
+		base.WriteBehind = true
 	}
 	if over.DiskPath != "" {
 		base.DiskPath = over.DiskPath

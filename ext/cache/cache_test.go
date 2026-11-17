@@ -216,7 +216,7 @@ func TestCopies(t *testing.T) {
 	}
 }
 
-// Without write-through the disk tier is overflow: a value read back goes to memory and leaves disk.
+// Without write-behind the disk tier is overflow: a value read back goes to memory and leaves disk.
 func TestDiskTier(t *testing.T) {
 	s := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: t.TempDir(), maxDisk: 1 << 20})
 	sp := s.open("/x", room(2, 11))
@@ -275,7 +275,7 @@ func TestDiskCeiling(t *testing.T) {
 	}
 }
 
-// Without write-through the disk tier starts empty: what an earlier process left is removed, and nothing else in the
+// Without write-behind the disk tier starts empty: what an earlier process left is removed, and nothing else in the
 // folder is touched.
 func TestDiskWipedOnStart(t *testing.T) {
 	dir := t.TempDir()
@@ -285,7 +285,7 @@ func TestDiskWipedOnStart(t *testing.T) {
 	put(s, sp, "b", "two") // a spills
 	s.flush()
 	os.WriteFile(filepath.Join(s.lim.dir, ".tmp-1"), []byte("half"), 0o644)
-	os.WriteFile(filepath.Join(s.lim.dir, walFile), []byte("{}\n"), 0o644)
+	os.WriteFile(filepath.Join(s.lim.dir, indexFile), []byte("{}\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "keep.txt"), []byte("mine"), 0o644)
 	os.MkdirAll(filepath.Join(s.lim.dir, "zz"), 0o755)
 	os.WriteFile(filepath.Join(s.lim.dir, "zz", "notes"), []byte("mine too"), 0o644)
@@ -451,8 +451,8 @@ func TestWriteThroughNeedsDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer app.Cleanup()
-	if err := New(Config{WriteThrough: true}).Register(app, nil); err == nil {
-		t.Fatal("write_through without disk_path accepted")
+	if err := New(Config{WriteBehind: true}).Register(app, nil); err == nil {
+		t.Fatal("write_behind without disk_path accepted")
 	}
 }
 
@@ -478,11 +478,11 @@ func TestOpenWithoutProvider(t *testing.T) {
 
 func TestConfigDecoding(t *testing.T) {
 	var y Config
-	src := "max_memory: 512MiB\ndisk_path: /var/cache/p1\nmax_disk: 10GB\nwrite_through: true\ndefaults: {max_memory: 64MiB, max_disk: 1GiB, ttl: 10m}\nbuckets:\n  a.b: {eviction: mru}\n"
+	src := "max_memory: 512MiB\ndisk_path: /var/cache/p1\nmax_disk: 10GB\nwrite_behind: true\ndefaults: {max_memory: 64MiB, max_disk: 1GiB, ttl: 10m}\nbuckets:\n  a.b: {eviction: mru}\n"
 	if err := yaml.Unmarshal([]byte(src), &y); err != nil {
 		t.Fatal(err)
 	}
-	if y.MaxMemory != 512<<20 || y.MaxDisk != 10e9 || !y.WriteThrough || y.Defaults.MaxMemory != 64<<20 || y.Defaults.MaxDisk != 1<<30 ||
+	if y.MaxMemory != 512<<20 || y.MaxDisk != 10e9 || !y.WriteBehind || y.Defaults.MaxMemory != 64<<20 || y.Defaults.MaxDisk != 1<<30 ||
 		time.Duration(y.Defaults.TTL) != 10*time.Minute || y.Buckets["a.b"].Eviction != cachev1.MRU {
 		t.Fatalf("yaml: %+v", y)
 	}

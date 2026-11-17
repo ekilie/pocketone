@@ -63,8 +63,8 @@ func (s *store) dropBlob(b *blob) {
 			s.removeEntry(e)
 			continue
 		}
-		if s.wal != nil {
-			s.wal.queue(walRec{Op: opDel, Space: e.sp.id, Key: e.key, Seq: s.wal.next()}) // no longer kept across a restart
+		if s.idx != nil {
+			s.idx.queue(indexRec{Op: opDel, Space: e.sp.id, Key: e.key, Seq: s.idx.next()}) // no longer kept across a restart
 		}
 		e.writing = false
 		s.detachDisk(e)
@@ -81,9 +81,9 @@ func (s *store) writeDone(e *entry) {
 		s.pending -= e.size
 		e.v = nil
 	}
-	if s.wal != nil {
+	if s.idx != nil {
 		b := e.disk
-		s.wal.queue(walRec{Op: opSet, Space: e.sp.id, Key: e.key, Ver: e.ver, Hash: b.hash.hex(), Size: b.size, Exp: e.exp, Seq: e.seq})
+		s.idx.queue(indexRec{Op: opSet, Space: e.sp.id, Key: e.key, Ver: e.ver, Hash: b.hash.hex(), Size: b.size, Exp: e.exp, Seq: e.seq})
 	}
 }
 
@@ -208,7 +208,7 @@ type slot struct {
 type ioOp struct {
 	write   *slot // write what this key holds
 	remove  *sum  // or remove this file
-	compact bool  // or compact the write-through index
+	compact bool  // or compact the write-behind index
 }
 
 // write queues e's key for writing, unless a write of it is already waiting: that one writes e's value.
@@ -261,7 +261,7 @@ func (q *ioQueue) run(s *store) {
 		case op.write != nil:
 			s.runWrite(*op.write)
 		case op.compact:
-			if err := s.wal.compact(s); err != nil {
+			if err := s.idx.compact(s); err != nil {
 				s.log.Warn("cache: index compaction failed", "error", err)
 			}
 		default:
@@ -317,7 +317,7 @@ func prune(dir string, keep map[sum]*blob) error {
 		switch {
 		case strings.HasPrefix(d.Name(), ".tmp-") && !d.IsDir():
 			_ = os.Remove(p)
-		case d.Name() == walFile && !d.IsDir() && keep == nil:
+		case d.Name() == indexFile && !d.IsDir() && keep == nil:
 			_ = os.Remove(p)
 		case d.IsDir() && len(d.Name()) == 2 && isHex(d.Name()):
 			files, err := os.ReadDir(p)
