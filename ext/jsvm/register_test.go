@@ -190,6 +190,18 @@ func TestRegisterBrokenHook(t *testing.T) {
 	}
 }
 
+// Hook files load before the app opens its database, as in PocketBase: a database call at a hook file's top level
+// fails with a hint saying where to do it instead, not a bare nil pointer error.
+func TestRegisterDatabaseBeforeBootstrap(t *testing.T) {
+	app := core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir()}) // not bootstrapped, as when pocketone starts
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{"pb_hooks/top.pb.mjs": `const users = await $app.findCollectionByNameOrId.async("users")`})
+	err := Register(app, Config{HooksDir: filepath.Join(dir, "pb_hooks"), MigrationsDir: t.TempDir(), TypesDir: dir})
+	if err == nil || !strings.Contains(err.Error(), "top.pb.mjs") || !strings.Contains(err.Error(), "onBootstrap") {
+		t.Fatalf("want an error naming top.pb.mjs with the onBootstrap hint, got %v", err)
+	}
+}
+
 // Errors point at the real file and line: no error mapping needed.
 func TestRegisterErrorPositions(t *testing.T) {
 	app, _ := tests.NewTestApp()

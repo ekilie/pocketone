@@ -72,6 +72,16 @@ routerAdd("GET", "/post/{slug}", async (e) => {
 })
 ```
 
+- Hook files run before the app opens its database, as in PocketBase, so a `$app` query at a file's top level fails.
+  Read data in `onBootstrap` after `e.next()`, or in a handler:
+
+  ```js
+  let users = null
+  onBootstrap((e) => {
+  	e.next()
+  	users = e.app.findCollectionByNameOrId("users")
+  })
+  ```
 - Globals live as long as the app's VM. A restart, a hooks reload or running out of memory starts a fresh one, so keep
   durable data in the database.
 - After an `await`, other requests may have run: use `e.app`, not the global `$app`, and keep transactions short across
@@ -106,7 +116,7 @@ export const bump = () => ++state.hits
 import { bump } from "./lib/store.mjs"
 import legacy from "./lib/legacy.cjs"      // CommonJS: module.exports is the default export
 import { hello } from "some-package"       // node_modules, CommonJS or ES
-const posts = await $app.findCollectionByNameOrId.async("posts")  // top-level await: done before the app serves
+const { greeting } = await import("./lib/greeting.mjs")      // top-level await: done before the app serves
 
 routerAdd("GET", "/hit", (e) => e.json(200, { hits: bump() }))
 ```

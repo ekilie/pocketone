@@ -359,6 +359,10 @@ func (p *plugin) registerHooks() error {
 			err = runErr
 		}
 		if err != nil {
+			if !p.app.IsBootstrapped() && strings.Contains(err.Error(), "nil pointer dereference") {
+				// most likely $app's database, which isn't open while hook files load (as in PocketBase)
+				err = fmt.Errorf("%w\n   hook files run before the app opens its database: read data in onBootstrap (after e.next()) or in a handler", err)
+			}
 			fmtErr := fmt.Errorf("failed to execute %s:\n - %w", name, err)
 			if p.config.HooksWatch {
 				color.Red("%v", fmtErr)

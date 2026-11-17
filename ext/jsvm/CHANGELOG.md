@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Fixed
+
+- A `$app` database call at a hook file's top level, which fails because hook files load before the database opens (as in PocketBase), now says so and points to `onBootstrap`, instead of a bare nil pointer error.
+
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading
