@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -577,6 +578,25 @@ func (vm *VM) Stats() Stats {
 	s := Stats{GoBytes: vm.statGoBytes.Load(), Handles: vm.statHandles.Load(), Tasks: vm.statTasks.Load(), PeakQueue: vm.statPeakQueue.Load()}
 	_ = vm.Do(func() { s.JSBytes = int64(C.avm_mem_used(vm.a)) })
 	return s
+}
+
+// GC frees what Go and JS no longer use: a Go collection (dropped js.Value wrappers post their frees to the loop),
+// the frees posted so far, then QuickJS's cycle collector. Finalizers run on their own goroutine, so a free may land
+// after GC returns; call it again to catch those. For tests and diagnostics; the engine collects on its own.
+func (vm *VM) GC() {
+	runtime.GC()
+	_ = vm.Do(func() {
+		for {
+			select {
+			case f := <-vm.posts:
+				vm.runTask(&task{fn: f})
+				continue
+			default:
+			}
+			break
+		}
+		C.JS_RunGC(vm.a)
+	})
 }
 
 // Interrupts is how many times the interrupt handler stopped JS.

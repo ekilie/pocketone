@@ -58,6 +58,15 @@ type Value interface {
 	Func() Func
 }
 
+// Release frees v now, if the engine supports it, instead of when Go garbage-collects it; v must not be used after.
+// Call it on values a Go closure the VM holds can reach (a NativeFunc capturing a struct that keeps the value): the
+// VM keeps such closures alive, so a value they reach is otherwise only freed after both sides drop it.
+func Release(v Value) {
+	if r, ok := v.(interface{ Release() }); ok && r != nil {
+		r.Release()
+	}
+}
+
 // Object is a JS object.
 type Object interface {
 	Value
