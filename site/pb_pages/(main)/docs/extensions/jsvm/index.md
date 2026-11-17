@@ -75,6 +75,16 @@ routerAdd("GET", "/post/{slug}", async (e) => {
 })
 ```
 
+- Hook files run before the app opens its database, as in PocketBase, so a `$app` query at a file's top level fails.
+  Read data in `onBootstrap` after `e.next()`, or in a handler:
+
+  ```js
+  let users = null
+  onBootstrap((e) => {
+  	e.next()
+  	users = e.app.findCollectionByNameOrId("users")
+  })
+  ```
 - Globals live as long as the app's VM. A restart, a hooks reload or running out of memory starts a fresh one, so keep
   durable data in the database.
 - After an `await`, other requests may have run: use `e.app`, not the global `$app`, and keep transactions short across
@@ -109,7 +119,7 @@ export const bump = () => ++state.hits
 import { bump } from "./lib/store.mjs"
 import legacy from "./lib/legacy.cjs"      // CommonJS: module.exports is the default export
 import { hello } from "some-package"       // node_modules, CommonJS or ES
-const posts = await $app.findCollectionByNameOrId.async("posts")  // top-level await: done before the app serves
+const { greeting } = await import("./lib/greeting.mjs")      // top-level await: done before the app serves
 
 routerAdd("GET", "/hit", (e) => e.json(200, { hits: bump() }))
 ```
@@ -140,7 +150,7 @@ map is kept, so an error names `pb_hooks/main.pb.mts:12:5` in your source, not i
 When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS API, for your editor and `tsc`:
 
 - PocketBase's API generated from PocketOne's core (its extra hooks included), by PocketBase's own generator.
-- What this engine adds ([`pocketone.d.ts`](pocketone.d.ts)): `.async` on every Go function, fully typed
+- What this engine adds ([`pocketone.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
   (`await $app.findRecordById.async(...)` is a `Promise<core.Record>`), `require`, `process`, `Buffer`, `console`,
   `import.meta`.
 - Each extension's own API, for the extensions on in that app (`$mcp`, `$tokens`, `$bulkmail`, `onContracts` and
@@ -163,7 +173,7 @@ do).
 ## Integrations
 
 Extensions plug in through `Config.Extensions` with the engine-neutral types in
-[`ext/extkit/js`](../extkit/js/js.go). A value implements any of:
+[`ext/extkit/js`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/js/js.go). A value implements any of:
 
 - `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API. `TypeScript()`: declare it for editors and
   `tsc` (appended to `pb_data/types.d.ts`).

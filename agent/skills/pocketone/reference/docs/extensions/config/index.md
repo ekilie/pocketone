@@ -25,7 +25,7 @@ app := pocketbase.NewWithConfig(pocketbase.Config{DefaultDataDir: cfg.ResolvePat
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/config`. [`examples/pocketone/main.go`](../../examples/pocketone/main.go)
+The module is `github.com/pockethost/pocketone/ext/config`. [`examples/pocketone/main.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go)
 shows the full wiring: every `app` key as a flag default, and the `server` keys as the serve command's defaults.
 
 ## Configure
@@ -60,6 +60,9 @@ app:
   dir: ./pb_data
   hooks_dir: ./pb_hooks
   env_allow: [STRIPE_KEY]
+  js_limits:          # the JS engine's limits for the app
+    memory: 128MiB
+    task_time: 10s
 pitr:
   retention: 168h
 ```
@@ -110,6 +113,9 @@ The single app, for every command that opens it: data dir, dev mode, encryption,
 | `hooks_pool` | int |  | Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
 | `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
 | `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |
+| `js_limits.memory` | int |  | The app's JS memory: the JS heap plus the Go objects JS holds, such as 128MiB. Default 64MiB. |
+| `js_limits.task_time` | duration |  | JS time one task (a request, a hook, a cron job) may use, Go calls and waits not counted, such as 10s. Default 5s. |
+| `js_limits.task_wall` | duration |  | Wall time one task may take, Go calls included, such as 60s. Default 30s. |
 
 #### `server:`
 
@@ -170,6 +176,19 @@ The app won't start, and says why, when the file has:
 
 An empty section (`pitr:` with nothing after it) is allowed and means all defaults.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone config`](https://pocketone.dev/docs/reference/cli#pocketone-config) | Lists the pocketone.yaml sections this binary understands, with their defaults |
+| [`pocketone config check`](https://pocketone.dev/docs/reference/cli#pocketone-config-check) | Checks the config file: every section known and valid, every $VAR set |
+
 ## Integrations
 
 ### Works with
@@ -217,7 +236,7 @@ cfg, err := firewall.Section.Require() // fails when the file doesn't have the s
 
 ## Example
 
-Config is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
+Config is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
 
 ## Go API
 

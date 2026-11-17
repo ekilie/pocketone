@@ -37,6 +37,8 @@ type Command struct {
 	Args  cobra.PositionalArgs // nil: any
 	Flags func(fs *pflag.FlagSet)
 	Run   func(c *Ctx, args []string) error
+
+	contract extkit.ContractID // a generated command: the contract whose operation it calls
 }
 
 // Contract is cli.commands/v1, keyed by command path.
@@ -127,10 +129,11 @@ func Generated() []Command {
 func generated(id extkit.ContractID, op extkit.OpInfo) Command {
 	fields := inputFields(op.In)
 	return Command{
-		Path:  PathOf(id, op.Name),
-		Short: firstSentence(op.Desc) + " (" + string(id) + ")",
-		Long:  op.Desc + "\n\nCalls " + op.Method + " /api/_c/" + string(id) + "/" + op.Path + " on the remote (token scope: " + op.Scope + ").",
-		Args:  cobra.NoArgs,
+		contract: id,
+		Path:     PathOf(id, op.Name),
+		Short:    firstSentence(op.Desc) + " (" + string(id) + ")",
+		Long:     op.Desc + "\n\nCalls " + op.Method + " /api/_c/" + string(id) + "/" + op.Path + " on the remote (token scope: " + op.Scope + ").",
+		Args:     cobra.NoArgs,
 		Flags: func(fs *pflag.FlagSet) {
 			for _, f := range fields {
 				f.define(fs)
@@ -448,6 +451,7 @@ func Mount(app core.App, root *cobra.Command) {
 		}
 		attach(root, g, false, groups)
 	}
+	root.AddCommand(referenceCommand(app, root))
 }
 
 func attach(root *cobra.Command, c Command, replace bool, groups map[string]string) {
@@ -480,7 +484,11 @@ func attach(root *cobra.Command, c Command, replace bool, groups map[string]stri
 		use += " " + c.Use
 	}
 	run := c.Run
-	cmd := &cobra.Command{Use: use, Short: c.Short, Long: c.Long, Args: c.Args, SilenceUsage: true}
+	cmd := &cobra.Command{Use: use, Short: c.Short, Long: c.Long, Args: c.Args, SilenceUsage: true,
+		Annotations: map[string]string{annSource: sourceOf(c.Run)}}
+	if c.contract != "" {
+		cmd.Annotations[annSource] = "contract:" + string(c.contract)
+	}
 	cmd.RunE = func(cc *cobra.Command, args []string) error {
 		ctx := cc.Context()
 		if ctx == nil {

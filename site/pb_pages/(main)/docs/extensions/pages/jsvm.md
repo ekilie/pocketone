@@ -13,7 +13,7 @@ Each request runs as one unit under the app's usual JS limits (execution time, m
 
 ## Talking to the app
 
-Use [`ctx.app`](ctx/app.md), which is `$app`. PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/) cover [database operations](https://pocketbase.io/docs/js-database/) and [record operations](https://pocketbase.io/docs/js-records/):
+Use [`ctx.app`](/docs/extensions/pages/ctx/app), which is `$app`. PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/) cover [database operations](https://pocketbase.io/docs/js-database/) and [record operations](https://pocketbase.io/docs/js-records/):
 
 ```js
 const records = ctx.app.findRecordsByFilter(
@@ -42,4 +42,4 @@ npm install some-package
 const somePackage = require('some-package')
 ```
 
-Your own modules go in `_private/` and load with [`ctx.resolve()`](ctx/resolve.md).
+Your own modules go in `_private/` and load with [`ctx.resolve()`](/docs/extensions/pages/ctx/resolve).

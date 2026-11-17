@@ -382,6 +382,19 @@
   .docs-toc-navigation {
     line-height: 1.25rem;
 
+    /* sliding between the main nav and a section's own nav (assets/docs.js) */
+    &.nav-slide-in {
+      animation: nav-slide-in 0.2s ease-out;
+    }
+    &.nav-slide-back {
+      animation: nav-slide-back 0.2s ease-out;
+    }
+    & a.nav-in::after {
+      content: "›";
+      float: right;
+      color: var(--faint);
+    }
+
     & ul,
     & ol {
       list-style: none;
@@ -1513,5 +1526,34 @@
 @layer components {
   .prose :not(pre) > code {
     overflow-wrap: anywhere;
+  }
+  /* In a table, code (a flag, a field, a command, a path) never breaks; a table too wide for the page scrolls sideways
+     instead. */
+  .prose table {
+    display: block;
+    overflow-x: auto;
+  }
+  .prose td code {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+}
+
+@keyframes nav-slide-in {
+  from {
+    transform: translateX(1.5rem);
+    opacity: 0;
+  }
+}
+@keyframes nav-slide-back {
+  from {
+    transform: translateX(-1.5rem);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-toc-navigation.nav-slide-in,
+  .docs-toc-navigation.nav-slide-back {
+    animation: none;
   }
 }

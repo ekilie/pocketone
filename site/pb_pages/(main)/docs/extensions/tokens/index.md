@@ -150,6 +150,32 @@ curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collection
 - The daily cleanup logs `tokens: deleted expired tokens` with a count when it deletes any, and
   `tokens: delete expired` as a warning if it fails.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone oauth clients add`](/docs/reference/cli#pocketone-oauth-clients-add) | Registers a client (prints its id, and its secret once for a confidential client) |
+| [`pocketone oauth clients list`](/docs/reference/cli#pocketone-oauth-clients-list) | Lists registered clients |
+| [`pocketone oauth clients rm <client_id>`](/docs/reference/cli#pocketone-oauth-clients-rm) | Removes a client |
+| [`pocketone token create`](/docs/reference/cli#pocketone-token-create) | Creates an API token and prints its secret (shown once) |
+| [`pocketone token list`](/docs/reference/cli#pocketone-token-list) | Lists API tokens (all, or one owner's) |
+| [`pocketone token revoke [id...]`](/docs/reference/cli#pocketone-token-revoke) | Revokes API tokens by id, or all of one owner's (--all) |
+| [`pocketone token scopes`](/docs/reference/cli#pocketone-token-scopes) | Lists the scopes extensions registered |
+
+### [oauth/v1](/docs/contracts/oauth/v1)
+
+Its HTTP API under `/api/_c/oauth/v1/`, as the contract describes.
+
+### [tokens/v1](/docs/contracts/tokens/v1)
+
+Its HTTP API under `/api/_c/tokens/v1/`, as the contract describes.
+
 ## Integrations
 
 ### Works with
@@ -226,7 +252,7 @@ Owners can also list, view and delete their own tokens through the records API o
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/tokens/v1`) and the `token` command.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/tokens/example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/tokens/v1`) and the `token` command.
 
 ```go
 // Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the token API (/api/_c/tokens/v1)
@@ -293,7 +319,7 @@ The OAuth server can only sign in accounts of those collections.
   audience.
 - The bearer check is a middleware that runs just before PocketBase's own auth middleware; a second one, right after
   it, sets the scope headers. Last use is written at most once a minute per token.
-- [`example/main.go`](example/main.go) runs one app where superusers and users may own tokens, with a `hello` scope
+- [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/tokens/example/main.go) runs one app where superusers and users may own tokens, with a `hello` scope
   for `GET /api/hello`. Try it with `go run ./example serve` and
   `go run ./example token create --superuser admin@example.com --name ci` (logins from
   [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password, user@example.com / password).

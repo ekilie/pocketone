@@ -17,7 +17,7 @@ pocketone deploy prod          # Deploy
 ## Install
 
 Remotes is built into `pocketone` and **on**: the `remote`, `login`, `logout` and `link` commands are always there, and
-every app provides [remote/v1](https://pocketone.dev/docs/contracts/all): whoami at `GET /api/_c/remote/v1` (so other machines can sign
+every app provides [remote/v1](https://pocketone.dev/docs/contracts): whoami at `GET /api/_c/remote/v1` (so other machines can sign
 in to it), status, restart and logs. There's nothing to install: it's in the [standard set](https://pocketone.dev/docs/extensions/standard).
 
 In your own Go build, use the standard set, or register it through its contracts yourself:
@@ -116,6 +116,34 @@ pocketone logout prod
 Forgets the saved login. A browser login is also revoked on the remote (its refresh token); a pasted token stays
 valid until you revoke it in the dashboard. If the remote can't be reached, it tells you to revoke it in the dashboard.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone link <url> [token]`](https://pocketone.dev/docs/reference/cli#pocketone-link) | Adds a remote (default name "default") and signs in to it |
+| [`pocketone login [remote]`](https://pocketone.dev/docs/reference/cli#pocketone-login) | Signs in to a remote and saves the login |
+| [`pocketone logout [remote]`](https://pocketone.dev/docs/reference/cli#pocketone-logout) | Forgets the saved login (and revokes it, for a browser login) |
+| [`pocketone remote add <name> <url>`](https://pocketone.dev/docs/reference/cli#pocketone-remote-add) | Adds or replaces a remote |
+| [`pocketone remote default <name>`](https://pocketone.dev/docs/reference/cli#pocketone-remote-default) | Sets the default remote |
+| [`pocketone remote list`](https://pocketone.dev/docs/reference/cli#pocketone-remote-list) | Lists remotes and whether you're logged in |
+| [`pocketone remote rm <name>`](https://pocketone.dev/docs/reference/cli#pocketone-remote-rm) | Removes a remote (its saved login stays; see logout) |
+| [`pocketone remote whoami [remote]`](https://pocketone.dev/docs/reference/cli#pocketone-remote-whoami) | Shows who you are on a remote and what it offers |
+
+### [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [whoami](https://pocketone.dev/docs/contracts/remote/v1#whoami) | `pocketone remote whoami` | `GET /api/_c/remote/v1` | `remote_whoami` |
+| [status](https://pocketone.dev/docs/contracts/remote/v1#status) | `pocketone remote status` | `GET /api/_c/remote/v1/status` | `remote_status` |
+| [restart](https://pocketone.dev/docs/contracts/remote/v1#restart) | `pocketone remote restart` | `POST /api/_c/remote/v1/restart` | `remote_restart` |
+| [logs](https://pocketone.dev/docs/contracts/remote/v1#logs) | `pocketone remote logs --n <n>` | `GET /api/_c/remote/v1/logs` | `remote_logs` |
+
 ## Integrations
 
 ### Works with
@@ -156,7 +184,7 @@ that instance).
 - **remote/v1 client.** `remotev1.NewClient(url, token, httpClient)` (ext/contracts/remote/v1) calls whoami, status,
   restart and logs.
 - **Go client.** The CLI client lives with the contract, in
-  [`remoteclient`](../contracts/remote/v1/remoteclient) (ext/contracts/remote/v1/remoteclient), so other extensions'
+  [`remoteclient`](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient) (ext/contracts/remote/v1/remoteclient), so other extensions'
   commands use it without importing this one. `remoteclient.Open(dir, name)` resolves a remote and its credential
   (environment first, then the saved login, renewing a browser login when due) and returns a `*remoteclient.Client`:
   base URL, bearer token, an HTTP client with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`.
@@ -170,7 +198,7 @@ that instance).
 
 ## Example
 
-[`example/main.go`](example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/remotes/example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
 
 ```go
 // Command example is a PocketOne app with remotes and API tokens: run two copies, add one as a remote of the other's

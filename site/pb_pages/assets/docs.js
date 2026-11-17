@@ -54,13 +54,30 @@
   // so the sidebar changes too: a swap replaces only #content. The swap script skips links with a target.
   const toc = document.getElementById('toc')
   const navs = new Set((toc?.dataset.navs || '').split(',').filter(Boolean))
+  // the same choice as _private/docs-nav.js
   const navOf = (href) => {
-    const m = href.match(/^\/docs\/extensions\/([^/?#]+)/)
-    return m && navs.has(m[1]) ? m[1] : ''
+    const path = href.split(/[?#]/)[0]
+    const m = path.match(/^\/docs\/extensions\/([^/]+)/)
+    if (m && navs.has(m[1]) && !new RegExp(`^/docs/extensions/${m[1]}/extension(/|$)`).test(path)) return m[1]
+    if (/^\/docs\/extensions(\/|$)/.test(path)) return 'extensions'
+    if (/^\/docs\/contracts(\/|$)/.test(path)) return 'contracts'
+    return ''
   }
+  // how deep a nav is: the main nav, a section (Contracts, Extensions), an extension's own site
+  const depth = (nav) => (nav === '' ? 0 : nav === 'contracts' || nav === 'extensions' ? 1 : 2)
+  const current = toc?.dataset.nav || ''
   document.querySelectorAll('.docs-toc-navigation a[href^="/"]').forEach((a) => {
-    if (navOf(a.getAttribute('href')) !== (toc?.dataset.nav || '')) a.target = '_self'
+    const to = navOf(a.getAttribute('href'))
+    if (to === current) return
+    a.target = '_self'
+    if (depth(to) > depth(current)) a.classList.add('nav-in') // a link that slides into a deeper nav
   })
+  // Coming from another nav, slide this one in: from the right going deeper, from the left coming back.
+  try {
+    const prev = sessionStorage.getItem('docs-nav')
+    if (toc && prev !== null && prev !== current) toc.classList.add(depth(current) > depth(prev) ? 'nav-slide-in' : 'nav-slide-back')
+    sessionStorage.setItem('docs-nav', current)
+  } catch (e) {}
 
   let timer
   new MutationObserver(() => {

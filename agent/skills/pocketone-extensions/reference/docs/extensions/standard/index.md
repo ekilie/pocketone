@@ -61,7 +61,7 @@ standard: deploy off: needs remote/v1, which nothing provides
 | With | What happens |
 |---|---|
 | [Pocker](https://pocketone.dev/docs/extensions/pocker) | Every instance gets the set (`Server.Standard`), with its own `extensions.<name>` settings. |
-| [Contracts](https://pocketone.dev/docs/contracts/all) | Members find each other through contracts (`tokens/v1`), resolved per app; the startup lines show who provides what. |
+| [Contracts](https://pocketone.dev/docs/contracts) | Members find each other through contracts (`tokens/v1`), resolved per app; the startup lines show who provides what. |
 
 ## Example
 

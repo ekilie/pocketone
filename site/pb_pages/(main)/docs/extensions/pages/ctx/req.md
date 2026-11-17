@@ -74,4 +74,4 @@ const theme = ctx.req.cookie('theme')                     // 'dark' or undefined
 const prefs = ctx.req.cookie('prefs', { json: true }) ?? {}
 ```
 
-Set cookies with [`ctx.res.cookie()`](res.md#cookies).
+Set cookies with [`ctx.res.cookie()`](/docs/extensions/pages/ctx/res#cookies).

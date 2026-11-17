@@ -101,6 +101,16 @@ belongs to the host.
 To empty an app's cache, as a superuser: `pocketone remote cache clear` (every bucket) or
 `pocketone remote cache clear --bucket pages.compiled` (one), through [cache.clear/v1](https://pocketone.dev/docs/contracts/cache.clear/v1).
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [cache.clear/v1](https://pocketone.dev/docs/contracts/cache.clear/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [clear](https://pocketone.dev/docs/contracts/cache.clear/v1#clear) | `pocketone remote cache clear --bucket <value>` | `POST /api/_c/cache.clear/v1` | `cache_clear_clear` |
+
 ## Integrations
 
 | Extension | How they fit |

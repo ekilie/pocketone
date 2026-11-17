@@ -61,6 +61,16 @@ databases skipped. It's [vacuum/v1](/docs/contracts/vacuum/v1), also on the comm
 pocketone remote vacuum status
 ```
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [vacuum/v1](/docs/contracts/vacuum/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [status](/docs/contracts/vacuum/v1#status) | `pocketone remote vacuum status` | `GET /api/_c/vacuum/v1` | `vacuum_status` |
+
 ## Integrations
 
 | Extension | How they fit |

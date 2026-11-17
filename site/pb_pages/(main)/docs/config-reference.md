@@ -23,6 +23,9 @@ The single app, for every command that opens it: data dir, dev mode, encryption,
 | `hooks_pool` | int |  | Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
 | `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
 | `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |
+| `js_limits.memory` | int |  | The app's JS memory: the JS heap plus the Go objects JS holds, such as 128MiB. Default 64MiB. |
+| `js_limits.task_time` | duration |  | JS time one task (a request, a hook, a cron job) may use, Go calls and waits not counted, such as 10s. Default 5s. |
+| `js_limits.task_wall` | duration |  | Wall time one task may take, Go calls included, such as 60s. Default 30s. |
 
 #### `autotls:`
 

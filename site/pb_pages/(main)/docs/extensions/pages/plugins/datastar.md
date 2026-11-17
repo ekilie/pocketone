@@ -44,7 +44,7 @@ a colon between the attribute name and its key (`data-on:click`, `data-bind:name
 | `prefetch(urls)` | Adds speculation rules so the browser prefetches `urls`. |
 | `signals()` | Reads the request's signals as an object: from the `datastar` query parameter for GET and DELETE, from the body otherwise. |
 | `readSignals(target)` | Merges the request's signals into `target` and returns it (0.x's `readSignals(request, target)` also works). |
-| `realtime.*` | Sends the same patches to realtime subscribers. Needs the [`realtime`](realtime.md) plugin. |
+| `realtime.*` | Sends the same patches to realtime subscribers. Needs the [`realtime`](/docs/extensions/pages/plugins/realtime) plugin. |
 
 Every send also takes `eventId` and `retryDuration` (in ms; the default 1000 isn't sent).
 

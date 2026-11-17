@@ -84,4 +84,4 @@ A `.md` partial is rendered as EJS, then Markdown:
 
 ## JavaScript modules
 
-`_private/` folders also hold JS modules. Load them with [`ctx.resolve()`](ctx/resolve.md), which uses the same lookup.
+`_private/` folders also hold JS modules. Load them with [`ctx.resolve()`](https://pocketone.dev/docs/extensions/pages/ctx/resolve), which uses the same lookup.

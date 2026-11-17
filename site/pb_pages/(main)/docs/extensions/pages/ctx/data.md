@@ -38,7 +38,7 @@ A handler's returned object is shallow-assigned into `ctx.data`. There is no dee
 
 ## `ctx.params`
 
-Route parameters from `[name]` segments, as strings. Never includes query parameters (use [`ctx.req.query()`](req.md)). In templates it's also available as `params`.
+Route parameters from `[name]` segments, as strings. Never includes query parameters (use [`ctx.req.query()`](/docs/extensions/pages/ctx/req)). In templates it's also available as `params`.
 
 ```ejs
 <!-- pb_pages/[org]/[repo]/index.ejs, at /acme/web -->

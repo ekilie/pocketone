@@ -72,7 +72,7 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 
 | Extension | How they fit |
 |---|---|
-| [Contracts](https://pocketone.dev/docs/contracts/all) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); Mail Relay sends it within the instance's limits. |
+| [Contracts](https://pocketone.dev/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); Mail Relay sends it within the instance's limits. |
 | [Pocker](https://pocketone.dev/docs/extensions/pocker) | The host it's built for. Every instance gets the relay, its own address and its own limits. |
 | [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap) | In development, point `SMTPUpstream` at the trap's SMTP port and every relayed message lands in one inbox, tagged with the instance. The example below does this. |
 | [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) | Campaigns go through PocketBase's mailer by default, so with SMTP off they are relayed and count against the instance's limits. |
@@ -106,7 +106,7 @@ instance, and with SMTP off PocketBase then falls back to the host's `sendmail`.
 
 ## Example
 
-[`example/main.go`](example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailrelay/example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
 mail lands in one inbox at http://127.0.0.1:8025. Run `go run ./example --dev` from this folder, then trigger a
 password reset on any instance:
 

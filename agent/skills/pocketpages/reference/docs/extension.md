@@ -125,12 +125,25 @@ page code are logged in full.
 
 ### Try the demo
 
-[`example/`](example) is a demo app with EJS, Markdown, JSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
+[`example/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example) is a demo app with EJS, Markdown, JSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
 speed check at `/speed`.
 
 ```bash
 cd example && go run . serve --dir=./pb_data
 ```
+
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone pages create <name>`](https://pocketone.dev/docs/reference/cli#pocketone-pages-create) | Create a folder with a starter kit (pb\_pages and anything it needs) |
+| [`pocketone pages starters`](https://pocketone.dev/docs/reference/cli#pocketone-pages-starters) | List the starter kits |
 
 ## Integrations
 
@@ -176,7 +189,7 @@ To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pa
 
 ## Example
 
-[`example/main.go`](example/main.go) serves the demo in [`example/pb_pages`](example/pb_pages): EJS, Markdown, JSX/TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example/pb_pages): EJS, Markdown, JSX/TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
 
 ```go
 // Command example runs one PocketOne app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
@@ -236,7 +249,7 @@ JS VM once per request.
 How it was measured (2026-11-11): Apple M1 Max, 10 cores, macOS 27, Go 1.27.4, `hey` against `127.0.0.1`. Each server
 was warmed with 500 requests, then `hey -z 10s -c 50` and `hey -n 2000 -c 1`; two rounds, which agreed within 5%.
 Every response was a 200 with the full page. The 0.x docs kit inlines about 6 KB of CSS into each page where v1
-links `app.css`. Rerun it with [`bench/run.sh`](bench/run.sh):
+links `app.css`. Rerun it with [`bench/run.sh`](https://github.com/pockethost/pocketone/blob/main/ext/pages/bench/run.sh):
 
 ```bash
 cp -R starters/daisyui-docs /tmp/v1-docs

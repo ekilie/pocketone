@@ -200,8 +200,8 @@ private network, and `Manager.Firewall()` lets host routes in front of the Manag
 ## Sandbox
 
 Every instance's JS hooks and migrations run in a sandbox (the [sandbox](https://pocketone.dev/docs/extensions/sandbox) extension), and its SQL runs behind
-SQLite's authorizer ([`sandbox/sqlguard.go`](../sandbox/sqlguard.go)). The sandbox extension also owns the egress policy
-([`sandbox/egress.go`](../sandbox/egress.go)); pocker turns it on for its instances. [`sandbox_test.go`](sandbox_test.go) runs one attack per
+SQLite's authorizer ([`sandbox/sqlguard.go`](https://github.com/pockethost/pocketone/blob/main/ext/sandbox/sqlguard.go)). The sandbox extension also owns the egress policy
+([`sandbox/egress.go`](https://github.com/pockethost/pocketone/blob/main/ext/sandbox/egress.go)); pocker turns it on for its instances. [`sandbox_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/pocker/sandbox_test.go) runs one attack per
 route from one instance against another instance and the host; all of these are refused:
 
 | Area | What the sandbox does |

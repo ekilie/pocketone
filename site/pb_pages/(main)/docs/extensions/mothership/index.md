@@ -36,7 +36,7 @@ if err := mothership.EnsureCollections(app); err != nil {
 
 The module is `github.com/pockethost/pocketone/ext/mothership`. In your own edge build, `mirror.FromSection(log)`
 returns the mirror for the config (nil without a `mothership` section); use it as the host's instance source and the
-router's edge source, as [`examples/pocketone/multi.go`](../../examples/pocketone/multi.go) does.
+router's edge source, as [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go) does.
 
 ## Configure
 
@@ -116,7 +116,7 @@ instance with no `edge` isn't served anywhere.
 ## Example
 
 There's no `example/main.go` yet. The stock binary's multi-instance mode,
-[`examples/pocketone/multi.go`](../../examples/pocketone/multi.go), follows a mothership when the config has the
+[`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go), follows a mothership when the config has the
 section.
 
 ## How it works

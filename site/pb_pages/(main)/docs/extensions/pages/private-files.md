@@ -30,8 +30,8 @@ pb_pages/
 
 `_private/` folders serve two purposes:
 
-1. Template partials, rendered with [`include()`](partials.md)
-2. JavaScript modules and other files, loaded with [`ctx.resolve()`](ctx/resolve.md)
+1. Template partials, rendered with [`include()`](/docs/extensions/pages/partials)
+2. JavaScript modules and other files, loaded with [`ctx.resolve()`](/docs/extensions/pages/ctx/resolve)
 
 Both use the same lookup: `_private/` in the current template's folder, then each parent folder up to `pb_pages/`. A name starting with `/` looks only in `pb_pages/_private/`.
 

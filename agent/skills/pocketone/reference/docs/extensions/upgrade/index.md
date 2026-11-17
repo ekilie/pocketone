@@ -68,6 +68,18 @@ It needs write access to the folder the executable is in.
 A kept executable doesn't undo migrations: once a newer version has served a `pb_data`, an older one may not open it.
 The backup is the way back for that.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone upgrade`](https://pocketone.dev/docs/reference/cli#pocketone-upgrade) | Upgrades this executable to the latest release, keeping the old one as &lt;name&gt;-&lt;version&gt; |
+
 ## Integrations
 
 Nothing integrates with it yet. Other tools can reuse its release code:
@@ -84,7 +96,7 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 
 ## Example
 
-[`example/main.go`](example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/upgrade/example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
 
 ```go
 // Command example is a PocketOne app with just the upgrade command. A local build has no release version, so it is
