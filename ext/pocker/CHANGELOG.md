@@ -11,6 +11,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 - `pocker.NewManager(scope, opts)` takes the host's contract scope instead of an instance source: the Manager runs the instances instance.source/v1 supplies there. Provide your source with `sourcev1.Contract.ProvideIn(scope, src)` (in tests, `sourcetest.Scope(instances...)` from `ext/contracts/instance/source/v1/sourcetest`). `pocker.Server` and `pocker.Provider` are unchanged.
 
+### Added
+
+- Automigrate on every instance, as on a PocketHost docker instance and a single `pocketone` app: creating, changing or deleting a collection over the API (or the dashboard) writes its JS migration into the instance's `pb_migrations`. Writing it doesn't restart the instance.
+
 ### Changed
 
 - A settings change to a running instance (`secrets`, `limits`, `dev`, ...) restarts it right away, as a `pb_hooks` change does: the app stops once the requests it is serving finish (up to 10s), then a fresh one starts; requests that arrive meanwhile get 503 with `Retry-After`. It used to start a new app on the next request while the old one ran on for 10 seconds beside it. An instance that isn't running is left alone.

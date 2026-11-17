@@ -306,6 +306,7 @@ ext/<name>/
   <name>.go         the extension
   <name>_test.go
   conformance_test.go  the shared extension test (below)
+  modes_test.go     the feature on the real binary, in every mode it runs in (below)
   example/main.go   a minimal program that builds cleanly and shows the feature
   ui/               optional: admin screens (embedded main.js)
   site/             optional: more end-user docs, as PocketPages pages (below)
@@ -337,6 +338,26 @@ ext/<name>/
   `conformance.Options{Setup: ...}` that registers MCP on the test apps; the test then checks each tool is named
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every extension passes; your own tests cover the
   feature.
+- **`modes_test.go` tests the feature in every mode it runs in**, on the real `pocketone` binary, with
+  [`ext/extkit/modetest`](../ext/extkit/modetest/modetest.go). Declare the instances the test needs, each configured
+  in full (files, extension settings, secrets), and the harness lays them out once per mode: `Single` (each its own
+  `pocketone serve`), `Host` (one multisite host serving them all) and `Fleet` (several hosts that forward to each
+  other). An app extension runs `modetest.AllApp` (Single and Host); a host extension picks Host and/or Fleet.
+
+  ```go
+  func TestModes(t *testing.T) {
+  	top := modetest.Topology{Instances: []modetest.Inst{{ID: "app", Extensions: map[string]any{"myextension": map[string]any{"limit": 5}}}}}
+  	modetest.Run(t, top, modetest.AllApp, func(t *testing.T, w *modetest.World) {
+  		s := w.Instance("app")
+  		s.MustJSON(http.MethodGet, "/api/_c/myextension/v1", s.Token(), nil, 200, nil)
+  	})
+  }
+  ```
+
+  The same test body runs in every mode: each instance has the URL `http://<id>.localhost:<port>` in all of them, and
+  `World.Update`, `World.Add`, `World.Restart` and `Site.WaitRestarted` do what each mode does (a host reloads its
+  instances file; a single app restarts its process). Where a mode really behaves differently, check `w.Mode` and say
+  why in a comment. `-short` skips mode tests.
 - **The README starts with front matter**: who owns the extension and its version (see [Ownership](#ownership)), and
   its entry in the [catalogue on pocketone.dev](https://pocketone.dev/docs/extensions): its `title`, its `group` (one
   of the ids in [`site/extensions.json`](../site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and

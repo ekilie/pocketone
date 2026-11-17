@@ -14,6 +14,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	_ "ganigeorgiev.com/pocketbase/pocketbase/migrations" // registers PocketBase's system migrations, as pocketbase.go does
+	"ganigeorgiev.com/pocketbase/pocketbase/plugins/migratecmd"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/ui"
@@ -160,6 +161,15 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("load hooks: %w", err)
+	}
+	// automigrate, as a PocketHost docker instance and a single pocketone app have it: a collection changed over the
+	// API writes its JS migration into pb_migrations (not watched, so no restart). No command tree: no CLI here.
+	if err := migratecmd.Register(app, nil, migratecmd.Config{
+		TemplateLang: migratecmd.TemplateLangJS,
+		Automigrate:  true,
+		Dir:          filepath.Join(dir, "pb_migrations"),
+	}); err != nil {
+		return nil, fmt.Errorf("automigrate: %w", err)
 	}
 	lines, err := opts.Standard.Finish(app, plan)
 	if err != nil {
