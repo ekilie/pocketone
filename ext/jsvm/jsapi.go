@@ -103,6 +103,24 @@ func (vm *VM) value(v JSValue) js.Value {
 	return jv
 }
 
+// Release frees the value now (js.Release) rather than when Go collects v; v reads as undefined after.
+func (v *jsValue) Release() {
+	runtime.SetFinalizer(v, nil)
+	vm, val := v.vm, v.v
+	v.v = C.avm_undefined()
+	if vm.onLoop() {
+		if vm.a != nil {
+			vm.free_(val)
+		}
+		return
+	}
+	vm.post(func() {
+		if vm.a != nil {
+			vm.free_(val)
+		}
+	})
+}
+
 func (v *jsValue) Nullish() bool {
 	t := C.avm_tag(v.v)
 	return t == C.JS_TAG_UNDEFINED || t == C.JS_TAG_NULL

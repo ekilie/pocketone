@@ -163,12 +163,26 @@ func (p *Pages) renderStatus(e *core.RequestEvent, root *os.Root, route *Route, 
 		if err := r.run(t); err != nil {
 			r.fail(err)
 		}
+		r.release()
 		return nil
 	})
 	if errors.Is(err, js.ErrNoEngine) {
 		return e.String(http.StatusInternalServerError, "ext/pages: the jsvm extension must be registered on this app\n")
 	}
 	return err
+}
+
+// release drops the request's Go references to its JS objects. The rt object's methods are Go closures over r, and
+// the VM's handle table keeps those alive, so while r holds rt (or anything that reaches it) neither the JS GC nor
+// Go's can free either side: every request would stay in memory until the VM ran out of it.
+func (r *request) release() {
+	if r.obj != nil {
+		js.Release(r.obj)
+	}
+	if r.cache != nil {
+		js.Release(r.cache)
+	}
+	r.obj, r.cache, r.st = nil, nil, nil
 }
 
 // pageContentType is the Content-Type a page's inner extension implies (robots.txt.ejs → text/plain), or "" for
