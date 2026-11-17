@@ -10,20 +10,21 @@ images. Code opens a **bucket** by name with the limits it wants and gets and se
 (memory and disk in this process, or Redis or Memcached shared between servers) is up to the provider, so a new one
 replaces the old without any caller changing.
 
-A bucket has:
+A bucket has its own caps, inside whatever room the provider has in all:
 
 | Option | What it does |
 |---|---|
-| `Eviction` | What a full bucket drops first: `lru` (default), `mru`, `fifo`, `lifo` |
-| `MaxItems` | Most entries kept in memory |
-| `MaxMemory` | Most bytes of keys and values kept in memory |
+| `Eviction` | Which of the bucket's entries go first when it's full: `lru` (default), `mru`, `fifo`, `lifo` |
+| `MaxItems` | Most entries the bucket holds |
+| `MaxMemory` | Most bytes of keys and values the bucket holds |
 | `TTL` | How long an entry lives unless `Set` says otherwise |
-| `DiskPath` | A disk tier for entries evicted from memory (relative to `pb_data`) |
-| `MaxDisk` | Most bytes the disk tier holds |
+
+Where entries live (memory, disk, another server) and how much room there is in all are the provider's and the
+operator's business, not the bucket's.
 
 The promise is a cache's: a provider may drop any entry at any time, and a `Get` may miss. It never returns a value
 that was deleted, cleared or replaced since, nor one past its TTL. Each app has its own buckets, on a multisite host
-too.
+too, even when the provider keeps every app's entries in one shared store.
 
 An app service contract, one provider ([cache.go](cache.go)).
 
@@ -55,8 +56,8 @@ Implement `cachev1.Cache` (`Bucket`) and `cachev1.Bucket` (`Get`, `Set`, `Delete
 cachev1.Contract.Provide(app, myCache)
 ```
 
-Keep each app's buckets apart: on a shared backend, prefix keys with `extkit.AppID(app)` and the bucket name. Treat
-`Options` as hints you keep as well as your storage allows (Redis has its own eviction, and ignores `DiskPath`), and
+Keep each app's buckets apart: on a shared store (one per process, or Redis), prefix keys with `extkit.AppID(app)` and
+the bucket name. Treat `Options` as caps you keep as well as your storage allows (Redis has its own eviction), and
 say in your README which ones you honour.
 
 ## Extensions

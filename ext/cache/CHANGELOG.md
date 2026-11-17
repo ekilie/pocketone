@@ -8,6 +8,7 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ### Added
 
-- New standard extension: cache buckets for an app and its extensions (cache/v1), in memory with LRU, MRU, FIFO or LIFO
-  eviction, item and memory caps, TTLs and an optional disk tier that survives restarts. Override any bucket's limits
-  in `pocketone.yaml`'s `cache` section.
+- New standard extension: cache buckets for an app and its extensions (cache/v1) from one store per process. On a
+  multisite host every instance shares it and sees only its own buckets; identical values are kept once. LRU, MRU,
+  FIFO or LIFO eviction, a memory budget for the store and caps per bucket, TTLs, and an optional disk tier that
+  survives restarts. Configure it in `pocketone.yaml`'s `cache` section.

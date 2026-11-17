@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 	"gopkg.in/yaml.v3"
 
@@ -19,202 +21,289 @@ import (
 
 var ctx = context.Background()
 
-func mustBucket(t *testing.T, lim limits) *bucket {
+func newTestStore(t *testing.T, lim poolLimits) *store {
 	t.Helper()
-	if lim.maxMem == 0 {
-		lim.maxMem = DefaultMaxMemory
+	if lim.eviction == "" {
+		lim.eviction = cachev1.LRU
 	}
-	if lim.maxDisk == 0 {
-		lim.maxDisk = DefaultMaxDisk
-	}
-	b, err := newBucket("test", lim, slog.New(slog.DiscardHandler))
+	s, err := newStore(lim, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return b
+	return s
 }
 
-func set(t *testing.T, b *bucket, keys ...string) {
-	t.Helper()
-	for _, k := range keys {
-		if err := b.Set(ctx, k, []byte("v"+k), 0); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
+func lru(n int) spaceLimits { return spaceLimits{eviction: cachev1.LRU, maxItems: n} }
 
-func has(b *bucket, k string) bool {
-	_, ok, _ := b.Get(ctx, k)
+func put(s *store, sp *space, k, v string) { s.set(sp, k, []byte(v), 0) }
+
+func has(s *store, sp *space, k string) bool {
+	_, ok := s.get(sp, k)
 	return ok
 }
 
-// memKeys lists what memory holds, without touching use order.
-func memKeys(b *bucket) map[string]bool {
-	out := map[string]bool{}
-	for k := range b.mem.items {
-		out[k] = true
-	}
-	return out
+func val(s *store, sp *space, k string) string {
+	v, _ := s.get(sp, k)
+	return string(v)
 }
 
-func TestEviction(t *testing.T) {
-	// Each: fill a, b, c (cap 3), read a, add d. Which one went?
-	cases := []struct {
-		ev   cachev1.Eviction
-		gone string
-	}{
-		{cachev1.LRU, "b"},  // a was read, b is least recently used
-		{cachev1.MRU, "a"},  // a was just read
-		{cachev1.FIFO, "a"}, // a was written first; the read doesn't count
-		{cachev1.LIFO, "c"}, // c was written last
-	}
-	for _, c := range cases {
-		t.Run(string(c.ev), func(t *testing.T) {
-			b := mustBucket(t, limits{eviction: c.ev, maxItems: 3})
-			set(t, b, "a", "b", "c")
-			if !has(b, "a") {
+func TestSpaceEviction(t *testing.T) {
+	// fill a, b, c (cap 3), read a, add d: which one went?
+	for ev, gone := range map[cachev1.Eviction]string{cachev1.LRU: "b", cachev1.MRU: "a", cachev1.FIFO: "a", cachev1.LIFO: "c"} {
+		t.Run(string(ev), func(t *testing.T) {
+			s := newTestStore(t, poolLimits{maxMem: 1 << 20})
+			sp := s.open("/x", spaceLimits{eviction: ev, maxItems: 3})
+			for _, k := range []string{"a", "b", "c"} {
+				put(s, sp, k, "v"+k)
+			}
+			if !has(s, sp, "a") {
 				t.Fatal("a missing before eviction")
 			}
-			set(t, b, "d")
-			got := memKeys(b)
-			if len(got) != 3 || got[c.gone] || !got["d"] {
-				t.Fatalf("after d: %v, want %s evicted", got, c.gone)
+			put(s, sp, "d", "vd")
+			if len(sp.entries) != 3 || sp.entries[gone] != nil || sp.entries["d"] == nil {
+				t.Fatalf("after d: %d entries, want %s evicted", len(sp.entries), gone)
 			}
 		})
 	}
 }
 
-func TestMaxMemory(t *testing.T) {
-	b := mustBucket(t, limits{eviction: cachev1.LRU, maxMem: 3 * (entryOverhead + 101)})
+func TestSpacesApart(t *testing.T) {
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20})
+	a, b := s.open("inst1/x", lru(0)), s.open("inst2/x", lru(0))
+	put(s, a, "k", "from a")
+	put(s, b, "k", "from b")
+	if val(s, a, "k") != "from a" || val(s, b, "k") != "from b" {
+		t.Fatal("two apps' buckets of one name share keys")
+	}
+	s.clear(a)
+	if has(s, a, "k") || !has(s, b, "k") {
+		t.Fatal("clear reached another app")
+	}
+}
+
+func TestSameBytesStoredOnce(t *testing.T) {
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20, maxItems: 1}) // room for one value
+	wasm := string(make([]byte, 1000))
+	spaces := []*space{s.open("inst1/wasm", lru(0)), s.open("inst2/wasm", lru(0)), s.open("inst3/other", lru(0))}
+	for i, sp := range spaces {
+		put(s, sp, fmt.Sprintf("key%d", i), wasm)
+	}
+	if len(s.blobs) != 1 || s.mem.bytes != 1000 {
+		t.Fatalf("%d blobs, %d bytes: identical values should be kept once", len(s.blobs), s.mem.bytes)
+	}
+	for i, sp := range spaces {
+		if val(s, sp, fmt.Sprintf("key%d", i)) != wasm {
+			t.Fatalf("key%d lost: a shared value should take one slot", i)
+		}
+	}
+	s.del(spaces[0], "key0")
+	s.del(spaces[1], "key1")
+	if len(s.blobs) != 1 || !has(s, spaces[2], "key2") {
+		t.Fatal("the value went while a key still points at it")
+	}
+	s.del(spaces[2], "key2")
+	if len(s.blobs) != 0 || s.mem.bytes != 0 || s.keyBytes != 0 {
+		t.Fatalf("left behind: %d blobs, %d bytes, %d key bytes", len(s.blobs), s.mem.bytes, s.keyBytes)
+	}
+}
+
+func TestStoreEvictionDropsEveryKey(t *testing.T) {
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20, maxItems: 1}) // no disk tier
+	a, b := s.open("inst1/x", lru(0)), s.open("inst2/x", lru(0))
+	put(s, a, "k", "shared")
+	put(s, b, "k", "shared")
+	put(s, a, "other", "new")
+	if has(s, a, "k") || has(s, b, "k") || !has(s, a, "other") {
+		t.Fatal("an evicted value should take every key pointing at it")
+	}
+}
+
+func TestSpaceCapKeepsSharedValue(t *testing.T) {
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20})
+	a, b := s.open("inst1/x", lru(1)), s.open("inst2/x", lru(0))
+	put(s, a, "k", "shared")
+	put(s, b, "k", "shared")
+	put(s, a, "k2", "mine") // a is over its own cap: its k goes, b's stays
+	if has(s, a, "k") || !has(s, b, "k") || !has(s, a, "k2") {
+		t.Fatal("a bucket's cap should evict only its own keys")
+	}
+}
+
+func TestMemoryLimit(t *testing.T) {
+	per := int64(100 + 1 + keyOverhead)
+	s := newTestStore(t, poolLimits{maxMem: 3 * per})
+	sp := s.open("/x", lru(0))
 	for i := range 5 {
-		_ = b.Set(ctx, fmt.Sprint(i), make([]byte, 100), 0)
+		s.set(sp, fmt.Sprint(i), []byte(fmt.Sprintf("%0100d", i)), 0)
 	}
-	if len(b.mem.items) != 3 || b.mem.bytes > b.lim.maxMem {
-		t.Fatalf("items %d bytes %d, want 3 within %d", len(b.mem.items), b.mem.bytes, b.lim.maxMem)
+	if len(sp.entries) != 3 || s.mem.bytes+s.keyBytes > s.lim.maxMem {
+		t.Fatalf("%d entries, %d bytes: want 3 within %d", len(sp.entries), s.mem.bytes+s.keyBytes, s.lim.maxMem)
 	}
-	_ = b.Set(ctx, "big", make([]byte, 1000), 0) // larger than the bucket: dropped without a disk tier
-	if has(b, "big") || len(b.mem.items) != 3 {
-		t.Fatal("an entry larger than the bucket was kept or evicted others")
+	s.set(sp, "big", make([]byte, 1000), 0) // larger than the store: not kept without a disk tier
+	if has(s, sp, "big") || len(sp.entries) != 3 {
+		t.Fatal("a value larger than the store was kept, or evicted others")
+	}
+
+	capped := s.open("/capped", spaceLimits{eviction: cachev1.LRU, maxMem: 50})
+	s.set(capped, "k", make([]byte, 100), 0)
+	if has(s, capped, "k") {
+		t.Fatal("a value larger than its bucket's cap was kept")
 	}
 }
 
 func TestTTL(t *testing.T) {
 	now := time.Unix(1000, 0)
-	b := mustBucket(t, limits{eviction: cachev1.LRU, ttl: time.Minute})
-	b.now = func() time.Time { return now }
-	_ = b.Set(ctx, "default", []byte("x"), 0)
-	_ = b.Set(ctx, "short", []byte("x"), time.Second)
-	_ = b.Set(ctx, "gone", []byte("x"), -1)
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20})
+	s.now = func() time.Time { return now }
+	sp := s.open("/x", spaceLimits{eviction: cachev1.LRU, ttl: time.Minute})
+	s.set(sp, "default", []byte("x"), 0)
+	s.set(sp, "short", []byte("y"), time.Second)
+	s.set(sp, "gone", []byte("z"), -1)
 	now = now.Add(2 * time.Second)
-	if has(b, "short") || !has(b, "default") || has(b, "gone") {
+	if has(s, sp, "short") || !has(s, sp, "default") || has(s, sp, "gone") {
 		t.Fatal("short should have expired, default not, gone never stored")
 	}
 	now = now.Add(time.Minute)
-	if has(b, "default") {
-		t.Fatal("default ttl not applied")
+	if has(s, sp, "default") {
+		t.Fatal("the bucket's ttl wasn't applied")
 	}
 }
 
 func TestCopies(t *testing.T) {
-	b := mustBucket(t, limits{eviction: cachev1.LRU})
+	s := newTestStore(t, poolLimits{maxMem: 1 << 20})
+	sp := s.open("/x", lru(0))
 	v := []byte("abc")
-	_ = b.Set(ctx, "k", v, 0)
+	s.set(sp, "k", v, 0)
 	v[0] = 'X'
-	got, _, _ := b.Get(ctx, "k")
+	got, _ := s.get(sp, "k")
 	got[1] = 'Y'
-	again, _, _ := b.Get(ctx, "k")
-	if string(again) != "abc" {
-		t.Fatalf("got %q: the bucket shares memory with its callers", again)
+	if val(s, sp, "k") != "abc" {
+		t.Fatal("the store shares memory with its callers")
 	}
 }
 
 func TestDiskTier(t *testing.T) {
 	dir := t.TempDir()
-	lim := limits{eviction: cachev1.LRU, maxItems: 2, dir: dir}
-	b := mustBucket(t, lim)
-	set(t, b, "a", "b", "c") // a spills to disk
-	if memKeys(b)["a"] || b.disk.items["a"] == nil {
-		t.Fatal("a should be on disk")
+	lim := poolLimits{maxMem: 1 << 20, maxItems: 1, dir: dir, maxDisk: 1 << 20}
+	s := newTestStore(t, lim)
+	a, b := s.open("inst1/x", lru(0)), s.open("inst2/x", lru(0))
+	put(s, a, "k", "shared")
+	put(s, b, "k", "shared")
+	put(s, a, "k2", "second") // the shared value spills, with both its keys
+	if bl := s.blobs[sum(sha256Of("shared"))]; bl == nil || !bl.disk {
+		t.Fatal("the shared value should be on disk")
 	}
-	v, ok, _ := b.Get(ctx, "a") // back to memory, b spills
-	if !ok || string(v) != "va" {
-		t.Fatalf("a from disk: %q %v", v, ok)
+	if val(s, b, "k") != "shared" { // back to memory; "second" spills
+		t.Fatal("shared value from disk")
 	}
-	if !memKeys(b)["a"] || b.disk.items["a"] != nil || b.disk.items["b"] == nil {
-		t.Fatal("a should move to memory and b to disk")
-	}
-
-	// a delete reaches the disk tier
-	_ = b.Delete(ctx, "b")
-	if has(b, "b") {
-		t.Fatal("deleted b came back from disk")
+	s.del(a, "k2")
+	if has(s, a, "k2") {
+		t.Fatal("a delete didn't reach the disk tier")
 	}
 
-	// what's on disk survives a restart
-	set(t, b, "d", "e") // a and c... spill
-	onDisk := len(b.disk.items)
-	b2 := mustBucket(t, lim)
-	if len(b2.disk.items) != onDisk || onDisk == 0 {
-		t.Fatalf("reloaded %d disk entries, want %d", len(b2.disk.items), onDisk)
+	put(s, a, "k3", "third") // "shared" spills again
+	s2 := newTestStore(t, lim)
+	a2, b2 := s2.open("inst1/x", lru(0)), s2.open("inst2/x", lru(0))
+	if val(s2, a2, "k") != "shared" || val(s2, b2, "k") != "shared" || len(s2.blobs) != 1 {
+		t.Fatalf("after a restart: %q %q, %d blobs", val(s2, a2, "k"), val(s2, b2, "k"), len(s2.blobs))
 	}
-	for k := range b.disk.items {
-		if v, ok, _ := b2.Get(ctx, k); !ok || string(v) != "v"+k {
-			t.Fatalf("%s after restart: %q %v", k, v, ok)
-		}
+	if has(s2, a2, "k3") {
+		t.Fatal("a value that was only in memory survived a restart")
 	}
-
-	// clear empties both tiers
-	_ = b2.Clear(ctx)
-	entries, _ := os.ReadDir(dir)
-	if len(b2.mem.items) != 0 || len(b2.disk.items) != 0 || len(entries) != 0 {
-		t.Fatal("clear left entries")
+	s2.clear(a2)
+	s2.clear(b2)
+	if n := countFiles(t, dir); n != 0 {
+		t.Fatalf("%d files left after clearing every key", n)
 	}
 }
 
 func TestDiskLimit(t *testing.T) {
 	dir := t.TempDir()
-	size := int64(diskHeader + 1 + 100)
-	b := mustBucket(t, limits{eviction: cachev1.FIFO, maxItems: 1, dir: dir, maxDisk: 2 * size})
+	s := newTestStore(t, poolLimits{eviction: cachev1.FIFO, maxMem: 1 << 20, maxItems: 1, dir: dir, maxDisk: 250})
+	sp := s.open("/x", lru(0))
 	for i := range 5 {
-		_ = b.Set(ctx, fmt.Sprint(i), make([]byte, 100), 0)
+		s.set(sp, fmt.Sprint(i), []byte(fmt.Sprintf("%0100d", i)), 0)
 	}
-	if len(b.disk.items) != 2 || b.disk.bytes > 2*size {
-		t.Fatalf("disk holds %d entries, %d bytes; want 2 within %d", len(b.disk.items), b.disk.bytes, 2*size)
+	if s.disk.order.Len() != 2 || s.disk.bytes > 250 {
+		t.Fatalf("disk holds %d values, %d bytes; want 2 within 250", s.disk.order.Len(), s.disk.bytes)
 	}
-	if has(b, "0") || !has(b, "2") {
+	if has(s, sp, "0") || !has(s, sp, "2") {
 		t.Fatal("FIFO on disk should drop the oldest")
 	}
 }
 
-func TestDiskExpiredDroppedOnLoad(t *testing.T) {
+func TestLoadDropsJunkAndExpired(t *testing.T) {
 	dir := t.TempDir()
 	now := time.Unix(1000, 0)
-	b := mustBucket(t, limits{eviction: cachev1.LRU, maxItems: 1, dir: dir})
-	b.now = func() time.Time { return now }
-	_ = b.Set(ctx, "a", []byte("x"), time.Second)
-	_ = b.Set(ctx, "b", []byte("x"), 0) // a spills
-	_ = os.WriteFile(filepath.Join(dir, "junk"), []byte("nope"), 0o644)
-	b2, err := newBucket("test", limits{eviction: cachev1.LRU, maxMem: DefaultMaxMemory, maxDisk: DefaultMaxDisk, dir: dir}, slog.New(slog.DiscardHandler))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// b2 runs at real time, so a (expiring 1001s after 1970) has expired; the junk file isn't an entry
-	if len(b2.disk.items) != 0 {
-		t.Fatalf("disk after reload: %d entries, want 0", len(b2.disk.items))
-	}
-	if _, err := os.Stat(filepath.Join(dir, "junk")); !os.IsNotExist(err) {
-		t.Fatal("junk file left in the disk tier")
+	lim := poolLimits{maxMem: 1 << 20, maxItems: 1, dir: dir, maxDisk: 1 << 20}
+	s := newTestStore(t, lim)
+	s.now = func() time.Time { return now }
+	sp := s.open("/x", lru(0))
+	s.set(sp, "a", []byte("x"), time.Second)
+	s.set(sp, "b", []byte("y"), 0) // a spills
+	os.MkdirAll(filepath.Join(dir, "keys", "zz"), 0o755)
+	os.WriteFile(filepath.Join(dir, "keys", "zz", "junk"), []byte("nope"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".tmp-1"), []byte("half"), 0o644)
+	s2 := newTestStore(t, lim) // real time: a's expiry (1001s after 1970) has passed
+	if len(s2.blobs) != 0 || countFiles(t, dir) != 0 {
+		t.Fatalf("%d blobs, %d files: expired records, orphan blobs and junk should go", len(s2.blobs), countFiles(t, dir))
 	}
 }
 
-func TestProvider(t *testing.T) {
+func TestInstancesShareOneStore(t *testing.T) {
+	x := New(Config{})
+	apps := make([]core.App, 2)
+	for i := range apps {
+		app, err := tests.NewTestApp()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer app.Cleanup()
+		extkit.SetAppID(app, fmt.Sprintf("inst%d", i))
+		// an instance can cap its buckets but not resize the shared store
+		layer := extkit.Config{{"max_memory": "1KiB", "buckets": map[string]any{"wasm": map[string]any{"max_items": 5}}}}
+		if err := x.Register(app, layer); err != nil {
+			t.Fatal(err)
+		}
+		extkit.AppScope(app).Seal(nil)
+		apps[i] = app
+	}
+	if x.store.lim.maxMem != DefaultMaxMemory {
+		t.Fatalf("an instance's settings changed the shared store: %d", x.store.lim.maxMem)
+	}
+	wasm := make([]byte, 4096)
+	for i, app := range apps {
+		b, err := cachev1.Open(app, "wasm", cachev1.Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b.(*bucket).sp.lim.maxItems != 5 {
+			t.Fatal("the instance's bucket cap wasn't applied")
+		}
+		_ = b.Set(ctx, "module", wasm, 0)
+		_ = b.Set(ctx, "mine", []byte(fmt.Sprint(i)), 0)
+	}
+	if len(x.store.spaces) != 2 || x.store.spaces["inst0/wasm"] == nil || x.store.spaces["inst1/wasm"] == nil {
+		t.Fatalf("spaces: %v", x.store.spaces)
+	}
+	if n := len(x.store.blobs); n != 3 { // the module once, and each instance's own value
+		t.Fatalf("%d values stored, want 3", n)
+	}
+	for i, app := range apps {
+		b, _ := cachev1.Open(app, "wasm", cachev1.Options{})
+		if v, ok, _ := b.Get(ctx, "mine"); !ok || string(v) != fmt.Sprint(i) {
+			t.Fatalf("inst%d read %q", i, v)
+		}
+	}
+}
+
+func TestProviderCaps(t *testing.T) {
 	app, err := tests.NewTestApp()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer app.Cleanup()
-
-	x := New(Config{Buckets: map[string]BucketConfig{"ops.tuned": {MaxItems: 7, DiskPath: "cache"}}})
+	x := New(Config{Buckets: map[string]BucketConfig{"ops.tuned": {MaxItems: 7}}})
 	layers := extkit.Config{{"defaults": map[string]any{"ttl": "5m"}, "buckets": map[string]any{"ops.tuned": map[string]any{"eviction": "fifo"}}}}
 	if err := x.Register(app, layers); err != nil {
 		t.Fatal(err)
@@ -226,22 +315,37 @@ func TestProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lim := got.(*bucket).lim
-	want := limits{eviction: cachev1.FIFO, maxItems: 7, maxMem: DefaultMaxMemory, ttl: time.Hour, maxDisk: DefaultMaxDisk,
-		dir: filepath.Join(app.DataDir(), "cache", "ops.tuned")}
-	if lim != want {
-		t.Fatalf("limits %+v, want %+v (config over code, code over config defaults)", lim, want)
+	want := spaceLimits{eviction: cachev1.FIFO, maxItems: 7, ttl: time.Hour}
+	if l := got.(*bucket).sp.lim; l != want {
+		t.Fatalf("caps %+v, want %+v (config over code, code over config defaults)", l, want)
 	}
-	other, _ := c.Bucket("plain", cachev1.Options{})
-	if l := other.(*bucket).lim; l.ttl != 5*time.Minute || l.dir != "" {
-		t.Fatalf("plain bucket %+v: want config default ttl, no disk", l)
+	if got.(*bucket).sp.id != "/ops.tuned" {
+		t.Fatalf("a single app's space is %q", got.(*bucket).sp.id)
 	}
-	again, _ := c.Bucket("ops.tuned", cachev1.Options{})
-	if again != got {
+	plain, _ := c.Bucket("plain", cachev1.Options{})
+	if l := plain.(*bucket).sp.lim; l.ttl != 5*time.Minute {
+		t.Fatalf("plain bucket %+v: want the config's default ttl", l)
+	}
+	if again, _ := c.Bucket("ops.tuned", cachev1.Options{}); again != got {
 		t.Fatal("same name should give the same bucket")
 	}
 	if _, err := c.Bucket("../x", cachev1.Options{}); err == nil {
 		t.Fatal("bad name accepted")
+	}
+}
+
+func TestSingleAppDiskUnderDataDir(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	x := New(Config{DiskPath: "cache"})
+	if err := x.Register(app, nil); err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(app.DataDir(), "cache"); x.store.lim.dir != want {
+		t.Fatalf("disk tier at %s, want %s", x.store.lim.dir, want)
 	}
 }
 
@@ -264,25 +368,41 @@ func TestOpenWithoutProvider(t *testing.T) {
 
 func TestConfigDecoding(t *testing.T) {
 	var y Config
-	src := "defaults: {max_memory: 64MiB, ttl: 10m}\nbuckets:\n  a.b: {max_disk: 1GB, eviction: mru}\n"
+	src := "max_memory: 512MiB\ndisk_path: /var/cache/p1\nmax_disk: 10GB\ndefaults: {max_memory: 64MiB, ttl: 10m}\nbuckets:\n  a.b: {eviction: mru}\n"
 	if err := yaml.Unmarshal([]byte(src), &y); err != nil {
 		t.Fatal(err)
 	}
-	if y.Defaults.MaxMemory != 64<<20 || time.Duration(y.Defaults.TTL) != 10*time.Minute || y.Buckets["a.b"].MaxDisk != 1e9 {
+	if y.MaxMemory != 512<<20 || y.MaxDisk != 10e9 || y.Defaults.MaxMemory != 64<<20 ||
+		time.Duration(y.Defaults.TTL) != 10*time.Minute || y.Buckets["a.b"].Eviction != cachev1.MRU {
 		t.Fatalf("yaml: %+v", y)
 	}
 	var j Config
-	if err := json.Unmarshal([]byte(`{"defaults":{"max_memory":"1KiB","max_disk":2048,"ttl":"1s"}}`), &j); err != nil {
+	if err := json.Unmarshal([]byte(`{"defaults":{"max_memory":"1KiB","ttl":"1s"},"max_disk":2048}`), &j); err != nil {
 		t.Fatal(err)
 	}
-	if j.Defaults.MaxMemory != 1024 || j.Defaults.MaxDisk != 2048 || time.Duration(j.Defaults.TTL) != time.Second {
+	if j.Defaults.MaxMemory != 1024 || j.MaxDisk != 2048 || time.Duration(j.Defaults.TTL) != time.Second {
 		t.Fatalf("json: %+v", j)
 	}
 	if _, err := ParseSize("lots"); err == nil {
 		t.Fatal("bad size accepted")
 	}
-	bad := Config{Buckets: map[string]BucketConfig{"x": {Eviction: "random"}}}
-	if bad.validate() == nil {
-		t.Fatal("bad eviction accepted")
+	for _, bad := range []Config{{Eviction: "random"}, {Buckets: map[string]BucketConfig{"x": {Eviction: "random"}}}} {
+		if bad.validate() == nil {
+			t.Fatalf("bad eviction accepted: %+v", bad)
+		}
 	}
 }
+
+func countFiles(t *testing.T, dir string) int {
+	t.Helper()
+	n := 0
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			n++
+		}
+		return nil
+	})
+	return n
+}
+
+func sha256Of(s string) [32]byte { return sha256.Sum256([]byte(s)) }

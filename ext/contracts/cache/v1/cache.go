@@ -27,7 +27,7 @@ import (
 )
 
 // Cache gives an app its buckets. Each app has its own: a bucket named "x" on one app never sees another app's "x",
-// on a multisite host too.
+// on a multisite host too, even when the provider keeps every app's entries in one shared store.
 type Cache interface {
 	// Bucket returns the bucket name, creating it with opts on first use. Later calls with the same name return the
 	// same bucket and ignore their opts. name must pass [ValidName]. A provider may override opts with an
@@ -71,22 +71,18 @@ func (e Eviction) Valid() bool {
 	return false
 }
 
-// Options are a bucket's limits. A zero field leaves the choice to the provider (and to the operator's settings).
+// Options are a bucket's limits: caps on what this app's bucket may hold, inside whatever room the provider has in
+// all. A zero field leaves the choice to the provider (and to the operator's settings). Where entries live (memory,
+// disk, another server) and how much room there is in all are the provider's business, not the bucket's.
 type Options struct {
-	// Eviction is what a full bucket drops first; "" is LRU.
+	// Eviction is which of the bucket's entries goes first when the bucket is full; "" is LRU.
 	Eviction Eviction
-	// MaxItems caps the entries kept in memory; 0 is no cap beyond MaxMemory.
+	// MaxItems caps the bucket's entries; 0 is no cap of its own.
 	MaxItems int
-	// MaxMemory caps the bytes of keys and values kept in memory; 0 is the provider's default.
+	// MaxMemory caps the bytes of the bucket's keys and values; 0 is no cap of its own.
 	MaxMemory int64
 	// TTL is how long an entry lives when Set gives no ttl; 0 is until it's evicted.
 	TTL time.Duration
-	// DiskPath turns on a disk tier: entries evicted from memory move there, and a read brings them back. A relative
-	// path is under the app's data dir (pb_data). "" keeps the bucket in memory only. Providers that keep entries
-	// elsewhere (Redis) ignore it.
-	DiskPath string
-	// MaxDisk caps the bytes the disk tier holds; 0 is the provider's default.
-	MaxDisk int64
 }
 
 // Contract is cache/v1: one provider per app.

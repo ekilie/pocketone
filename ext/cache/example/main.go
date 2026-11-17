@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		b, err := cachev1.Open(app, "example.slow", cachev1.Options{MaxItems: 100, TTL: time.Minute, DiskPath: "cache"})
+		b, err := cachev1.Open(app, "example.slow", cachev1.Options{MaxItems: 100, TTL: time.Minute})
 		if err != nil {
 			return err
 		}

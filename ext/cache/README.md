@@ -3,15 +3,19 @@ owners: ["@benallfree"]
 version: 0.0.1
 title: "Cache"
 group: binary
-summary: "Cache buckets in the app's own memory, with LRU/MRU/FIFO/LIFO eviction, TTLs and an optional disk tier."
+summary: "Cache buckets for every app in the process from one shared store: identical values kept once, LRU/MRU/FIFO/LIFO eviction, TTLs, an optional disk tier."
 ---
 
 # Cache
 
-Extensions and apps often compute the same thing many times: a rendered page, an answer from another API, a resized
-image. Cache gives them named buckets to keep those results in, in your app's own memory, with an optional folder on
-disk for more than fits in memory. Each bucket has its own limits, and you can change them without touching the code
-that uses them.
+Extensions and apps often compute the same thing many times: a rendered page, an answer from another API, a compiled
+module. Cache gives them named buckets to keep those results in, from one store in your app's process, with an
+optional folder on disk for more than fits in memory. Each bucket has its own caps, and you can change them without
+touching the code that uses them.
+
+On a multisite host the store is shared by every instance: one memory budget and one disk tier for all of them. Each
+instance still sees only its own buckets, and identical bytes (the same compiled template, the same `.wasm` file) are
+kept once however many instances or keys hold them.
 
 Cache provides [cache/v1](../contracts/cache/v1/README.md). Code that caches talks only to that contract, so a cache
 shared between servers (Redis, Memcached) can replace this one later without any of it changing.
@@ -27,32 +31,40 @@ extkit.Setup(app, []extkit.Extension{cache.New(cache.Config{})}, nil, nil)
 
 ## Configure
 
-Nothing to configure: each bucket uses the limits its code asks for, and 32 MiB of memory unless it asks for other.
-To change them, add a `cache` section to `pocketone.yaml`. `defaults` fill in what a bucket's code leaves unset;
-`buckets` set a named bucket's limits over what its code asks for:
+Nothing to configure: the store has 128 MiB of memory for every bucket together, and each bucket takes the caps its
+code asks for. To change them, add a `cache` section to `pocketone.yaml`. The top keys size the store; `defaults` fill
+in what a bucket's code leaves unset; `buckets` set a named bucket's caps over what its code asks for:
 
 ```yaml
 cache:
+  max_memory: 512MiB       # the store: every bucket together
+  disk_path: cache         # a disk tier for what memory evicts; leave out for memory only
+  max_disk: 10GiB
   defaults:
-    max_memory: 16MiB
     ttl: 10m
   buckets:
-    pages.render:
-      eviction: lru       # lru, mru, fifo or lifo
-      max_items: 5000
-      max_memory: 128MiB
-      disk_path: cache    # under pb_data; leave out for memory only
-      max_disk: 1GiB
+    pages.compiled:
+      max_memory: 64MiB    # one app's bucket
 ```
+
+The store:
 
 | Key | What it does |
 |---|---|
-| `eviction` | What a full bucket drops first: `lru` (least recently used, the default), `mru` (most recently used), `fifo` (oldest written), `lifo` (newest written) |
-| `max_items` | Most entries kept in memory |
-| `max_memory` | Most bytes kept in memory (default 32MiB per bucket) |
+| `max_memory` | Memory for every bucket together (default 128MiB) |
+| `max_items` | Most distinct values kept in memory; identical bytes count once |
+| `eviction` | Which values leave memory first when the store is full: `lru` (default), `mru`, `fifo`, `lifo` |
+| `disk_path` | Turns on the disk tier there. Relative paths are under `pb_data` on a single app, and under the working directory on a multisite host |
+| `max_disk` | Size of the disk tier (default 1GiB) |
+
+Each bucket (`defaults` and `buckets.<name>`):
+
+| Key | What it does |
+|---|---|
+| `max_items` | Most entries the bucket holds |
+| `max_memory` | Most bytes of keys and values the bucket holds; a value it shares with others counts in full |
+| `eviction` | Which of its entries go first when the bucket is full |
 | `ttl` | How long an entry lives unless its code says otherwise |
-| `disk_path` | Turns on the disk tier in this folder (relative paths are under `pb_data`) |
-| `max_disk` | Most bytes the disk tier holds (default 256MiB per bucket) |
 
 Sizes take `KiB`, `MiB`, `GiB` (or `KB`, `MB`, `GB`); durations take `s`, `m`, `h`.
 
@@ -61,7 +73,7 @@ A disk tier inside `pb_data` is part of your backups. To keep it out, give `disk
 
 ## Use
 
-Nothing to click. Entries evicted from memory move to the disk tier when there is one, and a read brings them back.
+Nothing to click. Values evicted from memory move to the disk tier when there is one, and a read brings them back.
 What's on disk is still there after a restart; what's in memory isn't. To empty a disk tier, stop the app and delete
 its folder.
 
@@ -69,7 +81,8 @@ its folder.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | Every instance has its own buckets and its own limits. An instance's `extensions.cache` takes the same keys as the `cache` section and wins over it. An absolute `disk_path` gets the instance's id added, so instances never share files. |
+| [Pocker](../pocker/README.md) | Every instance shares the host's one store (its memory, its disk tier), and sees only its own buckets: keys live under the instance's id. An instance that sleeps keeps its entries, so it wakes to a warm cache. An instance's `extensions.cache` may set `enabled`, `defaults` and `buckets` for itself; the store's keys are the host's only. |
+| [Docker](../docker/README.md) | Each container runs its own `pocketone`, so it has its own store. |
 
 ### Building on Cache
 
@@ -122,7 +135,7 @@ func main() {
 		log.Fatal(err)
 	}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		b, err := cachev1.Open(app, "example.slow", cachev1.Options{MaxItems: 100, TTL: time.Minute, DiskPath: "cache"})
+		b, err := cachev1.Open(app, "example.slow", cachev1.Options{MaxItems: 100, TTL: time.Minute})
 		if err != nil {
 			return err
 		}
@@ -146,11 +159,19 @@ func main() {
 
 ## How it works
 
-Each bucket is a map plus a list in use order, under one lock. A full bucket evicts by its strategy before it adds
-an entry; an entry larger than the whole memory tier goes straight to disk, or isn't kept. Expired entries are
-dropped when read, and in a sweep every few writes. The disk tier is one file per entry (named by the SHA-256 of its
-key, with its key and expiry in the file), written atomically, and indexed when the bucket opens, oldest file first.
-Disk reads and writes happen under the bucket's lock, so a delete never races a write to disk.
+One store per process. Each app's buckets are namespaces in it, `<instance id>/<bucket>` (just `/<bucket>` on a
+single app), so no app can read another's keys. Keys point at values stored by their SHA-256: the same bytes under
+any number of keys, from any number of instances, are one value with a reference count, and count once against the
+store's memory and item limits. A value goes when the last key pointing at it does.
+
+There are two kinds of eviction. When the store is over its limits, a value leaves memory (by the store's strategy):
+to the disk tier when there is one, else together with every key pointing at it. When one bucket is over its own
+caps, one of its keys goes (by the bucket's strategy), and the value only if nothing else points at it.
+
+The key index stays in memory and counts against `max_memory`. On disk, each value is a file named by its hash, and
+each key whose value is on disk has a small record beside it, so the tier is indexed again on the next start. Files
+are written atomically. One lock covers the store, including its disk reads and writes, so a delete never races a
+write.
 
 ## License
 
