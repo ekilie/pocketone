@@ -8,7 +8,7 @@ summary: "pocketone deploy, dev, pull and logs, and the deploy API."
 
 # Deploy
 
-> Walkthrough for app owners: [Deploy from your machine](https://pocketone.dev/docs/features/deploy). This page is the technical reference.
+> Walkthrough for app owners: [Deploy and live sync](https://pocketone.dev/docs/features/deploy). This page is the technical reference.
 
 Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
 `pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded and the app swaps them

@@ -1,9 +1,11 @@
 ---
-title: Build a site
+title: PocketPages sites
 description: Serve server-rendered pages from a pb_pages folder next to your data, with PocketPages, built into every PocketOne app.
 ---
 
-# Build a site
+# PocketPages sites
+
+> **PocketBase:** `pb_public` serves static files. **PocketOne:** PocketPages renders pages on the server from `pb_pages`, with direct access to your records.
 
 Put EJS or Markdown files in a `pb_pages` folder next to `pb_data`, and your app serves them as web pages. Each file
 is a route, and page code can read and write your records directly. This is PocketPages, built into PocketOne.
@@ -44,7 +46,7 @@ To start from something bigger, `pocketone pages starters` lists the starter kit
   the log.
 - **Not with `--jsvm goja`:** pages run in PocketOne's own JS engine, so they're off when you serve with PocketBase's.
 
-To send your pages to a running app, see [Deploy from your machine](/docs/features/deploy).
+To send your pages to a running app, see [Deploy and live sync](/docs/features/deploy).
 
 ## Change it
 

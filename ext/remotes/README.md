@@ -8,7 +8,7 @@ summary: "Named remotes and saved logins for the pocketone command."
 
 # Remotes
 
-> Walkthrough for app owners: [Remote administration](https://pocketone.dev/docs/features/remote). This page is the technical reference.
+> Walkthrough for app owners: [Remote CLI](https://pocketone.dev/docs/features/remote). This page is the technical reference.
 
 Named remotes for the `pocketone` command: the apps a project deploys to, each signed in to once. Give an app a name
 like `prod`, log in, and commands such as `pocketone deploy prod` know where to go and who you are.

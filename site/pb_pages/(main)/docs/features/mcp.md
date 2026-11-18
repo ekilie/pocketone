@@ -1,9 +1,11 @@
 ---
-title: Connect an AI agent
+title: MCP for AI agents
 description: Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
 ---
 
-# Connect an AI agent
+# MCP for AI agents
+
+> **PocketBase:** no MCP server. **PocketOne:** every app serves MCP at `/mcp`, with OAuth sign-in, so Claude and other agents work with your app as you.
 
 Point Claude, or any other MCP client, at your app and sign in. The agent can then read and change your data, check on
 the app and run admin tasks, as you and with your rights, nothing more.
@@ -108,4 +110,4 @@ in. The name agents see is your app's **Settings → Application → Application
   the [mcp/v1](/docs/contracts/mcp/v1) contract and serve the same tools.
 
 Looking to teach a coding agent how to build with PocketOne? That's a different thing: see
-[Coding agents](/docs/agents).
+[Teach your coding agent](/docs/agents).

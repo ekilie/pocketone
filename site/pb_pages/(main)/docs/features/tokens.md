@@ -1,9 +1,11 @@
 ---
-title: API tokens
+title: API tokens and OAuth
 description: Give a script, a CI job or a service its own long-lived token, limited to what it needs, and revoke it whenever you like. Apps and tools can also sign in to get one.
 ---
 
-# API tokens
+# API tokens and OAuth
+
+> **PocketBase:** auth tokens carry the account's full rights and can't be revoked one by one. **PocketOne:** named, scoped tokens you revoke individually, and your app is an OAuth server that apps and agents sign in through.
 
 A script, a CI job or another service can't type a password. Give it an API token instead: a long secret that starts
 with `pbt_`, acts as the account that owns it, and can be limited to a few scopes and given an expiry. Revoke it, and
@@ -67,7 +69,7 @@ pocketone token revoke --all --superuser admin@example.com
 `--scope` can be repeated. Without `--ttl` the token never expires.
 
 For CI that runs `pocketone` against your app, put the token in `P1_TOKEN` instead of signing in
-([Remote administration](/docs/features/remote)).
+([Remote CLI](/docs/features/remote)).
 
 To let an app of your own sign people in, register it once:
 

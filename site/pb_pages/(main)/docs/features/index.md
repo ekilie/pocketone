@@ -1,40 +1,39 @@
 ---
-title: Features
-description: What every PocketOne app can do on top of PocketBase, as step-by-step walkthroughs.
+title: New in PocketOne
+description: Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built in and on by default.
 ---
 
-# Features
+# New in PocketOne
 
-Every PocketOne app can do everything PocketBase does, plus the features below. They're built in and on by default,
-whether you run the `pocketone` binary yourself or a host runs your app. You don't need to install anything.
+PocketOne does everything PocketBase does, and adds the features below. They're built in and on by default, whether
+you run the `pocketone` binary yourself or a host runs your app. There's nothing to install.
 
-Each page walks through one task in the dashboard, from your terminal and from an agent. To find out how a
-feature works or how to build on it, follow the **How it works** links to its [extension](/docs/extensions) pages.
+| | PocketBase gives you | PocketOne adds |
+|---|---|---|
+| [Point-in-time restore](/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
+| [Deploy and live sync](/docs/features/deploy) | Copy files to the server yourself, then restart | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
+| [Remote CLI](/docs/features/remote) | A CLI for the machine that holds `pb_data` | Admin commands against any app, from your terminal, a script or an agent |
+| [API tokens and OAuth](/docs/features/tokens) | Auth tokens with the account's full rights | Named, scoped tokens you revoke one by one; your app is an OAuth server |
+| [MCP for AI agents](/docs/features/mcp) | No MCP | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
+| [Bulk mail](/docs/features/bulk-mail) | Account mail: verification, password reset | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
+| [PocketPages sites](/docs/features/sites) | Static files from `pb_public` | Server-rendered pages from `pb_pages`, with direct access to your records |
+| [QuickJS hooks](/docs/quickjs) | Hooks on goja | The same JS API with imports, TypeScript, async handlers, shared globals and hard limits |
+| [pocketone.yaml](/docs/pocketone-yaml) | Flags on every start | One config file, with every extension's options and a `.env` for secrets |
 
-## Ship your app
-
-- [Deploy from your machine](/docs/features/deploy): send your hooks, migrations and pages to a running app with one command.
-- [Build a site](/docs/features/sites): serve server-rendered pages from a `pb_pages` folder next to your data.
-- [Remote administration](/docs/features/remote): manage any app from your terminal, a script or an agent.
-
-## Protect your data
-
-- [Undo a mistake](/docs/features/restore): put your data back as it was at any moment, from the dashboard.
-
-## Reach your users
-
-- [Send bulk mail](/docs/features/bulk-mail): send a newsletter or announcement to your users, with unsubscribes handled.
-
-## Connect tools and agents
-
-- [API tokens](/docs/features/tokens): give a script, CI job or service its own token, limited to what it needs.
-- [Connect an AI agent](/docs/features/mcp): let Claude or another MCP client work with your app, with your rights.
+Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to
+build on it, follow its **How it works** links to the [extension](/docs/extensions) pages.
 
 ## Also built in
 
-These work behind the scenes, so they have no walkthrough:
+Smaller additions you'll notice without a page of their own:
 
-- **Settings:** one place for the settings superusers change for each feature ([Settings](/docs/extensions/settings)).
-- **Page templates:** the sign-in screens features show can be copied into your app with `pocketone template eject` and restyled ([Templates](/docs/extensions/templates)).
-- **Cache:** one shared memory budget for the caches features keep ([Cache](/docs/extensions/cache)).
-- **S3 redirects:** files kept in S3 download straight from the bucket through short-lived signed links ([S3 Redirect](/docs/extensions/s3redirect)).
+- **Mail you can see in dev mode:** with `serve --dev` and no SMTP settings, mail is caught and shown at
+  `http://127.0.0.1:8025` instead of being sent ([Mail Trap](/docs/extensions/mailtrap)).
+- **S3 redirects:** files kept in S3 download straight from the bucket through short-lived signed links
+  ([S3 Redirect](/docs/extensions/s3redirect)).
+- **Restylable sign-in pages:** copy the OAuth sign-in screens into your app with `pocketone template eject` and edit
+  them ([Templates](/docs/extensions/templates)).
+- **Settings and cache:** one settings screen and one shared memory budget for every feature
+  ([Settings](/docs/extensions/settings), [Cache](/docs/extensions/cache)).
+
+Coming from PocketBase? [What stays the same](/docs/pocketbase).

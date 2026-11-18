@@ -2,7 +2,7 @@
 //   - the pages of an extension with a site of its own (ext/<name>/site) show its nav, (main)/_private/toc-<name>.md,
 //     except its extension docs (/docs/extensions/<name>/extension);
 //   - every other extension page shows the Extensions nav (toc-extensions), and contract pages the Contracts nav
-//     (toc-contracts), which the main nav's Reference section slides into;
+//     (toc-contracts), which the main nav's Extend PocketOne section slides into;
 //   - everything else shows the main nav (toc).
 // site/sync writes those navs and lists the extensions with a site in site-navs.js. The docs layouts load this with
 // ctx.resolve, not as a +config.js plugin: a host loads plugins once, at start, so a deploy that changed one wouldn't

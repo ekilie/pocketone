@@ -1,26 +1,29 @@
-# Introduction
+# Get started
 
 - [What is PocketOne?](/docs/overview)
 - [Installation](/docs/installation)
+- [Coming from PocketBase](/docs/pocketbase)
+- [Teach your coding agent](/docs/agents)
 
-# Features
+# New in PocketOne
 
-- [All features](/docs/features)
-- [Deploy from your machine](/docs/features/deploy)
-- [Build a site](/docs/features/sites)
-- [Remote administration](/docs/features/remote)
-- [Undo a mistake](/docs/features/restore)
-- [Send bulk mail](/docs/features/bulk-mail)
-- [API tokens](/docs/features/tokens)
-- [Connect an AI agent](/docs/features/mcp)
+- [Everything new](/docs/features)
+- [Point-in-time restore](/docs/features/restore)
+- [Deploy and live sync](/docs/features/deploy)
+- [Remote CLI](/docs/features/remote)
+- [API tokens and OAuth](/docs/features/tokens)
+- [MCP for AI agents](/docs/features/mcp)
+- [Bulk mail](/docs/features/bulk-mail)
+- [PocketPages sites](/docs/features/sites)
+- [QuickJS hooks](/docs/quickjs)
+- [pocketone.yaml](/docs/pocketone-yaml)
 
-# Tutorials
+# Extend PocketOne
 
 - [How PocketOne fits together](/docs/how-pocketone-fits-together)
-- [Coding agents](/docs/agents)
-- [Your hooks on QuickJS](/docs/quickjs)
-- [Configure with pocketone.yaml](/docs/pocketone-yaml)
 - [Writing an extension](/docs/writing-an-extension)
+- [Contracts](/docs/contracts)
+- [Extensions](/docs/extensions)
 
 # Reference
 
@@ -28,11 +31,3 @@
 - [REST](/docs/reference/rest)
 - [MCP](/docs/reference/mcp)
 - [pocketone.yaml](/docs/config-reference)
-- [Pages](/docs/extensions/pages)
-- [Contracts](/docs/contracts)
-- [Extensions](/docs/extensions)
-
-# Going Further
-
-- [PocketBase docs](/docs/pocketbase)
-- [PocketBase compatibility](/docs/compatibility)

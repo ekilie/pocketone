@@ -1,9 +1,11 @@
 ---
-title: Undo a mistake
+title: Point-in-time restore
 description: Put your app's data back as it was at any moment in the last few days, from the dashboard, your terminal or an agent.
 ---
 
-# Undo a mistake
+# Point-in-time restore
+
+> **PocketBase:** backups you schedule, restored whole. **PocketOne:** every change is recorded, and you restore to any second in the last 72 hours.
 
 Deleted the wrong records, ran a bad migration, or let a script loose on production? Pick a moment from before it
 happened, and your app's data goes back to how it was then.
@@ -42,7 +44,7 @@ Only superusers can see or run a restore.
 
 ## From your terminal
 
-Sign in to your app once ([Remote administration](/docs/features/remote)), then:
+Sign in to your app once ([Remote CLI](/docs/features/remote)), then:
 
 ```bash
 pocketone remote restore points        # how far back you can go

@@ -8,7 +8,7 @@ summary: "Server-rendered pages from a pb_pages folder (formerly PocketPages)."
 
 # Pages
 
-> Walkthrough for app owners: [Build a site](https://pocketone.dev/docs/features/sites). This page is the technical reference.
+> Walkthrough for app owners: [PocketPages sites](https://pocketone.dev/docs/features/sites). This page is the technical reference.
 
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
 JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it

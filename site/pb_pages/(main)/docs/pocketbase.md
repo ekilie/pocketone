@@ -1,12 +1,35 @@
 ---
-title: PocketBase docs
-description: Where to read about the parts of PocketOne that come straight from PocketBase.
+title: Coming from PocketBase
+description: PocketOne is PocketBase with more built in. What stays the same, what's added, and where to read about the parts that come straight from PocketBase.
 ---
 
-# PocketBase docs
+# Coming from PocketBase
 
-PocketOne doesn't change how PocketBase itself works, so its docs are the reference for everything outside the
-extensions. This site doesn't copy them.
+PocketOne is PocketBase with more built in. Run `pocketone` the way you run `pocketbase`: the same commands and flags,
+the same API, the same dashboard and the same `pb_data`, `pb_hooks` and `pb_migrations` folders.
+
+## What stays the same
+
+- **Your API and SDKs.** Collections, records, auth, files and realtime work as in PocketBase. The JS and Dart SDKs
+  work unchanged.
+- **Your hooks.** The JS API (`$app`, `routerAdd`, `onRecordCreate`, `cronAdd`, …) is PocketBase's, so existing
+  `pb_hooks` run as they are. They run on [QuickJS](/docs/quickjs), which adds imports, TypeScript and async handlers on
+  top.
+- **PocketBase's own tests.** PocketBase's test suite runs unmodified against PocketOne's core on every change and
+  every day. See the live results on [PocketBase compatibility](/docs/compatibility).
+
+PocketOne is built on PocketBase v0.42. When pocketbase.io describes a newer release, some of it may not be in
+PocketOne yet.
+
+## What's added
+
+Point-in-time restore, deploys from your terminal, API tokens and OAuth, MCP for AI agents, bulk mail, server-rendered
+sites and more, all on by default. [New in PocketOne](/docs/features) lists them side by side with what PocketBase
+gives you.
+
+## Read the PocketBase docs for the rest
+
+This site doesn't copy PocketBase's docs. For everything PocketOne leaves as it is, read them at pocketbase.io:
 
 - [Introduction](https://pocketbase.io/docs/)
 - [Collections](https://pocketbase.io/docs/collections/)
@@ -18,6 +41,3 @@ extensions. This site doesn't copy them.
 - [Extend with Go](https://pocketbase.io/docs/go-overview/)
 - [Going to production](https://pocketbase.io/docs/going-to-production/)
 - [Web APIs reference](https://pocketbase.io/docs/api-records/)
-
-PocketOne is built on PocketBase v0.41. When the docs there describe a newer release, some of it may not be in
-PocketOne yet.

@@ -14,7 +14,7 @@ or endorsed by the PocketBase project.
 
 ## What it adds
 
-Run `pocketone` the way you run `pocketbase`. These are the differences you'll notice.
+Run `pocketone` the way you run `pocketbase`. These are the differences you'll notice; [New in PocketOne](/docs/features) compares each one with PocketBase.
 
 ### Point-in-time restore, on by default
 
@@ -46,7 +46,7 @@ the file, PocketOne behaves like stock PocketBase. `pocketone config` lists ever
 - `pocketone upgrade`: move to the latest release, keeping the old executable.
 - `pocketone remote …`: every operation of every contract an app offers is a command, such as
   `pocketone remote restore to --at -2h`. The same operations are REST endpoints and MCP tools.
-  [Remote administration](/docs/features/remote) explains it, and the [CLI reference](/docs/reference/cli) lists every command.
+  [Remote CLI](/docs/features/remote) explains it, and the [CLI reference](/docs/reference/cli) lists every command.
 
 ### Agents and API tokens
 

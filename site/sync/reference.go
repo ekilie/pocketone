@@ -213,10 +213,10 @@ func contractSurfaces(r *reference, id string) string {
 	var b strings.Builder
 	b.WriteString("## Commands and APIs\n\n")
 	if c.Routed {
-		fmt.Fprintf(&b, "Its own HTTP API under `%s/`, described above. It has no generated commands or MCP tools. [Remote administration](/docs/features/remote) explains how PocketOne apps are managed from afar.\n\n", c.Prefix)
+		fmt.Fprintf(&b, "Its own HTTP API under `%s/`, described above. It has no generated commands or MCP tools. [Remote CLI](/docs/features/remote) explains how PocketOne apps are managed from afar.\n\n", c.Prefix)
 		return b.String()
 	}
-	b.WriteString("Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote administration](/docs/features/remote), or the full [CLI](/docs/reference/cli), [REST](/docs/reference/rest) and [MCP](/docs/reference/mcp) references.\n\n")
+	b.WriteString("Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](/docs/features/remote), or the full [CLI](/docs/reference/cli), [REST](/docs/reference/rest) and [MCP](/docs/reference/mcp) references.\n\n")
 	for _, op := range c.Ops {
 		fmt.Fprintf(&b, "### %s\n\n", op.Name)
 		if op.Desc != "" {

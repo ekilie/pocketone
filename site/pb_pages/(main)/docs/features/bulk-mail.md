@@ -1,9 +1,11 @@
 ---
-title: Send bulk mail
+title: Bulk mail
 description: Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
 ---
 
-# Send bulk mail
+# Bulk mail
+
+> **PocketBase:** sends account mail (verification, password reset); campaigns need your own code or another service. **PocketOne:** campaigns from the dashboard, with unsubscribes, suppression and pacing handled.
 
 Got a newsletter, a launch or a change to announce? Write it once, pick which users get it, and your app sends it at a
 steady pace through its own mail settings. Every message gets an unsubscribe link, and people who unsubscribe, bounce
@@ -51,7 +53,7 @@ weren't mailed before get it.
 ## From your terminal
 
 Write the campaign in the dashboard first. Then sign in to your app once
-([Remote administration](/docs/features/remote)) and run it from your terminal:
+([Remote CLI](/docs/features/remote)) and run it from your terminal:
 
 ```bash
 pocketone remote bulkmail preview --campaign <id>                  # see the message

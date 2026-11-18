@@ -1,9 +1,11 @@
 ---
-title: Deploy from your machine
+title: Deploy and live sync
 description: Send your app's hooks, migrations, pages and public files to a running PocketOne app with one command, and keep a folder in step while you work.
 ---
 
-# Deploy from your machine
+# Deploy and live sync
+
+> **PocketBase:** you copy files to the server yourself and restart it. **PocketOne:** `pocketone deploy` uploads only what changed, and `pocketone dev` keeps a folder in step both ways.
 
 Write your hooks, migrations and pages on your own machine, then send them to your running app with one command. Only
 the files that changed are uploaded, and the app swaps them in while it keeps serving.
@@ -34,7 +36,7 @@ pocketone restart                       # restart later instead
 ```
 
 Every command takes a remote's name or a URL. Without one, it uses the project's default remote.
-[Remote administration](/docs/features/remote) covers adding more remotes and signing in.
+[Remote CLI](/docs/features/remote) covers adding more remotes and signing in.
 
 ## When changes take effect
 

@@ -8,7 +8,7 @@ summary: "Campaigns to your app's own users, with audiences from a collection, a
 
 # Bulk Mail
 
-> Walkthrough for app owners: [Send bulk mail](https://pocketone.dev/docs/features/bulk-mail). This page is the technical reference.
+> Walkthrough for app owners: [Bulk mail](https://pocketone.dev/docs/features/bulk-mail). This page is the technical reference.
 
 Campaigns to your app's own users, from the dashboard. You pick who gets the mail with a collection, a view or SQL,
 write the message, and Bulk Mail sends it at a steady pace through your app's mail settings. It adds one-click
