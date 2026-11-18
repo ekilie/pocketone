@@ -122,7 +122,7 @@ routerAdd("GET", "/agent-complete", (e) => {
 	mu.Lock()
 	appA := apps["a"]
 	mu.Unlock()
-	if err := agent.SaveSettings(appA, agent.Settings{Endpoint: api.URL + "/v1", Key: "sk", Model: "own-model"}); err != nil {
+	if err := agent.SaveSettings(appA, agent.Settings{Mode: agent.ModeAPI, Endpoint: api.URL + "/v1", Key: "sk", APIModel: "own-model"}); err != nil {
 		t.Fatal(err)
 	}
 	if code, res := get("http://a.test/agent-complete"); code != 200 || res["backend"] != "app" || res["text"] != "from my own API" {

@@ -30,11 +30,17 @@ extkit.Setup(app, []extkit.Extension{agent.New()}, nil, nil)
 
 ## Configure
 
-**Your own API:** in the dashboard, **Settings → Agent**: the endpoint (the API's base URL with its version, like
-`https://api.openai.com/v1` or `http://localhost:11434/v1` for Ollama), the key and the model. **Test** sends a
-one-word prompt. The key is never shown again; leave it empty to keep it.
+In the dashboard, **Settings → LLM** (under System) picks what answers:
 
-**A model PocketOne runs:** name it in `pocketone.yaml`:
+- **Off:** `$agent` answers with an error.
+- **Built-in:** a model PocketOne runs, chosen from the list below. Choosing another one downloads it (the page shows
+  the progress) and unloads the one before.
+- **API:** your own OpenAI-compatible endpoint (the API's base URL with its version, like `https://api.openai.com/v1`,
+  or `http://localhost:11434/v1` for Ollama), its key and the model. **Test** sends a one-word prompt. The key is never
+  shown again; leave it empty to keep it (a new endpoint needs the key entered again).
+
+Until you choose there, `pocketone.yaml` decides: the model it names runs built in, and without one the LLM is off.
+**Reset to pocketone.yaml** on the same page goes back to it. To name the model there:
 
 ```yaml
 agent:
@@ -49,8 +55,8 @@ agent:
 | `qwen3-4b` | 2.5 GB | about 3 GB | better answers, slower |
 
 The first start downloads the model into your user cache folder (`cache_dir` to change it) and checks its SHA-256;
-the app serves meanwhile, and `$agent` answers "still loading" until the model is ready. Your own API, once set,
-takes over from it.
+the app serves meanwhile, and `$agent` answers "still loading" until the model is ready. Nothing downloads for a
+command (`superuser`, `migrate`); only `serve` starts the model.
 
 ## Use
 
@@ -90,7 +96,7 @@ an MCP tool.
 | Extension | How they fit |
 |---|---|
 | [Settings](../settings/README.md) | Your own API is a settings/v1 section, in the dashboard, the CLI and for agents. |
-| [Multisite](../multisite/README.md) | A host whose `agent` section names a model runs it once for every instance and provides [agent/v1](../contracts/agent/v1/README.md) for them; `$agent` in each instance uses it. Each instance gets a share, set by `per_instance` (below). An instance whose admins set their own API in Settings → Agent uses that instead. Today only instances that run as isolates ([Pocker](../pocker/README.md)) reach the host's model. |
+| [Multisite](../multisite/README.md) | A host whose `agent` section names a model runs it once for every instance and provides [agent/v1](../contracts/agent/v1/README.md) for them; `$agent` in each instance uses it. Each instance gets a share, set by `per_instance` (below). Each instance's Settings → LLM offers Off, the host's model (shown with the instance's daily use) or its own API; which model runs built in is the host's call. Today only instances that run as isolates ([Pocker](../pocker/README.md)) reach the host's model. |
 
 On a host:
 
@@ -111,7 +117,7 @@ A PocketBase app that asks its model one question once the model is ready.
 
 ```go
 // Command example is a PocketBase app with the agent extension that asks its model one question once it's ready. Name
-// a model in pocketone.yaml (`agent: {model: qwen3-0.6b}`) or set your own API in Settings → Agent, run
+// a model in pocketone.yaml (`agent: {model: qwen3-0.6b}`) or choose one in Settings → LLM, run
 // `go run . serve`, and watch the log for "agent: answer".
 package main
 

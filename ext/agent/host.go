@@ -17,7 +17,7 @@ func init() { multisite.Link(HostExtension{}) }
 
 // HostExtension runs one model for every instance of a multisite host and provides agent/v1 for them. Each instance
 // gets PerInstance's share: a few calls at once and a daily allowance of answer tokens. An instance whose admins set
-// their own API in Settings → Agent is answered by that API instead, within the same endpoint.
+// their own API (or off) in Settings → LLM is answered that way instead, within the same endpoint.
 //
 // Instances that run in this process (Pocker isolates) call it through $agent and their own /api/_c/agent/v1; the
 // in-app extension steps aside for it.
@@ -149,11 +149,11 @@ func (a *hostAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText
 	if err := checkInput(in); err != nil {
 		return agentv1.CompleteResult{}, err
 	}
-	if app, ok := a.app(); ok {
-		if api, ok := ejected(app); ok {
-			api.Timeout = a.share.cfg.timeout()
-			return api.run(ctx, in, onText)
-		}
+	switch c := a.choice(); c.Mode {
+	case ModeOff:
+		return agentv1.CompleteResult{}, errOff(c)
+	case ModeAPI:
+		return c.API.run(ctx, in, onText)
 	}
 	release, err := a.share.admit(a.id)
 	if err != nil {
@@ -171,12 +171,22 @@ func (a *hostAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText
 }
 
 func (a *hostAgent) Status(context.Context, extkit.Auth) (agentv1.Status, error) {
-	if app, ok := a.app(); ok {
-		if api, ok := ejected(app); ok {
-			return agentv1.Status{Backend: "app", Model: api.Model, Ready: true}, nil
-		}
+	switch c := a.choice(); c.Mode {
+	case ModeOff:
+		return agentv1.Status{Message: errOff(c).Error()}, nil
+	case ModeAPI:
+		return agentv1.Status{Backend: "app", Model: c.API.Model, Ready: true}, nil
 	}
 	st := a.share.r.status("host")
 	st.Quota = a.share.quota(a.id)
 	return st, nil
+}
+
+// choice is what the instance's admins chose in Settings → LLM: off, their own API, or (by default) the host's model.
+func (a *hostAgent) choice() choice {
+	app, ok := a.app()
+	if !ok {
+		return choice{Mode: ModeHost, Source: "host"}
+	}
+	return choose(app, a.share.cfg, true)
 }

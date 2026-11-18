@@ -34,7 +34,7 @@ pocketone serve --dir=pb_data
 
 Open http://127.0.0.1:8090. The first start downloads the model named in [pocketone.yaml](pocketone.yaml)
 (`qwen3-1.7b`, 1.8 GB) into your user cache folder; the page shows the progress. To use your own API instead, sign in at
-`/_/` and set it in Settings → Agent.
+`/_/` and pick it in Settings → LLM.
 
 To teach it something else, change `preamble.md` and put your own Markdown files in `_private/context/` (one
 `Source: <url>` line at the top of a file links its sections). In dev mode (`--dev`) edits show up on the next question.

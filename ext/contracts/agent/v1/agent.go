@@ -103,11 +103,11 @@ type Quota struct {
 
 // ErrNotConfigured: nothing answers the app's prompts yet.
 var ErrNotConfigured = &extkit.Error{Code: "not_configured", Status: 503,
-	Message: "no model configured: set an API endpoint in Settings → Agent, or name a model in pocketone.yaml's agent section"}
+	Message: "no LLM configured: choose one in Settings → LLM, or name a model in pocketone.yaml's agent section"}
 
 // ErrNotReady: the model is still downloading or loading.
 var ErrNotReady = &extkit.Error{Code: "not_ready", Status: 503, Message: "the model is still loading; try again shortly"}
 
 // ErrQuota: the app used its daily allowance on its host's shared model.
 var ErrQuota = &extkit.Error{Code: "quota", Status: 429,
-	Message: "the app's daily allowance on the shared model is used up; set your own API endpoint in Settings → Agent"}
+	Message: "the app's daily allowance on the shared model is used up; choose your own API in Settings → LLM"}

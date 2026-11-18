@@ -55,6 +55,9 @@ type runner struct {
 	model    localModel
 
 	slots chan struct{} // generations at once
+
+	key   string // in runners
+	users int    // apps using it (under runnersMu); at 0 it's unloaded
 }
 
 var (
@@ -73,12 +76,14 @@ func sharedRunner(cfg Config, log *slog.Logger) (*runner, error) {
 	runnersMu.Lock()
 	defer runnersMu.Unlock()
 	if r := runners[key]; r != nil {
+		r.users++
 		return r, nil
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	r := &runner{cfg: cfg, src: src, log: log, ready: make(chan struct{}), slots: make(chan struct{}, cfg.Parallel)}
+	r := &runner{cfg: cfg, src: src, log: log, ready: make(chan struct{}), slots: make(chan struct{}, cfg.Parallel),
+		key: key, users: 1}
 	r.phase.Store("loading")
 	r.progress.Store(0.0)
 	runners[key] = r
@@ -96,7 +101,7 @@ func (r *runner) start() {
 			r.fail(err)
 			return
 		}
-		r.log.Info("agent: downloaded model", "model", r.src.Name, "took", time.Since(t).Round(time.Second))
+		r.log.Info("agent: downloaded model", "model", r.src.Name, "took", time.Since(t).Round(time.Second).String())
 	}
 	r.phase.Store("loading")
 	t := time.Now()
@@ -107,7 +112,32 @@ func (r *runner) start() {
 	}
 	r.model = m
 	r.phase.Store("ready")
-	r.log.Info("agent: model ready", "model", r.src.Name, "file", filepath.Base(r.src.Path), "threads", r.cfg.Threads, "took", time.Since(t).Round(time.Millisecond))
+	r.log.Info("agent: model ready", "model", r.src.Name, "file", filepath.Base(r.src.Path), "threads", r.cfg.Threads, "took", time.Since(t).Round(time.Millisecond).String())
+}
+
+// release says one app stopped using r. The last one out unloads the model, once its download or load is over and
+// every answer in progress has finished (closing it under a running answer would pull the memory out from under it).
+func (r *runner) release() {
+	runnersMu.Lock()
+	r.users--
+	last := r.users <= 0
+	if last && runners[r.key] == r {
+		delete(runners, r.key)
+	}
+	runnersMu.Unlock()
+	if !last {
+		return
+	}
+	go func() {
+		<-r.ready
+		for i := 0; i < cap(r.slots); i++ {
+			r.slots <- struct{}{} // every slot taken: nothing is answering
+		}
+		if r.model != nil {
+			_ = r.model.close()
+			r.log.Info("agent: model unloaded", "model", r.src.Name)
+		}
+	}()
 }
 
 func (r *runner) fail(err error) {

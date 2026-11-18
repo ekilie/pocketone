@@ -1,5 +1,5 @@
 // Command example is a PocketBase app with the agent extension that asks its model one question once it's ready. Name
-// a model in pocketone.yaml (`agent: {model: qwen3-0.6b}`) or set your own API in Settings → Agent, run
+// a model in pocketone.yaml (`agent: {model: qwen3-0.6b}`) or choose one in Settings → LLM, run
 // `go run . serve`, and watch the log for "agent: answer".
 package main
 

@@ -1,7 +1,7 @@
 // Package agent gives every PocketOne app a language model to call: agent/v1, and $agent.complete in pb_hooks. Who
 // answers, in order:
 //
-//  1. the app's own OpenAI-compatible API, when its admins set one in Settings → Agent;
+//  1. what the app's admins choose in Settings → LLM: off, a model PocketOne runs, or their own OpenAI-compatible API;
 //  2. else a model PocketOne runs in this process, when pocketone.yaml's agent section names one (downloaded once and
 //     cached);
 //  3. else, on a multisite host whose agent section names a model, the host's model, shared by every instance with a
@@ -11,10 +11,10 @@ package agent
 
 import (
 	"context"
-	"database/sql"
+	"embed"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,9 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
@@ -94,46 +92,6 @@ func (c Config) timeout() time.Duration {
 // Section is the `agent` section.
 var Section = extkit.NewSection(Name, Config{}, "The language model PocketOne runs itself for agent/v1 ($agent.complete); on a multisite host, the model every instance shares.")
 
-// Settings are what an app's admins set in Settings → Agent: their own OpenAI-compatible API. Stored in the app's
-// _params.
-type Settings struct {
-	Endpoint string `json:"endpoint"` // the API's base URL with its version, e.g. https://api.openai.com/v1
-	Key      string `json:"key,omitempty"`
-	Model    string `json:"model"`
-}
-
-const settingsParam = "agent"
-
-// LoadSettings returns the app's agent settings (the zero value when its admins never saved any).
-func LoadSettings(app core.App) (Settings, error) {
-	var raw string
-	err := app.DB().NewQuery("SELECT value FROM {{_params}} WHERE id = {:id}").Bind(dbx.Params{"id": settingsParam}).Row(&raw)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Settings{}, nil
-	}
-	if err != nil {
-		return Settings{}, err
-	}
-	var s Settings
-	if err := json.Unmarshal([]byte(raw), &s); err != nil {
-		return Settings{}, fmt.Errorf("agent: settings: %w", err)
-	}
-	return s, nil
-}
-
-// SaveSettings stores the app's agent settings.
-func SaveSettings(app core.App, s Settings) error {
-	b, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	now := types.NowDateTime().String()
-	_, err = app.DB().NewQuery(`INSERT INTO {{_params}} (id, value, created, updated) VALUES ({:id}, {:value}, {:now}, {:now})
-		ON CONFLICT(id) DO UPDATE SET value = excluded.value, updated = excluded.updated`).
-		Bind(dbx.Params{"id": settingsParam, "value": string(b), "now": now}).Execute()
-	return err
-}
-
 // Extension provides agent/v1 on an app, and its settings section.
 type Extension struct{}
 
@@ -150,12 +108,15 @@ func (*Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{Implements: extkit.IDs("agent/v1"), WorksWith: extkit.IDs("settings/v1")}
 }
 
-// Register implements extkit.Extension: the settings section always (so an instance can leave its host's shared
-// model), and agent/v1 unless the app's host provides it for its instances.
+// Register implements extkit.Extension: Settings → LLM always, and agent/v1 unless the app's host provides it for its
+// instances (then the host's provider answers, reading this app's settings for off and its own API).
 func (*Extension) Register(app core.App, _ extkit.Config) error {
-	settingsv1.Add(app, settingsSection{app})
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		se.UIExtensions = append(se.UIExtensions, core.UIExtension{Name: Name, FS: UI()})
+		return se.Next()
+	})
 	if extkit.HostProvides(app, agentv1.Contract.ID()) {
-		// the host answers; it reads this app's settings to honor its own API (see HostExtension)
+		settingsv1.Add(app, settingsSection{app: app, hosted: true})
 		id := extkit.AppID(app)
 		instanceApps.Store(id, app)
 		app.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
@@ -170,37 +131,82 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 		if _, err := resolveModel(cfg.Model, a.cfg.CacheDir); err != nil {
 			return err
 		}
-		// start downloading and loading only when the app serves, not for every command (superuser, migrate, ...)
-		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-			r, err := sharedRunner(cfg, app.Logger())
-			if err != nil {
-				return err
-			}
-			a.runner.Store(r)
-			return e.Next()
-		})
 	}
+	settingsv1.Add(app, settingsSection{app: app, onChange: func() { _, _, _ = a.current() }})
+	// models download and load only once the app serves, never for a command (superuser, migrate, ...)
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		a.serving.Store(true)
+		if _, _, err := a.current(); err != nil {
+			app.Logger().Error("agent: model", "error", err)
+		}
+		return e.Next()
+	})
+	app.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
+		_, _ = a.use("")
+		return e.Next()
+	})
 	agentv1.Contract.Provide(app, a)
 	return nil
+}
+
+//go:embed ui
+var uiFiles embed.FS
+
+// UI is the dashboard's Settings → LLM screen (main.js).
+func UI() fs.FS {
+	sub, _ := fs.Sub(uiFiles, "ui")
+	return sub
 }
 
 // instanceApps maps a host's instance id to its running app, for the host's provider to read the instance's settings.
 var instanceApps sync.Map // string → core.App
 
-// ejected returns the API an app's admins set, if any.
-func ejected(app core.App) (*apiBackend, bool) {
-	s, err := LoadSettings(app)
-	if err != nil || strings.TrimSpace(s.Endpoint) == "" {
-		return nil, false
-	}
-	return &apiBackend{Endpoint: s.Endpoint, Key: s.Key, Model: s.Model}, true
+// appAgent is agent/v1 on a single app: what its admins chose in Settings → LLM, else pocketone.yaml's model.
+type appAgent struct {
+	app     core.App
+	cfg     Config
+	serving atomic.Bool // models start only once the app serves
+
+	mu     sync.Mutex
+	runner *runner // the built-in model in use, if any
 }
 
-// appAgent is agent/v1 on a single app: its own API, else this process's runner.
-type appAgent struct {
-	app    core.App
-	cfg    Config
-	runner atomic.Pointer[runner] // set once the app serves
+// current is what answers now, with the built-in model's runner started (once the app serves) when that's the choice.
+func (a *appAgent) current() (choice, *runner, error) {
+	c := choose(a.app, a.cfg, false)
+	if c.Mode != ModeBuiltin {
+		_, err := a.use("")
+		return c, nil, err
+	}
+	if !a.serving.Load() {
+		return c, nil, nil
+	}
+	r, err := a.use(c.Model)
+	return c, r, err
+}
+
+// use switches the app's built-in model to spec ("" for none), releasing the one it used before.
+func (a *appAgent) use(spec string) (*runner, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.runner != nil && a.runner.cfg.Model == spec {
+		return a.runner, nil
+	}
+	var next *runner
+	if spec != "" {
+		cfg := a.cfg
+		cfg.Model = spec
+		r, err := sharedRunner(cfg, a.app.Logger())
+		if err != nil {
+			return nil, err
+		}
+		next = r
+	}
+	if a.runner != nil {
+		a.runner.release()
+	}
+	a.runner = next
+	return next, nil
 }
 
 func (a *appAgent) Complete(ctx context.Context, _ extkit.Auth, in agentv1.CompleteInput) (agentv1.CompleteResult, error) {
@@ -235,36 +241,39 @@ func (a *appAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText 
 	if err := checkInput(in); err != nil {
 		return agentv1.CompleteResult{}, err
 	}
-	if api, ok := ejected(a.app); ok {
-		api.Timeout = a.cfg.timeout()
-		return api.run(ctx, in, onText)
+	c, r, err := a.current()
+	if err != nil {
+		return agentv1.CompleteResult{}, &extkit.Error{Code: "model_failed", Status: 503, Message: err.Error()}
 	}
-	r := a.runner.Load()
-	if r == nil {
-		if a.cfg.Model != "" {
-			return agentv1.CompleteResult{}, agentv1.ErrNotReady // configured, the app isn't serving yet
+	switch c.Mode {
+	case ModeAPI:
+		return c.API.run(ctx, in, onText)
+	case ModeBuiltin:
+		if r == nil {
+			return agentv1.CompleteResult{}, agentv1.ErrNotReady // chosen; the app isn't serving yet
 		}
-		return agentv1.CompleteResult{}, agentv1.ErrNotConfigured
+		maxTokens := in.MaxTokens
+		if maxTokens <= 0 {
+			maxTokens = a.cfg.MaxTokens
+		}
+		return r.complete(ctx, in, maxTokens, "runner", onText)
 	}
-	maxTokens := in.MaxTokens
-	if maxTokens <= 0 {
-		maxTokens = a.cfg.MaxTokens
-	}
-	return r.complete(ctx, in, maxTokens, "runner", onText)
+	return agentv1.CompleteResult{}, errOff(c)
 }
 
 func (a *appAgent) Status(context.Context, extkit.Auth) (agentv1.Status, error) {
-	if api, ok := ejected(a.app); ok {
-		return agentv1.Status{Backend: "app", Model: api.Model, Ready: true}, nil
+	c, r, err := a.current()
+	switch {
+	case err != nil:
+		return agentv1.Status{Backend: "runner", Model: c.Model, Message: err.Error()}, nil
+	case c.Mode == ModeAPI:
+		return agentv1.Status{Backend: "app", Model: c.API.Model, Ready: true}, nil
+	case c.Mode == ModeBuiltin && r == nil:
+		return agentv1.Status{Backend: "runner", Model: c.Model, Message: "starts when the app serves"}, nil
+	case c.Mode == ModeBuiltin:
+		return r.status("runner"), nil
 	}
-	r := a.runner.Load()
-	if r == nil {
-		if a.cfg.Model != "" {
-			return agentv1.Status{Backend: "runner", Model: a.cfg.Model, Message: "starts when the app serves"}, nil
-		}
-		return agentv1.Status{Message: agentv1.ErrNotConfigured.Message}, nil
-	}
-	return r.status("runner"), nil
+	return agentv1.Status{Message: errOff(c).Error()}, nil
 }
 
 func checkInput(in agentv1.CompleteInput) error {
@@ -275,73 +284,6 @@ func checkInput(in agentv1.CompleteInput) error {
 		return &extkit.Error{Code: "bad_request", Message: "schema must be a JSON schema", Status: 400}
 	}
 	return nil
-}
-
-// settingsSection is Settings → Agent: the app's own API.
-type settingsSection struct{ app core.App }
-
-func (s settingsSection) Info() settingsv1.Info {
-	return settingsv1.Info{Extension: Name, Title: "Agent", Testable: true,
-		Description: "Your own OpenAI-compatible API for $agent.complete (OpenAI, OpenRouter, Groq, Ollama...). Leave the endpoint empty to use the model PocketOne or your host runs."}
-}
-
-type settingsView struct {
-	Endpoint string `json:"endpoint"`
-	Key      string `json:"key"`
-	KeySet   bool   `json:"keySet"`
-	Model    string `json:"model"`
-}
-
-func (s settingsSection) Get(context.Context) (json.RawMessage, error) {
-	cur, err := LoadSettings(s.app)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(settingsView{Endpoint: cur.Endpoint, KeySet: cur.Key != "", Model: cur.Model})
-}
-
-func (s settingsSection) Save(_ context.Context, values json.RawMessage) (json.RawMessage, error) {
-	next, err := s.parse(values)
-	if err != nil {
-		return nil, err
-	}
-	if err := SaveSettings(s.app, next); err != nil {
-		return nil, err
-	}
-	return s.Get(context.Background())
-}
-
-func (s settingsSection) Test(ctx context.Context, values json.RawMessage) error {
-	next, err := s.parse(values)
-	if err != nil {
-		return err
-	}
-	if next.Endpoint == "" {
-		return &extkit.Error{Code: "bad_request", Message: "set an endpoint to test", Status: 400}
-	}
-	api := &apiBackend{Endpoint: next.Endpoint, Key: next.Key, Model: next.Model, Timeout: 30 * time.Second}
-	_, err = api.run(ctx, agentv1.CompleteInput{Prompt: "Say OK.", MaxTokens: 5}, nil)
-	return err
-}
-
-// parse reads submitted settings; an empty key keeps the saved one.
-func (s settingsSection) parse(values json.RawMessage) (Settings, error) {
-	var in settingsView
-	if err := json.Unmarshal(values, &in); err != nil {
-		return Settings{}, &extkit.Error{Code: "bad_request", Message: `expected {"endpoint": "https://api.openai.com/v1", "key": "...", "model": "gpt-4o-mini"}`, Status: 400}
-	}
-	next := Settings{Endpoint: strings.TrimSpace(in.Endpoint), Key: in.Key, Model: strings.TrimSpace(in.Model)}
-	if next.Endpoint != "" && !strings.HasPrefix(next.Endpoint, "http://") && !strings.HasPrefix(next.Endpoint, "https://") {
-		return Settings{}, &extkit.Error{Code: "bad_request", Message: "endpoint must start with http:// or https://", Status: 400}
-	}
-	if next.Key == "" {
-		cur, err := LoadSettings(s.app)
-		if err != nil {
-			return Settings{}, err
-		}
-		next.Key = cur.Key
-	}
-	return next, nil
 }
 
 // BindJS exposes agent/v1 to the app's JS hooks as $agent.

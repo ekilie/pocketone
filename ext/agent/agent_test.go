@@ -250,18 +250,18 @@ func TestAppAPIWins(t *testing.T) {
 		t.Fatal("no settings section")
 	}
 	tester := sec.(settingsv1.Tester)
-	if err := tester.Test(context.Background(), json.RawMessage(`{"endpoint": "`+srv.URL+`/v1", "key": "wrong"}`)); err == nil || !strings.Contains(err.Error(), "bad key") {
+	if err := tester.Test(context.Background(), json.RawMessage(`{"mode": "api", "endpoint": "`+srv.URL+`/v1", "key": "wrong"}`)); err == nil || !strings.Contains(err.Error(), "bad key") {
 		t.Fatalf("test with a bad key: %v", err)
 	}
 	saver := sec.(settingsv1.Saver)
-	if _, err := saver.Save(context.Background(), json.RawMessage(`{"endpoint": "`+srv.URL+`/v1", "key": "sk-test", "model": "gpt-test"}`)); err != nil {
+	if _, err := saver.Save(context.Background(), json.RawMessage(`{"mode": "api", "endpoint": "`+srv.URL+`/v1", "key": "sk-test", "apiModel": "gpt-test"}`)); err != nil {
 		t.Fatal(err)
 	}
 	view, _ := sec.Get(context.Background())
 	if strings.Contains(string(view), "sk-test") || !strings.Contains(string(view), `"keySet":true`) {
 		t.Fatalf("settings view leaks or loses the key: %s", view)
 	}
-	if _, err := saver.Save(context.Background(), json.RawMessage(`{"endpoint": "`+srv.URL+`/v1", "key": "", "model": "gpt-test"}`)); err != nil {
+	if _, err := saver.Save(context.Background(), json.RawMessage(`{"mode": "api", "endpoint": "`+srv.URL+`/v1", "key": "", "apiModel": "gpt-test"}`)); err != nil {
 		t.Fatal(err)
 	}
 	a := agentv1.Contract.Must(app)
@@ -417,7 +417,7 @@ func TestStream(t *testing.T) {
 	}
 
 	srv, got := fakeAPI(t, "from the API stream")
-	if err := SaveSettings(app, Settings{Endpoint: srv.URL + "/v1", Key: "sk-test"}); err != nil {
+	if err := SaveSettings(app, Settings{Mode: ModeAPI, Endpoint: srv.URL + "/v1", Key: "sk-test"}); err != nil {
 		t.Fatal(err)
 	}
 	pieces, res = collect(t, a, agentv1.CompleteInput{Prompt: "hi"}, 0)
@@ -426,5 +426,125 @@ func TestStream(t *testing.T) {
 	}
 	if body, _ := got.Load().(string); !strings.Contains(body, `"stream":true`) || !strings.Contains(body, `"include_usage":true`) {
 		t.Fatalf("request: %s", body)
+	}
+}
+
+func section(t *testing.T, app core.App) settingsv1.Section {
+	t.Helper()
+	for _, s := range settingsv1.Sections(app) {
+		if s.Info().Extension == Name {
+			return s
+		}
+	}
+	t.Fatal("no LLM settings section")
+	return nil
+}
+
+func view(t *testing.T, sec settingsv1.Section) settingsView {
+	t.Helper()
+	raw, err := sec.Get(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var v settingsView
+	if err := json.Unmarshal(raw, &v); err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
+// Settings → LLM: pocketone.yaml's model runs until the admins choose; off stops answers; another built-in model
+// replaces the running one (which is unloaded); mode "" goes back to pocketone.yaml; a new endpoint drops the saved key.
+func TestSettingsModes(t *testing.T) {
+	fake := &fakeModel{reply: "ok"}
+	path := useFake(t, fake)
+	other := filepath.Join(filepath.Dir(path), "other.gguf")
+	if err := os.WriteFile(other, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	withSection(t, `{"model": "`+path+`"}`)
+	app := testApp(t)
+	if err := New().Register(app, nil); err != nil {
+		t.Fatal(err)
+	}
+	serve(t, app)
+	a := agentv1.Contract.Must(app)
+	sec := section(t, app)
+	saver := sec.(settingsv1.Saver)
+	save := func(v string) error { _, err := saver.Save(context.Background(), json.RawMessage(v)); return err }
+
+	if v := view(t, sec); v.Effective != ModeBuiltin || v.Source != "pocketone.yaml" || v.EffectiveModel != path || len(v.Models) != len(knownModels)+1 {
+		t.Fatalf("before any choice: %+v", v)
+	}
+	waitReady(t, a)
+	if _, err := a.Complete(context.Background(), extkit.Internal, agentv1.CompleteInput{Prompt: "hi"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := save(`{"mode": "off"}`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Complete(context.Background(), extkit.Internal, agentv1.CompleteInput{Prompt: "hi"}); extErr(err) == nil || !strings.Contains(err.Error(), "Settings → LLM") {
+		t.Fatalf("off: %v", err)
+	}
+	if st, _ := a.Status(context.Background(), extkit.Internal); st.Backend != "" || st.Ready {
+		t.Fatalf("off status: %+v", st)
+	}
+	runnersMu.Lock()
+	n := len(runners)
+	runnersMu.Unlock()
+	if n != 0 {
+		t.Fatalf("off: %d runners still loaded", n)
+	}
+
+	if err := save(`{"mode": "builtin", "model": "gpt-5"}`); extErr(err) == nil || extErr(err).Code != "bad_request" {
+		t.Fatalf("unknown model: %v", err)
+	}
+	if err := save(`{"mode": "builtin", "model": "` + path + `"}`); err != nil { // pocketone.yaml's own model is a choice too
+		t.Fatal(err)
+	}
+	if v := view(t, sec); v.Effective != ModeBuiltin || v.Source != "settings" {
+		t.Fatalf("builtin chosen: %+v", v)
+	}
+
+	if err := save(`{"mode": ""}`); err != nil {
+		t.Fatal(err)
+	}
+	if v := view(t, sec); v.Source != "pocketone.yaml" || v.Mode != "" {
+		t.Fatalf("back to pocketone.yaml: %+v", v)
+	}
+
+	if err := save(`{"mode": "api", "endpoint": "https://one.example/v1", "key": "k1"}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := save(`{"mode": "api", "endpoint": "https://two.example/v1", "key": ""}`); err != nil {
+		t.Fatal(err)
+	}
+	if cur, _ := LoadSettings(app); cur.Key != "" {
+		t.Fatalf("the key followed a new endpoint: %+v", cur)
+	}
+	if err := save(`{"mode": "host"}`); extErr(err) == nil {
+		t.Fatal("host mode on a single app: want an error")
+	}
+	_ = other
+}
+
+// Under a host, the section offers off, the host's model or an API; built in is the host's call.
+func TestHostedSettings(t *testing.T) {
+	withSection(t, `{"model": "qwen3-1.7b"}`)
+	app := testApp(t)
+	sec := settingsSection{app: app, hosted: true}
+	if _, err := sec.Save(context.Background(), json.RawMessage(`{"mode": "builtin", "model": "qwen3-0.6b"}`)); extErr(err) == nil {
+		t.Fatal("builtin under a host: want an error")
+	}
+	v := view(t, sec)
+	if !v.Hosted || v.Effective != ModeHost || v.Source != "host" || v.EffectiveModel != "qwen3-1.7b" || len(v.Models) != 0 {
+		t.Fatalf("hosted view: %+v", v)
+	}
+	if _, err := sec.Save(context.Background(), json.RawMessage(`{"mode": "off"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if c := choose(app, Config{}, true); c.Mode != ModeOff {
+		t.Fatalf("hosted off: %+v", c)
 	}
 }
