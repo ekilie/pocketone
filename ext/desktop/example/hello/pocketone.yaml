@@ -1,0 +1,11 @@
+# Hello: a PocketOne app that runs as a normal server (`pocketone serve`) and builds into a desktop app
+# (`pocketone desktop build`). Paths are relative to this file, so the app keeps its data here.
+app:
+  dir: pb_data
+server:
+  public_dir: pb_public
+desktop:
+  name: Hello
+  id: dev.pocketone.hello
+  width: 900
+  height: 640

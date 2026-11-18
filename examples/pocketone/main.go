@@ -22,6 +22,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
 	"github.com/pockethost/pocketone/ext/autotls"
 	"github.com/pockethost/pocketone/ext/config"
+	"github.com/pockethost/pocketone/ext/desktop"
 	"github.com/pockethost/pocketone/ext/docker"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/jsvm"
@@ -84,6 +85,7 @@ func main() {
 	set.Providers = standard.ConfiguredProviders() // pocketone.yaml's providers: section
 	set.Add(vacuum.New())                          // compacts the app's databases on the `vacuum` section's schedule
 	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
+	set.Add(desktop.New())                         // `pocketone desktop build`: this folder's app as a native desktop app
 
 	// ---------------------------------------------------------------
 	// Flags: each lives on the commands that read it (flags.go). The app flags go on every command that opens this
