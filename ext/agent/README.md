@@ -74,6 +74,9 @@ onRecordCreate((e) => {
   maxItems, anyOf), so even the smallest model fills in the schema instead of describing it. Your own API gets it as
   `response_format`, which most providers honor.
 - The answer: `text`, `data`, `model`, `backend` (`app` or `runner`, or `host` on a multisite host), `usage`.
+- `$agent.stream(opts, onText)` answers the same way, calling `onText(piece)` as the answer is written (return `false`
+  to stop); forward the pieces to the browser with `ctx.res.sse()` in a page. It's
+  [agent.stream/v1](../contracts/agent/stream/v1/README.md), for code in the same process.
 - `$agent.status()` says which model answers and whether it's ready.
 
 `$agent.complete` waits for the answer, like `$http.send`. A model on your CPU writes maybe 5 to 30 words a second,

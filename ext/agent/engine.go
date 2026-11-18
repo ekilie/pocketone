@@ -37,7 +37,7 @@ func (e *engineModel) chatPrompt(msgs []agentv1.Message) string {
 func (e *engineModel) generate(ctx context.Context, prompt string, o genOptions) (genResult, error) {
 	res, err := e.m.Generate(ctx, prompt, engine.GenerateOptions{
 		MaxTokens: o.MaxTokens, Temperature: o.Temperature, TopP: 0.9, TopK: 40, Stop: o.Stop, Constraint: o.Constraint,
-	}, nil)
+	}, o.OnText)
 	g := genResult{Text: res.Text, InputTokens: res.PromptTokens, OutputTokens: res.OutputTokens,
 		StopReason: stopReason(res.StopReason), Prefill: res.Prefill, Decode: res.Decode}
 	if ctx.Err() != nil && g.StopReason == "" {
@@ -49,8 +49,10 @@ func (e *engineModel) generate(ctx context.Context, prompt string, o genOptions)
 // stopReason maps the engine's reasons onto agent/v1's: "stop", "length" or "cancelled".
 func stopReason(r string) string {
 	switch r {
-	case "eos", "stop", "callback":
+	case "eos", "stop":
 		return "stop"
+	case "callback": // the caller's OnText said stop
+		return "cancelled"
 	case "length":
 		return "length"
 	case "canceled":

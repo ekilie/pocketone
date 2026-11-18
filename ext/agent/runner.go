@@ -28,6 +28,7 @@ type genOptions struct {
 	Temperature float64
 	Stop        []string
 	Constraint  func(text string) engine.Fit // nil: unconstrained
+	OnText      func(text string) bool       // each piece as it's written; false stops (nil: none)
 }
 
 type genResult struct {
@@ -134,7 +135,7 @@ func (r *runner) status(backend string) agentv1.Status {
 
 // complete answers in with the local model, after waiting for a free slot. maxTokens caps the answer (the caller's
 // limit, after any host cap).
-func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxTokens int, backend string) (agentv1.CompleteResult, error) {
+func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxTokens int, backend string, onText func(string) bool) (agentv1.CompleteResult, error) {
 	// phase is stored after model (and err), so reading it first makes them visible here
 	switch r.phase.Load().(string) {
 	case "ready":
@@ -167,7 +168,7 @@ func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxToke
 	if len(in.Schema) > 0 && in.Temperature == nil {
 		temp = 0 // structured answers: the most likely one
 	}
-	o := genOptions{MaxTokens: maxTokens, Temperature: temp, Stop: in.Stop}
+	o := genOptions{MaxTokens: maxTokens, Temperature: temp, Stop: in.Stop, OnText: onText}
 	if len(in.Schema) > 0 {
 		sn, err := compileSchema(in.Schema)
 		if err != nil {

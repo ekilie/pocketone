@@ -41,6 +41,13 @@ func TestHostProvidesAgentForPockerInstances(t *testing.T) {
 	defer extkit.SetSectionSource(nil)
 
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if b, _ := io.ReadAll(r.Body); strings.Contains(string(b), `"stream":true`) {
+			for _, p := range []string{"from ", "my ", "own ", "API"} {
+				_, _ = io.WriteString(w, `data: {"model":"own-model","choices":[{"delta":{"content":"`+p+`"}}]}`+"\n\n")
+			}
+			_, _ = io.WriteString(w, "data: [DONE]\n\n")
+			return
+		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"model":   "own-model",
 			"choices": []any{map[string]any{"message": map[string]any{"role": "assistant", "content": "from my own API"}, "finish_reason": "stop"}},
@@ -50,6 +57,13 @@ func TestHostProvidesAgentForPockerInstances(t *testing.T) {
 
 	root := t.TempDir()
 	probe := `routerAdd("GET", "/agent-status", (e) => e.json(200, $agent.status()))
+routerAdd("GET", "/agent-stream", (e) => {
+  const pieces = []
+  try {
+    const r = $agent.stream({ prompt: "hi" }, (t) => { pieces.push(t) })
+    return e.json(200, { pieces, text: r.text, backend: r.backend })
+  } catch (err) { return e.json(503, { error: String(err) }) }
+})
 routerAdd("GET", "/agent-complete", (e) => {
   try { return e.json(200, $agent.complete({ prompt: "hi" })) } catch (err) { return e.json(503, { error: String(err) }) }
 })`
@@ -113,6 +127,9 @@ routerAdd("GET", "/agent-complete", (e) => {
 	}
 	if code, res := get("http://a.test/agent-complete"); code != 200 || res["backend"] != "app" || res["text"] != "from my own API" {
 		t.Fatalf("a complete with its own API: %d %v", code, res)
+	}
+	if code, res := get("http://a.test/agent-stream"); code != 200 || res["text"] != "from my own API" || len(res["pieces"].([]any)) != 4 || res["backend"] != "app" {
+		t.Fatalf("a stream with its own API: %d %v", code, res)
 	}
 	if code, res := get("http://b.test/agent-complete"); code != 503 || !strings.Contains(res["error"].(string), "shared.gguf") {
 		t.Fatalf("b complete on the host's model: %d %v", code, res)

@@ -18,6 +18,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
+	streamv1 "github.com/pockethost/pocketone/ext/contracts/agent/stream/v1"
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -86,6 +87,15 @@ func (f *fakeModel) generate(ctx context.Context, prompt string, o genOptions) (
 		case <-time.After(f.delay):
 		case <-ctx.Done():
 			return genResult{StopReason: "cancelled"}, ctx.Err()
+		}
+	}
+	if o.OnText != nil { // stream the reply a word at a time, as the engine streams tokens
+		var sent strings.Builder
+		for _, w := range strings.SplitAfter(f.reply, " ") {
+			sent.WriteString(w)
+			if !o.OnText(w) {
+				return genResult{Text: sent.String(), OutputTokens: 1, StopReason: "cancelled"}, nil
+			}
 		}
 	}
 	return genResult{Text: f.reply, InputTokens: len(prompt) / 4, OutputTokens: 7, StopReason: "stop"}, nil
@@ -201,6 +211,16 @@ func fakeAPI(t *testing.T, reply string) (*httptest.Server, *atomic.Value) {
 		}
 		b, _ := io.ReadAll(r.Body)
 		got.Store(string(b))
+		if strings.Contains(string(b), `"stream":true`) {
+			w.Header().Set("Content-Type", "text/event-stream")
+			for _, piece := range strings.SplitAfter(reply, " ") {
+				c, _ := json.Marshal(map[string]any{"model": "gpt-test", "choices": []any{map[string]any{"delta": map[string]any{"content": piece}}}})
+				_, _ = io.WriteString(w, "data: "+string(c)+"\n\n")
+			}
+			_, _ = io.WriteString(w, `data: {"model":"gpt-test","choices":[{"delta":{},"finish_reason":"stop"}]}`+"\n\n")
+			_, _ = io.WriteString(w, `data: {"model":"gpt-test","choices":[],"usage":{"prompt_tokens":11,"completion_tokens":3}}`+"\n\ndata: [DONE]\n\n")
+			return
+		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"model":   "gpt-test",
 			"choices": []any{map[string]any{"message": map[string]any{"role": "assistant", "content": reply}, "finish_reason": "stop"}},
@@ -337,5 +357,47 @@ func TestResolveModel(t *testing.T) {
 	}
 	if _, err := resolveModel("gpt-5", "/cache"); err == nil {
 		t.Fatal("unknown name: want an error")
+	}
+}
+
+// agent.stream/v1 hands the answer over in pieces from the runner and from the app's own API, and a callback returning
+// false stops it.
+func TestStream(t *testing.T) {
+	fake := &fakeModel{reply: "one two three four"}
+	path := useFake(t, fake)
+	withSection(t, `{"model": "`+path+`"}`)
+	app := testApp(t)
+	if err := New().Register(app, nil); err != nil {
+		t.Fatal(err)
+	}
+	serve(t, app)
+	waitReady(t, agentv1.Contract.Must(app))
+	s := streamv1.Contract.Must(app)
+
+	var pieces []string
+	res, err := s.Stream(context.Background(), streamv1.Input{CompleteInput: agentv1.CompleteInput{Prompt: "count"},
+		OnText: func(p string) bool { pieces = append(pieces, p); return true }})
+	if err != nil || res.Text != "one two three four" || len(pieces) != 4 || res.Backend != "runner" {
+		t.Fatalf("runner stream: %+v %q %v", res, pieces, err)
+	}
+	pieces = nil
+	res, _ = s.Stream(context.Background(), streamv1.Input{CompleteInput: agentv1.CompleteInput{Prompt: "count"},
+		OnText: func(p string) bool { pieces = append(pieces, p); return len(pieces) < 2 }})
+	if res.StopReason != "cancelled" || res.Text != "one two " || len(pieces) != 2 {
+		t.Fatalf("stopped stream: %+v %q", res, pieces)
+	}
+
+	srv, got := fakeAPI(t, "from the API stream")
+	if err := SaveSettings(app, Settings{Endpoint: srv.URL + "/v1", Key: "sk-test"}); err != nil {
+		t.Fatal(err)
+	}
+	pieces = nil
+	res, err = s.Stream(context.Background(), streamv1.Input{CompleteInput: agentv1.CompleteInput{Prompt: "hi"},
+		OnText: func(p string) bool { pieces = append(pieces, p); return true }})
+	if err != nil || res.Text != "from the API stream" || len(pieces) != 4 || res.Usage.OutputTokens != 3 || res.StopReason != "stop" {
+		t.Fatalf("API stream: %+v %q %v", res, pieces, err)
+	}
+	if body, _ := got.Load().(string); !strings.Contains(body, `"stream":true`) || !strings.Contains(body, `"include_usage":true`) {
+		t.Fatalf("request: %s", body)
 	}
 }

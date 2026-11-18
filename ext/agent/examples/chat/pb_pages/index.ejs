@@ -112,6 +112,30 @@ async function poll() {
 }
 poll()
 
+// POSTs body and calls onEvent(event, data) for each server-sent event in the response (data parsed as JSON)
+async function streamPost(url, body, onEvent) {
+  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})
+  if (!res.ok || !res.body) throw new Error(res.statusText)
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buf = ''
+  for (;;) {
+    const {value, done} = await reader.read()
+    if (done) break
+    buf += value
+    let i
+    while ((i = buf.indexOf('\n\n')) >= 0) {
+      const block = buf.slice(0, i)
+      buf = buf.slice(i + 2)
+      let event = 'message', data = ''
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim()
+        else if (line.startsWith('data:')) data += line.slice(5).trimStart()
+      }
+      if (data) onEvent(event, JSON.parse(data))
+    }
+  }
+}
+
 async function post(url, body) {
   const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})
   const r = await res.json()
@@ -127,7 +151,18 @@ async function ask(text) {
   const t = Date.now()
   const tick = setInterval(() => { pending.innerHTML = `<span class="thinking">Thinking… ${Math.round((Date.now() - t) / 1000)} s</span>` }, 1000)
   try {
-    const r = await post('/chat', {messages: history})
+    let text = '', r
+    // the answer streams in as server-sent events: "text" pieces, then "done" with the sources
+    await streamPost('/chat', {messages: history}, (event, data) => {
+      if (event === 'text') {
+        if (!text) clearInterval(tick)
+        text += data
+        pending.innerHTML = md(text) + '<span class="thinking"> ▍</span>'
+        pending.scrollIntoView({block: 'end'})
+      } else if (event === 'done') r = data
+      else if (event === 'error') throw new Error(data)
+    })
+    if (!r) throw new Error('the answer stopped early')
     history.push({role: 'assistant', content: r.answer})
     const src = r.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)).join(' · ')
     pending.innerHTML = md(r.answer) +

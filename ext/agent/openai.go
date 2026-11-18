@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -33,6 +34,25 @@ type chatRequest struct {
 	Temperature    *float64        `json:"temperature,omitempty"`
 	Stop           []string        `json:"stop,omitempty"`
 	ResponseFormat *responseFormat `json:"response_format,omitempty"`
+	Stream         bool            `json:"stream,omitempty"`
+	StreamOptions  *streamOptions  `json:"stream_options,omitempty"`
+}
+
+type streamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
+}
+
+// streamChunk is one server-sent event of a streamed chat completion.
+type streamChunk struct {
+	Model   string `json:"model"`
+	Choices []struct {
+		Delta        chatMessage `json:"delta"`
+		FinishReason *string     `json:"finish_reason"`
+	} `json:"choices"`
+	Usage *struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	} `json:"usage"`
 }
 
 type chatMessage struct {
@@ -65,7 +85,8 @@ type chatResponse struct {
 	} `json:"error"`
 }
 
-func (b *apiBackend) complete(ctx context.Context, in agentv1.CompleteInput) (agentv1.CompleteResult, error) {
+// run answers in; onText, when set, gets the answer as it's written (the API is asked to stream).
+func (b *apiBackend) run(ctx context.Context, in agentv1.CompleteInput, onText func(string) bool) (agentv1.CompleteResult, error) {
 	if b.Endpoint == "" {
 		return agentv1.CompleteResult{}, agentv1.ErrNotConfigured
 	}
@@ -76,6 +97,9 @@ func (b *apiBackend) complete(ctx context.Context, in agentv1.CompleteInput) (ag
 	req := chatRequest{Model: model, Messages: toChat(in), MaxTokens: in.MaxTokens, Temperature: in.Temperature, Stop: in.Stop}
 	if len(in.Schema) > 0 {
 		req.ResponseFormat = &responseFormat{Type: "json_schema", JSONSchema: &jsonSchemaSpec{Name: "answer", Schema: in.Schema}}
+	}
+	if onText != nil {
+		req.Stream, req.StreamOptions = true, &streamOptions{IncludeUsage: true}
 	}
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -104,15 +128,11 @@ func (b *apiBackend) complete(ctx context.Context, in agentv1.CompleteInput) (ag
 		return agentv1.CompleteResult{}, &extkit.Error{Code: "upstream", Message: "the model API didn't answer: " + err.Error(), Status: 502}
 	}
 	defer res.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(res.Body, 8<<20))
-	if err != nil {
-		return agentv1.CompleteResult{}, &extkit.Error{Code: "upstream", Message: err.Error(), Status: 502}
-	}
-	var cr chatResponse
-	jerr := json.Unmarshal(raw, &cr)
 	if res.StatusCode >= 300 {
+		raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 		msg := strings.TrimSpace(string(raw))
-		if jerr == nil && cr.Error != nil && cr.Error.Message != "" {
+		var cr chatResponse
+		if json.Unmarshal(raw, &cr) == nil && cr.Error != nil && cr.Error.Message != "" {
 			msg = cr.Error.Message
 		}
 		if len(msg) > 300 {
@@ -120,14 +140,27 @@ func (b *apiBackend) complete(ctx context.Context, in agentv1.CompleteInput) (ag
 		}
 		return agentv1.CompleteResult{}, &extkit.Error{Code: "upstream", Message: fmt.Sprintf("the model API said %d: %s", res.StatusCode, msg), Status: 502}
 	}
-	if jerr != nil || len(cr.Choices) == 0 {
-		return agentv1.CompleteResult{}, &extkit.Error{Code: "upstream", Message: "the model API's answer wasn't a chat completion", Status: 502}
+	var out agentv1.CompleteResult
+	if onText != nil {
+		if out, err = readStream(res.Body, onText); err != nil {
+			return out, err
+		}
+	} else {
+		raw, err := io.ReadAll(io.LimitReader(res.Body, 8<<20))
+		if err != nil {
+			return agentv1.CompleteResult{}, &extkit.Error{Code: "upstream", Message: err.Error(), Status: 502}
+		}
+		var cr chatResponse
+		if json.Unmarshal(raw, &cr) != nil || len(cr.Choices) == 0 {
+			return agentv1.CompleteResult{}, &extkit.Error{Code: "upstream", Message: "the model API's answer wasn't a chat completion", Status: 502}
+		}
+		out = agentv1.CompleteResult{
+			Text: cr.Choices[0].Message.Content, Model: cr.Model,
+			StopReason: finishReason(cr.Choices[0].FinishReason),
+			Usage:      agentv1.Usage{InputTokens: cr.Usage.PromptTokens, OutputTokens: cr.Usage.CompletionTokens},
+		}
 	}
-	out := agentv1.CompleteResult{
-		Text: cr.Choices[0].Message.Content, Model: cr.Model, Backend: "app",
-		StopReason: finishReason(cr.Choices[0].FinishReason),
-		Usage:      agentv1.Usage{InputTokens: cr.Usage.PromptTokens, OutputTokens: cr.Usage.CompletionTokens},
-	}
+	out.Backend = "app"
 	if out.Model == "" {
 		out.Model = model
 	}
@@ -137,6 +170,53 @@ func (b *apiBackend) complete(ctx context.Context, in agentv1.CompleteInput) (ag
 			return out, &extkit.Error{Code: "bad_answer", Message: "the model's answer isn't JSON: " + err.Error(), Status: 502}
 		}
 		out.Data = data
+	}
+	return out, nil
+}
+
+// readStream reads a streamed chat completion (server-sent events, "data: {...}" lines ending with "data: [DONE]"),
+// handing each piece of text to onText; onText returning false stops reading.
+func readStream(body io.Reader, onText func(string) bool) (agentv1.CompleteResult, error) {
+	var out agentv1.CompleteResult
+	var text strings.Builder
+	sc := bufio.NewScanner(body)
+	sc.Buffer(make([]byte, 64<<10), 1<<20)
+	for sc.Scan() {
+		data, ok := strings.CutPrefix(sc.Text(), "data:")
+		if !ok {
+			continue // comments, event names, blank lines
+		}
+		data = strings.TrimSpace(data)
+		if data == "[DONE]" {
+			break
+		}
+		var c streamChunk
+		if json.Unmarshal([]byte(data), &c) != nil {
+			continue
+		}
+		if c.Model != "" {
+			out.Model = c.Model
+		}
+		if c.Usage != nil {
+			out.Usage = agentv1.Usage{InputTokens: c.Usage.PromptTokens, OutputTokens: c.Usage.CompletionTokens}
+		}
+		for _, ch := range c.Choices {
+			if ch.FinishReason != nil {
+				out.StopReason = finishReason(*ch.FinishReason)
+			}
+			if ch.Delta.Content == "" {
+				continue
+			}
+			text.WriteString(ch.Delta.Content)
+			if !onText(ch.Delta.Content) {
+				out.Text, out.StopReason = text.String(), "cancelled"
+				return out, nil
+			}
+		}
+	}
+	out.Text = text.String()
+	if err := sc.Err(); err != nil {
+		return out, &extkit.Error{Code: "upstream", Message: "the model API's stream broke off: " + err.Error(), Status: 502}
 	}
 	return out, nil
 }

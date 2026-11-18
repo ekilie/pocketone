@@ -107,8 +107,11 @@ function search(kb, query, n) {
     .map((x) => x.s)
 }
 
-/** Answers the conversation's last question, armed with the preamble and the best-matching context. */
-function answer(ctx, messages) {
+/**
+ * Answers the conversation's last question, armed with the preamble and the best-matching context. onText, if given,
+ * gets the answer as it's written ($agent.stream); without it the answer comes back whole ($agent.complete).
+ */
+function answer(ctx, messages, onText) {
   const kb = knowledge(ctx)
   const recent = messages.slice(-6) // the last few turns are enough; every token is read on a CPU
   // the question, plus the one before it, so a follow-up ("and how do I undo that?") still finds its topic
@@ -124,7 +127,8 @@ function answer(ctx, messages) {
     ...context.map((s, i) => `[${i + 1}] ${s.title}\n${s.text}`),
   ].join('\n\n')
   const started = Date.now()
-  const res = $agent.complete({ system, messages: recent, maxTokens: 350, temperature: 0.3 })
+  const opts = { system, messages: recent, maxTokens: 350, temperature: 0.3 }
+  const res = onText ? $agent.stream(opts, onText) : $agent.complete(opts)
   return {
     answer: res.text.trim(),
     model: res.model,
