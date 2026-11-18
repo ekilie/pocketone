@@ -162,7 +162,7 @@ Redirect URIs must be `https`, `http` on a loopback address, or an app's custom 
 | [Deploy](/docs/extensions/deploy) | `pocketone login` gives the deploy commands a token for the account that signed in. |
 | [Templates](/docs/extensions/templates) | The pages are its `oauth` set: `pocketone template eject oauth` copies them to `pb_templates/oauth/` to edit. Without Templates, the built-in pages. |
 
-Under [Pocker](/docs/extensions/pocker) every instance has it, through the standard set.
+On a [multisite](/docs/extensions/multisite) host every instance that runs PocketOne has it, through the standard set.
 
 ### Audience (RFC 8707)
 

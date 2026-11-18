@@ -34,7 +34,7 @@ func main() {
 		}
 		return posts(e.App)
 	})
-	// the same extension value the standard set gives every pocker instance (set.WASM)
+	// the same extension value the standard set gives every app, standalone or an instance (set.WASM)
 	w := wasm.New(wasm.Config{})
 	extkit.MustRegister(app, w)
 	jsvm.MustRegister(app, jsvm.Config{

@@ -8,6 +8,8 @@ summary: "An MCP endpoint at /mcp so agents can manage your app and call its too
 
 # MCP
 
+> Walkthrough for app owners: [MCP for AI agents](https://pocketone.dev/docs/features/mcp). This page is the technical reference.
+
 A [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp`, so an agent (Claude Code, a Claude
 connector, any Streamable HTTP client) can work with your app. No sidecar process.
 
@@ -30,9 +32,9 @@ connector, any Streamable HTTP client) can work with your app. No sidecar proces
 MCP is built into `pocketone` and always on, with [Tokens](../tokens/README.md) and
 [the OAuth server](../tokens/OAUTH.md) for sign-in and `$mcp` in `pb_hooks`. There's nothing to install or turn on.
 
-MCP is a member of the [standard set](../standard/README.md), so every PocketOne app has it: the stock binary, every
-[Pocker](../pocker/README.md) instance, and your own Go build made with `standard.New()`. The set also registers
-Tokens (with its OAuth server) for sign-in and binds `$mcp` in `pb_hooks`:
+MCP is a member of the [standard set](../standard/README.md), so every PocketOne app has it: a standalone app or an
+instance on a [multisite host](../multisite/README.md), from the stock binary or your own Go build made with
+`standard.New()`. The set also registers Tokens (with its OAuth server) for sign-in and binds `$mcp` in `pb_hooks`:
 
 ```go
 set := standard.New()
@@ -196,8 +198,8 @@ In `pocketone` it always is.
 | [S3 Redirect](../s3redirect/README.md) | `pb_download_file` follows its one redirect to storage. |
 | JS hooks | `$mcp` in `pb_hooks` (above). |
 
-Under [Pocker](../pocker/README.md), every instance gets MCP from the standard set, with its own tokens, OAuth sign-in
-and `/mcp`; an instance turns it off with `extensions.mcp.enabled: false`.
+On a [multisite host](../multisite/README.md), every instance that runs PocketOne has MCP from the standard set, with
+its own tokens, OAuth sign-in and `/mcp`; with Pocker, an instance turns it off with `extensions.mcp.enabled: false`.
 
 ### Tools from Go
 

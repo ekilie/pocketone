@@ -42,8 +42,8 @@ WASM is an extension; the `.pb.wasm` files it runs are modules. Beyond this page
 
 ## Install
 
-WASM is built into `pocketone`: it's a member of the [standard set](../standard/README.md), which every app and
-every pocker instance gets, and the set binds `$wasm` into the JS engine ([`ext/jsvm`](../jsvm/README.md)). Put a
+WASM is built into `pocketone`: it's a member of the [standard set](../standard/README.md), which every app gets,
+standalone or an instance on a multisite host, and the set binds `$wasm` into the JS engine ([`ext/jsvm`](../jsvm/README.md)). Put a
 `.pb.wasm` file in `pb_hooks` and call it.
 
 In your own build, the set already has it. To change its settings, replace the member:
@@ -83,7 +83,7 @@ The defaults suit most apps. To change them, pass them to `wasm.New` (`set.WASM 
 | `MaxPayload` | 4 MB | Largest input or output of a call. |
 | `CacheDir` | `pocketone/wasm` in the user's cache folder (`~/.cache` on Linux, `~/Library/Caches` on macOS) | Where compiled modules are kept between calls and restarts (see How it works). `"off"` compiles every call. Keep it where only the server's process writes: it holds machine code the process runs. |
 
-There's no `pocketone.yaml` section. Under pocker, each instance can override all of these but `CacheDir`, which is the host's (see Integrations).
+Its `pocketone.yaml` section has only `enabled`: `wasm: {enabled: false}` turns `$wasm` off on a single app. With Pocker, each instance can override all of these but `CacheDir`, which is the host's (see Integrations).
 
 ## Use
 
@@ -291,11 +291,11 @@ few milliseconds and under 1 MB.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | One extension value serves every instance (the standard set). Each instance has its own modules, in its own `pb_hooks/`, its own call slots and limits. Each call reads the instance's module file as it is then; nothing runs between calls (below). A module change reloads just that instance, like a `.pb.js` change. |
+| [Multisite](../multisite/README.md) | Add it to the host's standard set and Pocker gives it to every instance it runs (Docker containers run stock images): one extension value serves them all. Each instance has its own modules, in its own `pb_hooks/`, its own call slots and limits. Each call reads the instance's module file as it is then; nothing runs between calls (below). A module change reloads just that instance, like a `.pb.js` change. |
 | [Sandbox](../sandbox/README.md) | `$wasm` is safe to give a hostile tenant: a module gets nothing but its input. A call can't be interrupted by the JS engine's time limits, so `Timeout` (and compiling) bound it instead. |
 | [Deploy](../deploy/README.md) | `pocketone deploy` sends the modules with the rest of `pb_hooks/`. |
 
-### Per-instance settings (pocker)
+### Per-instance settings (Pocker)
 
 Each instance can override `maxCallMemoryMB`, `maxConcurrent`, `maxModulesMB`, `timeout` (a duration, like `5s`) and
 `maxPayload` in its `extensions.wasm` settings, over the Config given to `New`, key by key. `enabled: false` turns
@@ -363,7 +363,7 @@ func main() {
 		}
 		return posts(e.App)
 	})
-	// the same extension value the standard set gives every pocker instance (set.WASM)
+	// the same extension value the standard set gives every app, standalone or an instance (set.WASM)
 	w := wasm.New(wasm.Config{})
 	extkit.MustRegister(app, w)
 	jsvm.MustRegister(app, jsvm.Config{

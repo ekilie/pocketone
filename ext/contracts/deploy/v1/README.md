@@ -5,7 +5,8 @@ summary: "A project's code files on an app: check, upload, commit, list, read, w
 
 # deploy/v1
 
-A project's code on an app: `pb_hooks`, `pb_migrations`, `pb_public` and packages. Clients send only the files
+A project's code on an app: its `pb_*` folders except `pb_data` (`pb_hooks`, `pb_migrations`, `pb_pages`,
+`pb_public`, `pb_templates`) and packages (`package.json`, the lockfile, `node_modules`). Clients send only the files
 the app lacks, then swap the new set in at once. Restart and logs are [remote/v1](../../remote/v1/README.md)'s, which
 it requires.
 

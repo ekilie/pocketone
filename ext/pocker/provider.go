@@ -9,7 +9,7 @@ import (
 	"github.com/pockethost/pocketone/ext/multisite"
 )
 
-// SectionConfig is the `pocker` section (pocketone.yaml, ext/config): settings for running instances in-process.
+// SectionConfig is the `pocker` section (pocketone.yaml, ext/config): settings for running instances as isolates.
 // Listeners, instances and the firewall are the host's sections (server, instances, firewall).
 //
 //	pocker:
@@ -21,16 +21,18 @@ type SectionConfig struct {
 	HooksPoolSize *int   `yaml:"hooks_pool_size" doc:"Ignored: each instance has one JS VM (ext/jsvm). Kept so existing configs load."`
 	Limits        `yaml:",inline"`
 	EgressAllow   []string `yaml:"egress_allow" doc:"Private networks (CIDRs) instances may still connect to. Default none: public addresses only."`
+	// IsolateConfig is pocketone.yaml's shape, nested: what every instance gets as its own config.
+	IsolateConfig map[string]map[string]any `yaml:"isolate_config" doc:"Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it."`
 }
 
 // Section is the key of the `pocker` section.
 var Section = extkit.NewSectionFunc("pocker", func() SectionConfig {
 	d := DefaultConfig()
 	return SectionConfig{Root: d.PBRoot, HooksPoolSize: d.HooksPoolSize, Limits: d.Limits}
-}, "Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).")
+}, "Runtime provider pocker: instances run as isolates in this process (root folder, hooks pool, egress allow list, instance limit defaults).")
 
 // Provider is pocker as a host extension for ext/multisite: it reads the `pocker` section and provides runtime/v1
-// (instances in-process). The fields are the host application's extensions, as on [Server].
+// (instances as isolates). The fields are the host application's extensions, as on [Server].
 type Provider struct {
 	// Standard is the per-app extension set every instance gets (ext/standard's Set; see [Server.Standard]). Required.
 	Standard extkit.AppSet
@@ -58,7 +60,7 @@ func (p *Provider) Contracts() extkit.Contracts {
 	return extkit.Contracts{Implements: extkit.IDs("runtime/v1"), Requires: extkit.IDs("instance.source/v1")}
 }
 
-// RegisterHost implements multisite.Extension: it reads the `pocker` section and makes h run instances in-process.
+// RegisterHost implements multisite.Extension: it reads the `pocker` section and makes h run instances as isolates.
 func (p *Provider) RegisterHost(h *multisite.Host) error {
 	sc, _ := Section.Get()
 	cfg := DefaultConfig()
@@ -66,7 +68,7 @@ func (p *Provider) RegisterHost(h *multisite.Host) error {
 	if p.Resolve != nil {
 		root = p.Resolve(root)
 	}
-	cfg.PBRoot, cfg.Dev, cfg.Limits, cfg.EgressAllow = root, h.Dev, sc.Limits, sc.EgressAllow
+	cfg.PBRoot, cfg.Dev, cfg.Limits, cfg.EgressAllow, cfg.IsolateConfig = root, h.Dev, sc.Limits, sc.EgressAllow, sc.IsolateConfig
 	cfg.TLS = h.Listeners.TLS // the server section's certificate files (autotls checks them)
 	if sc.HooksPoolSize != nil {
 		cfg.HooksPoolSize = sc.HooksPoolSize

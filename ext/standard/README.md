@@ -9,9 +9,9 @@ summary: "The extensions every PocketOne app has, as one set a host configures."
 # Standard Set
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. The stock `pocketone` binary and every Pocker instance use it,
-so an app never misses one because its host forgot to list it. Members can be reconfigured or turned off per app,
-never removed.
+PocketPages, S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
+app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
+list it. Members can be reconfigured or turned off per app, never removed.
 
 ## Install
 
@@ -31,8 +31,10 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 
 - **Reconfigure a member:** replace it, e.g. `set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour})`. A
   member set to nil is an error.
-- **Turn one off:** `enabled: false` in its `pocketone.yaml` section, or in an instance's `extensions.<name>` under
-  Pocker. Extensions that require it turn off too, and say why.
+- **Turn one off:** on a single app, `enabled: false` in its `pocketone.yaml` section (`tokens: {enabled: false}`);
+  for every instance under Pocker, in its `pocker: isolate_config:` section, and for one instance, in its
+  `extensions.<name>`. Extensions that require it turn off too, and
+  say why. cache, s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
 - **Add your own:** `set.Add(myextension.New())`. Extras register after the members, under the same rules.
 - **Pick providers:** `set.Providers` is `pocketone.yaml`'s `providers:` section, for a contract more than one
   extension provides.
@@ -57,7 +59,7 @@ standard: deploy off: needs remote/v1, which nothing provides
 
 | With | What happens |
 |---|---|
-| [Pocker](../pocker/README.md) | Every instance gets the set (`Server.Standard`), with its own `extensions.<name>` settings. |
+| [Multisite](../multisite/README.md) | Every instance that runs PocketOne gets the set. Pocker gives it to each instance (`Server.Standard`) with the instance's own `extensions.<name>` settings and the host's extras. A Docker instance on a PocketOne image runs the stock `pocketone` binary: the set with its defaults, no extras. One on a PocketBase image has none. |
 | [Contracts](../contracts/README.md) | Members find each other through contracts (`tokens/v1`), resolved per app; the startup lines show who provides what. |
 
 ## Example

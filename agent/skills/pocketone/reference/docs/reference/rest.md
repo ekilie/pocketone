@@ -6,7 +6,7 @@ Every contract API a PocketOne app with its [standard extensions](https://pocket
 - **Auth:** an `Authorization` header with a superuser's auth token or an [API token](https://pocketone.dev/docs/extensions/tokens). Each operation needs its token scope; a superuser's own auth token passes every scope.
 - **Discovery:** `GET /api/_c/remote/v1` says who you are and lists every contract the app offers ([remote/v1](https://pocketone.dev/docs/contracts/remote/v1)).
 - **Input:** a JSON body for `POST`, query parameters for `GET`. **Answers** are JSON; streams are server-sent events.
-- **Same as the CLI and MCP:** every operation here is also a `pocketone` command and an MCP tool, behind the same checks ([how](https://pocketone.dev/docs/remote)).
+- **Same as the CLI and MCP:** every operation here is also a `pocketone` command and an MCP tool, behind the same checks ([how](https://pocketone.dev/docs/features/remote)).
 
 ## bulkmail/v1
 

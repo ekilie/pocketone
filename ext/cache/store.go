@@ -1,7 +1,7 @@
 package cache
 
-// The store is one per Extension value, so one per process: a single app, or every instance of a multisite host. Apps
-// see it through namespaces ("spaces"), one per app and bucket, whose keys never meet another space's.
+// The store is one per Extension value, so one per process: one app, or every isolate of an isolate runtime
+// (Pocker). Apps see it through namespaces ("spaces"), one per app and bucket, whose keys never meet another space's.
 //
 // Memory and disk follow different rules:
 //   - In memory every key holds its own value: its bytes, or a Go value (cachev1.Item). Nothing in memory is shared

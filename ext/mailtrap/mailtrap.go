@@ -4,11 +4,12 @@
 // It provides mail.fallback/v1 (ext/contracts): with SMTP off, the app's mail goes to the contract's providers in
 // order; in dev mode mailtrap takes it, so sendmail never runs. Outside dev mode it passes the message on.
 //
-// A single app:
+// A standalone app without a set:
 //
 //	mailtrap.MustRegister(app)
 //
-// Under pocker, add [New] to Server.Extensions; every dev instance's mail lands in the one inbox, labeled by instance.
+// With ext/standard's set, add [New] as an extra (set.Add), as the pocketone binary does. When several apps share a
+// process as isolates (an isolate runtime such as Pocker), every dev instance's mail lands in one inbox, labeled by instance.
 //
 // The inbox listens on 127.0.0.1:8025 (SMTP 127.0.0.1:1025); P1_MAILTRAP_HTTP and P1_MAILTRAP_SMTP move it.
 package mailtrap
@@ -22,12 +23,12 @@ import (
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
-// Name is the extension's name (extkit / pocker config key).
+// Name is the extension's name (its extkit key).
 const Name = "mailtrap"
 
 const reason = "No SMTP configured"
 
-// Extension is the extkit form, for pocker's Server.Extensions and extkit.MustRegister.
+// Extension is the extkit form, for a set's Add (ext/standard) and extkit.MustRegister.
 type Extension struct{}
 
 // New returns the extension.

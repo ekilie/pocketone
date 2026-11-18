@@ -53,7 +53,15 @@ pocker:
   egress_allow: []          # private networks instances may still reach
   max_js_execution: 30s     # default limits; each instance can override them
   max_js_allocation: 64MiB
+  isolate_config:           # every instance's config, in pocketone.yaml's shape
+    tokens: { enabled: false }
 ```
+
+`isolate_config` holds one section per extension the instances run (the standard set's members and your own
+extensions), each taking what an instance's `extensions.<name>` takes. It is every instance's base: an instance's own
+`extensions.<name>` overrides it key by key, so one instance can turn back on what `isolate_config` turns off. A
+section for an extension the instances don't run stops startup. The top-level sections of `pocketone.yaml` configure
+a single app; on a multisite host they don't reach the instances.
 
 An instance overrides any limit in its own `limits` (missing fields keep the default):
 

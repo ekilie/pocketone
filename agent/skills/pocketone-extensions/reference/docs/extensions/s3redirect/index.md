@@ -118,13 +118,13 @@ The example is its own Go module, so its demo dependencies (gofakes3, the AWS SD
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The same extension runs on every instance. The `s3redirect` section sets the defaults; each instance can override `enabled` and `ttl` (below). |
-| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | Apps without their own S3 settings keep files in its bucket (under pocker, fenced to `instances/<id>/storage/`). Its driver signs, so those downloads redirect too. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | It's a standard member, so every instance that runs PocketOne has it. With Pocker, the `s3redirect` section sets the defaults and each instance can override `enabled` and `ttl` (below). |
+| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | Apps without their own S3 settings keep files in its bucket (for isolates, as under Pocker, fenced to `instances/<id>/storage/`). Its driver signs, so those downloads redirect too. |
 
-### Per-instance settings (pocker)
+### Per-instance settings (Pocker)
 
 ```go
-srv.Extensions = append(srv.Extensions, s3redirect.New(s3redirect.Config{}))
+set.S3Redirect = s3redirect.New(s3redirect.Config{}) // a standard member: reconfigure it on the host's set
 ```
 
 ```yaml
@@ -138,8 +138,8 @@ instances:
       s3redirect: { enabled: false }   # per instance: enabled, ttl
 ```
 
-It's an [extkit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a single app and on every pocker
-instance; it doesn't link pocker.
+It's an [extkit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a standalone app and on every instance
+of a multisite host; it doesn't link a runtime.
 
 ### Building on S3 Redirect
 

@@ -36,7 +36,7 @@ const (
 	paramKey     = "bulkmail"
 )
 
-// Config is set by whoever builds the binary (or, under pocker, per instance).
+// Config is set by whoever builds the binary (or, on a multisite host with Pocker, per instance).
 type Config struct {
 	// Rate caps messages per second for this app (default 5). A campaign's own rate_per_sec can only lower it.
 	Rate float64
@@ -130,7 +130,7 @@ func MustRegister(app core.App, cfg Config) *BulkMail {
 }
 
 // Register adds bulk mail to app: its collections (on bootstrap), routes and dashboard screens (on serve), and the
-// background sender (on serve, stopped on terminate). Call it before app.Start(), or from pocker's SetupApp.
+// background sender (on serve, stopped on terminate). Call it before app.Start(), or from a host's setup hook (pocker's SetupApp).
 func Register(app core.App, cfg Config) (*BulkMail, error) {
 	if cfg.Rate <= 0 {
 		cfg.Rate = defaultRate

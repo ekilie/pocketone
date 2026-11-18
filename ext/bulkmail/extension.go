@@ -7,13 +7,13 @@ import (
 	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
-// Extension is bulk mail as a PocketOne extension ([extkit.Extension]): the same value works on a single app and on
-// every instance under pocker.
+// Extension is bulk mail as a PocketOne extension ([extkit.Extension]): the same value works on a standalone app and
+// on every instance a multisite host runs on PocketOne. It is a member of ext/standard's set.
 //
-//	extkit.MustRegister(app, bulkmail.New(bulkmail.Config{}))         // a single app
-//	srv.Extensions = append(srv.Extensions, bulkmail.New(bulkmail.Config{})) // every pocker instance
+//	extkit.MustRegister(app, bulkmail.New(bulkmail.Config{})) // one app
+//	set.BulkMail = bulkmail.New(bulkmail.Config{})            // the standard set: every app built from it
 //
-// An instance's `extensions.bulkmail` settings apply over the Config given to New: `rate`, `daily` (0 means this app may not send bulk mail; the screens say so) and
+// On Pocker, an instance's `extensions.bulkmail` settings apply over the Config given to New: `rate`, `daily` (0 means this app may not send bulk mail; the screens say so) and
 // `enabled`, which the host checks.
 type Extension struct {
 	cfg Config
@@ -66,7 +66,7 @@ func (p *Extension) Register(app core.App, cfg extkit.Config) error {
 }
 
 // BindJS implements [extkit.JSBinder]: $bulkmail in the app's JS hooks. It only reaches the app's own data, mail
-// settings and limits, so it's safe for an untrusted tenant under pocker.
+// settings and limits, so it's safe for an untrusted tenant on a multisite host.
 func (p *Extension) BindJS(app core.App, rt js.Runtime) {
 	if For(app) != nil {
 		BindJS(app, rt)

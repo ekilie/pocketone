@@ -36,7 +36,7 @@ provider binds its own routes, `extkit.RouteBinder`).
 
 ## Commands and APIs
 
-Its own HTTP API under `/api/_c/tokens/v1/`, described above. It has no generated commands or MCP tools. [Remote administration](https://pocketone.dev/docs/remote) explains how PocketOne apps are managed from afar.
+Its own HTTP API under `/api/_c/tokens/v1/`, described above. It has no generated commands or MCP tools. [Remote CLI](https://pocketone.dev/docs/features/remote) explains how PocketOne apps are managed from afar.
 
 ## Extensions
 

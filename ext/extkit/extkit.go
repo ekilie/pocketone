@@ -1,5 +1,7 @@
-// Package extkit is PocketOne's extension contract: one extension value that works on a single app and,
-// unchanged, on every instance under pocker (ext/pocker hosts any [Extension] in Server.Extensions).
+// Package extkit is PocketOne's extension contract: one extension value that works, unchanged, on every app, however
+// it's hosted: a standalone app, or an instance on a multisite host, whichever runtime runs it. An isolate runtime
+// (runtime/v1; ext/pocker is one) registers the same value on many apps in one process, so an extension keeps
+// per-app state per app ([AppID]).
 //
 // An extension implements Name and Register, and optionally [JSBinder]:
 //
@@ -16,8 +18,8 @@
 //		return nil
 //	}
 //
-// A single app registers it with [MustRegister] (and [BindJS] from jsvm's OnInit). Pocker calls Register for every
-// instance with that instance's settings.
+// Usually it's in a set ([AppSet], ext/standard's), which registers it on each app with that app's settings. Without a
+// set, register it with [MustRegister] (and [BindJS] from jsvm's OnInit).
 package extkit
 
 import (
@@ -32,8 +34,8 @@ import (
 
 // Extension is a PocketOne extension.
 type Extension interface {
-	// Name is the extension's key: a top-level key in a pocker config file, an instance's `extensions.<name>` block, the
-	// prefix of its collections (`_<name>_`) and its name in logs.
+	// Name is the extension's key: its pocketone.yaml section, an instance's `extensions.<name>` block on a multisite
+	// host, the prefix of its collections (`_<name>_`) and its name in logs.
 	Name() string
 
 	// Register installs the extension on app before it bootstraps: hooks, routes, collections, dashboard screens.
@@ -42,8 +44,8 @@ type Extension interface {
 }
 
 // JSBinder is an extension that exposes its Go API to the app's JS hooks (e.g. as a $name global). It's called for each
-// JS runtime of an app the extension is registered on. Under pocker, what it exposes must be safe for a hostile tenant
-// to call on its own app.
+// JS runtime of an app the extension is registered on. What it exposes must be safe for a hostile tenant to call on
+// its own app: on a multisite host, the app's hooks may be a tenant's code.
 type JSBinder interface {
 	BindJS(app core.App, rt js.Runtime)
 }
@@ -56,8 +58,8 @@ type Closer interface {
 	Close(ctx context.Context) error
 }
 
-// Config is an extension's settings for one app, as layers applied in order (under pocker, one: the instance's
-// `extensions.<name>`). Each layer is a map from YAML or JSON. The extension's own defaults, the ones given to its
+// Config is an extension's settings for one app, as layers applied in order (on a Pocker host, two: its
+// isolate_config section, then the instance's `extensions.<name>`). Each layer is a map from YAML or JSON. The extension's own defaults, the ones given to its
 // constructor (and its pocketone.yaml section, see [NewSection]), sit under all of them.
 type Config []map[string]any
 
@@ -135,11 +137,12 @@ func BindJS(app core.App, rt js.Runtime, extensions ...Extension) {
 
 const appIDKey = "extkit.appId"
 
-// SetAppID records the host's identifier for app (under pocker, the instance id). Hosts call it before Register.
+// SetAppID records the host's identifier for app (the instance id). A runtime that runs several apps in one process
+// calls it before Register.
 func SetAppID(app core.App, id string) { app.Store().Set(appIDKey, id) }
 
-// AppID is the host's identifier for app, set with [SetAppID]: under pocker, the instance id. It's "" on a single app,
-// where there's only one. Use it for whatever must differ per app in shared state: a bucket prefix, a sender
+// AppID is the host's identifier for app, set with [SetAppID]: the instance id when the app is an isolate (it shares the process).
+// It's "" when the app has the process to itself (a standalone app, or an instance its runtime runs in its own process). Use it for whatever must differ per app in shared state: a bucket prefix, a sender
 // address, a rate-limit key.
 func AppID(app core.App) string {
 	id, _ := app.Store().Get(appIDKey).(string)

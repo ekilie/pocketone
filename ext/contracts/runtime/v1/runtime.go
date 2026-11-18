@@ -1,4 +1,4 @@
-// Package runtimev1 is the runtime/v1 contract: what runs a multisite host's instances (ext/pocker in-process,
+// Package runtimev1 is the runtime/v1 contract: what runs a multisite host's instances (ext/pocker as isolates,
 // ext/docker in containers). A host may have several, in preference order: each instance runs on the one it names
 // (Instance.Runtime), else the first that serves it. `providers: { runtime/v1: [pocker, docker] }` picks and orders
 // them.

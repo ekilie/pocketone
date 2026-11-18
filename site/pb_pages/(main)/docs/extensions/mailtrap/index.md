@@ -16,8 +16,8 @@ app whose SMTP is off sends its mail here instead of the host's `sendmail`, and 
 
 ## Install
 
-Mail Trap is built into `pocketone`, for a single app and for every pocker instance on a multisite host. There's
-nothing to install: run `pocketone serve --dev` with SMTP off and it's active.
+Mail Trap is built into `pocketone`, for every app it runs: a standalone app, or an instance on a multisite host.
+There's nothing to install: run `pocketone serve --dev` with SMTP off and it's active.
 
 In your own Go build, register it before the app starts:
 
@@ -27,13 +27,14 @@ mailtrap.MustRegister(app)
 app.Start()
 ```
 
-Under Pocker, add `mailtrap.New()` to the extensions. The module is `github.com/pockethost/pocketone/ext/mailtrap`.
+With ext/standard's set, add it as an extra, as the stock binary does: `set.Add(mailtrap.New())`. The module is
+`github.com/pockethost/pocketone/ext/mailtrap`.
 
 ## Configure
 
 There is no `pocketone.yaml` section or settings screen. It turns itself on only when both are true:
 
-- the app is in dev mode (`serve --dev`, or a dev instance under Pocker), and
+- the app is in dev mode (`serve --dev`, or a dev instance on a multisite host), and
 - the app's SMTP is off (Settings → Mail).
 
 Turn SMTP on, or run without `--dev`, and it does nothing. Two environment variables move its ports:
@@ -63,7 +64,7 @@ catches mail and prints each message in the terminal.
 | Extension | How they fit |
 |---|---|
 | [Contracts](/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); in dev mode Mail Trap takes it, otherwise it passes it on. |
-| [Pocker](/docs/extensions/pocker) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
+| [Multisite](/docs/extensions/multisite) | With an isolate runtime ([Pocker](/docs/extensions/pocker)), one inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
 | [Mail Relay](/docs/extensions/mailrelay) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |
 | [Bulk Mail](/docs/extensions/bulkmail) | In dev mode with SMTP off, campaign mail lands in the inbox instead of being sent. |
 

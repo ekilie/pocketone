@@ -8,6 +8,8 @@ summary: "Campaigns to your app's own users, with audiences from a collection, a
 
 # Bulk Mail
 
+> Walkthrough for app owners: [Bulk mail](https://pocketone.dev/docs/features/bulk-mail). This page is the technical reference.
+
 Campaigns to your app's own users, from the dashboard. You pick who gets the mail with a collection, a view or SQL,
 write the message, and Bulk Mail sends it at a steady pace through your app's mail settings. It adds one-click
 unsubscribe, keeps a list of addresses that must never be mailed again, and handles bounces and spam complaints.
@@ -138,12 +140,12 @@ pocketone serve --dev
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | Add the same extension value to `srv.Extensions` and every instance gets Bulk Mail. Each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
+| [Multisite](../multisite/README.md) | Bulk Mail is a standard member, so every PocketOne app has it, standalone or an instance on a multisite host (reconfigure it with `set.BulkMail = bulkmail.New(...)` on the host's standard set). On Pocker each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
 | [Mailtrap](../mailtrap/README.md) | In dev mode with SMTP off, campaign mail lands in the local inbox instead of being sent. |
 
-### Per-instance settings (pocker)
+### Per-instance settings (Pocker)
 
-Each instance's `extensions.bulkmail` settings apply over the `Config` given to `bulkmail.New`:
+On Pocker, each instance's `extensions.bulkmail` settings apply over the `Config` given to `bulkmail.New`:
 
 ```yaml
 instances:
@@ -234,7 +236,7 @@ func main() {
 
 	registerDemoView(app) // a "newsletter_audience" view to use as a campaign audience (demo.go)
 
-	// the same extension value pocker would host on every instance (srv.Extensions = append(srv.Extensions, mail))
+	// the same extension value a multisite host gives every instance (set.BulkMail = mail on its standard set)
 	mail := bulkmail.New(bulkmail.Config{
 		Rate:  5,    // messages per second
 		Daily: 5000, // messages per day; bulkmail.NoBulkMail forbids sending

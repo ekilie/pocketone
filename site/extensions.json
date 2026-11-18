@@ -8,7 +8,7 @@
     { "id": "authors", "title": "For extension authors", "nav": "Extensions: for authors", "intro": "The extension contract and tools for building and testing extensions." }
   ],
   "links": [
-    { "name": "extkit", "title": "Extension Kit", "group": "authors", "summary": "The extension contract: one extension works on a single app and under pocker.", "link": "ext/extkit/extkit.go" },
+    { "name": "extkit", "title": "Extension Kit", "group": "authors", "summary": "The extension contract: one extension works on every app, standalone or hosted.", "link": "ext/extkit/extkit.go" },
     { "name": "contracts", "title": "Contracts", "group": "authors", "summary": "The versioned interfaces extensions use to work together, and the generator that writes their plumbing.", "link": "ext/contracts/README.md" },
     { "name": "devusers", "title": "Dev Users", "group": "authors", "summary": "Local testing only: a superuser and a user with password \"password\".", "link": "ext/devusers/devusers.go" }
   ]

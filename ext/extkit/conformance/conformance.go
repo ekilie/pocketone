@@ -1,6 +1,6 @@
 // Package conformance is the shared test every PocketOne extension runs. It checks what any [extkit.Extension] must get
 // right whatever it does: it registers and runs on a fresh app and shuts down cleanly, it leaves PocketBase's own
-// collections alone and names its own `_<name>` or `_<name>_…`, one extension value can serve many apps at once (as under pocker)
+// collections alone and names its own `_<name>` or `_<name>_…`, one extension value can serve many apps at once (as under an isolate runtime)
 // without one app's registration reaching another, and any MCP tools it adds are named `<name>_<verb>_<noun>` and
 // described.
 //
@@ -187,7 +187,7 @@ func CheckCollections(t TB, p extkit.Extension, o Options) {
 	}
 }
 
-// CheckManyApps: one extension value registers on several apps, as under pocker. Registering on one app must add
+// CheckManyApps: one extension value registers on several apps in one process, as an isolate runtime does. Registering on one app must add
 // nothing to any other app's hooks; registering concurrently must work (run with -race); and every app then runs.
 func CheckManyApps(t TB, p extkit.Extension, o Options) {
 	o = withApps(o)
@@ -297,7 +297,7 @@ func allHookCounts(apps []*core.BaseApp) []map[string]int {
 
 var appSeq atomic.Int64
 
-// newApp is a fresh app with its own host id ([extkit.AppID]), as pocker gives each instance.
+// newApp is a fresh app with its own host id ([extkit.AppID]), as an isolate runtime gives each instance.
 func newApp(t TB, o Options) *core.BaseApp {
 	t.Helper()
 	app := core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir(), EncryptionEnv: "", QueryTimeout: 10 * time.Second})

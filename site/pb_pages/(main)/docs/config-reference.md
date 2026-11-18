@@ -44,6 +44,26 @@ Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certifica
 
 Owned by [Auto TLS](/docs/extensions/autotls).
 
+#### `backups:`
+
+Turns the backups extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.backups`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
+#### `bulkmail:`
+
+Turns the bulkmail extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.bulkmail`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
 #### `cache:`
 
 The cache (cache/v1): one store for every app in the process (memory, disk tier), and caps per bucket.
@@ -53,7 +73,7 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
 | `eviction` | string |  | Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo. |
 | `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
-| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker). |
 | `max_disk` | int |  | Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB. |
 | `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
 | `defaults.max_items` | int |  | Most entries the bucket holds. |
@@ -63,6 +83,16 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `buckets` | map of object |  | Caps per bucket name, over what its code asks for. |
 
 Owned by [Cache](/docs/extensions/cache).
+
+#### `deploy:`
+
+Turns the deploy extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.deploy`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
 
 #### `docker:`
 
@@ -140,6 +170,16 @@ Instance data on this host: how often disk use is measured and last-request time
 
 Owned by [Stats](/docs/extensions/stats).
 
+#### `mcp:`
+
+Turns the mcp extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.mcp`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
 #### `mothership:`
 
 A community mothership to mirror instances and edges from: url, login, this edge's id, internal URL, region, apex.
@@ -164,6 +204,16 @@ Serve many instances (a multisite host) instead of a single app. The runtimes ar
 
 Owned by [Multisite](/docs/extensions/multisite).
 
+#### `pages:`
+
+Turns the pages extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.pages`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
 #### `pitr:`
 
 Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.
@@ -178,7 +228,7 @@ Owned by [PITR](/docs/extensions/pitr).
 
 #### `pocker:`
 
-Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).
+Runtime provider pocker: instances run as isolates in this process (root folder, hooks pool, egress allow list, instance limit defaults).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -193,6 +243,7 @@ Runtime provider pocker: instances run in-process (root folder, hooks pool, egre
 | `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
+| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
 
 Owned by [Pocker](/docs/extensions/pocker).
 
@@ -220,6 +271,16 @@ Default rate limits for every instance (per instance: extensions.firewall.rate_l
 | `off` | bool |  | No rate limiting. The default in dev mode unless rate_limits is set. |
 
 Owned by [Firewall](/docs/extensions/firewall).
+
+#### `remotes:`
+
+Turns the remotes extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.remotes`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
 
 #### `s3redirect:`
 
@@ -250,6 +311,36 @@ The serve command: http, https and CORS origins, and for a single app its static
 | `pages_dir` | string |  | Single app only: the PocketPages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
 | `hooks_watch` | bool |  | Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
 | `automigrate` | bool |  | Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
+
+#### `settings:`
+
+Turns the settings extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.settings`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
+#### `templates:`
+
+Turns the templates extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.templates`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
+#### `tokens:`
+
+Turns the tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.tokens`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
 
 #### `vacuum:`
 

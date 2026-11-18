@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"strings"
 
 	"github.com/pockethost/pocketone/ext/multisite"
 	"github.com/pockethost/pocketone/ext/sandbox"
@@ -107,7 +108,7 @@ func (s *Server) Run(ctx context.Context) error {
 // Name implements multisite.Extension.
 func (s *Server) Name() string { return "pocker" }
 
-// RegisterHost implements multisite.Extension: it makes h run instances in-process. It registers the host extensions
+// RegisterHost implements multisite.Extension: it makes h run instances as isolates. It registers the host extensions
 // among s.Extensions on h (gates, TLS, wrappers), installs the egress policy and provides the Manager as runtime/v1;
 // its app extensions go to every instance. h's Source, Forward, Dev, Listeners and Logger are already set.
 func (s *Server) RegisterHost(h *multisite.Host) error {
@@ -155,7 +156,7 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 		if cp, ok := p.(extkit.Extension); ok {
 			// a PocketOne extension: register it on every instance, with that instance's settings
 			if _, own := p.(AppIniter); !own {
-				hp := hostExtension(cp)
+				hp := hostExtension(cp, s.Config.IsolateConfig[cp.Name()])
 				initers = append(initers, hp)
 				jsIniters = append(jsIniters, hp)
 			}
@@ -168,6 +169,18 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 		}
 		if js, ok := p.(JSIniter); ok {
 			jsIniters = append(jsIniters, js)
+		}
+	}
+	// isolate_config: a section for an extension the instances don't run is a typo, not a no-op
+	for name := range s.Config.IsolateConfig {
+		known := standardNames[name]
+		for _, p := range s.Extensions {
+			if _, ok := p.(extkit.Extension); ok && p.Name() == name {
+				known = true
+			}
+		}
+		if !known {
+			return fmt.Errorf("isolate_config: unknown section %q (sections are the extensions every instance runs: %s)", name, strings.Join(instanceExtensionNames(s), ", "))
 		}
 	}
 	// host extensions among s.Extensions (servertiming, autotls, ...): the same as on any runtime
@@ -200,6 +213,7 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 		InitJS:        chainJSIniters(jsIniters),
 		Setup:         s.SetupApp,
 		Standard:      s.Standard,
+		IsolateConfig: s.Config.IsolateConfig,
 		Host:          s.Host,
 		Forward:       h.Forward,
 		Directory:     h.Directory,
@@ -238,4 +252,19 @@ func (s *Server) onEvent(source InstanceSource, log *slog.Logger) func(Event) {
 			sink.InstanceEvent(e)
 		}
 	}
+}
+
+// instanceExtensionNames lists the extensions every instance runs: the standard set's, then the PocketOne extensions
+// among s.Extensions.
+func instanceExtensionNames(s *Server) []string {
+	var out []string
+	for _, e := range s.Standard.Extensions() {
+		out = append(out, e.Name())
+	}
+	for _, p := range s.Extensions {
+		if _, ok := p.(extkit.Extension); ok {
+			out = append(out, p.Name())
+		}
+	}
+	return out
 }

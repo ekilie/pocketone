@@ -12,7 +12,7 @@ Run every instance on a host in its own container, with the official PocketBase 
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
 
 Docker is one of the two runtime providers of the multi-instance [multisite](../multisite/README.md). The other is
-[Pocker](../pocker/README.md), which runs every instance inside one process. A host runs exactly one of them.
+[Pocker](../pocker/README.md), which runs every instance inside one process. A host can run either or both.
 
 ## Install
 
@@ -111,7 +111,7 @@ Instance folders are ordinary folders under `root`. To work on one while nothing
 
 ### Remote control
 
-Containers run stock images with no PocketOne extensions, so the host answers
+Containers run stock images, and a PocketBase image has no PocketOne extensions, so the host answers
 [remote/v1](../contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
 `pocketone remote` commands work the same as against a Pocker instance or a single app. It answers after the host's
 gates (firewall, rate limits) and blocked check, so a blocked instance's remote/v1 gets the blocked answer and the
@@ -139,7 +139,7 @@ newer PocketBase than wrote its data is upgraded.
 | Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | Docker is a runtime provider of the host: the host routes by hostname, runs the listeners and gates, and hands each request to docker. |
-| [Pocker](../pocker/README.md) | The other provider. A host runs one or the other, over the same instance folders. |
+| [Pocker](../pocker/README.md) | The other provider. A host runs either or both, over the same instance folders. |
 | [Edge](../edge/README.md) | For a fleet: requests for instances on another edge are forwarded there. |
 | [Mothership](../mothership/README.md) | Instances (and their versions) come from a mothership instead of a file. |
 | [Firewall](../firewall/README.md) | Rate limits and allow lists in front of every instance. |

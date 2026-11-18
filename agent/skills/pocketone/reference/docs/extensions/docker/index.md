@@ -7,7 +7,7 @@ Run every instance on a host in its own container, with the official PocketBase 
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
 
 Docker is one of the two runtime providers of the multi-instance [multisite](https://pocketone.dev/docs/extensions/multisite). The other is
-[Pocker](https://pocketone.dev/docs/extensions/pocker), which runs every instance inside one process. A host runs exactly one of them.
+[Pocker](https://pocketone.dev/docs/extensions/pocker), which runs every instance inside one process. A host can run either or both.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -135,7 +135,7 @@ Instance folders are ordinary folders under `root`. To work on one while nothing
 
 ### Remote control
 
-Containers run stock images with no PocketOne extensions, so the host answers
+Containers run stock images, and a PocketBase image has no PocketOne extensions, so the host answers
 [remote/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
 `pocketone remote` commands work the same as against a Pocker instance or a single app. It answers after the host's
 gates (firewall, rate limits) and blocked check, so a blocked instance's remote/v1 gets the blocked answer and the
@@ -185,7 +185,7 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 | Extension | How they fit |
 |---|---|
 | [Multisite](https://pocketone.dev/docs/extensions/multisite) | Docker is a runtime provider of the host: the host routes by hostname, runs the listeners and gates, and hands each request to docker. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The other provider. A host runs one or the other, over the same instance folders. |
+| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The other provider. A host runs either or both, over the same instance folders. |
 | [Edge](https://pocketone.dev/docs/extensions/edge) | For a fleet: requests for instances on another edge are forwarded there. |
 | [Mothership](https://pocketone.dev/docs/extensions/mothership) | Instances (and their versions) come from a mothership instead of a file. |
 | [Firewall](https://pocketone.dev/docs/extensions/firewall) | Rate limits and allow lists in front of every instance. |

@@ -202,7 +202,7 @@ What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
 | Extension | How they fit |
 |---|---|
 | Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](/docs/extensions/pitr), [S3 Redirect](/docs/extensions/s3redirect) and [Auto TLS](/docs/extensions/autotls) are examples. |
-| [Pocker](/docs/extensions/pocker) and [Docker](/docs/extensions/docker) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
+| [Multisite](/docs/extensions/multisite) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes ([Pocker](/docs/extensions/pocker), [Docker](/docs/extensions/docker)) `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
 
 ### The server section with many instances
 

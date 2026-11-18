@@ -8,7 +8,7 @@ under `/docs/extensions/pages`.
 
 - `pb_pages/` is the app: the root layout, the home page in `(splash)/`, the docs in `(main)/docs/` and the blog in
   `(main)/blog/`.
-- `pb_pages/(main)/_private/toc.md` is the docs navigation, hand-written. Its Reference section slides into the
+- `pb_pages/(main)/_private/toc.md` is the docs navigation, hand-written. Its Extend PocketOne section slides into the
   Contracts and Extensions navs (`toc-contracts.md`, `toc-extensions.md`, written by `sync/`); `_private/docs-nav.js`
   picks which nav a page shows.
 - `pb_pages/(main)/blog/`: every `.md` file there is a post (front matter: title, description, date, author, tags).

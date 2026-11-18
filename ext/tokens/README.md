@@ -8,6 +8,8 @@ summary: "Long-lived API tokens with scopes."
 
 # Tokens
 
+> Walkthrough for app owners: [API tokens](https://pocketone.dev/docs/features/tokens). This page is the technical reference.
+
 Long-lived API tokens for your app: secrets that start with `pbt_`, for CI, deploys, scripts and agents. Each token
 belongs to an account and acts as that account. It can be limited to scopes, given an expiry, and revoked on its own.
 Send one as `Authorization: Bearer pbt_…`. Ordinary PocketBase auth tokens keep working unchanged.
@@ -43,20 +45,24 @@ A Go build can narrow both (see [Go config](#go-config)).
 ### Scopes
 
 A token without scopes has its owner's full rights. A token with scopes works only on the requests its scopes cover,
-plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Extensions and your own `pb_hooks` register the scopes. In
-`pocketone` the built-in ones are:
+plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Extensions, contracts and your own
+`pb_hooks` register the scopes. In `pocketone` they are:
 
 | Scope | From | Allows | Who can hold it |
 |---|---|---|---|
-| `deploy` | [Deploy](../deploy/README.md) | Deploy code (hooks, migrations, public files, packages), read files and logs | superusers |
+| `deploy` | [Deploy](../deploy/README.md) | Deploy code (hooks, migrations, pages, public files, packages), read files and logs | superusers |
 | `deploy:read` | [Deploy](../deploy/README.md) | Read deployed files and stream logs | superusers |
+| `<name>`, `<name>:read` | each [contract](../contracts/README.md) the app provides | That contract's operations under `/api/_c/<id>/`: `remote` and `remote:read`, `restore` and `restore:read`, `settings` and `settings:read`, `bulkmail:read`, `cache`, ... | per contract |
 
-`pocketone token scopes` lists every scope your app has, with its paths.
+Contract scopes are registered when the app serves, so **Settings → API tokens** on the running app lists every
+scope. The `pocketone token` command works offline and doesn't see them: `token scopes` lists only `deploy` and
+`deploy:read`, and `token create --scope restore` fails with `unknown scope "restore"`. Create a token with a
+contract scope from the dashboard or the [REST API](#rest-api).
 
 ### Your own scopes
 
-Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on the
-[the OAuth server](OAUTH.md) consent page:
+Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on
+[the OAuth server](OAUTH.md)'s consent page:
 
 ```js
 // pb_hooks/scopes.pb.js
@@ -157,7 +163,7 @@ curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collection
 | [MCP](../mcp/README.md) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner. A full-access token's calls hold every registered scope; a token limited to scopes on the consent page has its calls checked like requests with those scopes (`WithScopes`). |
 | [Deploy](../deploy/README.md) | Registers `deploy` and `deploy:read`; a `deploy` token is what CI uses. |
 | [Remotes](../remotes/README.md) | `pocketone login` takes a pasted API token when the remote has no OAuth server. In CI, put a token in `P1_TOKEN` (or `P1_TOKEN_<REMOTE>`). remote/v1's whoami (`/api/_c/remote/v1`) reports a token's id and scopes, whatever its scopes. |
-| [Pocker](../pocker/README.md) | Add `tokens.New(tokens.Config{})` to the host's extensions and every instance gets its own tokens, routes and screen. Per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
+| [Multisite](../multisite/README.md) | It's a standard member, so every instance gets its own tokens, routes and screen; reconfigure it on the host's set with `set.Tokens = tokens.New(tokens.Config{...})`. With Pocker, per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. |
 
 ### Building on Tokens
 

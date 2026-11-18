@@ -36,7 +36,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`oauth/v1`](oauth/v1/README.md) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
 | [`remote/v1`](remote/v1/README.md) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](restore/v1/README.md) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
-| [`runtime/v1`](runtime/v1/README.md) | What runs a multisite host's instances (in-process, in containers), in preference order. | docker, pocker |  |  | @benallfree |
+| [`runtime/v1`](runtime/v1/README.md) | What runs a multisite host's instances (as isolates, in containers), in preference order. | docker, pocker |  |  | @benallfree |
 | [`settings/v1`](settings/v1/README.md) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr, vacuum | @benallfree |
 | [`templates/v1`](templates/v1/README.md) | An extension's own pages as Go templates a project can eject and edit. | templates |  | tokens | @benallfree |
 | [`tls/v1`](tls/v1/README.md) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |

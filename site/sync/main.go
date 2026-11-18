@@ -401,7 +401,7 @@ func index(m *manifest) string {
 	return b.String()
 }
 
-// The main nav (_private/toc.md) is hand-written; its Reference section links Contracts and Extensions, whose pages
+// The main nav (_private/toc.md) is hand-written; its Extend PocketOne section links Contracts and Extensions, whose pages
 // show a nav of their own (_private/docs-nav.js), written here: toc-contracts.md lists every contract and
 // toc-extensions.md every extension, by group.
 const (

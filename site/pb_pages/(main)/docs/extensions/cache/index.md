@@ -60,7 +60,7 @@ The store, ceilings over every bucket together:
 |---|---|
 | `max_memory` | Memory for every bucket together (default 128MiB) |
 | `eviction` | Which values leave memory (or disk) first when the store reaches a ceiling: `lru` (default), `mru`, `fifo`, `lifo` |
-| `disk_path` | Turns on the disk tier there, in a `p1cache` folder. Relative paths are under `pb_data` on a single app, and under the working directory on a multisite host |
+| `disk_path` | Turns on the disk tier there, in a `p1cache` folder. Relative paths are under `pb_data` when the app has the process to itself, and under the working directory when several apps share it (Pocker) |
 | `max_disk` | Size of the disk tier (default 1GiB) |
 
 Each bucket (`defaults` and `buckets.<name>`), its own budget:
@@ -89,7 +89,7 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
 | `eviction` | string |  | Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo. |
 | `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
-| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker). |
 | `max_disk` | int |  | Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB. |
 | `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
 | `defaults.max_items` | int |  | Most entries the bucket holds. |
@@ -121,7 +121,7 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/pocker) | Every instance shares the host's one store (its memory, its disk tier), and sees only its own buckets: keys live under the instance's id. An instance that sleeps keeps its entries, so it wakes to a warm cache. An instance's `extensions.cache` may set `enabled`, `defaults` and `buckets` for itself; the store's keys are the host's only. |
+| [Multisite](/docs/extensions/multisite) | Every instance that runs PocketOne has Cache (a standard member). With [Pocker](/docs/extensions/pocker), every instance shares the host's one store (its memory, its disk tier), and sees only its own buckets: keys live under the instance's id. An instance that sleeps keeps its entries, so it wakes to a warm cache. An instance's `extensions.cache` may set `enabled`, `defaults` and `buckets` for itself; the store's keys are the host's only. |
 | [Docker](/docs/extensions/docker) | Each container runs its own `pocketone`, so it has its own store. |
 
 ### Building on Cache
@@ -205,8 +205,8 @@ func main() {
 
 ## How it works
 
-One store per process. Each app's buckets are namespaces in it, `<instance id>/<bucket>` (just `/<bucket>` on a
-single app), so no app can read another's keys.
+One store per process. Each app's buckets are namespaces in it, `<instance id>/<bucket>` (just `/<bucket>` when
+the app has the process to itself), so no app can read another's keys.
 
 Memory and disk follow different rules. In memory every key holds its own value, bytes or a Go value, and nothing is
 shared between keys. On disk values are files named by the SHA-256 of their bytes (an item's `MarshalCache` bytes):

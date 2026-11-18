@@ -25,9 +25,9 @@ PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS AP
   caps on queued tasks and async calls. A runaway script stops with an error; other apps in the process keep running.
 - **Real error positions.** Stack traces name `pb_hooks/<file>:<line>`.
 
-The `pocketone` binary and every Pocker instance run on it. PocketBase's own `plugins/jsvm` (goja) is for pure
-PocketBase compatibility only: `jsvm: goja` under `app:` in `pocketone.yaml` (or `--jsvm goja`) runs a single app on it,
-with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off.
+Every PocketOne app runs on it: a standalone app or an instance on a multisite host, whatever the runtime. PocketBase's
+own `plugins/jsvm` (goja) is for pure PocketBase compatibility only: `jsvm: goja` under `app:` in `pocketone.yaml` (or
+`--jsvm goja`) runs a standalone app on it, with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 

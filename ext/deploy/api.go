@@ -61,7 +61,7 @@ type Backend interface {
 	RecordDeploy(ctx context.Context, rec DeployRecord) (id string, err error)
 }
 
-// Instances is the part of Pocker's Manager the deploy API uses.
+// Instances is what the deploy API needs from the host's instance manager (pocker's Manager is one).
 type Instances interface {
 	Running(id string) bool
 	InstanceDir(id string) (string, bool)

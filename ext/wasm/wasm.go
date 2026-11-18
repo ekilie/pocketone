@@ -22,11 +22,11 @@
 // app takes over once it has started.) To turn a module off, remove or rename it. Copy a new version in under another
 // name and rename it over the old one, so no call reads it half written (files starting with "." are left alone).
 //
-// A single app:
+// A standalone app:
 //
 //	wasm.MustRegister(app, wasm.Config{})
 //
-// or [New] as an [extkit.Extension], for examples/pocketone and pocker (see [Extension]).
+// or [New] as an [extkit.Extension], added to the standard set (see [Extension]).
 package wasm
 
 import (
