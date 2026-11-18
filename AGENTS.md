@@ -184,4 +184,10 @@ waits for (not published on pocketone.dev). `site/extensions.json` holds
   unreleased lines (minor with upgrade steps, else patch), stamps every changelog, and lists the new versions in the
   release's section, which is its notes (`examples/pocketone/release-notes.sh vX.Y.Z`). Upstream PocketBase's changelog
   is `CHANGELOG.pocketbase.md`; never edit it by hand (`.github/upstream-changelog.sh` refreshes it).
+- **Tests, by when they run.** Before a branch merges into `main`: build and vet what it touches, and run the tests
+  of the packages it changed when they're quick; no full suite locally. A push to `main` runs the tests of every module
+  it affects in CI (`extensions.yml`, and `upstream-tests.yml` for core); a red run there is fixed with a follow-up
+  commit. The full suite runs once per release: `examples/pocketone/release.sh --check` starts
+  `.github/workflows/release-check.yml` on `main` (every module with `-race`, PocketBase's suite on our core, `ext/jsvm`
+  on 32-bit ARM, every release target), and `release.sh vX.Y.Z` tags only a commit that passed it.
 - Plans and internal notes go in a private maintainer repo, never here.
