@@ -18,7 +18,6 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
-	streamv1 "github.com/pockethost/pocketone/ext/contracts/agent/stream/v1"
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -360,8 +359,39 @@ func TestResolveModel(t *testing.T) {
 	}
 }
 
-// agent.stream/v1 hands the answer over in pieces from the runner and from the app's own API, and a callback returning
-// false stops it.
+// collect runs agent/v1's stream in this process, as $agent.stream does: the pieces, and the final result. stopAfter > 0
+// stops it after that many pieces.
+func collect(t *testing.T, a agentv1.Agent, in agentv1.CompleteInput, stopAfter int) ([]string, *agentv1.CompleteResult) {
+	t.Helper()
+	s, err := a.Stream(context.Background(), extkit.Internal, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pieces []string
+	var res *agentv1.CompleteResult
+	err = s.Run(context.Background(), func(e any) error {
+		ch := e.(agentv1.Chunk)
+		if ch.Done {
+			res = ch.Result
+			return nil
+		}
+		pieces = append(pieces, ch.Text)
+		if stopAfter > 0 && len(pieces) >= stopAfter {
+			return errStopped
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res == nil {
+		t.Fatal("no done chunk")
+	}
+	return pieces, res
+}
+
+// agent/v1's stream hands the answer over in pieces from the runner and from the app's own API, ends with the whole
+// result, and stops when the receiver does.
 func TestStream(t *testing.T) {
 	fake := &fakeModel{reply: "one two three four"}
 	path := useFake(t, fake)
@@ -371,31 +401,28 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	serve(t, app)
-	waitReady(t, agentv1.Contract.Must(app))
-	s := streamv1.Contract.Must(app)
+	a := agentv1.Contract.Must(app)
+	waitReady(t, a)
 
-	var pieces []string
-	res, err := s.Stream(context.Background(), streamv1.Input{CompleteInput: agentv1.CompleteInput{Prompt: "count"},
-		OnText: func(p string) bool { pieces = append(pieces, p); return true }})
-	if err != nil || res.Text != "one two three four" || len(pieces) != 4 || res.Backend != "runner" {
-		t.Fatalf("runner stream: %+v %q %v", res, pieces, err)
+	pieces, res := collect(t, a, agentv1.CompleteInput{Prompt: "count"}, 0)
+	if res.Text != "one two three four" || len(pieces) != 4 || res.Backend != "runner" {
+		t.Fatalf("runner stream: %+v %q", res, pieces)
 	}
-	pieces = nil
-	res, _ = s.Stream(context.Background(), streamv1.Input{CompleteInput: agentv1.CompleteInput{Prompt: "count"},
-		OnText: func(p string) bool { pieces = append(pieces, p); return len(pieces) < 2 }})
+	pieces, res = collect(t, a, agentv1.CompleteInput{Prompt: "count"}, 2)
 	if res.StopReason != "cancelled" || res.Text != "one two " || len(pieces) != 2 {
 		t.Fatalf("stopped stream: %+v %q", res, pieces)
+	}
+	if _, err := a.Stream(context.Background(), extkit.Internal, agentv1.CompleteInput{}); extErr(err) == nil || extErr(err).Code != "bad_request" {
+		t.Fatalf("empty prompt: %v", err)
 	}
 
 	srv, got := fakeAPI(t, "from the API stream")
 	if err := SaveSettings(app, Settings{Endpoint: srv.URL + "/v1", Key: "sk-test"}); err != nil {
 		t.Fatal(err)
 	}
-	pieces = nil
-	res, err = s.Stream(context.Background(), streamv1.Input{CompleteInput: agentv1.CompleteInput{Prompt: "hi"},
-		OnText: func(p string) bool { pieces = append(pieces, p); return true }})
-	if err != nil || res.Text != "from the API stream" || len(pieces) != 4 || res.Usage.OutputTokens != 3 || res.StopReason != "stop" {
-		t.Fatalf("API stream: %+v %q %v", res, pieces, err)
+	pieces, res = collect(t, a, agentv1.CompleteInput{Prompt: "hi"}, 0)
+	if res.Text != "from the API stream" || len(pieces) != 4 || res.Usage.OutputTokens != 3 || res.StopReason != "stop" || res.Backend != "app" {
+		t.Fatalf("API stream: %+v %q", res, pieces)
 	}
 	if body, _ := got.Load().(string); !strings.Contains(body, `"stream":true`) || !strings.Contains(body, `"include_usage":true`) {
 		t.Fatalf("request: %s", body)

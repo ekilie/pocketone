@@ -39,6 +39,7 @@ Over HTTP (a superuser, or a token with the `agent` scope):
 | Operation | HTTP | Token scope |
 |---|---|---|
 | Complete | `POST /api/_c/agent/v1/complete` with `{"prompt": "...", "maxTokens": 100}` | `agent` |
+| Stream | `POST /api/_c/agent/v1/stream`, same input; server-sent events | `agent` |
 | Status | `GET /api/_c/agent/v1` | `agent:read` |
 
 `complete` takes `prompt` or `messages` (`[{"role": "user", "content": "..."}]`), and optionally `system`, `schema` (a
@@ -46,6 +47,11 @@ JSON schema the answer must match; its parsed value comes back as `data`), `maxT
 single-model provider ignores). It answers `text`, `data`, `model`, `backend` (`app`, `runner` or `host`),
 `stopReason` and `usage`. Errors: `not_configured` (503), `not_ready` (503, still downloading or loading), `quota`
 (429, the app's daily allowance on a shared model is used up).
+
+`stream` sends the same answer as it's written: one `event: stream` per piece, `{"text": "..."}`, then
+`{"done": true, "result": {...}}` with what `complete` returns. An error before the answer starts is a JSON error
+response; one during it ends the stream with `event: error`. In the same process, `$agent.stream(opts, onText)` runs it
+with a callback (from Go, call the returned `extkit.Stream`'s `Run`).
 
 `status` says which backend and model answer, whether the model is ready (with download progress), and the app's
 quota on a shared model.

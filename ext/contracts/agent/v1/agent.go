@@ -27,6 +27,11 @@ type Agent interface {
 	//
 	//op: POST complete
 	Complete(ctx context.Context, a extkit.Auth, in CompleteInput) (CompleteResult, error)
+	// Stream answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one
+	// with done and the whole result.
+	//
+	//op: POST stream
+	Stream(ctx context.Context, a extkit.Auth, in CompleteInput) (extkit.Stream, error)
 	// Status says which model answers the app's prompts, whether it's ready, and how much of the app's quota is left.
 	//
 	//op: GET / scope=agent:read
@@ -63,6 +68,13 @@ type CompleteResult struct {
 	Backend    string `json:"backend"`
 	StopReason string `json:"stopReason,omitempty"` // "stop", "length" or "cancelled"
 	Usage      Usage  `json:"usage"`
+}
+
+// Chunk is one entry of a streamed answer: a piece of text as it's written, or, last, done with the whole result.
+type Chunk struct {
+	Text   string          `json:"text,omitempty"`
+	Done   bool            `json:"done,omitempty"`
+	Result *CompleteResult `json:"result,omitempty"`
 }
 
 // Usage counts tokens.

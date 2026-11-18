@@ -75,15 +75,14 @@ onRecordCreate((e) => {
   `response_format`, which most providers honor.
 - The answer: `text`, `data`, `model`, `backend` (`app` or `runner`, or `host` on a multisite host), `usage`.
 - `$agent.stream(opts, onText)` answers the same way, calling `onText(piece)` as the answer is written (return `false`
-  to stop); forward the pieces to the browser with `ctx.res.sse()` in a page. It's
-  [agent.stream/v1](../contracts/agent/stream/v1/README.md), for code in the same process.
+  to stop); forward the pieces to the browser with `ctx.res.sse()` in a page.
 - `$agent.status()` says which model answers and whether it's ready.
 
 `$agent.complete` waits for the answer, like `$http.send`. A model on your CPU writes maybe 5 to 30 words a second,
 so keep answers short (`maxTokens`) and do long jobs in a cron, not in a request hook.
 
-It's [agent/v1](../contracts/agent/v1/README.md), also over HTTP (`POST /api/_c/agent/v1/complete` with a superuser
-or a token with the `agent` scope), on the command line (`pocketone remote agent complete --prompt "..."`) and as
+It's [agent/v1](../contracts/agent/v1/README.md), also over HTTP (`POST /api/_c/agent/v1/complete`, or
+`/api/_c/agent/v1/stream` for server-sent events, with a superuser or a token with the `agent` scope), on the command line (`pocketone remote agent complete --prompt "..."`) and as
 an MCP tool.
 
 ## Integrations

@@ -52,8 +52,8 @@ The table is generated from each contract's README and every extension's `Contra
 - **Service:** a Go interface, looked up in the same process (`fallbackv1.Contract.Of(app)`).
 - **Wire:** a service with an HTTP API under `/api/_c/<id>/`, generated from its interface: each method is an
   operation with its own HTTP method, path and token scope (`//op: POST restart scope=remote`); inputs and results are
-  JSON, uploads (`extkit.RawIn`), downloads (`extkit.RawOut`) or streams (`extkit.Stream`, sent as server-sent
-  events). It gets action hooks (`remotev1.OnRestart`, `onRemoteRestart` in `pb_hooks`), an MCP tool per JSON
+  JSON, uploads (`extkit.RawIn`), downloads (`extkit.RawOut`) or streams (`extkit.Stream`, sent as server-sent events:
+  a GET or a POST, pushed as they happen with `Run` or polled with `Poll`). It gets action hooks (`remotev1.OnRestart`, `onRemoteRestart` in `pb_hooks`), an MCP tool per JSON
   operation and a client. Every caller (HTTP, MCP, Go) passes the same scope check and hooks.
 - **Routed:** a contract whose provider is an `http.Handler` serving everything under `/api/_c/<id>/` as it is, for an
   API a protocol shapes (OAuth) or an existing API moved under a contract (deploy/v1).

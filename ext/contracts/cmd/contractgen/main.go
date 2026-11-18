@@ -340,8 +340,8 @@ func wireOp(m *method, op string) error {
 		m.OutKind = "OutRaw"
 	case "extkit.Stream":
 		m.OutKind = "OutStream"
-		if m.HTTPMethod != "GET" {
-			return fmt.Errorf("a stream (extkit.Stream) is a GET")
+		if m.HTTPMethod != "GET" && m.HTTPMethod != "POST" {
+			return fmt.Errorf("a stream (extkit.Stream) is a GET (input in the query) or a POST (input as a JSON body)")
 		}
 	}
 	return nil
@@ -555,7 +555,7 @@ func (c *Client) {{.Name}}(ctx context.Context, _ extkit.Auth{{if .In}}, in {{.I
 {{- if eq .OutKind "OutRaw"}}
 	return c.c.CallRawOut(ctx, "{{.HTTPMethod}}", "{{.Path}}", {{if .In}}in{{else}}nil{{end}})
 {{- else if eq .OutKind "OutStream"}}
-	return c.c.CallStream(ctx, "{{.Path}}", {{if .In}}in{{else}}nil{{end}})
+	return c.c.CallStreamMethod(ctx, "{{.HTTPMethod}}", "{{.Path}}", {{if .In}}in{{else}}nil{{end}})
 {{- else if .RawIn}}
 {{- if .Out}}
 	var out {{.Out}}

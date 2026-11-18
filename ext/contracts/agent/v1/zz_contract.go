@@ -40,6 +40,21 @@ var W = extkit.NewWire(Contract, "agent", func(inner Agent, g *extkit.Guard[Agen
 		},
 	},
 	extkit.Op[Agent]{
+		Name:   "stream",
+		Desc:   "Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result.",
+		Method: "POST",
+		Path:   "stream",
+		In:     reflect.TypeOf(CompleteInput{}),
+		Out:    extkit.OutStream,
+		Invoke: func(ctx context.Context, impl Agent, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in CompleteInput
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.Stream(ctx, a, in)
+		},
+	},
+	extkit.Op[Agent]{
 		Name:   "status",
 		Desc:   "Says which model answers the app's prompts, whether it's ready, and how much of the app's quota is left.",
 		Method: "GET",
@@ -68,6 +83,20 @@ func (d *guardAgent) Complete(ctx context.Context, a extkit.Auth, in CompleteInp
 // to continue; return an error to refuse. in is the call's input; changes reach the provider.
 func OnComplete(owner any, fn func(e *extkit.CallEvent, in *CompleteInput) error) {
 	W.On(owner, "complete").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*CompleteInput))
+	})
+}
+
+func (d *guardAgent) Stream(ctx context.Context, a extkit.Auth, in CompleteInput) (extkit.Stream, error) {
+	return extkit.Run(d.g, a, "stream", &in, func(in *CompleteInput) (extkit.Stream, error) {
+		return d.inner.Stream(ctx, a, *in)
+	})
+}
+
+// OnStream binds fn to stream calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnStream(owner any, fn func(e *extkit.CallEvent, in *CompleteInput) error) {
+	W.On(owner, "stream").BindFunc(func(e *extkit.CallEvent) error {
 		return fn(e, e.Input.(*CompleteInput))
 	})
 }
@@ -101,6 +130,10 @@ var _ Agent = (*Client)(nil)
 func (c *Client) Complete(ctx context.Context, _ extkit.Auth, in CompleteInput) (CompleteResult, error) {
 	var out CompleteResult
 	return out, c.c.Call(ctx, "POST", "complete", in, &out)
+}
+
+func (c *Client) Stream(ctx context.Context, _ extkit.Auth, in CompleteInput) (extkit.Stream, error) {
+	return c.c.CallStreamMethod(ctx, "POST", "stream", in)
 }
 
 func (c *Client) Status(ctx context.Context, _ extkit.Auth) (Status, error) {

@@ -194,7 +194,7 @@ func callOp(c *Ctx, caller *extkit.Caller, op extkit.OpInfo, fields []field) err
 	case op.Out == extkit.OutStream:
 		ctx, stop := signal.NotifyContext(c, os.Interrupt)
 		defer stop()
-		s, err := caller.CallStream(ctx, op.Path, in)
+		s, err := caller.CallStreamMethod(ctx, op.Method, op.Path, in)
 		if err != nil {
 			return err
 		}
@@ -213,6 +213,9 @@ func callOp(c *Ctx, caller *extkit.Caller, op extkit.OpInfo, fields []field) err
 				for _, e := range s.Poll() {
 					b, _ := json.Marshal(e)
 					fmt.Fprintln(c.Out, string(b))
+				}
+				if s.Err != nil {
+					return s.Err()
 				}
 				return nil
 			case <-tick.C:

@@ -27,7 +27,6 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
-	streamv1 "github.com/pockethost/pocketone/ext/contracts/agent/stream/v1"
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -148,7 +147,7 @@ func (*Extension) Name() string { return Name }
 
 // Contracts implements extkit.Declarer.
 func (*Extension) Contracts() extkit.Contracts {
-	return extkit.Contracts{Implements: extkit.IDs("agent/v1", "agent.stream/v1"), WorksWith: extkit.IDs("settings/v1")}
+	return extkit.Contracts{Implements: extkit.IDs("agent/v1"), WorksWith: extkit.IDs("settings/v1")}
 }
 
 // Register implements extkit.Extension: the settings section always (so an instance can leave its host's shared
@@ -156,10 +155,8 @@ func (*Extension) Contracts() extkit.Contracts {
 func (*Extension) Register(app core.App, _ extkit.Config) error {
 	settingsv1.Add(app, settingsSection{app})
 	if extkit.HostProvides(app, agentv1.Contract.ID()) {
-		// the host answers; it reads this app's settings to honor its own API (see HostExtension). A callback can't
-		// cross HTTP, so agent.stream/v1 isn't host-provided: the app streams from the host's model in this process.
+		// the host answers; it reads this app's settings to honor its own API (see HostExtension)
 		id := extkit.AppID(app)
-		streamv1.Contract.Provide(app, &hostedStreamer{app: app, id: id})
 		instanceApps.Store(id, app)
 		app.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
 			instanceApps.CompareAndDelete(id, app)
@@ -184,7 +181,6 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 		})
 	}
 	agentv1.Contract.Provide(app, a)
-	streamv1.Contract.Provide(app, a)
 	return nil
 }
 
@@ -211,9 +207,27 @@ func (a *appAgent) Complete(ctx context.Context, _ extkit.Auth, in agentv1.Compl
 	return a.answer(ctx, in, nil)
 }
 
-// Stream implements agent.stream/v1.
-func (a *appAgent) Stream(ctx context.Context, in streamv1.Input) (agentv1.CompleteResult, error) {
-	return a.answer(ctx, in.CompleteInput, in.OnText)
+// Stream implements agent/v1: the answer as it's written.
+func (a *appAgent) Stream(_ context.Context, _ extkit.Auth, in agentv1.CompleteInput) (extkit.Stream, error) {
+	if err := checkInput(in); err != nil {
+		return extkit.Stream{}, err
+	}
+	return streamOf(func(ctx context.Context, onText func(string) bool) (agentv1.CompleteResult, error) {
+		return a.answer(ctx, in, onText)
+	}), nil
+}
+
+// streamOf is agent/v1's stream of an answer: a chunk for each piece as it's written, then one with done and the
+// whole result. The answer runs when the stream does, with the stream's context; it stops when the receiver is gone.
+func streamOf(answer func(ctx context.Context, onText func(string) bool) (agentv1.CompleteResult, error)) extkit.Stream {
+	return extkit.Stream{Run: func(ctx context.Context, send func(any) error) error {
+		res, err := answer(ctx, func(text string) bool { return send(agentv1.Chunk{Text: text}) == nil })
+		if err != nil {
+			return err
+		}
+		_ = send(agentv1.Chunk{Done: true, Result: &res}) // fails only when the receiver is gone
+		return nil
+	}}
 }
 
 // answer is Complete and Stream: onText, when set, gets the answer as it's written.
@@ -366,30 +380,47 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 			if err != nil {
 				return nil, errors.New("$agent.stream: " + err.Error())
 			}
-			s, ok := streamv1.Contract.Of(app)
-			if !ok {
-				return nil, agentv1.ErrNotConfigured
-			}
-			var onText func(string) bool
-			if fn := c.Arg(1).Func(); fn != nil {
-				var cbErr error
-				onText = func(text string) bool {
-					v, err := fn.Call(text)
-					if err != nil {
-						cbErr = errors.New(js.Message(err))
-						return false
-					}
-					return v != false
-				}
-				defer func() {
-					if cbErr != nil {
-						app.Logger().Warn("$agent.stream: onText threw; the answer stopped", "error", cbErr)
-					}
-				}()
-			}
-			res, err := s.Stream(context.Background(), streamv1.Input{CompleteInput: in, OnText: onText})
+			a, err := call()
 			if err != nil {
 				return nil, err
+			}
+			s, err := a.Stream(context.Background(), extkit.Internal, in)
+			if err != nil {
+				return nil, err
+			}
+			if s.Close != nil {
+				defer s.Close()
+			}
+			fn := c.Arg(1).Func()
+			var res *agentv1.CompleteResult
+			var cbErr error
+			err = s.Run(context.Background(), func(e any) error {
+				ch, _ := e.(agentv1.Chunk)
+				if ch.Done {
+					res = ch.Result
+					return nil
+				}
+				if fn == nil || ch.Text == "" {
+					return nil
+				}
+				v, err := fn.Call(ch.Text)
+				if err != nil {
+					cbErr = errors.New(js.Message(err))
+					return cbErr
+				}
+				if v == false {
+					return errStopped
+				}
+				return nil
+			})
+			if cbErr != nil {
+				app.Logger().Warn("$agent.stream: onText threw; the answer stopped", "error", cbErr)
+			}
+			if err != nil {
+				return nil, err
+			}
+			if res == nil {
+				return nil, errors.New("$agent.stream: the answer ended without a result")
 			}
 			return toJS(res)
 		}),
@@ -406,6 +437,9 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		},
 	})
 }
+
+// errStopped: $agent.stream's onText returned false.
+var errStopped = errors.New("stopped")
 
 // inputFromJS reads $agent.complete's options through JSON, so they take the contract's field names. schema may be
 // an object or a string.

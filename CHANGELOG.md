@@ -36,6 +36,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 ### Added
 
 - `pocketone` runs WASM modules: put a `<name>.pb.wasm` in `pb_hooks` and call it from your hooks with `await $wasm.run.async(name, input)` ([ext/wasm](ext/wasm/README.md)).
+- Contract streams can push: a stream operation (`extkit.Stream`) may be a POST with a JSON body, and its provider can send entries as they happen with `Run` instead of being polled every 500 ms; a `Run` error ends the stream with `event: error`. `pocketone remote <contract> <op>` and the generated clients follow ([Contracts](ext/contracts/README.md)).
 
 ### Changed
 

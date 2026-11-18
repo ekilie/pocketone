@@ -3,11 +3,9 @@ package agent
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	streamv1 "github.com/pockethost/pocketone/ext/contracts/agent/stream/v1"
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/multisite"
@@ -45,30 +43,7 @@ func (HostExtension) RegisterHost(h *multisite.Host) error {
 	}
 	hs := newHostShare(r, cfg.withDefaults())
 	agentv1.Contract.ProvideForInstances(h.Scope, func(id string) agentv1.Agent { return &hostAgent{share: hs, id: id} })
-	currentShare.Store(hs)
 	return nil
-}
-
-// currentShare is the share of the host this process runs, for instances' agent.stream/v1 (see hostedStreamer).
-var currentShare atomic.Pointer[hostShare]
-
-// hostedStreamer is agent.stream/v1 in an instance whose host provides agent/v1: the host's model through the same
-// share (quota, concurrency, the instance's own API), streamed in this process. A host whose agent/v1 isn't this
-// package's gets the whole answer in one piece instead.
-type hostedStreamer struct {
-	app core.App
-	id  string
-}
-
-func (s *hostedStreamer) Stream(ctx context.Context, in streamv1.Input) (agentv1.CompleteResult, error) {
-	if hs := currentShare.Load(); hs != nil {
-		return (&hostAgent{share: hs, id: s.id}).answer(ctx, in.CompleteInput, in.OnText)
-	}
-	res, err := agentv1.Contract.Must(s.app).Complete(ctx, extkit.Internal, in.CompleteInput)
-	if err == nil && in.OnText != nil && res.Text != "" {
-		in.OnText(res.Text)
-	}
-	return res, err
 }
 
 // hostShare divides a host's model between its instances.
@@ -159,7 +134,17 @@ func (a *hostAgent) Complete(ctx context.Context, _ extkit.Auth, in agentv1.Comp
 	return a.answer(ctx, in, nil)
 }
 
-// answer is Complete, and agent.stream/v1 for the instance when onText is set.
+// Stream implements agent/v1 for the instance: the answer as it's written, through the same share.
+func (a *hostAgent) Stream(_ context.Context, _ extkit.Auth, in agentv1.CompleteInput) (extkit.Stream, error) {
+	if err := checkInput(in); err != nil {
+		return extkit.Stream{}, err
+	}
+	return streamOf(func(ctx context.Context, onText func(string) bool) (agentv1.CompleteResult, error) {
+		return a.answer(ctx, in, onText)
+	}), nil
+}
+
+// answer is Complete, and Stream when onText is set.
 func (a *hostAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText func(string) bool) (agentv1.CompleteResult, error) {
 	if err := checkInput(in); err != nil {
 		return agentv1.CompleteResult{}, err
