@@ -67,20 +67,20 @@ instances: { dev: true }
 pocker: { root: ./pb_root }
 ```
 
-## Everything new, side by side
+## Everything new at a glance
 
-| | PocketBase gives you | PocketOne adds |
-|---|---|---|
-| [QuickJS hooks](/docs/quickjs) | Hooks on goja: CommonJS `require`, synchronous handlers, a pool of runtimes | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
-| [PocketPages sites](/docs/features/sites) | Static files and single-page apps from `pb_public`; HTML from hooks with `$template` | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
-| [PocketBase isolates](/docs/features/isolates) | One app per process, run side by side in processes, containers or VMs | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
-| [Point-in-time restore](/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
-| [Deploy and live sync](/docs/features/deploy) | Copy the app folder to the server; hooks reload, migrations run on the next start | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
-| [Remote CLI](/docs/features/remote) | A CLI on the machine that holds `pb_data`; the dashboard and REST API from anywhere | Admin commands against any app, from your terminal, a script or an agent |
-| [API tokens and OAuth](/docs/features/tokens) | Auth tokens that act as their account | Named, scoped tokens you revoke one by one; your app is an OAuth server |
-| [MCP for AI agents](/docs/features/mcp) | A REST API and realtime, with JavaScript and Dart SDKs | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
-| [Bulk mail](/docs/features/bulk-mail) | Account mail (verification, password reset), and any mail from hooks | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
-| [pocketone.yaml](/docs/pocketone-yaml) | Settings in the dashboard; `serve` options as flags | One config file, with every extension's options and a `.env` for secrets |
+| | What you get |
+|---|---|
+| [QuickJS hooks](/docs/quickjs) | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
+| [PocketPages sites](/docs/features/sites) | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
+| [PocketBase isolates](/docs/features/isolates) | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
+| [Point-in-time restore](/docs/features/restore) | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
+| [Deploy and live sync](/docs/features/deploy) | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
+| [Remote CLI](/docs/features/remote) | Admin commands against any app, from your terminal, a script or an agent |
+| [API tokens and OAuth](/docs/features/tokens) | Named, scoped tokens you revoke one by one; your app is an OAuth server |
+| [MCP for AI agents](/docs/features/mcp) | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
+| [Bulk mail](/docs/features/bulk-mail) | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
+| [pocketone.yaml](/docs/pocketone-yaml) | One config file, with every extension's options and a `.env` for secrets |
 
 Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to
 build on it, follow its **How it works** links to the [extension](/docs/extensions) pages.
@@ -98,4 +98,4 @@ Smaller additions you'll notice without a page of their own:
 - **Settings and cache:** one settings screen and one shared memory budget for every feature
   ([Settings](/docs/extensions/settings), [Cache](/docs/extensions/cache)).
 
-Coming from PocketBase? [What stays the same](/docs/pocketbase).
+Coming from PocketBase? [What stays the same, and how each feature compares](/docs/pocketbase).

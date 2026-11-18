@@ -5,8 +5,6 @@ description: Send a newsletter or announcement to your app's own users, from the
 
 # Bulk mail
 
-> **PocketBase:** sends account mail (verification, password reset, email change, one-time codes), and your hooks can send any message through its mailer. **PocketOne:** campaigns from the dashboard, with unsubscribes, suppression and pacing handled.
-
 Got a newsletter, a launch or a change to announce? Write it once, pick which users get it, and your app sends it at a
 steady pace through its own mail settings. Every message gets an unsubscribe link, and people who unsubscribe, bounce
 or complain are never mailed again.

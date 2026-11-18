@@ -5,8 +5,6 @@ description: Send your app's hooks, migrations, pages and public files to a runn
 
 # Deploy and live sync
 
-> **PocketBase:** an app is a folder you copy to the server (`pb_hooks`, `pb_migrations`, `pb_public`); hooks reload when they change, and migrations run on the next start. **PocketOne:** `pocketone deploy` uploads only what changed, and `pocketone dev` keeps a folder in step both ways.
-
 Write your hooks, migrations and pages on your own machine, then send them to your running app with one command. Only
 the files that changed are uploaded, and the app swaps them in while it keeps serving.
 

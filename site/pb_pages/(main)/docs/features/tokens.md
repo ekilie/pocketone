@@ -5,8 +5,6 @@ description: Give a script, a CI job or a service its own long-lived token, limi
 
 # API tokens and OAuth
 
-> **PocketBase:** an auth token acts as its account, and changing the account's token key signs out all of its tokens at once. **PocketOne:** named, scoped tokens you revoke individually, and your app is an OAuth server that apps and agents sign in through.
-
 A script, a CI job or another service can't type a password. Give it an API token instead: a long secret that starts
 with `pbt_`, acts as the account that owns it, and can be limited to a few scopes and given an expiry. Revoke it, and
 it stops working at once.

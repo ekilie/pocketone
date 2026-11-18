@@ -23,9 +23,23 @@ PocketOne yet.
 
 ## What's added
 
-Point-in-time restore, deploys from your terminal, API tokens and OAuth, MCP for AI agents, bulk mail, server-rendered
-sites and more, all on by default. [New in PocketOne](/docs/features) lists them side by side with what PocketBase
-gives you.
+Everything below is on by default. Each row shows how PocketBase handles it and what PocketOne adds; the links go to
+the feature's page.
+
+| | In PocketBase | In PocketOne |
+|---|---|---|
+| [QuickJS hooks](/docs/quickjs) | Hooks on goja: CommonJS `require`, synchronous handlers, a pool of runtimes | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
+| [PocketPages sites](/docs/features/sites) | Static files and single-page apps from `pb_public`; HTML from hooks with `$template` | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
+| [PocketBase isolates](/docs/features/isolates) | One app per process, run side by side in processes, containers or VMs | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
+| [Point-in-time restore](/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
+| [Deploy and live sync](/docs/features/deploy) | Copy the app folder to the server; hooks reload, migrations run on the next start | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
+| [Remote CLI](/docs/features/remote) | A CLI on the machine that holds `pb_data`; the dashboard and REST API from anywhere | Admin commands against any app, from your terminal, a script or an agent |
+| [API tokens and OAuth](/docs/features/tokens) | Auth tokens that act as their account | Named, scoped tokens you revoke one by one; your app is an OAuth server |
+| [MCP for AI agents](/docs/features/mcp) | A REST API and realtime, with JavaScript and Dart SDKs | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
+| [Bulk mail](/docs/features/bulk-mail) | Account mail (verification, password reset), and any mail from hooks | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
+| [pocketone.yaml](/docs/pocketone-yaml) | Settings in the dashboard; `serve` options as flags | One config file, with every extension's options and a `.env` for secrets |
+
+Smaller additions are listed under [Also built in](/docs/features#also-built-in).
 
 ## Read the PocketBase docs for the rest
 
