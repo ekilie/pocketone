@@ -1,23 +1,91 @@
 ---
 title: New in PocketOne
-description: Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built in and on by default.
+description: Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built into the pocketone binary.
 ---
 
 # New in PocketOne
 
-PocketOne does everything PocketBase does, and adds the features below. They're built in and on by default, whether
-you run the `pocketone` binary yourself or a host runs your app. There's nothing to install.
+PocketOne does everything PocketBase does, and adds the features below. They're all built into the `pocketone`
+binary, and most are on by default. There's nothing to install.
+
+Three of them set PocketOne apart, and PocketBase can't do any of them: hooks with `async`, `import` and TypeScript,
+pages in TSX, and hundreds of apps running as isolates in one process.
+
+## Modern JavaScript on the server
+
+**[Hooks with async, import and TypeScript](/docs/quickjs).** Your `pb_hooks` run on QuickJS with the same JS API you
+already use, plus:
+
+- `async` handlers and `await`. The app keeps serving other requests while a handler waits on the database or an HTTP
+  call.
+- ES modules: `import` and `export` between your files, and packages from `node_modules`.
+- TypeScript: write `.pb.ts` files and they run as they are.
+- Globals shared by every handler, and memory and time limits that stop a runaway script instead of the app.
+
+```ts
+// pb_hooks/orders.pb.ts
+import { total } from "./lib/pricing.mjs"
+
+routerAdd("GET", "/api/orders/{id}/total", async (e) => {
+  const order = await e.app.findRecordById.async("orders", e.request.pathValue("id"))
+  return e.json(200, { total: total(order) })
+})
+```
+
+**[Pages in TSX, TypeScript or EJS](/docs/features/sites).** Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in `pb_pages`
+and it's a server-rendered page, with your records a function call away. Components `import` each other, and `+page.ts`
+and `+api.ts` route files are TypeScript. esbuild is built into the binary: no Node, no `npm install`, no build step.
+
+```ts
+// pb_pages/products/[id]/+page.ts
+export default {
+  load(ctx: any) {
+    ctx.data.product = ctx.app.findRecordById('products', ctx.params.id)
+  },
+}
+```
+
+```tsx
+// pb_pages/products/[id]/index.tsx
+import Price from './_private/Price'
+
+export default function Product({ data }: any) {
+  return (
+    <article>
+      <h1>{data.product.getString('name')}</h1>
+      <Price cents={data.product.getInt('price')} />
+    </article>
+  )
+}
+```
+
+## Hundreds of apps in one process
+
+**[PocketBase isolates](/docs/features/isolates).** One `pocketone` process runs hundreds of PocketBase apps as
+isolates, routed by hostname. Each is a complete app with its own data, hooks and dashboard. It starts on its first
+request in tens of milliseconds, costs about 3 MB while it runs, and is sandboxed from the others: its own memory cap,
+time limits, files, SQL and secrets. No container per app, no idle memory to pay for.
+
+```yaml
+# pocketone.yaml: every hostname you ask for becomes its own app (dev mode)
+multisite: {}
+instances: { dev: true }
+pocker: { root: ./pb_root }
+```
+
+## Everything new, side by side
 
 | | PocketBase gives you | PocketOne adds |
 |---|---|---|
+| [QuickJS hooks](/docs/quickjs) | Hooks on goja: CommonJS, no `await`, a pool of separate runtimes | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
+| [PocketPages sites](/docs/features/sites) | Static files from `pb_public` | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with no build step |
+| [PocketBase isolates](/docs/features/isolates) | One app per process; a container or VM each to host many | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
 | [Point-in-time restore](/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
 | [Deploy and live sync](/docs/features/deploy) | Copy files to the server yourself, then restart | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
 | [Remote CLI](/docs/features/remote) | A CLI for the machine that holds `pb_data` | Admin commands against any app, from your terminal, a script or an agent |
 | [API tokens and OAuth](/docs/features/tokens) | Auth tokens with the account's full rights | Named, scoped tokens you revoke one by one; your app is an OAuth server |
 | [MCP for AI agents](/docs/features/mcp) | No MCP | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
 | [Bulk mail](/docs/features/bulk-mail) | Account mail: verification, password reset | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
-| [PocketPages sites](/docs/features/sites) | Static files from `pb_public` | Server-rendered pages from `pb_pages`, with direct access to your records |
-| [QuickJS hooks](/docs/quickjs) | Hooks on goja | The same JS API with imports, TypeScript, async handlers, shared globals and hard limits |
 | [pocketone.yaml](/docs/pocketone-yaml) | Flags on every start | One config file, with every extension's options and a `.env` for secrets |
 
 Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to

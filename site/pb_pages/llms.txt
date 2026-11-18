@@ -15,15 +15,16 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## New in PocketOne
 
-- [Everything new](https://pocketone.dev/docs/features): Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built in and on by default.
+- [Everything new](https://pocketone.dev/docs/features): Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built into the pocketone binary.
+- [QuickJS: async, import, TS](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
+- [PocketPages: TSX, TS, EJS](https://pocketone.dev/docs/features/sites): Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
+- [Isolates: many apps, one process](https://pocketone.dev/docs/features/isolates): Run hundreds of PocketBase apps as isolates inside one pocketone process, routed by hostname. Each starts on its first request in tens of milliseconds, costs a few MB, and is sandboxed from the others.
 - [Point-in-time restore](https://pocketone.dev/docs/features/restore): Put your app's data back as it was at any moment in the last few days, from the dashboard, your terminal or an agent.
 - [Deploy and live sync](https://pocketone.dev/docs/features/deploy): Send your app's hooks, migrations, pages and public files to a running PocketOne app with one command, and keep a folder in step while you work.
 - [Remote CLI](https://pocketone.dev/docs/features/remote): Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
 - [API tokens and OAuth](https://pocketone.dev/docs/features/tokens): Give a script, a CI job or a service its own long-lived token, limited to what it needs, and revoke it whenever you like. Apps and tools can also sign in to get one.
 - [MCP for AI agents](https://pocketone.dev/docs/features/mcp): Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
 - [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
-- [PocketPages sites](https://pocketone.dev/docs/features/sites): Serve server-rendered pages from a pb_pages folder next to your data, with PocketPages, built into every PocketOne app.
-- [QuickJS hooks](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
 - [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
 - [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your pb_hooks, for libraries JavaScript doesn't have and work JavaScript does too slowly.
 

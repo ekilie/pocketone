@@ -1,19 +1,60 @@
 ---
-title: PocketPages sites
-description: Serve server-rendered pages from a pb_pages folder next to your data, with PocketPages, built into every PocketOne app.
+title: "PocketPages: sites in TSX, TypeScript or EJS"
+description: Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
 ---
 
-# PocketPages sites
+# PocketPages: sites in TSX, TypeScript or EJS
 
-> **PocketBase:** `pb_public` serves static files. **PocketOne:** PocketPages renders pages on the server from `pb_pages`, with direct access to your records.
+> **PocketBase:** `pb_public` serves static files. **PocketOne:** server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with your records a function call away and no build step.
 
-Put EJS or Markdown files in a `pb_pages` folder next to `pb_data`, and your app serves them as web pages. Each file
-is a route, and page code can read and write your records directly. This is PocketPages, built into PocketOne.
+Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in a `pb_pages` folder next to `pb_data`, and your app serves it as a web
+page. Each file is a route. Components `import` each other, route files can be TypeScript (`+page.ts`, `+api.ts`), and
+page code reads and writes your records directly. This is PocketPages, built into PocketOne.
 
-It's on for every PocketOne app whenever a `pb_pages` folder exists. No folder, no pages. There's nothing to install
-and no build step.
+esbuild is built into the `pocketone` binary, so TSX and TypeScript compile the first time a page is used: no Node, no
+`npm install`, no bundler, no build step. It's on for every PocketOne app whenever a `pb_pages` folder exists. No folder,
+no pages.
 
-## Hello world
+## A product page in TSX
+
+A TypeScript loader puts the record in `ctx.data`, and a TSX page renders it with a component:
+
+```ts
+// pb_pages/products/[id]/+page.ts
+export default {
+  load(ctx: any) {
+    ctx.data.product = ctx.app.findRecordById('products', ctx.params.id)
+  },
+}
+```
+
+```tsx
+// pb_pages/products/[id]/index.tsx
+import Price from './_private/Price'
+
+export default function Product({ data }: any) {
+  return (
+    <article>
+      <h1>{data.product.getString('name')}</h1>
+      <Price cents={data.product.getInt('price')} />
+    </article>
+  )
+}
+```
+
+```tsx
+// pb_pages/products/[id]/_private/Price.tsx
+export default ({ cents }: { cents: number }) => <span class="price">${(cents / 100).toFixed(2)}</span>
+```
+
+`/products/<id>` now answers with `<article><h1>Mug</h1><span class="price">$12.50</span></article>`. Edit any of the
+files and reload: the change shows up with no restart.
+
+JSX renders to plain HTML on the server. There's no virtual DOM and no client-side React, so pair it with htmx,
+Datastar or plain `<script>` tags for interactivity. TypeScript types are stripped, not checked; run `tsc --noEmit` or
+rely on your editor. [JSX and TSX](/docs/extensions/pages/jsx) has the details.
+
+## Prefer EJS? Hello world
 
 1. Make a folder for your app with a page in it:
 
@@ -39,7 +80,8 @@ To start from something bigger, `pocketone pages starters` lists the starter kit
 ## What's covered
 
 - **Files are routes:** `pb_pages/about.ejs` serves `/about`, and `pb_pages/blog/index.ejs` serves `/blog`.
-- **Templates:** EJS, Markdown, JSX and TSX, with layouts, partials, middleware and JSON routes.
+- **Templates:** TSX, JSX, EJS and Markdown, mixed freely (an EJS page can sit in a TSX layout), with layouts,
+  partials, middleware and JSON routes. Route files (`+page`, `+api`, `+middleware`) can be `.ts` or `.js`.
 - **Leftovers go on:** a URL no page matches goes on to `pb_public`, then to PocketBase. URLs under `/api/` and `/_/`
   always belong to PocketBase.
 - **Errors:** in dev mode you get detailed error pages. Otherwise visitors see a plain error page and the details go to
@@ -59,6 +101,7 @@ PocketPages plugins to load, go in `pb_pages/+config.js` ([+config.js](/docs/ext
 The full PocketPages docs:
 
 - [Installation](/docs/extensions/pages/installation) and [starter kits](/docs/extensions/pages/starter-kits)
+- [JSX and TSX](/docs/extensions/pages/jsx)
 - [Creating a page](/docs/extensions/pages/creating-a-page) and [routing](/docs/extensions/pages/routing)
 - [Loading data](/docs/extensions/pages/loading-data)
 - [Layouts and slots](/docs/extensions/pages/layouts)

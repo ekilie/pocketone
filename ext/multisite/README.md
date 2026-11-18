@@ -8,6 +8,8 @@ summary: "Many instances behind one listener, routed by hostname, run by one pro
 
 # Multisite
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](../firewall/README.md)), and a runtime serves it:
 [pocker](../pocker/README.md) runs instances as isolates in its own process, [docker](../docker/README.md) runs each in its own container,

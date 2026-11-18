@@ -16,6 +16,27 @@ or endorsed by the PocketBase project.
 
 Run `pocketone` the way you run `pocketbase`. These are the differences you'll notice; [New in PocketOne](/docs/features) compares each one with PocketBase.
 
+### Hooks with async, import and TypeScript
+
+Your `pb_hooks` run on QuickJS with PocketBase's JS API, so they work unchanged, and they gain what goja can't do:
+`async` handlers with `await` (the app keeps serving while one waits), ES module `import` and `node_modules` packages,
+`.pb.ts` TypeScript files, globals shared by every handler, and memory and time limits.
+[QuickJS hooks](/docs/quickjs) walks through each one.
+
+### Pages in TSX, TypeScript or EJS
+
+Put `.tsx`, `.jsx`, `.ejs` or Markdown files in a `pb_pages` folder and they're server-rendered pages, with your
+records a function call away. Components `import` each other and route files can be TypeScript. esbuild is built into
+the binary, so there's no Node, no `npm install` and no build step. This site is one. `pocketone pages create myapp`
+starts a new site from a starter kit. [PocketPages](/docs/features/sites) shows a page in TSX.
+
+### Hundreds of apps in one process
+
+Add a `multisite` section to `pocketone.yaml` and one `pocketone` process runs hundreds of PocketBase apps as
+isolates, routed by hostname. Each is a complete app with its own data, hooks and dashboard. It starts on its first
+request in tens of milliseconds, costs about 3 MB while it runs, and is sandboxed from the others. No container per app.
+[PocketBase isolates](/docs/features/isolates) shows it running in a minute.
+
 ### Point-in-time restore, on by default
 
 Your database is replicated with Litestream, so you can restore it to any moment from **Settings → Backups** or with
@@ -25,12 +46,6 @@ Your database is replicated with Litestream, so you can restore it to any moment
 
 In dev mode (`serve --dev`), an app with no SMTP settings doesn't send through the system's `sendmail`. The mail is
 caught and shown at `http://127.0.0.1:8025`.
-
-### Server-rendered pages
-
-Put `.ejs` and Markdown files in a `pb_pages` folder and they're served as pages, with no build step. This site is
-one. `pocketone pages create myapp` starts a new site from a starter kit. Full docs are under
-[Pages](/docs/extensions/pages/overview).
 
 ### A config file
 
