@@ -216,6 +216,24 @@ func (vm *VM) runTask(t *task) {
 	})
 	if t.done != nil {
 		close(t.done)
+		vm.drainPosts()
+	}
+}
+
+// drainPosts runs the posts queued so far. A job (a request, a hook) leaves several: the frees of the JS values Go
+// dropped (finalizers post them) and async completions. The loop takes a job or a post at random, one at a time,
+// so without this it ran about one post per job and the queue stayed full: the process's finalizer goroutine then
+// blocked in post, no finalizer ran anywhere, and the JS values those frees would release filled the heap
+// ("out of memory" on every request after ~25k pages at 50 concurrent). Posts are short; a job waits for at most
+// the ones queued before it finished.
+func (vm *VM) drainPosts() {
+	for n := len(vm.posts); n > 0; n-- {
+		select {
+		case f := <-vm.posts:
+			vm.runTask(&task{fn: f})
+		default:
+			return
+		}
 	}
 }
 
