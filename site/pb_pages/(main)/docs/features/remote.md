@@ -6,8 +6,6 @@ discussion: "pocketone.dev/docs/remote"
 
 # Remote CLI
 
-> **PocketBase:** the CLI works only on the machine that holds `pb_data`. **PocketOne:** sign in once, then run admin commands against any app from your terminal, a script or an agent.
-
 Everything an extension lets you do to an app, you can do from afar, three ways:
 
 - the `pocketone` command, against any app you've signed in to;

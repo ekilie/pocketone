@@ -8,8 +8,6 @@ source: "ext/desktop/docs/index.md"
 
 # Desktop apps
 
-> **PocketBase:** a server you host, reached from a browser. **PocketOne:** the same app folder also builds into a native desktop app for macOS, Windows and Linux, with your hooks, migrations and pages inside one executable and each user's data on their own machine.
-
 Your app is a folder: `pb_hooks`, `pb_migrations` and `pb_public`. `pocketone serve` runs it as a server, as always.
 `pocketone desktop build` turns the same folder into an app your users double-click:
 

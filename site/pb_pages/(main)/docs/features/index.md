@@ -8,7 +8,7 @@ description: Everything PocketOne adds to PocketBase, side by side with what Poc
 PocketOne does everything PocketBase does, and adds the features below. They're all built into the `pocketone`
 binary, and most are on by default. There's nothing to install.
 
-Three of them set PocketOne apart, and PocketBase can't do any of them: hooks with `async`, `import` and TypeScript,
+Three of them set PocketOne apart: hooks with `async`, `import` and TypeScript,
 async pages in TSX, and hundreds of apps running as isolates in one process.
 
 ## Modern JavaScript on the server
@@ -67,21 +67,21 @@ instances: { dev: true }
 pocker: { root: ./pb_root }
 ```
 
-## Everything new, side by side
+## Everything new at a glance
 
-| | PocketBase gives you | PocketOne adds |
-|---|---|---|
-| [QuickJS hooks](/docs/quickjs) | Hooks on goja: CommonJS, no `await`, a pool of separate runtimes | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
-| [PocketPages sites](/docs/features/sites) | Static files from `pb_public` | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
-| [PocketBase isolates](/docs/features/isolates) | One app per process; a container or VM each to host many | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
-| [Point-in-time restore](/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
-| [Deploy and live sync](/docs/features/deploy) | Copy files to the server yourself, then restart | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
-| [Remote CLI](/docs/features/remote) | A CLI for the machine that holds `pb_data` | Admin commands against any app, from your terminal, a script or an agent |
-| [API tokens and OAuth](/docs/features/tokens) | Auth tokens with the account's full rights | Named, scoped tokens you revoke one by one; your app is an OAuth server |
-| [MCP for AI agents](/docs/features/mcp) | No MCP | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
-| [Bulk mail](/docs/features/bulk-mail) | Account mail: verification, password reset | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
-| [Desktop apps](/docs/extensions/desktop) | A server you host, reached from a browser | The same folder builds into native macOS, Windows and Linux apps with `pocketone desktop build`, each user's data on their machine (preview) |
-| [pocketone.yaml](/docs/pocketone-yaml) | Flags on every start | One config file, with every extension's options and a `.env` for secrets |
+| | What you get |
+|---|---|
+| [QuickJS hooks](/docs/quickjs) | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
+| [PocketPages sites](/docs/features/sites) | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
+| [PocketBase isolates](/docs/features/isolates) | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
+| [Point-in-time restore](/docs/features/restore) | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
+| [Deploy and live sync](/docs/features/deploy) | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
+| [Remote CLI](/docs/features/remote) | Admin commands against any app, from your terminal, a script or an agent |
+| [API tokens and OAuth](/docs/features/tokens) | Named, scoped tokens you revoke one by one; your app is an OAuth server |
+| [MCP for AI agents](/docs/features/mcp) | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
+| [Bulk mail](/docs/features/bulk-mail) | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
+| [Desktop apps](/docs/extensions/desktop) | The same folder builds into native macOS, Windows and Linux apps with `pocketone desktop build`, each user's data on their machine (preview) |
+| [pocketone.yaml](/docs/pocketone-yaml) | One config file, with every extension's options and a `.env` for secrets |
 
 Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to
 build on it, follow its **How it works** links to the [extension](/docs/extensions) pages.
@@ -99,4 +99,4 @@ Smaller additions you'll notice without a page of their own:
 - **Settings and cache:** one settings screen and one shared memory budget for every feature
   ([Settings](/docs/extensions/settings), [Cache](/docs/extensions/cache)).
 
-Coming from PocketBase? [What stays the same](/docs/pocketbase).
+Coming from PocketBase? [What stays the same, and how each feature compares](/docs/pocketbase).
