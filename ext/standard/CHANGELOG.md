@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Fixed
+
+- A single app (the stock `pocketone` binary) now honors `enabled: false` in pocketone.yaml for every standard member: `settings`, `templates`, `tokens`, `remotes`, `mcp`, `pages`, `backups`, `bulkmail` and `deploy` each get a section with just `enabled` (before, those sections were refused as unknown and the switch was never read). Extensions that require the one you turn off go off too, and the startup lines say why.
+
 ## 0.0.2 (2026-11-17)
 
 ### Added
