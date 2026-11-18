@@ -26,8 +26,11 @@ cfg, err := config.Load(config.FromArgs(os.Args[1:]))
 if err != nil {
 	log.Fatal(err)
 }
-appCfg, _ := config.App.Get()
-app := pocketbase.NewWithConfig(pocketbase.Config{DefaultDataDir: cfg.ResolvePath(appCfg.Dir)})
+a, err := standard.AppFromConfig(cfg) // the whole app section, ext/standard
+if err != nil {
+	log.Fatal(err)
+}
+app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 

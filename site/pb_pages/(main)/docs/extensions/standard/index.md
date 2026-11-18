@@ -30,6 +30,24 @@ app.Start()
 `NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
+To build the app from `pocketone.yaml`'s `app` section (data folder, dev mode, hooks and migrations folders, JS engine
+and its limits), load the file and pass what `AppFromConfig` returns:
+
+```go
+cfg, err := config.Load(config.FromArgs(os.Args[1:]))
+if err != nil {
+	log.Fatal(err)
+}
+a, err := standard.AppFromConfig(cfg)
+if err != nil {
+	log.Fatal(err)
+}
+app := standard.New().NewApp(a.PocketBase, a.JS)
+```
+
+Every `app` key reaches your build this way, including ones added in later releases. Your own flags override the
+fields they cover.
+
 ## Configure
 
 - **Reconfigure a member:** replace it, e.g. `set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour})`. A

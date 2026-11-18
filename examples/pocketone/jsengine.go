@@ -18,11 +18,9 @@ import (
 //   - goja: PocketBase's own plugins/jsvm, for pure PocketBase compatibility. The PocketOne JS features are off and
 //     the startup lines say so.
 const (
-	engineQuickJS = "quickjs"
-	engineGoja    = "goja"
+	engineQuickJS = standard.JSEngineQuickJS
+	engineGoja    = standard.JSEngineGoja
 )
-
-func defaultJSEngine() string { return engineQuickJS }
 
 // gojaOff is what an app gives up in goja mode.
 const gojaOff = "pages, $mcp, $tokens, $bulkmail, JS contracts, real globals and async handlers"
