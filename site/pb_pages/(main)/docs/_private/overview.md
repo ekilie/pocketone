@@ -18,7 +18,7 @@ Run `pocketone` the way you run `pocketbase`. These are the differences you'll n
 
 ### Hooks with async, import and TypeScript
 
-Your `pb_hooks` run on QuickJS with PocketBase's JS API, so they work unchanged, and they gain what goja can't do:
+Your `pb_hooks` run on QuickJS with PocketBase's JS API, so they work unchanged, and they gain what goja doesn't do:
 `async` handlers with `await` (the app keeps serving while one waits), ES module `import` and `node_modules` packages,
 `.pb.ts` TypeScript files, globals shared by every handler, and memory and time limits.
 [QuickJS hooks](/docs/quickjs) walks through each one.

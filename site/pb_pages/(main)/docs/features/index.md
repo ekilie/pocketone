@@ -8,7 +8,7 @@ description: Everything PocketOne adds to PocketBase, side by side with what Poc
 PocketOne does everything PocketBase does, and adds the features below. They're all built into the `pocketone`
 binary, and most are on by default. There's nothing to install.
 
-Three of them set PocketOne apart, and PocketBase can't do any of them: hooks with `async`, `import` and TypeScript,
+Three of them set PocketOne apart, and PocketBase doesn't do any of them: hooks with `async`, `import` and TypeScript,
 async pages in TSX, and hundreds of apps running as isolates in one process.
 
 ## Modern JavaScript on the server
