@@ -3,6 +3,10 @@
 # Modules are affected by their own files or by any module they reach through a `replace`; a core change affects
 # all of them. See .github/extensions/main.go and docs/extensions.md.
 #
+# Runs on pull requests and, through workflow_call, on land branches (land.yml, with base = origin/main) and in the
+# release check (release-check.yml, no base: every module). Nothing reaches main without passing it, so pushes to main
+# don't run it again.
+#
 # `plan` checks the rules and lists the affected modules; `test` builds, vets and tests each one in its own job, in
 # parallel (a change to core or to .github/extensions tests all ~30); `extensions` is the single overall result.
 # An extension author runs the same checks locally with `go run ./.github/extensions test`. Generated files (the site,
@@ -11,11 +15,17 @@
 name: extensions
 
 on:
-  push:
-    branches: [main]
   pull_request:
-  # release-check.yml calls this with no push range, so every module is tested
+  # land.yml passes the range it lands (origin/main..the land branch); release-check.yml passes none, so every module
+  # is tested
   workflow_call:
+    inputs:
+      base:
+        type: string
+        default: ""
+      head:
+        type: string
+        default: ""
 
 jobs:
   plan:
@@ -38,8 +48,8 @@ jobs:
       - name: Affected modules
         id: affected
         env:
-          BEFORE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          AFTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          BEFORE: ${{ inputs.base || (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || '' }}
+          AFTER: ${{ inputs.head || (github.event_name == 'pull_request' && github.event.pull_request.head.sha) || github.sha }}
         run: |
           set -euo pipefail
           if [ -z "$BEFORE" ] || [ "$BEFORE" = 0000000000000000000000000000000000000000 ]; then
@@ -67,6 +77,29 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: "**/go.sum"
+      # ext/docker's tests run real PocketBase and PocketOne releases, downloaded from GitHub into ~/.cache/ce-docker-test
+      # (runtime_test.go); keep them between runs so a GitHub hiccup doesn't fail the job
+      - name: Cache ext/docker's test releases
+        if: matrix.module == 'ext/docker'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ce-docker-test
+          key: ce-docker-test-${{ hashFiles('ext/docker/testdata/releases.json') }}
+      # proxy.golang.org sometimes drops a download mid-stream (INTERNAL_ERROR); fetch everything up front, with retries,
+      # so a dropped connection costs a retry, not a red run.
+      - name: Download modules
+        working-directory: ${{ matrix.module }}
+        run: |
+          for i in 1 2 3 4; do
+            if go mod download; then exit 0; fi
+            echo "::warning::go mod download failed (attempt $i); retrying"
+            sleep $((i * 5))
+          done
+          exit 1
+      - name: go.mod and go.sum are tidy
+        working-directory: ${{ matrix.module }}
+        run: |
+          go mod tidy -diff || { echo "::error::${{ matrix.module }}: go.mod or go.sum is out of date; run go mod tidy there and commit it"; exit 1; }
       - name: Build, vet and test
         working-directory: ${{ matrix.module }}
         # ext/desktop/runtime (Wails) builds with its cgo-free backend, as `pocketone desktop build` does; the cgo one

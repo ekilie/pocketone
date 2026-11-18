@@ -71,7 +71,12 @@ func TestCreateVerifyRevoke(t *testing.T) {
 	if err != nil || info.Owner.Id != su.Id || len(info.Scopes) != 0 {
 		t.Fatalf("verify: %v %+v", err, info)
 	}
-	if _, err := tk.Verify(secret[:len(secret)-1] + "x"); err != ErrInvalid {
+	// change the last character to a different one (a fixed "x" was the same character 1 time in 62)
+	last := "x"
+	if secret[len(secret)-1] == 'x' {
+		last = "y"
+	}
+	if _, err := tk.Verify(secret[:len(secret)-1] + last); err != ErrInvalid {
 		t.Fatalf("tampered: %v", err)
 	}
 	if err := tk.Revoke(rec.Id); err != nil {
