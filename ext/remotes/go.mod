@@ -100,3 +100,5 @@ replace github.com/pockethost/pocketone/ext/s3redirect => ../s3redirect
 replace github.com/pockethost/pocketone/ext/mothership => ../mothership
 
 replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+
+replace github.com/pockethost/pocketone/ext/templates => ../templates
