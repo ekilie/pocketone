@@ -1,6 +1,6 @@
 ---
 title: Coming from PocketBase
-description: PocketOne is PocketBase with more built in. What stays the same, what's added, and where to read about the parts that come straight from PocketBase.
+description: PocketOne is PocketBase with more built in. What stays the same, and how each added feature compares.
 ---
 
 # Coming from PocketBase
@@ -23,21 +23,67 @@ PocketOne yet.
 
 ## What's added
 
-Point-in-time restore, deploys from your terminal, API tokens and OAuth, MCP for AI agents, bulk mail, server-rendered
-sites and more, all on by default. [New in PocketOne](/docs/features) lists them side by side with what PocketBase
-gives you.
+Everything below is on by default. For each one, here's how you'd handle it in PocketBase and what PocketOne brings.
 
-## Read the PocketBase docs for the rest
+### Hooks
 
-This site doesn't copy PocketBase's docs. For everything PocketOne leaves as it is, read them at pocketbase.io:
+PocketBase runs `pb_hooks` on goja: CommonJS `require`, synchronous handlers, and a pool of runtimes that each load
+your hook files. PocketOne runs the same JS API on QuickJS, so your hooks keep working, and adds `async`/`await`, ES
+module `import` with `node_modules` packages, `.pb.ts` TypeScript, globals shared by every handler, and memory and time
+limits. [QuickJS hooks](/docs/quickjs)
 
-- [Introduction](https://pocketbase.io/docs/)
-- [Collections](https://pocketbase.io/docs/collections/)
-- [API rules and filters](https://pocketbase.io/docs/api-rules-and-filters/)
-- [Authentication](https://pocketbase.io/docs/authentication/)
-- [Files upload and handling](https://pocketbase.io/docs/files-handling/)
-- [Working with relations](https://pocketbase.io/docs/working-with-relations/)
-- [Extend with JavaScript](https://pocketbase.io/docs/js-overview/)
-- [Extend with Go](https://pocketbase.io/docs/go-overview/)
-- [Going to production](https://pocketbase.io/docs/going-to-production/)
-- [Web APIs reference](https://pocketbase.io/docs/api-records/)
+### Sites
+
+PocketBase serves static files and single-page apps from `pb_public`, and hooks can render HTML with `$template`.
+PocketOne adds server-rendered pages: a `.tsx`, `.jsx`, `.ejs` or `.md` file in `pb_pages` becomes a route, with
+`await` everywhere and no build step. [PocketPages sites](/docs/features/sites)
+
+### Many apps on one server
+
+A PocketBase app is one process, and you host several by running a process, container or VM for each. PocketOne can
+run hundreds of apps as isolates inside one process; each starts on its first request in tens of milliseconds, uses
+about 3 MB and is sandboxed from the others. [PocketBase isolates](/docs/features/isolates)
+
+### Backups and restore
+
+PocketBase makes backups on a schedule, to local disk or S3, and restores a whole backup. PocketOne also records every
+change, so you can restore to any second in the last 72 hours, and undo the restore. [Point-in-time
+restore](/docs/features/restore)
+
+### Deploying
+
+A PocketBase app is a folder you copy to the server; hooks reload when they change, and migrations run on the next
+start. PocketOne adds `pocketone deploy`, which uploads only what changed, and `pocketone dev`, which keeps a local
+folder and the running app in step both ways and streams the logs. [Deploy and live sync](/docs/features/deploy)
+
+### Admin from anywhere
+
+PocketBase's CLI runs on the machine that holds `pb_data`, and the dashboard and REST API work from anywhere. PocketOne
+adds a remote CLI: sign in once, then run admin commands against any app from your terminal, a script or an agent.
+[Remote CLI](/docs/features/remote)
+
+### Tokens
+
+A PocketBase auth token acts as its account, and changing the account's token key signs out all of its tokens at once.
+PocketOne adds named, scoped API tokens that you revoke one by one, and makes your app an OAuth server that apps and
+agents sign in through. [API tokens and OAuth](/docs/features/tokens)
+
+### AI agents
+
+PocketBase offers a REST API and realtime subscriptions, with official JavaScript and Dart SDKs. PocketOne also serves
+MCP at `/mcp` on every app, with OAuth sign-in, so Claude and other agents work with your app as you, using your own
+tools from `pb_hooks` too. [MCP for AI agents](/docs/features/mcp)
+
+### Mail
+
+PocketBase sends account mail (verification, password reset, email change, one-time codes), and your hooks can send any
+message through its mailer. PocketOne adds campaigns from the dashboard, with unsubscribes, suppression and pacing
+handled. [Bulk mail](/docs/features/bulk-mail)
+
+### Configuration
+
+In PocketBase, app settings live in the dashboard and `serve` takes its options as command-line flags. PocketOne adds
+`pocketone.yaml`, one file next to your app for those options and every extension's, with a `.env` for secrets.
+[pocketone.yaml](/docs/pocketone-yaml)
+
+Smaller additions are listed under [Also built in](/docs/features#also-built-in).
