@@ -21,7 +21,7 @@ import (
 // With ext/s3redirect on the same server, downloads of default-bucket files become signed redirects to the
 // instance's folder, without any wiring between the two extensions, and the signed URL serves the bytes.
 func TestS3RedirectSeesDefaultBucket(t *testing.T) {
-	b := startMinio(t)
+	b := startBucket(t)
 	st := New(Config{Bucket: b, Logger: quiet})
 	rd := s3redirect.New(s3redirect.Config{Logger: quiet})
 	var appA core.App

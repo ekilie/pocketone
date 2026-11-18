@@ -8,6 +8,7 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ### Added
 
+- New member `S3Fallback` (ext/s3-fallback, config section `storage`): a default bucket for apps without S3 of their own, so every PocketOne app and every isolate on a multisite host has it. It does nothing until the `storage` section mounts a backend. Reconfigure it with `set.S3Fallback = s3fallback.New(s3fallback.Config{...})`; a host that added it with `set.Add(s3fallback.New(...))` must drop that line (two extensions named `storage` stop startup).
 - New member `WASM` (ext/wasm): WASI modules in `pb_hooks`, called with `$wasm`. Reconfigure it with `set.WASM = wasm.New(wasm.Config{...})`. Turn it off on a single app with `wasm: {enabled: false}`.
 
 ### Fixed

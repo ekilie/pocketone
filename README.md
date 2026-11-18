@@ -64,6 +64,7 @@ choose not to use them.
 | **[Pages](ext/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. |
 | **[MCP](ext/mcp/README.md)** | An MCP endpoint at `/mcp` so agents can manage your app and call its tools. |
 | **[S3 Redirect](ext/s3redirect/README.md)** | File downloads as short-lived signed S3 redirects. |
+| **[S3 Fallback](ext/s3-fallback/README.md)** | A default bucket for uploads and backups when an app hasn't set its own S3; on a multisite host, each instance gets its own folder. |
 | **[Tokens](ext/tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes, and an [OAuth server](ext/tokens/OAUTH.md) for `pocketone login` and MCP sign-in. |
 | **[Deploy](ext/deploy/README.md)** | `pocketone deploy \| dev \| pull \| logs` and the deploy API. |
 | **[Remotes](ext/remotes/README.md)** | Named remotes and saved logins for the `pocketone` command. |
@@ -93,7 +94,6 @@ own custom PocketOne experience.
 | Extension | Description |
 |---|---|
 | **[Mail Relay](ext/mailrelay/README.md)** | Outgoing mail for instances without SMTP, sent as `<instance>@<your domain>` through your relay, with limits. |
-| **[S3 Fallback](ext/s3-fallback/README.md)** | A default bucket for uploads and backups when an instance hasn't set its own S3. |
 | **[Server Timing](ext/servertiming/README.md)** | `Server-Timing` headers for each step of a request. |
 
 **Sell it as a service**
