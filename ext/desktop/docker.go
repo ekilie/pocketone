@@ -66,15 +66,6 @@ func buildInDocker(ctx context.Context, o BuildOptions) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("the build in %s failed: %w", image, err)
 	}
-	// the bundles were built in Linux: sign them here, so macOS runs them on this machine
-	for _, t := range o.Targets {
-		if goos, goarch, _ := strings.Cut(t, "/"); goos == "darwin" {
-			apps, _ := filepath.Glob(filepath.Join(o.Out, goos+"-"+goarch, "*.app"))
-			for _, app := range apps {
-				adhocSign(ctx, app)
-			}
-		}
-	}
 	return nil
 }
 

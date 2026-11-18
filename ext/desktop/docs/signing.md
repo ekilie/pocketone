@@ -14,7 +14,43 @@ sign them, so each operating system knows the app comes from you and hasn't been
 | Windows | A SmartScreen "Windows protected your PC" warning | A code-signing certificate |
 | Linux | Nothing; Linux doesn't check | Optional: a GPG key, to publish a signature |
 
-Sign after every build: signing applies to the exact file, so a rebuilt app needs signing again.
+## Let desktop build sign
+
+Add a `sign` section to `pocketone.yaml`, and every `pocketone desktop build` signs what it built, on your machine,
+with your certificates. Name only the platforms you sign for:
+
+```yaml
+desktop:
+  name: Hello
+  id: dev.pocketone.hello
+  sign:
+    macos:
+      identity: "Developer ID Application: Your Name (ABCDE12345)"
+      notary_profile: pocketone-notary     # omit to sign without notarizing
+    windows:
+      # any command that signs {file} in place
+      command: signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a {file}
+    linux:
+      gpg_key: you@example.com
+```
+
+- **macOS:** it signs each `.app` with your Developer ID and the hardened runtime, puts it in a `.dmg`, signs the DMG,
+  sends it to Apple to notarize, and staples the result to both. You get the raw `.app` and the `.dmg`.
+- **Windows:** it runs your command on each `.exe`, with `{file}` replaced by its path. Use `signtool`, `osslsigncode`
+  or your signing service's tool, whichever fits your certificate.
+- **Linux:** it writes `<name>.sha256` and a detached `<name>.asc` GPG signature beside each binary.
+
+Before it builds anything, it checks that the tools are installed, that the identity is in your keychain and that the
+GPG key exists, so a missing piece fails in a second, not after the build. `pocketone desktop build --no-sign` skips
+the section, for a quick build to try out.
+
+Signing happens on your machine, not in the build image, because that's where your keychain and certificates are. So
+macOS builds are signed, notarized and put in a DMG only when you build on a Mac; built elsewhere, they're unsigned
+`.app` bundles. Windows and Linux builds sign anywhere their tools run (`signtool` only runs on Windows;
+`osslsigncode` runs everywhere).
+
+The sections below are the one-time setup for each platform, and the commands `desktop build` runs, if you'd rather
+sign by hand.
 
 ## macOS
 
@@ -43,9 +79,9 @@ where Apple scans the app and records that it did. You do both on a Mac, with th
      --apple-id you@example.com --team-id ABCDE12345 --password <app-specific password>
    ```
 
-### Every release: sign, notarize, staple
+### By hand: sign, notarize, staple
 
-Do this for each macOS build (`dist/darwin-arm64/Hello.app`, `dist/darwin-amd64/Hello.app`):
+`desktop build` does this for you with a `sign.macos` section. By hand, for each macOS build (`dist/darwin-arm64/Hello.app`, `dist/darwin-amd64/Hello.app`):
 
 1. **Sign** with your Developer ID, the hardened runtime (`--options runtime`, which notarization requires) and a
    secure timestamp. `--force` replaces the ad hoc signature the build added:
@@ -111,7 +147,7 @@ signing service rather than in a file, so how you sign depends on which you get.
 Either way, a new certificate starts with no reputation: SmartScreen may still warn for a while, until enough people
 have installed your signed app.
 
-### Every release: sign with signtool
+### By hand: sign with signtool
 
 On Windows, with the Windows SDK installed (it includes `signtool`) and your certificate on its token or in the
 certificate store:
@@ -147,8 +183,3 @@ gpg --armor --detach-sign Hello         # Hello.asc: a signature anyone with you
 
 Users check with `sha256sum -c Hello.sha256` and `gpg --verify Hello.asc Hello`. Packaging the app as a `.deb`,
 Flatpak or AppImage, where the package or repository is signed, also works.
-
-## Coming to desktop build
-
-Signing from `pocketone desktop build` itself, with your certificates, is planned, so a release build comes out signed
-and notarized.

@@ -42,6 +42,22 @@ desktop:
 
 Pick the `id` once and keep it: it's where your users' data lives, so a new id is a new, empty app for them.
 
+A `sign` section signs every build for the platforms it names (`--no-sign` skips it): macOS with your Developer ID,
+notarized and packaged as a DMG; Windows with your signing command; Linux with a checksum and a GPG signature. See
+[Signing and sharing](docs/signing.md).
+
+```yaml
+desktop:
+  sign:
+    macos:
+      identity: "Developer ID Application: Your Name (ABCDE12345)"
+      notary_profile: pocketone-notary
+    windows:
+      command: signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a {file}
+    linux:
+      gpg_key: you@example.com
+```
+
 ## Use
 
 In your app's folder:

@@ -37,6 +37,7 @@ type BuildOptions struct {
 	Targets []string // os/arch; default this machine's
 	Out     string   // where the apps go, relative to Dir; default dist
 	Local   bool     // build with this machine's Go instead of the build image
+	NoSign  bool     // skip Config.Sign
 	Image   string   // the build image; default the one matching this pocketone (DefaultImage)
 	Source  string   // --local: PocketOne source tree; default $P1_SOURCE, else the checkout Dir is in
 	Log     io.Writer
@@ -70,21 +71,29 @@ func Build(ctx context.Context, o BuildOptions) error {
 		}
 	}
 	if tmpl := os.Getenv(TemplateEnv); tmpl != "" {
-		return compile(ctx, o, tmpl, "")
+		return compile(ctx, o, tmpl, "") // in the build image: the host signs afterwards
 	}
-	if !o.Local {
-		return buildInDocker(ctx, o)
-	}
-	source, err := findSource(o.Source, dir)
-	if err != nil {
+	signing := o.signPlan()
+	if err := signing.preflight(ctx, o.Log); err != nil {
 		return err
 	}
-	work, err := os.MkdirTemp("", "pocketone-desktop-")
-	if err != nil {
+	if o.Local {
+		source, err := findSource(o.Source, dir)
+		if err != nil {
+			return err
+		}
+		work, err := os.MkdirTemp("", "pocketone-desktop-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(work)
+		if err := compile(ctx, o, work, source); err != nil {
+			return err
+		}
+	} else if err := buildInDocker(ctx, o); err != nil {
 		return err
 	}
-	defer os.RemoveAll(work)
-	return compile(ctx, o, work, source)
+	return signing.finish(ctx, o)
 }
 
 // compile builds o's targets in work: a fresh folder that gets a go.mod against source, or (source "") the build
@@ -196,7 +205,6 @@ func buildTarget(ctx context.Context, goBin, work, out, name, id, goos, goarch s
 	if err := os.WriteFile(filepath.Join(app, "Contents", "Info.plist"), infoPlist(name, id, exe), 0o644); err != nil {
 		return "", err
 	}
-	adhocSign(ctx, app)
 	return app, nil
 }
 

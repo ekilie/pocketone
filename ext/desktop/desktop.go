@@ -24,6 +24,32 @@ type Config struct {
 	ID     string `yaml:"id" doc:"Reverse-DNS app id (dev.example.notes): names the app's data folder on each user's machine and its single-instance lock. Default: app.pocketone.<name>."`
 	Width  int    `yaml:"width" doc:"The window's starting width. Default: 1024."`
 	Height int    `yaml:"height" doc:"The window's starting height. Default: 768."`
+
+	// Sign signs the builds for each platform it names, after every build (--no-sign skips it).
+	Sign SignConfig `yaml:"sign" doc:"Signing for each platform; a build signs the platforms named here (--no-sign skips it). Secrets can be $VAR references to the .env."`
+}
+
+// SignConfig is how desktop build signs each platform's builds.
+type SignConfig struct {
+	MacOS   *MacSign     `yaml:"macos" doc:"Sign (and notarize) the macOS builds. Needs a Mac with Xcode's tools."`
+	Windows *WindowsSign `yaml:"windows" doc:"Sign the Windows builds."`
+	Linux   *LinuxSign   `yaml:"linux" doc:"Publish a checksum and a GPG signature beside each Linux build."`
+}
+
+// MacSign signs macOS builds with a Developer ID and notarizes them.
+type MacSign struct {
+	Identity      string `yaml:"identity" doc:"The signing identity in your keychain, as security find-identity -v -p codesigning shows it: Developer ID Application: Your Name (TEAMID)."`
+	NotaryProfile string `yaml:"notary_profile" doc:"The notarytool keychain profile (xcrun notarytool store-credentials <profile>). Set: each DMG is notarized and stapled. Empty: signed, not notarized."`
+}
+
+// WindowsSign signs Windows builds with a command.
+type WindowsSign struct {
+	Command string `yaml:"command" doc:"The command that signs one executable in place; {file} is its path. signtool on Windows, osslsigncode anywhere, or your signing service's tool."`
+}
+
+// LinuxSign signs Linux builds with GPG.
+type LinuxSign struct {
+	GPGKey string `yaml:"gpg_key" doc:"The GPG key to sign with (its email or id). Each build gets <name>.sha256 and a detached <name>.asc signature."`
 }
 
 // Section is pocketone.yaml's desktop section.
@@ -53,7 +79,10 @@ embedded in the executable, which runs the app's server on a private 127.0.0.1 p
 Each user's data lives in their own app-data folder, named by the app id.
 
 Without flags it builds for this machine. --all builds macOS (arm64, amd64), Windows (amd64, arm64) and Linux
-(amd64, arm64); --target picks some. The apps land in dist/.
+(amd64, arm64); --target picks some. The apps land in dist/, macOS's as an .app and a .dmg.
+
+With a sign section in pocketone.yaml it signs what it built afterwards, here on this machine: macOS with your
+Developer ID (and notarizes), Windows with your command, Linux with GPG. --no-sign skips it.
 
 It runs in Docker, in the build image matching this pocketone (Go and PocketOne's source, vendored, so it needs
 nothing else and works offline once the image is here). --local builds with your own Go and a PocketOne checkout.`,
@@ -62,6 +91,7 @@ nothing else and works offline once the image is here). --local builds with your
 			fs.StringSlice("target", nil, "platforms to build, as os/arch (darwin/arm64,windows/amd64,...)")
 			fs.String("out", "dist", "the folder the apps are written to")
 			fs.Bool("local", false, "build with your own Go instead of the build image")
+			fs.Bool("no-sign", false, "skip pocketone.yaml's desktop.sign section (builds stay signed ad hoc)")
 			fs.String("image", "", "the build image (default "+DefaultImage()+")")
 			fs.String("source", "", "a PocketOne checkout: --local builds against it; a development pocketone builds its image from it (default $P1_SOURCE, else the checkout this folder is in)")
 		},
@@ -73,6 +103,7 @@ nothing else and works offline once the image is here). --local builds with your
 			o.Targets, _ = fs.GetStringSlice("target")
 			o.Out, _ = fs.GetString("out")
 			o.Local, _ = fs.GetBool("local")
+			o.NoSign, _ = fs.GetBool("no-sign")
 			o.Image, _ = fs.GetString("image")
 			o.Source, _ = fs.GetString("source")
 			return Build(c, o)

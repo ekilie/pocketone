@@ -92,5 +92,3 @@ quite fit. Being worked out:
 - **Trust:** requests from the app's own window run as its owner, and nothing else on the machine can reach the server.
 - **Settings:** a native Preferences window for the settings your app and its extensions declare, since the superuser
   dashboard isn't part of a shipped app.
-- **Signing:** signing and notarizing from `pocketone desktop build` itself; today you sign each build yourself
-  ([Signing and sharing](signing.md)).

@@ -13,12 +13,13 @@ pocketone desktop build                                        # this machine's 
 pocketone desktop build --all                                  # all six below
 pocketone desktop build --target windows/amd64,linux/amd64     # some of them
 pocketone desktop build --out builds                           # somewhere other than dist/
+pocketone desktop build --no-sign                              # skip the sign section
 ```
 
 | Platform | `--target` | You get |
 |---|---|---|
-| macOS, Apple Silicon | `darwin/arm64` | `dist/darwin-arm64/<name>.app` |
-| macOS, Intel | `darwin/amd64` | `dist/darwin-amd64/<name>.app` |
+| macOS, Apple Silicon | `darwin/arm64` | `dist/darwin-arm64/<name>.app` and `<name>.dmg` |
+| macOS, Intel | `darwin/amd64` | `dist/darwin-amd64/<name>.app` and `<name>.dmg` |
 | Windows, x64 | `windows/amd64` | `dist/windows-amd64/<name>.exe` |
 | Windows, Arm | `windows/arm64` | `dist/windows-arm64/<name>.exe` |
 | Linux, x64 | `linux/amd64` | `dist/linux-amd64/<name>` |
@@ -26,6 +27,9 @@ pocketone desktop build --out builds                           # somewhere other
 
 Each is one file (or one `.app` bundle) of about 40 MB, with your app and PocketOne inside. Windows builds open no
 console window.
+
+On a Mac, each macOS build also comes as a `.dmg`: the app and a link to Applications to drag it onto. With a `sign`
+section in `pocketone.yaml`, every build is signed for you; see [Signing and sharing](signing.md).
 
 ## Name and size
 
