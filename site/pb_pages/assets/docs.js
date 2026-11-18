@@ -30,7 +30,37 @@
     })
   }
 
+  // Mark the nav link for the page being viewed (aria-current, styled in site.css), in the sidebar and the mobile
+  // drawer. A page the nav doesn't list marks the link it falls under: the longest listed path it starts with.
+  const trim = (p) => p.replace(/\/+$/, '') || '/'
+  let marked
+  const markCurrent = () => {
+    const here = trim(location.pathname)
+    if (here === marked) return
+    marked = here
+    const links = [...document.querySelectorAll('.docs-toc-navigation a[href^="/"]')]
+    let best = ''
+    for (const a of links) {
+      const p = trim(a.getAttribute('href').split(/[?#]/)[0])
+      if (p !== '/docs' && (here === p || here.startsWith(p + '/')) && p.length > best.length) best = p
+    }
+    if (here === '/docs') best = '/docs'
+    for (const a of links) {
+      if (best && trim(a.getAttribute('href').split(/[?#]/)[0]) === best) a.setAttribute('aria-current', 'page')
+      else a.removeAttribute('aria-current')
+    }
+    // keep the marked link in view in the sidebar's own scroll box
+    const box = document.querySelector('.docs-nav-scroll')
+    const cur = box?.querySelector('a[aria-current="page"]')
+    if (box && cur) {
+      const b = box.getBoundingClientRect()
+      const c = cur.getBoundingClientRect()
+      if (c.top < b.top || c.bottom > b.bottom) box.scrollTop += c.top - b.top - b.height / 2 + c.height / 2
+    }
+  }
+
   const load = () => {
+    markCurrent()
     highlight()
     const title = document.getElementById('page-footer')?.dataset.title
     if (title && document.title !== title) document.title = title
@@ -78,6 +108,10 @@
     if (toc && prev !== null && prev !== current) toc.classList.add(depth(current) > depth(prev) ? 'nav-slide-in' : 'nav-slide-back')
     sessionStorage.setItem('docs-nav', current)
   } catch (e) {}
+
+  // the URL changes on a click or Back before the new content arrives, so mark the link right away
+  document.addEventListener('click', () => setTimeout(markCurrent, 0))
+  window.addEventListener('popstate', markCurrent)
 
   let timer
   new MutationObserver(() => {
