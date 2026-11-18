@@ -6,7 +6,7 @@ description: "Every command of the pocketone binary: PocketBase's own, the stand
 
 # CLI reference
 
-Every command of the `pocketone` binary with its [standard extensions](/docs/extensions/standard): PocketBase's own, the ones extensions add, and a `pocketone remote …` command for every operation of every contract, generated from it ([how](/docs/remote)). `pocketone <command> --help` says the same.
+Every command of the `pocketone` binary with its [standard extensions](/docs/extensions/standard): PocketBase's own, the ones extensions add, and a `pocketone remote …` command for every operation of every contract, generated from it ([how](/docs/features/remote)). `pocketone <command> --help` says the same.
 
 ## Global flags
 
