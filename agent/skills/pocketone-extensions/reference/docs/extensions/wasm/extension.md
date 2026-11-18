@@ -291,6 +291,7 @@ few milliseconds and under 1 MB.
 | [Multisite](https://pocketone.dev/docs/extensions/multisite) | Add it to the host's standard set and Pocker gives it to every instance it runs (Docker containers run stock images): one extension value serves them all. Each instance has its own modules, in its own `pb_hooks/`, its own call slots and limits. Each call reads the instance's module file as it is then; nothing runs between calls (below). A module change reloads just that instance, like a `.pb.js` change. |
 | [Sandbox](https://pocketone.dev/docs/extensions/sandbox) | `$wasm` is safe to give a hostile tenant: a module gets nothing but its input. A call can't be interrupted by the JS engine's time limits, so `Timeout` (and compiling) bound it instead. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `pocketone deploy` sends the modules with the rest of `pb_hooks/`. |
+| [MCP](https://pocketone.dev/docs/extensions/mcp) | The app's `/mcp` gets `wasm_list_modules` (superusers only): every module by name, with its manifest (functions, examples) and whether it runs. Agents connecting are told how to call a module with `$wasm`, so one working on the site knows its modules even without their sources. |
 
 ### Per-instance settings (Pocker)
 

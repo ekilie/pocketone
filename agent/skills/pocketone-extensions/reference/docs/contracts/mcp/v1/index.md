@@ -57,6 +57,7 @@ error="invalid_token"` challenge, never a guest's answer.
 | Extension | |
 |---|---|
 | [mcp](https://pocketone.dev/docs/extensions/mcp) | provides (default) |
+| [wasm](https://pocketone.dev/docs/extensions/wasm/extension) | works with |
 
 <!-- /contracts:index -->
 

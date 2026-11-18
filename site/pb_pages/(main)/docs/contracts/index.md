@@ -39,7 +39,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`mail.fallback/v1`](/docs/contracts/mail.fallback/v1) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](/docs/contracts/mail.feedback/v1) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](/docs/contracts/mail.suppression/v1) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |
-| [`mcp/v1`](/docs/contracts/mcp/v1) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  |  | @benallfree |
+| [`mcp/v1`](/docs/contracts/mcp/v1) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  | wasm | @benallfree |
 | [`oauth/v1`](/docs/contracts/oauth/v1) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
 | [`remote/v1`](/docs/contracts/remote/v1) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](/docs/contracts/restore/v1) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
