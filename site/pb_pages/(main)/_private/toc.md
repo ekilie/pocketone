@@ -3,6 +3,11 @@
 - [What is PocketOne?](/docs/overview)
 - [Installation](/docs/installation)
 
+# Features
+
+- [All features](/docs/features)
+- [Undo a mistake](/docs/features/restore)
+
 # Tutorials
 
 - [How PocketOne fits together](/docs/how-pocketone-fits-together)
