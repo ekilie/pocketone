@@ -16,11 +16,14 @@ The contract is [reference/docs/spec.md](reference/docs/spec.md). Where a doc an
 
 ## This is not Node
 
-Page code (middleware, handlers, templates, plugins) runs in the app's JS VM (Goja inside PocketBase):
+Page code (middleware, handlers, templates, plugins) runs in the app's JS VM (QuickJS, PocketOne's JS engine):
 
 - **No Node or browser APIs**: no `fs`, `Buffer`, `window`, `document`, `fetch`. Use PocketBase's JSVM globals
   (`$http.send`, `$os`, `$security`, ...) and `ctx` helpers.
-- **Synchronous.** `ctx.app`, `ctx.pb()` and `$http.send()` return results directly; don't `await` them.
+- **Sync by default, async when you want.** `ctx.app`, `ctx.pb()` and `$http.send()` return results directly; don't
+  `await` them. To wait outside the VM, `await` a Go function's `.async` twin
+  (`await ctx.app.countRecords.async('orders')`): middleware (`await next()`), `load`, handlers, EJS templates and
+  JSX components may all be `async`. In EJS, an async partial needs `<%- await include('name') %>`.
 - **Records are Go objects.** Read with `record.get('x')` / `record.getString('x')` / `record.getInt('x')`, write
   with `record.set('x', v)`. `record.id` works.
 - **`$app` finders take positional arguments**, and bind user input with `{:name}` placeholders, never string

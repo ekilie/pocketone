@@ -84,6 +84,28 @@ module.exports = {
 
 If a handler sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file`, `sse`), the page doesn't render.
 
+### Async loading
+
+`load` and the method handlers can be `async`. PocketPages waits for them before it renders. Every Go function has an
+`.async` twin that does its work outside the JS VM, so other requests keep running while it waits:
+
+```js
+// pb_pages/dashboard/+page.js
+module.exports = {
+  async load(ctx) {
+    const [orders, users] = await Promise.all([
+      ctx.app.countRecords.async('orders'),
+      ctx.app.countRecords.async('users'),
+    ])
+    return { orders, users }
+  },
+}
+```
+
+What an async handler returns is used just like a returned object, and an error it throws (or a rejected promise)
+fails the request like any other error. You can also `await` right in a template: see [EJS](https://pocketone.dev/docs/extensions/pages/ejs#await) and
+[JSX](https://pocketone.dev/docs/extensions/pages/jsx#async-components).
+
 ### One `+page.js` per folder
 
 A `+page.js` applies to every page in its folder. Use `ctx.route.name` to tell them apart:

@@ -22,6 +22,17 @@ module.exports = (ctx, next) => {
 - One signature: `(ctx, next)`. Call `next()` to continue, and return its result.
 - Returning without calling `next()` ends the request. If no response was sent, that's an error (a `500`; in dev mode the error page names the middleware file).
 - Share data through `ctx.data`.
+- Middleware can be `async`. `await next()` returns once the rest of the request has run, and throws what it threw.
+
+```js
+// pb_pages/+middleware.js
+module.exports = async (ctx, next) => {
+  ctx.data.unread = await ctx.app.countRecords.async('notifications', $dbx.hashExp({ read: false }))
+  const started = Date.now()
+  await next()
+  ctx.log.info('rendered', ctx.route.path, Date.now() - started, 'ms')
+}
+```
 
 ## Order
 

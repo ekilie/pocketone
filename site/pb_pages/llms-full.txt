@@ -8636,6 +8636,11 @@ For a URL that matches a page or API route, one JS call does all of this, in ord
 The call runs under the app's usual JS limits (execution time, memory), as one unit. If any step sends a response
 (`ctx.res.redirect`, `json`, `html`, `text`, `file`, `sse`), the later steps are skipped.
 
+**Async.** Middleware, `load`, method handlers, templates and components may be `async` (or return a promise). Each
+step waits for the one before it to settle, while the app's event loop runs, so `await` works on the `.async` twin of
+any Go function (`await ctx.app.countRecords.async('orders')`) and on any other promise. A rejected promise fails the
+request like a thrown error. Sync code never makes a promise, so it runs exactly as it would without this.
+
 ### 3.1 Middleware
 
 ```js
@@ -8650,6 +8655,9 @@ module.exports = (ctx, next) => {
 - One signature: `(ctx, next)`. Call `next()` to continue; return its result.
 - Returning without calling `next()` ends the request. If no response was sent, that's an error (500, and in dev
   the error page names the middleware file).
+- Middleware may be async: `await next()` returns once the rest of the request (later middleware, handlers,
+  template, layouts) has finished, and throws what it threw, so code after it can act on the outcome. A sync
+  middleware that calls `next()` without returning it still has the rest of the request awaited after it.
 - Share data through `ctx.data`.
 
 ### 3.2 Handlers: `+page.js`
@@ -8673,6 +8681,7 @@ module.exports = {
   `GET` (only the body is dropped), so keep side effects in `post`/`put`/`patch`/`delete`.
 - A handler may set `ctx.data` fields, or return a plain object, which is shallow-assigned into `ctx.data`
   (`Object.assign`). There is no deep merge.
+- Handlers may be async. A returned promise is awaited, and what it settles to is treated as a returned value.
 - A `+page.js` applies to every page in its folder. `ctx.route.name` tells them apart.
 - A method with no handler still renders the page, for every method (like PHP): a template can handle a form itself
   by checking `ctx.req.method`, with no `+page.js`.
@@ -8716,6 +8725,11 @@ module.exports = {
 
 - Escaping replaces `&` `<` `>` `"` `'` with `&amp;` `&lt;` `&gt;` `&#34;` `&#39;`. `null` and `undefined` output as an empty string.
 - A template is compiled once per content hash and reused.
+- **`await`.** A template whose code uses `await` (in any tag) is compiled as an async function, so
+  `<% const n = await ctx.app.countRecords.async('orders') %>` works. Including an async partial returns a promise:
+  print it with `<%- await include('name') %>`, which makes the including template async too. Printing a promise
+  without `await` is an error, not `[object Promise]`. `await slot('name', async () => { %>...<% })` defines a slot
+  whose content awaits. Templates without `await` stay plain functions.
 
 **In scope inside a template:** `ctx`, `data` (= `ctx.data`), `params` (= `ctx.params`), `include`, `slot`, `asset`
 (= `ctx.asset`), `meta` (= `ctx.meta`), `require` (the same `require` as page code, 1).
@@ -8821,6 +8835,9 @@ export default function Product({ data, slot }: any) {
   its locals become props.
 - Components are ordinary modules: `import Card from './_private/Card'` (resolved like `require`, 3.2). Partials
   are looked up with extensions in this order: `.ejs`, `.md`, `.jsx`, `.tsx`.
+- **Async components.** Any component may be `async`, the file's default export included. The render waits for it
+  wherever it sits in the tree; sibling async components run concurrently. `include()` of an async partial and
+  `slot(name, content)` with async content work the same way, and a layout reads the slot once it has settled.
 
 **TypeScript modules.** `+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and any `.ts` file reached by
 `require`/`import` work like their `.js` versions. A module whose only export is `export default` behaves like
@@ -15069,6 +15086,28 @@ module.exports = {
 
 If a handler sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file`, `sse`), the page doesn't render.
 
+### Async loading
+
+`load` and the method handlers can be `async`. PocketPages waits for them before it renders. Every Go function has an
+`.async` twin that does its work outside the JS VM, so other requests keep running while it waits:
+
+```js
+// pb_pages/dashboard/+page.js
+module.exports = {
+  async load(ctx) {
+    const [orders, users] = await Promise.all([
+      ctx.app.countRecords.async('orders'),
+      ctx.app.countRecords.async('users'),
+    ])
+    return { orders, users }
+  },
+}
+```
+
+What an async handler returns is used just like a returned object, and an error it throws (or a rejected promise)
+fails the request like any other error. You can also `await` right in a template: see [EJS](https://pocketone.dev/docs/extensions/pages/ejs#await) and
+[JSX](https://pocketone.dev/docs/extensions/pages/jsx#async-components).
+
 ### One `+page.js` per folder
 
 A `+page.js` applies to every page in its folder. Use `ctx.route.name` to tell them apart:
@@ -15211,6 +15250,22 @@ A request to `/feeds/latest` returns:
 - A folder can't have both a `+api.js` and an `index` page.
 - Middleware runs for API routes too.
 - `ctx.httpError()` thrown in a `+api.js` answers with JSON: `{ "status": 404, "message": "..." }`.
+- Handlers can be `async`. The response is sent once the handler settles.
+
+## Async handlers
+
+```js
+// pb_pages/stats/+api.js
+module.exports = {
+  async get(ctx) {
+    const orders = await ctx.app.countRecords.async('orders')
+    return ctx.res.json({ orders })
+  },
+}
+```
+
+An async handler still has to send a response. Returning a value without calling `ctx.res.json` (or another
+`ctx.res` method) is a `500`, as it is for a sync handler.
 
 ## Sending responses
 
@@ -15303,6 +15358,21 @@ A template returns its text. There is no `echo()`; anything you want in the outp
 <% } -%>
 </ul>
 ```
+
+## await
+
+A template can `await`. Any tag that uses `await` turns the template into an async one, and PocketPages waits for it
+before it sends the page:
+
+```ejs
+<% const orders = await ctx.app.countRecords.async('orders') %>
+<p><%= orders %> orders</p>
+```
+
+- Including a partial that uses `await` gives you a promise. Print it with `<%- await include('stats') %>`.
+- Printing a promise without `await` is an error, so you won't get `[object Promise]` in your page.
+- A slot whose content awaits takes an async function: `<% await slot('title', async () => { %>...<% }) %>`.
+- A template without `await` runs as a plain function, so sync templates cost nothing extra.
 
 ## Caching
 
@@ -15420,6 +15490,33 @@ JSX renders straight to HTML on the server. There's no virtual DOM, no hydration
 - `style` takes a string or an object: `{ marginTop: 4 }` renders `margin-top:4`.
 - `true` renders a bare attribute. `false`, `null` and `undefined` leave it out.
 - `<html>` gets `<!doctype html>` in front of it, since JSX can't write a doctype.
+
+## Async components
+
+Any component can be `async`, including the file's default export. The render waits for every async component in the
+tree, and sibling components run at the same time:
+
+```tsx
+// pb_pages/dashboard.tsx
+async function Count({ collection }: { collection: string }) {
+  const n = await $app.countRecords.async(collection)
+  return <b>{n}</b>
+}
+
+export default async function Dashboard({ ctx }: any) {
+  const user = ctx.auth ? await ctx.app.findRecordById.async('users', ctx.auth.id) : null
+  return (
+    <main>
+      <p>Hi {user ? user.getString('name') : 'there'}</p>
+      <p>
+        <Count collection="orders" /> orders, <Count collection="users" /> users
+      </p>
+    </main>
+  )
+}
+```
+
+`include()` of a partial that awaits, and `slot(name, content)` with async content, work the same way.
 
 ## Layouts
 
@@ -15723,6 +15820,17 @@ module.exports = (ctx, next) => {
 - One signature: `(ctx, next)`. Call `next()` to continue, and return its result.
 - Returning without calling `next()` ends the request. If no response was sent, that's an error (a `500`; in dev mode the error page names the middleware file).
 - Share data through `ctx.data`.
+- Middleware can be `async`. `await next()` returns once the rest of the request has run, and throws what it threw.
+
+```js
+// pb_pages/+middleware.js
+module.exports = async (ctx, next) => {
+  ctx.data.unread = await ctx.app.countRecords.async('notifications', $dbx.hashExp({ read: false }))
+  const started = Date.now()
+  await next()
+  ctx.log.info('rendered', ctx.route.path, Date.now() - started, 'ms')
+}
+```
 
 ## Order
 
