@@ -88,6 +88,10 @@ func main() {
 		if err := runTest(os.Args[2:]); err != nil {
 			fail(err)
 		}
+	case "quick":
+		if err := runQuick(os.Args[2:]); err != nil {
+			fail(err)
+		}
 	case "release":
 		if len(os.Args) < 3 || len(os.Args) > 4 {
 			usage()
@@ -134,7 +138,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples | extensions contracts | extensions approvers <base> <head> | extensions test [dir...] | extensions release vX.Y.Z [YYYY-MM-DD] | extensions release-notes vX.Y.Z")
+	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples | extensions contracts | extensions approvers <base> <head> | extensions test [dir...] | extensions quick [dir...] | extensions release vX.Y.Z [YYYY-MM-DD] | extensions release-notes vX.Y.Z")
 	os.Exit(2)
 }
 

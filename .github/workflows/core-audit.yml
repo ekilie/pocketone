@@ -1,12 +1,19 @@
 # Every commit that changes PocketBase core (anything outside ext/, site/, examples/pocketone/, docs/, README.md, CONTRIBUTING.md, AGENTS.md, CLAUDE.md,
 # CHANGELOG.md, CHANGELOG.pocketbase.md,
 # .github/, .claude/, .claude-plugin/, agent/) must carry a "Core-Audit:" trailer recording its independent audit. See AGENTS.md.
+# Runs on pull requests and, through workflow_call, on land branches (land.yml); nothing reaches main without it.
 name: core-audit
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
+    inputs:
+      base:
+        type: string
+        required: true
+      head:
+        type: string
+        required: true
 
 jobs:
   trailer:
@@ -17,8 +24,8 @@ jobs:
           fetch-depth: 0
       - name: Core commits carry a Core-Audit trailer
         env:
-          BEFORE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          AFTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          BEFORE: ${{ inputs.base || github.event.pull_request.base.sha }}
+          AFTER: ${{ inputs.head || github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           if [ -z "$BEFORE" ] || [ "$BEFORE" = 0000000000000000000000000000000000000000 ]; then
