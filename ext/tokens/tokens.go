@@ -46,7 +46,8 @@ var (
 	ErrExpired = errors.New("expired API token")
 )
 
-// Config is set by whoever builds the binary (or, under pocker, per instance).
+// Config is set by whoever builds the binary (with Pocker, an instance can override parts of it in its
+// settings).
 type Config struct {
 	// OAuth configures the OAuth server that comes with tokens (oauth/v1 at /api/_c/oauth/v1/): browser and device
 	// sign-in for the CLI, and OAuth clients such as Claude's MCP connectors. On unless OAuth.Disabled.
@@ -84,7 +85,7 @@ func MustRegister(app core.App, cfg Config) *Tokens {
 
 // Register adds API tokens to app: the _tokens collection (on bootstrap), the bearer middleware, routes and
 // dashboard screen (on serve), and on a *pocketbase.PocketBase the `token` command. Call it before app.Start(), or
-// from a pocker extension's InitApp.
+// from an extension's Register (as [Extension] does).
 func Register(app core.App, cfg Config) (*Tokens, error) {
 	if cfg.Now == nil {
 		cfg.Now = time.Now

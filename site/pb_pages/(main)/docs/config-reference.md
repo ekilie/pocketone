@@ -53,7 +53,7 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
 | `eviction` | string |  | Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo. |
 | `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
-| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker). |
 | `max_disk` | int |  | Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB. |
 | `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
 | `defaults.max_items` | int |  | Most entries the bucket holds. |
@@ -178,7 +178,7 @@ Owned by [PITR](/docs/extensions/pitr).
 
 #### `pocker:`
 
-Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).
+Runtime provider pocker: instances run as isolates in this process (root folder, hooks pool, egress allow list, instance limit defaults).
 
 | Key | Type | Default | Description |
 |---|---|---|---|

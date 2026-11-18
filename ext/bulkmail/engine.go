@@ -22,7 +22,8 @@ const (
 	brakeFailureRate = 0.05
 	idleTick         = 15 * time.Second
 	// idleWait is how long a sender with nothing to send sleeps; starting, resuming or editing a campaign wakes it
-	// sooner. Under pocker every running instance has a sender, so idle ones must cost next to nothing.
+	// sooner. When instances run as isolates (Pocker), each running one has a sender, so idle ones must cost next
+	// to nothing.
 	idleWait = 5 * time.Minute
 )
 

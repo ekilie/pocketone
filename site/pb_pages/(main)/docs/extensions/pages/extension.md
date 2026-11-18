@@ -157,19 +157,15 @@ What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/pocker) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
+| [Multisite](/docs/extensions/multisite) | Pages is in the standard set, so every instance that runs PocketOne serves its own `pb_pages` (below). |
 | [Cache](/docs/extensions/cache) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. On a multisite host they also outlive an instance's restarts, since the cache belongs to the host. With the cache off, each JS VM compiles a file the first time it meets it. |
 | [Deploy](/docs/extensions/deploy) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
-### Under pocker
+### On a multisite host
 
 Pages is a member of the [standard set](/docs/extensions/standard), so every instance serves its own
-`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. A host without
-the standard set adds it like any extension:
-
-```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(pages.Config{})}}
-```
+`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. With an
+isolate runtime ([Pocker](/docs/extensions/pocker)), where instances are isolates in one process:
 
 - Each start of an instance's app gets its own route table, compiled templates (in its own `pages.compiled` bucket; identical files share one copy in the host's cache) and caches. An instance that sleeps
   drops them; nothing is shared between instances.

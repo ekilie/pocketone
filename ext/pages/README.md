@@ -141,19 +141,15 @@ cd example && go run . serve --dir=./pb_data
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
+| [Multisite](../multisite/README.md) | Pages is in the standard set, so every instance that runs PocketOne serves its own `pb_pages` (below). |
 | [Cache](../cache/README.md) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. On a multisite host they also outlive an instance's restarts, since the cache belongs to the host. With the cache off, each JS VM compiles a file the first time it meets it. |
 | [Deploy](../deploy/README.md) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
-### Under pocker
+### On a multisite host
 
 Pages is a member of the [standard set](../standard/README.md), so every instance serves its own
-`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. A host without
-the standard set adds it like any extension:
-
-```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(pages.Config{})}}
-```
+`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. With an
+isolate runtime ([Pocker](../pocker/README.md)), where instances are isolates in one process:
 
 - Each start of an instance's app gets its own route table, compiled templates (in its own `pages.compiled` bucket; identical files share one copy in the host's cache) and caches. An instance that sleeps
   drops them; nothing is shared between instances.

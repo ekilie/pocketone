@@ -15,7 +15,7 @@ A PocketOne extension is Go code compiled into your build. There are two kinds, 
 - **Host extensions** add to a multisite host, the process that serves many instances: request gates (firewall, rate
   limits), TLS, middleware around every instance, instance sources, background jobs.
 
-How a multisite host runs its instances (in-process with [pocker](/docs/extensions/pocker), in containers with
+How a multisite host runs its instances (as isolates in its own process with [pocker](/docs/extensions/pocker), in containers with
 [docker](/docs/extensions/docker), or both) is the host's `runtime/v1` contract. App extensions don't depend on it.
 
 ## App extensions: `extkit`
@@ -53,7 +53,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
-  What runs inside an instance depends on its runtime: pocker registers the set in-process; a docker instance runs
+  What runs inside an instance depends on its runtime: pocker registers the set in each isolate; a docker instance runs
   the `pocketone` binary in its container, so it has the stock set (your own extras need your own image); an instance
   on a stock PocketBase image runs none, and gets only the contracts the host provides for it
   ([Working together](#working-together-contracts)).
@@ -387,7 +387,10 @@ ext/<name>/
   - `## Use`: day to day: the admin screens and what to click, the commands.
   - `## Integrations`: the extensions yours works with and how (multisite hosting goes here, not in the sections
     above), and how other extensions can build on yours (hooks, filesystem kinds, per-instance settings, Go
-    and REST APIs).
+    and REST APIs). Hosting is a [Multisite](/docs/extensions/multisite) row: what an instance gets and its
+    `extensions.<name>` settings. Pocker and Docker are two `runtime/v1` providers, not the host: name one only for
+    what differs by runtime (isolates, which share the host's process; sleeping instances; and today per-instance settings and the
+    host's extras, which only Pocker applies), never as the stand-in for "a multisite host".
   - `## Example`: the code that uses it. A sentence on what your `example/main.go` runs, then the whole file in a
     ```` ```go ```` block, exactly as it is; `go run ./.github/extensions examples` copies it in, and CI fails when the two
     differ. Without an example (an extension built into `pocketone`), say where to see it used.

@@ -1,5 +1,5 @@
-// Package standard is PocketOne's standard set: the extensions every PocketOne app has (the stock binary, every Pocker
-// instance, any host), with named members a host configures and extras it adds.
+// Package standard is PocketOne's standard set: the extensions every PocketOne app has (a standalone app or an
+// instance on a multisite host, whatever its runtime), with named members a host configures and extras it adds.
 //
 //	set := standard.New()
 //	set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour}) // reconfigure a member
@@ -218,7 +218,7 @@ func (s *Set) BindJS(app core.App, rt js.Runtime) {
 }
 
 // Finish implements [extkit.AppSet]: it seals app's contracts and returns the startup lines. The host decides where
-// they go: a single app logs them (Register), Pocker writes them to the instance's own log.
+// they go: a standalone app logs them (Register), Pocker writes them to the instance's own log.
 func (s *Set) Finish(app core.App, plan *extkit.Plan) ([]string, error) {
 	lines, err := extkit.Finish(app, plan, s.Providers)
 	if err != nil {
@@ -231,7 +231,7 @@ func (s *Set) Finish(app core.App, plan *extkit.Plan) ([]string, error) {
 	return append([]string{"standard: on: " + strings.Join(on, ", ")}, lines...), nil
 }
 
-// NewApp is a PocketOne single app: the set registered, pb_hooks loaded through jsvm with the set's JS APIs, the
+// NewApp is a standalone PocketOne app: the set registered, pb_hooks loaded through jsvm with the set's JS APIs, the
 // contracts sealed. It panics on a setup error, like PocketBase's MustRegister helpers.
 func (s *Set) NewApp(cfg pocketbase.Config, jsCfg jsvm.Config) *pocketbase.PocketBase {
 	app := pocketbase.NewWithConfig(cfg)

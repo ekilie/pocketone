@@ -35,8 +35,8 @@ func Register(app core.App) {
 	})
 }
 
-// Ensure creates the test accounts, or resets their passwords, on an already bootstrapped app. Under pocker, call
-// it from SetupApp.
+// Ensure creates the test accounts, or resets their passwords, on an already bootstrapped app. On a multisite host
+// running Pocker, call it from pocker's SetupApp.
 func Ensure(app core.App) error {
 	if err := ensure(app, core.CollectionNameSuperusers, SuperuserEmail); err != nil {
 		return err

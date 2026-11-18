@@ -7,5 +7,5 @@
 // remote/v1.
 //
 // Server half: the deploy API. [Register] serves it on a single app (superusers; API tokens with the deploy scope);
-// [New] builds it for any [Backend] and [Instances] (PocketHost runs it under pocker with its own backend).
+// [New] builds it for any [Backend] and [Instances] (PocketHost runs it on its multisite host with its own backend).
 package deploy

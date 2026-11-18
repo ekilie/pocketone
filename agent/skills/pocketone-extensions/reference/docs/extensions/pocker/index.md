@@ -67,7 +67,7 @@ Every instance runs the PocketOne code in the binary; an instance's `version` is
 
 #### `pocker:`
 
-Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).
+Runtime provider pocker: instances run as isolates in this process (root folder, hooks pool, egress allow list, instance limit defaults).
 
 | Key | Type | Default | Description |
 |---|---|---|---|

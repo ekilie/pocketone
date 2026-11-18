@@ -107,7 +107,7 @@ func (s *Server) Run(ctx context.Context) error {
 // Name implements multisite.Extension.
 func (s *Server) Name() string { return "pocker" }
 
-// RegisterHost implements multisite.Extension: it makes h run instances in-process. It registers the host extensions
+// RegisterHost implements multisite.Extension: it makes h run instances as isolates. It registers the host extensions
 // among s.Extensions on h (gates, TLS, wrappers), installs the egress policy and provides the Manager as runtime/v1;
 // its app extensions go to every instance. h's Source, Forward, Dev, Listeners and Logger are already set.
 func (s *Server) RegisterHost(h *multisite.Host) error {

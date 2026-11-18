@@ -48,7 +48,7 @@ const (
 // SupportedVersions are the MCP protocol revisions this server speaks, newest first.
 var SupportedVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26"}
 
-// Config is set by whoever builds the binary (or, under pocker, per instance).
+// Config is set by whoever builds the binary (or, with Pocker, per instance).
 type Config struct {
 	// Name is serverInfo.name (default: a slug of Settings → Application name, or "pocketbase").
 	Name string

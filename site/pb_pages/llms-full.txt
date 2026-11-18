@@ -921,7 +921,7 @@ A PocketOne extension is Go code compiled into your build. There are two kinds, 
 - **Host extensions** add to a multisite host, the process that serves many instances: request gates (firewall, rate
   limits), TLS, middleware around every instance, instance sources, background jobs.
 
-How a multisite host runs its instances (in-process with [pocker](https://pocketone.dev/docs/extensions/pocker), in containers with
+How a multisite host runs its instances (as isolates in its own process with [pocker](https://pocketone.dev/docs/extensions/pocker), in containers with
 [docker](https://pocketone.dev/docs/extensions/docker), or both) is the host's `runtime/v1` contract. App extensions don't depend on it.
 
 ## App extensions: `extkit`
@@ -959,7 +959,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
-  What runs inside an instance depends on its runtime: pocker registers the set in-process; a docker instance runs
+  What runs inside an instance depends on its runtime: pocker registers the set in each isolate; a docker instance runs
   the `pocketone` binary in its container, so it has the stock set (your own extras need your own image); an instance
   on a stock PocketBase image runs none, and gets only the contracts the host provides for it
   ([Working together](#working-together-contracts)).
@@ -1293,7 +1293,10 @@ ext/<name>/
   - `## Use`: day to day: the admin screens and what to click, the commands.
   - `## Integrations`: the extensions yours works with and how (multisite hosting goes here, not in the sections
     above), and how other extensions can build on yours (hooks, filesystem kinds, per-instance settings, Go
-    and REST APIs).
+    and REST APIs). Hosting is a [Multisite](https://pocketone.dev/docs/extensions/multisite) row: what an instance gets and its
+    `extensions.<name>` settings. Pocker and Docker are two `runtime/v1` providers, not the host: name one only for
+    what differs by runtime (isolates, which share the host's process; sleeping instances; and today per-instance settings and the
+    host's extras, which only Pocker applies), never as the stand-in for "a multisite host".
   - `## Example`: the code that uses it. A sentence on what your `example/main.go` runs, then the whole file in a
     ```` ```go ```` block, exactly as it is; `go run ./.github/extensions examples` copies it in, and CI fails when the two
     differ. Without an example (an extension built into `pocketone`), say where to see it used.
@@ -2785,7 +2788,7 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
 | `eviction` | string |  | Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo. |
 | `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
-| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker). |
 | `max_disk` | int |  | Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB. |
 | `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
 | `defaults.max_items` | int |  | Most entries the bucket holds. |
@@ -2910,7 +2913,7 @@ Owned by [PITR](https://pocketone.dev/docs/extensions/pitr).
 
 #### `pocker:`
 
-Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).
+Runtime provider pocker: instances run as isolates in this process (root folder, hooks pool, egress allow list, instance limit defaults).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -3184,7 +3187,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`oauth/v1`](https://pocketone.dev/docs/contracts/oauth/v1) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
 | [`remote/v1`](https://pocketone.dev/docs/contracts/remote/v1) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](https://pocketone.dev/docs/contracts/restore/v1) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
-| [`runtime/v1`](https://pocketone.dev/docs/contracts/runtime/v1) | What runs a multisite host's instances (in-process, in containers), in preference order. | docker, pocker |  |  | @benallfree |
+| [`runtime/v1`](https://pocketone.dev/docs/contracts/runtime/v1) | What runs a multisite host's instances (as isolates, in containers), in preference order. | docker, pocker |  |  | @benallfree |
 | [`settings/v1`](https://pocketone.dev/docs/contracts/settings/v1) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr, vacuum | @benallfree |
 | [`templates/v1`](https://pocketone.dev/docs/contracts/templates/v1) | An extension's own pages as Go templates a project can eject and edit. | templates |  | tokens | @benallfree |
 | [`tls/v1`](https://pocketone.dev/docs/contracts/tls/v1) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |
@@ -3371,7 +3374,7 @@ The extension contract and tools for building and testing extensions.
 | [Bundle](https://pocketone.dev/docs/extensions/bundle) | An app's hooks, migrations and public files embedded in the binary. |
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
 | [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
-| [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
+| [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on every app, standalone or hosted. |
 | [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
 | [Standard Set](https://pocketone.dev/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
 
@@ -4636,7 +4639,7 @@ Source: https://pocketone.dev/docs/contracts/runtime/v1
 
 # runtime/v1
 
-What runs a multisite host's instances: [pocker](https://pocketone.dev/docs/extensions/pocker) in-process,
+What runs a multisite host's instances: [pocker](https://pocketone.dev/docs/extensions/pocker) as isolates,
 [docker](https://pocketone.dev/docs/extensions/docker) in containers. A host can have several at once, in preference order: each
 instance runs on the one it names (`runtime: docker` in its record), else the first that can serve it (by PocketBase
 version, for example). Having a `multisite` section makes the binary a host; the runtimes are this contract's
@@ -5481,12 +5484,12 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Add the same extension value to `srv.Extensions` and every instance gets Bulk Mail. Each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Bulk Mail is a standard member, so every PocketOne app has it, standalone or an instance on a multisite host (reconfigure it with `set.BulkMail = bulkmail.New(...)` on the host's standard set). On Pocker each instance can override its limits (below). `$bulkmail` only reaches the instance's own data, so it's safe for untrusted tenants. |
 | [Mailtrap](https://pocketone.dev/docs/extensions/mailtrap) | In dev mode with SMTP off, campaign mail lands in the local inbox instead of being sent. |
 
-### Per-instance settings (pocker)
+### Per-instance settings (Pocker)
 
-Each instance's `extensions.bulkmail` settings apply over the `Config` given to `bulkmail.New`:
+On Pocker, each instance's `extensions.bulkmail` settings apply over the `Config` given to `bulkmail.New`:
 
 ```yaml
 instances:
@@ -5577,7 +5580,7 @@ func main() {
 
 	registerDemoView(app) // a "newsletter_audience" view to use as a campaign audience (demo.go)
 
-	// the same extension value pocker would host on every instance (srv.Extensions = append(srv.Extensions, mail))
+	// the same extension value a multisite host gives every instance (set.BulkMail = mail on its standard set)
 	mail := bulkmail.New(bulkmail.Config{
 		Rate:  5,    // messages per second
 		Daily: 5000, // messages per day; bulkmail.NoBulkMail forbids sending
@@ -5682,7 +5685,7 @@ The store, ceilings over every bucket together:
 |---|---|
 | `max_memory` | Memory for every bucket together (default 128MiB) |
 | `eviction` | Which values leave memory (or disk) first when the store reaches a ceiling: `lru` (default), `mru`, `fifo`, `lifo` |
-| `disk_path` | Turns on the disk tier there, in a `p1cache` folder. Relative paths are under `pb_data` on a single app, and under the working directory on a multisite host |
+| `disk_path` | Turns on the disk tier there, in a `p1cache` folder. Relative paths are under `pb_data` when the app has the process to itself, and under the working directory when several apps share it (Pocker) |
 | `max_disk` | Size of the disk tier (default 1GiB) |
 
 Each bucket (`defaults` and `buckets.<name>`), its own budget:
@@ -5711,7 +5714,7 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
 | `eviction` | string |  | Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo. |
 | `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
-| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host. |
+| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker). |
 | `max_disk` | int |  | Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB. |
 | `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
 | `defaults.max_items` | int |  | Most entries the bucket holds. |
@@ -5743,7 +5746,7 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Every instance shares the host's one store (its memory, its disk tier), and sees only its own buckets: keys live under the instance's id. An instance that sleeps keeps its entries, so it wakes to a warm cache. An instance's `extensions.cache` may set `enabled`, `defaults` and `buckets` for itself; the store's keys are the host's only. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance that runs PocketOne has Cache (a standard member). With [Pocker](https://pocketone.dev/docs/extensions/pocker), every instance shares the host's one store (its memory, its disk tier), and sees only its own buckets: keys live under the instance's id. An instance that sleeps keeps its entries, so it wakes to a warm cache. An instance's `extensions.cache` may set `enabled`, `defaults` and `buckets` for itself; the store's keys are the host's only. |
 | [Docker](https://pocketone.dev/docs/extensions/docker) | Each container runs its own `pocketone`, so it has its own store. |
 
 ### Building on Cache
@@ -5827,8 +5830,8 @@ func main() {
 
 ## How it works
 
-One store per process. Each app's buckets are namespaces in it, `<instance id>/<bucket>` (just `/<bucket>` on a
-single app), so no app can read another's keys.
+One store per process. Each app's buckets are namespaces in it, `<instance id>/<bucket>` (just `/<bucket>` when
+the app has the process to itself), so no app can read another's keys.
 
 Memory and disk follow different rules. In memory every key holds its own value, bytes or a Go value, and nothing is
 shared between keys. On disk values are files named by the SHA-256 of their bytes (an item's `MarshalCache` bytes):
@@ -6064,7 +6067,7 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 | Extension | How they fit |
 |---|---|
 | Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](https://pocketone.dev/docs/extensions/pitr), [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) and [Auto TLS](https://pocketone.dev/docs/extensions/autotls) are examples. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) and [Docker](https://pocketone.dev/docs/extensions/docker) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes ([Pocker](https://pocketone.dev/docs/extensions/pocker), [Docker](https://pocketone.dev/docs/extensions/docker)) `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
 
 ### The server section with many instances
 
@@ -6220,7 +6223,7 @@ npm and bun, pnpm's store, workspace links; never devDependencies) and shipped a
 
 **Restarts:** files are swapped in while the app runs, each rename atomic, and deploy never restarts the app on its
 own. `pb_pages` and `pb_public` are read from disk on each request, and hooks reload by themselves (PocketBase's
-`--hooksWatch`, Pocker's watcher). Migrations and packages apply only when the app starts, so a deploy that changes
+`--hooksWatch`, or the runtime's watcher on a multisite host). Migrations and packages apply only when the app starts, so a deploy that changes
 them says `Migrations or packages changed` and leaves the restart to you: pass `--restart` (the app restarts once,
 after the whole batch is in, and you hear if it fails to start), run `pocketone restart`, or type `r` in `dev`. So
 does the first deploy that creates `pb_hooks`, since a watcher only sees folders that existed when the app started.
@@ -6232,7 +6235,7 @@ pocketone restart prod
 ```
 
 Restarts the app so it applies new migrations and packages, and tells you if it fails to start. An app that isn't
-running (a sleeping Pocker instance) is left alone; it applies them when it starts.
+running (a sleeping instance on a multisite host) is left alone; it applies them when it starts.
 
 ### `dev`
 
@@ -6331,7 +6334,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 | [Remotes](https://pocketone.dev/docs/extensions/remotes) | Gives the commands their remotes, saved logins and CI tokens. The commands find deploy/v1 in the remote's whoami, and `restart` and `logs` use its remote/v1 (deploy requires it). |
 | [OAuth](https://pocketone.dev/docs/extensions/tokens/oauth) (in Tokens) | `pocketone login` signs in through the browser when the remote runs it. |
 | [Tokens](https://pocketone.dev/docs/extensions/tokens) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. Add `remote` for `--restart` and `remote:read` for `dev`'s logs. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | A multisite host can serve the same API for all its instances with its own backend: build it with `deploy.New` (below). PocketHost does this. |
 
 ### Building on Deploy
 
@@ -6342,7 +6345,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 - **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths})`
   builds the API; mount `api.Wrap(next)`. `Backend` decides which instance a request is for (`Lookup(r)`), who it
   acts as (`Authenticate(r, inst)` → `Auth{UserID, Scopes, Via, TokenLabel}`, an `*AuthError`, or `ErrNoAccess` for a
-  404) and records history. `Instances` is pocker's Manager (stop, swap, start). Serve it as deploy/v1 for the host's
+  404) and records history. `Instances` stops, swaps and starts instances (pocker's Manager is one). Serve it as deploy/v1 for the host's
   instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
 - **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
   does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
@@ -6451,9 +6454,9 @@ PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS AP
   caps on queued tasks and async calls. A runaway script stops with an error; other apps in the process keep running.
 - **Real error positions.** Stack traces name `pb_hooks/<file>:<line>`.
 
-The `pocketone` binary and every Pocker instance run on it. PocketBase's own `plugins/jsvm` (goja) is for pure
-PocketBase compatibility only: `jsvm: goja` under `app:` in `pocketone.yaml` (or `--jsvm goja`) runs a single app on it,
-with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off.
+Every PocketOne app runs on it: a standalone app or an instance on a multisite host, whatever the runtime. PocketBase's
+own `plugins/jsvm` (goja) is for pure PocketBase compatibility only: `jsvm: goja` under `app:` in `pocketone.yaml` (or
+`--jsvm goja`) runs a standalone app on it, with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -6693,9 +6696,9 @@ connector, any Streamable HTTP client) can work with your app. No sidecar proces
 MCP is built into `pocketone` and always on, with [Tokens](https://pocketone.dev/docs/extensions/tokens) and
 [the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) for sign-in and `$mcp` in `pb_hooks`. There's nothing to install or turn on.
 
-MCP is a member of the [standard set](https://pocketone.dev/docs/extensions/standard), so every PocketOne app has it: the stock binary, every
-[Pocker](https://pocketone.dev/docs/extensions/pocker) instance, and your own Go build made with `standard.New()`. The set also registers
-Tokens (with its OAuth server) for sign-in and binds `$mcp` in `pb_hooks`:
+MCP is a member of the [standard set](https://pocketone.dev/docs/extensions/standard), so every PocketOne app has it: a standalone app or an
+instance on a [multisite host](https://pocketone.dev/docs/extensions/multisite), from the stock binary or your own Go build made with
+`standard.New()`. The set also registers Tokens (with its OAuth server) for sign-in and binds `$mcp` in `pb_hooks`:
 
 ```go
 set := standard.New()
@@ -6859,8 +6862,8 @@ In `pocketone` it always is.
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | `pb_download_file` follows its one redirect to storage. |
 | JS hooks | `$mcp` in `pb_hooks` (above). |
 
-Under [Pocker](https://pocketone.dev/docs/extensions/pocker), every instance gets MCP from the standard set, with its own tokens, OAuth sign-in
-and `/mcp`; an instance turns it off with `extensions.mcp.enabled: false`.
+On a [multisite host](https://pocketone.dev/docs/extensions/multisite), every instance that runs PocketOne has MCP from the standard set, with
+its own tokens, OAuth sign-in and `/mcp`; with Pocker, an instance turns it off with `extensions.mcp.enabled: false`.
 
 ### Tools from Go
 
@@ -7214,19 +7217,15 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Pages is in the standard set, so every instance that runs PocketOne serves its own `pb_pages` (below). |
 | [Cache](https://pocketone.dev/docs/extensions/cache) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. On a multisite host they also outlive an instance's restarts, since the cache belongs to the host. With the cache off, each JS VM compiles a file the first time it meets it. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
-### Under pocker
+### On a multisite host
 
 Pages is a member of the [standard set](https://pocketone.dev/docs/extensions/standard), so every instance serves its own
-`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. A host without
-the standard set adds it like any extension:
-
-```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(pages.Config{})}}
-```
+`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. With an
+isolate runtime ([Pocker](https://pocketone.dev/docs/extensions/pocker)), where instances are isolates in one process:
 
 - Each start of an instance's app gets its own route table, compiled templates (in its own `pages.compiled` bucket; identical files share one copy in the host's cache) and caches. An instance that sleeps
   drops them; nothing is shared between instances.
@@ -7482,7 +7481,7 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Every instance on the host gets PITR. The `pitr` section sets the defaults for all of them; each instance can override `enabled` and `retention` (below). A restore restarts only that instance, and sleeping instances cost nothing. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | PITR is in the standard set, so every instance that runs PocketOne has it, and a restore restarts only that instance. With an isolate runtime ([Pocker](https://pocketone.dev/docs/extensions/pocker)), the `pitr` section sets the defaults for all of them, each instance can override `enabled` and `retention` (below), and sleeping instances cost nothing. |
 | [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | Mount `litestream` on a backend and every app without its own bucket keeps its history there, under its own prefix. An app's own bucket (Settings → Backups) still wins. |
 | [Multitenant](https://pocketone.dev/docs/extensions/tenants) (planned) | Sets each instance's `enabled` and `retention` from its plan, for example a plan without PITR. |
 | PocketBase backups | `pb_data/litestream/` is left out of backup zips, and restoring a zip doesn't wipe it. |
@@ -7756,8 +7755,8 @@ Whoami says who the request's credential is and what the app offers, so clients 
 
 `via` is `token` for an API token, `jwt` for a PocketBase auth token, and empty with no credential (`auth` is then
 `null`, and `extensions` is left out). `contracts` are the contract APIs the app offers, each at `/api/_c/<id>/`:
-everything a client can use (oauth/v1's metadata is at `/.well-known/oauth-authorization-server`). Restart answers at once and restarts just after (under Pocker, only
-that instance).
+everything a client can use (oauth/v1's metadata is at `/.well-known/oauth-authorization-server`). Restart answers at once and restarts just after (on a multisite host,
+only that instance).
 
 ### Building on Remotes
 
@@ -7947,13 +7946,13 @@ The example is its own Go module, so its demo dependencies (gofakes3, the AWS SD
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The same extension runs on every instance. The `s3redirect` section sets the defaults; each instance can override `enabled` and `ttl` (below). |
-| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | Apps without their own S3 settings keep files in its bucket (under pocker, fenced to `instances/<id>/storage/`). Its driver signs, so those downloads redirect too. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | It's a standard member, so every instance that runs PocketOne has it. With Pocker, the `s3redirect` section sets the defaults and each instance can override `enabled` and `ttl` (below). |
+| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | Apps without their own S3 settings keep files in its bucket (for isolates, as under Pocker, fenced to `instances/<id>/storage/`). Its driver signs, so those downloads redirect too. |
 
-### Per-instance settings (pocker)
+### Per-instance settings (Pocker)
 
 ```go
-srv.Extensions = append(srv.Extensions, s3redirect.New(s3redirect.Config{}))
+set.S3Redirect = s3redirect.New(s3redirect.Config{}) // a standard member: reconfigure it on the host's set
 ```
 
 ```yaml
@@ -7967,8 +7966,8 @@ instances:
       s3redirect: { enabled: false }   # per instance: enabled, ttl
 ```
 
-It's an [extkit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a single app and on every pocker
-instance; it doesn't link pocker.
+It's an [extkit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a standalone app and on every instance
+of a multisite host; it doesn't link a runtime.
 
 ### Building on S3 Redirect
 
@@ -8446,7 +8445,7 @@ Its HTTP API under `/api/_c/tokens/v1/`, as the contract describes.
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An agent's OAuth sign-in to `/mcp` is an API token bound to `/mcp` that never expires; revoke it to disconnect the agent. Tool calls run as the token's owner. A full-access token's calls hold every registered scope; a token limited to scopes on the consent page has its calls checked like requests with those scopes (`WithScopes`). |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | Registers `deploy` and `deploy:read`; a `deploy` token is what CI uses. |
 | [Remotes](https://pocketone.dev/docs/extensions/remotes) | `pocketone login` takes a pasted API token when the remote has no OAuth server. In CI, put a token in `P1_TOKEN` (or `P1_TOKEN_<REMOTE>`). remote/v1's whoami (`/api/_c/remote/v1`) reports a token's id and scopes, whatever its scopes. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Add `tokens.New(tokens.Config{})` to the host's extensions and every instance gets its own tokens, routes and screen. Per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. The stock `pocketone` binary doesn't add it to pocker instances. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | It's a standard member, so every instance gets its own tokens, routes and screen; reconfigure it on the host's set with `set.Tokens = tokens.New(tokens.Config{...})`. With Pocker, per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own tokens. |
 
 ### Building on Tokens
 
@@ -8749,7 +8748,7 @@ Redirect URIs must be `https`, `http` on a loopback address, or an app's custom 
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `pocketone login` gives the deploy commands a token for the account that signed in. |
 | [Templates](https://pocketone.dev/docs/extensions/templates) | The pages are its `oauth` set: `pocketone template eject oauth` copies them to `pb_templates/oauth/` to edit. Without Templates, the built-in pages. |
 
-Under [Pocker](https://pocketone.dev/docs/extensions/pocker) every instance has it, through the standard set.
+On a [multisite](https://pocketone.dev/docs/extensions/multisite) host every instance that runs PocketOne has it, through the standard set.
 
 ### Audience (RFC 8707)
 
@@ -9126,7 +9125,7 @@ Run every instance on a host in its own container, with the official PocketBase 
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
 
 Docker is one of the two runtime providers of the multi-instance [multisite](https://pocketone.dev/docs/extensions/multisite). The other is
-[Pocker](https://pocketone.dev/docs/extensions/pocker), which runs every instance inside one process. A host runs exactly one of them.
+[Pocker](https://pocketone.dev/docs/extensions/pocker), which runs every instance inside one process. A host can run either or both.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -9254,7 +9253,7 @@ Instance folders are ordinary folders under `root`. To work on one while nothing
 
 ### Remote control
 
-Containers run stock images with no PocketOne extensions, so the host answers
+Containers run stock images, and a PocketBase image has no PocketOne extensions, so the host answers
 [remote/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
 `pocketone remote` commands work the same as against a Pocker instance or a single app. It answers after the host's
 gates (firewall, rate limits) and blocked check, so a blocked instance's remote/v1 gets the blocked answer and the
@@ -9304,7 +9303,7 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 | Extension | How they fit |
 |---|---|
 | [Multisite](https://pocketone.dev/docs/extensions/multisite) | Docker is a runtime provider of the host: the host routes by hostname, runs the listeners and gates, and hands each request to docker. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The other provider. A host runs one or the other, over the same instance folders. |
+| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The other provider. A host runs either or both, over the same instance folders. |
 | [Edge](https://pocketone.dev/docs/extensions/edge) | For a fleet: requests for instances on another edge are forwarded there. |
 | [Mothership](https://pocketone.dev/docs/extensions/mothership) | Instances (and their versions) come from a mothership instead of a file. |
 | [Firewall](https://pocketone.dev/docs/extensions/firewall) | Rate limits and allow lists in front of every instance. |
@@ -9876,7 +9875,7 @@ Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](https://pocketone.dev/docs/extensions/firewall)), and a runtime serves it:
-[pocker](https://pocketone.dev/docs/extensions/pocker) runs instances in-process, [docker](https://pocketone.dev/docs/extensions/docker) runs each in its own container,
+[pocker](https://pocketone.dev/docs/extensions/pocker) runs instances as isolates in its own process, [docker](https://pocketone.dev/docs/extensions/docker) runs each in its own container,
 and a host can run both. Everything a host plugs in is a host-scope contract: [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1),
 [gate/v1](https://pocketone.dev/docs/contracts/gate/v1), [tls/v1](https://pocketone.dev/docs/contracts/tls/v1),
 [http.wrap/v1](https://pocketone.dev/docs/contracts/http.wrap/v1) and [instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1).
@@ -10045,7 +10044,7 @@ this folder with `go run ./example --instances instances.yaml`, then `curl -H 'H
 
 ```go
 // A minimal host: instances from a YAML file, routed by hostname, served by a toy runtime that answers with the
-// instance it resolved. Real hosts plug in a provider instead (ext/pocker in-process, ext/docker in containers).
+// instance it resolved. Real hosts plug in a provider instead (ext/pocker as isolates, ext/docker in containers).
 //
 //	go run ./example --instances instances.yaml
 //	curl -H 'Host: blog.localhost' localhost:8090/
@@ -10176,7 +10175,7 @@ Every instance runs the PocketOne code in the binary; an instance's `version` is
 
 #### `pocker:`
 
-Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).
+Runtime provider pocker: instances run as isolates in this process (root folder, hooks pool, egress allow list, instance limit defaults).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -10527,10 +10526,10 @@ any of:
 
 | Interface | Used for |
 |---|---|
-| `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [pitr](https://pocketone.dev/docs/extensions/pitr), [storage](https://pocketone.dev/docs/extensions/s3-fallback), [tokens](https://pocketone.dev/docs/extensions/tokens), [s3redirect](https://pocketone.dev/docs/extensions/s3redirect), [mailrelay](https://pocketone.dev/docs/extensions/mailrelay), [bulkmail](https://pocketone.dev/docs/extensions/bulkmail). `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a single app. |
+| `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [mailtrap](https://pocketone.dev/docs/extensions/mailtrap), [mailrelay](https://pocketone.dev/docs/extensions/mailrelay), [storage](https://pocketone.dev/docs/extensions/s3-fallback). Members of the standard set ([pitr](https://pocketone.dev/docs/extensions/pitr), [tokens](https://pocketone.dev/docs/extensions/tokens), [s3redirect](https://pocketone.dev/docs/extensions/s3redirect), [bulkmail](https://pocketone.dev/docs/extensions/bulkmail), ...) come from `Standard`; listing one here is an error. `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a standalone app. |
 | `multisite.Extension` | a host extension (`RegisterHost`): it provides host contracts (gate/v1, tls/v1, http.wrap/v1, ...) as on any runtime ([docs/extensions.md](https://pocketone.dev/docs/writing-an-extension#host-extensions)) |
 | `Starter` | background work that needs pocker's Manager |
-| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a single app too and pass the [conformance test](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go). |
+| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a standalone app too and pass the [conformance test](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go). |
 
 Per-instance settings for an extension go under the instance's `extensions.<name>` (read them with `pocker.DecodeExtensionConfig`).
 `app.Restart()` (a backup restore, pitr) restarts only that instance, not the process.
@@ -10647,7 +10646,7 @@ leave the app's own database files, and outbound connections reach public addres
 ## Install
 
 Sandbox isn't a switch in `pocketone`: [Pocker](https://pocketone.dev/docs/extensions/pocker) applies it to every instance it runs. With
-a `multisite` section in `pocketone.yaml` (pocker as the runtime), every instance is sandboxed and there's nothing to install. A single app
+a `multisite` section in `pocketone.yaml` (pocker as the runtime), every instance is sandboxed and there's nothing to install. A standalone app
 served by `pocketone` without a `multisite` section is not sandboxed.
 
 In your own Go build, give it to the [JSVM](https://pocketone.dev/docs/extensions/jsvm) engine as an extension:
@@ -10978,7 +10977,7 @@ request served) and reports them. Later it will also carry out decisions about t
 ## Install
 
 Lifecycle runs on a host that serves many instances ([ext/multisite](https://pocketone.dev/docs/extensions/multisite), with [pocker](https://pocketone.dev/docs/extensions/pocker)
-or [docker](https://pocketone.dev/docs/extensions/docker)), not on a single app.
+or [docker](https://pocketone.dev/docs/extensions/docker)), not on a standalone app.
 
 The stock `pocketone` binary turns it on by itself in host mode: when `pocketone.yaml` has a `multisite` section,
 every instance under the first runtime's root folder is measured. There's no switch to flip.
@@ -11226,10 +11225,11 @@ Source: https://pocketone.dev/docs/extensions/mailrelay
 
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
-Outgoing mail for [Pocker](https://pocketone.dev/docs/extensions/pocker) instances that haven't set up SMTP.
+Outgoing mail for instances on a [multisite host](https://pocketone.dev/docs/extensions/multisite) that haven't set up SMTP, when they share one
+process: isolates (an isolate runtime such as [Pocker](https://pocketone.dev/docs/extensions/pocker)).
 
-Stock PocketBase falls back to the host's `sendmail` when SMTP is off. Under Pocker that would run `sendmail` on the
-shared host for every tenant. With this extension:
+Stock PocketBase falls back to the host's `sendmail` when SMTP is off. With apps sharing a process, that would run
+`sendmail` on the shared host for every tenant. With this extension:
 
 - **SMTP on** in an instance's Settings → Mail: the app sends the mail itself. Bring your own SMTP always wins.
 - **SMTP off:** the mail goes through your relay as `<instance>@<Domain>`, within per-instance limits. `sendmail`
@@ -11239,18 +11239,18 @@ shared host for every tenant. With this extension:
 
 ## Install
 
-Mail Relay is not in the `pocketone` binary. Add it to the extensions of your own Pocker build, with your sending
-domain and relay:
+Mail Relay is not in the `pocketone` binary. In your own host build, add it to the standard set your runtime gets
+(`Standard` on a Pocker server), with your sending domain and relay:
 
 ```go
-srv.Extensions = append(srv.Extensions, mailrelay.New(mailrelay.Config{
+set.Add(mailrelay.New(mailrelay.Config{
     Domain:   "mail.example.com",
     Upstream: mailrelay.SMTPUpstream{Addr: "smtp.provider.com:587", Username: "…", Password: "…"},
 }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/mailrelay`. It works the same in `pocker.Provider{Extensions: ...}`.
-It also registers on a single app, but a single app can set up its own SMTP and doesn't need a relay.
+The module is `github.com/pockethost/pocketone/ext/mailrelay`. It also registers on a standalone app, but a standalone
+app can set up its own SMTP and doesn't need a relay.
 
 ## Configure
 
@@ -11296,7 +11296,7 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 | Extension | How they fit |
 |---|---|
 | [Contracts](https://pocketone.dev/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); Mail Relay sends it within the instance's limits. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The host it's built for. Every instance gets the relay, its own address and its own limits. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | What it's built for: isolates, instances that share the host's process (an isolate runtime such as [Pocker](https://pocketone.dev/docs/extensions/pocker)). Every instance gets the relay, its own address and its own limits. |
 | [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap) | In development, point `SMTPUpstream` at the trap's SMTP port and every relayed message lands in one inbox, tagged with the instance. The example below does this. |
 | [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) | Campaigns go through PocketBase's mailer by default, so with SMTP off they are relayed and count against the instance's limits. |
 
@@ -11316,7 +11316,7 @@ instances:
 A change to these settings restarts the instance's app on its next request.
 
 Use `send: false`, not `enabled: false`, to stop an instance sending. `enabled: false` turns the extension off for that
-instance, and with SMTP off PocketBase then falls back to the host's `sendmail`. Don't set it under Pocker.
+instance, and with SMTP off PocketBase then falls back to the host's `sendmail`. Don't set it when apps share a process.
 
 ### Building on Mail Relay
 
@@ -11452,14 +11452,14 @@ its own folder in the bucket and can't reach anything outside it. The credential
 
 ## Install
 
-S3 Fallback isn't built into `pocketone`; add it to a Go build. Under [Pocker](https://pocketone.dev/docs/extensions/pocker), add it to the
-server's extensions:
+S3 Fallback isn't built into `pocketone`; add it to a Go build. On a [multisite](https://pocketone.dev/docs/extensions/multisite) host, add it
+to the host's standard set; Pocker gives it to every instance it runs (Docker containers run stock images):
 
 ```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{s3fallback.New(s3fallback.Config{})}}
+set.Add(s3fallback.New(s3fallback.Config{}))
 ```
 
-On a single app, register it with the backends and mounts in Go:
+On a standalone app, register it with the backends and mounts in Go:
 
 ```go
 extkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
@@ -11469,7 +11469,7 @@ The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
 
 ## Configure
 
-Under Pocker the `storage` section of `pocketone.yaml` is read at start. Fields set in Go win.
+The `storage` section of `pocketone.yaml` is read on first use. Fields set in Go win.
 
 ```yaml
 storage:
@@ -11518,7 +11518,7 @@ It applies to instances created with the extension on. Files already on an insta
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Each instance gets the root `instances/<id>/`; the `storage` section is read when the server starts. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance the set reaches gets the extension. An isolate (Pocker) gets the root `instances/<id>/`. |
 | [PITR](https://pocketone.dev/docs/extensions/pitr) | Mount `litestream` and every instance without its own bucket keeps its history there. An instance's own PITR bucket still wins. |
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | Downloads become signed redirects to the bucket. Nothing to wire: the fenced filesystem signs with its prefix, so S3 Redirect treats it like any S3 mount. |
 
@@ -11527,14 +11527,14 @@ It applies to instances created with the extension on. Files already on an insta
 - **Your own kind.** Any kind an extension asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
   PITR's `litestream` works this way. Uploads and backups step aside when the app turned on its own S3; for other
   kinds, the extension asking checks its own app setting first.
-- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for a single app,
-  `instances/<id>/` under Pocker). `FS(root, kind)` returns the same fenced filesystem outside a hook; close it when
-  done. `Config()` returns the effective configuration.
+- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for an app that has
+  the process to itself, `instances/<id>/` for an isolate, as under Pocker). `FS(root, kind)` returns the same
+  fenced filesystem outside a hook; close it when done. `Config()` returns the effective configuration.
 
 ## Example
 
 There's no `example/main.go` yet. [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show
-it on a single app and under Pocker, against MinIO.
+it on a standalone app and under Pocker, against MinIO.
 
 ## How it works
 
@@ -11662,7 +11662,7 @@ WASM is an extension; the `.pb.wasm` files it runs are modules.
 ## Install
 
 WASM isn't built into `pocketone` yet. In your own build, add it to the [standard set](https://pocketone.dev/docs/extensions/standard),
-which every app and every pocker instance gets; the set binds `$wasm` into the JS engine
+which every app gets, standalone or an instance on a multisite host; the set binds `$wasm` into the JS engine
 ([`ext/jsvm`](https://pocketone.dev/docs/extensions/jsvm)):
 
 ```go
@@ -11698,7 +11698,7 @@ The defaults suit most apps. To change them, pass them to `wasm.New`:
 | `MaxModulesMB` | 10 | MB of modules running at once: the `.wasm` sizes of the calls running, added up (file sizes, not memory). More wait, as above. It's also the largest module that runs. |
 | `MaxPayload` | 4 MB | Largest input or output of a call. |
 
-There's no `pocketone.yaml` section. Under pocker, each instance can override these (see Integrations).
+There's no `pocketone.yaml` section. With Pocker, each instance can override these (see Integrations).
 
 ## Use
 
@@ -11902,11 +11902,11 @@ whose calls are 40 times faster and take a seventh of the memory.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | One extension value serves every instance (the standard set). Each instance has its own modules, in its own `pb_hooks/`, its own call slots and limits. Each call reads the instance's module file as it is then; nothing runs between calls (below). A module change reloads just that instance, like a `.pb.js` change. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Add it to the host's standard set and Pocker gives it to every instance it runs (Docker containers run stock images): one extension value serves them all. Each instance has its own modules, in its own `pb_hooks/`, its own call slots and limits. Each call reads the instance's module file as it is then; nothing runs between calls (below). A module change reloads just that instance, like a `.pb.js` change. |
 | [Sandbox](https://pocketone.dev/docs/extensions/sandbox) | `$wasm` is safe to give a hostile tenant: a module gets nothing but its input. A call can't be interrupted by the JS engine's time limits, so `Timeout` (and compiling) bound it instead. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `pocketone deploy` sends the modules with the rest of `pb_hooks/`. |
 
-### Per-instance settings (pocker)
+### Per-instance settings (Pocker)
 
 Each instance can override `maxCallMemoryMB`, `maxConcurrent`, `maxModulesMB`, `timeout` (a duration, like `5s`) and
 `maxPayload` in its `extensions.wasm` settings, over the Config given to `New`, key by key. `enabled: false` turns
@@ -11974,7 +11974,7 @@ func main() {
 		}
 		return posts(e.App)
 	})
-	// the same extension value the standard set gives every pocker instance (set.Add(wasm.New(...)))
+	// the same extension value a build adds to the standard set for every app (set.Add(wasm.New(...)))
 	w := wasm.New(wasm.Config{})
 	extkit.MustRegister(app, w)
 	jsvm.MustRegister(app, jsvm.Config{
@@ -12333,8 +12333,8 @@ app whose SMTP is off sends its mail here instead of the host's `sendmail`, and 
 
 ## Install
 
-Mail Trap is built into `pocketone`, for a single app and for every pocker instance on a multisite host. There's
-nothing to install: run `pocketone serve --dev` with SMTP off and it's active.
+Mail Trap is built into `pocketone`, for every app it runs: a standalone app, or an instance on a multisite host.
+There's nothing to install: run `pocketone serve --dev` with SMTP off and it's active.
 
 In your own Go build, register it before the app starts:
 
@@ -12344,13 +12344,14 @@ mailtrap.MustRegister(app)
 app.Start()
 ```
 
-Under Pocker, add `mailtrap.New()` to the extensions. The module is `github.com/pockethost/pocketone/ext/mailtrap`.
+With ext/standard's set, add it as an extra, as the stock binary does: `set.Add(mailtrap.New())`. The module is
+`github.com/pockethost/pocketone/ext/mailtrap`.
 
 ## Configure
 
 There is no `pocketone.yaml` section or settings screen. It turns itself on only when both are true:
 
-- the app is in dev mode (`serve --dev`, or a dev instance under Pocker), and
+- the app is in dev mode (`serve --dev`, or a dev instance on a multisite host), and
 - the app's SMTP is off (Settings → Mail).
 
 Turn SMTP on, or run without `--dev`, and it does nothing. Two environment variables move its ports:
@@ -12380,7 +12381,7 @@ catches mail and prints each message in the terminal.
 | Extension | How they fit |
 |---|---|
 | [Contracts](https://pocketone.dev/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); in dev mode Mail Trap takes it, otherwise it passes it on. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | One inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | With an isolate runtime ([Pocker](https://pocketone.dev/docs/extensions/pocker)), one inbox for every dev instance. Each message is labeled with the instance that sent it (its `X-Pocker-Instance` header), and the inbox filters by instance. |
 | [Mail Relay](https://pocketone.dev/docs/extensions/mailrelay) | Mail Relay's example uses the trap's SMTP port as its relay, so relayed mail goes through the real SMTP path and lands here. |
 | [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) | In dev mode with SMTP off, campaign mail lands in the inbox instead of being sent. |
 
@@ -12447,9 +12448,9 @@ Source: https://pocketone.dev/docs/extensions/standard
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,
-so an app never misses one because its host forgot to list it. Members can be reconfigured or turned off per app,
-never removed.
+PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. Every app uses it, standalone or an
+instance on a multisite host, so an app never misses one because its host forgot to list it. Members can be
+reconfigured or turned off per app, never removed.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -12503,7 +12504,7 @@ standard: deploy off: needs remote/v1, which nothing provides
 
 | With | What happens |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Every instance gets the set (`Server.Standard`), with its own `extensions.<name>` settings. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance that runs PocketOne gets the set. Pocker gives it to each instance (`Server.Standard`) with the instance's own `extensions.<name>` settings and the host's extras. A Docker instance on a PocketOne image runs the stock `pocketone` binary: the set with its defaults, no extras. One on a PocketBase image has none. |
 | [Contracts](https://pocketone.dev/docs/contracts) | Members find each other through contracts (`tokens/v1`), resolved per app; the startup lines show who provides what. |
 
 ## Example

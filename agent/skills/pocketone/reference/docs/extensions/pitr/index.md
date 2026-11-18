@@ -144,7 +144,7 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Every instance on the host gets PITR. The `pitr` section sets the defaults for all of them; each instance can override `enabled` and `retention` (below). A restore restarts only that instance, and sleeping instances cost nothing. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | PITR is in the standard set, so every instance that runs PocketOne has it, and a restore restarts only that instance. With an isolate runtime ([Pocker](https://pocketone.dev/docs/extensions/pocker)), the `pitr` section sets the defaults for all of them, each instance can override `enabled` and `retention` (below), and sleeping instances cost nothing. |
 | [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | Mount `litestream` on a backend and every app without its own bucket keeps its history there, under its own prefix. An app's own bucket (Settings → Backups) still wins. |
 | [Multitenant](https://pocketone.dev/docs/extensions/tenants) (planned) | Sets each instance's `enabled` and `retention` from its plan, for example a plan without PITR. |
 | PocketBase backups | `pb_data/litestream/` is left out of backup zips, and restoring a zip doesn't wipe it. |

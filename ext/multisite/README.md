@@ -10,7 +10,7 @@ summary: "Many instances behind one listener, routed by hostname, run by one pro
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](../firewall/README.md)), and a runtime serves it:
-[pocker](../pocker/README.md) runs instances in-process, [docker](../docker/README.md) runs each in its own container,
+[pocker](../pocker/README.md) runs instances as isolates in its own process, [docker](../docker/README.md) runs each in its own container,
 and a host can run both. Everything a host plugs in is a host-scope contract: [runtime/v1](../contracts/runtime/v1/README.md),
 [gate/v1](../contracts/gate/v1/README.md), [tls/v1](../contracts/tls/v1/README.md),
 [http.wrap/v1](../contracts/http/wrap/v1/README.md) and [instance.source/v1](../contracts/instance/source/v1/README.md).
@@ -162,7 +162,7 @@ this folder with `go run ./example --instances instances.yaml`, then `curl -H 'H
 
 ```go
 // A minimal host: instances from a YAML file, routed by hostname, served by a toy runtime that answers with the
-// instance it resolved. Real hosts plug in a provider instead (ext/pocker in-process, ext/docker in containers).
+// instance it resolved. Real hosts plug in a provider instead (ext/pocker as isolates, ext/docker in containers).
 //
 //	go run ./example --instances instances.yaml
 //	curl -H 'Host: blog.localhost' localhost:8090/

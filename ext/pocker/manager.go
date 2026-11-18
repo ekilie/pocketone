@@ -30,7 +30,7 @@ func ValidID(id string) bool { return multisite.ValidID(id) }
 // DevID is the id dev mode gives an unmapped hostname (see [multisite.DevID]).
 func DevID(h string) string { return multisite.DevID(h) }
 
-// Manager runs instances in-process: an [multisite.Runtime] that starts each instance's app on its first request and
+// Manager runs instances as isolates in this process: an [multisite.Runtime] that starts each instance's app on its first request and
 // keeps it running. Its instances come from instance.source/v1 on the host's scope, through an [multisite.Directory]:
 // the host's (shared in [ManagerOptions.Directory], which the host feeds), or its own, fed by Run. As an http.Handler
 // it serves the whole edge pipeline with itself as the only runtime.
