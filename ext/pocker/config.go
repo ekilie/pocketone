@@ -40,6 +40,11 @@ type Config struct {
 	// EgressAllow lists private networks apps may still connect to (default none: public addresses only).
 	EgressAllow []string
 
+	// IsolateConfig is the pocketone.yaml shape for every instance: one section per extension the instances run
+	// (`tokens: {enabled: false}`), each taking what an instance's `extensions.<name>` takes. It is the base layer:
+	// an instance's own `extensions.<name>` overrides it key by key.
+	IsolateConfig map[string]map[string]any
+
 	// TLS: certificate files for HTTPS, and an optional HTTP redirect listener. (Automatic certificates are the
 	// autotls extension, with its own `autotls` section.)
 	TLS TLSConfig

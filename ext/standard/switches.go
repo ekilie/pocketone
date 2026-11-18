@@ -20,12 +20,12 @@ func init() {
 		if extkit.IsSection(name) { // the member got a section of its own
 			continue
 		}
-		switches[name] = extkit.NewSection(name, Switch{}, "Turns the "+name+" extension off on a single app (`enabled: false`). Instances on a multisite host use their own `extensions."+name+"` instead.")
+		switches[name] = extkit.NewSection(name, Switch{}, "Turns the "+name+" extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions."+name+"`.")
 	}
 }
 
 // ConfiguredSwitches is the settings layer a single app reads from pocketone.yaml: each switch section's `enabled`.
-// RegisterWith uses it; Pocker passes each instance's own `extensions.<name>` instead.
+// RegisterWith uses it; Pocker passes its isolate_config section, then each instance's own `extensions.<name>`.
 func ConfiguredSwitches(name string) extkit.Config {
 	sec, ok := switches[name]
 	if !ok {

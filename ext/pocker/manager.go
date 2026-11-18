@@ -142,6 +142,8 @@ type ManagerOptions struct {
 	Standard extkit.AppSet
 	// Host is the host's contract scope (see [Server.Host]).
 	Host *extkit.Scope
+	// IsolateConfig is every instance's base config, one section per extension (see [Config.IsolateConfig]).
+	IsolateConfig map[string]map[string]any
 }
 
 // NewManager creates a Manager that takes its instances from instance.source/v1 on scope, the host's contract scope
@@ -154,7 +156,7 @@ func NewManager(scope *extkit.Scope, opts ManagerOptions) *Manager {
 	defaults := opts.Defaults.Over(DefaultLimits())
 	m := &Manager{
 		scope:    scope,
-		opts:     appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup, Standard: opts.Standard, Host: opts.Host},
+		opts:     appOptions{PBRoot: opts.PBRoot, HooksPoolSize: opts.HooksPoolSize, ForceDev: opts.Dev, Defaults: defaults, Init: opts.Init, InitJS: opts.InitJS, Setup: opts.Setup, Standard: opts.Standard, Host: opts.Host, IsolateConfig: opts.IsolateConfig},
 		defaults: defaults,
 		onEvent:  opts.OnEvent,
 		gate:     opts.Gate,
