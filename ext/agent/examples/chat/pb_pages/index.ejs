@@ -27,7 +27,14 @@
   #status.warn { color: var(--warn); } #status.err { color: var(--err); }
   .armed code { font-size: 12px; }
   #log { flex: 1; padding: 16px 0; display: flex; flex-direction: column; gap: 14px; }
-  .msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; overflow-wrap: anywhere; }
+  .me { white-space: pre-wrap; }
+  .bot p, .bot ul, .bot ol, .bot pre, .bot h4 { margin: 0 0 8px; }
+  .bot > :last-child { margin-bottom: 0; }
+  .bot ul, .bot ol { padding-left: 22px; }
+  .bot li { margin: 2px 0; }
+  .bot h4 { font-size: 15px; }
+  .bot a { color: var(--accent); }
   .me { align-self: flex-end; background: var(--me); color: var(--me-text); border-bottom-right-radius: 4px; }
   .bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
   code { background: color-mix(in srgb, var(--text) 9%, transparent); padding: 1px 5px; border-radius: 4px;
@@ -82,11 +89,42 @@ const statusEl = document.getElementById('status')
 const history = []
 
 function esc(s) { return s.replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c])) }
-// just enough Markdown for short answers: ``` blocks, `code`, **bold**
-function inline(s) { return esc(s).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>') }
-function md(s) {
-  return s.split(/```[a-zA-Z0-9_-]*\n?/).map((part, i) =>
-    i % 2 ? `<pre><code>${esc(part.replace(/\n$/, ''))}</code></pre>` : inline(part)).join('')
+// Markdown for the model's answers: paragraphs, lists, headings, ``` blocks, `code`, **bold**, *italic* and links.
+// Everything is escaped first; links only become links for http(s) URLs.
+function inline(s) {
+  const codes = []
+  s = esc(s).replace(/`([^`\n]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`) // keep code spans as they are
+  s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?])/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+    .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, '$1<i>$2</i>')
+  return s.replace(/\u0000(\d+)\u0000/g, (_, n) => `<code>${codes[n]}</code>`)
+}
+function md(text) {
+  const out = []
+  let list = null, para = []
+  const endPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join('<br>')}</p>`); para = [] } }
+  const endList = () => { if (list) { out.push(`</${list}>`); list = null } }
+  const parts = text.split(/^```[a-zA-Z0-9_-]*[ \t]*$/m)
+  parts.forEach((part, i) => {
+    if (i % 2) { endPara(); endList(); out.push(`<pre><code>${esc(part.replace(/^\n|\n$/g, ''))}</code></pre>`); return }
+    for (const line of part.split('\n')) {
+      let m
+      if (!line.trim()) { endPara(); endList(); continue }
+      if ((m = line.match(/^\s*([-*+]|\d+[.)])\s+(.*)$/))) {
+        const kind = /\d/.test(m[1]) ? 'ol' : 'ul'
+        endPara()
+        if (list !== kind) { endList(); out.push(`<${kind}>`); list = kind }
+        out.push(`<li>${inline(m[2])}</li>`)
+      } else if ((m = line.match(/^(#{1,4})\s+(.*)$/))) {
+        endPara(); endList(); out.push(`<h4>${inline(m[2])}</h4>`)
+      } else {
+        endList(); para.push(line.trim())
+      }
+    }
+  })
+  endPara(); endList()
+  return out.join('')
 }
 
 function add(cls, html) {

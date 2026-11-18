@@ -12,7 +12,7 @@ const STOP = new Set(
 )
 
 // The docs' words for what people ask about ("instances" where people say "apps", "host" for "server").
-const SYNONYMS = { app: ['instance'], server: ['host', 'multisite'], site: ['instance'], backup: ['restore', 'pitr'],
+const SYNONYMS = { app: ['instance'], server: ['host'], site: ['instance'], backup: ['restore', 'pitr'],
   undo: ['restore'], email: ['mail'], ai: ['mcp', 'agent'] }
 
 /** Search terms: lowercase words without stop words, single letters or a plural "s". */
