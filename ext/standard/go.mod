@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000
@@ -154,3 +155,5 @@ replace github.com/pockethost/pocketone/ext/templates => ../templates
 replace github.com/pockethost/pocketone/ext/cache => ../cache
 
 replace github.com/pockethost/pocketone/ext/wasm => ../wasm
+
+replace github.com/pockethost/pocketone/ext/agent => ../agent

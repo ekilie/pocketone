@@ -24,7 +24,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`) and resolves
+`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`, `$agent`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
 ## Configure
@@ -44,7 +44,7 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm, agent
 standard: tokens/v1 ← tokens
 ```
 

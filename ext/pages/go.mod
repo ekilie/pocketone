@@ -46,6 +46,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
+	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
@@ -156,3 +157,5 @@ replace github.com/pockethost/pocketone/ext/templates => ../templates
 replace github.com/pockethost/pocketone/ext/cache => ../cache
 
 replace github.com/pockethost/pocketone/ext/wasm => ../wasm
+
+replace github.com/pockethost/pocketone/ext/agent => ../agent

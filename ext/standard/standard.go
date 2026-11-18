@@ -21,6 +21,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
+	"github.com/pockethost/pocketone/ext/agent"
 	"github.com/pockethost/pocketone/ext/backups"
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/cache"
@@ -55,6 +56,7 @@ type Set struct {
 	BulkMail   *bulkmail.Extension
 	Deploy     *deploy.Extension
 	WASM       *wasm.Extension
+	Agent      *agent.Extension
 
 	// Providers is the `providers:` section of pocketone.yaml: which extension provides a contract when several do.
 	Providers extkit.Choices
@@ -80,6 +82,7 @@ func New() *Set {
 		BulkMail:   bulkmail.New(bulkmail.Config{}),
 		Deploy:     deploy.NewExtension(deploy.Config{}),
 		WASM:       wasm.New(wasm.Config{}),
+		Agent:      agent.New(),
 	}
 }
 
@@ -91,7 +94,7 @@ func (s *Set) Add(e ...extkit.Extension) *Set {
 
 // Extensions lists the members then the extras.
 func (s *Set) Extensions() []extkit.Extension {
-	out := make([]extkit.Extension, 0, 14+len(s.extras))
+	out := make([]extkit.Extension, 0, 15+len(s.extras))
 	for _, m := range s.members() {
 		if m.ext != nil {
 			out = append(out, m.ext)
@@ -108,7 +111,7 @@ type member struct {
 func (s *Set) members() []member {
 	m := []member{
 		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
-		{"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM},
+		{"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"Agent", s.Agent},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
 		if isNil(m[i].ext) {
@@ -145,6 +148,8 @@ func isNil(e extkit.Extension) bool {
 	case *deploy.Extension:
 		return v == nil
 	case *wasm.Extension:
+		return v == nil
+	case *agent.Extension:
 		return v == nil
 	}
 	return e == nil

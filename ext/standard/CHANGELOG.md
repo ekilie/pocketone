@@ -8,6 +8,7 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ### Added
 
+- New member `Agent` (ext/agent): a language model for `pb_hooks`, called with `$agent.complete()`, from the app's own API or a model PocketOne runs itself; on a host, the host's shared model. Turn it off on a single app with `agent: {enabled: false}`.
 - New member `WASM` (ext/wasm): WASI modules in `pb_hooks`, called with `$wasm`. Reconfigure it with `set.WASM = wasm.New(wasm.Config{...})`. Turn it off on a single app with `wasm: {enabled: false}`.
 
 ### Fixed
