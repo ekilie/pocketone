@@ -13,8 +13,8 @@ const WhoamiPath = remoteclient.WhoamiPath
 
 // Config for the server half.
 type Config struct {
-	// Restart restarts the app for remote/v1's restart (default app.Restart(); under Pocker that restarts only the
-	// instance). Tests replace it.
+	// Restart restarts the app for remote/v1's restart (default app.Restart(); for an isolate, as under Pocker,
+	// that restarts only this app). Tests replace it.
 	Restart func(app core.App) error
 }
 

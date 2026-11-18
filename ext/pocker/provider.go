@@ -9,7 +9,7 @@ import (
 	"github.com/pockethost/pocketone/ext/multisite"
 )
 
-// SectionConfig is the `pocker` section (pocketone.yaml, ext/config): settings for running instances in-process.
+// SectionConfig is the `pocker` section (pocketone.yaml, ext/config): settings for running instances as isolates.
 // Listeners, instances and the firewall are the host's sections (server, instances, firewall).
 //
 //	pocker:
@@ -27,10 +27,10 @@ type SectionConfig struct {
 var Section = extkit.NewSectionFunc("pocker", func() SectionConfig {
 	d := DefaultConfig()
 	return SectionConfig{Root: d.PBRoot, HooksPoolSize: d.HooksPoolSize, Limits: d.Limits}
-}, "Runtime provider pocker: instances run in-process (root folder, hooks pool, egress allow list, instance limit defaults).")
+}, "Runtime provider pocker: instances run as isolates in this process (root folder, hooks pool, egress allow list, instance limit defaults).")
 
 // Provider is pocker as a host extension for ext/multisite: it reads the `pocker` section and provides runtime/v1
-// (instances in-process). The fields are the host application's extensions, as on [Server].
+// (instances as isolates). The fields are the host application's extensions, as on [Server].
 type Provider struct {
 	// Standard is the per-app extension set every instance gets (ext/standard's Set; see [Server.Standard]). Required.
 	Standard extkit.AppSet
@@ -58,7 +58,7 @@ func (p *Provider) Contracts() extkit.Contracts {
 	return extkit.Contracts{Implements: extkit.IDs("runtime/v1"), Requires: extkit.IDs("instance.source/v1")}
 }
 
-// RegisterHost implements multisite.Extension: it reads the `pocker` section and makes h run instances in-process.
+// RegisterHost implements multisite.Extension: it reads the `pocker` section and makes h run instances as isolates.
 func (p *Provider) RegisterHost(h *multisite.Host) error {
 	sc, _ := Section.Get()
 	cfg := DefaultConfig()

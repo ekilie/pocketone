@@ -14,14 +14,14 @@ its own folder in the bucket and can't reach anything outside it. The credential
 
 ## Install
 
-S3 Fallback isn't built into `pocketone`; add it to a Go build. Under [Pocker](../pocker/README.md), add it to the
-server's extensions:
+S3 Fallback isn't built into `pocketone`; add it to a Go build. On a [multisite](../multisite/README.md) host, add it
+to the host's standard set; Pocker gives it to every instance it runs (Docker containers run stock images):
 
 ```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{s3fallback.New(s3fallback.Config{})}}
+set.Add(s3fallback.New(s3fallback.Config{}))
 ```
 
-On a single app, register it with the backends and mounts in Go:
+On a standalone app, register it with the backends and mounts in Go:
 
 ```go
 extkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
@@ -31,7 +31,7 @@ The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
 
 ## Configure
 
-Under Pocker the `storage` section of `pocketone.yaml` is read at start. Fields set in Go win.
+The `storage` section of `pocketone.yaml` is read on first use. Fields set in Go win.
 
 ```yaml
 storage:
@@ -80,7 +80,7 @@ It applies to instances created with the extension on. Files already on an insta
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | Each instance gets the root `instances/<id>/`; the `storage` section is read when the server starts. |
+| [Multisite](../multisite/README.md) | Every instance the set reaches gets the extension. An isolate (Pocker) gets the root `instances/<id>/`. |
 | [PITR](../pitr/README.md) | Mount `litestream` and every instance without its own bucket keeps its history there. An instance's own PITR bucket still wins. |
 | [S3 Redirect](../s3redirect/README.md) | Downloads become signed redirects to the bucket. Nothing to wire: the fenced filesystem signs with its prefix, so S3 Redirect treats it like any S3 mount. |
 
@@ -89,14 +89,14 @@ It applies to instances created with the extension on. Files already on an insta
 - **Your own kind.** Any kind an extension asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
   PITR's `litestream` works this way. Uploads and backups step aside when the app turned on its own S3; for other
   kinds, the extension asking checks its own app setting first.
-- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for a single app,
-  `instances/<id>/` under Pocker). `FS(root, kind)` returns the same fenced filesystem outside a hook; close it when
-  done. `Config()` returns the effective configuration.
+- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for an app that has
+  the process to itself, `instances/<id>/` for an isolate, as under Pocker). `FS(root, kind)` returns the same
+  fenced filesystem outside a hook; close it when done. `Config()` returns the effective configuration.
 
 ## Example
 
 There's no `example/main.go` yet. [`storage_test.go`](storage_test.go) and [`mounts_test.go`](mounts_test.go) show
-it on a single app and under Pocker, against MinIO.
+it on a standalone app and under Pocker, against MinIO.
 
 ## How it works
 

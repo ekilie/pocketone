@@ -18,7 +18,7 @@ request served) and reports them. Later it will also carry out decisions about t
 ## Install
 
 Lifecycle runs on a host that serves many instances ([ext/multisite](../multisite/README.md), with [pocker](../pocker/README.md)
-or [docker](../docker/README.md)), not on a single app.
+or [docker](../docker/README.md)), not on a standalone app.
 
 The stock `pocketone` binary turns it on by itself in host mode: when `pocketone.yaml` has a `multisite` section,
 every instance under the first runtime's root folder is measured. There's no switch to flip.

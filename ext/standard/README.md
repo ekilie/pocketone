@@ -9,9 +9,9 @@ summary: "The extensions every PocketOne app has, as one set a host configures."
 # Standard Set
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. The stock `pocketone` binary and every Pocker instance use it,
-so an app never misses one because its host forgot to list it. Members can be reconfigured or turned off per app,
-never removed.
+PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. Every app uses it, standalone or an
+instance on a multisite host, so an app never misses one because its host forgot to list it. Members can be
+reconfigured or turned off per app, never removed.
 
 ## Install
 
@@ -57,7 +57,7 @@ standard: deploy off: needs remote/v1, which nothing provides
 
 | With | What happens |
 |---|---|
-| [Pocker](../pocker/README.md) | Every instance gets the set (`Server.Standard`), with its own `extensions.<name>` settings. |
+| [Multisite](../multisite/README.md) | Every instance that runs PocketOne gets the set. Pocker gives it to each instance (`Server.Standard`) with the instance's own `extensions.<name>` settings and the host's extras. A Docker instance on a PocketOne image runs the stock `pocketone` binary: the set with its defaults, no extras. One on a PocketBase image has none. |
 | [Contracts](../contracts/README.md) | Members find each other through contracts (`tokens/v1`), resolved per app; the startup lines show who provides what. |
 
 ## Example

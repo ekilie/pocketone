@@ -109,7 +109,7 @@ func (s *YAMLSource) Watch(ctx context.Context) (<-chan Change, error) {
 			lastStamp = st
 			next, err := s.load()
 			if err != nil {
-				slog.Error("pocker: instances file not reloaded", "error", err)
+				slog.Error("multisite: instances file not reloaded", "error", err)
 				continue
 			}
 			for _, c := range diffInstances(current, next) {

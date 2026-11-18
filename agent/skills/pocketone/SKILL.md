@@ -75,7 +75,7 @@ those. What changes:
 - **Extension APIs are contracts** under `/api/_c/<id>/` (see [how they fit together](reference/docs/how-pocketone-fits-together.md)). `/mcp` and `/.well-known/*`
   are the only extension paths at the root. Responses carry `X-Powered-By: PocketOne <version>`.
 - **Many instances**: a `multisite` section in `pocketone.yaml` makes `pocketone serve` a host for many instances
-  (in-process with Pocker, in containers with Docker, or both).
+  (as isolates with Pocker, in containers with Docker, or both).
 
 ## Commands
 
@@ -204,7 +204,7 @@ no code yet (version 0.0.0).
 | Multitenant Billing | planned | Plans, quotas and the billing provider hook for Multitenant. | [tenant-billing](reference/docs/extensions/tenant-billing/index.md) |
 | Lemon Squeezy Adapter | planned | Lemon Squeezy as the billing provider. | [tenant-billing-ls](reference/docs/extensions/tenant-billing-ls/index.md) |
 | **For extension authors** | | | |
-| Extension Kit | Go library | The extension contract: one extension works on a single app and under pocker. | `ext/extkit/extkit.go` (no page) |
+| Extension Kit | Go library | The extension contract: one extension works on every app, standalone or hosted. | `ext/extkit/extkit.go` (no page) |
 | Standard Set | yes | The extensions every PocketOne app has, as one set a host configures. | [standard](reference/docs/extensions/standard/index.md) |
 | Contracts | Go library | The versioned interfaces extensions use to work together, and their generator. | [contracts](reference/docs/contracts/index.md) |
 | Mail Trap | yes (dev mode) | Dev mode: mail from an app without SMTP lands in a built-in inbox. | [mailtrap](reference/docs/extensions/mailtrap/index.md) |

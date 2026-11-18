@@ -11,7 +11,7 @@ import (
 )
 
 // BindJS exposes the Go service to an app's JS hooks as the $bulkmail global. Add it to the jsvm OnInit (next to
-// the sandbox's, under pocker):
+// the sandbox's, on Pocker):
 //
 //	jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { bulkmail.BindJS(app, rt) }})
 //

@@ -10,13 +10,13 @@
 // this extension replaces the stream with a 302 to a presigned GET URL. The browser fetches the file from the bucket, so
 // the app's bandwidth and memory stay free. With Cloudflare R2 there are no egress fees either.
 //
-// Single app:
+// Standalone app:
 //
 //	app := pocketbase.New()
 //	s3redirect.MustRegister(app, s3redirect.Config{TTL: 5 * time.Minute})
 //
-// The standard PocketOne binary (examples/pocketone) registers it by default. Many apps in one process: put New(cfg) in
-// pocker's Server.Extensions (it's an [extkit.Extension]).
+// It's a member of ext/standard's set, so every PocketOne app has it, standalone or an instance on a multisite host.
+// To reconfigure it, set the member: set.S3Redirect = New(cfg) (it's an [extkit.Extension]).
 package s3redirect
 
 import (
@@ -113,8 +113,8 @@ func (p *Extension) resolve(ac AppConfig) (enabled bool, ttl time.Duration) {
 	return enabled, ttl
 }
 
-// SetupApp binds the redirect to app's file downloads. A single app calls it through the package's Register; the
-// extension's Register method (pocker, extkit) calls it for each app.
+// SetupApp binds the redirect to app's file downloads. A standalone app calls it through the package's Register; the
+// extension's Register method (extkit, the standard set) calls it for each app.
 func (p *Extension) SetupApp(app core.App, ac AppConfig) error {
 	enabled, ttl := p.resolve(ac)
 	if !enabled {

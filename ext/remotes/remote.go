@@ -13,7 +13,7 @@ import (
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
-// remote is remote/v1 on a standalone app (or a Pocker instance, until the host provides it).
+// remote is remote/v1 on a standalone app, or on an instance whose multisite host doesn't provide it.
 type remote struct {
 	app     core.App
 	restart func(core.App) error
@@ -57,7 +57,7 @@ func (r *remote) Status(context.Context, extkit.Auth) (remotev1.Status, error) {
 func (r *remote) Restart(context.Context, extkit.Auth) (remotev1.RestartResult, error) {
 	restart := r.restart
 	if restart == nil {
-		restart = func(app core.App) error { return app.Restart() } // under Pocker: only this instance
+		restart = func(app core.App) error { return app.Restart() } // an isolate (Pocker): only this one
 	}
 	go func() {
 		time.Sleep(200 * time.Millisecond) // let the answer go out first

@@ -4,7 +4,7 @@
 // credentials never reach its settings, env or JS. Downloads stream through the server, or, with ext/s3redirect,
 // become signed redirects (to s3redirect a mount is just another S3 filesystem).
 //
-//	srv.Extensions = append(srv.Extensions, s3fallback.New(s3fallback.Config{}))
+//	set.Add(s3fallback.New(s3fallback.Config{})) // on the standard set every app gets
 //
 //	storage:
 //	  backends:
@@ -15,11 +15,12 @@
 //	    litestream: r2-eu  # PITR history (ext/pitr asks for kind "litestream")
 //
 // Each app gets <backend prefix><root><kind>/ per mounted kind and can't reach anything outside it. The root is the
-// caller's choice and opaque to the extension: under pocker, Register uses "instances/<id>/"; a single app passes "" (or
-// any name). Several deployments sharing one bucket keep apart with their own backend prefix or roots. When an app turns on its own S3 for uploads
-// or backups, PocketBase's normal code takes over with the app's credentials. Other kinds are served whenever they're
-// mounted: the extension asking for them (e.g. ext/pitr) checks its own app setting first. Without mounts the extension
-// does nothing. Files already on an app's local disk are not read or moved.
+// caller's choice and opaque to the extension: for an isolate (Pocker), Register uses "instances/<id>/";
+// an app with the process to itself passes "" (or any name). Several deployments sharing one bucket keep apart with
+// their own backend prefix or roots. When an app turns on its own S3 for uploads or backups, PocketBase's normal code
+// takes over with the app's credentials. Other kinds are served whenever they're mounted: the extension asking for
+// them (e.g. ext/pitr) checks its own app setting first. Without mounts the extension does nothing. Files already on
+// an app's local disk are not read or moved.
 //
 // The old shape (`bucket:` + `uploads:`/`backups:`) still works: it becomes one backend named "default" mounted for
 // storage and backups, with a warning.
@@ -73,7 +74,7 @@ type Bucket struct {
 	ForcePathStyle bool   `yaml:"force_path_style" doc:"Path-style addressing, for MinIO and similar servers."`
 }
 
-// Extension is the extension: an app extension, registered on each instance (or a single app).
+// Extension is the extension: an app extension, registered on each instance (or a standalone app).
 type Extension struct {
 	cfg  Config
 	log  *slog.Logger
@@ -196,9 +197,9 @@ func keyPrefix(b *Bucket, root, kind string) string {
 	return b.Prefix + root + kind + "/"
 }
 
-// Bind serves app's filesystems from the mounts under root (opaque, the caller's choice: "" for a single app,
-// "instances/<id>/" under pocker). Uploads and backups step aside when the app turned on its own S3 for them; any
-// other mounted kind is served whenever it's asked for.
+// Bind serves app's filesystems from the mounts under root (opaque, the caller's choice: "" for an app with the
+// process to itself, "instances/<id>/" for an isolate, as under Pocker). Uploads and backups step aside when the
+// app turned on its own S3 for them; any other mounted kind is served whenever it's asked for.
 func (p *Extension) Bind(app core.App, root string) error {
 	mounts, err := p.mounts()
 	if err != nil || len(mounts) == 0 {
@@ -237,7 +238,8 @@ type settings struct {
 }
 
 // Register implements [extkit.Extension]: binds app to the mounts under "instances/<id>/" (its [extkit.AppID])
-// under pocker, or at the backends' roots on a single app, unless the app has the extension off.
+// when apps share a process (Pocker), or at the backends' roots when the app has the process to itself, unless the
+// app has the extension off.
 func (p *Extension) Register(app core.App, layers extkit.Config) error {
 	p.configure()
 	var s settings

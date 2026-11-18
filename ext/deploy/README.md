@@ -97,7 +97,7 @@ npm and bun, pnpm's store, workspace links; never devDependencies) and shipped a
 
 **Restarts:** files are swapped in while the app runs, each rename atomic, and deploy never restarts the app on its
 own. `pb_pages` and `pb_public` are read from disk on each request, and hooks reload by themselves (PocketBase's
-`--hooksWatch`, Pocker's watcher). Migrations and packages apply only when the app starts, so a deploy that changes
+`--hooksWatch`, or the runtime's watcher on a multisite host). Migrations and packages apply only when the app starts, so a deploy that changes
 them says `Migrations or packages changed` and leaves the restart to you: pass `--restart` (the app restarts once,
 after the whole batch is in, and you hear if it fails to start), run `pocketone restart`, or type `r` in `dev`. So
 does the first deploy that creates `pb_hooks`, since a watcher only sees folders that existed when the app started.
@@ -109,7 +109,7 @@ pocketone restart prod
 ```
 
 Restarts the app so it applies new migrations and packages, and tells you if it fails to start. An app that isn't
-running (a sleeping Pocker instance) is left alone; it applies them when it starts.
+running (a sleeping instance on a multisite host) is left alone; it applies them when it starts.
 
 ### `dev`
 
@@ -188,7 +188,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 | [Remotes](../remotes/README.md) | Gives the commands their remotes, saved logins and CI tokens. The commands find deploy/v1 in the remote's whoami, and `restart` and `logs` use its remote/v1 (deploy requires it). |
 | [OAuth](../tokens/OAUTH.md) (in Tokens) | `pocketone login` signs in through the browser when the remote runs it. |
 | [Tokens](../tokens/README.md) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. Add `remote` for `--restart` and `remote:read` for `dev`'s logs. |
-| [Pocker](../pocker/README.md) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
+| [Multisite](../multisite/README.md) | A multisite host can serve the same API for all its instances with its own backend: build it with `deploy.New` (below). PocketHost does this. |
 
 ### Building on Deploy
 
@@ -199,7 +199,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 - **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths})`
   builds the API; mount `api.Wrap(next)`. `Backend` decides which instance a request is for (`Lookup(r)`), who it
   acts as (`Authenticate(r, inst)` → `Auth{UserID, Scopes, Via, TokenLabel}`, an `*AuthError`, or `ErrNoAccess` for a
-  404) and records history. `Instances` is pocker's Manager (stop, swap, start). Serve it as deploy/v1 for the host's
+  404) and records history. `Instances` stops, swaps and starts instances (pocker's Manager is one). Serve it as deploy/v1 for the host's
   instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
 - **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
   does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).

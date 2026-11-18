@@ -29,8 +29,8 @@ replaces, not code in this extension.
 
 **Waits on:** the host half above.
 
-Register vacuum in every Pocker instance (a standard member, or the host's own instance extensions) so its Settings →
-Backups section shows the host's status. `extkit.HostProvides` already keeps the setting out when the host provides
+Register vacuum in every instance on a multisite host (a standard member, or an extra on the host's set) so its
+Settings → Backups section shows the host's status. `extkit.HostProvides` already keeps the setting out when the host provides
 `vacuum/v1`; registering it before a host provider exists would give instances' admins a setting instead.
 
 ## PocketHost on this extension

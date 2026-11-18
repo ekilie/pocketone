@@ -1,11 +1,11 @@
 ---
 owners: ["@benallfree"]
-summary: "What runs a multisite host's instances (in-process, in containers), in preference order."
+summary: "What runs a multisite host's instances (as isolates, in containers), in preference order."
 ---
 
 # runtime/v1
 
-What runs a multisite host's instances: [pocker](../../../pocker/README.md) in-process,
+What runs a multisite host's instances: [pocker](../../../pocker/README.md) as isolates,
 [docker](../../../docker/README.md) in containers. A host can have several at once, in preference order: each
 instance runs on the one it names (`runtime: docker` in its record), else the first that can serve it (by PocketBase
 version, for example). Having a `multisite` section makes the binary a host; the runtimes are this contract's

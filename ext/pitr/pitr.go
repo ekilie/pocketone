@@ -2,15 +2,16 @@
 // pb_data/litestream/ or to an S3-compatible bucket), and the app's superuser can put the database back as it was at
 // any moment inside the retention window, from Settings → Backups.
 //
-// Single app:
+// A standalone app without a set:
 //
 //	app := pocketbase.New()
 //	pitr.MustRegister(app, pitr.Config{})
 //
-// Many apps in one process: add it to a pocker server's extensions; settings come from pocketone.yaml's `pitr`
-// section and each instance's `extensions.pitr`:
+// It's a member of ext/standard's set, so every app built on it has PITR. Isolates (an isolate runtime such as
+// Pocker): settings come from pocketone.yaml's `pitr` section and each instance's `extensions.pitr`;
+// reconfigure the member to change the defaults:
 //
-//	srv.Extensions = append(srv.Extensions, pitr.New(pitr.Config{}))
+//	set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour})
 package pitr
 
 import (
@@ -194,8 +195,8 @@ func (a *appPITR) destination() (*destination, error) {
 }
 
 // SetupApp adds point-in-time restore to app. Call it before the app bootstraps (pocketbase.New → before Start;
-// under pocker the extension's Register calls it). Replication starts when the app serves (OnServe), so CLI commands run in another
-// process never write to the history. With PITR disabled for the app it adds nothing.
+// in a set, the extension's Register calls it). Replication starts when the app serves (OnServe), so CLI commands run
+// in another process never write to the history. With PITR disabled for the app it adds nothing.
 func (p *Extension) SetupApp(app core.App, ac AppConfig) error {
 	enabled, retention := p.resolve(ac)
 	if !enabled {

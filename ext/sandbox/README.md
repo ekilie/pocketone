@@ -15,7 +15,7 @@ leave the app's own database files, and outbound connections reach public addres
 ## Install
 
 Sandbox isn't a switch in `pocketone`: [Pocker](../pocker/README.md) applies it to every instance it runs. With
-a `multisite` section in `pocketone.yaml` (pocker as the runtime), every instance is sandboxed and there's nothing to install. A single app
+a `multisite` section in `pocketone.yaml` (pocker as the runtime), every instance is sandboxed and there's nothing to install. A standalone app
 served by `pocketone` without a `multisite` section is not sandboxed.
 
 In your own Go build, give it to the [JSVM](../jsvm/README.md) engine as an extension:

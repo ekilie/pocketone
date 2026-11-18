@@ -60,9 +60,9 @@ type Instance struct {
 	// serving it (e.g. suspended, unpaid). A running app is left running.
 	Blocked *Blocked `yaml:"blocked,omitempty"`
 
-	// Remote, when set, means another server runs this instance (e.g. "http://10.0.0.2:8080"). Pocker applies its
-	// firewall (peer check, rate limits) and then forwards the request there instead of starting the app here (see
-	// ext/pocker's ManagerOptions.Forward). An app already running here is stopped.
+	// Remote, when set, means another server runs this instance (e.g. "http://10.0.0.2:8080"). The multisite host
+	// applies its gates (firewall: peer check, rate limits) and then forwards the request there instead of starting the
+	// app here (see ext/multisite's Host.Forward). An app already running here is stopped.
 	Remote string `yaml:"remote,omitempty"`
 }
 

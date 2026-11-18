@@ -26,7 +26,7 @@ func main() {
 
 	registerDemoView(app) // a "newsletter_audience" view to use as a campaign audience (demo.go)
 
-	// the same extension value pocker would host on every instance (srv.Extensions = append(srv.Extensions, mail))
+	// the same extension value a multisite host gives every instance (set.BulkMail = mail on its standard set)
 	mail := bulkmail.New(bulkmail.Config{
 		Rate:  5,    // messages per second
 		Daily: 5000, // messages per day; bulkmail.NoBulkMail forbids sending
