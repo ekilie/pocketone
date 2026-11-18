@@ -13,7 +13,8 @@ import (
 // Extension is ext/wasm as a PocketOne extension ([extkit.Extension]): the same value works on a single app and on
 // every instance under pocker, each instance with its own modules in its own pb_hooks/.
 //
-//	set := standard.New().Add(wasm.New(wasm.Config{})) // a single app, and every pocker instance
+//	set := standard.New()                            // has it: set.WASM, on a single app and every pocker instance
+//	set.WASM = wasm.New(wasm.Config{MaxConcurrent: 4}) // reconfigure it
 //
 // An instance's `extensions.wasm` settings apply over the Config given to New: `dir`, `maxCallMemoryMB`, `maxConcurrent`,
 // `maxModulesMB`, `timeout` ("5s", or nanoseconds), `maxPayload`, and `enabled`, which the host checks.

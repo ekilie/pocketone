@@ -36,6 +36,7 @@ import (
 	"github.com/pockethost/pocketone/ext/settings"
 	"github.com/pockethost/pocketone/ext/templates"
 	"github.com/pockethost/pocketone/ext/tokens"
+	"github.com/pockethost/pocketone/ext/wasm"
 )
 
 // Set is the standard members, then the host's extras, registered on every app in that order (contracts reorder them
@@ -53,6 +54,7 @@ type Set struct {
 	Backups    *backups.Extension
 	BulkMail   *bulkmail.Extension
 	Deploy     *deploy.Extension
+	WASM       *wasm.Extension
 
 	// Providers is the `providers:` section of pocketone.yaml: which extension provides a contract when several do.
 	Providers extkit.Choices
@@ -77,6 +79,7 @@ func New() *Set {
 		Backups:    backups.New(),
 		BulkMail:   bulkmail.New(bulkmail.Config{}),
 		Deploy:     deploy.NewExtension(deploy.Config{}),
+		WASM:       wasm.New(wasm.Config{}),
 	}
 }
 
@@ -88,7 +91,7 @@ func (s *Set) Add(e ...extkit.Extension) *Set {
 
 // Extensions lists the members then the extras.
 func (s *Set) Extensions() []extkit.Extension {
-	out := make([]extkit.Extension, 0, 13+len(s.extras))
+	out := make([]extkit.Extension, 0, 14+len(s.extras))
 	for _, m := range s.members() {
 		if m.ext != nil {
 			out = append(out, m.ext)
@@ -105,7 +108,7 @@ type member struct {
 func (s *Set) members() []member {
 	m := []member{
 		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
-		{"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy},
+		{"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
 		if isNil(m[i].ext) {
@@ -140,6 +143,8 @@ func isNil(e extkit.Extension) bool {
 	case *bulkmail.Extension:
 		return v == nil
 	case *deploy.Extension:
+		return v == nil
+	case *wasm.Extension:
 		return v == nil
 	}
 	return e == nil
@@ -259,7 +264,7 @@ func (s *Set) Register(app core.App, jsCfg jsvm.Config) error {
 
 // RegisterWith is Register with another JS engine: loadJS registers it on app between the extensions and the seal.
 // The pocketone binary passes PocketBase's own plugins/jsvm here in its goja compatibility mode; then the set's JS
-// APIs ($mcp, $tokens, pages, JS contracts) aren't bound.
+// APIs ($mcp, $tokens, $wasm, pages, JS contracts) aren't bound.
 func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error {
 	plan, err := s.Prepare(app, nil)
 	if err != nil {

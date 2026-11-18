@@ -1,0 +1,71 @@
+---
+title: WebAssembly text (WAT)
+description: Write a WASM module for pb_hooks by hand in WebAssembly's own text format, calling WASI directly, with no compiler and no libc.
+---
+
+# WebAssembly text (WAT)
+
+WAT is WebAssembly's assembly language: the instructions a module is made of, written as text. Writing a module in it means no compiler, no runtime and no libc, only the module and the WASI functions it imports. The summary example is 1.8 KB, the smallest module here: its first call compiles in about 9 ms, later calls load it from the cache in under half a millisecond.
+
+It's for fun and for learning what's under every other page here. For real work, any other language is less code: the summary takes about 200 lines of WAT.
+
+## Set up
+
+```bash
+brew install wabt   # wat2wasm, wasm2wat, and friends
+```
+
+## The module
+
+[`example/summary/wat`](../../example/summary/wat/summary.wat) takes a text on stdin, like the [C](c.md) one, and prints `{"text", "words"}`. It does by hand what libc and a compiler do for the other languages:
+
+- **It imports WASI directly:** `args_sizes_get` and `args_get` for the function asked for, `fd_read` for stdin, `fd_write` for stdout and stderr, `proc_exit` to fail.
+- **It lays out its own memory:** fixed addresses for its strings, the arguments and the manifest, and the input from 64 KB up, growing memory with `memory.grow` as the input needs it.
+- **It exports `_start`**, the function a WASI program runs.
+
+```wat
+(module
+  (import "wasi_snapshot_preview1" "fd_read" (func $fd_read (param i32 i32 i32 i32) (result i32)))
+  (import "wasi_snapshot_preview1" "fd_write" (func $fd_write (param i32 i32 i32 i32) (result i32)))
+  (import "wasi_snapshot_preview1" "proc_exit" (func $proc_exit (param i32)))
+  ;; ...
+  (memory (export "memory") 2)
+  (data (i32.const 160) "{\22code\22:\22no_such_function\22,\22message\22:\22only run\22}")
+
+  ;; end the program with an error pb_hooks can read (err.code / err.message)
+  (func $fail (param $ptr i32) (param $len i32)
+    (call $write (i32.const 2) (local.get $ptr) (local.get $len))
+    (call $proc_exit (i32.const 1)))
+
+  ;; space, tab, newline, vertical tab, form feed, carriage return
+  (func $space (param $c i32) (result i32)
+    (i32.or (i32.eq (local.get $c) (i32.const 32))
+            (i32.lt_u (i32.sub (local.get $c) (i32.const 9)) (i32.const 5))))
+
+  (func $main (export "_start")
+    ;; read argv[1], print the manifest for --describe, read stdin, count the words,
+    ;; write {"text": ..., "words": ...}
+  ))
+```
+
+The manifest is a data segment, the compacted `manifest.json` with its quotes written `\22`. WAT can't include a file, so the tests check the two say the same thing.
+
+## Build
+
+```bash
+wat2wasm summary.wat -o pb_hooks/summary.pb.wasm
+```
+
+`wasm2wat` turns any module back into text, which is a good way to see what a compiler made: `wasm2wat pb_hooks/summary.pb.wasm | less`.
+
+## Call it
+
+```js
+const out = await $wasm.run.async("summary", e.record.get("body")) // a string goes in as it is
+```
+
+## What to know
+
+- **A trap is a crash.** An out-of-bounds load, a division by zero or `unreachable` ends the call as `crashed`. The example uses `unreachable` when memory can't grow.
+- **Only WebAssembly 2.0 runs**, so instructions from later proposals (tail calls, GC, exceptions, threads) fail when the module loads. `memory.copy` (bulk memory) and SIMD are fine.
+- **The manifest's `language`** is up to you; a WAT module says nothing about itself. The example says `"WAT"`.

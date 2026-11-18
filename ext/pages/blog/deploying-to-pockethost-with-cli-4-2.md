@@ -6,7 +6,7 @@ author: Ben Allfree
 tags: deploying, PocketHost, starters
 ---
 
-> This post is about PocketPages 0.x, the npm package. PocketPages v1 is built into PocketOne: see [Moving from PocketPages 0.x](../site/moving-from-0x.md).
+> This post is about PocketPages 0.x, the npm package. PocketPages v1 is built into PocketOne: see [Moving from PocketPages 0.x](../docs/moving-from-0x.md).
 
 Going live with PocketPages is now four commands, and the tricky part about npm packages is handled for you.
 
@@ -69,4 +69,4 @@ Each starter kit now runs live on PocketHost, deployed straight from the repo, s
 | htmx     | [pocketpages-htmx.pockethost.io](https://pocketpages-htmx.pockethost.io)         |
 | datastar | [pocketpages-datastar.pockethost.io](https://pocketpages-datastar.pockethost.io) |
 
-The full list is on [Starter Kits](../site/starter-kits.md), and the complete guide is in [Deploying to Production](../site/deploying.md).
+The full list is on [Starter Kits](../docs/starter-kits.md), and the complete guide is in [Deploying to Production](../docs/deploying.md).

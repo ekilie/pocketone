@@ -4,7 +4,7 @@
 //
 // Comments: one thread per page in the Q&A category, matched by an exact term. An extension's page and its guides (the
 // extra .md files beside its README; site/sync gives them `discussion:`) share the extension's thread; each page of an
-// extension's site (ext/<name>/site) has its own. Pages that moved from /docs/plugins/ and /docs/writing-a-plugin keep
+// extension's docs (ext/<name>/docs) have their own. Pages that moved from /docs/plugins/ and /docs/writing-a-plugin keep
 // their old terms, so their existing threads follow them. Front matter `discussion: <term>` picks another term; `discussion: false` turns comments off.
 // The docs home and the extension index have none.
 //

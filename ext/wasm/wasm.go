@@ -43,6 +43,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
+	"github.com/tetratelabs/wazero"
 )
 
 // Name is the extension's name: its key under an instance's `extensions:` block.
@@ -74,6 +75,14 @@ type Config struct {
 
 	// MaxPayload is the largest input or output of a call, in bytes (default 4 MB).
 	MaxPayload int
+
+	// CacheDir is where compiled modules are kept between calls and restarts (default pocketone/wasm in the user's
+	// cache folder: ~/.cache on Linux, ~/Library/Caches on macOS). A module's first call compiles it; later calls load
+	// the machine code from there, 20 to 30 times faster. Every app and instance naming the same folder shares it,
+	// keyed by each module's bytes. "off" compiles every call. The process runs what's in this folder as machine
+	// code, so keep it where only the process writes: never in a folder an app's users or tenants can write to
+	// (pb_data, pb_hooks). Only the host sets it; instances can't.
+	CacheDir string
 }
 
 func (c Config) withDefaults() Config {
@@ -103,8 +112,10 @@ func MustRegister(app core.App, cfg Config) *Host {
 
 // Host runs one app's modules.
 type Host struct {
-	app core.App
-	cfg Config
+	app      core.App
+	cfg      Config
+	cache    wazero.CompilationCache // nil: every call compiles
+	cacheErr error                   // why there's no cache, logged when the app serves
 
 	mu      sync.RWMutex
 	serving bool
@@ -168,6 +179,16 @@ func Register(app core.App, cfg Config) (*Host, error) {
 	}
 	cfg.Dir = dir
 	h := &Host{app: app, cfg: cfg, checked: map[string]checked{}, freed: make(chan struct{})}
+	if cfg.CacheDir == "" {
+		if d, err := defaultCacheDir(); err != nil {
+			h.cacheErr = fmt.Errorf("no user cache folder (%w): set CacheDir", err)
+		} else {
+			h.cfg.CacheDir = d
+		}
+	}
+	if h.cfg.CacheDir != "" && h.cfg.CacheDir != "off" {
+		h.cache, h.cacheErr = cacheFor(h.cfg.CacheDir)
+	}
 	app.Store().Set(storeKey, h)
 
 	// modules only run while serving, so other commands (migrate, superuser, ...) never compile them
@@ -180,6 +201,9 @@ func Register(app core.App, cfg Config) (*Host, error) {
 			h.mu.Lock()
 			h.serving = true
 			h.mu.Unlock()
+			if h.cacheErr != nil {
+				h.app.Logger().Warn("wasm: no compilation cache, every call compiles its module", "dir", h.cfg.CacheDir, "error", h.cacheErr)
+			}
 			h.Modules() // checks every module once, so the log says at start which ones can't run
 			return nil
 		},

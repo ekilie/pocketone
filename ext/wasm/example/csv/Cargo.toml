@@ -1,0 +1,15 @@
+[package]
+name = "csv"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+csv = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1

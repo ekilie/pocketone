@@ -54,10 +54,11 @@ type extension struct {
 	Name, Title, Group, Summary string
 	Link                        string // no README: point here (repo path) instead
 	guides                      []guide
-	site                        []string // ext/<name>/site, paths relative to it (extsite.go)
+	site                        []string // ext/<name>/docs, paths relative to it (extsite.go)
 	blog                        []string // ext/<name>/blog/*.md, file names
 	nav                         string   // the site's nav sections, ready for the docs nav
-	landing                     bool     // site/ has its own index page: it's /docs/extensions/<name>, the README moves under it
+	landing                     bool     // it has docs (ext/<name>/docs/index.md): they're /docs/extensions/<name>, the README moves under it
+	section, docsTitle          string   // the main nav section that links its docs, and the link's text (docs/index.md's front matter)
 }
 
 type guide struct {
@@ -357,6 +358,9 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 
 	sectionNavs(m, out)
 	siteNavs(m, out)
+	if out[tocFile], err = mainNav(root, m); err != nil {
+		return nil, err
+	}
 	if err := versionFile(root, out); err != nil {
 		return nil, err
 	}
@@ -370,8 +374,8 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	return out, nil
 }
 
-// link is an extension's page in the catalogue and the Extensions nav: its README page. An extension with a site of
-// its own (Pages) is listed by its extension docs; its site is linked from the main nav's Reference section.
+// link is an extension's page in the catalogue and the Extensions nav: its README page. An extension's docs
+// (ext/<name>/docs) are linked from the main nav's section their index.md names instead.
 func link(p *extension) string {
 	if p.Link != "" {
 		return repoURL + "/blob/main/" + p.Link
@@ -425,9 +429,6 @@ func sectionNavs(m *manifest, out map[string]string) {
 				continue
 			}
 			fmt.Fprintf(&b, "- [%s](%s)\n", p.Title, link(p))
-			if p.landing {
-				continue // its guides are in its site's nav
-			}
 			for _, gd := range p.guides {
 				fmt.Fprintf(&b, "- [%s: %s](/docs/extensions/%s/%s)\n", p.Title, gd.title, p.Name, gd.slug)
 			}

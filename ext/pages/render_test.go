@@ -91,7 +91,7 @@ func TestModuleRequireRelative(t *testing.T) {
 
 func TestStarterKitsRender(t *testing.T) {
 	dirs, _ := filepath.Glob("starters/*/pb_pages")
-	dirs = append(dirs, "../../site/pb_pages") // pocketone.dev, which carries the PocketPages docs (ext/pages/site)
+	dirs = append(dirs, "../../site/pb_pages") // pocketone.dev, which carries the PocketPages docs (ext/pages/docs)
 	for _, dir := range dirs {
 		t.Run(dir, func(t *testing.T) {
 			table, errs := Build(dir)

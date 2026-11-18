@@ -33,6 +33,14 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+### Added
+
+- `pocketone` runs WASM modules: put a `<name>.pb.wasm` in `pb_hooks` and call it from your hooks with `await $wasm.run.async(name, input)` ([ext/wasm](ext/wasm/README.md)).
+
+### Changed
+
+- Extensions keep their end-user docs in `ext/<name>/docs/` (was `site/`). `docs/index.md` is required and names the main docs nav section that links it (`section: Reference`); the README is the extension's page in the Extensions reference, at `/docs/extensions/<name>/extension`, and no longer appears in the docs' sidebar ([Writing an extension](docs/extensions.md)).
+
 ## v0.0.1-alpha.7 (2026-11-17)
 
 ### Upgrading

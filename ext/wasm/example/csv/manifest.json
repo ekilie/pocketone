@@ -1,0 +1,53 @@
+{
+  "description": "CSV to JSON rows, quoted fields and all: run reads comma-separated, tsv tab-separated, semicolon semicolon-separated, with the csv crate",
+  "functions": [
+    "run",
+    "tsv",
+    "semicolon"
+  ],
+  "language": "Rust",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/csv",
+  "examples": [
+    {
+      "function": "run",
+      "input": "name,email,note\nAda,ada@example.com,\"likes \"\"math\"\", and engines\"\nBob,bob@example.com\n",
+      "output": {
+        "columns": [
+          "name",
+          "email",
+          "note"
+        ],
+        "rows": [
+          {
+            "name": "Ada",
+            "email": "ada@example.com",
+            "note": "likes \"math\", and engines"
+          }
+        ],
+        "errors": [
+          {
+            "line": 3,
+            "message": "CSV error: record 2 (line: 3, byte: 66): found record with 2 fields, but the previous record has 3 fields"
+          }
+        ]
+      }
+    },
+    {
+      "function": "semicolon",
+      "input": "sku;price\nA-1;9,99\n",
+      "output": {
+        "columns": [
+          "sku",
+          "price"
+        ],
+        "rows": [
+          {
+            "sku": "A-1",
+            "price": "9,99"
+          }
+        ],
+        "errors": []
+      }
+    }
+  ]
+}
