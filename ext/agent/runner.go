@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pockethost/pocketone/ext/agent/engine"
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
@@ -26,6 +27,7 @@ type genOptions struct {
 	MaxTokens   int
 	Temperature float64
 	Stop        []string
+	Constraint  func(text string) engine.Fit // nil: unconstrained
 }
 
 type genResult struct {
@@ -165,7 +167,15 @@ func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxToke
 	if len(in.Schema) > 0 && in.Temperature == nil {
 		temp = 0 // structured answers: the most likely one
 	}
-	g, err := r.model.generate(ctx, r.model.chatPrompt(msgs), genOptions{MaxTokens: maxTokens, Temperature: temp, Stop: in.Stop})
+	o := genOptions{MaxTokens: maxTokens, Temperature: temp, Stop: in.Stop}
+	if len(in.Schema) > 0 {
+		sn, err := compileSchema(in.Schema)
+		if err != nil {
+			return agentv1.CompleteResult{}, &extkit.Error{Code: "bad_request", Message: err.Error(), Status: 400}
+		}
+		o.Constraint = sn.fit // the answer can only be JSON matching the schema
+	}
+	g, err := r.model.generate(ctx, r.model.chatPrompt(msgs), o)
 	if err != nil && g.OutputTokens == 0 {
 		return agentv1.CompleteResult{}, err
 	}

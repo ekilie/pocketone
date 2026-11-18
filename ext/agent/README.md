@@ -69,7 +69,10 @@ onRecordCreate((e) => {
 ```
 
 - `prompt`, or `messages` for a conversation; `system`, `maxTokens`, `temperature`, `stop`.
-- `schema`: a JSON schema. The model is told to answer with matching JSON and the parsed value comes back as `data`.
+- `schema`: a JSON schema; the parsed answer comes back as `data`. With a model PocketOne runs, the answer can only be JSON
+  matching it: the model is kept to it token by token (type, enum, const, properties, required, items, minItems,
+  maxItems, anyOf), so even the smallest model fills in the schema instead of describing it. Your own API gets it as
+  `response_format`, which most providers honor.
 - The answer: `text`, `data`, `model`, `backend` (`app` or `runner`, or `host` on a multisite host), `usage`.
 - `$agent.status()` says which model answers and whether it's ready.
 
