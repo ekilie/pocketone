@@ -146,13 +146,34 @@ func TestSandboxBlocksEscapes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stopApp(running)
+	// A hung request leaves the VM busy, so stopping the app would hang too: skip it and fail with the attack's name.
+	hung := false
+	defer func() {
+		if !hung {
+			stopApp(running)
+		}
+	}()
 
+	// Every attack is cut off within seconds (MaxJSExecution, MaxQueryDuration, the 10 s sleep cap, the memory
+	// limit). One still running after a minute is a built-in the sandbox can't interrupt (as bigJoin was): fail now
+	// with its name instead of waiting out go test's -timeout.
+	const hangAfter = time.Minute
 	call := func(name string) (attackResult, int, time.Duration) {
+		t.Helper()
 		r := httptest.NewRequest(http.MethodGet, "/t/"+name, nil)
 		w := httptest.NewRecorder()
 		start := time.Now()
-		running.handler.ServeHTTP(w, r)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			running.handler.ServeHTTP(w, r)
+		}()
+		select {
+		case <-done:
+		case <-time.After(hangAfter):
+			hung = true
+			t.Fatalf("%s: still running after %s; the sandbox didn't interrupt it", name, hangAfter)
+		}
 		var res attackResult
 		_ = json.Unmarshal(w.Body.Bytes(), &res)
 		return res, w.Code, time.Since(start)
