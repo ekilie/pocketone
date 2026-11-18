@@ -45,6 +45,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
@@ -55,6 +56,7 @@ require (
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -68,13 +70,13 @@ require (
 	github.com/superfly/ltx v0.5.2 // indirect
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
 	github.com/yuin/goldmark v1.8.7 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/image v0.48.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -92,6 +94,7 @@ replace (
 	github.com/pockethost/pocketone/ext/backups => ../backups
 	github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
 	github.com/pockethost/pocketone/ext/bundle => ../bundle
+	github.com/pockethost/pocketone/ext/cache => ../cache
 	github.com/pockethost/pocketone/ext/config => ../config
 	github.com/pockethost/pocketone/ext/contracts => ../contracts
 	github.com/pockethost/pocketone/ext/deploy => ../deploy
@@ -117,6 +120,7 @@ replace (
 	github.com/pockethost/pocketone/ext/settings => ../settings
 	github.com/pockethost/pocketone/ext/standard => ../standard
 	github.com/pockethost/pocketone/ext/stats => ../stats
+	github.com/pockethost/pocketone/ext/templates => ../templates
 	github.com/pockethost/pocketone/ext/tokens => ../tokens
 	github.com/pockethost/pocketone/ext/upgrade => ../upgrade
 )

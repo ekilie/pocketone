@@ -33,6 +33,10 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+### PocketBase
+
+- Built on PocketBase v0.42.3 plus one later upstream commit (c5003ce6; was v0.42.2). Realtime subscription changes no longer need to come from the connection's IP, OAuth2 redirects also accept the subscribing IP and log failures at WARN, and S3 multipart uploads that S3 reports as failed in a 200 response now fail. See its [changelog](CHANGELOG.pocketbase.md).
+
 ## v0.0.1-alpha.7 (2026-11-17)
 
 ### Upgrading
