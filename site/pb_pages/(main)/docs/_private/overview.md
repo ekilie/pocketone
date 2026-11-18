@@ -30,6 +30,13 @@ records a function call away. Components `import` each other and route files can
 the binary, so there's no Node, no `npm install` and no build step. This site is one. `pocketone pages create myapp`
 starts a new site from a starter kit. [PocketPages](/docs/features/sites) shows a page in TSX.
 
+### Hundreds of apps in one process
+
+Add a `multisite` section to `pocketone.yaml` and one `pocketone` process runs hundreds of PocketBase apps as
+isolates, routed by hostname. Each is a complete app with its own data, hooks and dashboard. It starts on its first
+request in tens of milliseconds, costs about 3 MB while it runs, and is sandboxed from the others. No container per app.
+[PocketBase isolates](/docs/features/isolates) shows it running in a minute.
+
 ### Point-in-time restore, on by default
 
 Your database is replicated with Litestream, so you can restore it to any moment from **Settings → Backups** or with

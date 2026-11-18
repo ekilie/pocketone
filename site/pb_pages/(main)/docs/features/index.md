@@ -1,16 +1,17 @@
 ---
 title: New in PocketOne
-description: Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built in and on by default.
+description: Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built into the pocketone binary.
 ---
 
 # New in PocketOne
 
-PocketOne does everything PocketBase does, and adds the features below. They're built in and on by default, whether
-you run the `pocketone` binary yourself or a host runs your app. There's nothing to install.
+PocketOne does everything PocketBase does, and adds the features below. They're all built into the `pocketone`
+binary, and most are on by default. There's nothing to install.
+
+Three of them set PocketOne apart, and PocketBase can't do any of them: hooks with `async`, `import` and TypeScript,
+pages in TSX, and hundreds of apps running as isolates in one process.
 
 ## Modern JavaScript on the server
-
-The two biggest differences are in the code you write. PocketBase can't do either of these.
 
 **[Hooks with async, import and TypeScript](/docs/quickjs).** Your `pb_hooks` run on QuickJS with the same JS API you
 already use, plus:
@@ -58,12 +59,27 @@ export default function Product({ data }: any) {
 }
 ```
 
+## Hundreds of apps in one process
+
+**[PocketBase isolates](/docs/features/isolates).** One `pocketone` process runs hundreds of PocketBase apps as
+isolates, routed by hostname. Each is a complete app with its own data, hooks and dashboard. It starts on its first
+request in tens of milliseconds, costs about 3 MB while it runs, and is sandboxed from the others: its own memory cap,
+time limits, files, SQL and secrets. No container per app, no idle memory to pay for.
+
+```yaml
+# pocketone.yaml: every hostname you ask for becomes its own app (dev mode)
+multisite: {}
+instances: { dev: true }
+pocker: { root: ./pb_root }
+```
+
 ## Everything new, side by side
 
 | | PocketBase gives you | PocketOne adds |
 |---|---|---|
 | [QuickJS hooks](/docs/quickjs) | Hooks on goja: CommonJS, no `await`, a pool of separate runtimes | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
 | [PocketPages sites](/docs/features/sites) | Static files from `pb_public` | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with no build step |
+| [PocketBase isolates](/docs/features/isolates) | One app per process; a container or VM each to host many | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
 | [Point-in-time restore](/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
 | [Deploy and live sync](/docs/features/deploy) | Copy files to the server yourself, then restart | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
 | [Remote CLI](/docs/features/remote) | A CLI for the machine that holds `pb_data` | Admin commands against any app, from your terminal, a script or an agent |

@@ -10,6 +10,7 @@
 - [Everything new](/docs/features)
 - [QuickJS: async, import, TS](/docs/quickjs)
 - [PocketPages: TSX, TS, EJS](/docs/features/sites)
+- [Isolates: many apps, one process](/docs/features/isolates)
 - [Point-in-time restore](/docs/features/restore)
 - [Deploy and live sync](/docs/features/deploy)
 - [Remote CLI](/docs/features/remote)
