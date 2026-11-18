@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
@@ -45,8 +46,8 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
@@ -55,6 +56,7 @@ require (
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -120,3 +122,7 @@ replace (
 	github.com/pockethost/pocketone/ext/tokens => ../tokens
 	github.com/pockethost/pocketone/ext/upgrade => ../upgrade
 )
+
+replace github.com/pockethost/pocketone/ext/cache => ../cache
+
+replace github.com/pockethost/pocketone/ext/templates => ../templates

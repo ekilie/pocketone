@@ -9,9 +9,9 @@ summary: "The extensions every PocketOne app has, as one set a host configures."
 # Standard Set
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. Every app uses it, standalone or an
-instance on a multisite host, so an app never misses one because its host forgot to list it. Members can be
-reconfigured or turned off per app, never removed.
+PocketPages, S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
+app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
+list it. Members can be reconfigured or turned off per app, never removed.
 
 ## Install
 
@@ -24,7 +24,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`) and resolves
+`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
 ## Configure
@@ -44,7 +44,7 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm
 standard: tokens/v1 ← tokens
 ```
 

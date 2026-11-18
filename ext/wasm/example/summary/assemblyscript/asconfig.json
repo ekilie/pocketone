@@ -1,0 +1,12 @@
+{
+  "extends": "./node_modules/@assemblyscript/wasi-shim/asconfig.json",
+  "targets": {
+    "release": {
+      "outFile": "summary.pb.wasm",
+      "optimizeLevel": 3,
+      "shrinkLevel": 2,
+      "noAssert": true,
+      "runtime": "stub"
+    }
+  }
+}

@@ -25,6 +25,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [PocketPages sites](https://pocketone.dev/docs/features/sites): Serve server-rendered pages from a pb_pages folder next to your data, with PocketPages, built into every PocketOne app.
 - [QuickJS hooks](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
 - [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
+- [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your pb_hooks, for libraries JavaScript doesn't have and work JavaScript does too slowly.
 
 ## Extend PocketOne
 
@@ -39,6 +40,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [REST](https://pocketone.dev/docs/reference/rest): Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input.
 - [MCP](https://pocketone.dev/docs/reference/mcp): Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments.
 - [pocketone.yaml](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
+- [PocketPages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
 
 ## Contracts: By name
 
@@ -75,6 +77,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
 - [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
+- [Pages: PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
 - [PITR](https://pocketone.dev/docs/extensions/pitr): Point-in-time restore of your database with Litestream. On by default.
 - [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect): File downloads as short-lived signed S3 redirects.
@@ -84,6 +87,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Tokens: OAuth](https://pocketone.dev/docs/extensions/tokens/oauth): Tokens: OAuth
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
 - [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk.
+- [WASM](https://pocketone.dev/docs/extensions/wasm/extension): Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box.
 
 ## Extensions: Run many instances
 
@@ -103,7 +107,6 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Mail Relay](https://pocketone.dev/docs/extensions/mailrelay): Outgoing mail for instances without SMTP, through your relay, with limits.
 - [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback): A default bucket for uploads and backups when an instance has no S3 of its own.
 - [Server Timing](https://pocketone.dev/docs/extensions/servertiming): Server-Timing headers for each step of a request.
-- [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box.
 
 ## Extensions: Sell it as a service
 
@@ -119,11 +122,6 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
-
-## Pages
-
-- [Home](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
-- [PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
 
 ## Pages: Introduction
 
@@ -207,6 +205,33 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Google OAuth2](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketPages app with the auth plugin.
 - [Outgoing Email with Amazon SES](https://pocketone.dev/docs/extensions/pages/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
 - [Setting up a new email domain in Google Suite](https://pocketone.dev/docs/extensions/pages/speedruns/gs-gmail): Complete walkthrough for configuring email domains in Google Suite, including domain verification, Gmail activation, catch-all email setup, MX record configuration, and sender account integration.
+
+## WASM: Languages
+
+- [Choosing a language](https://pocketone.dev/docs/extensions/wasm/languages): Which languages build WASM modules for pb_hooks, what each one costs per call, and how to pick.
+- [C and C++](https://pocketone.dev/docs/extensions/wasm/languages/c): Build a WASM module for pb_hooks from C or C++ with zig cc, which brings its own WASI libc.
+- [Go](https://pocketone.dev/docs/extensions/wasm/languages/go): Build a WASM module for pb_hooks with Go's own compiler (GOOS=wasip1), and when its size matters.
+- [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo): Build Go code into small, fast WASM modules for pb_hooks with TinyGo.
+- [Rust](https://pocketone.dev/docs/extensions/wasm/languages/rust): Build WASM modules for pb_hooks from Rust, and use crates from crates.io in them.
+- [Zig](https://pocketone.dev/docs/extensions/wasm/languages/zig): Build small WASM modules for pb_hooks with Zig.
+- [AssemblyScript](https://pocketone.dev/docs/extensions/wasm/languages/assemblyscript): Build a WASM module for pb_hooks in AssemblyScript, a TypeScript-like language, with the WASI shim.
+- [WebAssembly text (WAT)](https://pocketone.dev/docs/extensions/wasm/languages/wat): Write a WASM module for pb_hooks by hand in WebAssembly's own text format, calling WASI directly, with no compiler and no libc.
+- [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm): Write a WASM module for pb_hooks in LLVM IR, the assembly language compilers hand to LLVM, and let clang build it.
+- [Other languages](https://pocketone.dev/docs/extensions/wasm/languages/others): What another language needs to build a WASM module pb_hooks can run, and how the usual candidates fit.
+
+## WASM: Guides
+
+- [Keeping state in JS](https://pocketone.dev/docs/extensions/wasm/guides/state): Modules keep nothing between calls. Keep the state in the app (a record, or $app.store()), pass it in with each call, and save what comes back. With a TinyGo example.
+
+## WASM: Recipes
+
+- [Overview](https://pocketone.dev/docs/extensions/wasm/recipes): WASM modules built on real libraries, each with a tested hook: Markdown, HTML sanitizing, QR codes, thumbnails, diffs, CSV, EDIFACT and XML orders, and crypto pb_hooks lacks.
+- [Markdown to HTML](https://pocketone.dev/docs/extensions/wasm/recipes/markdown): Render Markdown posts to HTML in a hook with pulldown-cmark, then clean them with sanitize-html.
+- [Sanitize HTML](https://pocketone.dev/docs/extensions/wasm/recipes/sanitize-html): Clean untrusted HTML from users with ammonia, so it's safe to show on your pages.
+- [Text diffs](https://pocketone.dev/docs/extensions/wasm/recipes/diff): Keep a revision history of a text field as unified diffs, with the similar crate.
+- [Image thumbnails](https://pocketone.dev/docs/extensions/wasm/recipes/thumbnail): Make a PNG thumbnail of every uploaded photo in a hook, with the image crate.
+- [QR codes](https://pocketone.dev/docs/extensions/wasm/recipes/qrcode): Draw a QR code as SVG for a ticket, a check-in link or a Wi-Fi login, with the qrcode crate.
+- [CSV import](https://pocketone.dev/docs/extensions/wasm/recipes/csv): Import records from a CSV file, quoted fields and all, with the csv crate.
 
 ## Optional
 

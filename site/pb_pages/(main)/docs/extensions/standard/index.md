@@ -10,9 +10,9 @@ source: "ext/standard/README.md"
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail and deploy. Every app uses it, standalone or an
-instance on a multisite host, so an app never misses one because its host forgot to list it. Members can be
-reconfigured or turned off per app, never removed.
+PocketPages, S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
+app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
+list it. Members can be reconfigured or turned off per app, never removed.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -27,7 +27,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`) and resolves
+`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
 ## Configure
@@ -120,12 +120,20 @@ Turns the tokens extension off on a single app (`enabled: false`). On a multisit
 |---|---|---|---|
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
+#### `wasm:`
+
+Turns the wasm extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.wasm`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
 ## Use
 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm
 standard: tokens/v1 ← tokens
 ```
 

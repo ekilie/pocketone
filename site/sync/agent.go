@@ -66,7 +66,7 @@ var docsSites = []docsSite{
 		SkillRef: "agent/skills/pocketone-extensions/reference",
 	},
 	{
-		// PocketPages' docs are the pages extension's site (ext/pages/site), part of pocketone.dev
+		// PocketPages' docs are the pages extension's docs (ext/pages/docs), part of pocketone.dev
 		Name:     "PocketPages",
 		URL:      "https://pocketone.dev",
 		Pages:    "site/pb_pages",

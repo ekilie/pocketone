@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Added
+
+- New member `WASM` (ext/wasm): WASI modules in `pb_hooks`, called with `$wasm`. Reconfigure it with `set.WASM = wasm.New(wasm.Config{...})`. Turn it off on a single app with `wasm: {enabled: false}`.
+
 ### Fixed
 
 - A single app (the stock `pocketone` binary) now honors `enabled: false` in pocketone.yaml for every standard member: `settings`, `templates`, `tokens`, `remotes`, `mcp`, `pages`, `backups`, `bulkmail` and `deploy` each get a section with just `enabled` (before, those sections were refused as unknown and the switch was never read). Extensions that require the one you turn off go off too, and the startup lines say why.

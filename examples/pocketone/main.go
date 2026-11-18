@@ -1,5 +1,5 @@
 // Command pocketone is the standard PocketOne binary: PocketBase's examples/base plus the standard set (ext/standard:
-// settings, tokens (with its OAuth server), remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy) and the
+// settings, tokens (with its OAuth server), remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm) and the
 // extras added here (autotls, mailtrap, upgrade). It's its own module so core's go.mod stays upstream's.
 package main
 
@@ -79,7 +79,7 @@ func main() {
 	}))
 
 	// The standard set: every PocketOne app's extensions (settings, tokens with its OAuth server, remotes, mcp, pages,
-	// s3redirect, pitr, backups, bulkmail, deploy). The flags below reconfigure members; extras are added after them.
+	// s3redirect, pitr, backups, bulkmail, deploy, wasm). The flags below reconfigure members; extras are added after them.
 	set := standard.New()
 	set.Providers = standard.ConfiguredProviders() // pocketone.yaml's providers: section
 	set.Add(vacuum.New())                          // compacts the app's databases on the `vacuum` section's schedule

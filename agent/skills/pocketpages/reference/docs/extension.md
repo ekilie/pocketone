@@ -260,7 +260,7 @@ bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 - [SPEC.md](https://pocketone.dev/docs/extensions/pages/spec): the full PocketPages v1 contract.
 - [fixtures/](https://github.com/pockethost/pocketone/blob/main/ext/pages/fixtures/README.md): the request test cases (`go test ./...` runs them all).
 - [starters/](https://github.com/pockethost/pocketone/tree/main/ext/pages/starters): the starter kits. [addons/](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md): JS add-ons such as Datastar.
-- [site/](https://github.com/pockethost/pocketone/blob/main/ext/pages/site/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
+- [docs/](https://github.com/pockethost/pocketone/blob/main/ext/pages/docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
   pocketone.dev under this page. [blog/](https://github.com/pockethost/pocketone/tree/main/ext/pages/blog): the PocketPages blog posts.
 
 ## License

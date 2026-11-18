@@ -2,16 +2,29 @@
 owners: ["@octavonu"]
 version: 0.0.1
 title: "WASM"
-group: services
+group: binary
 summary: "Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box."
 ---
 
 # WASM
 
-**Bring your own WASM (BYOW).** Your own code, in Go, Rust, Zig or anything that builds for WASI, in pb_hooks, where
-`$os.cmd` and `$os.exec` aren't allowed: a module is a small program compiled to WebAssembly that your hooks call like
-a function. Input in, output out, or an error. It can't reach the database, files, network, environment or other
+**Bring your own WASM (BYOW).** Call code written in Go, Rust, Zig or anything else that builds for WASI from
+pb_hooks, when you need a library from another language or more speed than JS gives you. A module is a small program
+compiled to WebAssembly that your hooks call like a function. Input in, output out, or an error. It can't reach the database, files, network, environment or other
 processes; your hook gives it what it needs and decides what to do with the result.
+
+One call does it:
+
+```js
+const out = await $wasm.run.async("summary", { title: "Hello", body: "one two three" })
+// out is { text: "Hello", words: 3 }
+```
+
+`"summary"` names the module, `pb_hooks/summary.pb.wasm`. The object is its input, sent to it as JSON, and `out` is
+the JSON it writes back, parsed. If the module fails, the call rejects with a `WasmError`. Calls are only `async`: the
+module runs off the JS engine, so the app keeps serving other requests while it works.
+
+In a hook, the input comes from the record and the output goes back into it:
 
 ```js
 // pb_hooks/main.pb.js
@@ -25,16 +38,19 @@ onRecordCreate(async (e) => {
 Use it for what JS hooks do badly or slowly: parsing (EDIFACT, XML, binary formats), crypto, validation, number
 crunching, or a library that only exists in Go, Rust or C.
 
-WASM is an extension; the `.pb.wasm` files it runs are modules.
+WASM is an extension; the `.pb.wasm` files it runs are modules. Beyond this page: a page for [each language](docs/languages/index.md) (C, Go, TinyGo, Rust, Zig, AssemblyScript), [keeping state in JS](docs/guides/state.md) between calls, and [recipes](docs/recipes/index.md) built on real libraries (Markdown, HTML sanitizing, thumbnails, QR codes, diffs, CSV).
 
 ## Install
 
-WASM isn't built into `pocketone` yet. In your own build, add it to the [standard set](../standard/README.md),
-which every app gets, standalone or an instance on a multisite host; the set binds `$wasm` into the JS engine
-([`ext/jsvm`](../jsvm/README.md)):
+WASM is built into `pocketone`: it's a member of the [standard set](../standard/README.md), which every app gets,
+standalone or an instance on a multisite host, and the set binds `$wasm` into the JS engine ([`ext/jsvm`](../jsvm/README.md)). Put a
+`.pb.wasm` file in `pb_hooks` and call it.
+
+In your own build, the set already has it. To change its settings, replace the member:
 
 ```go
-set := standard.New().Add(wasm.New(wasm.Config{})) // $wasm in pb_hooks
+set := standard.New()
+set.WASM = wasm.New(wasm.Config{MaxConcurrent: 4})
 ```
 
 Without the set, register it and bind it yourself:
@@ -55,7 +71,7 @@ hooks; nothing else needs setting up.
 
 ## Configure
 
-The defaults suit most apps. To change them, pass them to `wasm.New`:
+The defaults suit most apps. To change them, pass them to `wasm.New` (`set.WASM = wasm.New(...)` in a standard set):
 
 | Field | Default | What it does |
 |---|---|---|
@@ -65,8 +81,9 @@ The defaults suit most apps. To change them, pass them to `wasm.New`:
 | `MaxConcurrent` | 8 | Calls running at once in the app. More wait, up to `Timeout`, then fail as `busy`. |
 | `MaxModulesMB` | 10 | MB of modules running at once: the `.wasm` sizes of the calls running, added up (file sizes, not memory). More wait, as above. It's also the largest module that runs. |
 | `MaxPayload` | 4 MB | Largest input or output of a call. |
+| `CacheDir` | `pocketone/wasm` in the user's cache folder (`~/.cache` on Linux, `~/Library/Caches` on macOS) | Where compiled modules are kept between calls and restarts (see How it works). `"off"` compiles every call. Keep it where only the server's process writes: it holds machine code the process runs. |
 
-There's no `pocketone.yaml` section. With Pocker, each instance can override these (see Integrations).
+Its `pocketone.yaml` section has only `enabled`: `wasm: {enabled: false}` turns `$wasm` off on a single app. With Pocker, each instance can override all of these but `CacheDir`, which is the host's (see Integrations).
 
 ## Use
 
@@ -145,7 +162,7 @@ $wasm.limits()   // {maxCallMemoryMB, timeoutMs, maxConcurrent, maxModulesMB, ma
 
 Calls are async only, in an async hook. The JS engine runs one VM per app and can't interrupt a call into Go, so a
 module called synchronously would hold the VM, and with it every other hook and request of the app, while it compiles
-and runs (a Go module compiles for over a second each call). A call runs off the VM instead, and the app serves other
+and runs (a Go module's first call compiles for over a second). A call runs off the VM instead, and the app serves other
 requests meanwhile. `$wasm.run(...)` without `.async` throws, saying so.
 
 The input is the module's stdin: a string or bytes (an `ArrayBuffer`, a `Uint8Array` or another typed array) as they are, nothing for
@@ -191,7 +208,7 @@ stderr is a JSON object `{"code", "message", "retryable"}`, hooks get it as is, 
 `message` of a `module_error`. Anything it writes to stderr on success goes to the app's log (Logs in the
 dashboard), so stderr is its log.
 
-**Go** ([`example/summary`](example/summary/main.go)):
+**Go** ([`example/summary/go`](example/summary/go/main.go)):
 
 ```go
 //go:embed manifest.json
@@ -215,7 +232,7 @@ func main() {
 GOOS=wasip1 GOARCH=wasm go build -o pb_hooks/summary.pb.wasm .
 ```
 
-**Rust** ([`example/summary-rust`](example/summary-rust/src/main.rs)): a binary crate, serde for JSON.
+**Rust** ([`example/summary/rust`](example/summary/rust/src/main.rs)): a binary crate, serde for JSON.
 
 ```sh
 rustup target add wasm32-wasip1   # once
@@ -223,11 +240,11 @@ cargo build --release --target wasm32-wasip1
 cp target/wasm32-wasip1/release/summary.wasm pb_hooks/summary.pb.wasm
 ```
 
-**Zig** ([`example/summary-zig`](example/summary-zig/src/main.zig)): an executable for `wasm32-wasi`. Set
+**Zig** ([`example/summary/zig`](example/summary/zig/src/main.zig)): an executable for `wasm32-wasi` (Zig 0.17). Set
 `stack_size = 1 << 20` in `build.zig`: Zig's default stack is 16 MB, and every call would start with it.
 
-Any language that builds a WASI program works the same way (C, TinyGo, AssemblyScript with WASI, ...). Try a
-module without an app: `echo '{"title":"Hi","body":"one two"}' | wazero run summary.pb.wasm run`.
+Any language that builds a WASI program works the same way: [Languages](docs/languages/index.md) has a page for C
+and C++, Go, TinyGo, Rust, Zig and AssemblyScript, each with a module to build, and what else runs. Try a module without an app: `echo '{"title":"Hi","body":"one two"}' | wazero run summary.pb.wasm run`.
 
 Two things are refused when the module loads, with a message that says so:
 
@@ -237,22 +254,24 @@ Two things are refused when the module loads, with a message that says so:
 
 ### Which language
 
-| Example | Size | Checked when its file loads | Per call | Memory per call: compiled code + the program's own |
+| Example | Module | First call (compiles) | Later calls (from the cache) | Machine code: in memory during a call, and in the cache |
 |---|---|---|---|---|
-| Go | 4.4 MB | 240 ms | 1.7 s | ~20–30 MB + 3.6 MB |
-| Rust | 95 KB | 37 ms | 39 ms | ~2–5 MB + 1.1 MB |
-| Zig | 55 KB | 39 ms | 23 ms | ~2.5 MB + 1.2 MB |
+| C | 25 KB | 17 ms | 0.5 ms | 86 KB |
+| Rust | 98 KB | 33 ms | 1.3 ms | 389 KB |
+| Zig | 95 KB | 30 ms | 1.2 ms | 357 KB |
+| TinyGo | 284 KB | 74 ms | 3 ms | 988 KB |
+| Go | 4.3 MB | 1.05 s | 38 ms | 18 MB |
 
-Every call compiles the module from scratch and runs it, and nothing compiled is kept: a module takes memory only
-while a call runs, however many modules the apps have: between calls, nothing. The compiled
-code is most of it; the program's own memory (its stack and heap, Go's runtime and garbage collector included) stays
-under `MaxCallMemoryMB`. Compiling is almost all of a call's time: the summary itself runs in a few milliseconds. Measured on
-a laptop (2026-11-14), one call at a time; the compiled code's size is approximate, and a Go module's varies with
-what it imports (one that imports `net/http` is ~11 MB).
+A module's first call compiles it and writes its machine code to the cache (`CacheDir`); every later call, after a
+restart too, loads it from there. Running the summary itself takes under a millisecond in every language. A call
+holds its module's machine code in memory only while it runs, plus the program's own memory (its stack and heap, Go's
+runtime and garbage collector included), which stays under `MaxCallMemoryMB`; between calls, nothing. Measured on a
+laptop (2026-11-18), one call at a time; a Go module's size varies with what it imports (one that imports `net/http`
+is ~11 MB). [Choosing a language](docs/languages/index.md) has the same numbers with how to pick.
 
-Go calls compiling at once also slow each other down: one took +19 MB, two +38 MB, four +245 MB (2026-11-16). That's
-why the calls running at once are limited by their modules' size, `MaxModulesMB`, and not only by their number. An
-admin picks the trade-off with that one number:
+Go calls compiling at once also slow each other down: one took +19 MB, two +38 MB, four +245 MB (2026-11-16, before
+the cache; calls that load from the cache take far less). That's why the calls running at once are limited by their
+modules' size, `MaxModulesMB`, and not only by their number. An admin picks the trade-off with that one number:
 
 | `MaxModulesMB` | Go calls (4.4 MB) at once | Rust or Zig calls (~0.1 MB) | Most memory they take, measured |
 |---|---|---|---|
@@ -260,9 +279,11 @@ admin picks the trade-off with that one number:
 | 10 (default) | 2 | 8 | ~45 MB |
 | 20 | 4 | 8 | ~250 MB |
 
-Pick by what the module does. Go is the easiest to write and fine where a call can take a second or two (a cron job,
-an import, an admin action). A module on a hot path (every record save, every request) is better in Rust or Zig,
-whose calls are 40 times faster and take a seventh of the memory.
+Pick by what the module does. With the cache, every language is quick after its first call; what still differs is
+memory and how many calls run at once. A Go call holds 18 MB of machine code and takes 38 ms to load it, and two run at
+once with the defaults: fine for a cron job, an import or an admin action. A module on a hot path (every record save,
+every request) is better in C, Rust, Zig or TinyGo (the same Go source, a module 15 times smaller), whose calls take a
+few milliseconds and under 1 MB.
 
 ## Integrations
 
@@ -314,7 +335,7 @@ out like an instance (`pb_data/`, `pb_hooks/`). Build the module into `example/p
 //
 // Build the module into pb_hooks/ (before or after starting the app: each call reads it):
 //
-//	(cd summary && GOOS=wasip1 GOARCH=wasm go build -o ../pb_hooks/summary.pb.wasm .)
+//	(cd summary/go && GOOS=wasip1 GOARCH=wasm go build -o ../../pb_hooks/summary.pb.wasm .)
 //
 // Then create a post (dashboard, or the API) and look at its summary field.
 //
@@ -342,7 +363,7 @@ func main() {
 		}
 		return posts(e.App)
 	})
-	// the same extension value a build adds to the standard set for every app (set.Add(wasm.New(...)))
+	// the same extension value the standard set gives every app, standalone or an instance (set.WASM)
 	w := wasm.New(wasm.Config{})
 	extkit.MustRegister(app, w)
 	jsvm.MustRegister(app, jsvm.Config{
@@ -372,7 +393,10 @@ so `/wasm`-style pages and the wazero CLI can try it), built with the command in
 
 | Module | Language | What it shows |
 |---|---|---|
-| [`summary`](example/summary), [`summary-rust`](example/summary-rust), [`summary-zig`](example/summary-zig) | Go, Rust, Zig | The same module in three languages: the hook above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; Rust and Zig, under 100 KB and ~40 ms). |
+| [`summary/go`](example/summary/go), [`summary/tinygo`](example/summary/tinygo), [`summary/rust`](example/summary/rust), [`summary/zig`](example/summary/zig), [`summary/c`](example/summary/c), [`summary/assemblyscript`](example/summary/assemblyscript) | Go, TinyGo, Rust, Zig, C, AssemblyScript | The same module in six languages: the hook above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; TinyGo ~280 KB and ~65 ms; Rust, Zig, C and AssemblyScript under 100 KB and 10–25 ms). |
+| [`summary/wat`](example/summary/wat), [`summary/llvm`](example/summary/llvm) | WAT, LLVM IR | The C summary written by hand in two assembly languages, for fun: WebAssembly text calling WASI directly (1.8 KB), and LLVM IR built by clang with wasi-libc (3.8 KB). See [WAT](docs/languages/wat.md) and [LLVM IR](docs/languages/llvm.md). |
+| [`stats-tinygo`](example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the hook stores in a record and passes in with each call ([Keeping state in JS](docs/guides/state.md)). |
+| [`markdown`](example/markdown), [`sanitize-html`](example/sanitize-html), [`diff`](example/diff), [`thumbnail`](example/thumbnail), [`qrcode`](example/qrcode), [`csv`](example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with a tested hook in the [recipes](docs/recipes/index.md). |
 | [`crypto`](example/crypto) | Go | What an app used to run with `$os.exec`: AES-256-GCM. The key comes in with each call; the module can't keep it or send it anywhere. |
 | [`waflows`](example/waflows) | Rust | What pb_hooks can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. The hook keeps the JSON and HTTP; the module does only those two. |
 | [`edifact-orders-rust`](example/edifact-orders-rust) | Rust | A real format with a real library (edifact-rs): an EDIFACT ORDERS message, as raw text, read into an order. |
@@ -380,13 +404,19 @@ so `/wasm`-style pages and the wazero CLI can try it), built with the command in
 | [`devil`](example/devil) | Rust | Is it safe? It tries, in plain sight, to read the app's database and `/etc/passwd`, list folders, write a file, read the environment, run `sh -c id` and send to `attacker.example`. Every try says `refused`. |
 | [`memhog`](example/memhog) | Rust | What does it cost? It asks for more memory than `MaxCallMemoryMB`: that call fails as `crashed`, saying which limit it hit, and the app goes on. `probe` shows the limit from inside. |
 
-The Rust and Zig ones are also kept built, beside their sources (`example/<folder>/<name>.pb.wasm`, under 300 KB
-each), so they double as the extension's tests: every run of `go test` loads each one, checks that its `--describe`
-is its `manifest.json`, and runs its examples, with no Rust or Zig installed. A change to `ext/wasm` that breaks a real
-module shows there. With Rust 1.100.0 (and `wasm32-wasip1`) or Zig 0.14.0 installed, `TestPrebuiltMatchSources`
-also rebuilds each one and checks it's the same bytes; the Rust builds remap their paths (to `/rustc/<commit>` and
-`/cargo`), so a module holds no path of the machine that built it. After changing one:
-`go test -run TestPrebuiltExamples -update`.
+Every one of them is also kept built, beside its source (`example/<folder>/<name>.pb.wasm`: the Go ones about 4.5 MB,
+the rest under 1 MB), so they double as the extension's tests: every run of `go test` loads each one, checks that its
+`--describe` is its `manifest.json`, and runs its examples, with no compiler and no Docker needed. A change to
+`ext/wasm` that breaks a real module shows there.
+
+They're built in Docker, never with the compilers on your machine:
+[`example/toolchains/Dockerfile`](example/toolchains/Dockerfile) is the build environment of every example language,
+one stage each: Go 1.27.4, TinyGo 0.41.1, Rust 1.100.0 and Zig 0.17.0 (Zig, and C through `zig cc`), each image
+pinned by digest and Zig's download by checksum, so a rebuild on any machine gives the same bytes. After changing a
+module's source: `go test -run 'TestPrebuiltExamples/<folder>' -update`. To check every kept file is what its source
+builds, byte for byte: `go test -run TestPrebuiltMatchSources -rebuild` (a few minutes). To move to a newer compiler,
+change it in the Dockerfile and rebuild them all with `-update`. The Go builds use `-trimpath` and the Rust builds
+remap the crates' paths to `/cargo`, so a module holds no path of the container that built it.
 
 ## What a module can't do
 
@@ -408,11 +438,20 @@ stays with `$http.send` in pb_hooks.
 ## How it works
 
 - Modules run only while the app serves (other commands, such as `migrate`, never read them).
-- Like `node script.js`: each call reads its module's file (`<name>.pb.wasm`, once the call has room), compiles the module in a wazero runtime of its own, runs it, and closes it after. Nothing stays in memory
-  between calls, so a folder of 100 modules costs nothing while they aren't called, and no compilation cache, in
-  memory or on disk. Compiling validates the module: a broken or half-written one doesn't run. A call in progress
-  finishes with what it read, whatever happens to the file meanwhile. Compiling counts toward `MaxConcurrent` and
-  `MaxModulesMB`, so the memory it takes stays bounded too.
+- Like `node script.js`: each call reads its module's file (`<name>.pb.wasm`, once the call has room), compiles the
+  module in a wazero runtime of its own (or loads its machine code from the cache), runs it, and closes it after.
+  Nothing stays in memory between calls, so a folder of 100 modules costs nothing while they aren't called.
+  Compiling validates the module: a broken or half-written one doesn't run. A call in progress finishes with what it
+  read, whatever happens to the file meanwhile. Compiling counts toward `MaxConcurrent` and `MaxModulesMB`, so the
+  memory it takes stays bounded too.
+- Compiled modules are kept on disk, in wazero's compilation cache (`CacheDir`), keyed by each module's bytes: a
+  changed module compiles again on its next call, and identical modules share one entry, across every app and
+  instance in the process and across restarts. Loading from it is 20 to 30 times faster than compiling. Calls of the
+  same module compile one at a time (wazero can't load one module twice at once safely); calls of other modules
+  never wait for it, and a call whose caller gives up stops waiting (`busy`). When the process first opens the cache, it
+  deletes entries older than 30 days, since nothing else does: a module still in use compiles once more then. The
+  process runs the cache's contents as machine code, so it belongs where only the process writes, never in `pb_data`
+  or `pb_hooks`.
 - WASM watches nothing itself: no watches of its own, no timer, no work between calls, however many instances there
   are. (The JS engine's, or pocker's, watch on `pb_hooks/` restarts the app when a module changes, as for a hook.)
 - `$wasm.modules()` lists the folder each time. It checks each module with wazero's interpreter, which validates it

@@ -17,6 +17,7 @@
 - [PocketPages sites](/docs/features/sites)
 - [QuickJS hooks](/docs/quickjs)
 - [pocketone.yaml](/docs/pocketone-yaml)
+- [WASM](/docs/extensions/wasm)
 
 # Extend PocketOne
 
@@ -31,3 +32,4 @@
 - [REST](/docs/reference/rest)
 - [MCP](/docs/reference/mcp)
 - [pocketone.yaml](/docs/config-reference)
+- [PocketPages](/docs/extensions/pages)

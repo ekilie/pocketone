@@ -1,7 +1,7 @@
 # pocketone.dev
 
 The PocketOne website: what PocketOne is, how to install it, and its extensions. A PocketPages v1 app (`ext/pages`),
-started from the pocketpages.dev site, whose docs now live in [`../ext/pages/site`](../ext/pages/site) and appear here
+started from the pocketpages.dev site, whose docs now live in [`../ext/pages/docs`](../ext/pages/docs) and appear here
 under `/docs/extensions/pages`.
 
 ## Layout

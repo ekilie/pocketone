@@ -1,0 +1,23 @@
+{
+  "description": "Running statistics of a series (count, mean, standard deviation, min, max), with the state kept by the caller",
+  "functions": ["add", "report"],
+  "language": "TinyGo",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/stats-tinygo",
+  "examples": [
+    {
+      "function": "add",
+      "input": {"state": null, "values": [2, 4, 4, 4]},
+      "output": {"count": 4, "mean": 3.5, "m2": 3, "min": 2, "max": 4}
+    },
+    {
+      "function": "add",
+      "input": {"state": {"count": 4, "mean": 3.5, "m2": 3, "min": 2, "max": 4}, "values": [5, 5, 7, 9]},
+      "output": {"count": 8, "mean": 5, "m2": 32, "min": 2, "max": 9}
+    },
+    {
+      "function": "report",
+      "input": {"count": 8, "mean": 5, "m2": 32, "min": 2, "max": 9},
+      "output": {"count": 8, "mean": 5, "stddev": 2, "min": 2, "max": 9}
+    }
+  ]
+}

@@ -16,6 +16,7 @@
 - [JSVM](/docs/extensions/jsvm)
 - [MCP](/docs/extensions/mcp)
 - [Pages](/docs/extensions/pages/extension)
+- [Pages: PocketPages v1 specification](/docs/extensions/pages/spec)
 - [PITR](/docs/extensions/pitr)
 - [Remotes](/docs/extensions/remotes)
 - [S3 Redirect](/docs/extensions/s3redirect)
@@ -25,6 +26,7 @@
 - [Tokens: OAuth](/docs/extensions/tokens/oauth)
 - [Upgrade](/docs/extensions/upgrade)
 - [Vacuum](/docs/extensions/vacuum)
+- [WASM](/docs/extensions/wasm/extension)
 
 # Run many instances
 
@@ -44,7 +46,6 @@
 - [Mail Relay](/docs/extensions/mailrelay)
 - [S3 Fallback](/docs/extensions/s3-fallback)
 - [Server Timing](/docs/extensions/servertiming)
-- [WASM](/docs/extensions/wasm)
 
 # Sell it as a service
 

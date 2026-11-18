@@ -353,3 +353,13 @@ Defaults for compacting the app's SQLite databases (VACUUM): on or off, and how 
 
 Owned by [Vacuum](/docs/extensions/vacuum).
 
+#### `wasm:`
+
+Turns the wasm extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.wasm`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+

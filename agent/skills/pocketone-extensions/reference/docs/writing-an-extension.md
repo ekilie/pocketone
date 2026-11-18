@@ -310,7 +310,7 @@ ext/<name>/
   modes_test.go     the feature on the real binary, in every mode it runs in (below)
   example/main.go   a minimal program that builds cleanly and shows the feature
   ui/               optional: admin screens (embedded main.js)
-  site/             optional: more end-user docs, as PocketPages pages (below)
+  docs/             optional: end-user docs (tutorials, guides), as PocketPages pages (below)
   blog/             optional: posts for the pocketone.dev blog
 ```
 
@@ -391,20 +391,32 @@ ext/<name>/
 
   Write the first three for someone running one PocketOne app, not for a Go developer. Anything else (how it works,
   limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
-- **More docs than a README holds go in `site/`:** a folder of [PocketPages](https://pocketone.dev/docs/extensions/pages) pages that
-  pocketone.dev serves under your extension's page, so `site/ctx/req.md` is `/docs/extensions/<name>/ctx/req`.
-  [`ext/pages/site`](../ext/pages/site) (PocketPages' own docs) is the example.
-  - `site/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. Your extension's pages
-    show it as their sidebar, in place of the main docs nav (with a link back, your README page and your guides on
-    top); the main nav lists your extension once, like any other.
+- **Your README is your extension's reference; end-user docs go in `docs/`.** The README is your extension's page in
+  the Extensions reference. Tutorials, guides and recipes, written for someone learning to use it, go in an optional
+  `docs/` folder of [PocketPages](https://pocketone.dev/docs/extensions/pages) pages beside it, which pocketone.dev serves under your
+  extension's URL: `docs/ctx/req.md` is `/docs/extensions/<name>/ctx/req`. [`ext/pages/docs`](../ext/pages/docs)
+  (PocketPages' docs) and [`ext/wasm/docs`](../ext/wasm/docs) are the examples.
+  - `docs/index.md` is required: the docs' landing page, at `/docs/extensions/<name>`. Its front matter names the main
+    nav section that links it, one of the `# Section` headings of the main docs nav (`Tutorials`, `Reference`, ...),
+    and the link's text is its `title`:
+
+    ```yaml
+    ---
+    title: WASM
+    section: Reference
+    description: Bring your own WASM ...
+    ---
+    ```
+
+    Your README moves to `/docs/extensions/<name>/extension`, where the Extensions reference links it.
+  - `docs/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. Your docs pages show it as
+    their sidebar, in place of the main docs nav, under a link back and a link to `index.md`. The README and the guides
+    beside it aren't in it: they're in the Extensions reference.
   - Pages are templates: EJS runs in `.md` files as in any PocketPages app, so a code sample writes `<%%` for a
-    literal `<%`. Partials go in `site/_private/`; the site's own (`browser`, for one) are found too.
-  - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `shot.png` beside the page); the
-    site turns them into site URLs, and a link to a file that doesn't exist fails the build.
+    literal `<%`. Partials go in `docs/_private/`; the site's own (`browser`, for one) are found too.
+  - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `../README.md`, `shot.png` beside
+    the page); the site turns them into site URLs, and a link to a file that doesn't exist fails the build.
   - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
-  - An `index.md` at the root of `site/` becomes your extension's landing page (`/docs/extensions/<name>`, where the
-    catalogue links), and your README moves to `/docs/extensions/<name>/extension`. Without one, the README is the
-    landing page. PocketPages' landing is a splash written with the site's `splash inset` and `announce` styles.
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another

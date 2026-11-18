@@ -47,9 +47,9 @@ type module struct {
 	size int // the module's size in bytes, when it was opened
 }
 
-// run runs the module's function with input (its stdin) and returns its output (its stdout). Every call compiles the
-// module from its file, as it is then, and runs it in a runtime of its own, so nothing from one call reaches another,
-// and nothing stays in memory after. Up to MaxConcurrent calls run at once; more wait. Errors are *Error.
+// run runs the module's function with input (its stdin) and returns its output (its stdout). Every call reads the
+// module's file as it is then, compiles it (or loads its machine code from the cache), and runs it in a runtime of its
+// own, so nothing from one call reaches another, and nothing stays in memory after. Up to MaxConcurrent calls run at once; more wait. Errors are *Error.
 //
 // It's unexported on purpose: modules are called from the app's pb_hooks ($wasm, see BindJS) and from nowhere else,
 // no Go API, no endpoint.
@@ -166,9 +166,9 @@ func (h *Host) cantRun(name string, err error) *Error {
 	return &Error{Module: name, Code: CodeNotLoaded, Message: "the module didn't load: " + err.Error()}
 }
 
-// call reads the module's file, compiles it and runs function once. Compiling validates the module (a broken or
-// half-written one doesn't run); Timeout limits the run, and compiling comes before it, bounded by the module's size
-// (at most MaxModulesMB), and can't be interrupted.
+// call reads the module's file, compiles it (or loads its machine code from the cache) and runs function once.
+// Compiling validates the module (a broken or half-written one doesn't run); Timeout limits the run, and compiling
+// comes before it, bounded by the module's size (at most MaxModulesMB), and can't be interrupted.
 func (m *module) call(ctx context.Context, function string, input []byte) (report, error) {
 	h := m.host
 	start := time.Now()
@@ -176,12 +176,19 @@ func (m *module) call(ctx context.Context, function string, input []byte) (repor
 	if err != nil {
 		return report{}, h.cantRun(m.name, err)
 	}
-	rt, err := newRuntime(ctx, h.cfg.MaxCallMemoryMB)
+	rt, err := newRuntime(ctx, h.cfg.MaxCallMemoryMB, h.cache)
 	if err != nil {
 		return report{}, &Error{Module: m.name, Code: CodeCrashed, Message: "runtime: " + err.Error()}
 	}
-	defer rt.Close(context.Background()) // drops the compiled module with it
-	mod, err := rt.CompileModule(ctx, code)
+	defer rt.Close(context.Background())
+	mod, err := compile(ctx, rt, code)
+	if mod != nil {
+		defer mod.Close(context.Background()) // frees its machine code (the cache keeps it on disk), after the run
+	}
+	if mod == nil && ctx.Err() != nil { // the caller gave up while another call of this module was compiling it
+		return report{compile: time.Since(start)}, &Error{Module: m.name, Code: CodeBusy, Retryable: true,
+			Message: "the caller gave up waiting for another call of this module to compile it: " + context.Cause(ctx).Error()}
+	}
 	if err == nil {
 		err = checkModule(mod)
 	}
