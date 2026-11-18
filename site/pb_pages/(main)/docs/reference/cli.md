@@ -6,7 +6,7 @@ description: "Every command of the pocketone binary: PocketBase's own, the stand
 
 # CLI reference
 
-Every command of the `pocketone` binary with its [standard extensions](/docs/extensions/standard): PocketBase's own, the ones extensions add, and a `pocketone remote …` command for every operation of every contract, generated from it ([how](/docs/remote)). `pocketone <command> --help` says the same.
+Every command of the `pocketone` binary with its [standard extensions](/docs/extensions/standard): PocketBase's own, the ones extensions add, and a `pocketone remote …` command for every operation of every contract, generated from it ([how](/docs/features/remote)). `pocketone <command> --help` says the same.
 
 ## Global flags
 
@@ -65,6 +65,80 @@ Deploys the project's code set (pb\_\* folders except pb\_data, package.json, bu
 | `-v`, `--verbose` | bool | – | list every file |
 
 From [Deploy](/docs/extensions/deploy).
+
+## pocketone desktop
+
+Commands under desktop
+
+From [Desktop](/docs/extensions/desktop/extension).
+
+### pocketone desktop build
+
+Build this folder's app as a native desktop app (this platform; --all for every platform)
+
+```
+pocketone desktop build
+```
+
+Compiles the PocketOne app in the current folder into a desktop app: pb\_hooks, pb\_migrations and pb\_public are
+embedded in the executable, which runs the app's server on a private 127.0.0.1 port and shows it in a native window.
+Each user's data lives in their own app-data folder, named by the app id.
+
+Without flags it builds for this machine. --all builds macOS (arm64, amd64), Windows (amd64, arm64) and Linux
+(amd64, arm64); --target picks some. The apps land in dist/, macOS's as an .app and a .dmg.
+
+With a sign section in pocketone.yaml it signs what it built afterwards, here on this machine: macOS with your
+Developer ID (and notarizes), Windows with your command, Linux with GPG. --no-sign skips it.
+
+It runs in Docker, in the build image matching this pocketone (Go and PocketOne's source, vendored, so it needs
+nothing else and works offline once the image is here). --local builds with your own Go and a PocketOne checkout.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--all` | bool | – | build for every platform |
+| `--image` | string | – | the build image (default pocketone-build:dev) |
+| `--local` | bool | – | build with your own Go instead of the build image |
+| `--no-sign` | bool | – | skip pocketone.yaml's desktop.sign section (builds stay signed ad hoc) |
+| `--out` | string | `dist` | the folder the apps are written to |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | a PocketOne checkout: `--local` builds against it; a development pocketone builds its image from it (default $P1\_SOURCE, else the checkout this folder is in) |
+| `--target` | stringSlice | – | platforms to build, as os/arch (darwin/arm64,windows/amd64,...) |
+
+From [Desktop](/docs/extensions/desktop/extension).
+
+### pocketone desktop image
+
+Build the desktop build image from a PocketOne checkout
+
+```
+pocketone desktop image
+```
+
+Builds the image desktop build runs in (Go plus this checkout's source, vendored) and tags it. A release
+publishes it as ghcr.io/pockethost/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne checkout (default $P1\_SOURCE, else the one this folder is in) |
+| `--tag` | string | `pocketone-build:dev` | the image's tag |
+
+From [Desktop](/docs/extensions/desktop/extension).
+
+### pocketone desktop prepare
+
+Write the build image's vendored module into &lt;dir&gt; (the build image's Dockerfile runs this)
+
+```
+pocketone desktop prepare <dir>
+```
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne source tree |
+
+From [Desktop](/docs/extensions/desktop/extension).
 
 ## pocketone dev
 
@@ -195,7 +269,7 @@ Supported arguments are:
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -216,7 +290,7 @@ Every `pocketone oauth` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -307,7 +381,7 @@ Every `pocketone pitr` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -892,7 +966,7 @@ pocketone serve [domain(s)]
 | `--autotlsDNSTokenEnv` | string | `CF_API_TOKEN` | environment variable holding the DNS provider's API token for `--autotlsDNS` |
 | `--autotlsDomains` | stringSlice | – | extra domains for `--autotls`, obtained at start (comma separated; wildcards like \*.example.com need `--autotlsDNS`) |
 | `--autotlsEmail` | string | – | ACME account email for `--autotls` (expiry notices from the CA) |
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -907,7 +981,7 @@ pocketone serve [domain(s)]
 | `--pagesDir` | string | – | the directory with the PocketPages app (default pb\_pages next to pb\_data); served when it exists |
 | `--pitr` | bool | `true` | point-in-time restore: replicate data.db into pb\_data/litestream/ while serving |
 | `--pitrRetention` | duration | `72h0m0s` | how far back a point-in-time restore can go |
-| `--publicDir` | string | `./pb_public` | the directory to serve static files |
+| `--publicDir` | string | `<the binary's folder>/pb_public` | the directory to serve static files |
 | `--queryTimeout` | int | `30` | the default SELECT queries timeout in seconds |
 | `--s3Redirect` | bool | `true` | answer file downloads with a short-lived signed redirect to the bucket when S3 file storage is on |
 | `--s3RedirectTTL` | duration | `5m0s` | how long each signed file download URL stays valid |
@@ -924,7 +998,7 @@ Every `pocketone superuser` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -1003,7 +1077,7 @@ Every `pocketone template` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -1048,7 +1122,7 @@ Every `pocketone token` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |

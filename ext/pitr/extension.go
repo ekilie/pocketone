@@ -66,6 +66,6 @@ func (p *Extension) Register(app core.App, layers extkit.Config) error {
 	return p.SetupApp(app, ac)
 }
 
-// Section is the key of the `pitr` section (pocketone.yaml): point-in-time restore defaults for a single app (the
-// pocketone binary reads it for its flag defaults) and for every instance on a pocker host.
+// Section is the key of the `pitr` section (pocketone.yaml): point-in-time restore defaults for a standalone app (the
+// pocketone binary reads it for its flag defaults) and for every instance a multisite host runs as an isolate (Pocker).
 var Section = extkit.NewSection(Name, Config{}, "Point-in-time restore: on by default, retention, snapshot interval. The --pitr and --pitrRetention flags win.")

@@ -1,0 +1,104 @@
+---
+title: JSX and TSX
+description: Write pages, layouts, partials and error pages as .jsx or .tsx components, rendered to HTML on the server with no build step.
+---
+
+# JSX and TSX
+
+A `.jsx` or `.tsx` file is a template, just like an `.ejs` file. It can be a page, a layout (`+layout.tsx`), an error page (`+error.tsx`, `+404.tsx`) or a partial in `_private/`. PocketOne compiles it the first time it's used, with esbuild built into the binary: no Node, no `npm install`, no build step. TypeScript types are stripped, not checked.
+
+```tsx
+// pb_pages/products/[id].tsx
+import Price from './_private/Price'
+
+export default function Product({ data, slot }: any) {
+  slot('title', data.product.getString('name'))
+  return (
+    <article class="product">
+      <h1>{data.product.getString('name')}</h1>
+      <Price cents={data.product.getInt('price')} />
+    </article>
+  )
+}
+```
+
+```tsx
+// pb_pages/products/_private/Price.tsx
+export default ({ cents }: { cents: number }) => <span class="price">${(cents / 100).toFixed(2)}</span>
+```
+
+## Props
+
+The file's default export is a component: a function from props to markup. It gets:
+
+| Prop | |
+|---|---|
+| `ctx` | The [request context](ctx/index.md). |
+| `data`, `params`, `meta` | The same as `ctx.data`, `ctx.params` and `ctx.meta`. |
+| `asset`, `include` | The same helpers EJS templates have. `include(name, locals)` returns HTML you can put in JSX. |
+| `slot` | `slot(name)` reads a named slot, `slot(name, content)` sets one, `slot()` is the inner content. |
+| `children` | In a layout, the inner content. |
+
+A partial also gets the locals it was included with, as props. EJS can include a `.jsx` or `.tsx` partial the same way: its locals become props.
+
+## Server-rendered HTML only
+
+JSX renders straight to HTML on the server. There's no virtual DOM, no hydration and no client-side React.
+
+- Event handler props (functions) are dropped. Use plain attributes: `onclick="..."`, `hx-get`, `data-on:click`.
+- Text and attribute values are escaped. `dangerouslySetInnerHTML={{ __html: html }}` inserts raw HTML.
+- `class` and `className` both work, as do `for` and `htmlFor`.
+- `style` takes a string or an object: `{ marginTop: 4 }` renders `margin-top:4`.
+- `true` renders a bare attribute. `false`, `null` and `undefined` leave it out.
+- `<html>` gets `<!doctype html>` in front of it, since JSX can't write a doctype.
+
+## Async components
+
+Any component can be `async`, including the file's default export. The render waits for every async component in the
+tree, and sibling components run at the same time:
+
+```tsx
+// pb_pages/dashboard.tsx
+async function Count({ collection }: { collection: string }) {
+  const n = await $app.countRecords.async(collection)
+  return <b>{n}</b>
+}
+
+export default async function Dashboard({ ctx }: any) {
+  const user = ctx.auth ? await ctx.app.findRecordById.async('users', ctx.auth.id) : null
+  return (
+    <main>
+      <p>Hi {user ? user.getString('name') : 'there'}</p>
+      <p>
+        <Count collection="orders" /> orders, <Count collection="users" /> users
+      </p>
+    </main>
+  )
+}
+```
+
+`include()` of a partial that awaits, and `slot(name, content)` with async content, work the same way.
+
+## Layouts
+
+```tsx
+// pb_pages/+layout.tsx
+export default function Layout({ children, slot }: any) {
+  return (
+    <html>
+      <head>
+        <title>{slot('title')}</title>
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+Layouts in `.ejs`, `.jsx` and `.tsx` mix freely: an EJS page can sit inside a TSX layout and the other way round.
+
+## TypeScript modules
+
+`+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and any `.ts` file reached by `require` or `import` work like their `.js` versions. A module whose only export is `export default` behaves like `module.exports = ...`.
+
+Components are ordinary modules, so `import Card from './_private/Card'` resolves the same way as [`require`](jsvm.md). When a partial name has no extension, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.

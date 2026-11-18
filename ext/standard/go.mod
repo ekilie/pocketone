@@ -19,9 +19,12 @@ require (
 	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -55,7 +58,6 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -66,7 +68,7 @@ require (
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/superfly/ltx v0.5.2 // indirect
-	github.com/tetratelabs/wazero v1.2.1 // indirect
+	github.com/tetratelabs/wazero v1.12.0 // indirect
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
 	github.com/yuin/goldmark v1.8.7 // indirect
 	golang.org/x/crypto v0.59.0 // indirect
@@ -78,7 +80,6 @@ require (
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.80.1 // indirect
 	modernc.org/libquickjs v0.13.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
@@ -151,3 +152,5 @@ replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
 replace github.com/pockethost/pocketone/ext/templates => ../templates
 
 replace github.com/pockethost/pocketone/ext/cache => ../cache
+
+replace github.com/pockethost/pocketone/ext/wasm => ../wasm

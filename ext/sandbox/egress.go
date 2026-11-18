@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -61,10 +62,11 @@ func (p EgressPolicy) Permits(addr netip.Addr) bool {
 
 // Dialer returns a net.Dialer that refuses connections the policy doesn't permit.
 func (p EgressPolicy) Dialer() *net.Dialer {
-	return policyDialer(func() EgressPolicy { return p })
+	return policyDialer(func() *EgressPolicy { return &p })
 }
 
-func policyDialer(current func() EgressPolicy) *net.Dialer {
+// policyDialer checks each address against current(); nil (no policy installed) lets every address through.
+func policyDialer(current func() *EgressPolicy) *net.Dialer {
 	return &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
@@ -74,7 +76,7 @@ func policyDialer(current func() EgressPolicy) *net.Dialer {
 				return err
 			}
 			addr, err := netip.ParseAddr(host)
-			if err != nil || !current().Permits(addr) {
+			if p := current(); p != nil && (err != nil || !p.Permits(addr)) {
 				return fmt.Errorf("egress to %s is not allowed on this host", address)
 			}
 			return nil
@@ -84,21 +86,43 @@ func policyDialer(current func() EgressPolicy) *net.Dialer {
 
 var (
 	activeEgress atomic.Pointer[EgressPolicy]
-	wireEgress   sync.Once
+	egressMu     sync.Mutex
+	egressWired  bool
+	origDial     func(ctx context.Context, network, address string) (net.Conn, error)
+	origProxy    func(*http.Request) (*url.URL, error)
 )
 
 // InstallEgressPolicy routes Go's default HTTP transport through the policy (PocketBase's own HTTP clients, and
 // $http.send via the sandbox's client); [BindMail] sends an app's SMTP through it. It applies to the whole process;
-// calling it again replaces the policy (e.g. on a config reload).
+// calling it again replaces the policy (e.g. on a config reload). [UninstallEgressPolicy] undoes it.
 func InstallEgressPolicy(p EgressPolicy) {
+	egressMu.Lock()
+	defer egressMu.Unlock()
 	activeEgress.Store(&p)
-	wireEgress.Do(func() {
-		d := policyDialer(func() EgressPolicy { return *activeEgress.Load() })
+	if egressWired {
+		return
+	}
+	if t, ok := http.DefaultTransport.(*http.Transport); ok {
+		origDial, origProxy = t.DialContext, t.Proxy
+		t.DialContext = policyDialer(activeEgress.Load).DialContext
+		t.Proxy = nil // a proxy from the environment would bypass the per-address check
+		egressWired = true
+	}
+}
+
+// UninstallEgressPolicy removes the policy [InstallEgressPolicy] installed and gives Go's default HTTP transport back
+// its own dialer and proxy, so the process can reach any address again. Tests that start a Pocker host call it in
+// t.Cleanup, since the policy (which blocks loopback) would otherwise outlive them and break later tests.
+func UninstallEgressPolicy() {
+	egressMu.Lock()
+	defer egressMu.Unlock()
+	if egressWired {
 		if t, ok := http.DefaultTransport.(*http.Transport); ok {
-			t.DialContext = d.DialContext
-			t.Proxy = nil // a proxy from the environment would bypass the per-address check
+			t.DialContext, t.Proxy = origDial, origProxy
 		}
-	})
+		egressWired = false
+	}
+	activeEgress.Store(nil)
 }
 
 // egressDialContext dials through the installed policy, or returns nil when none is installed.
@@ -106,5 +130,5 @@ func egressDialContext() func(ctx context.Context, network, address string) (net
 	if activeEgress.Load() == nil {
 		return nil
 	}
-	return policyDialer(func() EgressPolicy { return *activeEgress.Load() }).DialContext
+	return policyDialer(activeEgress.Load).DialContext
 }

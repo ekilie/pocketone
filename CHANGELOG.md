@@ -37,6 +37,14 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 - Built on PocketBase v0.42.3 plus one later upstream commit (c5003ce6; was v0.42.2). Realtime subscription changes no longer need to come from the connection's IP, OAuth2 redirects also accept the subscribing IP and log failures at WARN, and S3 multipart uploads that S3 reports as failed in a 200 response now fail. See its [changelog](CHANGELOG.pocketbase.md).
 
+### Added
+
+- `pocketone` runs WASM modules: put a `<name>.pb.wasm` in `pb_hooks` and call it from your hooks with `await $wasm.run.async(name, input)` ([ext/wasm](ext/wasm/README.md)).
+
+### Changed
+
+- Extensions keep their end-user docs in `ext/<name>/docs/` (was `site/`). `docs/index.md` is required and names the main docs nav section that links it (`section: Reference`); the README is the extension's page in the Extensions reference, at `/docs/extensions/<name>/extension`, and no longer appears in the docs' sidebar ([Writing an extension](docs/extensions.md)).
+
 ## v0.0.1-alpha.7 (2026-11-17)
 
 ### Upgrading

@@ -6,7 +6,7 @@
 //
 // Build the module into pb_hooks/ (before or after starting the app: each call reads it):
 //
-//	(cd summary && GOOS=wasip1 GOARCH=wasm go build -o ../pb_hooks/summary.pb.wasm .)
+//	(cd summary/go && GOOS=wasip1 GOARCH=wasm go build -o ../../pb_hooks/summary.pb.wasm .)
 //
 // Then create a post (dashboard, or the API) and look at its summary field.
 //
@@ -34,7 +34,7 @@ func main() {
 		}
 		return posts(e.App)
 	})
-	// the same extension value the standard set gives every pocker instance (set.Add(wasm.New(...)))
+	// the same extension value the standard set gives every app, standalone or an instance (set.WASM)
 	w := wasm.New(wasm.Config{})
 	extkit.MustRegister(app, w)
 	jsvm.MustRegister(app, jsvm.Config{

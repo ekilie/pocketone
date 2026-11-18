@@ -12,12 +12,12 @@ import (
 // Name is the extension's key under an instance's `extensions:`.
 const Name = "tokens"
 
-// Extension is API tokens as a PocketOne extension: on a single app with extkit.MustRegister, and under pocker every
-// instance gets its own _tokens, routes and screen.
+// Extension is API tokens as a PocketOne extension, a member of ext/standard's set: every app has it, and on a
+// multisite host every instance that runs PocketOne gets its own _tokens, routes and screen. Reconfigure it on the set:
 //
-//	srv.Extensions = append(srv.Extensions, tokens.New(tokens.Config{}))
+//	set.Tokens = tokens.New(tokens.Config{})
 //
-// Per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own
+// With Pocker, per instance, `extensions: {tokens: {enabled: false}}` turns it off and `collections: [...]` picks who may own
 // tokens. Scopes are registered per app by the extensions that own them (they call tokens.For(app).RegisterScope).
 type Extension struct{ cfg Config }
 

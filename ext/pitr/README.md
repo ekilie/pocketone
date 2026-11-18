@@ -8,6 +8,8 @@ summary: "Point-in-time restore of your database with Litestream. On by default.
 
 # PITR
 
+> Walkthrough for app owners: [Point-in-time restore](https://pocketone.dev/docs/features/restore). This page is the technical reference.
+
 Point-in-time restore: your database as it was at any moment in the last few days, restored from the dashboard.
 History is recorded with [Litestream](https://litestream.io), next to your data or in an S3-compatible bucket.
 
@@ -115,7 +117,7 @@ serving, never during CLI commands.
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](../pocker/README.md) | Every instance on the host gets PITR. The `pitr` section sets the defaults for all of them; each instance can override `enabled` and `retention` (below). A restore restarts only that instance, and sleeping instances cost nothing. |
+| [Multisite](../multisite/README.md) | PITR is in the standard set, so every instance that runs PocketOne has it, and a restore restarts only that instance. With an isolate runtime ([Pocker](../pocker/README.md)), the `pitr` section sets the defaults for all of them, each instance can override `enabled` and `retention` (below), and sleeping instances cost nothing. |
 | [S3 Fallback](../s3-fallback/README.md) | Mount `litestream` on a backend and every app without its own bucket keeps its history there, under its own prefix. An app's own bucket (Settings → Backups) still wins. |
 | [Multitenant](../tenants/README.md) (planned) | Sets each instance's `enabled` and `retention` from its plan, for example a plan without PITR. |
 | PocketBase backups | `pb_data/litestream/` is left out of backup zips, and restoring a zip doesn't wipe it. |

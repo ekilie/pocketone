@@ -8,10 +8,8 @@
   var route = rt.route
   var cache = rt.cache // per VM: compiled functions and module exports
 
-  try {
-    main()
-  } catch (e) {
-    // tell Go what a JS error carries; a Go error comes back to Go as itself, without these properties
+  // tell Go what a JS error carries; a Go error comes back to Go as itself, without these properties
+  function report(e) {
     if (e !== null && typeof e === 'object') {
       if (e.__ppHttp) rt.httpError(Number(e.__ppHttp.status), String(e.__ppHttp.message))
       else if (e.__ppWhere) rt.setWhere(String(e.__ppWhere))
@@ -19,12 +17,36 @@
     throw e
   }
 
+  // isPromise reports a thenable: what an async loader, handler, middleware or template returns.
+  function isPromise(v) {
+    return v !== null && typeof v === 'object' && typeof v.then === 'function'
+  }
+  // then calls fn with v, or with what v settles to if it's a promise. Sync page code never makes a promise, so it
+  // runs exactly as before; once something returns one, the rest of the request chains on it and the driver returns
+  // a promise, which the engine awaits (running the event loop) before Go sends the response.
+  function then(v, fn) {
+    return isPromise(v) ? v.then(fn) : fn(v)
+  }
+
+  var out
+  try {
+    out = main()
+  } catch (e) {
+    report(e)
+  }
+  if (isPromise(out)) return out.then(undefined, report)
+
   function main() {
     // ---- escaping, used by compiled templates ----
     var escRe = /[&<>"']/g
     var escMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&#34;', "'": '&#39;' }
     function str(v) {
-      return v === null || v === undefined ? '' : String(v)
+      if (v === null || v === undefined) return ''
+      // a sync template printing an async include (or any promise) would print [object Promise]
+      if (typeof v === 'object' && typeof v.then === 'function') {
+        throw new Error('a promise was printed; await it (<%- await include(...) %>, <%= await ... %>)')
+      }
+      return String(v)
     }
     function esc(v) {
       return str(v).replace(escRe, function (c) {
@@ -109,16 +131,35 @@
     var pp // what compiled templates receive; set below
 
     // render renders a template (page, layout or partial) and returns its text.
+    // It returns a promise instead when the template is async (uses await, or renders an async component).
     function render(file, locals) {
       rt.enter(file)
+      var pending = false
       try {
-        if (/\.(jsx|tsx)$/.test(file)) return renderJSX(file, locals)
-        var out = String(rt.template(file)(pp, file, locals))
-        if (/\.md$/.test(file)) out = rt.markdown(file, out)
-        return out
+        var out = /\.(jsx|tsx)$/.test(file) ? renderJSX(file, locals) : rt.template(file)(pp, file, locals)
+        if (isPromise(out)) {
+          pending = true
+          return out.then(
+            function (s) {
+              rt.leave()
+              return finishRender(file, s)
+            },
+            function (e) {
+              rt.leave()
+              throw e
+            }
+          )
+        }
+        return finishRender(file, out)
       } finally {
-        rt.leave()
+        if (!pending) rt.leave()
       }
+    }
+
+    function finishRender(file, out) {
+      out = String(out)
+      if (/\.md$/.test(file)) out = rt.markdown(file, out)
+      return out
     }
 
     function include(from, name, locals) {
@@ -148,18 +189,40 @@
         return rt.asset(file, String(p))
       }
       props.include = function (name, l) {
-        return j.raw(include(file, name, l))
+        var out = include(file, name, l)
+        return isPromise(out) ? out.then(j.raw) : j.raw(out)
       }
       props.slot = function (name, content) {
         if (name === undefined || name === null) return j.raw(rt.wrapped())
         if (arguments.length > 1) {
-          rt.setSlot(String(name), j.toHTML(content))
+          var html = j.toHTML(content)
+          if (isPromise(html)) {
+            // async content: this render waits for it before it returns
+            if (!pendingSlots) pendingSlots = []
+            pendingSlots.push(
+              html.then(function (h) {
+                rt.setSlot(String(name), h)
+              })
+            )
+            return undefined
+          }
+          rt.setSlot(String(name), html)
           return undefined
         }
         return j.raw(rt.getSlot(String(name)))
       }
       props.children = j.raw(rt.wrapped())
-      return j.toHTML(comp(props))
+      var pendingSlots = null
+      var out = j.toHTML(comp(props))
+      if (!pendingSlots && !isPromise(out)) return out
+      return Promise.resolve(out).then(function settle(html) {
+        if (!pendingSlots || !pendingSlots.length) return html
+        var wait = pendingSlots
+        pendingSlots = []
+        return Promise.all(wait).then(function () {
+          return settle(html)
+        })
+      })
     }
 
     // ---- +config.js ----
@@ -545,12 +608,11 @@
     // renderError renders +error.ejs inside the root layout, for Go's error responses (render.go).
     rt.renderError = function (status, message, errorTpl, rootLayout) {
       ctx.error = { status: status, message: message }
-      var html = render(errorTpl, null)
-      if (rootLayout) {
+      return then(render(errorTpl, null), function (html) {
+        if (!rootLayout) return html
         rt.setWrapped(html)
-        html = render(rootLayout, null)
-      }
-      return html
+        return render(rootLayout, null)
+      })
     }
 
     // ---- plugins ----
@@ -580,19 +642,31 @@
       }
     }
 
+    // handle runs the folder's +page/+api module (load, then the method's handler), then renders the template and its
+    // layouts. Each step may return a promise; the next one runs once it settles.
     function handle() {
       var mod = route.handler ? load(route.handler) : null
       var m = rt.method.toLowerCase()
       if (m === 'head') m = 'get'
 
       if (mod && typeof mod.load === 'function') {
-        assign(mod.load(ctx))
-        if (rt.sent()) return
+        return then(mod.load(ctx), function (v) {
+          assign(v)
+          if (rt.sent()) return
+          return runMethod(mod, m)
+        })
       }
+      return runMethod(mod, m)
+    }
+
+    function runMethod(mod, m) {
       var h = mod && mod[m]
       if (typeof h === 'function') {
-        assign(h(ctx))
-        if (rt.sent()) return
+        return then(h(ctx), function (v) {
+          assign(v)
+          if (rt.sent()) return
+          return respond(m)
+        })
       } else if (route.kind === 'api' || route.kind === 'page-js') {
         // nothing to render, so a method without a handler is a 405. A page with a template renders for any
         // method (like PHP); the template can branch on ctx.req.method.
@@ -604,23 +678,42 @@
         rt.methodNotAllowed(allow.join(', '))
         return
       }
+      return respond(m)
+    }
+
+    function respond(m) {
       if (route.kind === 'api' || route.kind === 'page-js') {
         if (!rt.sent()) throw new Error(route.file + ': the ' + m + ' handler returned without sending a response')
         return
       }
+      return then(render(route.file, null), function (html) {
+        html = transform(html, route.file)
+        if (rt.sent()) return
+        return wrapLayouts(html, rt.layoutsOn() ? 0 : route.layouts.length)
+      })
+    }
 
-      var html = transform(render(route.file, null), route.file)
-      if (rt.sent()) return
-      if (rt.layoutsOn()) {
-        for (var li = 0; li < route.layouts.length; li++) {
-          rt.setWrapped(html)
-          html = transform(render(route.layouts[li], null), route.layouts[li])
-          if (rt.sent()) return
+    // wrapLayouts wraps html in the layouts from index li outward, then sends the page.
+    function wrapLayouts(html, li) {
+      for (; li < route.layouts.length; li++) {
+        rt.setWrapped(html)
+        var out = render(route.layouts[li], null)
+        if (isPromise(out)) {
+          var at = li
+          return out.then(function (h) {
+            h = transform(h, route.layouts[at])
+            if (rt.sent()) return
+            return wrapLayouts(h, at + 1)
+          })
         }
+        html = transform(out, route.layouts[li])
+        if (rt.sent()) return
       }
       rt.sendPage(html)
     }
 
+    // next runs the next +middleware (root first), then handle. A middleware may be async and await next(); a sync
+    // one that calls next() without returning it still has the rest of the request awaited after it.
     var mi = 0
     function next() {
       if (mi < route.middlewares.length) {
@@ -628,17 +721,50 @@
         var fn = load(file)
         if (typeof fn !== 'function') throw new Error(file + ' must export a function (ctx, next)')
         var nextCalled = false
+        var down // what next() returned, if the rest of the request went async
+        var downDone = false
         var out = fn(ctx, function () {
           nextCalled = true
-          return next()
+          var v = next()
+          if (isPromise(v)) {
+            down = v
+            v.then(
+              function () {
+                downDone = true
+              },
+              function () {
+                downDone = true
+              }
+            )
+          }
+          return v
         })
+        var check = function (v) {
+          if (!nextCalled && !rt.sent()) {
+            throw new Error(file + ' ended the request without calling next() or sending a response')
+          }
+          // An async middleware that awaited next() has seen it settle (and maybe caught its error); one that didn't
+          // await it leaves it pending, so wait for it here.
+          if (down && !downDone && down !== v) {
+            return down.then(function () {
+              return v
+            })
+          }
+          return v
+        }
+        if (isPromise(out)) return out.then(check)
         if (!nextCalled && !rt.sent()) {
           throw new Error(file + ' ended the request without calling next() or sending a response')
+        }
+        if (down && down !== out) {
+          return down.then(function () {
+            return out
+          })
         }
         return out
       }
       return handle()
     }
-    next()
+    return next()
   }
 })

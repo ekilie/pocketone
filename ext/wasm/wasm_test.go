@@ -413,7 +413,8 @@ func TestSettings(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := wasm.For(app).Config()
-			tc.want.Dir = got.Dir // the default folder, checked in TestDefaultDir
+			tc.want.Dir = got.Dir           // the default folder, checked in TestDefaultDir
+			tc.want.CacheDir = got.CacheDir // the default cache folder (the tests' own, TestMain)
 			if got != tc.want {
 				t.Fatalf("got %+v, want %+v", got, tc.want)
 			}
@@ -510,8 +511,8 @@ func TestMaxConcurrent(t *testing.T) {
 	wg.Wait()
 }
 
-// TestCold: as outside the tests, nothing compiled is kept, so every call compiles the module. Compiling isn't
-// counted in Timeout: a Go module takes longer than 300 ms to compile and still runs.
+// TestCold: with no cache (CacheDir "off"), every call compiles the module. Compiling isn't counted in Timeout: a Go
+// module takes longer than 300 ms to compile and still runs.
 func TestCold(t *testing.T) {
 	wasm.Cold(t)
 	e := withBasic(t, wasm.Config{Timeout: 300 * time.Millisecond})

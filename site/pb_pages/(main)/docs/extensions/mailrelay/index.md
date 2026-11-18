@@ -9,10 +9,11 @@ source: "ext/mailrelay/README.md"
 
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
-Outgoing mail for [Pocker](/docs/extensions/pocker) instances that haven't set up SMTP.
+Outgoing mail for instances on a [multisite host](/docs/extensions/multisite) that haven't set up SMTP, when they share one
+process: isolates (an isolate runtime such as [Pocker](/docs/extensions/pocker)).
 
-Stock PocketBase falls back to the host's `sendmail` when SMTP is off. Under Pocker that would run `sendmail` on the
-shared host for every tenant. With this extension:
+Stock PocketBase falls back to the host's `sendmail` when SMTP is off. With apps sharing a process, that would run
+`sendmail` on the shared host for every tenant. With this extension:
 
 - **SMTP on** in an instance's Settings → Mail: the app sends the mail itself. Bring your own SMTP always wins.
 - **SMTP off:** the mail goes through your relay as `<instance>@<Domain>`, within per-instance limits. `sendmail`
@@ -22,18 +23,18 @@ shared host for every tenant. With this extension:
 
 ## Install
 
-Mail Relay is not in the `pocketone` binary. Add it to the extensions of your own Pocker build, with your sending
-domain and relay:
+Mail Relay is not in the `pocketone` binary. In your own host build, add it to the standard set your runtime gets
+(`Standard` on a Pocker server), with your sending domain and relay:
 
 ```go
-srv.Extensions = append(srv.Extensions, mailrelay.New(mailrelay.Config{
+set.Add(mailrelay.New(mailrelay.Config{
     Domain:   "mail.example.com",
     Upstream: mailrelay.SMTPUpstream{Addr: "smtp.provider.com:587", Username: "…", Password: "…"},
 }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/mailrelay`. It works the same in `pocker.Provider{Extensions: ...}`.
-It also registers on a single app, but a single app can set up its own SMTP and doesn't need a relay.
+The module is `github.com/pockethost/pocketone/ext/mailrelay`. It also registers on a standalone app, but a standalone
+app can set up its own SMTP and doesn't need a relay.
 
 ## Configure
 
@@ -79,7 +80,7 @@ Once it's in, there's nothing to run. Each instance's mail is relayed whenever i
 | Extension | How they fit |
 |---|---|
 | [Contracts](/docs/contracts) | Provides `mail.fallback/v1`: with SMTP off, an app's mail goes to the contract's providers in order (`providers: { mail.fallback/v1: [mailtrap, mailrelay] }`); Mail Relay sends it within the instance's limits. |
-| [Pocker](/docs/extensions/pocker) | The host it's built for. Every instance gets the relay, its own address and its own limits. |
+| [Multisite](/docs/extensions/multisite) | What it's built for: isolates, instances that share the host's process (an isolate runtime such as [Pocker](/docs/extensions/pocker)). Every instance gets the relay, its own address and its own limits. |
 | [Mail Trap](/docs/extensions/mailtrap) | In development, point `SMTPUpstream` at the trap's SMTP port and every relayed message lands in one inbox, tagged with the instance. The example below does this. |
 | [Bulk Mail](/docs/extensions/bulkmail) | Campaigns go through PocketBase's mailer by default, so with SMTP off they are relayed and count against the instance's limits. |
 
@@ -99,7 +100,7 @@ instances:
 A change to these settings restarts the instance's app on its next request.
 
 Use `send: false`, not `enabled: false`, to stop an instance sending. `enabled: false` turns the extension off for that
-instance, and with SMTP off PocketBase then falls back to the host's `sendmail`. Don't set it under Pocker.
+instance, and with SMTP off PocketBase then falls back to the host's `sendmail`. Don't set it when apps share a process.
 
 ### Building on Mail Relay
 

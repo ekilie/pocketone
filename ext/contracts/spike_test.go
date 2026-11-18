@@ -400,7 +400,7 @@ func TestHostProvidesDeployForItsInstances(t *testing.T) {
 		t.Fatalf("non-contract path should reach the container, got %d", res.StatusCode)
 	}
 
-	// A Pocker instance is a PocketOne app: its own deploy extension steps aside, and in-app callers get the host's
+	// An in-process (Pocker) instance is a PocketOne app: its own deploy extension steps aside, and in-app callers get the host's
 	// provider for this instance, still through the app's own hooks.
 	app := newApp(t)
 	extkit.AttachHost(app, host, "pock1")

@@ -3,6 +3,8 @@
 
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough for app owners: [Deploy and live sync](https://pocketone.dev/docs/features/deploy). This page is the technical reference.
+
 Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
 `pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded and the app swaps them
 in; `restart` applies new migrations and packages. `pocketone dev` keeps your folder and the app in step both ways and
@@ -94,7 +96,7 @@ npm and bun, pnpm's store, workspace links; never devDependencies) and shipped a
 
 **Restarts:** files are swapped in while the app runs, each rename atomic, and deploy never restarts the app on its
 own. `pb_pages` and `pb_public` are read from disk on each request, and hooks reload by themselves (PocketBase's
-`--hooksWatch`, Pocker's watcher). Migrations and packages apply only when the app starts, so a deploy that changes
+`--hooksWatch`, or the runtime's watcher on a multisite host). Migrations and packages apply only when the app starts, so a deploy that changes
 them says `Migrations or packages changed` and leaves the restart to you: pass `--restart` (the app restarts once,
 after the whole batch is in, and you hear if it fails to start), run `pocketone restart`, or type `r` in `dev`. So
 does the first deploy that creates `pb_hooks`, since a watcher only sees folders that existed when the app started.
@@ -106,7 +108,7 @@ pocketone restart prod
 ```
 
 Restarts the app so it applies new migrations and packages, and tells you if it fails to start. An app that isn't
-running (a sleeping Pocker instance) is left alone; it applies them when it starts.
+running (a sleeping instance on a multisite host) is left alone; it applies them when it starts.
 
 ### `dev`
 
@@ -205,7 +207,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 | [Remotes](https://pocketone.dev/docs/extensions/remotes) | Gives the commands their remotes, saved logins and CI tokens. The commands find deploy/v1 in the remote's whoami, and `restart` and `logs` use its remote/v1 (deploy requires it). |
 | [OAuth](https://pocketone.dev/docs/extensions/tokens/oauth) (in Tokens) | `pocketone login` signs in through the browser when the remote runs it. |
 | [Tokens](https://pocketone.dev/docs/extensions/tokens) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. Add `remote` for `--restart` and `remote:read` for `dev`'s logs. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The same API runs for many instances with your own backend: build it with `deploy.New` (below). PocketHost does this. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | A multisite host can serve the same API for all its instances with its own backend: build it with `deploy.New` (below). PocketHost does this. |
 
 ### Building on Deploy
 
@@ -216,7 +218,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 - **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths})`
   builds the API; mount `api.Wrap(next)`. `Backend` decides which instance a request is for (`Lookup(r)`), who it
   acts as (`Authenticate(r, inst)` → `Auth{UserID, Scopes, Via, TokenLabel}`, an `*AuthError`, or `ErrNoAccess` for a
-  404) and records history. `Instances` is pocker's Manager (stop, swap, start). Serve it as deploy/v1 for the host's
+  404) and records history. `Instances` stops, swaps and starts instances (pocker's Manager is one). Serve it as deploy/v1 for the host's
   instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
 - **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
   does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
@@ -233,7 +235,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote
 //	cd myproject && mkdir pb_hooks && echo 'routerAdd("GET", "/hi", (e) => e.string(200, "hi"))' > pb_hooks/main.pb.js
-//	go run ./example link http://127.0.0.1:8090 --email admin@example.com   # password: password
+//	go run ./example link http://127.0.0.1:8090   # sign in in the browser as admin@example.com / password
 //	go run ./example deploy
 //	curl http://127.0.0.1:8090/hi
 //

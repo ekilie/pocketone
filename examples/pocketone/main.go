@@ -1,5 +1,5 @@
 // Command pocketone is the standard PocketOne binary: PocketBase's examples/base plus the standard set (ext/standard:
-// settings, tokens (with its OAuth server), remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy) and the
+// settings, tokens (with its OAuth server), remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm) and the
 // extras added here (autotls, mailtrap, upgrade). It's its own module so core's go.mod stays upstream's.
 package main
 
@@ -22,6 +22,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
 	"github.com/pockethost/pocketone/ext/autotls"
 	"github.com/pockethost/pocketone/ext/config"
+	"github.com/pockethost/pocketone/ext/desktop"
 	"github.com/pockethost/pocketone/ext/docker"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/jsvm"
@@ -79,11 +80,12 @@ func main() {
 	}))
 
 	// The standard set: every PocketOne app's extensions (settings, tokens with its OAuth server, remotes, mcp, pages,
-	// s3redirect, pitr, backups, bulkmail, deploy). The flags below reconfigure members; extras are added after them.
+	// s3redirect, pitr, backups, bulkmail, deploy, wasm). The flags below reconfigure members; extras are added after them.
 	set := standard.New()
 	set.Providers = standard.ConfiguredProviders() // pocketone.yaml's providers: section
 	set.Add(vacuum.New())                          // compacts the app's databases on the `vacuum` section's schedule
 	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
+	set.Add(desktop.New())                         // `pocketone desktop build`: this folder's app as a native desktop app
 
 	// ---------------------------------------------------------------
 	// Flags: each lives on the commands that read it (flags.go). The app flags go on every command that opens this

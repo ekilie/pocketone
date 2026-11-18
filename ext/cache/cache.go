@@ -55,7 +55,7 @@ type Config struct {
 	// The store, shared by every app in the process: ceilings over every bucket together.
 	Eviction  cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo."`
 	MaxMemory Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Memory for every bucket together, such as 512MiB. Default 128MiB."`
-	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there (in a p1cache folder). Relative: under pb_data on a single app, the working directory on a multisite host."`
+	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker)."`
 	MaxDisk   Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB."`
 
 	// Each app's buckets.
@@ -155,7 +155,7 @@ func (x *Extension) storeFor(app core.App, c Config) (*store, error) {
 		}
 		if d := c.DiskPath; d != "" {
 			if !filepath.IsAbs(d) && extkit.AppID(app) == "" {
-				d = filepath.Join(app.DataDir(), d) // a single app: under its pb_data
+				d = filepath.Join(app.DataDir(), d) // the app has the process to itself: under its pb_data
 			}
 			if d, x.storeErr = filepath.Abs(d); x.storeErr != nil {
 				return
@@ -242,7 +242,7 @@ func (b BucketConfig) over(o BucketConfig) BucketConfig {
 // provider is one app's cache/v1: a view of the store under the app's id.
 type provider struct {
 	store *store
-	app   string // extkit.AppID: "" on a single app
+	app   string // extkit.AppID: "" when the app has the process to itself
 	cfg   Config
 
 	mu      sync.Mutex

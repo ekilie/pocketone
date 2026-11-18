@@ -146,10 +146,10 @@ any of:
 
 | Interface | Used for |
 |---|---|
-| `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [pitr](../pitr/README.md), [storage](../s3-fallback/README.md), [tokens](../tokens/README.md), [s3redirect](../s3redirect/README.md), [mailrelay](../mailrelay/README.md), [bulkmail](../bulkmail/README.md). `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a single app. |
+| `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [mailtrap](../mailtrap/README.md), [mailrelay](../mailrelay/README.md), [storage](../s3-fallback/README.md). Members of the standard set ([pitr](../pitr/README.md), [tokens](../tokens/README.md), [s3redirect](../s3redirect/README.md), [bulkmail](../bulkmail/README.md), ...) come from `Standard`; listing one here is an error. `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a standalone app. |
 | `multisite.Extension` | a host extension (`RegisterHost`): it provides host contracts (gate/v1, tls/v1, http.wrap/v1, ...) as on any runtime ([docs/extensions.md](../../docs/extensions.md#host-extensions)) |
 | `Starter` | background work that needs pocker's Manager |
-| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a single app too and pass the [conformance test](../extkit/conformance/conformance.go). |
+| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a standalone app too and pass the [conformance test](../extkit/conformance/conformance.go). |
 
 Per-instance settings for an extension go under the instance's `extensions.<name>` (read them with `pocker.DecodeExtensionConfig`).
 `app.Restart()` (a backup restore, pitr) restarts only that instance, not the process.

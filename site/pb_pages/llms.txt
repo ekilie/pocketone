@@ -6,19 +6,35 @@ PocketOne takes the same commands and flags as PocketBase, plus its own; core Po
 
 Every page below in one file: https://pocketone.dev/llms-full.txt
 
-## Introduction
+## Get started
 
 - [What is PocketOne?](https://pocketone.dev/docs/overview): PocketOne is a community fork of PocketBase. Its core changes are kept small; everything else is an extension.
 - [Installation](https://pocketone.dev/docs/installation): Install PocketOne with Homebrew, a release download or go build, and keep it up to date.
+- [Coming from PocketBase](https://pocketone.dev/docs/pocketbase): PocketOne is PocketBase with more built in. What stays the same, and how each added feature compares.
+- [Teach your coding agent](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and PocketPages with our Agent Skills and llms.txt.
 
-## Tutorials
+## New in PocketOne
+
+- [Everything new](https://pocketone.dev/docs/features): Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built into the pocketone binary.
+- [QuickJS: async, import, TS](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
+- [PocketPages: TSX, TS, EJS](https://pocketone.dev/docs/features/sites): Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
+- [Isolates: many apps, one process](https://pocketone.dev/docs/features/isolates): Run hundreds of PocketBase apps as isolates inside one pocketone process, routed by hostname. Each starts on its first request in tens of milliseconds, costs a few MB, and is sandboxed from the others.
+- [Point-in-time restore](https://pocketone.dev/docs/features/restore): Put your app's data back as it was at any moment in the last few days, from the dashboard, your terminal or an agent.
+- [Deploy and live sync](https://pocketone.dev/docs/features/deploy): Send your app's hooks, migrations, pages and public files to a running PocketOne app with one command, and keep a folder in step while you work.
+- [Remote CLI](https://pocketone.dev/docs/features/remote): Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
+- [API tokens and OAuth](https://pocketone.dev/docs/features/tokens): Give a script, a CI job or a service its own long-lived token, limited to what it needs, and revoke it whenever you like. Apps and tools can also sign in to get one.
+- [MCP for AI agents](https://pocketone.dev/docs/features/mcp): Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
+- [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
+- [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
+- [Desktop apps](https://pocketone.dev/docs/extensions/desktop): Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker.
+- [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your pb_hooks, for libraries JavaScript doesn't have and work JavaScript does too slowly.
+
+## Extend PocketOne
 
 - [How PocketOne fits together](https://pocketone.dev/docs/how-pocketone-fits-together): How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.
-- [Remote administration](https://pocketone.dev/docs/remote): Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
-- [Coding agents](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and PocketPages with our Agent Skills and llms.txt.
-- [Your hooks on QuickJS](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
-- [Configure with pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
 - [Writing an extension](https://pocketone.dev/docs/writing-an-extension): How to write a PocketOne extension.
+- [Contracts](https://pocketone.dev/docs/contracts): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
+- [Extensions](https://pocketone.dev/docs/extensions): Every extension in PocketOne, grouped by what it's for.
 
 ## Reference
 
@@ -26,14 +42,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [REST](https://pocketone.dev/docs/reference/rest): Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input.
 - [MCP](https://pocketone.dev/docs/reference/mcp): Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments.
 - [pocketone.yaml](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
-- [Pages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
-- [Contracts](https://pocketone.dev/docs/contracts): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
-- [Extensions](https://pocketone.dev/docs/extensions): Every extension in PocketOne, grouped by what it's for.
-
-## Going Further
-
-- [PocketBase docs](https://pocketone.dev/docs/pocketbase): Where to read about the parts of PocketOne that come straight from PocketBase.
-- [PocketBase compatibility](https://pocketone.dev/docs/compatibility): Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.
+- [PocketPages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
 
 ## Contracts: By name
 
@@ -52,12 +61,18 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [oauth/v1](https://pocketone.dev/docs/contracts/oauth/v1): The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in.
 - [remote/v1](https://pocketone.dev/docs/contracts/remote/v1): Remote control of an app: whoami, status, restart, logs. The base every client starts from.
 - [restore/v1](https://pocketone.dev/docs/contracts/restore/v1): Put an app's data back as it was at a moment: from continuous history, or the latest backup before it.
-- [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1): What runs a multisite host's instances (in-process, in containers), in preference order.
+- [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1): What runs a multisite host's instances (as isolates, in containers), in preference order.
 - [settings/v1](https://pocketone.dev/docs/contracts/settings/v1): The settings an app's admins change for its extensions, one API for all of them.
 - [templates/v1](https://pocketone.dev/docs/contracts/templates/v1): An extension's own pages as Go templates a project can eject and edit.
 - [tls/v1](https://pocketone.dev/docs/contracts/tls/v1): The TLS of a multisite host's listener: automatic certificates instead of certificate files.
 - [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
 - [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1): Compacting an app's databases so freed space goes back to the disk, and when it last happened.
+
+## Desktop: Guides
+
+- [Building](https://pocketone.dev/docs/extensions/desktop/build): pocketone desktop build: which platforms, the Docker build image, building with your own Go, and what lands in dist/.
+- [How the app runs](https://pocketone.dev/docs/extensions/desktop/runtime): What a PocketOne desktop app does on your users' machines: where their data lives, how upgrades migrate it, the window, and what each platform needs.
+- [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing): Sign your PocketOne desktop app so people can install it without warnings: Developer ID signing and notarization on macOS, Authenticode on Windows, checksums and signatures on Linux.
 
 ## Extensions: Standard extensions
 
@@ -67,9 +82,11 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Cache](https://pocketone.dev/docs/extensions/cache): Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once.
 - [Config](https://pocketone.dev/docs/extensions/config): The pocketone.yaml config file, with secrets in a .env beside it.
 - [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
+- [Desktop](https://pocketone.dev/docs/extensions/desktop/extension): Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine.
 - [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
 - [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
+- [Pages: PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
 - [PITR](https://pocketone.dev/docs/extensions/pitr): Point-in-time restore of your database with Litestream. On by default.
 - [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect): File downloads as short-lived signed S3 redirects.
@@ -79,6 +96,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Tokens: OAuth](https://pocketone.dev/docs/extensions/tokens/oauth): Tokens: OAuth
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
 - [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk.
+- [WASM](https://pocketone.dev/docs/extensions/wasm/extension): Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box.
 
 ## Extensions: Run many instances
 
@@ -98,7 +116,6 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Mail Relay](https://pocketone.dev/docs/extensions/mailrelay): Outgoing mail for instances without SMTP, through your relay, with limits.
 - [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback): A default bucket for uploads and backups when an instance has no S3 of its own.
 - [Server Timing](https://pocketone.dev/docs/extensions/servertiming): Server-Timing headers for each step of a request.
-- [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box.
 
 ## Extensions: Sell it as a service
 
@@ -114,10 +131,6 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
-
-## Pages
-
-- [PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
 
 ## Pages: Introduction
 
@@ -201,3 +214,34 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Google OAuth2](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketPages app with the auth plugin.
 - [Outgoing Email with Amazon SES](https://pocketone.dev/docs/extensions/pages/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
 - [Setting up a new email domain in Google Suite](https://pocketone.dev/docs/extensions/pages/speedruns/gs-gmail): Complete walkthrough for configuring email domains in Google Suite, including domain verification, Gmail activation, catch-all email setup, MX record configuration, and sender account integration.
+
+## WASM: Languages
+
+- [Choosing a language](https://pocketone.dev/docs/extensions/wasm/languages): Which languages build WASM modules for pb_hooks, what each one costs per call, and how to pick.
+- [C and C++](https://pocketone.dev/docs/extensions/wasm/languages/c): Build a WASM module for pb_hooks from C or C++ with zig cc, which brings its own WASI libc.
+- [Go](https://pocketone.dev/docs/extensions/wasm/languages/go): Build a WASM module for pb_hooks with Go's own compiler (GOOS=wasip1), and when its size matters.
+- [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo): Build Go code into small, fast WASM modules for pb_hooks with TinyGo.
+- [Rust](https://pocketone.dev/docs/extensions/wasm/languages/rust): Build WASM modules for pb_hooks from Rust, and use crates from crates.io in them.
+- [Zig](https://pocketone.dev/docs/extensions/wasm/languages/zig): Build small WASM modules for pb_hooks with Zig.
+- [AssemblyScript](https://pocketone.dev/docs/extensions/wasm/languages/assemblyscript): Build a WASM module for pb_hooks in AssemblyScript, a TypeScript-like language, with the WASI shim.
+- [WebAssembly text (WAT)](https://pocketone.dev/docs/extensions/wasm/languages/wat): Write a WASM module for pb_hooks by hand in WebAssembly's own text format, calling WASI directly, with no compiler and no libc.
+- [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm): Write a WASM module for pb_hooks in LLVM IR, the assembly language compilers hand to LLVM, and let clang build it.
+- [Other languages](https://pocketone.dev/docs/extensions/wasm/languages/others): What another language needs to build a WASM module pb_hooks can run, and how the usual candidates fit.
+
+## WASM: Guides
+
+- [Keeping state in JS](https://pocketone.dev/docs/extensions/wasm/guides/state): Modules keep nothing between calls. Keep the state in the app (a record, or $app.store()), pass it in with each call, and save what comes back. With a TinyGo example.
+
+## WASM: Recipes
+
+- [Overview](https://pocketone.dev/docs/extensions/wasm/recipes): WASM modules built on real libraries, each with a tested hook: Markdown, HTML sanitizing, QR codes, thumbnails, diffs, CSV, EDIFACT and XML orders, and crypto pb_hooks lacks.
+- [Markdown to HTML](https://pocketone.dev/docs/extensions/wasm/recipes/markdown): Render Markdown posts to HTML in a hook with pulldown-cmark, then clean them with sanitize-html.
+- [Sanitize HTML](https://pocketone.dev/docs/extensions/wasm/recipes/sanitize-html): Clean untrusted HTML from users with ammonia, so it's safe to show on your pages.
+- [Text diffs](https://pocketone.dev/docs/extensions/wasm/recipes/diff): Keep a revision history of a text field as unified diffs, with the similar crate.
+- [Image thumbnails](https://pocketone.dev/docs/extensions/wasm/recipes/thumbnail): Make a PNG thumbnail of every uploaded photo in a hook, with the image crate.
+- [QR codes](https://pocketone.dev/docs/extensions/wasm/recipes/qrcode): Draw a QR code as SVG for a ticket, a check-in link or a Wi-Fi login, with the qrcode crate.
+- [CSV import](https://pocketone.dev/docs/extensions/wasm/recipes/csv): Import records from a CSV file, quoted fields and all, with the csv crate.
+
+## Optional
+
+- [PocketBase compatibility](https://pocketone.dev/docs/compatibility): Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.

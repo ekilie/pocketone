@@ -1,9 +1,9 @@
 ---
-title: Your hooks on QuickJS
+title: "QuickJS hooks: async, import and TypeScript"
 description: PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
 ---
 
-# Your hooks on QuickJS
+# QuickJS hooks: async, import and TypeScript
 
 PocketOne runs your `pb_hooks` and `pb_migrations` on [QuickJS](/docs/extensions/jsvm) instead of goja, the engine
 stock PocketBase uses. It's the same JS API (`$app`, `routerAdd`, `onRecordCreate`, `cronAdd`, `$http`, …), so your
@@ -232,7 +232,7 @@ These are the limits in the `pocketone` binary:
 | JS time per task | 5 s |
 | Wall time per task, Go calls included | 30 s |
 
-Change them in `pocketone.yaml` ([Configure with pocketone.yaml](/docs/pocketone-yaml)):
+Change them in `pocketone.yaml` ([pocketone.yaml](/docs/pocketone-yaml)):
 
 ```yaml
 app:
@@ -305,4 +305,4 @@ contracts, shared globals and async handlers.
 
 - [JSVM](/docs/extensions/jsvm): every file type, module resolution rule and setting.
 - PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/): the JS API itself, which is unchanged.
-- [Coding agents](/docs/agents): give your agent the PocketOne skill so it writes hooks the QuickJS way.
+- [Teach your coding agent](/docs/agents): give your agent the PocketOne skill so it writes hooks the QuickJS way.

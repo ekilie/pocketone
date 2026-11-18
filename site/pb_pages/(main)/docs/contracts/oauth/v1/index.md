@@ -36,7 +36,7 @@ tokens through tokens/v1.
 
 ## Commands and APIs
 
-Its own HTTP API under `/api/_c/oauth/v1/`, described above. It has no generated commands or MCP tools. [Remote administration](/docs/remote) explains how PocketOne apps are managed from afar.
+Its own HTTP API under `/api/_c/oauth/v1/`, described above. It has no generated commands or MCP tools. [Remote CLI](/docs/features/remote) explains how PocketOne apps are managed from afar.
 
 ## Extensions
 

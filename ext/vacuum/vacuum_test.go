@@ -110,7 +110,7 @@ func TestHostTakesOver(t *testing.T) {
 			t.Fatal("the app's admins got a vacuum setting on a host that owns vacuum")
 		}
 	}
-	if err := extkit.AppScope(app).Seal(nil); err != nil { // as Pocker does once an instance's extensions registered
+	if err := extkit.AppScope(app).Seal(nil); err != nil { // as the standard set does once an app's extensions registered
 		t.Fatal(err)
 	}
 	v, ok := vacuumv1.Contract.Of(app)

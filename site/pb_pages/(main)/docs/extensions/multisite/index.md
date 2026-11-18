@@ -9,9 +9,11 @@ source: "ext/multisite/README.md"
 
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](/docs/extensions/firewall)), and a runtime serves it:
-[pocker](/docs/extensions/pocker) runs instances in-process, [docker](/docs/extensions/docker) runs each in its own container,
+[pocker](/docs/extensions/pocker) runs instances as isolates in its own process, [docker](/docs/extensions/docker) runs each in its own container,
 and a host can run both. Everything a host plugs in is a host-scope contract: [runtime/v1](/docs/contracts/runtime/v1),
 [gate/v1](/docs/contracts/gate/v1), [tls/v1](/docs/contracts/tls/v1),
 [http.wrap/v1](/docs/contracts/http.wrap/v1) and [instance.source/v1](/docs/contracts/instance.source/v1).
@@ -180,7 +182,7 @@ this folder with `go run ./example --instances instances.yaml`, then `curl -H 'H
 
 ```go
 // A minimal host: instances from a YAML file, routed by hostname, served by a toy runtime that answers with the
-// instance it resolved. Real hosts plug in a provider instead (ext/pocker in-process, ext/docker in containers).
+// instance it resolved. Real hosts plug in a provider instead (ext/pocker as isolates, ext/docker in containers).
 //
 //	go run ./example --instances instances.yaml
 //	curl -H 'Host: blog.localhost' localhost:8090/

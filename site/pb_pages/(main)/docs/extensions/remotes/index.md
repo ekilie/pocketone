@@ -9,6 +9,8 @@ source: "ext/remotes/README.md"
 
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough for app owners: [Remote CLI](https://pocketone.dev/docs/features/remote). This page is the technical reference.
+
 Named remotes for the `pocketone` command: the apps a project deploys to, each signed in to once. Give an app a name
 like `prod`, log in, and commands such as `pocketone deploy prod` know where to go and who you are.
 
@@ -182,8 +184,8 @@ Whoami says who the request's credential is and what the app offers, so clients 
 
 `via` is `token` for an API token, `jwt` for a PocketBase auth token, and empty with no credential (`auth` is then
 `null`, and `extensions` is left out). `contracts` are the contract APIs the app offers, each at `/api/_c/<id>/`:
-everything a client can use (oauth/v1's metadata is at `/.well-known/oauth-authorization-server`). Restart answers at once and restarts just after (under Pocker, only
-that instance).
+everything a client can use (oauth/v1's metadata is at `/.well-known/oauth-authorization-server`). Restart answers at once and restarts just after (on a multisite host,
+only that instance).
 
 ### Building on Remotes
 

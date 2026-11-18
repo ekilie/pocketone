@@ -1,0 +1,85 @@
+# The release gate: everything, on one commit, before it may be tagged. examples/pocketone/release.sh refuses to tag a
+# commit unless this workflow passed on it. Day to day, a push to main tests only the modules it affects
+# (extensions.yml) and core tests run on core changes and daily (upstream-tests.yml); this is the one run that covers all
+# of it at once, plus what only matters at a release:
+#
+#   modules   every extension module and examples/pocketone: build, vet, go test -race (extensions.yml, all modules)
+#   core      PocketBase's own suite on our core, and our core tests (upstream-tests.yml)
+#   arm32     ext/jsvm's tests on linux/arm/v7 under QEMU: QuickJS has its own 32-bit value layout (capi_value32.go)
+#   targets   goreleaser builds every release target (a target that fails after the tag is pushed burns the version)
+#
+# Start it on main with `examples/pocketone/release.sh --check` (or `gh workflow run release-check.yml --ref main`).
+name: release check
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release-check-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  modules:
+    uses: ./.github/workflows/extensions.yml
+
+  core:
+    uses: ./.github/workflows/upstream-tests.yml
+
+  arm32:
+    name: ext/jsvm on linux/arm/v7
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+      - name: Install QEMU
+        run: sudo apt-get update -q && sudo apt-get install -y -q qemu-user-static
+      - name: Test under QEMU
+        working-directory: ext/jsvm
+        env:
+          GOARCH: arm
+          GOARM: "7"
+          CGO_ENABLED: "0"
+        run: go test -count=1 -timeout 25m -exec qemu-arm-static ./...
+
+  targets:
+    name: every release target builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: build --config examples/pocketone/.goreleaser.yaml --snapshot --clean
+      - name: The linux/amd64 binary runs
+        run: |
+          set -euo pipefail
+          bin=$(find .builds -path '*linux_amd64*' -name pocketone -type f | head -1)
+          [ -n "$bin" ] || { echo "no linux/amd64 binary in .builds"; exit 1; }
+          "$bin" --version
+
+  # The one result release.sh reads: fails if any part failed.
+  release-check:
+    needs: [modules, core, arm32, targets]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Result
+        env:
+          MODULES: ${{ needs.modules.result }}
+          CORE: ${{ needs.core.result }}
+          ARM32: ${{ needs.arm32.result }}
+          TARGETS: ${{ needs.targets.result }}
+        run: |
+          echo "modules: $MODULES, core: $CORE, arm32: $ARM32, targets: $TARGETS"
+          [ "$MODULES" = success ] && [ "$CORE" = success ] && [ "$ARM32" = success ] && [ "$TARGETS" = success ]

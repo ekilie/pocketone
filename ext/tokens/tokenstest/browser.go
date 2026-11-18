@@ -26,7 +26,7 @@ type Login struct {
 // client ("pocketone CLI"), clicks Allow and follows the redirect back to the CLI's loopback listener.
 func Approve(authURL string, login Login) error {
 	jar, _ := cookiejar.New(nil)
-	c := &http.Client{Jar: jar, Timeout: 10 * time.Second,
+	c := &http.Client{Jar: jar, Timeout: 10 * time.Second, Transport: browserTransport(),
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	u, err := url.Parse(authURL)
 	if err != nil {
@@ -81,10 +81,17 @@ func Fail(authURL string, cause error) {
 		return
 	}
 	back.RawQuery = url.Values{"state": {q.Get("state")}, "error": {"test_browser"}, "error_description": {cause.Error()}}.Encode()
-	c := &http.Client{Timeout: 5 * time.Second}
+	c := &http.Client{Timeout: 5 * time.Second, Transport: browserTransport()}
 	if res, err := c.Get(back.String()); err == nil {
 		res.Body.Close()
 	}
+}
+
+// browserTransport is the "browser"'s own connection pool. A real browser is another process, so it never shares the
+// CLI's http.DefaultTransport, which a Pocker host in the same test binary rewires through its egress policy (that
+// blocks loopback, and would keep Fail from ever reaching the CLI's listener).
+func browserTransport() *http.Transport {
+	return &http.Transport{Proxy: nil, DisableKeepAlives: true}
 }
 
 // ApproveOrFail is [Approve], then [Fail] if it didn't work. It returns Approve's error.

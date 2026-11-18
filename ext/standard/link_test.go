@@ -49,15 +49,40 @@ func TestLinkSignsInThroughOAuth(t *testing.T) {
 		t.Fatalf("link --email: %v\n%s", err, out)
 	}
 
-	out, err := run(t, app1, "link", srv2.URL)
+	// link runs beside the browser, so a browser failure fails the test at once, whatever link is waiting on
+	type linkResult struct {
+		out string
+		err error
+	}
+	linked := make(chan linkResult, 1)
+	go func() {
+		out, err := run(t, app1, "link", srv2.URL)
+		linked <- linkResult{out, err}
+	}()
+	var lr linkResult
 	select {
 	case berr := <-browserErr:
 		if berr != nil {
-			t.Fatalf("browser: %v\nlink: %v\n%s", berr, err, out)
+			t.Fatalf("browser: %v", berr)
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatalf("link finished without the browser grant: %v\n%s", err, out)
+		select {
+		case lr = <-linked:
+		case <-time.After(10 * time.Second):
+			t.Fatal("the browser signed in but link didn't finish")
+		}
+	case lr = <-linked:
+		select {
+		case berr := <-browserErr:
+			if berr != nil {
+				t.Fatalf("browser: %v\nlink: %v\n%s", berr, lr.err, lr.out)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("link finished without the browser grant: %v\n%s", lr.err, lr.out)
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("link never opened the browser")
 	}
+	out, err := lr.out, lr.err
 	if err != nil {
 		t.Fatalf("link: %v\n%s", err, out)
 	}

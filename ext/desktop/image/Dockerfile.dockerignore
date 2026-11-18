@@ -1,0 +1,8 @@
+# The build image needs the Go source only.
+.git
+**/node_modules
+**/pb_data
+ext/**/dist
+**/.DS_Store
+site
+docs

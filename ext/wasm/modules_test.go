@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 )
@@ -55,24 +54,35 @@ func build(t *testing.T, src, tags string, library bool) []byte {
 	return b
 }
 
-// The Rust and Zig examples are kept built, beside their sources (example/<folder>/<name>.pb.wasm), so every run of
-// the tests runs them, with no Rust or Zig installed. A rebuild gives the same bytes with the same compiler:
-// rustVersion and zigVersion, the versions they're built with. `go test -run TestPrebuiltExamples -update` rebuilds
-// them.
-const (
-	rustVersion = "1.100.0"
-	zigVersion  = "0.14.0"
-)
+// The example modules (Go, TinyGo, Rust, Zig, C, LLVM IR, WebAssembly text) are kept built, beside their sources (example/<folder>/<name>.pb.wasm), so
+// every run of the tests runs them, with none of those compilers installed. They're built in Docker, with the
+// toolchains pinned in example/toolchains/Dockerfile, so a rebuild on any machine gives the same bytes:
+// `go test -run TestPrebuiltExamples -update` rebuilds them, and TestPrebuiltMatchSources checks them (both need
+// Docker; without it the check skips).
 
 // prebuilt lists them: the folder, the language, what the build makes, and the file kept (the module's name).
 var prebuilt = []struct{ dir, lang, out, file string }{
-	{"example/summary-rust", "rust", "summary", "summary.pb.wasm"},
-	{"example/summary-zig", "zig", "summary", "summary.pb.wasm"},
+	{"example/summary/go", "go", "summary", "summary.pb.wasm"},
+	{"example/crypto", "go", "crypto", "crypto.pb.wasm"},
+	{"example/summary/rust", "rust", "summary", "summary.pb.wasm"},
+	{"example/summary/zig", "zig", "summary", "summary.pb.wasm"},
+	{"example/summary/c", "c", "summary", "summary.pb.wasm"},
+	{"example/summary/llvm", "llvm", "summary", "summary.pb.wasm"},
+	{"example/summary/wat", "wat", "summary", "summary.pb.wasm"},
+	{"example/summary/tinygo", "tinygo", "summary", "summary.pb.wasm"},
+	{"example/summary/assemblyscript", "assemblyscript", "summary", "summary.pb.wasm"},
+	{"example/stats-tinygo", "tinygo", "stats", "stats.pb.wasm"},
 	{"example/edifact-orders-rust", "rust", "orders", "edifact-orders-rust.pb.wasm"},
 	{"example/order-xml", "rust", "order-xml", "order-xml.pb.wasm"},
 	{"example/waflows", "rust", "waflows", "waflows.pb.wasm"},
 	{"example/devil", "rust", "devil", "devil.pb.wasm"},
 	{"example/memhog", "rust", "memhog", "memhog.pb.wasm"},
+	{"example/markdown", "rust", "markdown", "markdown.pb.wasm"},
+	{"example/sanitize-html", "rust", "sanitize-html", "sanitize-html.pb.wasm"},
+	{"example/qrcode", "rust", "qrcode", "qrcode.pb.wasm"},
+	{"example/thumbnail", "rust", "thumbnail", "thumbnail.pb.wasm"},
+	{"example/diff", "rust", "diff", "diff.pb.wasm"},
+	{"example/csv", "rust", "csv", "csv.pb.wasm"},
 }
 
 // prebuiltModule is the kept build of an example folder.
@@ -91,35 +101,42 @@ func prebuiltModule(t *testing.T, dir string) []byte {
 	return nil
 }
 
-// toolchain skips the test, or with -update fails it, when the compiler isn't there or isn't the version the
-// examples are built with: another version builds other bytes.
-func toolchain(t *testing.T, name, want string, version ...string) string {
+// toolchainImages builds each stage of example/toolchains/Dockerfile once per test run (Docker's cache makes it quick
+// after the first time) and names its image.
+var (
+	imageMu sync.Mutex
+	images  = map[string]string{}
+)
+
+// toolchainImage is the image of a Dockerfile stage (rust, zig, tinygo, go, wabt, assemblyscript). It skips the test, or with -update fails it,
+// when Docker isn't there.
+func toolchainImage(t *testing.T, stage string) string {
 	t.Helper()
 	stop := t.Skipf
 	if *update {
 		stop = t.Fatalf
 	}
-	path, err := exec.LookPath(name)
-	if err != nil && name == "zig" {
-		home, _ := os.UserHomeDir()
-		if found, _ := filepath.Glob(filepath.Join(home, ".local", "zig-*", "zig")); len(found) > 0 {
-			path, err = found[len(found)-1], nil
-		}
+	imageMu.Lock()
+	defer imageMu.Unlock()
+	if img, ok := images[stage]; ok {
+		return img
 	}
-	if err != nil {
-		stop("no %s", name)
+	if err := exec.Command("docker", "info").Run(); err != nil {
+		stop("no Docker: the prebuilt examples are built in example/toolchains/Dockerfile")
 		return ""
 	}
-	out, err := exec.Command(path, version...).Output()
-	if got := strings.TrimSpace(string(out)); err != nil || !strings.Contains(got, want) {
-		stop("%s is %q; the prebuilt examples are built with %s", name, got, want)
+	img := "pocketone-wasm-" + stage
+	cmd := exec.Command("docker", "build", "-q", "--target", stage, "-t", img, "example/toolchains")
+	if b, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("building the %s toolchain image: %v\n%s", stage, err, b)
 	}
-	return path
+	images[stage] = img
+	return img
 }
 
-// buildExample builds a prebuilt example from its source, as the kept file was built. Rust's paths are remapped
-// (the toolchain's sources to /rustc/<commit>, as in Rust's own builds; the crates to /cargo), so the module holds
-// no path of the machine that built it.
+// buildExample builds a prebuilt example from its source, as the kept file was built: in its toolchain's container,
+// with the source mounted read-only and the module copied out. Rust's crate paths are remapped to /cargo, so the
+// module holds no path of the container either; the crates are cached in the Docker volume pocketone-wasm-cargo.
 func buildExample(t *testing.T, dir string) []byte {
 	t.Helper()
 	if testing.Short() {
@@ -136,40 +153,52 @@ func buildExample(t *testing.T, dir string) []byte {
 	if b, ok := built[dir]; ok {
 		return b
 	}
-	var cmd *exec.Cmd
-	var out string
+	var stage, script string
+	var extra []string
 	switch p.lang {
 	case "rust":
-		toolchain(t, "rustc", "rustc "+rustVersion+" ", "--version")
-		cargo := toolchain(t, "cargo", "cargo "+rustVersion+" ", "--version")
-		sysroot, _ := exec.Command("rustc", "--print", "sysroot").Output()
-		info, _ := exec.Command("rustc", "-vV").Output()
-		_, commit, _ := strings.Cut(string(info), "commit-hash: ")
-		commit, _, _ = strings.Cut(commit, "\n")
-		cargoHome := os.Getenv("CARGO_HOME")
-		if cargoHome == "" {
-			home, _ := os.UserHomeDir()
-			cargoHome = filepath.Join(home, ".cargo")
-		}
-		flags := []string{
-			"--remap-path-prefix=" + filepath.Join(strings.TrimSpace(string(sysroot)), "lib/rustlib/src/rust") + "=/rustc/" + commit,
-			"--remap-path-prefix=" + filepath.Join(cargoHome, "registry/src") + "=/cargo",
-		}
-		cmd = exec.Command(cargo, "build", "--release", "--locked", "--target", "wasm32-wasip1")
-		cmd.Env = append(os.Environ(), "CARGO_ENCODED_RUSTFLAGS="+strings.Join(flags, "\x1f"))
-		out = filepath.Join(dir, "target/wasm32-wasip1/release", p.out+".wasm")
+		stage = "rust"
+		extra = []string{"-v", "pocketone-wasm-cargo:/usr/local/cargo/registry",
+			"-e", "CARGO_TARGET_DIR=/tmp/target", "-e", "CARGO_ENCODED_RUSTFLAGS=--remap-path-prefix=/usr/local/cargo/registry/src=/cargo"}
+		script = "cargo build --release --locked --target wasm32-wasip1 && cp /tmp/target/wasm32-wasip1/release/" + p.out + ".wasm /out/module.wasm"
 	case "zig":
-		zig := toolchain(t, "zig", zigVersion, "version")
-		cmd = exec.Command(zig, "build", "-Doptimize=ReleaseSmall")
-		out = filepath.Join(dir, "zig-out/bin", p.out+".wasm")
+		stage = "zig"
+		script = "zig build -Doptimize=ReleaseSmall --cache-dir /tmp/zig-local --prefix /tmp/zig-out && cp /tmp/zig-out/bin/" + p.out + ".wasm /out/module.wasm"
+	case "c":
+		stage = "zig"
+		script = "zig cc -target wasm32-wasi -std=c23 -Os -s -Wl,-z,stack-size=1048576 -o /out/module.wasm main.c"
+	case "llvm":
+		stage = "zig"
+		script = "zig cc -target wasm32-wasi -Os -s -Wl,-z,stack-size=1048576 -o /out/module.wasm summary.ll"
+	case "wat":
+		stage = "wabt"
+		script = "wat2wasm summary.wat -o /out/module.wasm"
+	case "tinygo":
+		stage = "tinygo"
+		script = "tinygo build -target=wasip1 -opt=z -no-debug -scheduler=none -o /out/module.wasm ."
+	case "assemblyscript":
+		stage = "assemblyscript"
+		// the source is mounted read-only: build a copy, with the image's pinned packages as its node_modules
+		script = "cp -r /src /tmp/b && cd /tmp/b && rm -rf node_modules && ln -s /opt/as/node_modules node_modules && " +
+			"npx asc assembly/index.ts --target release --outFile /out/module.wasm"
+	case "go":
+		stage = "go"
+		script = "go build -o /out/module.wasm ." // GOOS, GOARCH and -trimpath are set in the image
 	default:
 		t.Fatalf("%s isn't a prebuilt example", dir)
 	}
-	cmd.Dir = dir
+	img := toolchainImage(t, stage)
+	src, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir()
+	args := append([]string{"run", "--rm", "-v", src + ":/src:ro", "-v", out + ":/out", "-w", "/src"}, extra...)
+	cmd := exec.Command("docker", append(args, "--entrypoint", "sh", img, "-c", script)...)
 	if b, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("building %s: %v\n%s", dir, err, b)
 	}
-	b, err := os.ReadFile(out)
+	b, err := os.ReadFile(filepath.Join(out, "module.wasm"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -55,7 +55,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
-	github.com/tetratelabs/wazero v1.2.1 // indirect
+	github.com/tetratelabs/wazero v1.12.0 // indirect
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
 	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/image v0.48.0 // indirect
@@ -92,3 +92,5 @@ replace github.com/pockethost/pocketone/ext/config => ../config
 replace github.com/pockethost/pocketone/ext/contracts => ../contracts
 
 replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+
+replace github.com/pockethost/pocketone/ext/wasm => ../wasm

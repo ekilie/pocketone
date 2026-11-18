@@ -24,7 +24,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`bulkmail/v1`](bulkmail/v1/README.md) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](cache/clear/v1/README.md) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
 | [`cache/v1`](cache/v1/README.md) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
-| [`cli.commands/v1`](cli/commands/v1/README.md) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. |  |  |  | @benallfree |
+| [`cli.commands/v1`](cli/commands/v1/README.md) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. | desktop |  |  | @benallfree |
 | [`deploy/v1`](deploy/v1/README.md) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](gate/v1/README.md) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](http/wrap/v1/README.md) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |
@@ -36,7 +36,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`oauth/v1`](oauth/v1/README.md) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
 | [`remote/v1`](remote/v1/README.md) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](restore/v1/README.md) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
-| [`runtime/v1`](runtime/v1/README.md) | What runs a multisite host's instances (in-process, in containers), in preference order. | docker, pocker |  |  | @benallfree |
+| [`runtime/v1`](runtime/v1/README.md) | What runs a multisite host's instances (as isolates, in containers), in preference order. | docker, pocker |  |  | @benallfree |
 | [`settings/v1`](settings/v1/README.md) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr, vacuum | @benallfree |
 | [`templates/v1`](templates/v1/README.md) | An extension's own pages as Go templates a project can eject and edit. | templates |  | tokens | @benallfree |
 | [`tls/v1`](tls/v1/README.md) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |

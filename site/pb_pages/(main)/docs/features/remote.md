@@ -1,0 +1,92 @@
+---
+title: Remote CLI
+description: Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
+discussion: "pocketone.dev/docs/remote"
+---
+
+# Remote CLI
+
+Everything an extension lets you do to an app, you can do from afar, three ways:
+
+- the `pocketone` command, against any app you've signed in to;
+- the REST API, from a script or another service;
+- MCP, from an agent such as Claude.
+
+Nobody writes these by hand. Each extension API is a [contract](/docs/how-pocketone-fits-together): a Go interface with one method per
+operation. PocketOne generates the command, the endpoint and the tool from that interface. Install an extension, or
+use a host that provides a contract, and its commands show up in the `pocketone` you already have. There's no other
+tool to install.
+
+## From your terminal
+
+Sign in to an app once, then run its commands:
+
+```bash
+pocketone remote add prod https://myapp.example.com --default
+pocketone login prod
+pocketone remote whoami        # who you are there, your token's scopes, and the contracts the app offers
+pocketone remote restore points
+pocketone remote restore to --at -2h
+```
+
+`remote restore to` calls [restore/v1](/docs/contracts/restore/v1) on the app. On an app with
+[PITR](/docs/extensions/pitr), you get the data as it was two hours ago, to the second. On an app with
+[Backups](/docs/extensions/backups) only, you get the latest backup before that. The command is the same either way.
+
+How a command is named and read:
+
+- **Name:** `remote`, the contract's name, then the operation. restore/v1's `restore_to` is `remote restore to`,
+  mail.suppression/v1's `check` is `remote mail suppression check`, remote/v1's `status` is `remote status`.
+- **Flags:** one per field of the operation's input: `--at`, `--email`, `--campaign`.
+  - Times take RFC 3339 (`2026-11-10T15:00:00Z`), a local time (`2026-11-10 15:00`) or a duration from now (`-2h`).
+  - Lists take `a,b` or a repeated flag.
+  - Anything else takes JSON, or `@file` to read it from a file.
+- **Whole input:** `--json` takes the whole input as JSON (`@file` reads a file, `-` reads stdin). Flags you also
+  give override its fields.
+- **Which app:** `--remote` (`-r`) takes a remote's name or a URL. Without it you get the project's default remote.
+- **Output:** JSON, so you can pipe it to `jq`. A stream (`remote logs`) prints one JSON line per entry until Ctrl-C.
+- **Errors:** if the app doesn't offer the contract, the command says so ("this remote doesn't offer restore/v1").
+
+In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for one remote) to an [API token](/docs/extensions/tokens) instead of
+signing in. [Remotes](/docs/extensions/remotes) covers remotes and saved logins.
+
+## From a script: REST
+
+Every operation is an endpoint under `/api/_c/<contract>/`:
+
+```bash
+curl -X POST https://myapp.example.com/api/_c/restore/v1/restore \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"at": "2026-11-10T15:00:00Z"}'
+```
+
+`GET /api/_c/remote/v1` is the one fixed path. It answers who you are and lists every contract the app offers.
+
+## From an agent: MCP
+
+An app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)). Each operation is a tool named after its contract and
+operation (`restore_points`, `restore_restore_to`, `remote_status`). Add `https://myapp.example.com/mcp` to Claude and
+sign in.
+
+## The same checks every way
+
+The command, the endpoint and the tool all call the contract, so each passes the same checks:
+
+- **Token scope:** each operation needs a token scope (`restore`, `restore:read`). An API token carries only the
+  scopes it was given. A superuser's own sign-in passes all of them.
+- **Superuser:** only superusers may call an operation, unless it's public.
+- **Hooks:** the same hooks run, in Go and in `pb_hooks` (`onRestoreRestoreTo`).
+
+## Every command, endpoint and tool
+
+- [CLI reference](/docs/reference/cli): every command of `pocketone`, PocketBase's own included.
+- [REST reference](/docs/reference/rest): every contract endpoint.
+- [MCP reference](/docs/reference/mcp): every contract tool.
+
+Each [contract page](/docs/contracts) lists its operations all three ways. Each extension page lists the commands
+it adds and the contracts it answers.
+
+## Your own commands
+
+An extension can replace a generated command with its own, or add new ones under `remote`, by providing
+[cli.commands/v1](/docs/contracts/cli.commands/v1). [Writing an extension](/docs/writing-an-extension) explains how.

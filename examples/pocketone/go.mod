@@ -6,6 +6,7 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/autotls v0.0.0-20261112000927-b078fd50496e
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/desktop v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/docker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/edge v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
@@ -82,6 +83,7 @@ require (
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -90,7 +92,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/superfly/ltx v0.5.2 // indirect
-	github.com/tetratelabs/wazero v1.2.1 // indirect
+	github.com/tetratelabs/wazero v1.12.0 // indirect
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
 	github.com/yuin/goldmark v1.8.7 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
@@ -185,3 +187,7 @@ replace github.com/pockethost/pocketone/ext/templates => ../../ext/templates
 replace github.com/pockethost/pocketone/ext/cache => ../../ext/cache
 
 replace github.com/pockethost/pocketone/ext/vacuum => ../../ext/vacuum
+
+replace github.com/pockethost/pocketone/ext/desktop => ../../ext/desktop
+
+replace github.com/pockethost/pocketone/ext/wasm => ../../ext/wasm

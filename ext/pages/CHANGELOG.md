@@ -7,6 +7,13 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Added
+
+- Page code can be async. PocketPages awaits promises from `load`, the method handlers, `+api` handlers and
+  `+middleware` (`await next()` included), and allows `await` in EJS templates (`<%- await include(...) %>` for an
+  async partial) and in JSX/TSX components, async ones anywhere in the tree. Use the `.async` twin of a Go function
+  (`await ctx.app.countRecords.async('orders')`) to wait outside the VM. Sync pages run exactly as before.
+
 ## 0.1.0 (2026-11-17)
 
 ### Fixed

@@ -15,7 +15,7 @@ A PocketOne extension is Go code compiled into your build. There are two kinds, 
 - **Host extensions** add to a multisite host, the process that serves many instances: request gates (firewall, rate
   limits), TLS, middleware around every instance, instance sources, background jobs.
 
-How a multisite host runs its instances (in-process with [pocker](/docs/extensions/pocker), in containers with
+How a multisite host runs its instances (as isolates in its own process with [pocker](/docs/extensions/pocker), in containers with
 [docker](/docs/extensions/docker), or both) is the host's `runtime/v1` contract. App extensions don't depend on it.
 
 ## App extensions: `extkit`
@@ -53,7 +53,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
-  What runs inside an instance depends on its runtime: pocker registers the set in-process; a docker instance runs
+  What runs inside an instance depends on its runtime: pocker registers the set in each isolate; a docker instance runs
   the `pocketone` binary in its container, so it has the stock set (your own extras need your own image); an instance
   on a stock PocketBase image runs none, and gets only the contracts the host provides for it
   ([Working together](#working-together-contracts)).
@@ -316,7 +316,7 @@ ext/<name>/
   modes_test.go     the feature on the real binary, in every mode it runs in (below)
   example/main.go   a minimal program that builds cleanly and shows the feature
   ui/               optional: admin screens (embedded main.js)
-  site/             optional: more end-user docs, as PocketPages pages (below)
+  docs/             optional: end-user docs (tutorials, guides), as PocketPages pages (below)
   blog/             optional: posts for the pocketone.dev blog
 ```
 
@@ -387,27 +387,42 @@ ext/<name>/
   - `## Use`: day to day: the admin screens and what to click, the commands.
   - `## Integrations`: the extensions yours works with and how (multisite hosting goes here, not in the sections
     above), and how other extensions can build on yours (hooks, filesystem kinds, per-instance settings, Go
-    and REST APIs).
+    and REST APIs). Hosting is a [Multisite](/docs/extensions/multisite) row: what an instance gets and its
+    `extensions.<name>` settings. Pocker and Docker are two `runtime/v1` providers, not the host: name one only for
+    what differs by runtime (isolates, which share the host's process; sleeping instances; and today per-instance settings and the
+    host's extras, which only Pocker applies), never as the stand-in for "a multisite host".
   - `## Example`: the code that uses it. A sentence on what your `example/main.go` runs, then the whole file in a
     ```` ```go ```` block, exactly as it is; `go run ./.github/extensions examples` copies it in, and CI fails when the two
     differ. Without an example (an extension built into `pocketone`), say where to see it used.
 
   Write the first three for someone running one PocketOne app, not for a Go developer. Anything else (how it works,
   limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
-- **More docs than a README holds go in `site/`:** a folder of [PocketPages](/docs/extensions/pages) pages that
-  pocketone.dev serves under your extension's page, so `site/ctx/req.md` is `/docs/extensions/<name>/ctx/req`.
-  [`ext/pages/site`](../ext/pages/site) (PocketPages' own docs) is the example.
-  - `site/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. Your extension's pages
-    show it as their sidebar, in place of the main docs nav (with a link back, your README page and your guides on
-    top); the main nav lists your extension once, like any other.
+- **Your README is your extension's reference; end-user docs go in `docs/`.** The README is your extension's page in
+  the Extensions reference. Tutorials, guides and recipes, written for someone learning to use it, go in an optional
+  `docs/` folder of [PocketPages](/docs/extensions/pages) pages beside it, which pocketone.dev serves under your
+  extension's URL: `docs/ctx/req.md` is `/docs/extensions/<name>/ctx/req`. [`ext/pages/docs`](../ext/pages/docs)
+  (PocketPages' docs) and [`ext/wasm/docs`](../ext/wasm/docs) are the examples.
+  - `docs/index.md` is required: the docs' landing page, at `/docs/extensions/<name>`. Its front matter names the main
+    nav section that links it, one of the `# Section` headings of the main docs nav (`Tutorials`, `Reference`, ...),
+    and the link's text is its `title`:
+
+    ```yaml
+    ---
+    title: WASM
+    section: Reference
+    description: Bring your own WASM ...
+    ---
+    ```
+
+    Your README moves to `/docs/extensions/<name>/extension`, where the Extensions reference links it.
+  - `docs/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. Your docs pages show it as
+    their sidebar, in place of the main docs nav, under a link back and a link to `index.md`. The README and the guides
+    beside it aren't in it: they're in the Extensions reference.
   - Pages are templates: EJS runs in `.md` files as in any PocketPages app, so a code sample writes `<%%%` for a
-    literal `<%%`. Partials go in `site/_private/`; the site's own (`browser`, for one) are found too.
-  - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `shot.png` beside the page); the
-    site turns them into site URLs, and a link to a file that doesn't exist fails the build.
+    literal `<%%`. Partials go in `docs/_private/`; the site's own (`browser`, for one) are found too.
+  - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `../README.md`, `shot.png` beside
+    the page); the site turns them into site URLs, and a link to a file that doesn't exist fails the build.
   - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
-  - An `index.md` at the root of `site/` becomes your extension's landing page (`/docs/extensions/<name>`, where the
-    catalogue links), and your README moves to `/docs/extensions/<name>/extension`. Without one, the README is the
-    landing page. PocketPages' landing is a splash written with the site's `splash inset` and `announce` styles.
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another

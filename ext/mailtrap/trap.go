@@ -42,7 +42,7 @@ var (
 	DevTrapSMTPAddr = "127.0.0.1:1025"
 )
 
-// InstanceHeader names the app that sent a message when several apps share a process (e.g. under pocker). The trap
+// InstanceHeader names the app that sent a message when several apps share a process (isolates, e.g. under pocker). The trap
 // shows and filters by it.
 const InstanceHeader = "X-Pocker-Instance" // same header pocker.InstanceHeader sets
 

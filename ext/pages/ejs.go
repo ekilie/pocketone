@@ -14,8 +14,15 @@ import (
 // __pp carries the request helpers (ctx, include, asset, meta, slots), __file is the template's path relative to
 // pb_pages (for includes and errors), __locals are an include's extra variables. The function returns the rendered
 // text. Line numbers are tracked in __l so errors can name the template line.
+//
+// A template whose code uses await compiles to an async function instead, which returns a promise of the text; the
+// driver awaits it. Templates without await stay plain functions, so they cost nothing extra.
 
 var scriptServerRe = regexp.MustCompile(`(?s)<script\s+server\s*>(.*?)</script>`)
+
+// awaitRe finds await in a tag's code. A false match (await in a string) only makes the template async, which
+// renders the same.
+var awaitRe = regexp.MustCompile(`\bawait\b`)
 
 // templatePrelude defines the names a template can use. `with (locals)` makes include locals top-level variables.
 const templatePrelude = `var ctx = __pp.ctx, data = ctx.data, params = ctx.params, meta = ctx.meta;
@@ -24,7 +31,13 @@ var __b = { s: '' }, __l = 1;
 var include = function (n, l) { return __pp.include(__file, n, l); };
 var require = function (n) { return __pp.require(__file, n); };
 var slot = function (n, f) {
-  if (typeof f === 'function') { var s = __b.s; __b.s = ''; f(); var c = __b.s; __b.s = s; __pp.setSlot(n, c); return ''; }
+  if (typeof f === 'function') {
+    var s = __b.s; __b.s = ''; var r = f();
+    var done = function () { var c = __b.s; __b.s = s; __pp.setSlot(n, c); return ''; };
+    // an async callback (in an async template): <% await slot('head', async () => { %>...<% }) %>
+    if (r !== null && typeof r === 'object' && typeof r.then === 'function') return r.then(done);
+    return done();
+  }
   if (n === undefined || n === null) return __pp.wrapped();
   return __pp.getSlot(n);
 };
@@ -40,6 +53,7 @@ func CompileEJS(src string) (string, error) {
 
 	var body strings.Builder
 	line := 1
+	async := false
 	emitText := func(s string) {
 		if s == "" {
 			return
@@ -89,6 +103,9 @@ func CompileEJS(src string) (string, error) {
 		code := src[tagStart : tagStart+closeRel]
 		code = strings.ReplaceAll(code, "%%>", "%>")
 		setLine()
+		if kind != '#' && !async && awaitRe.MatchString(code) {
+			async = true
+		}
 		switch kind {
 		case '=':
 			fmt.Fprintf(&body, "__b.s += __esc(%s);\n", trimExpr(code))
@@ -124,7 +141,11 @@ func CompileEJS(src string) (string, error) {
 	}
 
 	var out strings.Builder
-	out.WriteString("(function (__pp, __file, __locals) {\n")
+	if async {
+		out.WriteString("(async function (__pp, __file, __locals) {\n")
+	} else {
+		out.WriteString("(function (__pp, __file, __locals) {\n")
+	}
 	out.WriteString(templatePrelude)
 	// locals is the include's variables as one object (EJS's own name), so a partial can test an optional one with
 	// locals.x instead of hitting a ReferenceError; a page or layout gets an empty object.

@@ -34,7 +34,7 @@ func (f *fakeExtension) BindJS(app core.App, _ js.Runtime) {
 
 func TestHostedExtension(t *testing.T) {
 	f := &fakeExtension{got: map[string]int{}, bound: map[string]bool{}}
-	h := hostExtension(f)
+	h := hostExtension(f, nil)
 
 	run := func(inst Instance) {
 		t.Helper()

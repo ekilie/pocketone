@@ -1,0 +1,20 @@
+{
+  "description": "Untrusted HTML to safe HTML: an allow list of tags and attributes, with ammonia",
+  "functions": [
+    "run"
+  ],
+  "language": "Rust",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/sanitize-html",
+  "examples": [
+    {
+      "function": "run",
+      "input": "<p onclick=\"steal()\">Hi <a href=\"javascript:alert(1)\">there</a><script>alert(1)</script></p>",
+      "output": "<p>Hi <a rel=\"noopener noreferrer\">there</a></p>"
+    },
+    {
+      "function": "run",
+      "input": "<h2 style=\"color:red\">Title</h2><a href=\"https://pocketone.dev\" target=\"_blank\">PocketOne</a><img src=\"x.png\" onerror=\"alert(1)\">",
+      "output": "<h2>Title</h2><a href=\"https://pocketone.dev\" rel=\"noopener noreferrer\">PocketOne</a><img src=\"x.png\">"
+    }
+  ]
+}

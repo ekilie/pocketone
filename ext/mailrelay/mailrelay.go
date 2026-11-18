@@ -1,14 +1,15 @@
-// Package mailrelay is outgoing mail for Pocker instances that haven't set up SMTP.
+// Package mailrelay is outgoing mail for instances on a multisite host that haven't set up SMTP, when they share one
+// process: isolates (an isolate runtime such as Pocker).
 //
-// Stock PocketBase falls back to the host's `sendmail` when SMTP is off. Under Pocker that would run sendmail on the
-// shared host for every tenant. With this extension, an instance's mail goes one of two ways:
+// Stock PocketBase falls back to the host's `sendmail` when SMTP is off. With apps sharing a process, that would run
+// sendmail on the shared host for every tenant. With this extension, an instance's mail goes one of two ways:
 //
 //   - SMTP on in its settings: PocketBase sends it as usual (bring your own SMTP always wins);
 //   - SMTP off: the extension sends it through the operator's relay (an [Upstream]) as <local part>@<Domain>, within
 //     per-instance limits. sendmail never runs.
 //
-// It's a PocketOne extension ([extkit.Extension]): Pocker registers it on every instance. A single PocketBase app can
-// simply configure its own SMTP, but registering it there works too.
+// It's a PocketOne extension ([extkit.Extension]): add it to the host's standard set (set.Add) and every instance gets
+// it. A standalone app can simply configure its own SMTP, but registering it there works too.
 package mailrelay
 
 import (
@@ -67,7 +68,8 @@ type Config struct {
 	MaxRecipients int
 	MaxSize       int
 
-	// LocalPart picks the address's local part from an app's id ([extkit.AppID]: under Pocker, the instance id).
+	// LocalPart picks the address's local part from an app's id ([extkit.AppID]: the instance id when apps share a
+	// process).
 	// Default: the first label of the id, lowercased, anything but a-z, 0-9 and "-" dropped.
 	LocalPart func(id string) string
 

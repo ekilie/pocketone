@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/sandbox"
 )
 
 func freeAddr(t *testing.T) string {
@@ -122,6 +123,7 @@ func TestServerAutoTLSRefusesUnmappedSNI(t *testing.T) {
 	cfg.TLS.HTTPListen = httpAddr
 	auto := New()
 	auto.Config = Config{Auto: true, Email: "ops@example.com", CA: "letsencrypt-staging"}
+	t.Cleanup(sandbox.UninstallEgressPolicy) // the host installs it process-wide; it blocks loopback for later tests
 	srv := &pocker.Server{Standard: testStandard, Config: cfg, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Extensions: []pocker.Extension{auto}}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)

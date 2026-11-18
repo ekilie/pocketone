@@ -34,6 +34,6 @@ This site runs on v1 now, on a PocketHost edge in Los Angeles.
 ## Coming from 0.x
 
 v1 keeps the ideas (a folder of files that become routes, EJS, layouts, partials, middleware) and changes the API.
-[Moving from PocketPages 0.x](../site/moving-from-0x.md) lists every difference.
+[Moving from PocketPages 0.x](../docs/moving-from-0x.md) lists every difference.
 
 The npm package is retiring: v1 is where new work happens. Apps on 0.x keep running where they run today.

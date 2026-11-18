@@ -1,0 +1,71 @@
+---
+title: Go
+description: Build a WASM module for pb_hooks with Go's own compiler (GOOS=wasip1), and when its size matters.
+---
+
+# Go
+
+Go builds a module with nothing extra to install: `GOOS=wasip1` is a target of the Go you already have, and the whole standard library comes along. The cost is size. The summary example is 4.3 MB: its first call compiles it for about a second, and later calls load 18 MB of machine code from the cache in about 38 ms. That's fine off the hot path: a cron job, an import, an admin action. For a module that runs on every save or every request, build the same code with [TinyGo](tinygo.md) instead: 3 ms and under 1 MB a call.
+
+## The module
+
+[`example/summary/go`](../../example/summary/go/main.go) is a plain command-line program:
+
+```go
+//go:embed manifest.json
+var manifest string // what `summary --describe` prints
+
+func main() {
+	switch os.Args[1] { // the function asked for
+	case "--describe":
+		fmt.Print(manifest)
+		return
+	case "run":
+	default:
+		fail("no_such_function", os.Args[1])
+	}
+	var post struct {
+		Title string `json:"title"`
+		Body  string `json:"body"`
+	}
+	if err := json.NewDecoder(os.Stdin).Decode(&post); err != nil {
+		fail("bad_input", "the input isn't a post: "+err.Error())
+	}
+	// ... the summary
+	json.NewEncoder(os.Stdout).Encode(map[string]any{"text": text, "words": len(words)})
+}
+
+// fail ends the program with an error pb_hooks can read (err.code / err.message).
+func fail(code, message string) {
+	b, _ := json.Marshal(map[string]string{"code": code, "message": message})
+	fmt.Fprint(os.Stderr, string(b))
+	os.Exit(1)
+}
+```
+
+## Build
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -o pb_hooks/summary.pb.wasm .
+```
+
+`-ldflags="-s -w"` saves little here (about 80 KB of 4.4 MB). A Go module always says it's Go, so its manifest needs no `language`.
+
+## Call it
+
+```js
+// pb_hooks/main.pb.js
+onRecordCreate(async (e) => {
+  const out = await $wasm.run.async("summary", { title: e.record.get("title"), body: e.record.get("body") })
+  e.record.set("summary", out.text)
+  return e.next()
+}, "posts")
+```
+
+## Size
+
+What you import sets the size. The summary (`encoding/json`, `strings`, `fmt`) is 4.3 MB; a module that imports `net/http` is about 11 MB, over the default `MaxModulesMB` of 10, so it can't run until that's raised. Two Go calls run at once with the defaults, and calls that compile at the same time slow each other down ([Which language](../../README.md#which-language) has the numbers).
+
+## What doesn't work
+
+`GOOS=wasip1` programs get no files, no network and no environment here. `net` builds but reaches nothing outside the program, and goroutines run, one at a time. A library (`-buildmode=c-shared`) isn't a program and is refused when it loads.

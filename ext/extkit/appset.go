@@ -14,7 +14,7 @@ import (
 //	})
 //	lines, err := set.Finish(app, plan)         // seal the app's contracts; lines are its startup lines
 //
-// ext/standard's Set is the one PocketOne ships. It's an interface here so hosts (ext/pocker) take it without
+// ext/standard's Set is the one PocketOne ships. It's an interface here so runtimes (ext/pocker) take it without
 // importing the extensions in it.
 type AppSet interface {
 	// Prepare resolves which extensions run on app (layers gives each one's settings for this app; nil means none)

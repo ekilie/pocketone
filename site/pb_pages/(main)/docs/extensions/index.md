@@ -20,6 +20,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Cache](/docs/extensions/cache) | Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once. |
 | [Config](/docs/extensions/config) | The pocketone.yaml config file, with secrets in a .env beside it. |
 | [Deploy](/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
+| [Desktop](/docs/extensions/desktop/extension) | Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine. |
 | [JSVM](/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
 | [MCP](/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [Pages](/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
@@ -31,6 +32,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Tokens](/docs/extensions/tokens) | Long-lived API tokens with scopes. |
 | [Upgrade](/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
 | [Vacuum](/docs/extensions/vacuum) | Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk. |
+| [WASM](/docs/extensions/wasm/extension) | Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box. |
 
 ## Run many instances
 
@@ -57,7 +59,6 @@ Shared services a host gives every instance it runs.
 | [Mail Relay](/docs/extensions/mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
 | [S3 Fallback](/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [Server Timing](/docs/extensions/servertiming) | Server-Timing headers for each step of a request. |
-| [WASM](/docs/extensions/wasm) | Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box. |
 
 ## Sell it as a service
 
@@ -78,6 +79,6 @@ The extension contract and tools for building and testing extensions.
 | [Bundle](/docs/extensions/bundle) | An app's hooks, migrations and public files embedded in the binary. |
 | [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
 | [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
-| [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on a single app and under pocker. |
+| [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on every app, standalone or hosted. |
 | [Mail Trap](/docs/extensions/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
 | [Standard Set](/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |

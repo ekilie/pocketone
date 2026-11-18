@@ -6,7 +6,7 @@ description: "Every MCP tool a PocketOne app's contracts add at /mcp, with its t
 
 # MCP reference
 
-A PocketOne app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)): PocketBase's whole API as `pb_*` tools, the tools your `pb_hooks` add, and one tool per operation of every contract the app provides, listed here for the [standard set](/docs/extensions/standard). Each contract tool calls the contract, so it passes the same token scope check and hooks as the REST API and the CLI ([how](/docs/remote)). Uploads and downloads have no tool.
+A PocketOne app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)): PocketBase's whole API as `pb_*` tools, the tools your `pb_hooks` add, and one tool per operation of every contract the app provides, listed here for the [standard set](/docs/extensions/standard). Each contract tool calls the contract, so it passes the same token scope check and hooks as the REST API and the CLI ([how](/docs/features/remote)). Uploads and downloads have no tool.
 
 ## bulkmail/v1
 

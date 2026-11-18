@@ -9,6 +9,8 @@ source: "ext/pages/README.md"
 
 Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough for app owners: [PocketPages sites](https://pocketone.dev/docs/features/sites). This page is the technical reference.
+
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
 JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it
 can use your data directly. This is PocketPages v1, formerly the npm PocketPages package.
@@ -157,19 +159,15 @@ What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/pocker) | Pages is in the standard set, so every instance serves its own `pb_pages` (below). |
+| [Multisite](/docs/extensions/multisite) | Pages is in the standard set, so every instance that runs PocketOne serves its own `pb_pages` (below). |
 | [Cache](/docs/extensions/cache) | Compiled templates and modules go in the `pages.compiled` bucket (cache/v1, at most 32 MiB per app), keyed by content, so old versions are evicted instead of piling up. On a multisite host, instances serving the same files share one compiled copy. On a multisite host they also outlive an instance's restarts, since the cache belongs to the host. With the cache off, each JS VM compiles a file the first time it meets it. |
 | [Deploy](/docs/extensions/deploy) | `pb_pages` deploys with your other `pb_*` folders. `pull` doesn't fetch it by default; name it: `pocketone pull prod pb_pages`. |
 
-### Under pocker
+### On a multisite host
 
 Pages is a member of the [standard set](/docs/extensions/standard), so every instance serves its own
-`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. A host without
-the standard set adds it like any extension:
-
-```go
-srv := &pocker.Server{Config: cfg, Extensions: []pocker.Extension{pages.New(pages.Config{})}}
-```
+`<instance dir>/pb_pages`, in the stock `pocketone` binary and in any host built on `standard.New()`. With an
+isolate runtime ([Pocker](/docs/extensions/pocker)), where instances are isolates in one process:
 
 - Each start of an instance's app gets its own route table, compiled templates (in its own `pages.compiled` bucket; identical files share one copy in the host's cache) and caches. An instance that sleeps
   drops them; nothing is shared between instances.
@@ -268,7 +266,7 @@ bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 - [SPEC.md](/docs/extensions/pages/spec): the full PocketPages v1 contract.
 - [fixtures/](https://github.com/pockethost/pocketone/blob/main/ext/pages/fixtures/README.md): the request test cases (`go test ./...` runs them all).
 - [starters/](https://github.com/pockethost/pocketone/tree/main/ext/pages/starters): the starter kits. [addons/](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md): JS add-ons such as Datastar.
-- [site/](https://github.com/pockethost/pocketone/blob/main/ext/pages/site/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
+- [docs/](https://github.com/pockethost/pocketone/blob/main/ext/pages/docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
   pocketone.dev under this page. [blog/](https://github.com/pockethost/pocketone/tree/main/ext/pages/blog): the PocketPages blog posts.
 
 ## License

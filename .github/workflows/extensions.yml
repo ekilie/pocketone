@@ -14,6 +14,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # release-check.yml calls this with no push range, so every module is tested
+  workflow_call:
 
 jobs:
   plan:
@@ -67,6 +69,10 @@ jobs:
           cache-dependency-path: "**/go.sum"
       - name: Build, vet and test
         working-directory: ${{ matrix.module }}
+        # ext/desktop/runtime (Wails) builds with its cgo-free backend, as `pocketone desktop build` does; the cgo one
+        # needs GTK headers the runner doesn't have. Same list as moduleTags in .github/extensions/test.go.
+        env:
+          GOFLAGS: ${{ matrix.module == 'ext/desktop/runtime' && '-tags=purego' || '' }}
         run: go build -o /dev/null ./... && go vet ./... && go test -race -count=1 -timeout 10m ./...
 
   # The one check to watch or require: fails if the rules failed or any module did.
