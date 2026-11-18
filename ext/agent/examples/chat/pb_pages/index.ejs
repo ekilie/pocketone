@@ -1,9 +1,13 @@
+<%
+  const kb = ctx.resolve('agent').knowledge(ctx)
+  const status = $agent.status()
+%>
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Docs Chat</title>
+<title>PocketOne Docs Chat</title>
 <style>
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
@@ -19,14 +23,15 @@
   .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; min-height: 100vh; display: flex; flex-direction: column; }
   header { padding: 20px 0 12px; border-bottom: 1px solid var(--line); }
   header h1 { margin: 0; font-size: 18px; }
-  #status { margin-top: 4px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  #status, .armed { margin-top: 4px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
   #status.warn { color: var(--warn); } #status.err { color: var(--err); }
+  .armed code { font-size: 12px; }
   #log { flex: 1; padding: 16px 0; display: flex; flex-direction: column; gap: 14px; }
   .msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .me { align-self: flex-end; background: var(--me); color: var(--me-text); border-bottom-right-radius: 4px; }
   .bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
-  .bot code { background: color-mix(in srgb, var(--text) 9%, transparent); padding: 1px 5px; border-radius: 4px;
-              font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: color-mix(in srgb, var(--text) 9%, transparent); padding: 1px 5px; border-radius: 4px;
+         font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
   .bot pre { margin: 8px 0; padding: 10px 12px; border-radius: 8px; overflow-x: auto; white-space: pre;
              background: color-mix(in srgb, var(--text) 7%, transparent); }
   .bot pre code { background: none; padding: 0; }
@@ -34,9 +39,12 @@
   .meta a { color: var(--accent); text-decoration: none; } .meta a:hover { text-decoration: underline; }
   .thinking { color: var(--muted); font-style: italic; }
   .error { color: var(--err); }
-  .empty { color: var(--muted); text-align: center; margin-top: 18vh; }
-  .empty button { margin: 4px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
-                  background: var(--panel); color: var(--text); cursor: pointer; font: inherit; font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips button, .empty button { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line);
+         background: var(--panel); color: var(--text); cursor: pointer; font: inherit; font-size: 13px; }
+  .chips button:hover, .empty button:hover { border-color: var(--accent); }
+  .empty { color: var(--muted); text-align: center; margin-top: 16vh; }
+  .empty .chips { justify-content: center; }
   form { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0 20px; display: flex; gap: 8px; }
   textarea { flex: 1; resize: none; height: 46px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
              background: var(--panel); color: var(--text); font: inherit; }
@@ -48,13 +56,15 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Docs Chat</h1>
-    <div id="status">Connecting…</div>
+    <h1>PocketOne Docs Chat</h1>
+    <div id="status"><%= status.ready ? `${status.model} (${status.backend})` : (status.message || 'Model loading…') %></div>
+    <div class="armed">Armed with <code>preamble.md</code> and <%= kb.files.length %> context files
+      (<%= kb.sections.length %> sections) from <code>pb_pages/_private</code></div>
   </header>
   <div id="log">
     <div class="empty" id="empty">
-      <p>Ask about the docs this app was given.</p>
-      <div>
+      <p>Ask about PocketOne.</p>
+      <div class="chips">
         <button>How do I restore my database to an earlier moment?</button>
         <button>How do I run many apps on one server?</button>
         <button>What is PocketPages?</button>
@@ -89,19 +99,25 @@ function add(cls, html) {
   return d
 }
 
-async function status() {
+// the model may still be downloading: poll until it's ready
+async function poll() {
   try {
-    const r = await (await fetch('/api/chat/status')).json()
+    const r = await (await fetch('/chat')).json()
     const a = r.agent || {}
-    if (!a.backend) { statusEl.className = 'err'; statusEl.textContent = a.message || 'No model configured'; return false }
-    if (!a.ready) { statusEl.className = 'warn'; statusEl.textContent = a.message || 'Model loading…'; return false }
-    statusEl.className = ''
-    statusEl.textContent = `${a.model} (${a.backend}) · ${r.passages || '…'} passages from ${r.knowledge}`
-    return r.passages > 0
-  } catch { statusEl.className = 'err'; statusEl.textContent = 'Server unreachable'; return false }
+    if (a.ready) { statusEl.className = ''; statusEl.textContent = `${a.model} (${a.backend})`; return }
+    statusEl.className = a.backend ? 'warn' : 'err'
+    statusEl.textContent = a.message || 'Model loading…'
+  } catch { statusEl.className = 'err'; statusEl.textContent = 'Server unreachable' }
+  setTimeout(poll, 2000)
 }
-async function poll() { if (!(await status())) setTimeout(poll, 2000) }
 poll()
+
+async function post(url, body) {
+  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})
+  const r = await res.json()
+  if (!res.ok) throw new Error(r.error || r.message || res.statusText)
+  return r
+}
 
 async function ask(text) {
   add('me', esc(text))
@@ -111,18 +127,33 @@ async function ask(text) {
   const t = Date.now()
   const tick = setInterval(() => { pending.innerHTML = `<span class="thinking">Thinking… ${Math.round((Date.now() - t) / 1000)} s</span>` }, 1000)
   try {
-    const res = await fetch('/api/chat', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({messages: history})})
-    const r = await res.json()
-    if (!res.ok) throw new Error(r.error || r.message || res.statusText)
+    const r = await post('/chat', {messages: history})
     history.push({role: 'assistant', content: r.answer})
-    const src = (r.sources || []).map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)).join(' · ')
+    const src = r.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)).join(' · ')
     pending.innerHTML = md(r.answer) +
       `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in / ${r.usage.outputTokens} out` +
+      `<br>Armed with: ${r.armedWith.map(f => `<code>${esc(f)}</code>`).join(' ')}` +
       (src ? `<br>Sources: ${src}` : '') + '</div>'
+    suggest(pending, text, r.answer)
   } catch (err) {
     history.pop()
     pending.innerHTML = `<span class="error">${esc(err.message)}</span>`
   } finally { clearInterval(tick); send.disabled = false; q.focus() }
+}
+
+// follow-up questions: a second $agent call that can only answer with a JSON array of three strings
+async function suggest(el, question, answer) {
+  try {
+    const r = await post('/chat/suggest', {question, answer})
+    const chips = document.createElement('div')
+    chips.className = 'chips'
+    for (const s of r.questions || []) {
+      const b = document.createElement('button')
+      b.textContent = s
+      chips.appendChild(b)
+    }
+    el.appendChild(chips)
+  } catch {}
 }
 
 document.getElementById('f').addEventListener('submit', e => {
@@ -133,7 +164,9 @@ document.getElementById('f').addEventListener('submit', e => {
   ask(text)
 })
 q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('f').requestSubmit() } })
-log.addEventListener('click', e => { if (e.target.matches('.empty button')) ask(e.target.textContent) })
+log.addEventListener('click', e => {
+  if (e.target.matches('.chips button') && !send.disabled) ask(e.target.textContent)
+})
 </script>
 </body>
 </html>
