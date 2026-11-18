@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/dbx"
@@ -166,11 +167,18 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 	cfg, _ := Section.Get()
 	a := &appAgent{app: app, cfg: cfg.withDefaults()}
 	if cfg.Model != "" {
-		r, err := sharedRunner(cfg, app.Logger())
-		if err != nil {
+		if _, err := resolveModel(cfg.Model, a.cfg.CacheDir); err != nil {
 			return err
 		}
-		a.runner = r
+		// start downloading and loading only when the app serves, not for every command (superuser, migrate, ...)
+		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+			r, err := sharedRunner(cfg, app.Logger())
+			if err != nil {
+				return err
+			}
+			a.runner.Store(r)
+			return e.Next()
+		})
 	}
 	agentv1.Contract.Provide(app, a)
 	return nil
@@ -192,7 +200,7 @@ func ejected(app core.App) (*apiBackend, bool) {
 type appAgent struct {
 	app    core.App
 	cfg    Config
-	runner *runner
+	runner atomic.Pointer[runner] // set once the app serves
 }
 
 func (a *appAgent) Complete(ctx context.Context, _ extkit.Auth, in agentv1.CompleteInput) (agentv1.CompleteResult, error) {
@@ -203,24 +211,32 @@ func (a *appAgent) Complete(ctx context.Context, _ extkit.Auth, in agentv1.Compl
 		api.Timeout = a.cfg.timeout()
 		return api.complete(ctx, in)
 	}
-	if a.runner == nil {
+	r := a.runner.Load()
+	if r == nil {
+		if a.cfg.Model != "" {
+			return agentv1.CompleteResult{}, agentv1.ErrNotReady // configured, the app isn't serving yet
+		}
 		return agentv1.CompleteResult{}, agentv1.ErrNotConfigured
 	}
 	maxTokens := in.MaxTokens
 	if maxTokens <= 0 {
 		maxTokens = a.cfg.MaxTokens
 	}
-	return a.runner.complete(ctx, in, maxTokens, "runner")
+	return r.complete(ctx, in, maxTokens, "runner")
 }
 
 func (a *appAgent) Status(context.Context, extkit.Auth) (agentv1.Status, error) {
 	if api, ok := ejected(a.app); ok {
 		return agentv1.Status{Backend: "app", Model: api.Model, Ready: true}, nil
 	}
-	if a.runner == nil {
+	r := a.runner.Load()
+	if r == nil {
+		if a.cfg.Model != "" {
+			return agentv1.Status{Backend: "runner", Model: a.cfg.Model, Message: "starts when the app serves"}, nil
+		}
 		return agentv1.Status{Message: agentv1.ErrNotConfigured.Message}, nil
 	}
-	return a.runner.status("runner"), nil
+	return r.status("runner"), nil
 }
 
 func checkInput(in agentv1.CompleteInput) error {

@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
@@ -21,6 +22,18 @@ import (
 	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
+
+// serve fires the app's OnServe hooks, as `serve` does (the runner starts there).
+func serve(t *testing.T, app core.App) {
+	t.Helper()
+	r, err := apis.NewRouter(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.OnServe().Trigger(&core.ServeEvent{App: app, Router: r}, func(*core.ServeEvent) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func testApp(t *testing.T) core.App {
 	t.Helper()
@@ -155,6 +168,7 @@ func TestRunnerAnswers(t *testing.T) {
 	if err := New().Register(app, nil); err != nil {
 		t.Fatal(err)
 	}
+	serve(t, app)
 	a := agentv1.Contract.Must(app)
 	waitReady(t, a)
 	res, err := a.Complete(context.Background(), extkit.Internal, agentv1.CompleteInput{

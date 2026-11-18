@@ -24,6 +24,7 @@ func TestRealModel(t *testing.T) {
 	if err := New().Register(app, nil); err != nil {
 		t.Fatal(err)
 	}
+	serve(t, app)
 	a := agentv1.Contract.Must(app)
 	waitReady(t, a)
 	res, err := a.Complete(context.Background(), extkit.Internal, agentv1.CompleteInput{
@@ -56,6 +57,7 @@ func TestRealModelExtract(t *testing.T) {
 	if err := New().Register(app, nil); err != nil {
 		t.Fatal(err)
 	}
+	serve(t, app)
 	a := agentv1.Contract.Must(app)
 	waitReady(t, a)
 	res, err := a.Complete(context.Background(), extkit.Internal, agentv1.CompleteInput{

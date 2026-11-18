@@ -119,7 +119,7 @@ func fetch(src modelSource, client *http.Client, progress *atomic.Value) error {
 	if total == 0 {
 		total = res.ContentLength
 	}
-	part := src.Path + ".part"
+	part := fmt.Sprintf("%s.%d.part", src.Path, os.Getpid()) // two processes fetching at once don't share a file
 	f, err := os.Create(part)
 	if err != nil {
 		return err
