@@ -1,6 +1,6 @@
 ---
 title: Coming from PocketBase
-description: PocketOne is PocketBase with more built in. What stays the same, what's added, and where to read about the parts that come straight from PocketBase.
+description: PocketOne is PocketBase with more built in. What stays the same, and how each added feature compares.
 ---
 
 # Coming from PocketBase
@@ -87,18 +87,3 @@ In PocketBase, app settings live in the dashboard and `serve` takes its options 
 [pocketone.yaml](/docs/pocketone-yaml)
 
 Smaller additions are listed under [Also built in](/docs/features#also-built-in).
-
-## Read the PocketBase docs for the rest
-
-This site doesn't copy PocketBase's docs. For everything PocketOne leaves as it is, read them at pocketbase.io:
-
-- [Introduction](https://pocketbase.io/docs/)
-- [Collections](https://pocketbase.io/docs/collections/)
-- [API rules and filters](https://pocketbase.io/docs/api-rules-and-filters/)
-- [Authentication](https://pocketbase.io/docs/authentication/)
-- [Files upload and handling](https://pocketbase.io/docs/files-handling/)
-- [Working with relations](https://pocketbase.io/docs/working-with-relations/)
-- [Extend with JavaScript](https://pocketbase.io/docs/js-overview/)
-- [Extend with Go](https://pocketbase.io/docs/go-overview/)
-- [Going to production](https://pocketbase.io/docs/going-to-production/)
-- [Web APIs reference](https://pocketbase.io/docs/api-records/)
