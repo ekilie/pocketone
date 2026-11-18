@@ -164,7 +164,7 @@ func TestSandboxHoldsInPages(t *testing.T) {
 				"pb_pages/asset.ejs":         "<%= asset('../../b/pb_pages/secret.txt') %>",
 				"pb_pages/loop.ejs":          "<% while (true) {} %>",
 				"pb_pages/alloc.ejs":         "<%= 'x'.repeat(1e9).length %>",
-				"pb_pages/grow.ejs":          "<% const a = []; for (;;) a.push(new Array(100000).fill(a.length)) %>",
+				"pb_pages/grow.ejs":          "<% const a = []; for (;;) a.push(new Uint8Array(1 << 20).fill(a.length)) %>",
 				"pb_pages/recurse.ejs":       "<% function f() { return f() + 1 } f() %>",
 				"pb_pages/self.ejs":          "<%- include('self') %>",
 				"pb_pages/_private/self.ejs": "<%- include('self') %>",
@@ -192,7 +192,10 @@ func TestSandboxHoldsInPages(t *testing.T) {
 		}
 	}
 
-	// runaway code: stopped by the instance's limits, quickly, with a 500
+	// runaway code: stopped by the instance's limits, quickly, with a 500.
+	// /grow grows by 1 MiB buffers, not arrays of JS values: filling 4M values one by one took ~10s under -race (the
+	// engine is translated C and every memory access is checked), and QuickJS consults the time limit only once per
+	// 10000 calls and loop turns, so MaxJSExecution never stopped it first and it failed the 10s check on CI.
 	runaway := map[string]string{
 		"/loop":    "interrupted",              // MaxJSExecution
 		"/alloc":   "out of memory",            // MaxJSAllocation: one huge allocation is refused
@@ -209,7 +212,7 @@ func TestSandboxHoldsInPages(t *testing.T) {
 			t.Fatalf("%s: want a 500 mentioning %q, got %d %.300q", path, want, code, body)
 		}
 		if d > 10*time.Second {
-			t.Fatalf("%s took %v; the limit is 2s", path, d)
+			t.Fatalf("%s took %v; MaxJSExecution is 2s and the check allows 10s", path, d)
 		}
 	}
 	if code, body := h.get(t, "http://a.test/ok"); code != 200 || body != "still fine" {
