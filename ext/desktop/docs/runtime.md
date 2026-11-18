@@ -44,7 +44,5 @@ upgraded the first time they open it, the same way `pocketone serve` upgrades a 
 
 ## Sharing your app
 
-A build signed ad hoc runs on the Mac that built it. To give a macOS app to other people, sign and notarize it with
-your own Apple Developer ID; unsigned, macOS asks them to approve it in System Settings first. Windows shows a
-SmartScreen warning for unsigned apps until they're signed with a code-signing certificate. Signing from
-`pocketone desktop build` is planned.
+A build runs on the machine that built it. Before you give it to other people, sign it (and on macOS, notarize it), so
+it opens without warnings: [Signing and sharing](signing.md) has the steps for each platform.
