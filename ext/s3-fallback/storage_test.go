@@ -9,11 +9,9 @@ import (
 	"image/png"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -22,58 +20,17 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/s3redirect/s3test"
 )
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))
 
-// startMinio runs a throwaway MinIO with buckets "shared" (the operator's) and "own" (an instance's own S3).
-func startMinio(t *testing.T) *Bucket {
+// startBucket runs a throwaway in-memory bucket server (ext/s3redirect/s3test) with buckets "shared" (the
+// operator's) and "own" (an instance's own S3). It checks presigned downloads as S3 does.
+func startBucket(t *testing.T) *Bucket {
 	t.Helper()
-	bin, err := exec.LookPath("minio")
-	if err != nil {
-		t.Skip("minio not installed")
-	}
-	mc, err := exec.LookPath("mc")
-	if err != nil {
-		t.Skip("mc not installed")
-	}
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr := l.Addr().String()
-	_ = l.Close()
-	cmd := exec.Command(bin, "server", "--quiet", "--address", addr, "--console-address", "127.0.0.1:0", t.TempDir())
-	cmd.Env = append(os.Environ(), "MINIO_ROOT_USER=storagetest", "MINIO_ROOT_PASSWORD=storagetest-secret")
-	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
-	endpoint := "http://" + addr
-	client := &http.Client{Transport: &http.Transport{}, Timeout: 2 * time.Second}
-	for i := 0; ; i++ {
-		if resp, err := client.Get(endpoint + "/minio/health/ready"); err == nil {
-			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				break
-			}
-		}
-		if i > 50 {
-			t.Fatal("minio did not start in 5s")
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	cfgDir := t.TempDir()
-	run := func(args ...string) {
-		c := exec.Command(mc, append([]string{"--config-dir", cfgDir}, args...)...)
-		if out, err := c.CombinedOutput(); err != nil {
-			t.Fatalf("mc %v: %v\n%s", args, err, out)
-		}
-	}
-	run("alias", "set", "t", endpoint, "storagetest", "storagetest-secret")
-	run("mb", "t/shared")
-	run("mb", "t/own")
-	return &Bucket{Endpoint: endpoint, Bucket: "shared", Region: "us-east-1", AccessKey: "storagetest", Secret: "storagetest-secret", ForcePathStyle: true, Prefix: "eu/"}
+	srv := s3test.Start(t, "shared", "own")
+	return &Bucket{Endpoint: srv.URL, Bucket: "shared", Region: srv.Region, AccessKey: srv.AccessKey, Secret: srv.Secret, ForcePathStyle: true, Prefix: "eu/"}
 }
 
 // raw opens a bucket without any fence, to check where things landed.
@@ -111,7 +68,7 @@ func pngBytes(t *testing.T) []byte {
 }
 
 func TestDefaultBucketUnderPocker(t *testing.T) {
-	b := startMinio(t)
+	b := startBucket(t)
 	shared := raw(t, b, "shared")
 	pbRoot := t.TempDir()
 

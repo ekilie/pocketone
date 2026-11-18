@@ -2837,6 +2837,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [PITR](https://pocketone.dev/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |
 | [Remotes](https://pocketone.dev/docs/extensions/remotes) | Named remotes and saved logins for the pocketone command. |
+| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Settings](https://pocketone.dev/docs/extensions/settings) | One API for the settings an app's admins change for its extensions. On by default. |
 | [Templates](https://pocketone.dev/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
@@ -2868,7 +2869,6 @@ Shared services a host gives every instance it runs.
 | Extension | What it does |
 |---|---|
 | [Mail Relay](https://pocketone.dev/docs/extensions/mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
-| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [Server Timing](https://pocketone.dev/docs/extensions/servertiming) | Server-Timing headers for each step of a request. |
 
 ## Sell it as a service
@@ -4635,6 +4635,27 @@ Turns the settings extension off on a single app (`enabled: false`). On a multis
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `storage:`
+
+A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On for every instance unless false; an instance's extensions.storage.enabled overrides it. |
+| `backends` | map of object |  | Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style. |
+| `mounts` | map of string |  | Filesystem kind (storage, backups, litestream, ...) to backend name. |
+| `bucket.endpoint` | string |  | S3 endpoint URL. |
+| `bucket.bucket` | string |  | Bucket name. |
+| `bucket.region` | string |  | Bucket region (auto for R2). |
+| `bucket.access_key` | string |  | Access key id. |
+| `bucket.secret` | string |  | Secret key; use a $VAR from the .env. |
+| `bucket.prefix` | string |  | Prepended to every key, to share a bucket. |
+| `bucket.force_path_style` | bool |  | Path-style addressing, for MinIO and similar servers. |
+| `uploads` | bool |  | Deprecated: with bucket, false keeps uploads off it. |
+| `backups` | bool |  | Deprecated: with bucket, false keeps backups off it. |
+
+Owned by [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback).
 
 #### `templates:`
 
@@ -10384,6 +10405,143 @@ MIT
 
 ---
 
+Source: https://pocketone.dev/docs/extensions/s3-fallback
+
+# S3 Fallback
+
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount
+each kind of file on one: record uploads, backup zips, PITR history, or any extension's own kind. Every instance gets
+its own folder in the bucket and can't reach anything outside it. The credentials never reach the instance.
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+S3 Fallback is in the [standard set](https://pocketone.dev/docs/extensions/standard), so it's built into `pocketone` and every isolate on a
+[multisite](https://pocketone.dev/docs/extensions/multisite) host has it (Docker containers run stock images). It does nothing until the
+`storage` section below mounts a backend. Its main use is a multisite host, where each instance gets its own folder in
+one bucket; a single app with mounts keeps its files at the backend's root.
+
+In your own Go build, reconfigure the member instead of adding it again:
+
+```go
+set := standard.New()
+set.S3Fallback = s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts})
+```
+
+The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
+
+## Configure
+
+The `storage` section of `pocketone.yaml` is read on first use. Fields set in Go win.
+
+```yaml
+storage:
+  backends:                        # named S3-compatible destinations
+    r2-eu:   { endpoint: https://<account>.eu.r2.cloudflarestorage.com, bucket: pocketbase-eu, region: auto, access_key: $R2_KEY, secret: $R2_SECRET }
+    b2-cold: { endpoint: ..., bucket: ph-backups, region: ..., access_key: ..., secret: ... }
+  mounts:                          # filesystem kind -> backend
+    storage:    r2-eu              # record uploads
+    backups:    b2-cold            # backup zips
+    litestream: r2-eu              # PITR history (ext/pitr)
+  # enabled: false                 # off for every instance
+```
+
+Each backend also takes `prefix` (prepended to every key, so several deployments can share a bucket) and
+`force_path_style` (for MinIO and similar servers). With no mounts the extension does nothing and files stay on local
+disk, as in PocketBase.
+
+Each instance can turn it off in its own settings, from `instances.yaml` or a mothership. Only `enabled` is read per
+instance; backends and mounts are the operator's:
+
+```yaml
+instances:
+  - id: blog
+    extensions: { storage: { enabled: false } }
+```
+
+The old shape (`bucket:` with `uploads:` / `backups:`) still works, with a warning: it becomes a backend named
+`default`, mounted for uploads and backups.
+
+### pocketone.yaml reference
+
+#### `storage:`
+
+A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On for every instance unless false; an instance's extensions.storage.enabled overrides it. |
+| `backends` | map of object |  | Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style. |
+| `mounts` | map of string |  | Filesystem kind (storage, backups, litestream, ...) to backend name. |
+| `bucket.endpoint` | string |  | S3 endpoint URL. |
+| `bucket.bucket` | string |  | Bucket name. |
+| `bucket.region` | string |  | Bucket region (auto for R2). |
+| `bucket.access_key` | string |  | Access key id. |
+| `bucket.secret` | string |  | Secret key; use a $VAR from the .env. |
+| `bucket.prefix` | string |  | Prepended to every key, to share a bucket. |
+| `bucket.force_path_style` | bool |  | Path-style addressing, for MinIO and similar servers. |
+| `uploads` | bool |  | Deprecated: with bucket, false keeps uploads off it. |
+| `backups` | bool |  | Deprecated: with bucket, false keeps backups off it. |
+
+## Use
+
+There's nothing to do day to day. To an instance nothing is configured: Settings show S3 off, and uploads, thumbs,
+`$app.newFilesystem()` and the Backups screen work as before. Files land in the bucket under
+`<prefix>instances/<id>/<kind>/`. Downloads stream through the server, or redirect to the bucket with
+[S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect).
+
+When an instance turns on its own S3 (Settings → Files storage, or Settings → Backups), PocketBase's normal code takes
+over with the instance's credentials. Files already in the default bucket stay there, as PocketBase's own S3 switch
+doesn't move files either.
+
+It applies to instances created with the extension on. Files already on an instance's local disk are not read or moved.
+
+## Integrations
+
+### Works with
+
+| Extension | How they fit |
+|---|---|
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance the set reaches gets the extension. An isolate (Pocker) gets the root `instances/<id>/`. |
+| [PITR](https://pocketone.dev/docs/extensions/pitr) | Mount `litestream` and every instance without its own bucket keeps its history there. An instance's own PITR bucket still wins. |
+| [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | Downloads become signed redirects to the bucket. Nothing to wire: the fenced filesystem signs with its prefix, so S3 Redirect treats it like any S3 mount. |
+
+### Building on S3 Fallback
+
+- **Your own kind.** Any kind an extension asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
+  PITR's `litestream` works this way. Uploads and backups step aside when the app turned on its own S3; for other
+  kinds, the extension asking checks its own app setting first.
+- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for an app that has
+  the process to itself, `instances/<id>/` for an isolate, as under Pocker). `FS(root, kind)` returns the same
+  fenced filesystem outside a hook; close it when done. `Config()` returns the effective configuration.
+
+## Example
+
+There's no `example/main.go` yet. [`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go) shows it on the `pocketone` binary, as a single app
+and on a multisite host; [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show it in Go.
+
+## How it works
+
+- PocketBase asks `OnFilesystemCreate` before it creates a filesystem. For a mounted kind, the extension answers with the
+  backend, fenced to `<backend prefix><root><kind>/`. An instance can't list, read, write or delete anything outside
+  it.
+- The fence is a driver that adds the prefix to every key and strips it from listings. Signed download URLs are made
+  with the backend's own credentials.
+
+### Status
+
+Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go)); not yet deployed.
+
+## License
+
+MIT
+
+
+---
+
 Source: https://pocketone.dev/docs/extensions/s3redirect
 
 # S3 Redirect
@@ -14489,123 +14647,6 @@ MIT
 
 ---
 
-Source: https://pocketone.dev/docs/extensions/s3-fallback
-
-# S3 Fallback
-
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
-
-A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount
-each kind of file on one: record uploads, backup zips, PITR history, or any extension's own kind. Every instance gets
-its own folder in the bucket and can't reach anything outside it. The credentials never reach the instance.
-
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
-
-## Install
-
-S3 Fallback isn't built into `pocketone`; add it to a Go build. On a [multisite](https://pocketone.dev/docs/extensions/multisite) host, add it
-to the host's standard set; Pocker gives it to every instance it runs (Docker containers run stock images):
-
-```go
-set.Add(s3fallback.New(s3fallback.Config{}))
-```
-
-On a standalone app, register it with the backends and mounts in Go:
-
-```go
-extkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
-```
-
-The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
-
-## Configure
-
-The `storage` section of `pocketone.yaml` is read on first use. Fields set in Go win.
-
-```yaml
-storage:
-  backends:                        # named S3-compatible destinations
-    r2-eu:   { endpoint: https://<account>.eu.r2.cloudflarestorage.com, bucket: pocketbase-eu, region: auto, access_key: $R2_KEY, secret: $R2_SECRET }
-    b2-cold: { endpoint: ..., bucket: ph-backups, region: ..., access_key: ..., secret: ... }
-  mounts:                          # filesystem kind -> backend
-    storage:    r2-eu              # record uploads
-    backups:    b2-cold            # backup zips
-    litestream: r2-eu              # PITR history (ext/pitr)
-  # enabled: false                 # off for every instance
-```
-
-Each backend also takes `prefix` (prepended to every key, so several deployments can share a bucket) and
-`force_path_style` (for MinIO and similar servers). With no mounts the extension does nothing and files stay on local
-disk, as in PocketBase.
-
-Each instance can turn it off in its own settings, from `instances.yaml` or a mothership. Only `enabled` is read per
-instance; backends and mounts are the operator's:
-
-```yaml
-instances:
-  - id: blog
-    extensions: { storage: { enabled: false } }
-```
-
-The old shape (`bucket:` with `uploads:` / `backups:`) still works, with a warning: it becomes a backend named
-`default`, mounted for uploads and backups.
-
-## Use
-
-There's nothing to do day to day. To an instance nothing is configured: Settings show S3 off, and uploads, thumbs,
-`$app.newFilesystem()` and the Backups screen work as before. Files land in the bucket under
-`<prefix>instances/<id>/<kind>/`. Downloads stream through the server, or redirect to the bucket with
-[S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect).
-
-When an instance turns on its own S3 (Settings → Files storage, or Settings → Backups), PocketBase's normal code takes
-over with the instance's credentials. Files already in the default bucket stay there, as PocketBase's own S3 switch
-doesn't move files either.
-
-It applies to instances created with the extension on. Files already on an instance's local disk are not read or moved.
-
-## Integrations
-
-### Works with
-
-| Extension | How they fit |
-|---|---|
-| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance the set reaches gets the extension. An isolate (Pocker) gets the root `instances/<id>/`. |
-| [PITR](https://pocketone.dev/docs/extensions/pitr) | Mount `litestream` and every instance without its own bucket keeps its history there. An instance's own PITR bucket still wins. |
-| [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | Downloads become signed redirects to the bucket. Nothing to wire: the fenced filesystem signs with its prefix, so S3 Redirect treats it like any S3 mount. |
-
-### Building on S3 Fallback
-
-- **Your own kind.** Any kind an extension asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
-  PITR's `litestream` works this way. Uploads and backups step aside when the app turned on its own S3; for other
-  kinds, the extension asking checks its own app setting first.
-- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for an app that has
-  the process to itself, `instances/<id>/` for an isolate, as under Pocker). `FS(root, kind)` returns the same
-  fenced filesystem outside a hook; close it when done. `Config()` returns the effective configuration.
-
-## Example
-
-There's no `example/main.go` yet. [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show
-it on a standalone app and under Pocker, against MinIO.
-
-## How it works
-
-- PocketBase asks `OnFilesystemCreate` before it creates a filesystem. For a mounted kind, the extension answers with the
-  backend, fenced to `<backend prefix><root><kind>/`. An instance can't list, read, write or delete anything outside
-  it.
-- The fence is a driver that adds the prefix to every key and strips it from listings. Signed download URLs are made
-  with the backend's own credentials.
-
-### Status
-
-Works and is tested against MinIO; not yet deployed.
-
-## License
-
-MIT
-
-
----
-
 Source: https://pocketone.dev/docs/extensions/servertiming
 
 # Server Timing
@@ -15065,7 +15106,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
+PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
@@ -15092,7 +15133,7 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 - **Turn one off:** on a single app, `enabled: false` in its `pocketone.yaml` section (`tokens: {enabled: false}`);
   for every instance under Pocker, in its `pocker: isolate_config:` section, and for one instance, in its
   `extensions.<name>`. Extensions that require it turn off too, and
-  say why. cache, s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
+  say why. cache, storage (s3-fallback), s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
 - **Add your own:** `set.Add(myextension.New())`. Extras register after the members, under the same rules.
 - **Pick providers:** `set.Providers` is `pocketone.yaml`'s `providers:` section, for a contract more than one
   extension provides.
@@ -15188,7 +15229,7 @@ Turns the wasm extension off on a single app (`enabled: false`). On a multisite 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm
 standard: tokens/v1 ← tokens
 ```
 

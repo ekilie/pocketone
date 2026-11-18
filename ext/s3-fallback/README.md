@@ -2,7 +2,7 @@
 owners: ["@benallfree"]
 version: 0.0.1
 title: "S3 Fallback"
-group: services
+group: binary
 summary: "A default bucket for uploads and backups when an instance has no S3 of its own."
 ---
 
@@ -14,17 +14,16 @@ its own folder in the bucket and can't reach anything outside it. The credential
 
 ## Install
 
-S3 Fallback isn't built into `pocketone`; add it to a Go build. On a [multisite](../multisite/README.md) host, add it
-to the host's standard set; Pocker gives it to every instance it runs (Docker containers run stock images):
+S3 Fallback is in the [standard set](../standard/README.md), so it's built into `pocketone` and every isolate on a
+[multisite](../multisite/README.md) host has it (Docker containers run stock images). It does nothing until the
+`storage` section below mounts a backend. Its main use is a multisite host, where each instance gets its own folder in
+one bucket; a single app with mounts keeps its files at the backend's root.
+
+In your own Go build, reconfigure the member instead of adding it again:
 
 ```go
-set.Add(s3fallback.New(s3fallback.Config{}))
-```
-
-On a standalone app, register it with the backends and mounts in Go:
-
-```go
-extkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
+set := standard.New()
+set.S3Fallback = s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts})
 ```
 
 The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
@@ -95,8 +94,8 @@ It applies to instances created with the extension on. Files already on an insta
 
 ## Example
 
-There's no `example/main.go` yet. [`storage_test.go`](storage_test.go) and [`mounts_test.go`](mounts_test.go) show
-it on a standalone app and under Pocker, against MinIO.
+There's no `example/main.go` yet. [`modes_test.go`](modes_test.go) shows it on the `pocketone` binary, as a single app
+and on a multisite host; [`storage_test.go`](storage_test.go) and [`mounts_test.go`](mounts_test.go) show it in Go.
 
 ## How it works
 
@@ -108,7 +107,7 @@ it on a standalone app and under Pocker, against MinIO.
 
 ### Status
 
-Works and is tested against MinIO; not yet deployed.
+Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](modes_test.go)); not yet deployed.
 
 ## License
 

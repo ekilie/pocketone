@@ -334,6 +334,27 @@ Turns the settings extension off on a single app (`enabled: false`). On a multis
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
+#### `storage:`
+
+A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On for every instance unless false; an instance's extensions.storage.enabled overrides it. |
+| `backends` | map of object |  | Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style. |
+| `mounts` | map of string |  | Filesystem kind (storage, backups, litestream, ...) to backend name. |
+| `bucket.endpoint` | string |  | S3 endpoint URL. |
+| `bucket.bucket` | string |  | Bucket name. |
+| `bucket.region` | string |  | Bucket region (auto for R2). |
+| `bucket.access_key` | string |  | Access key id. |
+| `bucket.secret` | string |  | Secret key; use a $VAR from the .env. |
+| `bucket.prefix` | string |  | Prepended to every key, to share a bucket. |
+| `bucket.force_path_style` | bool |  | Path-style addressing, for MinIO and similar servers. |
+| `uploads` | bool |  | Deprecated: with bucket, false keeps uploads off it. |
+| `backups` | bool |  | Deprecated: with bucket, false keeps backups off it. |
+
+Owned by [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback).
+
 #### `templates:`
 
 Turns the templates extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.templates`.

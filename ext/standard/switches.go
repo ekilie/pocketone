@@ -8,7 +8,7 @@ type Switch struct {
 	Enabled *bool `yaml:"enabled" doc:"On unless false. Extensions that require it turn off too, and the startup lines say why."`
 }
 
-// switchMembers are the standard members without a section of their own. Members with one (cache, s3redirect, pitr)
+// switchMembers are the standard members without a section of their own. Members with one (cache, storage, s3redirect, pitr)
 // read `enabled` there themselves.
 var switchMembers = []string{"settings", "templates", "tokens", "remotes", "mcp", "pages", "backups", "bulkmail", "deploy", "wasm"}
 

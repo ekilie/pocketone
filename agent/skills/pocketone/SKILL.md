@@ -179,6 +179,7 @@ no code yet (version 0.0.0).
 | Vacuum | planned | Scheduled SQLite VACUUM. | [vacuum](reference/docs/extensions/vacuum/index.md) |
 | MCP | yes | An MCP endpoint at /mcp so agents can manage your app and call its tools. | [mcp](reference/docs/extensions/mcp/index.md) |
 | S3 Redirect | yes | File downloads as short-lived signed S3 redirects. | [s3redirect](reference/docs/extensions/s3redirect/index.md) |
+| S3 Fallback | yes | A default bucket for uploads and backups when an app has no S3 of its own; off until the `storage` section mounts one. | [s3-fallback](reference/docs/extensions/s3-fallback/index.md) |
 | Tokens | yes | Long-lived API tokens with scopes (and the OAuth server). | [tokens](reference/docs/extensions/tokens/index.md), [OAuth](reference/docs/extensions/tokens/oauth.md) |
 | Deploy | yes | pocketone deploy, dev, pull and logs, and the deploy API. | [deploy](reference/docs/extensions/deploy/index.md) |
 | Remotes | yes | Named remotes and saved logins for the pocketone command. | [remotes](reference/docs/extensions/remotes/index.md) |
@@ -197,7 +198,6 @@ no code yet (version 0.0.0).
 | Stats | host | Measures disk use and last request for each instance a host serves. | [stats](reference/docs/extensions/stats/index.md) |
 | **Services for your instances** | | | |
 | Mail Relay | Go build | Outgoing mail for instances without SMTP, through your relay, with limits. | [mailrelay](reference/docs/extensions/mailrelay/index.md) |
-| S3 Fallback | Go build | A default bucket for uploads and backups when an instance has no S3 of its own. | [s3-fallback](reference/docs/extensions/s3-fallback/index.md) |
 | Server Timing | host | Server-Timing headers for each step of a request. | [servertiming](reference/docs/extensions/servertiming/index.md) |
 | **Sell it as a service** | | | |
 | Multitenant | planned | Accounts that own instances: quotas, owner logins, tokens and an API. | [tenants](reference/docs/extensions/tenants/index.md) |
