@@ -13,6 +13,7 @@
 - [Cache](/docs/extensions/cache)
 - [Config](/docs/extensions/config)
 - [Deploy](/docs/extensions/deploy)
+- [Desktop](/docs/extensions/desktop/extension)
 - [JSVM](/docs/extensions/jsvm)
 - [MCP](/docs/extensions/mcp)
 - [Pages](/docs/extensions/pages/extension)

@@ -66,6 +66,80 @@ Deploys the project's code set (pb\_\* folders except pb\_data, package.json, bu
 
 From [Deploy](/docs/extensions/deploy).
 
+## pocketone desktop
+
+Commands under desktop
+
+From [Desktop](/docs/extensions/desktop/extension).
+
+### pocketone desktop build
+
+Build this folder's app as a native desktop app (this platform; --all for every platform)
+
+```
+pocketone desktop build
+```
+
+Compiles the PocketOne app in the current folder into a desktop app: pb\_hooks, pb\_migrations and pb\_public are
+embedded in the executable, which runs the app's server on a private 127.0.0.1 port and shows it in a native window.
+Each user's data lives in their own app-data folder, named by the app id.
+
+Without flags it builds for this machine. --all builds macOS (arm64, amd64), Windows (amd64, arm64) and Linux
+(amd64, arm64); --target picks some. The apps land in dist/, macOS's as an .app and a .dmg.
+
+With a sign section in pocketone.yaml it signs what it built afterwards, here on this machine: macOS with your
+Developer ID (and notarizes), Windows with your command, Linux with GPG. --no-sign skips it.
+
+It runs in Docker, in the build image matching this pocketone (Go and PocketOne's source, vendored, so it needs
+nothing else and works offline once the image is here). --local builds with your own Go and a PocketOne checkout.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--all` | bool | – | build for every platform |
+| `--image` | string | – | the build image (default pocketone-build:dev) |
+| `--local` | bool | – | build with your own Go instead of the build image |
+| `--no-sign` | bool | – | skip pocketone.yaml's desktop.sign section (builds stay signed ad hoc) |
+| `--out` | string | `dist` | the folder the apps are written to |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | a PocketOne checkout: `--local` builds against it; a development pocketone builds its image from it (default $P1\_SOURCE, else the checkout this folder is in) |
+| `--target` | stringSlice | – | platforms to build, as os/arch (darwin/arm64,windows/amd64,...) |
+
+From [Desktop](/docs/extensions/desktop/extension).
+
+### pocketone desktop image
+
+Build the desktop build image from a PocketOne checkout
+
+```
+pocketone desktop image
+```
+
+Builds the image desktop build runs in (Go plus this checkout's source, vendored) and tags it. A release
+publishes it as ghcr.io/pockethost/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne checkout (default $P1\_SOURCE, else the one this folder is in) |
+| `--tag` | string | `pocketone-build:dev` | the image's tag |
+
+From [Desktop](/docs/extensions/desktop/extension).
+
+### pocketone desktop prepare
+
+Write the build image's vendored module into &lt;dir&gt; (the build image's Dockerfile runs this)
+
+```
+pocketone desktop prepare <dir>
+```
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne source tree |
+
+From [Desktop](/docs/extensions/desktop/extension).
+
 ## pocketone dev
 
 Keeps the project's code and a remote in step both ways (and streams the remote's logs)

@@ -80,6 +80,7 @@ pocker: { root: ./pb_root }
 | [API tokens and OAuth](/docs/features/tokens) | Auth tokens with the account's full rights | Named, scoped tokens you revoke one by one; your app is an OAuth server |
 | [MCP for AI agents](/docs/features/mcp) | No MCP | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
 | [Bulk mail](/docs/features/bulk-mail) | Account mail: verification, password reset | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
+| [Desktop apps](/docs/extensions/desktop) | A server you host, reached from a browser | The same folder builds into native macOS, Windows and Linux apps with `pocketone desktop build`, each user's data on their machine (preview) |
 | [pocketone.yaml](/docs/pocketone-yaml) | Flags on every start | One config file, with every extension's options and a `.env` for secrets |
 
 Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to

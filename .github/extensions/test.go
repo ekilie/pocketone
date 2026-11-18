@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// moduleTags are the build tags a module builds and tests with, here and in CI (extensions.yml's GOFLAGS): Wails'
+// cgo-free backend for the desktop runtime, as `pocketone desktop build` uses.
+var moduleTags = map[string]string{"ext/desktop/runtime": "purego"}
+
 func runTest(dirs []string) error {
 	start := time.Now()
 	step := func(format string, a ...any) {
@@ -54,6 +58,9 @@ func runTest(dirs []string) error {
 			step("%s: go %s", dir, strings.Join(args, " "))
 			cmd := exec.Command("go", args...)
 			cmd.Dir = dir
+			if tags, ok := moduleTags[dir]; ok {
+				cmd.Env = append(os.Environ(), "GOFLAGS=-tags="+tags)
+			}
 			cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("%s: go %s: %w", dir, args[0], err)

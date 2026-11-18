@@ -6,6 +6,7 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/autotls v0.0.0-20261112000927-b078fd50496e
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/desktop v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/docker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/edge v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
@@ -186,5 +187,7 @@ replace github.com/pockethost/pocketone/ext/templates => ../../ext/templates
 replace github.com/pockethost/pocketone/ext/cache => ../../ext/cache
 
 replace github.com/pockethost/pocketone/ext/vacuum => ../../ext/vacuum
+
+replace github.com/pockethost/pocketone/ext/desktop => ../../ext/desktop
 
 replace github.com/pockethost/pocketone/ext/wasm => ../../ext/wasm

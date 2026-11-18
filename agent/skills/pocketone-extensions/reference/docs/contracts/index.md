@@ -25,7 +25,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`bulkmail/v1`](https://pocketone.dev/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](https://pocketone.dev/docs/contracts/cache.clear/v1) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
 | [`cache/v1`](https://pocketone.dev/docs/contracts/cache/v1) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
-| [`cli.commands/v1`](https://pocketone.dev/docs/contracts/cli.commands/v1) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. |  |  |  | @benallfree |
+| [`cli.commands/v1`](https://pocketone.dev/docs/contracts/cli.commands/v1) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. | desktop |  |  | @benallfree |
 | [`deploy/v1`](https://pocketone.dev/docs/contracts/deploy/v1) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](https://pocketone.dev/docs/contracts/gate/v1) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](https://pocketone.dev/docs/contracts/http.wrap/v1) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |

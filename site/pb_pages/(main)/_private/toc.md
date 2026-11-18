@@ -18,6 +18,7 @@
 - [MCP for AI agents](/docs/features/mcp)
 - [Bulk mail](/docs/features/bulk-mail)
 - [pocketone.yaml](/docs/pocketone-yaml)
+- [Desktop apps](/docs/extensions/desktop)
 - [WASM](/docs/extensions/wasm)
 
 # Extend PocketOne

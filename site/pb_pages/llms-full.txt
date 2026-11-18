@@ -354,6 +354,7 @@ pocker: { root: ./pb_root }
 | [API tokens and OAuth](https://pocketone.dev/docs/features/tokens) | Auth tokens with the account's full rights | Named, scoped tokens you revoke one by one; your app is an OAuth server |
 | [MCP for AI agents](https://pocketone.dev/docs/features/mcp) | No MCP | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
 | [Bulk mail](https://pocketone.dev/docs/features/bulk-mail) | Account mail: verification, password reset | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
+| [Desktop apps](https://pocketone.dev/docs/extensions/desktop) | A server you host, reached from a browser | The same folder builds into native macOS, Windows and Linux apps with `pocketone desktop build`, each user's data on their machine (preview) |
 | [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml) | Flags on every start | One config file, with every extension's options and a `.env` for secrets |
 
 Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to
@@ -1764,6 +1765,100 @@ providers:
 
 ---
 
+Source: https://pocketone.dev/docs/extensions/desktop
+
+# Desktop apps
+
+> **PocketBase:** a server you host, reached from a browser. **PocketOne:** the same app folder also builds into a native desktop app for macOS, Windows and Linux, with your hooks, migrations and pages inside one executable and each user's data on their own machine.
+
+Your app is a folder: `pb_hooks`, `pb_migrations` and `pb_public`. `pocketone serve` runs it as a server, as always.
+`pocketone desktop build` turns the same folder into an app your users double-click:
+
+```sh
+pocketone serve                  # the app as a server
+pocketone desktop build          # a desktop app for this machine, in dist/
+pocketone desktop build --all    # macOS, Windows and Linux, arm64 and amd64
+```
+
+All you need is `pocketone` and Docker. The build runs in a build image that holds Go and PocketOne's source, so
+there's no Go, C compiler or Xcode to install, and every platform builds from any machine.
+
+> **Preview.** Desktop builds work today, but how a desktop app handles trust and settings is still settling (see
+> [What's next](#whats-next)). The desktop runtime uses Wails' cgo-free backends, which Wails marks experimental on
+> macOS and Linux.
+
+## How it works
+
+The desktop app is your PocketOne app plus a window:
+
+1. Your `pb_hooks`, `pb_migrations` and `pb_public` are embedded in the executable. Nothing is read from disk, so
+   nobody can change a shipped app's hooks.
+2. When it starts, it runs your app's server on a private `127.0.0.1` port, applying your migrations to the user's data.
+3. It opens a native window on that server, using the system's own webview: WebKit on macOS, WebView2 on Windows,
+   WebKitGTK on Linux.
+
+Your pages call the API with `fetch`, exactly as they do in a browser. The PocketBase JS SDK, realtime and file
+uploads work the same, because it's the same server.
+
+## Try it: hello world
+
+PocketOne's source has a hello-world app in `ext/desktop/example/hello`: a hook, a migration and one page that lists
+and adds greetings.
+
+```js
+// pb_hooks/main.pb.js
+routerAdd("GET", "/api/hello", (e) => {
+  const rows = $app.findRecordsByFilter("greetings", "", "-created", 50, 0)
+  return e.json(200, { message: "Hello from PocketOne hooks", greetings: rows.map((r) => r.get("text")) })
+})
+```
+
+Its `pocketone.yaml` keeps the server's data in the folder and names the desktop app:
+
+```yaml
+app:
+  dir: pb_data
+server:
+  public_dir: pb_public
+desktop:
+  name: Hello
+  id: dev.pocketone.hello
+  width: 900
+  height: 640
+```
+
+Run it both ways:
+
+```sh
+cd ext/desktop/example/hello
+pocketone superuser upsert admin@example.com password
+pocketone serve                  # http://127.0.0.1:8090
+pocketone desktop build          # dist/darwin-arm64/Hello.app on an Apple Silicon Mac
+open dist/darwin-arm64/Hello.app
+```
+
+The server and the desktop app keep separate data: the server's in `pb_data/`, the desktop app's in your app-data
+folder.
+
+## Next
+
+- [Building](https://pocketone.dev/docs/extensions/desktop/build): targets, the build image, building with your own Go, and what lands in `dist/`.
+- [How the app runs](https://pocketone.dev/docs/extensions/desktop/runtime): where each user's data lives, upgrades, the window and what each platform needs.
+- [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing): signing and notarizing for macOS, signing for Windows, and checksums for Linux.
+- [Extension reference](https://pocketone.dev/docs/extensions/desktop/extension): the `desktop` section of `pocketone.yaml` and building on the runtime from Go.
+
+## What's next
+
+A desktop app has one person at the keyboard and data on their machine, so PocketBase's users and superusers don't
+quite fit. Being worked out:
+
+- **Trust:** requests from the app's own window run as its owner, and nothing else on the machine can reach the server.
+- **Settings:** a native Preferences window for the settings your app and its extensions declare, since the superuser
+  dashboard isn't part of a shipped app.
+
+
+---
+
 Source: https://pocketone.dev/docs/extensions/wasm
 
 # WASM
@@ -2565,7 +2660,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`bulkmail/v1`](https://pocketone.dev/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](https://pocketone.dev/docs/contracts/cache.clear/v1) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
 | [`cache/v1`](https://pocketone.dev/docs/contracts/cache/v1) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
-| [`cli.commands/v1`](https://pocketone.dev/docs/contracts/cli.commands/v1) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. |  |  |  | @benallfree |
+| [`cli.commands/v1`](https://pocketone.dev/docs/contracts/cli.commands/v1) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. | desktop |  |  | @benallfree |
 | [`deploy/v1`](https://pocketone.dev/docs/contracts/deploy/v1) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](https://pocketone.dev/docs/contracts/gate/v1) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](https://pocketone.dev/docs/contracts/http.wrap/v1) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |
@@ -2706,6 +2801,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Cache](https://pocketone.dev/docs/extensions/cache) | Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once. |
 | [Config](https://pocketone.dev/docs/extensions/config) | The pocketone.yaml config file, with secrets in a .env beside it. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
+| [Desktop](https://pocketone.dev/docs/extensions/desktop/extension) | Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine. |
 | [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
@@ -2834,6 +2930,80 @@ Deploys the project's code set (pb\_\* folders except pb\_data, package.json, bu
 | `-v`, `--verbose` | bool | – | list every file |
 
 From [Deploy](https://pocketone.dev/docs/extensions/deploy).
+
+## pocketone desktop
+
+Commands under desktop
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
+
+### pocketone desktop build
+
+Build this folder's app as a native desktop app (this platform; --all for every platform)
+
+```
+pocketone desktop build
+```
+
+Compiles the PocketOne app in the current folder into a desktop app: pb\_hooks, pb\_migrations and pb\_public are
+embedded in the executable, which runs the app's server on a private 127.0.0.1 port and shows it in a native window.
+Each user's data lives in their own app-data folder, named by the app id.
+
+Without flags it builds for this machine. --all builds macOS (arm64, amd64), Windows (amd64, arm64) and Linux
+(amd64, arm64); --target picks some. The apps land in dist/, macOS's as an .app and a .dmg.
+
+With a sign section in pocketone.yaml it signs what it built afterwards, here on this machine: macOS with your
+Developer ID (and notarizes), Windows with your command, Linux with GPG. --no-sign skips it.
+
+It runs in Docker, in the build image matching this pocketone (Go and PocketOne's source, vendored, so it needs
+nothing else and works offline once the image is here). --local builds with your own Go and a PocketOne checkout.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--all` | bool | – | build for every platform |
+| `--image` | string | – | the build image (default pocketone-build:dev) |
+| `--local` | bool | – | build with your own Go instead of the build image |
+| `--no-sign` | bool | – | skip pocketone.yaml's desktop.sign section (builds stay signed ad hoc) |
+| `--out` | string | `dist` | the folder the apps are written to |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | a PocketOne checkout: `--local` builds against it; a development pocketone builds its image from it (default $P1\_SOURCE, else the checkout this folder is in) |
+| `--target` | stringSlice | – | platforms to build, as os/arch (darwin/arm64,windows/amd64,...) |
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
+
+### pocketone desktop image
+
+Build the desktop build image from a PocketOne checkout
+
+```
+pocketone desktop image
+```
+
+Builds the image desktop build runs in (Go plus this checkout's source, vendored) and tags it. A release
+publishes it as ghcr.io/pockethost/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne checkout (default $P1\_SOURCE, else the one this folder is in) |
+| `--tag` | string | `pocketone-build:dev` | the image's tag |
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
+
+### pocketone desktop prepare
+
+Write the build image's vendored module into &lt;dir&gt; (the build image's Dockerfile runs this)
+
+```
+pocketone desktop prepare <dir>
+```
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne source tree |
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
 
 ## pocketone dev
 
@@ -4191,6 +4361,23 @@ Turns the deploy extension off on a single app (`enabled: false`). On a multisit
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
+#### `desktop:`
+
+How `pocketone desktop build` names and sizes the desktop app built from this folder.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | string |  | The app's name: the window title and the executable's name. Default: the folder's name. |
+| `id` | string |  | Reverse-DNS app id (dev.example.notes): names the app's data folder on each user's machine and its single-instance lock. Default: app.pocketone.<name>. |
+| `width` | int |  | The window's starting width. Default: 1024. |
+| `height` | int |  | The window's starting height. Default: 768. |
+| `sign.macos.identity` | string |  | The signing identity in your keychain, as security find-identity -v -p codesigning shows it: Developer ID Application: Your Name (TEAMID). |
+| `sign.macos.notary_profile` | string |  | The notarytool keychain profile (xcrun notarytool store-credentials <profile>). Set: each DMG is notarized and stapled. Empty: signed, not notarized. |
+| `sign.windows.command` | string |  | The command that signs one executable in place; {file} is its path. signtool on Windows, osslsigncode anywhere, or your signing service's tool. |
+| `sign.linux.gpg_key` | string |  | The GPG key to sign with (its email or id). Each build gets <name>.sha256 and a detached <name>.asc signature. |
+
+Owned by [Desktop](https://pocketone.dev/docs/extensions/desktop).
+
 #### `docker:`
 
 Runtime provider docker: each instance in its own container with the PocketBase (pb:) or PocketOne (p1:) binary of its version (image, binary cache and manifest, instance root, default version, idle stop, limits).
@@ -5019,7 +5206,9 @@ them.
 
 <!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
 
-No extension declares this contract yet.
+| Extension | |
+|---|---|
+| [desktop](https://pocketone.dev/docs/extensions/desktop/extension) | provides |
 
 <!-- /contracts:index -->
 
@@ -6198,6 +6387,352 @@ Says who compacts the app's databases, whether and how often, and how the last r
 ## License
 
 MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/build
+
+# Building
+
+Run `pocketone desktop build` in your app's folder, the one with `pb_hooks`, `pb_migrations` or `pb_public`. It embeds
+those folders in a desktop app for each platform you ask for.
+
+```sh
+pocketone desktop build                                        # this machine's platform
+pocketone desktop build --all                                  # all six below
+pocketone desktop build --target windows/amd64,linux/amd64     # some of them
+pocketone desktop build --out builds                           # somewhere other than dist/
+pocketone desktop build --no-sign                              # skip the sign section
+```
+
+| Platform | `--target` | You get |
+|---|---|---|
+| macOS, Apple Silicon | `darwin/arm64` | `dist/darwin-arm64/<name>.app` and `<name>.dmg` |
+| macOS, Intel | `darwin/amd64` | `dist/darwin-amd64/<name>.app` and `<name>.dmg` |
+| Windows, x64 | `windows/amd64` | `dist/windows-amd64/<name>.exe` |
+| Windows, Arm | `windows/arm64` | `dist/windows-arm64/<name>.exe` |
+| Linux, x64 | `linux/amd64` | `dist/linux-amd64/<name>` |
+| Linux, Arm | `linux/arm64` | `dist/linux-arm64/<name>` |
+
+Each is one file (or one `.app` bundle) of about 40 MB, with your app and PocketOne inside. Windows builds open no
+console window.
+
+On a Mac, each macOS build also comes as a `.dmg`: the app and a link to Applications to drag it onto. With a `sign`
+section in `pocketone.yaml`, every build is signed for you; see [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing).
+
+## Name and size
+
+`pocketone.yaml`'s `desktop` section names the app and sizes its window:
+
+```yaml
+desktop:
+  name: Notes              # window title and file name; default: the folder's name
+  id: dev.example.notes    # where each user's data lives; default: app.pocketone.<name>
+  width: 900               # starting window size; default 1024 × 768
+  height: 640
+```
+
+Choose the `id` once and keep it. It names the folder each user's data lives in, so a new `id` is a new, empty app for
+everyone who installed the old one.
+
+## The build image
+
+Builds run in Docker, in the build image for your `pocketone`'s version: `ghcr.io/pockethost/pocketone-build:v<version>`,
+pulled the first time. It holds Go, PocketOne's source and every dependency, vendored, so once it's here builds work
+offline, and the same `pocketone` version always builds the same app.
+
+`pocketone desktop build` mounts your app folder and the output folder into it, builds every platform there, and
+keeps Go's build cache in a Docker volume (`pocketone-build-cache`), so rebuilds take seconds. On a Mac it then signs
+the macOS bundles ad hoc, so they run on that Mac.
+
+A development `pocketone`, built from a PocketOne checkout, has no published image. It builds its own,
+`pocketone-build:dev`, from that checkout the first time (a minute or two). `pocketone desktop image` rebuilds it after
+you change the source.
+
+## Without Docker
+
+With Go 1.27 or newer and a PocketOne checkout, `--local` builds with your own Go instead:
+
+```sh
+pocketone desktop build --local --all                        # inside the checkout
+pocketone desktop build --local --source ~/src/pocketone     # anywhere else (or set P1_SOURCE)
+```
+
+It needs no C compiler either: every platform cross-compiles with plain Go.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/runtime
+
+# How the app runs
+
+A desktop app is your PocketOne app, with the standard extensions, its server on a private port, and a native window
+in front.
+
+## Each user's data
+
+Every user has their own data, in their own app-data folder, named by your app's `id`:
+
+| Platform | Data folder |
+|---|---|
+| macOS | `~/Library/Application Support/<id>/pb_data` |
+| Windows | `%AppData%\<id>\pb_data` |
+| Linux | `~/.config/<id>/pb_data` |
+
+It's an ordinary `pb_data`, so everything that works on one, from backups to point-in-time restore, works here too.
+
+## Upgrades
+
+Your migrations run every time the app starts. Ship a new version with new migrations, and each user's data is
+upgraded the first time they open it, the same way `pocketone serve` upgrades a server's.
+
+## The server and the window
+
+- The server listens on a free `127.0.0.1` port, chosen each time, so it never collides with anything else.
+- The window opens once the server answers.
+- Only one copy runs at a time.
+- Your hooks, migrations and public files come from the executable, never from disk.
+- There is no superuser, and the superuser installer page never opens: the people using a desktop app aren't its
+  admins.
+
+## What each platform needs
+
+| Platform | Needs |
+|---|---|
+| macOS | macOS 11 or newer |
+| Windows | The WebView2 runtime, which Windows 10 and 11 already have |
+| Linux | The GTK 4 and WebKitGTK 6.0 libraries; without them the app says which package to install |
+
+## Sharing your app
+
+A build runs on the machine that built it. Before you give it to other people, sign it (and on macOS, notarize it), so
+it opens without warnings: [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing) has the steps for each platform.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/signing
+
+# Signing and sharing
+
+`pocketone desktop build` gives you apps that run on the machine that built them. Before you send them to other people,
+sign them, so each operating system knows the app comes from you and hasn't been changed since:
+
+| Platform | Unsigned, your users see | To sign, you need |
+|---|---|---|
+| macOS | "can't be opened", until they approve it in System Settings | An Apple Developer account and a Mac |
+| Windows | A SmartScreen "Windows protected your PC" warning | A code-signing certificate |
+| Linux | Nothing; Linux doesn't check | Optional: a GPG key, to publish a signature |
+
+## Let desktop build sign
+
+Add a `sign` section to `pocketone.yaml`, and every `pocketone desktop build` signs what it built, on your machine,
+with your certificates. Name only the platforms you sign for:
+
+```yaml
+desktop:
+  name: Hello
+  id: dev.pocketone.hello
+  sign:
+    macos:
+      identity: "Developer ID Application: Your Name (ABCDE12345)"
+      notary_profile: pocketone-notary     # omit to sign without notarizing
+    windows:
+      # any command that signs {file} in place
+      command: signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a {file}
+    linux:
+      gpg_key: you@example.com
+```
+
+- **macOS:** it signs each `.app` with your Developer ID and the hardened runtime, puts it in a `.dmg`, signs the DMG,
+  sends it to Apple to notarize, and staples the result to both. You get the raw `.app` and the `.dmg`.
+- **Windows:** it runs your command on each `.exe`, with `{file}` replaced by its path. Use `signtool`, `osslsigncode`
+  or your signing service's tool, whichever fits your certificate.
+- **Linux:** it writes `<name>.sha256` and a detached `<name>.asc` GPG signature beside each binary.
+
+Before it builds anything, it checks that the tools are installed, that the identity is in your keychain and that the
+GPG key exists, so a missing piece fails in a second, not after the build. `pocketone desktop build --no-sign` skips
+the section, for a quick build to try out.
+
+Signing happens on your machine, not in the build image, because that's where your keychain and certificates are. So
+macOS builds are signed, notarized and put in a DMG only when you build on a Mac; built elsewhere, they're unsigned
+`.app` bundles. Windows and Linux builds sign anywhere their tools run (`signtool` only runs on Windows;
+`osslsigncode` runs everywhere).
+
+The sections below are the one-time setup for each platform, and the commands `desktop build` runs, if you'd rather
+sign by hand.
+
+## macOS
+
+macOS wants two things for an app downloaded from the internet: a **Developer ID signature**, and **notarization**,
+where Apple scans the app and records that it did. You do both on a Mac, with the tools that come with Xcode.
+
+### Once: get a Developer ID certificate
+
+1. Join the [Apple Developer Program](https://developer.apple.com/programs/) (paid, yearly).
+2. In Xcode, open **Settings → Accounts**, add your Apple ID, select your team and choose **Manage Certificates**.
+   Click **+** and pick **Developer ID Application**. Xcode creates the certificate and puts it in your keychain.
+3. Check that it's there and copy its name:
+
+   ```sh
+   security find-identity -v -p codesigning
+   #  1) 3F2A…  "Developer ID Application: Your Name (ABCDE12345)"
+   ```
+
+   `ABCDE12345` is your team ID.
+
+4. Create an [app-specific password](https://account.apple.com) for your Apple ID (**Sign-In and Security →
+   App-Specific Passwords**), and save it for the notary tool under a profile name:
+
+   ```sh
+   xcrun notarytool store-credentials pocketone-notary \
+     --apple-id you@example.com --team-id ABCDE12345 --password <app-specific password>
+   ```
+
+### By hand: sign, notarize, staple
+
+`desktop build` does this for you with a `sign.macos` section. By hand, for each macOS build (`dist/darwin-arm64/Hello.app`, `dist/darwin-amd64/Hello.app`):
+
+1. **Sign** with your Developer ID, the hardened runtime (`--options runtime`, which notarization requires) and a
+   secure timestamp. `--force` replaces the ad hoc signature the build added:
+
+   ```sh
+   codesign --force --options runtime --timestamp \
+     --sign "Developer ID Application: Your Name (ABCDE12345)" dist/darwin-arm64/Hello.app
+   codesign --verify --strict --verbose=2 dist/darwin-arm64/Hello.app
+   ```
+
+2. **Notarize:** zip the app and send it to Apple. It usually takes a few minutes:
+
+   ```sh
+   ditto -c -k --keepParent dist/darwin-arm64/Hello.app Hello.zip
+   xcrun notarytool submit Hello.zip --keychain-profile pocketone-notary --wait
+   ```
+
+   If it says `Invalid`, `xcrun notarytool log <submission id> --keychain-profile pocketone-notary` shows why.
+
+3. **Staple** the result to the app, so it opens even when the user is offline, and check it:
+
+   ```sh
+   xcrun stapler staple dist/darwin-arm64/Hello.app
+   spctl --assess --type execute --verbose dist/darwin-arm64/Hello.app
+   # dist/darwin-arm64/Hello.app: accepted
+   # source=Notarized Developer ID
+   ```
+
+4. **Package** the stapled app to share it. A zip:
+
+   ```sh
+   ditto -c -k --keepParent dist/darwin-arm64/Hello.app Hello-macos-arm64.zip
+   ```
+
+   or a disk image, which you sign too:
+
+   ```sh
+   hdiutil create -volname Hello -srcfolder dist/darwin-arm64/Hello.app -ov -format UDZO Hello.dmg
+   codesign --timestamp --sign "Developer ID Application: Your Name (ABCDE12345)" Hello.dmg
+   ```
+
+One download for both kinds of Mac: join the two executables with `lipo` before you sign, and ship one app.
+
+```sh
+cp -R dist/darwin-arm64/Hello.app Hello.app
+lipo -create dist/darwin-arm64/Hello.app/Contents/MacOS/Hello dist/darwin-amd64/Hello.app/Contents/MacOS/Hello \
+  -output Hello.app/Contents/MacOS/Hello
+```
+
+### Without an Apple Developer account
+
+Without a Developer ID, macOS still runs your app, but anyone who downloads it is warned first. What they see depends on
+how it's signed:
+
+| Your app is | Someone who downloads it sees |
+|---|---|
+| Signed ad hoc (what `desktop build` does with no `sign.macos`) | "Apple could not verify it is free of malware", and the app doesn't open |
+| Signed with a self-signed certificate | The same warning |
+| Signed with a Developer ID, not notarized | A similar warning |
+| Signed with a Developer ID and notarized | Only "downloaded from the internet, open it?" |
+
+The warning only appears for downloaded apps, which macOS marks as quarantined. An app you build and run on your own
+Mac opens without it.
+
+**Opening it anyway.** For yourself, testers and people you know, that's fine. They:
+
+1. Open the app and dismiss the warning.
+2. Go to **System Settings → Privacy & Security**, scroll to **Security** and click **Open Anyway** next to the app.
+3. Confirm, and the app opens from then on.
+
+Or, if they're comfortable with Terminal, they remove the quarantine mark, and the app opens normally:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Hello.app
+```
+
+**Self-signing.** You can make your own code-signing certificate: in Keychain Access, choose **Keychain Access →
+Certificate Assistant → Create a Certificate**, set **Certificate Type** to **Code Signing**, and then mark it
+**Always Trust** for code signing (double-click it, open **Trust**). Its name then goes in `sign.macos.identity`, without
+`notary_profile`, since Apple only notarizes Developer ID apps.
+
+It doesn't remove the warning: macOS can't trust a certificate it doesn't know, so a self-signed app gets the same
+warning as an ad hoc one. What it gives you is the same identity from one version to the next, so macOS remembers what
+your users allowed the app to do (files, camera, keychain items) when they update.
+
+For an app you give to the public, only a Developer ID and notarization open it without warnings.
+
+## Windows
+
+Windows checks an **Authenticode** signature. You need a code-signing certificate from a certificate authority, such
+as DigiCert, Sectigo or SSL.com. Certificates issued today keep their key on a hardware token or in the CA's cloud
+signing service rather than in a file, so how you sign depends on which you get.
+
+### Once: get a certificate
+
+- **Organization validation (OV):** the CA checks that your business exists. For an individual, pick a certificate
+  issued to you by name.
+- **Extended validation (EV):** a stricter check, for businesses.
+- **A cloud signing service**, such as Azure Trusted Signing, signs without a token, for organizations it can verify.
+
+Either way, a new certificate starts with no reputation: SmartScreen may still warn for a while, until enough people
+have installed your signed app.
+
+### By hand: sign with signtool
+
+On Windows, with the Windows SDK installed (it includes `signtool`) and your certificate on its token or in the
+certificate store:
+
+```bat
+signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a dist\windows-amd64\Hello.exe
+signtool verify /pa /v dist\windows-amd64\Hello.exe
+```
+
+`/a` picks the best certificate it finds; `/sha1 <thumbprint>` picks one exactly. A cloud signing service gives you
+its own `signtool` plugin or tool; follow its instructions for the same step. Sign `windows-arm64` the same way.
+
+### From a Mac or Linux
+
+[osslsigncode](https://github.com/mtrojnar/osslsigncode) signs Windows executables on macOS and Linux, if your
+certificate's key is in a file or on a token it can reach:
+
+```sh
+osslsigncode sign -pkcs12 certificate.pfx -pass "$PFX_PASSWORD" -n "Hello" \
+  -t http://timestamp.digicert.com -in dist/windows-amd64/Hello.exe -out Hello.exe
+```
+
+## Linux
+
+Linux runs the binary you give it; there's no signature check to pass. What you can do is let people check the
+download is yours and intact:
+
+```sh
+cd dist/linux-amd64
+sha256sum Hello > Hello.sha256          # a checksum to publish next to the download
+gpg --armor --detach-sign Hello         # Hello.asc: a signature anyone with your public key can check
+```
+
+Users check with `sha256sum -c Hello.sha256` and `gpg --verify Hello.asc Hello`. Packaging the app as a `.deb`,
+Flatpak or AppImage, where the package or repository is signed, also works.
 
 
 ---
@@ -7598,6 +8133,195 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 - `Config.Dir` and `Config.StoreDir` move the deploy folder and the upload store; `Config.Prefix` moves the API.
 - Logs on a single app come from its own `_logs` table; entries at error level and above are marked as stderr.
 - The `node_modules` collector is [`nodemodules`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/nodemodules/nodemodules.go), a port of the npm CLI's.
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/extension
+
+# Desktop
+
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+The same app folder you run with `pocketone serve` becomes a desktop app: `pocketone desktop build` compiles your
+`pb_hooks`, `pb_migrations` and `pb_public` into one executable that runs the app's server on a private `127.0.0.1`
+port and shows it in a native window (the system webview, through [Wails](https://wails.io)). Your users install
+nothing else, and each one's data stays on their machine.
+
+All you need is `pocketone` and Docker: the build runs in a build image with Go and PocketOne's source, and every
+platform builds from any machine, with no C compiler or Xcode. The desktop runtime uses Wails' cgo-free backends,
+which Wails marks experimental on macOS and Linux.
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+Desktop is built into `pocketone`. Builds run in [Docker](https://docs.docker.com/get-docker/), in the build image
+for your `pocketone`'s version (`ghcr.io/pockethost/pocketone-build:v<version>`), pulled on first use. It holds Go
+and PocketOne's source with every dependency vendored, so once it's here builds work offline. A named volume
+(`pocketone-build-cache`) keeps Go's build cache, so rebuilds take seconds.
+
+A development `pocketone` (built from a checkout) builds its own image, `pocketone-build:dev`, from that checkout on
+first use (`pocketone desktop image` rebuilds it). With Go 1.27 or newer and a checkout, `--local` skips Docker and
+builds with your own Go (`--source` or `P1_SOURCE` names the checkout when you aren't in it).
+
+## Configure
+
+`pocketone.yaml`'s `desktop` section names and sizes the app:
+
+```yaml
+desktop:
+  name: Notes              # window title and executable name; default: the folder's name
+  id: dev.example.notes    # names each user's data folder and the single-instance lock; default: app.pocketone.<name>
+  width: 900               # starting window size; default 1024 × 768
+  height: 640
+```
+
+Pick the `id` once and keep it: it's where your users' data lives, so a new id is a new, empty app for them.
+
+A `sign` section signs every build for the platforms it names (`--no-sign` skips it): macOS with your Developer ID,
+notarized and packaged as a DMG; Windows with your signing command; Linux with a checksum and a GPG signature. See
+[Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing).
+
+```yaml
+desktop:
+  sign:
+    macos:
+      identity: "Developer ID Application: Your Name (ABCDE12345)"
+      notary_profile: pocketone-notary
+    windows:
+      command: signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a {file}
+    linux:
+      gpg_key: you@example.com
+```
+
+### pocketone.yaml reference
+
+#### `desktop:`
+
+How `pocketone desktop build` names and sizes the desktop app built from this folder.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | string |  | The app's name: the window title and the executable's name. Default: the folder's name. |
+| `id` | string |  | Reverse-DNS app id (dev.example.notes): names the app's data folder on each user's machine and its single-instance lock. Default: app.pocketone.<name>. |
+| `width` | int |  | The window's starting width. Default: 1024. |
+| `height` | int |  | The window's starting height. Default: 768. |
+| `sign.macos.identity` | string |  | The signing identity in your keychain, as security find-identity -v -p codesigning shows it: Developer ID Application: Your Name (TEAMID). |
+| `sign.macos.notary_profile` | string |  | The notarytool keychain profile (xcrun notarytool store-credentials <profile>). Set: each DMG is notarized and stapled. Empty: signed, not notarized. |
+| `sign.windows.command` | string |  | The command that signs one executable in place; {file} is its path. signtool on Windows, osslsigncode anywhere, or your signing service's tool. |
+| `sign.linux.gpg_key` | string |  | The GPG key to sign with (its email or id). Each build gets <name>.sha256 and a detached <name>.asc signature. |
+
+## Use
+
+In your app's folder:
+
+```sh
+pocketone serve            # the app as a normal server, as always
+pocketone desktop build    # a desktop app for this machine, in dist/
+pocketone desktop build --all                                  # macOS, Windows and Linux, arm64 and amd64
+pocketone desktop build --target windows/amd64,linux/amd64     # some of them
+```
+
+`dist/<os>-<arch>/` gets `<name>.app` on macOS (signed ad hoc when you build on a Mac, so it runs there), `<name>.exe` on
+Windows (no console window), and `<name>` on Linux.
+
+What the desktop app does when it starts:
+
+- **Its data** goes in the user's own app-data folder, by `id`: `~/Library/Application Support/<id>/pb_data` on
+  macOS, `%AppData%\<id>\pb_data` on Windows, `~/.config/<id>/pb_data` on Linux.
+- **Your migrations** run on every start, so a new version of your app upgrades each user's data.
+- **Your hooks and public files** are read from the executable, never from disk.
+- **It serves** on a free `127.0.0.1` port and opens the window on it. Only one copy runs at a time (Wails' single-instance lock, by `id`).
+- **There is no superuser** and the installer page never opens; the app's users aren't its admins.
+
+What each platform needs:
+
+- **macOS:** 11 or newer. Apps you send to others need signing and notarization with your own Apple Developer ID;
+  unsigned, macOS asks them to approve the app in System Settings first.
+- **Windows:** the WebView2 runtime, which Windows 10 and 11 already have.
+- **Linux:** the GTK 4 and WebKitGTK 6.0 libraries; without them the app says which package to install.
+
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone desktop build`](https://pocketone.dev/docs/reference/cli#pocketone-desktop-build) | Build this folder's app as a native desktop app (this platform; --all for every platform) |
+| [`pocketone desktop image`](https://pocketone.dev/docs/reference/cli#pocketone-desktop-image) | Build the desktop build image from a PocketOne checkout |
+| [`pocketone desktop prepare <dir>`](https://pocketone.dev/docs/reference/cli#pocketone-desktop-prepare) | Write the build image's vendored module into &lt;dir&gt; (the build image's Dockerfile runs this) |
+
+## Integrations
+
+| Extension | How they fit |
+|---|---|
+| [Bundle](https://pocketone.dev/docs/extensions/bundle) | The desktop app serves your hooks, migrations and public files from the executable through Bundle. |
+| [Standard](https://pocketone.dev/docs/extensions/standard) | The desktop app runs the standard set, as `pocketone serve` does. |
+| [JSVM](https://pocketone.dev/docs/extensions/jsvm) | Your hooks run in PocketOne's QuickJS engine. |
+
+### Building on Desktop
+
+The runtime is its own module, `ext/desktop/runtime`, so the `pocketone` binary never links Wails. Your own Go
+program can use it directly:
+
+```go
+desktop.Run(desktop.App{Name: "Notes", ID: "dev.example.notes", Hooks: hooks, Migrations: migrations, Public: public})
+```
+
+Build it with `CGO_ENABLED=0 go build -tags purego` for macOS and Linux (Wails' cgo-free backends); Windows needs no
+tag. The build image is [image/Dockerfile](https://github.com/pockethost/pocketone/blob/main/ext/desktop/image/Dockerfile): a `pocketone` and the vendored module `pocketone desktop
+prepare` writes.
+
+## Example
+
+[example/hello](https://github.com/pockethost/pocketone/tree/main/ext/desktop/example/hello) is a hello-world app: a hook (`GET /api/hello`), a migration (a `greetings`
+collection with one row) and a page that lists and adds greetings.
+
+```sh
+cd ext/desktop/example/hello
+pocketone superuser upsert admin@example.com password
+pocketone serve                 # http://127.0.0.1:8090
+pocketone desktop build         # dist/darwin-arm64/Hello.app on an Apple Silicon Mac
+```
+
+[example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/desktop/example/main.go) is a PocketBase app with only this extension, to show the command.
+
+```go
+// Command example is a PocketBase app with only the desktop extension: `go run . desktop build` in an app folder
+// (one with pb_hooks, pb_migrations or pb_public, like ./hello) builds it as a desktop app. The pocketone binary
+// has the same command.
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+
+	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
+	"github.com/pockethost/pocketone/ext/desktop"
+	"github.com/pockethost/pocketone/ext/extkit"
+)
+
+func main() {
+	app := pocketbase.New()
+	if _, err := extkit.Setup(app, []extkit.Extension{desktop.New()}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	clicmdv1.Mount(app, app.RootCmd) // the commands extensions provide; the standard set does this for pocketone
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## License
 

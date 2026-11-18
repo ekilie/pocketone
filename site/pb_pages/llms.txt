@@ -26,6 +26,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [MCP for AI agents](https://pocketone.dev/docs/features/mcp): Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
 - [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
 - [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
+- [Desktop apps](https://pocketone.dev/docs/extensions/desktop): Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker.
 - [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your pb_hooks, for libraries JavaScript doesn't have and work JavaScript does too slowly.
 
 ## Extend PocketOne
@@ -67,6 +68,12 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
 - [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1): Compacting an app's databases so freed space goes back to the disk, and when it last happened.
 
+## Desktop: Guides
+
+- [Building](https://pocketone.dev/docs/extensions/desktop/build): pocketone desktop build: which platforms, the Docker build image, building with your own Go, and what lands in dist/.
+- [How the app runs](https://pocketone.dev/docs/extensions/desktop/runtime): What a PocketOne desktop app does on your users' machines: where their data lives, how upgrades migrate it, the window, and what each platform needs.
+- [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing): Sign your PocketOne desktop app so people can install it without warnings: Developer ID signing and notarization on macOS, Authenticode on Windows, checksums and signatures on Linux.
+
 ## Extensions: Standard extensions
 
 - [Auto TLS](https://pocketone.dev/docs/extensions/autotls): Certificates on demand and wildcards through ACME.
@@ -75,6 +82,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Cache](https://pocketone.dev/docs/extensions/cache): Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once.
 - [Config](https://pocketone.dev/docs/extensions/config): The pocketone.yaml config file, with secrets in a .env beside it.
 - [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
+- [Desktop](https://pocketone.dev/docs/extensions/desktop/extension): Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine.
 - [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
 - [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).

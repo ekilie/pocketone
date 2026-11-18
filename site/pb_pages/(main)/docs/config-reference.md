@@ -94,6 +94,23 @@ Turns the deploy extension off on a single app (`enabled: false`). On a multisit
 
 Owned by [Standard Set](/docs/extensions/standard).
 
+#### `desktop:`
+
+How `pocketone desktop build` names and sizes the desktop app built from this folder.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | string |  | The app's name: the window title and the executable's name. Default: the folder's name. |
+| `id` | string |  | Reverse-DNS app id (dev.example.notes): names the app's data folder on each user's machine and its single-instance lock. Default: app.pocketone.<name>. |
+| `width` | int |  | The window's starting width. Default: 1024. |
+| `height` | int |  | The window's starting height. Default: 768. |
+| `sign.macos.identity` | string |  | The signing identity in your keychain, as security find-identity -v -p codesigning shows it: Developer ID Application: Your Name (TEAMID). |
+| `sign.macos.notary_profile` | string |  | The notarytool keychain profile (xcrun notarytool store-credentials <profile>). Set: each DMG is notarized and stapled. Empty: signed, not notarized. |
+| `sign.windows.command` | string |  | The command that signs one executable in place; {file} is its path. signtool on Windows, osslsigncode anywhere, or your signing service's tool. |
+| `sign.linux.gpg_key` | string |  | The GPG key to sign with (its email or id). Each build gets <name>.sha256 and a detached <name>.asc signature. |
+
+Owned by [Desktop](/docs/extensions/desktop).
+
 #### `docker:`
 
 Runtime provider docker: each instance in its own container with the PocketBase (pb:) or PocketOne (p1:) binary of its version (image, binary cache and manifest, instance root, default version, idle stop, limits).
