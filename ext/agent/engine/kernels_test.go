@@ -174,35 +174,7 @@ func TestKernels(t *testing.T) {
 	}
 }
 
-func TestAttnKernels(t *testing.T) {
-	r := rand.New(rand.NewPCG(5, 6))
-	hd, stride, n := 128, 1024, 37
-	q := make([]float32, hd)
-	k := make([]float32, n*stride)
-	for i := range q {
-		q[i] = float32(r.NormFloat64())
-	}
-	for i := range k {
-		k[i] = float32(r.NormFloat64())
-	}
-	o1, o2 := make([]float32, n), make([]float32, n)
-	dots(q, k[256:], stride, n, o1)
-	dotsGo(q, k[256:], stride, n, o2)
-	for j := range o1 {
-		if !close32(o1[j], o2[j]) {
-			t.Fatalf("dots %d: %v vs %v", j, o1[j], o2[j])
-		}
-	}
-	w1, w2 := make([]float32, hd), make([]float32, hd)
-	wsum(o2, k[128:], stride, w1)
-	for j := range o2 {
-		axpyGo(o2[j], k[128+j*stride:128+j*stride+hd], w2)
-	}
-	for j := range w1 {
-		if !close32(w1[j], w2[j]) {
-			t.Fatalf("wsum %d: %v vs %v", j, w1[j], w2[j])
-		}
-	}
+func TestExpf(t *testing.T) {
 	for x := float32(-86.9); x < 88; x += 0.137 {
 		a, b := expf(x), float32(math.Exp(float64(x)))
 		if math.Abs(float64(a-b)) > 1e-6*float64(b)+1e-38 {

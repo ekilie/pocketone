@@ -9,11 +9,11 @@ import (
 	"sort"
 )
 
-// RequantizeQ8_0 writes a copy of the GGUF file at in to out with every 2-D
+// requantizeQ8_0 writes a copy of the GGUF file at in to out with every 2-D
 // weight converted to Q8_0 (norms stay F32). It exists for testing and
 // benchmarking the Q8_0 path from a model already on disk; converting from a
 // 4-bit file does not recover the original precision.
-func RequantizeQ8_0(in, out string) error {
+func requantizeQ8_0(in, out string) error {
 	g, err := openGGUF(in)
 	if err != nil {
 		return err

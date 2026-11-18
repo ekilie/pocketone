@@ -77,26 +77,6 @@ func dotQ8_0Go(x, y []byte, nb int) float32 {
 	return sum
 }
 
-// Attention kernels: dots computes out[j] = q·k[j*kstride:][:len(q)] for j < n;
-// wsum computes out = Σ_j p[j]·v[j*vstride:][:len(out)].
-var (
-	dots = dotsGo
-	wsum = wsumGo
-)
-
-func dotsGo(q, k []float32, kstride, n int, out []float32) {
-	for j := 0; j < n; j++ {
-		out[j] = dotF32(q, k[j*kstride:j*kstride+len(q)])
-	}
-}
-
-func wsumGo(p, v []float32, vstride int, out []float32) {
-	clear(out)
-	for j, pj := range p {
-		axpy(pj, v[j*vstride:j*vstride+len(out)], out)
-	}
-}
-
 // expf is a fast float32 exp (max rel. error ~2e-7 on [-87, 88]).
 func expf(x float32) float32 {
 	if x < -87 {

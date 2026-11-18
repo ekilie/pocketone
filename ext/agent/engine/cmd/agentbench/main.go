@@ -17,12 +17,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pockethost/pocketone/ext/agent/engine"
+	"github.com/pockethost/pocketone/ext/agent/engine/internal/benchhooks"
 )
 
 var ollamaURL = "http://127.0.0.1:11434"
@@ -50,7 +52,7 @@ func main() {
 		fs.Parse(os.Args[2:])
 		var p string
 		if p, err = resolveModel(*in); err == nil {
-			err = engine.RequantizeQ8_0(p, *out)
+			err = benchhooks.RequantizeQ8_0(p, *out)
 		}
 	default:
 		err = fmt.Errorf("unknown command %q", os.Args[1])
@@ -141,13 +143,17 @@ func cmdRun(args []string) error {
 	r := runResult{Load: time.Since(t0).Seconds(), Kernels: m.Info().Kernels}
 	for i := 0; i <= *runs; i++ {
 		p := promptText(*prompt, i)
-		start := time.Now()
 		res, err := m.Generate(context.Background(), p, engine.GenerateOptions{MaxTokens: *gen, IgnoreEOS: true}, nil)
 		if err != nil {
 			return err
 		}
 		ttft := res.Prefill
-		_ = start
+		label := fmt.Sprintf("run %d/%d", i, *runs)
+		if i == 0 {
+			label = "warm-up"
+		}
+		logf("%s: %d prompt tokens, prefill %.1f tok/s, %d tokens decoded at %.1f tok/s", label, res.PromptTokens,
+			float64(res.PromptTokens)/res.Prefill.Seconds(), res.OutputTokens, float64(res.OutputTokens-1)/res.Decode.Seconds())
 		if i == 0 {
 			continue // warm-up (pages the weights in)
 		}
@@ -159,6 +165,8 @@ func cmdRun(args []string) error {
 		r.Text, r.Tokens = res.Text, res.Tokens
 	}
 	r.MaxRSS = maxRSS()
+	fmt.Fprintf(os.Stderr, "kernels %s, threads %d, load %.2fs, prompt %v tokens, prefill %.1f tok/s, decode %.1f tok/s, TTFT %.0f ms, peak RSS %d MB (medians of %d runs)\n",
+		r.Kernels, *threads, r.Load, r.PromptTokens, median(r.Prefill), median(r.Decode), median(r.TTFT)*1000, r.MaxRSS>>20, len(r.Prefill))
 	return json.NewEncoder(os.Stdout).Encode(r)
 }
 
@@ -224,7 +232,11 @@ func ollamaUnloadAll(models []string) {
 
 // runnerRSS returns the summed RSS (bytes) of `ollama runner` processes.
 func runnerRSS() int64 {
-	out, err := exec.Command("ps", "-axo", "rss=,command=").Output()
+	args := []string{"-axo", "rss=,command="} // BSD/macOS
+	if runtime.GOOS == "linux" {
+		args = []string{"-eo", "rss=,args="}
+	}
+	out, err := exec.Command("ps", args...).Output()
 	if err != nil {
 		return 0
 	}
@@ -244,6 +256,9 @@ func runnerRSS() int64 {
 
 // ---- compare ----
 
+// cmpThreads is the thread count for correctness comparisons (speed doesn't matter there).
+var cmpThreads = min(8, runtime.NumCPU())
+
 func greedyOpts(gen int) map[string]any {
 	return map[string]any{"temperature": 0, "top_k": 1, "seed": 1, "num_predict": gen, "num_ctx": 2048}
 }
@@ -261,7 +276,7 @@ func cmdCompare(args []string) error {
 		if err != nil {
 			return err
 		}
-		m, err := engine.Load(path, engine.LoadOptions{Threads: 8})
+		m, err := engine.Load(path, engine.LoadOptions{Threads: cmpThreads})
 		if err != nil {
 			return err
 		}
@@ -272,7 +287,7 @@ func cmdCompare(args []string) error {
 			opts["_logprobs"] = true
 			if *cpu {
 				opts["num_gpu"] = 0
-				opts["num_thread"] = 8
+				opts["num_thread"] = cmpThreads
 			}
 			logf("ollama %s %s ...", tag, pn)
 			or, err := ollamaGenerate(tag, p, opts, 5*time.Minute)
@@ -310,7 +325,7 @@ func cmdCompare(args []string) error {
 				cont = append(cont, ids[0])
 				theirLP = append(theirLP, lp.Logprob)
 			}
-			am, ourLP := m.TeacherForce(ours, cont)
+			am, ourLP := benchhooks.TeacherForce(m, ours, cont)
 			agree := 0
 			var maxd, sumd float64
 			for i := range cont {
