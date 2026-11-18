@@ -25,6 +25,10 @@ var AppFolders = []string{"pb_hooks", "pb_migrations", "pb_public"}
 // runtimeModule is the module the generated main package calls.
 const runtimeModule = "github.com/pockethost/pocketone/ext/desktop/runtime"
 
+// TemplateEnv names the build image's prepared module (`desktop prepare`): set, a build runs inside the image,
+// offline, against that module's vendored source.
+const TemplateEnv = "P1_DESKTOP_TEMPLATE"
+
 // BuildOptions is one `desktop build`.
 type BuildOptions struct {
 	Config  Config
@@ -32,11 +36,14 @@ type BuildOptions struct {
 	All     bool     // every platform in AllTargets
 	Targets []string // os/arch; default this machine's
 	Out     string   // where the apps go, relative to Dir; default dist
-	Source  string   // PocketOne source tree; default $P1_SOURCE, else the checkout Dir is in
+	Local   bool     // build with this machine's Go instead of the build image
+	Image   string   // the build image; default the one matching this pocketone (DefaultImage)
+	Source  string   // --local: PocketOne source tree; default $P1_SOURCE, else the checkout Dir is in
 	Log     io.Writer
 }
 
-// Build compiles the app in o.Dir into a desktop app for each target, in o.Out.
+// Build compiles the app in o.Dir into a desktop app for each target, in o.Out: in the build image (Docker) by
+// default, with this machine's Go when o.Local, and offline against the prepared module when it runs in the image.
 func Build(ctx context.Context, o BuildOptions) error {
 	if o.Log == nil {
 		o.Log = io.Discard
@@ -45,77 +52,116 @@ func Build(ctx context.Context, o BuildOptions) error {
 	if err != nil {
 		return err
 	}
-	goBin, err := exec.LookPath("go")
-	if err != nil {
-		return errors.New("desktop build needs Go 1.27 or newer on your PATH (https://go.dev/dl)")
+	o.Dir = dir
+	out := orStr(o.Out, "dist")
+	if !filepath.IsAbs(out) {
+		out = filepath.Join(dir, out)
+	}
+	o.Out = out
+	if o.All {
+		o.Targets = AllTargets
+	}
+	if len(o.Targets) == 0 {
+		o.Targets = []string{goruntime.GOOS + "/" + goruntime.GOARCH}
+	}
+	for _, t := range o.Targets {
+		if !strings.Contains(t, "/") {
+			return fmt.Errorf("--target %q: use os/arch, like darwin/arm64", t)
+		}
+	}
+	if tmpl := os.Getenv(TemplateEnv); tmpl != "" {
+		return compile(ctx, o, tmpl, "")
+	}
+	if !o.Local {
+		return buildInDocker(ctx, o)
 	}
 	source, err := findSource(o.Source, dir)
 	if err != nil {
 		return err
 	}
-	name := orStr(o.Config.Name, filepath.Base(dir))
-	id := orStr(o.Config.ID, "app.pocketone."+strings.ToLower(safeName(name)))
-	targets := o.Targets
-	if o.All {
-		targets = AllTargets
-	}
-	if len(targets) == 0 {
-		targets = []string{goruntime.GOOS + "/" + goruntime.GOARCH}
-	}
-	for _, t := range targets {
-		if !strings.Contains(t, "/") {
-			return fmt.Errorf("--target %q: use os/arch, like darwin/arm64", t)
-		}
-	}
-
 	work, err := os.MkdirTemp("", "pocketone-desktop-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(work)
+	return compile(ctx, o, work, source)
+}
+
+// compile builds o's targets in work: a fresh folder that gets a go.mod against source, or (source "") the build
+// image's prepared module, whose go.mod and vendor/ stay as they are.
+func compile(ctx context.Context, o BuildOptions, work, source string) error {
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		return errors.New("desktop build --local needs Go 1.27 or newer on your PATH (https://go.dev/dl); without --local it runs in Docker")
+	}
+	name, id := appNames(o.Config, o.Dir)
+	embedded, err := copyApp(o.Dir, filepath.Join(work, "app"))
+	if err != nil {
+		return err
+	}
+	from := "the build image's vendored source"
+	if source != "" {
+		from = source
+	}
+	fmt.Fprintf(o.Log, "%s %s (%s): embedding %s, building against %s\n", stamp(), name, id, strings.Join(embedded, ", "), from)
+	if err := writeMain(work, name, id, o.Config, embedded); err != nil {
+		return err
+	}
+	if source != "" {
+		if err := writeGoMod(work, source); err != nil {
+			return err
+		}
+		if err := goCmd(ctx, goBin, work, nil, "mod", "tidy"); err != nil {
+			return err
+		}
+	}
+	for _, t := range o.Targets {
+		goos, goarch, _ := strings.Cut(t, "/")
+		start := time.Now()
+		fmt.Fprintf(o.Log, "%s building %s/%s...\n", stamp(), goos, goarch)
+		path, err := buildTarget(ctx, goBin, work, o.Out, name, id, goos, goarch)
+		if err != nil {
+			return fmt.Errorf("%s/%s: %w", goos, goarch, err)
+		}
+		fmt.Fprintf(o.Log, "%s   %s (%s)\n", stamp(), displayPath(o.Dir, path), time.Since(start).Round(100*time.Millisecond))
+	}
+	return nil
+}
+
+// appNames are the app's name and id: the desktop section's, else from the folder's name.
+func appNames(c Config, dir string) (name, id string) {
+	name = orStr(c.Name, filepath.Base(dir))
+	return name, orStr(c.ID, "app.pocketone."+strings.ToLower(safeName(name)))
+}
+
+// copyApp copies the app folders that exist in dir into dst (emptied first) and returns their names.
+func copyApp(dir, dst string) ([]string, error) {
+	if err := os.RemoveAll(dst); err != nil {
+		return nil, err
+	}
 	var embedded []string
 	for _, f := range AppFolders {
 		src := filepath.Join(dir, f)
 		if fi, err := os.Stat(src); err != nil || !fi.IsDir() {
 			continue
 		}
-		if err := os.CopyFS(filepath.Join(work, "app", f), os.DirFS(src)); err != nil {
-			return fmt.Errorf("copy %s: %w", f, err)
+		if err := os.CopyFS(filepath.Join(dst, f), os.DirFS(src)); err != nil {
+			return nil, fmt.Errorf("copy %s: %w", f, err)
 		}
 		embedded = append(embedded, f)
 	}
 	if len(embedded) == 0 {
-		return fmt.Errorf("%s has none of %s: run desktop build in your app's folder", dir, strings.Join(AppFolders, ", "))
+		return nil, fmt.Errorf("%s has none of %s: run desktop build in your app's folder", dir, strings.Join(AppFolders, ", "))
 	}
-	fmt.Fprintf(o.Log, "%s %s (%s): embedding %s, building against %s\n", stamp(), name, id, strings.Join(embedded, ", "), source)
-	if err := writeMain(work, name, id, o.Config, embedded); err != nil {
-		return err
-	}
-	if err := writeGoMod(work, source); err != nil {
-		return err
-	}
-	if err := goCmd(ctx, goBin, work, nil, "mod", "tidy"); err != nil {
-		return err
-	}
+	return embedded, nil
+}
 
-	out := orStr(o.Out, "dist")
-	if !filepath.IsAbs(out) {
-		out = filepath.Join(dir, out)
+// displayPath is path relative to dir when it's inside it.
+func displayPath(dir, path string) string {
+	if rel, err := filepath.Rel(dir, path); err == nil && !strings.HasPrefix(rel, "..") {
+		return rel
 	}
-	for _, t := range targets {
-		goos, goarch, _ := strings.Cut(t, "/")
-		start := time.Now()
-		fmt.Fprintf(o.Log, "%s building %s/%s...\n", stamp(), goos, goarch)
-		path, err := buildTarget(ctx, goBin, work, out, name, id, goos, goarch)
-		if err != nil {
-			return fmt.Errorf("%s/%s: %w", goos, goarch, err)
-		}
-		if rel, err := filepath.Rel(dir, path); err == nil && !strings.HasPrefix(rel, "..") {
-			path = rel
-		}
-		fmt.Fprintf(o.Log, "%s   %s (%s)\n", stamp(), path, time.Since(start).Round(100*time.Millisecond))
-	}
-	return nil
+	return path
 }
 
 // buildTarget builds one platform and returns what it wrote: an .app bundle on macOS, an executable elsewhere.
@@ -150,13 +196,19 @@ func buildTarget(ctx context.Context, goBin, work, out, name, id, goos, goarch s
 	if err := os.WriteFile(filepath.Join(app, "Contents", "Info.plist"), infoPlist(name, id, exe), 0o644); err != nil {
 		return "", err
 	}
-	// an ad-hoc signature over the whole bundle, so macOS runs it on this machine (no-op off macOS)
-	if goruntime.GOOS == "darwin" {
-		if cs, err := exec.LookPath("codesign"); err == nil {
-			_ = exec.CommandContext(ctx, cs, "--force", "--deep", "--sign", "-", app).Run()
-		}
-	}
+	adhocSign(ctx, app)
 	return app, nil
+}
+
+// adhocSign gives a macOS bundle an ad-hoc signature, so macOS runs it on this machine. It does nothing off macOS
+// (inside the build image, the host signs the bundles after the build).
+func adhocSign(ctx context.Context, app string) {
+	if goruntime.GOOS != "darwin" {
+		return
+	}
+	if cs, err := exec.LookPath("codesign"); err == nil {
+		_ = exec.CommandContext(ctx, cs, "--force", "--deep", "--sign", "-", app).Run()
+	}
 }
 
 // findSource is the PocketOne source tree to build against: the flag, $P1_SOURCE, else the checkout dir is in.
@@ -179,8 +231,8 @@ func findSource(flag, dir string) (string, error) {
 			break
 		}
 	}
-	return "", errors.New("no PocketOne source to build against: pass --source <checkout> or set P1_SOURCE " +
-		"(builds from a release's own source image come later)")
+	return "", errors.New("desktop build --local needs a PocketOne source tree: pass --source <checkout> or set " +
+		"P1_SOURCE, or drop --local to build in the build image")
 }
 
 func isSource(d string) bool {

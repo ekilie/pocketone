@@ -13,14 +13,20 @@ The same app folder you run with `pocketone serve` becomes a desktop app: `pocke
 port and shows it in a native window (the system webview, through [Wails](https://wails.io)). Your users install
 nothing else, and each one's data stays on their machine.
 
-Every platform builds from any machine with Go installed: no C compiler, no Docker, no Xcode. The desktop runtime uses
-Wails' cgo-free backends, which Wails marks experimental on macOS and Linux.
+All you need is `pocketone` and Docker: the build runs in a build image with Go and PocketOne's source, and every
+platform builds from any machine, with no C compiler or Xcode. The desktop runtime uses Wails' cgo-free backends,
+which Wails marks experimental on macOS and Linux.
 
 ## Install
 
-Desktop is built into `pocketone`. It needs [Go](https://go.dev/dl) 1.27 or newer on your `PATH`, since the build
-compiles your app. For now it also needs a PocketOne source checkout to build against: run it inside one, or pass
-`--source` (or set `P1_SOURCE`). A release's own source, so you don't need a checkout, comes later.
+Desktop is built into `pocketone`. Builds run in [Docker](https://docs.docker.com/get-docker/), in the build image
+for your `pocketone`'s version (`ghcr.io/pockethost/pocketone-build:v<version>`), pulled on first use. It holds Go
+and PocketOne's source with every dependency vendored, so once it's here builds work offline. A named volume
+(`pocketone-build-cache`) keeps Go's build cache, so rebuilds take seconds.
+
+A development `pocketone` (built from a checkout) builds its own image, `pocketone-build:dev`, from that checkout on
+first use (`pocketone desktop image` rebuilds it). With Go 1.27 or newer and a checkout, `--local` skips Docker and
+builds with your own Go (`--source` or `P1_SOURCE` names the checkout when you aren't in it).
 
 ## Configure
 
@@ -47,7 +53,7 @@ pocketone desktop build --all                                  # macOS, Windows 
 pocketone desktop build --target windows/amd64,linux/amd64     # some of them
 ```
 
-`dist/<os>-<arch>/` gets `<name>.app` on macOS (ad-hoc signed when built on a Mac, so it runs there), `<name>.exe` on
+`dist/<os>-<arch>/` gets `<name>.app` on macOS (signed ad hoc when you build on a Mac, so it runs there), `<name>.exe` on
 Windows (no console window), and `<name>` on Linux.
 
 What the desktop app does when it starts:
@@ -84,7 +90,8 @@ desktop.Run(desktop.App{Name: "Notes", ID: "dev.example.notes", Hooks: hooks, Mi
 ```
 
 Build it with `CGO_ENABLED=0 go build -tags purego` for macOS and Linux (Wails' cgo-free backends); Windows needs no
-tag.
+tag. The build image is [image/Dockerfile](image/Dockerfile): a `pocketone` and the vendored module `pocketone desktop
+prepare` writes.
 
 ## Example
 
