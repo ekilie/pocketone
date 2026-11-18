@@ -77,6 +77,14 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: "**/go.sum"
+      # ext/docker's tests run real PocketBase and PocketOne releases, downloaded from GitHub into ~/.cache/ce-docker-test
+      # (runtime_test.go); keep them between runs so a GitHub hiccup doesn't fail the job
+      - name: Cache ext/docker's test releases
+        if: matrix.module == 'ext/docker'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ce-docker-test
+          key: ce-docker-test-${{ hashFiles('ext/docker/testdata/releases.json') }}
       # proxy.golang.org sometimes drops a download mid-stream (INTERNAL_ERROR); fetch everything up front, with retries,
       # so a dropped connection costs a retry, not a red run.
       - name: Download modules
