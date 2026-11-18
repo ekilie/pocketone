@@ -8,6 +8,8 @@ summary: "An MCP endpoint at /mcp so agents can manage your app and call its too
 
 # MCP
 
+> Walkthrough for app owners: [Connect an AI agent](https://pocketone.dev/docs/features/mcp). This page is the technical reference.
+
 A [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp`, so an agent (Claude Code, a Claude
 connector, any Streamable HTTP client) can work with your app. No sidecar process.
 

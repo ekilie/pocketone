@@ -213,10 +213,10 @@ func contractSurfaces(r *reference, id string) string {
 	var b strings.Builder
 	b.WriteString("## Commands and APIs\n\n")
 	if c.Routed {
-		fmt.Fprintf(&b, "Its own HTTP API under `%s/`, described above. It has no generated commands or MCP tools. [Remote administration](/docs/remote) explains how PocketOne apps are managed from afar.\n\n", c.Prefix)
+		fmt.Fprintf(&b, "Its own HTTP API under `%s/`, described above. It has no generated commands or MCP tools. [Remote administration](/docs/features/remote) explains how PocketOne apps are managed from afar.\n\n", c.Prefix)
 		return b.String()
 	}
-	b.WriteString("Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote administration](/docs/remote), or the full [CLI](/docs/reference/cli), [REST](/docs/reference/rest) and [MCP](/docs/reference/mcp) references.\n\n")
+	b.WriteString("Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote administration](/docs/features/remote), or the full [CLI](/docs/reference/cli), [REST](/docs/reference/rest) and [MCP](/docs/reference/mcp) references.\n\n")
 	for _, op := range c.Ops {
 		fmt.Fprintf(&b, "### %s\n\n", op.Name)
 		if op.Desc != "" {
@@ -362,7 +362,7 @@ func cliReference(m *manifest) string {
 	r := m.ref
 	var b strings.Builder
 	b.WriteString(refFrontMatter("CLI reference", "Every command of the pocketone binary: PocketBase's own, the standard extensions', and one per contract operation."))
-	b.WriteString("# CLI reference\n\nEvery command of the `pocketone` binary with its [standard extensions](/docs/extensions/standard): PocketBase's own, the ones extensions add, and a `pocketone remote …` command for every operation of every contract, generated from it ([how](/docs/remote)). `pocketone <command> --help` says the same.\n\n")
+	b.WriteString("# CLI reference\n\nEvery command of the `pocketone` binary with its [standard extensions](/docs/extensions/standard): PocketBase's own, the ones extensions add, and a `pocketone remote …` command for every operation of every contract, generated from it ([how](/docs/features/remote)). `pocketone <command> --help` says the same.\n\n")
 	b.WriteString("## Global flags\n\nEvery command takes these.\n\n")
 	flagTable(&b, r.Global)
 	tops := map[string]bool{}
@@ -422,7 +422,7 @@ func restReference(m *manifest) string {
 	b.WriteString("- **Auth:** an `Authorization` header with a superuser's auth token or an [API token](/docs/extensions/tokens). Each operation needs its token scope; a superuser's own auth token passes every scope.\n")
 	b.WriteString("- **Discovery:** `GET /api/_c/remote/v1` says who you are and lists every contract the app offers ([remote/v1](/docs/contracts/remote/v1)).\n")
 	b.WriteString("- **Input:** a JSON body for `POST`, query parameters for `GET`. **Answers** are JSON; streams are server-sent events.\n")
-	b.WriteString("- **Same as the CLI and MCP:** every operation here is also a `pocketone` command and an MCP tool, behind the same checks ([how](/docs/remote)).\n\n")
+	b.WriteString("- **Same as the CLI and MCP:** every operation here is also a `pocketone` command and an MCP tool, behind the same checks ([how](/docs/features/remote)).\n\n")
 	for _, c := range r.Contracts {
 		fmt.Fprintf(&b, "## %s\n\n", c.ID)
 		prov := ""
@@ -458,7 +458,7 @@ func mcpReference(m *manifest) string {
 	r := m.ref
 	var b strings.Builder
 	b.WriteString(refFrontMatter("MCP reference", "Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments."))
-	b.WriteString("# MCP reference\n\nA PocketOne app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)): PocketBase's whole API as `pb_*` tools, the tools your `pb_hooks` add, and one tool per operation of every contract the app provides, listed here for the [standard set](/docs/extensions/standard). Each contract tool calls the contract, so it passes the same token scope check and hooks as the REST API and the CLI ([how](/docs/remote)). Uploads and downloads have no tool.\n\n")
+	b.WriteString("# MCP reference\n\nA PocketOne app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)): PocketBase's whole API as `pb_*` tools, the tools your `pb_hooks` add, and one tool per operation of every contract the app provides, listed here for the [standard set](/docs/extensions/standard). Each contract tool calls the contract, so it passes the same token scope check and hooks as the REST API and the CLI ([how](/docs/features/remote)). Uploads and downloads have no tool.\n\n")
 	for _, c := range r.Contracts {
 		var tools []opRef
 		for _, op := range c.Ops {

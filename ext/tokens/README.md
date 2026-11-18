@@ -8,6 +8,8 @@ summary: "Long-lived API tokens with scopes."
 
 # Tokens
 
+> Walkthrough for app owners: [API tokens](https://pocketone.dev/docs/features/tokens). This page is the technical reference.
+
 Long-lived API tokens for your app: secrets that start with `pbt_`, for CI, deploys, scripts and agents. Each token
 belongs to an account and acts as that account. It can be limited to scopes, given an expiry, and revoked on its own.
 Send one as `Authorization: Bearer pbt_…`. Ordinary PocketBase auth tokens keep working unchanged.

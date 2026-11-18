@@ -42,7 +42,7 @@ Only superusers can see or run a restore.
 
 ## From your terminal
 
-Sign in to your app once ([Remote administration](/docs/remote)), then:
+Sign in to your app once ([Remote administration](/docs/features/remote)), then:
 
 ```bash
 pocketone remote restore points        # how far back you can go

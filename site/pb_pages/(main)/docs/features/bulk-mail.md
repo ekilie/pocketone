@@ -1,0 +1,126 @@
+---
+title: Send bulk mail
+description: Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
+---
+
+# Send bulk mail
+
+Got a newsletter, a launch or a change to announce? Write it once, pick which users get it, and your app sends it at a
+steady pace through its own mail settings. Every message gets an unsubscribe link, and people who unsubscribe, bounce
+or complain are never mailed again.
+
+This is on for every PocketOne app. Nothing is sent until a superuser starts a campaign.
+
+## Before your first campaign
+
+1. Sign in to the dashboard as a superuser and open **Settings → Mail**. Set up your mail server and sender there, as
+   you would for any PocketBase app. Campaigns send through them.
+2. Below that form, in the **Bulk mail** section, fill in **Postal address**. It's shown in every campaign footer, and
+   anti-spam laws require one. Click **Save bulk mail settings**.
+3. Open **Settings → Application** and check that **Application URL** is the address people reach your app on.
+   Unsubscribe links are built from it.
+
+## Send a campaign from the dashboard
+
+1. Open **Mail** in the dashboard menu and click **New campaign**. It starts as a draft for the verified users of
+   `users`.
+2. Fill in **Name**, **Subject** and **Body**. Use `{{record.name}}` (any field of the user's record), `{{email}}` and
+   `{{campaign.name}}` to fill in each message.
+3. Under **Audience**, pick who gets it. With **Filter**, choose the **Collection**, an optional **Filter** in the same
+   syntax as API rules (such as `verified = true`), and the **Email field**. Click **Count recipients** to see how
+   many match, how many are suppressed, and a few sample addresses.
+4. Click **Save changes**. Click **Preview** to see the message for one recipient, or fill in **Test address** and
+   click **Send test**.
+5. Click **Send** and confirm.
+
+The campaign page shows its progress and a **Recipients** table. While it runs, you can **Pause**, **Resume** or
+**Cancel** it.
+
+To send later, set **Schedule (UTC)** before you save. The button then says **Schedule**. To send slower than your
+app's limit, set **Max per second**.
+
+For audiences a filter can't express, choose **SQL** and write a read-only `SELECT` that returns an `email` column.
+Every other column it returns can be used in the message as `{{record.column}}`. A view works too: pick it as the
+**Collection**.
+
+## Send it again to new users
+
+Each address gets a campaign at most once. Click **Send** on a finished campaign and only users who match now but
+weren't mailed before get it.
+
+## From your terminal
+
+Write the campaign in the dashboard first. Then sign in to your app once
+([Remote administration](/docs/features/remote)) and run it from your terminal:
+
+```bash
+pocketone remote bulkmail preview --campaign <id>                  # see the message
+pocketone remote bulkmail test --campaign <id> --to you@example.com
+pocketone remote bulkmail start --campaign <id>
+pocketone remote bulkmail pause --campaign <id>                    # also resume, cancel
+```
+
+`--limit 100` on `start` queues at most 100 new recipients, to send a campaign in batches. To see who an audience
+reaches before you send:
+
+```bash
+pocketone remote bulkmail count --audience '{"collection": "users", "filter": "verified = true", "email_field": "email"}'
+```
+
+## From pb_hooks
+
+`$bulkmail` does the same from your JS hooks:
+
+```js
+const { count, suppressed } = $bulkmail.count({ collection: "users", filter: "verified = true", email_field: "email" })
+$bulkmail.start("CAMPAIGN_ID")
+$bulkmail.suppress("someone@example.com")
+```
+
+## From an agent
+
+An agent connected to your app over [MCP](/docs/reference/mcp) has a tool for each step: `bulkmail_count`,
+`bulkmail_preview`, `bulkmail_test`, `bulkmail_start`, `bulkmail_pause`, `bulkmail_resume` and `bulkmail_cancel`.
+Count and preview need a token with the `bulkmail:read` scope, the rest the `bulkmail` scope. Only superusers can run
+campaigns.
+
+## Unsubscribes, bounces and complaints
+
+- **Unsubscribe:** every message ends with a footer holding your postal address and an unsubscribe link. It also
+  carries the one-click unsubscribe headers that Gmail and Yahoo require from bulk senders. Opening the link shows a
+  confirm button, so link scanners can't unsubscribe anyone.
+- **Suppressions:** **Mail → Suppressions** lists the addresses that never get campaign mail, whatever the audience
+  says. Unsubscribes are added automatically. Click **Add address** to add one by hand, or **Export CSV** to download
+  the list.
+- **Bounces and complaints:** to add those to the list too, open **Bounces and complaints** in the **Bulk mail**
+  section. For Amazon SES, subscribe your SNS topic to the **Amazon SES (SNS) endpoint** shown there. For other
+  providers, set a **Webhook secret** and point the provider at the **Generic webhook** URL.
+
+## Limits
+
+- Your app sends at most **5 messages a second** and **5,000 a day** (UTC), across all campaigns. The **Bulk mail**
+  section shows your app's limits and how many it sent today. A host may set other limits for your app.
+- A message counts as sent only once the mail server accepts it, so a restart doesn't send twice or skip anyone.
+- A permanent error from the mail server fails that recipient. Other errors are retried, up to three attempts.
+- A campaign pauses itself when more than 5% of its sends fail after the first 100, or when spam complaints pass 0.3%
+  of its sends (at least 3). The reason shows next to its status.
+
+## Try it locally
+
+In dev mode with SMTP off, `pocketone` catches every mail, campaigns included, in an inbox at http://127.0.0.1:8025:
+
+```bash
+pocketone serve --dev
+```
+
+## Change it
+
+There's no `pocketone.yaml` section for bulk mail; the [pocketone.yaml reference](/docs/config-reference) lists none.
+Sending uses your **Settings → Mail** server and sender, and you lower the pace per campaign with **Max per second**.
+
+## How it works
+
+- [Bulk Mail](/docs/extensions/bulkmail) runs the campaigns, the pages in the dashboard and `$bulkmail`.
+- [bulkmail/v1](/docs/contracts/bulkmail/v1) is the contract behind the command, the REST API and the MCP tools.
+- [mail.suppression/v1](/docs/contracts/mail.suppression/v1) keeps the suppression list and the unsubscribe link.
+- [mail.feedback/v1](/docs/contracts/mail.feedback/v1) takes bounce and complaint reports from your mail provider.

@@ -1,6 +1,7 @@
 ---
 title: Remote administration
 description: Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
+discussion: "pocketone.dev/docs/remote"
 ---
 
 # Remote administration
