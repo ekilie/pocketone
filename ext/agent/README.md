@@ -158,10 +158,13 @@ func main() {
 
 ## The built-in engine
 
-The model runs in `ext/agent/engine`: Go, no cgo, with assembly for the hot loops on arm64 (Apple silicon, Graviton,
-Ampere), where it runs about as fast as llama.cpp on the CPU. On x86 it uses plain Go for now, which is several times
-slower. It reads GGUF files (Q4_K, Q6_K, Q8_0, F16) and runs the Qwen3 family. Other models work through your own API
-(Ollama, llama-server).
+The model runs in `ext/agent/engine`: Go, no cgo, with assembly for the hot loops on arm64 (NEON) and x86 (AVX2), where
+it matches or beats llama.cpp-based servers on the CPU for short jobs. Other CPUs fall back to plain Go, which is many
+times slower. It reads GGUF files (Q4_K, Q6_K, Q8_0, F16) and runs the Qwen3 family. Other models work through your own
+API (Ollama, llama-server).
+
+[examples/chat](examples/chat/README.md) is a small chat app that answers questions about an `llms-full.txt`
+(PocketOne's docs by default).
 
 ## License
 

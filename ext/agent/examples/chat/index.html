@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs Chat</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
+    --me: #1f6feb; --me-text: #ffffff; --accent: #1f6feb; --warn: #9a6700; --err: #c62828;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141414; --panel: #1e1e1e; --text: #ececea; --muted: #9a9a94; --line: #2e2e2c;
+            --me: #2f81f7; --me-text: #ffffff; --accent: #58a6ff; --warn: #d29922; --err: #f85149; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; min-height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 20px 0 12px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 18px; }
+  #status { margin-top: 4px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  #status.warn { color: var(--warn); } #status.err { color: var(--err); }
+  #log { flex: 1; padding: 16px 0; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .me { align-self: flex-end; background: var(--me); color: var(--me-text); border-bottom-right-radius: 4px; }
+  .bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .bot code { background: color-mix(in srgb, var(--text) 9%, transparent); padding: 1px 5px; border-radius: 4px;
+              font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .bot pre { margin: 8px 0; padding: 10px 12px; border-radius: 8px; overflow-x: auto; white-space: pre;
+             background: color-mix(in srgb, var(--text) 7%, transparent); }
+  .bot pre code { background: none; padding: 0; }
+  .meta { margin-top: 8px; font-size: 12px; color: var(--muted); white-space: normal; }
+  .meta a { color: var(--accent); text-decoration: none; } .meta a:hover { text-decoration: underline; }
+  .thinking { color: var(--muted); font-style: italic; }
+  .error { color: var(--err); }
+  .empty { color: var(--muted); text-align: center; margin-top: 18vh; }
+  .empty button { margin: 4px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+                  background: var(--panel); color: var(--text); cursor: pointer; font: inherit; font-size: 13px; }
+  form { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0 20px; display: flex; gap: 8px; }
+  textarea { flex: 1; resize: none; height: 46px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+             background: var(--panel); color: var(--text); font: inherit; }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button.send { padding: 0 18px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font: inherit;
+                font-weight: 600; cursor: pointer; } button.send:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Docs Chat</h1>
+    <div id="status">Connecting…</div>
+  </header>
+  <div id="log">
+    <div class="empty" id="empty">
+      <p>Ask about the docs this app was given.</p>
+      <div>
+        <button>How do I restore my database to an earlier moment?</button>
+        <button>How do I run many apps on one server?</button>
+        <button>What is PocketPages?</button>
+      </div>
+    </div>
+  </div>
+  <form id="f">
+    <textarea id="q" placeholder="Ask a question…" autofocus></textarea>
+    <button class="send" id="send">Send</button>
+  </form>
+</div>
+<script>
+const log = document.getElementById('log'), q = document.getElementById('q'), send = document.getElementById('send')
+const statusEl = document.getElementById('status')
+const history = []
+
+function esc(s) { return s.replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c])) }
+// just enough Markdown for short answers: ``` blocks, `code`, **bold**
+function inline(s) { return esc(s).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>') }
+function md(s) {
+  return s.split(/```[a-zA-Z0-9_-]*\n?/).map((part, i) =>
+    i % 2 ? `<pre><code>${esc(part.replace(/\n$/, ''))}</code></pre>` : inline(part)).join('')
+}
+
+function add(cls, html) {
+  document.getElementById('empty')?.remove()
+  const d = document.createElement('div')
+  d.className = 'msg ' + cls
+  d.innerHTML = html
+  log.appendChild(d)
+  d.scrollIntoView({behavior: 'smooth', block: 'end'})
+  return d
+}
+
+async function status() {
+  try {
+    const r = await (await fetch('/api/chat/status')).json()
+    const a = r.agent || {}
+    if (!a.backend) { statusEl.className = 'err'; statusEl.textContent = a.message || 'No model configured'; return false }
+    if (!a.ready) { statusEl.className = 'warn'; statusEl.textContent = a.message || 'Model loading…'; return false }
+    statusEl.className = ''
+    statusEl.textContent = `${a.model} (${a.backend}) · ${r.passages || '…'} passages from ${r.knowledge}`
+    return r.passages > 0
+  } catch { statusEl.className = 'err'; statusEl.textContent = 'Server unreachable'; return false }
+}
+async function poll() { if (!(await status())) setTimeout(poll, 2000) }
+poll()
+
+async function ask(text) {
+  add('me', esc(text))
+  history.push({role: 'user', content: text})
+  const pending = add('bot', '<span class="thinking">Thinking…</span>')
+  send.disabled = true
+  const t = Date.now()
+  const tick = setInterval(() => { pending.innerHTML = `<span class="thinking">Thinking… ${Math.round((Date.now() - t) / 1000)} s</span>` }, 1000)
+  try {
+    const res = await fetch('/api/chat', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({messages: history})})
+    const r = await res.json()
+    if (!res.ok) throw new Error(r.error || r.message || res.statusText)
+    history.push({role: 'assistant', content: r.answer})
+    const src = (r.sources || []).map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)).join(' · ')
+    pending.innerHTML = md(r.answer) +
+      `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in / ${r.usage.outputTokens} out` +
+      (src ? `<br>Sources: ${src}` : '') + '</div>'
+  } catch (err) {
+    history.pop()
+    pending.innerHTML = `<span class="error">${esc(err.message)}</span>`
+  } finally { clearInterval(tick); send.disabled = false; q.focus() }
+}
+
+document.getElementById('f').addEventListener('submit', e => {
+  e.preventDefault()
+  const text = q.value.trim()
+  if (!text || send.disabled) return
+  q.value = ''
+  ask(text)
+})
+q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('f').requestSubmit() } })
+log.addEventListener('click', e => { if (e.target.matches('.empty button')) ask(e.target.textContent) })
+</script>
+</body>
+</html>
