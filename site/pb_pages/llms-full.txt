@@ -1602,7 +1602,7 @@ Supported arguments are:
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -1623,7 +1623,7 @@ Every `pocketone oauth` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -1714,7 +1714,7 @@ Every `pocketone pitr` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -2299,7 +2299,7 @@ pocketone serve [domain(s)]
 | `--autotlsDNSTokenEnv` | string | `CF_API_TOKEN` | environment variable holding the DNS provider's API token for `--autotlsDNS` |
 | `--autotlsDomains` | stringSlice | – | extra domains for `--autotls`, obtained at start (comma separated; wildcards like \*.example.com need `--autotlsDNS`) |
 | `--autotlsEmail` | string | – | ACME account email for `--autotls` (expiry notices from the CA) |
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -2314,7 +2314,7 @@ pocketone serve [domain(s)]
 | `--pagesDir` | string | – | the directory with the PocketPages app (default pb\_pages next to pb\_data); served when it exists |
 | `--pitr` | bool | `true` | point-in-time restore: replicate data.db into pb\_data/litestream/ while serving |
 | `--pitrRetention` | duration | `72h0m0s` | how far back a point-in-time restore can go |
-| `--publicDir` | string | `./pb_public` | the directory to serve static files |
+| `--publicDir` | string | `<the binary's folder>/pb_public` | the directory to serve static files |
 | `--queryTimeout` | int | `30` | the default SELECT queries timeout in seconds |
 | `--s3Redirect` | bool | `true` | answer file downloads with a short-lived signed redirect to the bucket when S3 file storage is on |
 | `--s3RedirectTTL` | duration | `5m0s` | how long each signed file download URL stays valid |
@@ -2331,7 +2331,7 @@ Every `pocketone superuser` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -2410,7 +2410,7 @@ Every `pocketone template` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -2455,7 +2455,7 @@ Every `pocketone token` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -2779,6 +2779,26 @@ Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certifica
 
 Owned by [Auto TLS](https://pocketone.dev/docs/extensions/autotls).
 
+#### `backups:`
+
+Turns the backups extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.backups`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `bulkmail:`
+
+Turns the bulkmail extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.bulkmail`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
 #### `cache:`
 
 The cache (cache/v1): one store for every app in the process (memory, disk tier), and caps per bucket.
@@ -2798,6 +2818,16 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `buckets` | map of object |  | Caps per bucket name, over what its code asks for. |
 
 Owned by [Cache](https://pocketone.dev/docs/extensions/cache).
+
+#### `deploy:`
+
+Turns the deploy extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.deploy`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `docker:`
 
@@ -2875,6 +2905,16 @@ Instance data on this host: how often disk use is measured and last-request time
 
 Owned by [Stats](https://pocketone.dev/docs/extensions/stats).
 
+#### `mcp:`
+
+Turns the mcp extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.mcp`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
 #### `mothership:`
 
 A community mothership to mirror instances and edges from: url, login, this edge's id, internal URL, region, apex.
@@ -2898,6 +2938,16 @@ Owned by [Mothership](https://pocketone.dev/docs/extensions/mothership).
 Serve many instances (a multisite host) instead of a single app. The runtimes are the providers of runtime/v1.
 
 Owned by [Multisite](https://pocketone.dev/docs/extensions/multisite).
+
+#### `pages:`
+
+Turns the pages extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.pages`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `pitr:`
 
@@ -2928,6 +2978,7 @@ Runtime provider pocker: instances run as isolates in this process (root folder,
 | `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
+| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
 
 Owned by [Pocker](https://pocketone.dev/docs/extensions/pocker).
 
@@ -2955,6 +3006,16 @@ Default rate limits for every instance (per instance: extensions.firewall.rate_l
 | `off` | bool |  | No rate limiting. The default in dev mode unless rate_limits is set. |
 
 Owned by [Firewall](https://pocketone.dev/docs/extensions/firewall).
+
+#### `remotes:`
+
+Turns the remotes extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.remotes`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `s3redirect:`
 
@@ -2985,6 +3046,36 @@ The serve command: http, https and CORS origins, and for a single app its static
 | `pages_dir` | string |  | Single app only: the PocketPages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
 | `hooks_watch` | bool |  | Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
 | `automigrate` | bool |  | Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
+
+#### `settings:`
+
+Turns the settings extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.settings`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `templates:`
+
+Turns the templates extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.templates`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `tokens:`
+
+Turns the tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.tokens`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `vacuum:`
 
@@ -3867,7 +3958,8 @@ Source: https://pocketone.dev/docs/contracts/deploy/v1
 
 # deploy/v1
 
-A project's code on an app: `pb_hooks`, `pb_migrations`, `pb_public` and packages. Clients send only the files
+A project's code on an app: its `pb_*` folders except `pb_data` (`pb_hooks`, `pb_migrations`, `pb_pages`,
+`pb_public`, `pb_templates`) and packages (`package.json`, the lockfile, `node_modules`). Clients send only the files
 the app lacks, then swap the new set in at once. Restart and logs are [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)'s, which
 it requires.
 
@@ -6362,7 +6454,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote
 //	cd myproject && mkdir pb_hooks && echo 'routerAdd("GET", "/hi", (e) => e.string(200, "hi"))' > pb_hooks/main.pb.js
-//	go run ./example link http://127.0.0.1:8090 --email admin@example.com   # password: password
+//	go run ./example link http://127.0.0.1:8090   # sign in in the browser as admin@example.com / password
 //	go run ./example deploy
 //	curl http://127.0.0.1:8090/hi
 //
@@ -8305,20 +8397,24 @@ A Go build can narrow both (see [Go config](#go-config)).
 ### Scopes
 
 A token without scopes has its owner's full rights. A token with scopes works only on the requests its scopes cover,
-plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Extensions and your own `pb_hooks` register the scopes. In
-`pocketone` the built-in ones are:
+plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Extensions, contracts and your own
+`pb_hooks` register the scopes. In `pocketone` they are:
 
 | Scope | From | Allows | Who can hold it |
 |---|---|---|---|
-| `deploy` | [Deploy](https://pocketone.dev/docs/extensions/deploy) | Deploy code (hooks, migrations, public files, packages), read files and logs | superusers |
+| `deploy` | [Deploy](https://pocketone.dev/docs/extensions/deploy) | Deploy code (hooks, migrations, pages, public files, packages), read files and logs | superusers |
 | `deploy:read` | [Deploy](https://pocketone.dev/docs/extensions/deploy) | Read deployed files and stream logs | superusers |
+| `<name>`, `<name>:read` | each [contract](https://pocketone.dev/docs/contracts) the app provides | That contract's operations under `/api/_c/<id>/`: `remote` and `remote:read`, `restore` and `restore:read`, `settings` and `settings:read`, `bulkmail:read`, `cache`, ... | per contract |
 
-`pocketone token scopes` lists every scope your app has, with its paths.
+Contract scopes are registered when the app serves, so **Settings → API tokens** on the running app lists every
+scope. The `pocketone token` command works offline and doesn't see them: `token scopes` lists only `deploy` and
+`deploy:read`, and `token create --scope restore` fails with `unknown scope "restore"`. Create a token with a
+contract scope from the dashboard or the [REST API](#rest-api).
 
 ### Your own scopes
 
-Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on the
-[the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) consent page:
+Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on
+[the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth)'s consent page:
 
 ```js
 // pb_hooks/scopes.pb.js
@@ -10158,7 +10254,15 @@ pocker:
   egress_allow: []          # private networks instances may still reach
   max_js_execution: 30s     # default limits; each instance can override them
   max_js_allocation: 64MiB
+  isolate_config:           # every instance's config, in pocketone.yaml's shape
+    tokens: { enabled: false }
 ```
+
+`isolate_config` holds one section per extension the instances run (the standard set's members and your own
+extensions), each taking what an instance's `extensions.<name>` takes. It is every instance's base: an instance's own
+`extensions.<name>` overrides it key by key, so one instance can turn back on what `isolate_config` turns off. A
+section for an extension the instances don't run stops startup. The top-level sections of `pocketone.yaml` configure
+a single app; on a multisite host they don't reach the instances.
 
 An instance overrides any limit in its own `limits` (missing fields keep the default):
 
@@ -10190,6 +10294,7 @@ Runtime provider pocker: instances run as isolates in this process (root folder,
 | `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
+| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
 
 ## Use
 
@@ -12472,17 +12577,91 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 
 - **Reconfigure a member:** replace it, e.g. `set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour})`. A
   member set to nil is an error.
-- **Turn one off:** `enabled: false` in its `pocketone.yaml` section, or in an instance's `extensions.<name>` under
-  Pocker. Extensions that require it turn off too, and say why.
+- **Turn one off:** on a single app, `enabled: false` in its `pocketone.yaml` section (`tokens: {enabled: false}`);
+  for every instance under Pocker, in its `pocker: isolate_config:` section, and for one instance, in its
+  `extensions.<name>`. Extensions that require it turn off too, and
+  say why. cache, s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
 - **Add your own:** `set.Add(myextension.New())`. Extras register after the members, under the same rules.
 - **Pick providers:** `set.Providers` is `pocketone.yaml`'s `providers:` section, for a contract more than one
   extension provides.
 
 ### pocketone.yaml reference
 
+#### `backups:`
+
+Turns the backups extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.backups`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `bulkmail:`
+
+Turns the bulkmail extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.bulkmail`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `deploy:`
+
+Turns the deploy extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.deploy`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `mcp:`
+
+Turns the mcp extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.mcp`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `pages:`
+
+Turns the pages extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.pages`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
 #### `providers:`
 
 Which extension provides a contract when several do.
+
+#### `remotes:`
+
+Turns the remotes extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.remotes`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `settings:`
+
+Turns the settings extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.settings`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `templates:`
+
+Turns the templates extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.templates`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `tokens:`
+
+Turns the tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.tokens`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
 ## Use
 

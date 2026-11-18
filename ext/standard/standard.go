@@ -6,8 +6,8 @@
 //	set.Add(mailtrap.New())                                         // the host's own extensions
 //	app := set.NewApp(pocketbase.Config{}, jsvm.Config{})
 //
-// Members can be reconfigured, never removed: an app turns one off with its `enabled: false` setting, and the startup
-// lines say so. Extensions find each other through contracts (ext/contracts), resolved per app.
+// Members can be reconfigured, never removed: a single app turns one off with `enabled: false` in its pocketone.yaml
+// section, an instance on a multisite host in its `extensions.<name>`, and the startup lines say so. Extensions find each other through contracts (ext/contracts), resolved per app.
 package standard
 
 import (
@@ -261,7 +261,7 @@ func (s *Set) Register(app core.App, jsCfg jsvm.Config) error {
 // The pocketone binary passes PocketBase's own plugins/jsvm here in its goja compatibility mode; then the set's JS
 // APIs ($mcp, $tokens, pages, JS contracts) aren't bound.
 func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error {
-	plan, err := s.Prepare(app, nil)
+	plan, err := s.Prepare(app, ConfiguredSwitches) // pocketone.yaml's `<member>: {enabled: false}`
 	if err != nil {
 		return err
 	}

@@ -190,7 +190,7 @@ Supported arguments are:
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -211,7 +211,7 @@ Every `pocketone oauth` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -302,7 +302,7 @@ Every `pocketone pitr` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -887,7 +887,7 @@ pocketone serve [domain(s)]
 | `--autotlsDNSTokenEnv` | string | `CF_API_TOKEN` | environment variable holding the DNS provider's API token for `--autotlsDNS` |
 | `--autotlsDomains` | stringSlice | – | extra domains for `--autotls`, obtained at start (comma separated; wildcards like \*.example.com need `--autotlsDNS`) |
 | `--autotlsEmail` | string | – | ACME account email for `--autotls` (expiry notices from the CA) |
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -902,7 +902,7 @@ pocketone serve [domain(s)]
 | `--pagesDir` | string | – | the directory with the PocketPages app (default pb\_pages next to pb\_data); served when it exists |
 | `--pitr` | bool | `true` | point-in-time restore: replicate data.db into pb\_data/litestream/ while serving |
 | `--pitrRetention` | duration | `72h0m0s` | how far back a point-in-time restore can go |
-| `--publicDir` | string | `./pb_public` | the directory to serve static files |
+| `--publicDir` | string | `<the binary's folder>/pb_public` | the directory to serve static files |
 | `--queryTimeout` | int | `30` | the default SELECT queries timeout in seconds |
 | `--s3Redirect` | bool | `true` | answer file downloads with a short-lived signed redirect to the bucket when S3 file storage is on |
 | `--s3RedirectTTL` | duration | `5m0s` | how long each signed file download URL stays valid |
@@ -919,7 +919,7 @@ Every `pocketone superuser` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -998,7 +998,7 @@ Every `pocketone template` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
@@ -1043,7 +1043,7 @@ Every `pocketone token` command takes these.
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--dev` | bool | `true` | enable dev mode, aka. printing logs and sql statements to the console |
+| `--dev` | bool | – | enable dev mode, aka. printing logs and sql statements to the console |
 | `--dir` | string | `<the binary's folder>/pb_data` | the PocketBase data directory |
 | `--encryptionEnv` | string | – | the env variable whose value of 32 characters will be used as encryption key for the app settings (default none) |
 | `--hooksDir` | string | – | the directory with the JS app hooks |
