@@ -131,6 +131,44 @@ lipo -create dist/darwin-arm64/Hello.app/Contents/MacOS/Hello dist/darwin-amd64/
   -output Hello.app/Contents/MacOS/Hello
 ```
 
+### Without an Apple Developer account
+
+Without a Developer ID, macOS still runs your app, but anyone who downloads it is warned first. What they see depends on
+how it's signed:
+
+| Your app is | Someone who downloads it sees |
+|---|---|
+| Signed ad hoc (what `desktop build` does with no `sign.macos`) | "Apple could not verify it is free of malware", and the app doesn't open |
+| Signed with a self-signed certificate | The same warning |
+| Signed with a Developer ID, not notarized | A similar warning |
+| Signed with a Developer ID and notarized | Only "downloaded from the internet, open it?" |
+
+The warning only appears for downloaded apps, which macOS marks as quarantined. An app you build and run on your own
+Mac opens without it.
+
+**Opening it anyway.** For yourself, testers and people you know, that's fine. They:
+
+1. Open the app and dismiss the warning.
+2. Go to **System Settings → Privacy & Security**, scroll to **Security** and click **Open Anyway** next to the app.
+3. Confirm, and the app opens from then on.
+
+Or, if they're comfortable with Terminal, they remove the quarantine mark, and the app opens normally:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Hello.app
+```
+
+**Self-signing.** You can make your own code-signing certificate: in Keychain Access, choose **Keychain Access →
+Certificate Assistant → Create a Certificate**, set **Certificate Type** to **Code Signing**, and then mark it
+**Always Trust** for code signing (double-click it, open **Trust**). Its name then goes in `sign.macos.identity`, without
+`notary_profile`, since Apple only notarizes Developer ID apps.
+
+It doesn't remove the warning: macOS can't trust a certificate it doesn't know, so a self-signed app gets the same
+warning as an ad hoc one. What it gives you is the same identity from one version to the next, so macOS remembers what
+your users allowed the app to do (files, camera, keychain items) when they update.
+
+For an app you give to the public, only a Developer ID and notarization open it without warnings.
+
 ## Windows
 
 Windows checks an **Authenticode** signature. You need a code-signing certificate from a certificate authority, such
