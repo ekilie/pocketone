@@ -5,7 +5,7 @@ PocketOne does everything PocketBase does, and adds the features below. They're 
 binary, and most are on by default. There's nothing to install.
 
 Three of them set PocketOne apart, and PocketBase can't do any of them: hooks with `async`, `import` and TypeScript,
-pages in TSX, and hundreds of apps running as isolates in one process.
+async pages in TSX, and hundreds of apps running as isolates in one process.
 
 ## Modern JavaScript on the server
 
@@ -30,26 +30,20 @@ routerAdd("GET", "/api/orders/{id}/total", async (e) => {
 
 **[Pages in TSX, TypeScript or EJS](https://pocketone.dev/docs/features/sites).** Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in `pb_pages`
 and it's a server-rendered page, with your records a function call away. Components `import` each other, and `+page.ts`
-and `+api.ts` route files are TypeScript. esbuild is built into the binary: no Node, no `npm install`, no build step.
-
-```ts
-// pb_pages/products/[id]/+page.ts
-export default {
-  load(ctx: any) {
-    ctx.data.product = ctx.app.findRecordById('products', ctx.params.id)
-  },
-}
-```
+and `+api.ts` route files are TypeScript. Every part of a page can `await`: loaders, handlers, middleware, EJS tags and
+`async` components, and sibling components render at the same time. esbuild is built into the binary: no Node, no
+`npm install`, no build step.
 
 ```tsx
-// pb_pages/products/[id]/index.tsx
+// pb_pages/products/[id].tsx
 import Price from './_private/Price'
 
-export default function Product({ data }: any) {
+export default async function Product({ ctx }: any) {
+  const product = await ctx.app.findRecordById.async('products', ctx.params.id)
   return (
     <article>
-      <h1>{data.product.getString('name')}</h1>
-      <Price cents={data.product.getInt('price')} />
+      <h1>{product.getString('name')}</h1>
+      <Price cents={product.getInt('price')} />
     </article>
   )
 }
@@ -74,7 +68,7 @@ pocker: { root: ./pb_root }
 | | PocketBase gives you | PocketOne adds |
 |---|---|---|
 | [QuickJS hooks](https://pocketone.dev/docs/quickjs) | Hooks on goja: CommonJS, no `await`, a pool of separate runtimes | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
-| [PocketPages sites](https://pocketone.dev/docs/features/sites) | Static files from `pb_public` | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with no build step |
+| [PocketPages sites](https://pocketone.dev/docs/features/sites) | Static files from `pb_public` | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
 | [PocketBase isolates](https://pocketone.dev/docs/features/isolates) | One app per process; a container or VM each to host many | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
 | [Point-in-time restore](https://pocketone.dev/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
 | [Deploy and live sync](https://pocketone.dev/docs/features/deploy) | Copy files to the server yourself, then restart | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |

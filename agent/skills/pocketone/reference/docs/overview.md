@@ -22,7 +22,8 @@ Your `pb_hooks` run on QuickJS with PocketBase's JS API, so they work unchanged,
 ### Pages in TSX, TypeScript or EJS
 
 Put `.tsx`, `.jsx`, `.ejs` or Markdown files in a `pb_pages` folder and they're server-rendered pages, with your
-records a function call away. Components `import` each other and route files can be TypeScript. esbuild is built into
+records a function call away. Components `import` each other, route files can be TypeScript, and every part of a
+page can `await`. esbuild is built into
 the binary, so there's no Node, no `npm install` and no build step. This site is one. `pocketone pages create myapp`
 starts a new site from a starter kit. [PocketPages](https://pocketone.dev/docs/features/sites) shows a page in TSX.
 

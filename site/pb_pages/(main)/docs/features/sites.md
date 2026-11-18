@@ -5,11 +5,12 @@ description: Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, str
 
 # PocketPages: sites in TSX, TypeScript or EJS
 
-> **PocketBase:** `pb_public` serves static files. **PocketOne:** server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with your records a function call away and no build step.
+> **PocketBase:** `pb_public` serves static files. **PocketOne:** server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere, your records a function call away, and no build step.
 
 Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in a `pb_pages` folder next to `pb_data`, and your app serves it as a web
 page. Each file is a route. Components `import` each other, route files can be TypeScript (`+page.ts`, `+api.ts`), and
-page code reads and writes your records directly. This is PocketPages, built into PocketOne.
+page code reads and writes your records directly. Every part of a page can `await`, and the app keeps serving other
+requests while it waits. This is PocketPages, built into PocketOne.
 
 esbuild is built into the `pocketone` binary, so TSX and TypeScript compile the first time a page is used: no Node, no
 `npm install`, no bundler, no build step. It's on for every PocketOne app whenever a `pb_pages` folder exists. No folder,
@@ -17,38 +18,55 @@ no pages.
 
 ## A product page in TSX
 
-A TypeScript loader puts the record in `ctx.data`, and a TSX page renders it with a component:
-
-```ts
-// pb_pages/products/[id]/+page.ts
-export default {
-  load(ctx: any) {
-    ctx.data.product = ctx.app.findRecordById('products', ctx.params.id)
-  },
-}
-```
+The page is an `async` component: it awaits its record, then renders it with another component.
 
 ```tsx
-// pb_pages/products/[id]/index.tsx
+// pb_pages/products/[id].tsx
 import Price from './_private/Price'
 
-export default function Product({ data }: any) {
+export default async function Product({ ctx }: any) {
+  const product = await ctx.app.findRecordById.async('products', ctx.params.id)
   return (
     <article>
-      <h1>{data.product.getString('name')}</h1>
-      <Price cents={data.product.getInt('price')} />
+      <h1>{product.getString('name')}</h1>
+      <Price cents={product.getInt('price')} />
     </article>
   )
 }
 ```
 
 ```tsx
-// pb_pages/products/[id]/_private/Price.tsx
+// pb_pages/products/_private/Price.tsx
 export default ({ cents }: { cents: number }) => <span class="price">${(cents / 100).toFixed(2)}</span>
 ```
 
 `/products/<id>` now answers with `<article><h1>Mug</h1><span class="price">$12.50</span></article>`. Edit any of the
 files and reload: the change shows up with no restart.
+
+## await anywhere
+
+`.async` twins of Go functions (`findRecordById.async`, `countRecords.async`, ...) do their work
+outside the JS VM, so the app serves other requests while a page waits.
+
+- **Components:** any component can be `async`. Sibling components run at the same time, so these two counts load in
+  parallel:
+
+  ```tsx
+  async function Count({ collection }: { collection: string }) {
+    const n = await $app.countRecords.async(collection)
+    return <b>{n}</b>
+  }
+
+  export default () => <p><Count collection="orders" /> orders, <Count collection="users" /> users</p>
+  ```
+
+- **Loaders and handlers:** `load`, `get`, `post` and the rest in `+page.ts`, `+api.ts` handlers, and `+middleware`
+  can be `async`.
+- **EJS:** a tag can `await`: `<%% const n = await ctx.app.countRecords.async('orders') %>`.
+- **Sync stays free:** a page without `await` runs exactly as before.
+
+[Loading data](/docs/extensions/pages/loading-data#async-loading), [EJS](/docs/extensions/pages/ejs#await) and
+[JSX and TSX](/docs/extensions/pages/jsx#async-components) have the details.
 
 JSX renders to plain HTML on the server. There's no virtual DOM and no client-side React, so pair it with htmx,
 Datastar or plain `<script>` tags for interactivity. TypeScript types are stripped, not checked; run `tsc --noEmit` or
