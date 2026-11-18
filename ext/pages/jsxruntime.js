@@ -1,5 +1,7 @@
 // The JSX runtime for .jsx/.tsx pages (SPEC 4.5): __h(tag, props, ...children) renders straight to an HTML string,
 // wrapped as { __html } so it isn't escaped again when nested. Evaluated once per VM; returns the runtime object.
+// An async component returns a promise; toHTML and h then return promises too, up to the page, which the driver
+// awaits. Sync trees never make one, so they render as plain string concatenation.
 ;(function (esc) {
   var VOID = {
     area: 1, base: 1, br: 1, col: 1, embed: 1, hr: 1, img: 1, input: 1,
@@ -17,16 +19,34 @@
     return new Raw(s === undefined || s === null ? '' : String(s))
   }
 
+  // toHTML returns the HTML for v, or a promise of it if v is (or holds) a promise.
   function toHTML(v) {
     if (v === null || v === undefined || v === true || v === false) return ''
     if (v instanceof Raw) return v.__html
     if (Array.isArray(v)) {
       var out = ''
-      for (var i = 0; i < v.length; i++) out += toHTML(v[i])
+      for (var i = 0; i < v.length; i++) {
+        var s = toHTML(v[i])
+        if (typeof s !== 'string') return joinAsync(v, i, out, s)
+        out += s
+      }
       return out
     }
-    if (typeof v === 'object' && typeof v.__html === 'string') return v.__html
+    if (typeof v === 'object') {
+      if (typeof v.__html === 'string') return v.__html
+      if (typeof v.then === 'function') return v.then(toHTML)
+    }
     return esc(String(v))
+  }
+
+  // joinAsync finishes toHTML of the array v from index i, where out is the HTML so far and first is the promise
+  // v[i] gave. Siblings are already running (JSX evaluates children first), so they're awaited together.
+  function joinAsync(v, i, out, first) {
+    var parts = [out, first]
+    for (var j = i + 1; j < v.length; j++) parts.push(toHTML(v[j]))
+    return Promise.all(parts).then(function (p) {
+      return p.join('')
+    })
   }
 
   function styleString(o) {
@@ -41,7 +61,8 @@
   }
 
   function Fragment(props) {
-    return raw(toHTML(props && props.children))
+    var s = toHTML(props && props.children)
+    return typeof s === 'string' ? raw(s) : s.then(raw)
   }
 
   function h(tag, props) {
@@ -77,6 +98,11 @@
     if (inner === null) inner = toHTML(children.length ? children : props && props.children)
     // JSX can't spell a doctype, so <html> brings its own
     var doctype = tag === 'html' ? '<!doctype html>' : ''
+    if (typeof inner !== 'string') {
+      return inner.then(function (s) {
+        return raw(doctype + '<' + tag + attrs + '>' + s + '</' + tag + '>')
+      })
+    }
     return raw(doctype + '<' + tag + attrs + '>' + inner + '</' + tag + '>')
   }
 

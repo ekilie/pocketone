@@ -9,6 +9,8 @@ source: "ext/pitr/README.md"
 
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough for app owners: [Point-in-time restore](https://pocketone.dev/docs/features/restore). This page is the technical reference.
+
 Point-in-time restore: your database as it was at any moment in the last few days, restored from the dashboard.
 History is recorded with [Litestream](https://litestream.io), next to your data or in an S3-compatible bucket.
 

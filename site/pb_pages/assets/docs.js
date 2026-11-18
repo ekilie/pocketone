@@ -50,7 +50,7 @@
     box.append(s)
   }
 
-  // A nav link to a page with another nav (into an extension site such as Pages, or back out) loads the whole page,
+  // A nav link to a page with another nav (into an extension's docs such as Pages, or back out) loads the whole page,
   // so the sidebar changes too: a swap replaces only #content. The swap script skips links with a target.
   const toc = document.getElementById('toc')
   const navs = new Set((toc?.dataset.navs || '').split(',').filter(Boolean))
@@ -63,7 +63,7 @@
     if (/^\/docs\/contracts(\/|$)/.test(path)) return 'contracts'
     return ''
   }
-  // how deep a nav is: the main nav, a section (Contracts, Extensions), an extension's own site
+  // how deep a nav is: the main nav, a section (Contracts, Extensions), an extension's own docs
   const depth = (nav) => (nav === '' ? 0 : nav === 'contracts' || nav === 'extensions' ? 1 : 2)
   const current = toc?.dataset.nav || ''
   document.querySelectorAll('.docs-toc-navigation a[href^="/"]').forEach((a) => {

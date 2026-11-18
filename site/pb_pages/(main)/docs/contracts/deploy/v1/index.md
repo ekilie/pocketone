@@ -7,7 +7,8 @@ source: "ext/contracts/deploy/v1/README.md"
 
 # deploy/v1
 
-A project's code on an app: `pb_hooks`, `pb_migrations`, `pb_public` and packages. Clients send only the files
+A project's code on an app: its `pb_*` folders except `pb_data` (`pb_hooks`, `pb_migrations`, `pb_pages`,
+`pb_public`, `pb_templates`) and packages (`package.json`, the lockfile, `node_modules`). Clients send only the files
 the app lacks, then swap the new set in at once. Restart and logs are [remote/v1](/docs/contracts/remote/v1)'s, which
 it requires.
 
@@ -43,7 +44,7 @@ A host provides it for its instances with `deployv1.Contract.ProvideForInstances
 
 ## Commands and APIs
 
-Its own HTTP API under `/api/_c/deploy/v1/`, described above. It has no generated commands or MCP tools. [Remote administration](/docs/remote) explains how PocketOne apps are managed from afar.
+Its own HTTP API under `/api/_c/deploy/v1/`, described above. It has no generated commands or MCP tools. [Remote CLI](/docs/features/remote) explains how PocketOne apps are managed from afar.
 
 ## Extensions
 

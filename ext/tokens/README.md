@@ -8,6 +8,8 @@ summary: "Long-lived API tokens with scopes."
 
 # Tokens
 
+> Walkthrough for app owners: [API tokens](https://pocketone.dev/docs/features/tokens). This page is the technical reference.
+
 Long-lived API tokens for your app: secrets that start with `pbt_`, for CI, deploys, scripts and agents. Each token
 belongs to an account and acts as that account. It can be limited to scopes, given an expiry, and revoked on its own.
 Send one as `Authorization: Bearer pbt_…`. Ordinary PocketBase auth tokens keep working unchanged.
@@ -43,20 +45,24 @@ A Go build can narrow both (see [Go config](#go-config)).
 ### Scopes
 
 A token without scopes has its owner's full rights. A token with scopes works only on the requests its scopes cover,
-plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Extensions and your own `pb_hooks` register the scopes. In
-`pocketone` the built-in ones are:
+plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Extensions, contracts and your own
+`pb_hooks` register the scopes. In `pocketone` they are:
 
 | Scope | From | Allows | Who can hold it |
 |---|---|---|---|
-| `deploy` | [Deploy](../deploy/README.md) | Deploy code (hooks, migrations, public files, packages), read files and logs | superusers |
+| `deploy` | [Deploy](../deploy/README.md) | Deploy code (hooks, migrations, pages, public files, packages), read files and logs | superusers |
 | `deploy:read` | [Deploy](../deploy/README.md) | Read deployed files and stream logs | superusers |
+| `<name>`, `<name>:read` | each [contract](../contracts/README.md) the app provides | That contract's operations under `/api/_c/<id>/`: `remote` and `remote:read`, `restore` and `restore:read`, `settings` and `settings:read`, `bulkmail:read`, `cache`, ... | per contract |
 
-`pocketone token scopes` lists every scope your app has, with its paths.
+Contract scopes are registered when the app serves, so **Settings → API tokens** on the running app lists every
+scope. The `pocketone token` command works offline and doesn't see them: `token scopes` lists only `deploy` and
+`deploy:read`, and `token create --scope restore` fails with `unknown scope "restore"`. Create a token with a
+contract scope from the dashboard or the [REST API](#rest-api).
 
 ### Your own scopes
 
-Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on the
-[the OAuth server](OAUTH.md) consent page:
+Declare a scope at the top level of a `pb_hooks` file. It then shows up in **Settings → API tokens** and on
+[the OAuth server](OAUTH.md)'s consent page:
 
 ```js
 // pb_hooks/scopes.pb.js

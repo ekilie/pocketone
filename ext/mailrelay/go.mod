@@ -58,6 +58,7 @@ require (
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -68,7 +69,7 @@ require (
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/superfly/ltx v0.5.2 // indirect
-	github.com/tetratelabs/wazero v1.2.1 // indirect
+	github.com/tetratelabs/wazero v1.12.0 // indirect
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
 	github.com/yuin/goldmark v1.8.7 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
@@ -155,3 +156,5 @@ replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
 replace github.com/pockethost/pocketone/ext/templates => ../templates
 
 replace github.com/pockethost/pocketone/ext/cache => ../cache
+
+replace github.com/pockethost/pocketone/ext/wasm => ../wasm

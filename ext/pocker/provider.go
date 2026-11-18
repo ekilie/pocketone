@@ -21,6 +21,8 @@ type SectionConfig struct {
 	HooksPoolSize *int   `yaml:"hooks_pool_size" doc:"Ignored: each instance has one JS VM (ext/jsvm). Kept so existing configs load."`
 	Limits        `yaml:",inline"`
 	EgressAllow   []string `yaml:"egress_allow" doc:"Private networks (CIDRs) instances may still connect to. Default none: public addresses only."`
+	// IsolateConfig is pocketone.yaml's shape, nested: what every instance gets as its own config.
+	IsolateConfig map[string]map[string]any `yaml:"isolate_config" doc:"Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it."`
 }
 
 // Section is the key of the `pocker` section.
@@ -66,7 +68,7 @@ func (p *Provider) RegisterHost(h *multisite.Host) error {
 	if p.Resolve != nil {
 		root = p.Resolve(root)
 	}
-	cfg.PBRoot, cfg.Dev, cfg.Limits, cfg.EgressAllow = root, h.Dev, sc.Limits, sc.EgressAllow
+	cfg.PBRoot, cfg.Dev, cfg.Limits, cfg.EgressAllow, cfg.IsolateConfig = root, h.Dev, sc.Limits, sc.EgressAllow, sc.IsolateConfig
 	cfg.TLS = h.Listeners.TLS // the server section's certificate files (autotls checks them)
 	if sc.HooksPoolSize != nil {
 		cfg.HooksPoolSize = sc.HooksPoolSize

@@ -12,6 +12,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Added
+
+- `pocker: isolate_config:` is every instance's config in pocketone.yaml's shape, one section per extension: `isolate_config: {tokens: {enabled: false}}` turns tokens off on every instance, and an instance's own `extensions.<name>` overrides it. A section for an extension the instances don't run stops startup.
+
 ## 0.1.0 (2026-11-17)
 
 ### Upgrading

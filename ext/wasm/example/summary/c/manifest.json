@@ -1,0 +1,13 @@
+{
+  "description": "Summarizes a text: its first words, and a word count",
+  "functions": ["run"],
+  "language": "C",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/c",
+  "examples": [
+    {
+      "function": "run",
+      "input": "one two three",
+      "output": {"text": "one two three", "words": 3}
+    }
+  ]
+}

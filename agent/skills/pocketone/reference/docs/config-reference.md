@@ -39,6 +39,26 @@ Automatic HTTPS certificates (ACME): auto, email, CA, domains, DNS-01, certifica
 
 Owned by [Auto TLS](https://pocketone.dev/docs/extensions/autotls).
 
+#### `backups:`
+
+Turns the backups extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.backups`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `bulkmail:`
+
+Turns the bulkmail extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.bulkmail`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
 #### `cache:`
 
 The cache (cache/v1): one store for every app in the process (memory, disk tier), and caps per bucket.
@@ -58,6 +78,16 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `buckets` | map of object |  | Caps per bucket name, over what its code asks for. |
 
 Owned by [Cache](https://pocketone.dev/docs/extensions/cache).
+
+#### `deploy:`
+
+Turns the deploy extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.deploy`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `docker:`
 
@@ -135,6 +165,16 @@ Instance data on this host: how often disk use is measured and last-request time
 
 Owned by [Stats](https://pocketone.dev/docs/extensions/stats).
 
+#### `mcp:`
+
+Turns the mcp extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.mcp`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
 #### `mothership:`
 
 A community mothership to mirror instances and edges from: url, login, this edge's id, internal URL, region, apex.
@@ -158,6 +198,16 @@ Owned by [Mothership](https://pocketone.dev/docs/extensions/mothership).
 Serve many instances (a multisite host) instead of a single app. The runtimes are the providers of runtime/v1.
 
 Owned by [Multisite](https://pocketone.dev/docs/extensions/multisite).
+
+#### `pages:`
+
+Turns the pages extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.pages`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `pitr:`
 
@@ -188,6 +238,7 @@ Runtime provider pocker: instances run as isolates in this process (root folder,
 | `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
+| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
 
 Owned by [Pocker](https://pocketone.dev/docs/extensions/pocker).
 
@@ -215,6 +266,16 @@ Default rate limits for every instance (per instance: extensions.firewall.rate_l
 | `off` | bool |  | No rate limiting. The default in dev mode unless rate_limits is set. |
 
 Owned by [Firewall](https://pocketone.dev/docs/extensions/firewall).
+
+#### `remotes:`
+
+Turns the remotes extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.remotes`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `s3redirect:`
 
@@ -246,6 +307,36 @@ The serve command: http, https and CORS origins, and for a single app its static
 | `hooks_watch` | bool |  | Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
 | `automigrate` | bool |  | Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
 
+#### `settings:`
+
+Turns the settings extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.settings`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `templates:`
+
+Turns the templates extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.templates`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `tokens:`
+
+Turns the tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.tokens`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
 #### `vacuum:`
 
 Defaults for compacting the app's SQLite databases (VACUUM): on or off, and how often. The app's admins change them in Settings.
@@ -256,4 +347,14 @@ Defaults for compacting the app's SQLite databases (VACUUM): on or off, and how 
 | `every` | string | `168h` | How often, e.g. 24h or 168h (weekly). |
 
 Owned by [Vacuum](https://pocketone.dev/docs/extensions/vacuum).
+
+#### `wasm:`
+
+Turns the wasm extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.wasm`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 

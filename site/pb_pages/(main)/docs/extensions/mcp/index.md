@@ -9,6 +9,8 @@ source: "ext/mcp/README.md"
 
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough for app owners: [MCP for AI agents](https://pocketone.dev/docs/features/mcp). This page is the technical reference.
+
 A [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `/mcp`, so an agent (Claude Code, a Claude
 connector, any Streamable HTTP client) can work with your app. No sidecar process.
 

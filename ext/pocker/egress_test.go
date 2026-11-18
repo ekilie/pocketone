@@ -75,6 +75,7 @@ func fakeSMTP(t *testing.T, addr string) (string, <-chan string) {
 func TestEgressFromApps(t *testing.T) {
 	// 127.0.0.2 stands in for an allowed service; everything else private is denied.
 	sandbox.InstallEgressPolicy(sandbox.EgressPolicy{Allow: []netip.Prefix{netip.MustParsePrefix("127.0.0.2/32")}})
+	t.Cleanup(sandbox.UninstallEgressPolicy)
 
 	denied := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("internal secret"))

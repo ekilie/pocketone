@@ -1,0 +1,36 @@
+{
+  "description": "A line diff of two texts: a unified diff and how many lines were added and removed, with similar",
+  "functions": [
+    "run"
+  ],
+  "language": "Rust",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/diff",
+  "examples": [
+    {
+      "function": "run",
+      "input": {
+        "old": "Pocket\nbase\n",
+        "new": "Pocket\nOne\nrocks\n"
+      },
+      "output": {
+        "added": 2,
+        "removed": 1,
+        "changed": true,
+        "unified": "--- old\n+++ new\n@@ -1,2 +1,3 @@\n Pocket\n-base\n+One\n+rocks\n"
+      }
+    },
+    {
+      "function": "run",
+      "input": {
+        "old": "same\n",
+        "new": "same\n"
+      },
+      "output": {
+        "unified": "",
+        "added": 0,
+        "removed": 0,
+        "changed": false
+      }
+    }
+  ]
+}

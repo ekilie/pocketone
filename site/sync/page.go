@@ -31,9 +31,17 @@ func loadBinary(root string) ([]section, *reference, error) {
 	if err := build.Run(); err != nil {
 		return nil, nil, fmt.Errorf("building examples/pocketone: %w", err)
 	}
+	// PocketBase takes a binary under the temp or Go cache dir for `go run` and defaults --dev to true; point both
+	// elsewhere for the child so the reference shows a built binary's defaults
+	childTmp := filepath.Join(tmp, "t")
+	if err := os.MkdirAll(childTmp, 0o755); err != nil {
+		return nil, nil, err
+	}
+	env := append(os.Environ(), "TMPDIR="+childTmp, "GOCACHE=off")
 	ask := func(start string, v any, args ...string) error {
 		cmd := exec.Command(bin, append(args, "--dev=false", "--dir", filepath.Join(tmp, "pb_data"))...)
 		cmd.Dir = tmp
+		cmd.Env = env
 		cmd.Stderr = os.Stderr
 		name := "pocketone " + strings.Join(args, " ")
 		raw, err := cmd.Output()

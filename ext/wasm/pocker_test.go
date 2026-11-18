@@ -14,15 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"github.com/pockethost/pocketone/ext/pocker"
 	"github.com/pockethost/pocketone/ext/standard"
 	"github.com/pockethost/pocketone/ext/wasm"
 )
-
-type instances []pocker.Instance
-
-func (s instances) Snapshot(context.Context) ([]pocker.Instance, error) { return s, nil }
-func (s instances) Watch(context.Context) (<-chan pocker.Change, error) { return nil, nil }
 
 // probe is a pb_hooks route that tells what $wasm looks like in an instance, and calls a module.
 const probe = `
@@ -56,14 +52,14 @@ func TestPocker(t *testing.T) {
 		install(t, filepath.Join(dir, "pb_hooks"), module, code)
 	}
 
-	mgr := pocker.NewManager(instances{
-		{ID: "a", Hosts: []string{"a.test"}, Extensions: map[string]any{"wasm": map[string]any{"timeout": "10s", "maxCallMemoryMB": 64}}},
-		{ID: "b", Hosts: []string{"b.test"}},
-		{ID: "c", Hosts: []string{"c.test"}, Extensions: map[string]any{"wasm": map[string]any{"enabled": false}}},
-	}, pocker.ManagerOptions{
+	mgr := pocker.NewManager(sourcetest.ScopeOf(
+		pocker.Instance{ID: "a", Hosts: []string{"a.test"}, Extensions: map[string]any{"wasm": map[string]any{"timeout": "10s", "maxCallMemoryMB": 64}}},
+		pocker.Instance{ID: "b", Hosts: []string{"b.test"}},
+		pocker.Instance{ID: "c", Hosts: []string{"c.test"}, Extensions: map[string]any{"wasm": map[string]any{"enabled": false}}},
+	), pocker.ManagerOptions{
 		PBRoot:   root,
 		Logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Standard: standard.New().Add(wasm.New(wasm.Config{})),
+		Standard: standard.New(), // wasm is a member
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	go mgr.Run(ctx)
@@ -132,7 +128,8 @@ func TestPocker(t *testing.T) {
 	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(50 * time.Millisecond) {
 		buf := make([]byte, 1<<20)
 		stacks := string(buf[:runtime.Stack(buf, true)])
-		if !strings.Contains(stacks, "tetratelabs/wazero") && !strings.Contains(stacks, "pocketone/ext/wasm.") {
+		ours := strings.ReplaceAll(stacks, "pocketone/ext/wasm.TestMain(", "") // the test binary's main goroutine
+		if !strings.Contains(stacks, "tetratelabs/wazero") && !strings.Contains(ours, "pocketone/ext/wasm.") {
 			break
 		}
 		if time.Now().After(deadline) {

@@ -48,6 +48,8 @@ type appOptions struct {
 	InitJS func(inst Instance, app core.App, rt js.Runtime)
 	// Setup, if set, runs for each app after migrations and before it serves (host application Go code).
 	Setup func(inst Instance, app core.App) error
+	// IsolateConfig is every instance's base config, one section per extension, under its own extensions.<name>.
+	IsolateConfig map[string]map[string]any
 	// Standard, if set, is registered on every app (ext/standard's Set): before its hooks load, with the instance's
 	// `extensions.<name>` settings; its JS APIs bound on every runtime; its contracts sealed after the hooks load.
 	Standard extkit.AppSet
@@ -138,7 +140,7 @@ func startApp(opts appOptions, inst Instance) (r *runningApp, err error) {
 	}
 	plan, err := opts.Standard.Prepare(app, func(name string) extkit.Config {
 		own, _ := extkit.Layer(inst.ExtensionConfig(name))
-		return extkit.Config{own}
+		return extkit.Config{opts.IsolateConfig[name], own} // pocker's isolate_config, then the instance's own
 	})
 	if err != nil {
 		return nil, fmt.Errorf("standard: %w", err)

@@ -134,6 +134,11 @@ For a URL that matches a page or API route, one JS call does all of this, in ord
 The call runs under the app's usual JS limits (execution time, memory), as one unit. If any step sends a response
 (`ctx.res.redirect`, `json`, `html`, `text`, `file`, `sse`), the later steps are skipped.
 
+**Async.** Middleware, `load`, method handlers, templates and components may be `async` (or return a promise). Each
+step waits for the one before it to settle, while the app's event loop runs, so `await` works on the `.async` twin of
+any Go function (`await ctx.app.countRecords.async('orders')`) and on any other promise. A rejected promise fails the
+request like a thrown error. Sync code never makes a promise, so it runs exactly as it would without this.
+
 ### 3.1 Middleware
 
 ```js
@@ -148,6 +153,9 @@ module.exports = (ctx, next) => {
 - One signature: `(ctx, next)`. Call `next()` to continue; return its result.
 - Returning without calling `next()` ends the request. If no response was sent, that's an error (500, and in dev
   the error page names the middleware file).
+- Middleware may be async: `await next()` returns once the rest of the request (later middleware, handlers,
+  template, layouts) has finished, and throws what it threw, so code after it can act on the outcome. A sync
+  middleware that calls `next()` without returning it still has the rest of the request awaited after it.
 - Share data through `ctx.data`.
 
 ### 3.2 Handlers: `+page.js`
@@ -171,6 +179,7 @@ module.exports = {
   `GET` (only the body is dropped), so keep side effects in `post`/`put`/`patch`/`delete`.
 - A handler may set `ctx.data` fields, or return a plain object, which is shallow-assigned into `ctx.data`
   (`Object.assign`). There is no deep merge.
+- Handlers may be async. A returned promise is awaited, and what it settles to is treated as a returned value.
 - A `+page.js` applies to every page in its folder. `ctx.route.name` tells them apart.
 - A method with no handler still renders the page, for every method (like PHP): a template can handle a form itself
   by checking `ctx.req.method`, with no `+page.js`.
@@ -214,6 +223,11 @@ module.exports = {
 
 - Escaping replaces `&` `<` `>` `"` `'` with `&amp;` `&lt;` `&gt;` `&#34;` `&#39;`. `null` and `undefined` output as an empty string.
 - A template is compiled once per content hash and reused.
+- **`await`.** A template whose code uses `await` (in any tag) is compiled as an async function, so
+  `<% const n = await ctx.app.countRecords.async('orders') %>` works. Including an async partial returns a promise:
+  print it with `<%- await include('name') %>`, which makes the including template async too. Printing a promise
+  without `await` is an error, not `[object Promise]`. `await slot('name', async () => { %>...<% })` defines a slot
+  whose content awaits. Templates without `await` stay plain functions.
 
 **In scope inside a template:** `ctx`, `data` (= `ctx.data`), `params` (= `ctx.params`), `include`, `slot`, `asset`
 (= `ctx.asset`), `meta` (= `ctx.meta`), `require` (the same `require` as page code, 1).
@@ -319,6 +333,9 @@ export default function Product({ data, slot }: any) {
   its locals become props.
 - Components are ordinary modules: `import Card from './_private/Card'` (resolved like `require`, 3.2). Partials
   are looked up with extensions in this order: `.ejs`, `.md`, `.jsx`, `.tsx`.
+- **Async components.** Any component may be `async`, the file's default export included. The render waits for it
+  wherever it sits in the tree; sibling async components run concurrently. `include()` of an async partial and
+  `slot(name, content)` with async content work the same way, and a layout reads the slot once it has settled.
 
 **TypeScript modules.** `+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and any `.ts` file reached by
 `require`/`import` work like their `.js` versions. A module whose only export is `export default` behaves like

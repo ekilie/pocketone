@@ -5,7 +5,7 @@ description: Install PocketOne with Homebrew, a release download or go build, an
 
 # Installation
 
-PocketOne is one executable, `pocketone`. It is built on PocketBase v0.41 and takes the same commands and flags, plus its own.
+PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and takes the same commands and flags, plus its own.
 
 ## Homebrew (macOS and Linux)
 

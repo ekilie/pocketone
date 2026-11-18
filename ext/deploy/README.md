@@ -8,6 +8,8 @@ summary: "pocketone deploy, dev, pull and logs, and the deploy API."
 
 # Deploy
 
+> Walkthrough for app owners: [Deploy and live sync](https://pocketone.dev/docs/features/deploy). This page is the technical reference.
+
 Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
 `pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded and the app swaps them
 in; `restart` applies new migrations and packages. `pocketone dev` keeps your folder and the app in step both ways and
@@ -216,7 +218,7 @@ message, source, token name, superuser and any error. Superusers can browse it i
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote
 //	cd myproject && mkdir pb_hooks && echo 'routerAdd("GET", "/hi", (e) => e.string(200, "hi"))' > pb_hooks/main.pb.js
-//	go run ./example link http://127.0.0.1:8090 --email admin@example.com   # password: password
+//	go run ./example link http://127.0.0.1:8090   # sign in in the browser as admin@example.com / password
 //	go run ./example deploy
 //	curl http://127.0.0.1:8090/hi
 //

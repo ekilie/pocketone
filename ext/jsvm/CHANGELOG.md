@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Fixed
+
+- A busy app no longer runs its JS VM out of memory. The VM's loop ran about one queued free (a JS value Go had dropped) per request, so under steady concurrent load the frees backed up, Go's finalizers stalled, and after about 25,000 pages at 50 concurrent requests every page and hook failed with `InternalError: out of memory` until the app restarted. The loop now runs the frees a request leaves before it takes the next one; a pages site served 150,000 requests in 30 seconds at a steady 130 MB.
+
 ## 0.0.2 (2026-11-17)
 
 ### Added

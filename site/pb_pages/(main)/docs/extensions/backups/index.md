@@ -9,6 +9,8 @@ source: "ext/backups/README.md"
 
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough for app owners: [Point-in-time restore](https://pocketone.dev/docs/features/restore). This page is the technical reference.
+
 Restore an app to a moment from its own backups. Ask for "Tuesday 15:00" and the app restores the latest backup made
 at or before it, wherever its backups are kept (pb_data/backups or S3). Every app gets this; with
 [PITR](/docs/extensions/pitr) on, PITR answers instead and restores any second in its window.

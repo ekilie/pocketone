@@ -11,21 +11,24 @@ import (
 // hostedExtension runs a PocketOne extension ([extkit.Extension], e.g. bulkmail.New(...)) on every instance: put the
 // extension itself in [Server.Extensions], no pocker-specific wrapper needed.
 //
-// Settings: the instance's `extensions.<name>` over the defaults the extension was built with (process-wide settings are
-// the extension's own, set in Go). `enabled: false` turns it off for that instance: Register and BindJS are never
+// Settings: the instance's `extensions.<name>` over its section of pocker's isolate_config, over the defaults the
+// extension was built with. `enabled: false` turns it off for that instance: Register and BindJS are never
 // called.
 type hostedExtension struct {
-	p extkit.Extension
+	p    extkit.Extension
+	base map[string]any // its section of pocker's isolate_config, under each instance's own
 }
 
-func hostExtension(p extkit.Extension) *hostedExtension { return &hostedExtension{p: p} }
+func hostExtension(p extkit.Extension, base map[string]any) *hostedExtension {
+	return &hostedExtension{p: p, base: base}
+}
 
 func (h *hostedExtension) config(inst Instance) (extkit.Config, error) {
 	own, err := extkit.Layer(inst.ExtensionConfig(h.p.Name()))
 	if err != nil {
 		return nil, fmt.Errorf("instance %s: extensions.%s: %w", inst.ID, h.p.Name(), err)
 	}
-	return extkit.Config{own}, nil
+	return extkit.Config{h.base, own}, nil
 }
 
 // InitApp implements [AppIniter].

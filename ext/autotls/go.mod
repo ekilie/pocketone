@@ -10,6 +10,7 @@ require (
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.58.0
 )
 
@@ -38,7 +39,6 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect

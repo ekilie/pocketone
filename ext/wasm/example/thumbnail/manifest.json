@@ -1,0 +1,29 @@
+{
+  "description": "A PNG thumbnail of a PNG or JPEG image, kept in proportion: run fits 256x256, small 64x64, with the image crate",
+  "functions": [
+    "run",
+    "small"
+  ],
+  "language": "Rust",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/thumbnail",
+  "examples": [
+    {
+      "function": "small",
+      "input": "iVBORw0KGgoAAAANSUhEUgAAAIAAAABACAIAAABdtOgoAAAAcklEQVR42u3RMQ0AAAjAMOTMvx7EIIOnyRSss6XHxgIAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAAABACAAAAQAgAAAEAAAAgBAAAAIAADVAaYQgiwJB8DeAAAAAElFTkSuQmCC",
+      "output": {
+        "height": 32,
+        "png": "iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAIAAAAt/+nTAAAAqElEQVR4Ae3AA6AkWZbG8f937o3IzKdyS2Oubdu2bdu2bdu2bWmMnpZKr54yMyLu+Xa3anqmhztr1a8+5dGP5n8xgv/dCP53I/jfjeB/N4L/3Qj+dyP4343gfzeC/90I/ncj+N+N4H83gv/dCP53I/jfjeB/N4L/3Qj+dyP4343gfzeC/90I/ncj+N+N4H83gv/dCP53I/jfjeB/N4L/3Qj+dyP4341/BKotAW8jxAEVAAAAAElFTkSuQmCC",
+        "width": 64
+      }
+    },
+    {
+      "function": "run",
+      "input": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAICAIAAAB/FOjAAAAAE0lEQVR42mPQiLpDEmIY1UALDQCrU68Bo3aiawAAAABJRU5ErkJggg==",
+      "output": {
+        "height": 8,
+        "png": "iVBORw0KGgoAAAANSUhEUgAAABAAAAAICAIAAAB/FOjAAAAAWElEQVR4Ae3AA6AkWZbG8f937o3IzKdyS2Oubdu2bdu2bdu2bWmMnpZKr54yMyLu+Xa3anqmhztr1a8++l2fwr8Cwb8Owb8Owb8Owb8Owb8Owb8Owb8O/wgm/gFxjCpxzgAAAABJRU5ErkJggg==",
+        "width": 16
+      }
+    }
+  ]
+}

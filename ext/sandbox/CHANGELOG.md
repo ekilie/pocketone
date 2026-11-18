@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- `UninstallEgressPolicy()` undoes `InstallEgressPolicy`, giving Go's default HTTP transport back its own dialer and proxy (for tests that start a Pocker host in-process).
+
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)
 
 ### Upgrading

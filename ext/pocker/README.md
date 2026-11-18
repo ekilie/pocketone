@@ -8,6 +8,8 @@ summary: "Hundreds of PocketBase instances in one Go process, routed by hostname
 
 # Pocker
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
 normal app folder and starts on its first request, in tens of milliseconds. Pocker provides
 [runtime/v1](../contracts/runtime/v1/README.md) for [Multisite](../multisite/README.md); its peer [Docker](../docker/README.md) runs each instance in a container instead.
@@ -53,7 +55,15 @@ pocker:
   egress_allow: []          # private networks instances may still reach
   max_js_execution: 30s     # default limits; each instance can override them
   max_js_allocation: 64MiB
+  isolate_config:           # every instance's config, in pocketone.yaml's shape
+    tokens: { enabled: false }
 ```
+
+`isolate_config` holds one section per extension the instances run (the standard set's members and your own
+extensions), each taking what an instance's `extensions.<name>` takes. It is every instance's base: an instance's own
+`extensions.<name>` overrides it key by key, so one instance can turn back on what `isolate_config` turns off. A
+section for an extension the instances don't run stops startup. The top-level sections of `pocketone.yaml` configure
+a single app; on a multisite host they don't reach the instances.
 
 An instance overrides any limit in its own `limits` (missing fields keep the default):
 

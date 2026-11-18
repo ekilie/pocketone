@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -51,25 +52,28 @@ func checkExamples(t *testing.T, e env, name string) {
 	}
 }
 
-// TestSummaryExample: the summary module, in Go, Rust and Zig, gives the same answers.
+// TestSummaryExample: the summary module, in Go, TinyGo, Rust and Zig, gives the same answers.
 func TestSummaryExample(t *testing.T) {
-	for _, lang := range []string{"go", "rust", "zig"} {
+	for _, lang := range []string{"go", "tinygo", "rust", "zig"} {
 		t.Run(lang, func(t *testing.T) { testSummary(t, lang) })
 	}
 }
 
 func testSummary(t *testing.T, lang string) {
-	src, want := "example/summary", "Go" // Go's module says it's Go; the others say it in their --describe
+	src, want := "example/summary/go", "Go" // Go's module says it's Go; the others say it in their --describe
 	var code []byte
 	switch lang {
 	case "rust":
-		src, want = "example/summary-rust", "Rust"
+		src, want = "example/summary/rust", "Rust"
 		code = prebuiltModule(t, src)
 	case "zig":
-		src, want = "example/summary-zig", "Zig"
+		src, want = "example/summary/zig", "Zig"
+		code = prebuiltModule(t, src)
+	case "tinygo":
+		src, want = "example/summary/tinygo", "TinyGo"
 		code = prebuiltModule(t, src)
 	default:
-		code = module(t, src)
+		code = prebuiltModule(t, src)
 	}
 	start := time.Now()
 	e := newApp(t, wasm.Config{}, func(app core.App, dir string) {
@@ -114,15 +118,17 @@ func testSummary(t *testing.T, lang string) {
 	t.Logf("%s: %s per call, compiling each time", lang, (time.Since(start) / 3).Round(100*time.Microsecond))
 }
 
-var update = flag.Bool("update", false, "rebuild the prebuilt Rust and Zig examples (example/*/*.pb.wasm) from their sources")
+var update = flag.Bool("update", false, "rebuild the prebuilt Go, TinyGo, Rust, Zig, C, LLVM IR and WAT examples (example/*/*.pb.wasm) from their sources")
 
-// TestPrebuiltExamples: every Rust and Zig example, as kept built beside its source, loads, describes itself as its
+var rebuild = flag.Bool("rebuild", false, "rebuild every prebuilt example in Docker and check it's the kept file (TestPrebuiltMatchSources; slow)")
+
+// TestPrebuiltExamples: every example module (Go, TinyGo, Rust, Zig, C), as kept built beside its source, loads, describes itself as its
 // manifest.json says (so the build isn't older than its manifest), and gives what each of its examples says. They run
-// with no Rust or Zig installed, so a change to ext/wasm that breaks a real module shows here. With -update, each is
-// rebuilt from its source first (with rustVersion and zigVersion).
+// with none of those compilers installed, so a change to ext/wasm that breaks a real module shows here. With -update, each is
+// rebuilt from its source first, in Docker (example/toolchains/Dockerfile).
 func TestPrebuiltExamples(t *testing.T) {
 	for _, p := range prebuilt {
-		t.Run(filepath.Base(p.dir), func(t *testing.T) {
+		t.Run(strings.TrimPrefix(p.dir, "example/"), func(t *testing.T) {
 			path := filepath.Join(p.dir, p.file)
 			if *update {
 				if err := os.WriteFile(path, buildExample(t, p.dir), 0o644); err != nil {
@@ -152,11 +158,14 @@ func TestPrebuiltExamples(t *testing.T) {
 	}
 }
 
-// TestPrebuiltMatchSources: each kept build is what its source builds, byte for byte. It needs Rust rustVersion
-// (with wasm32-wasip1) or Zig zigVersion, and skips the others.
+// TestPrebuiltMatchSources: each kept build is what its source builds, byte for byte, with the toolchains pinned in
+// example/toolchains/Dockerfile. It rebuilds every one, so it runs only when asked (-rebuild), and needs Docker.
 func TestPrebuiltMatchSources(t *testing.T) {
+	if !*rebuild {
+		t.Skip("rebuilds every example in Docker: go test -run TestPrebuiltMatchSources -rebuild")
+	}
 	for _, p := range prebuilt {
-		t.Run(filepath.Base(p.dir), func(t *testing.T) {
+		t.Run(strings.TrimPrefix(p.dir, "example/"), func(t *testing.T) {
 			if !bytes.Equal(buildExample(t, p.dir), prebuiltModule(t, p.dir)) {
 				t.Fatalf("%s isn't what its source builds: rebuild it (go test -run TestPrebuiltExamples -update)", filepath.Join(p.dir, p.file))
 			}
@@ -241,5 +250,50 @@ func TestHostileModule(t *testing.T) {
 	t.Logf("exit: %v (%s)", exitErr, time.Since(start))
 	if _, err := e.h.Call(context.Background(), "evil", "run", fmt.Appendf(nil, `{"target":%q}`, target)); err != nil {
 		t.Fatalf("after exit: %v", err)
+	}
+}
+
+// TestSummaryText: the summary modules that take plain text (C, LLVM IR, WebAssembly text, AssemblyScript) give the same answers:
+// the first 12 words with one space between them, a JSON string however odd the text, and the same errors.
+func TestSummaryText(t *testing.T) {
+	for _, dir := range []string{"example/summary/c", "example/summary/llvm", "example/summary/wat", "example/summary/assemblyscript"} {
+		t.Run(strings.TrimPrefix(dir, "example/"), func(t *testing.T) {
+			code := prebuiltModule(t, dir)
+			e := newApp(t, wasm.Config{}, func(_ core.App, d string) { install(t, d, "summary", code) })
+			for _, c := range []struct {
+				in, text string
+				words    float64
+			}{
+				{"one two three", "one two three", 3},
+				{"  one\t\ttwo \n three  ", "one two three", 3},
+				{"1 2 3 4 5 6 7 8 9 10 11 12 13", "1 2 3 4 5 6 7 8 9 10 11 12 …", 13},
+				{`say "hi" \ back` + "\x01slash", `say "hi" \ back` + "\x01slash", 4},
+				{"héllo wörld", "héllo wörld", 2},
+			} {
+				out, err := e.h.Call(context.Background(), "summary", "run", []byte(c.in))
+				if err != nil {
+					t.Fatalf("%q: %v", c.in, err)
+				}
+				var got struct {
+					Text  string  `json:"text"`
+					Words float64 `json:"words"`
+				}
+				if err := json.Unmarshal(out, &got); err != nil {
+					t.Fatalf("%q: output isn't JSON: %q", c.in, out)
+				}
+				if got.Text != c.text || got.Words != c.words {
+					t.Errorf("%q: got %q, %v words; want %q, %v", c.in, got.Text, got.Words, c.text, c.words)
+				}
+			}
+			_, err := e.h.Call(context.Background(), "summary", "run", []byte(" \n\t "))
+			var we *wasm.Error
+			if !errors.As(err, &we) || we.Code != "empty_body" {
+				t.Errorf("blank text: %v, want empty_body", err)
+			}
+			_, err = e.h.Call(context.Background(), "summary", "other", nil)
+			if !errors.As(err, &we) || we.Code != wasm.CodeNoSuchFunction {
+				t.Errorf("other function: %v, want %s", err, wasm.CodeNoSuchFunction)
+			}
+		})
 	}
 }

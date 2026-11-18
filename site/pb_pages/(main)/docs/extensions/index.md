@@ -31,6 +31,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Tokens](/docs/extensions/tokens) | Long-lived API tokens with scopes. |
 | [Upgrade](/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
 | [Vacuum](/docs/extensions/vacuum) | Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk. |
+| [WASM](/docs/extensions/wasm/extension) | Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box. |
 
 ## Run many instances
 
@@ -57,7 +58,6 @@ Shared services a host gives every instance it runs.
 | [Mail Relay](/docs/extensions/mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
 | [S3 Fallback](/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [Server Timing](/docs/extensions/servertiming) | Server-Timing headers for each step of a request. |
-| [WASM](/docs/extensions/wasm) | Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box. |
 
 ## Sell it as a service
 

@@ -58,8 +58,8 @@ type Closer interface {
 	Close(ctx context.Context) error
 }
 
-// Config is an extension's settings for one app, as layers applied in order (on a multisite host, one: the instance's
-// `extensions.<name>`). Each layer is a map from YAML or JSON. The extension's own defaults, the ones given to its
+// Config is an extension's settings for one app, as layers applied in order (on a Pocker host, two: its
+// isolate_config section, then the instance's `extensions.<name>`). Each layer is a map from YAML or JSON. The extension's own defaults, the ones given to its
 // constructor (and its pocketone.yaml section, see [NewSection]), sit under all of them.
 type Config []map[string]any
 

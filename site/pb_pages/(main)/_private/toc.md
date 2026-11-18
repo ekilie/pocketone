@@ -1,16 +1,31 @@
-# Introduction
+# Get started
 
 - [What is PocketOne?](/docs/overview)
 - [Installation](/docs/installation)
+- [Coming from PocketBase](/docs/pocketbase)
+- [Teach your coding agent](/docs/agents)
 
-# Tutorials
+# New in PocketOne
+
+- [Everything new](/docs/features)
+- [QuickJS: async, import, TS](/docs/quickjs)
+- [PocketPages: TSX, TS, EJS](/docs/features/sites)
+- [Isolates: many apps, one process](/docs/features/isolates)
+- [Point-in-time restore](/docs/features/restore)
+- [Deploy and live sync](/docs/features/deploy)
+- [Remote CLI](/docs/features/remote)
+- [API tokens and OAuth](/docs/features/tokens)
+- [MCP for AI agents](/docs/features/mcp)
+- [Bulk mail](/docs/features/bulk-mail)
+- [pocketone.yaml](/docs/pocketone-yaml)
+- [WASM](/docs/extensions/wasm)
+
+# Extend PocketOne
 
 - [How PocketOne fits together](/docs/how-pocketone-fits-together)
-- [Remote administration](/docs/remote)
-- [Coding agents](/docs/agents)
-- [Your hooks on QuickJS](/docs/quickjs)
-- [Configure with pocketone.yaml](/docs/pocketone-yaml)
 - [Writing an extension](/docs/writing-an-extension)
+- [Contracts](/docs/contracts)
+- [Extensions](/docs/extensions)
 
 # Reference
 
@@ -18,11 +33,4 @@
 - [REST](/docs/reference/rest)
 - [MCP](/docs/reference/mcp)
 - [pocketone.yaml](/docs/config-reference)
-- [Pages](/docs/extensions/pages)
-- [Contracts](/docs/contracts)
-- [Extensions](/docs/extensions)
-
-# Going Further
-
-- [PocketBase docs](/docs/pocketbase)
-- [PocketBase compatibility](/docs/compatibility)
+- [PocketPages](/docs/extensions/pages)

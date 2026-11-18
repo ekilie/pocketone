@@ -3,6 +3,8 @@
 
 Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
 normal app folder and starts on its first request, in tens of milliseconds. Pocker provides
 [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1) for [Multisite](https://pocketone.dev/docs/extensions/multisite); its peer [Docker](https://pocketone.dev/docs/extensions/docker) runs each instance in a container instead.
@@ -50,7 +52,15 @@ pocker:
   egress_allow: []          # private networks instances may still reach
   max_js_execution: 30s     # default limits; each instance can override them
   max_js_allocation: 64MiB
+  isolate_config:           # every instance's config, in pocketone.yaml's shape
+    tokens: { enabled: false }
 ```
+
+`isolate_config` holds one section per extension the instances run (the standard set's members and your own
+extensions), each taking what an instance's `extensions.<name>` takes. It is every instance's base: an instance's own
+`extensions.<name>` overrides it key by key, so one instance can turn back on what `isolate_config` turns off. A
+section for an extension the instances don't run stops startup. The top-level sections of `pocketone.yaml` configure
+a single app; on a multisite host they don't reach the instances.
 
 An instance overrides any limit in its own `limits` (missing fields keep the default):
 
@@ -82,6 +92,7 @@ Runtime provider pocker: instances run as isolates in this process (root folder,
 | `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
+| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
 
 ## Use
 

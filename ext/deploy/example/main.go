@@ -3,7 +3,7 @@
 //
 //	go run ./example serve --http=127.0.0.1:8090                  # the remote
 //	cd myproject && mkdir pb_hooks && echo 'routerAdd("GET", "/hi", (e) => e.string(200, "hi"))' > pb_hooks/main.pb.js
-//	go run ./example link http://127.0.0.1:8090 --email admin@example.com   # password: password
+//	go run ./example link http://127.0.0.1:8090   # sign in in the browser as admin@example.com / password
 //	go run ./example deploy
 //	curl http://127.0.0.1:8090/hi
 //
