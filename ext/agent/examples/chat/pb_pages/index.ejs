@@ -127,13 +127,19 @@ function md(text) {
   return out.join('')
 }
 
+// Keep the newest text in view while it's written, below the sticky input box, but only while the reader is at the
+// bottom: scrolling up to reread isn't undone by the next token.
+const atBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80
+const toBottom = () => window.scrollTo({top: document.documentElement.scrollHeight})
+function follow(change) { const stick = atBottom(); change(); if (stick) toBottom() }
+
 function add(cls, html) {
   document.getElementById('empty')?.remove()
   const d = document.createElement('div')
   d.className = 'msg ' + cls
   d.innerHTML = html
   log.appendChild(d)
-  d.scrollIntoView({behavior: 'smooth', block: 'end'})
+  toBottom() // a new message always shows
   return d
 }
 
@@ -195,18 +201,19 @@ async function ask(text) {
       if (event === 'text') {
         if (!text) clearInterval(tick)
         text += data
-        pending.innerHTML = md(text) + '<span class="thinking"> ▍</span>'
-        pending.scrollIntoView({block: 'end'})
+        follow(() => { pending.innerHTML = md(text) + '<span class="thinking"> ▍</span>' })
       } else if (event === 'done') r = data
       else if (event === 'error') throw new Error(data)
     })
     if (!r) throw new Error('the answer stopped early')
     history.push({role: 'assistant', content: r.answer})
     const src = r.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)).join(' · ')
-    pending.innerHTML = md(r.answer) +
-      `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in / ${r.usage.outputTokens} out` +
-      `<br>Armed with: ${r.armedWith.map(f => `<code>${esc(f)}</code>`).join(' ')}` +
-      (src ? `<br>Sources: ${src}` : '') + '</div>'
+    follow(() => {
+      pending.innerHTML = md(r.answer) +
+        `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in / ${r.usage.outputTokens} out` +
+        `<br>Armed with: ${r.armedWith.map(f => `<code>${esc(f)}</code>`).join(' ')}` +
+        (src ? `<br>Sources: ${src}` : '') + '</div>'
+    })
     suggest(pending, text, r.answer)
   } catch (err) {
     history.pop()
@@ -225,7 +232,7 @@ async function suggest(el, question, answer) {
       b.textContent = s
       chips.appendChild(b)
     }
-    el.appendChild(chips)
+    follow(() => el.appendChild(chips))
   } catch {}
 }
 
