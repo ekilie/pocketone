@@ -1,0 +1,63 @@
+# Publishes the desktop build image for every release: ghcr.io/pockethost/pocketone-build:<tag>, for linux/amd64 and
+# linux/arm64, built from the release's own commit. A released pocketone pulls the image for its own version
+# (ext/desktop DefaultImage), so `pocketone desktop build` builds against exactly the source it was released from.
+#
+# Runs when release.sh pushes a release tag. To publish an existing tag again: Actions → build image → Run workflow,
+# with the tag.
+
+name: build image
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The release tag to publish (vX.Y.Z)"
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-image-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish ${{ inputs.tag || github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: ghcr.io/pockethost/pocketone-build:${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      # the release's commit must have the Dockerfile (releases from before ext/desktop have none)
+      - name: Check the Dockerfile is there
+        run: test -f ext/desktop/image/Dockerfile || { echo "::error::no ext/desktop/image/Dockerfile at this tag"; exit 1; }
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ext/desktop/image/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/pockethost/pocketone
+            org.opencontainers.image.description=The image pocketone desktop build runs in: Go and PocketOne's source, vendored
+            org.opencontainers.image.version=${{ inputs.tag || github.ref_name }}
+            org.opencontainers.image.licenses=MIT
+      - name: Check the image
+        run: |
+          docker run --rm --platform linux/amd64 "$IMAGE" --version
+          docker run --rm --platform linux/arm64 "$IMAGE" --version

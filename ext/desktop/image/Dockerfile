@@ -3,18 +3,25 @@
 #
 #   docker build -f ext/desktop/image/Dockerfile -t pocketone-build:dev .
 #
-# (`pocketone desktop image` runs that; a development pocketone runs it on first use.)
+# (`pocketone desktop image` runs that; a development pocketone runs it on first use.) Every release tag publishes
+# it for linux/amd64 and linux/arm64 as ghcr.io/pockethost/pocketone-build:<tag> (.github/workflows/build-image.yml).
 
-FROM golang:1.27-bookworm AS prepare
+# The prepare stage runs on the build machine's own architecture and cross-compiles the image's pocketone, so a
+# multi-arch build (linux/amd64 and linux/arm64) never compiles Go under emulation. vendor/ is the same for every
+# architecture.
+FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS prepare
+ARG TARGETOS TARGETARCH
 ENV GOTOOLCHAIN=local CGO_ENABLED=0
 COPY . /src
+WORKDIR /src/examples/pocketone
 RUN --mount=type=cache,target=/root/go/pkg/mod \
-    cd /src/examples/pocketone && go build -trimpath -o /usr/local/bin/pocketone .
+    go build -trimpath -o /usr/local/bin/pocketone-host . && \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -o /out/pocketone .
 RUN --mount=type=cache,target=/root/go/pkg/mod \
-    pocketone desktop prepare --source /src /opt/pocketone-build
+    pocketone-host desktop prepare --source /src /opt/pocketone-build
 
 FROM golang:1.27-bookworm
-COPY --from=prepare /usr/local/bin/pocketone /usr/local/bin/pocketone
+COPY --from=prepare /out/pocketone /usr/local/bin/pocketone
 COPY --from=prepare /opt/pocketone-build /opt/pocketone-build
 # offline, against the vendored module; the build cache lives in a volume (pocketone-build-cache) between runs
 ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-mod=vendor GOPROXY=off GOSUMDB=off \
