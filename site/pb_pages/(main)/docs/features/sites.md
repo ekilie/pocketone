@@ -5,7 +5,7 @@ description: Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, str
 
 # PocketPages: sites in TSX, TypeScript or EJS
 
-> **PocketBase:** `pb_public` serves static files. **PocketOne:** server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere, your records a function call away, and no build step.
+> **PocketBase:** `pb_public` serves your static files and single-page apps, and hooks can render HTML with `$template`. **PocketOne:** server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere, your records a function call away, and no build step.
 
 Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in a `pb_pages` folder next to `pb_data`, and your app serves it as a web
 page. Each file is a route. Components `import` each other, route files can be TypeScript (`+page.ts`, `+api.ts`), and

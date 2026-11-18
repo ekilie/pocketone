@@ -5,7 +5,7 @@ description: Put your app's data back as it was at any moment in the last few da
 
 # Point-in-time restore
 
-> **PocketBase:** backups you schedule, restored whole. **PocketOne:** every change is recorded, and you restore to any second in the last 72 hours.
+> **PocketBase:** backups you schedule, to local disk or S3, restored whole. **PocketOne:** every change is recorded, and you restore to any second in the last 72 hours.
 
 Deleted the wrong records, ran a bad migration, or let a script loose on production? Pick a moment from before it
 happened, and your app's data goes back to how it was then.

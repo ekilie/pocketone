@@ -5,7 +5,7 @@ description: Connect Claude or another MCP client to your app, sign in once, and
 
 # MCP for AI agents
 
-> **PocketBase:** no MCP server. **PocketOne:** every app serves MCP at `/mcp`, with OAuth sign-in, so Claude and other agents work with your app as you.
+> **PocketBase:** a REST API and realtime subscriptions, with official JavaScript and Dart SDKs. **PocketOne:** every app serves MCP at `/mcp`, with OAuth sign-in, so Claude and other agents work with your app as you.
 
 Point Claude, or any other MCP client, at your app and sign in. The agent can then read and change your data, check on
 the app and run admin tasks, as you and with your rights, nothing more.

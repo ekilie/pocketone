@@ -5,7 +5,7 @@ description: Run hundreds of PocketBase apps as isolates inside one pocketone pr
 
 # PocketBase isolates: hundreds of apps in one process
 
-> **PocketBase:** one app per process. Hosting many means a container or VM for each, with its idle memory and a cold start of a second or more. **PocketOne:** hundreds of apps as isolates inside one process. Each starts on its first request in tens of milliseconds, costs a few MB, and is sandboxed from the others.
+> **PocketBase:** one app per process; to host several, you run a process, container or VM for each. **PocketOne:** hundreds of apps as isolates inside one process. Each starts on its first request in tens of milliseconds, costs a few MB, and is sandboxed from the others.
 
 An isolate is a complete PocketOne app: its own folder, `pb_data`, `pb_hooks`, `pb_migrations`, dashboard and
 superusers, at its own hostname. What's different is where it runs. Instead of a process or container of its own, it
