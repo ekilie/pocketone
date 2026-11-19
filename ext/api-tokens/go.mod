@@ -6,6 +6,7 @@ require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/crypto v0.59.0
 	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
@@ -34,7 +35,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
-	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/image v0.48.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect

@@ -19,6 +19,7 @@ func newApp(t *testing.T, cfg Config) (*tests.TestApp, *Tokens) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
+	fastPasswords(t, app)
 	tk, err := Register(app, cfg)
 	if err != nil {
 		t.Fatal(err)

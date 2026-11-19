@@ -70,6 +70,7 @@ func newEnvTokens(t *testing.T, cfg OAuthConfig, tcfg Config) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
+	fastPasswords(t, app)
 	tcfg.OAuth = cfg
 	tk := MustRegister(app, tcfg)
 	remotes.MustRegister(app, remotes.Config{})
