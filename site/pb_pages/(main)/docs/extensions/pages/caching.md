@@ -11,7 +11,7 @@ source: "ext/pages/docs/caching.md"
 
 `asset()` adds a content hash to a file's URL:
 
-```ejs
+```ets
 <img src="<%%= asset('/images/logo.png') %>">
 <!-- <img src="/images/logo.3f9a1c2b7d4e.png"> -->
 ```
@@ -37,7 +37,7 @@ The route table is built at startup and rebuilt whenever anything in `pb_pages` 
 
 Rendered pages aren't cached. To let browsers or a CDN cache a page, set a header in a handler or middleware:
 
-```js
+```ts
 module.exports = (ctx, next) => {
   ctx.res.header('Cache-Control', 'public, max-age=60')
   return next()

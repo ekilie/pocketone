@@ -11,7 +11,7 @@
 // build.
 //
 // The server half is remote/v1's whoami (GET /api/_c/remote/v1): who the request's token is, its scopes, and which
-// contracts the app offers (deploy/v1, oauth/v1, tokens/v1, ...), so clients discover what a remote supports.
+// contracts the app offers (deploy/v1, oauth/v1, api-tokens/v1, ...), so clients discover what a remote supports.
 package remoteclient
 
 import (

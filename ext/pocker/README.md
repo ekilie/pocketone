@@ -56,7 +56,7 @@ pocker:
   max_js_execution: 30s     # default limits; each instance can override them
   max_js_allocation: 64MiB
   isolate_config:           # every instance's config, in pocketone.yaml's shape
-    tokens: { enabled: false }
+    api-tokens: { enabled: false }
 ```
 
 `isolate_config` holds one section per extension the instances run (the standard set's members and your own

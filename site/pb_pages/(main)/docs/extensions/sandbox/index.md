@@ -67,7 +67,8 @@ There's nothing to operate day to day. Hooks that stick to normal app code (`rou
 `$app.findRecordById` and the rest) run unchanged. What changes for a hook author:
 
 - `$os.cmd`, `$os.exec`, `$os.exit` and `$filesystem.local` fail with "not available on this host (sandboxed)";
-  `$os.args` is empty; process-wide Go methods such as `$app.restart` read as `undefined`.
+  `$os.args` is empty; process-wide Go methods such as `$app.restart` read as `undefined`. The app's `types.d.ts`
+  declares each of them `never`, so `tsc` and your editor refuse a call to one before you deploy it.
 - Files outside the app's folder can't be read or written, by any API, including through `..` or symlinks.
 - `$os.getenv` and `process.env` see only the app's own environment.
 - A JS call that runs past its time limit is interrupted with an error; so is one that asks for a huge allocation.
@@ -88,8 +89,9 @@ Under Pocker, `console.*` output and hook errors go to the instance's own `logs/
 
 ### Building on Sandbox
 
-- **`Sandbox`** is a jsvm extension (`OnInit`, `Modules`, `HTTPClient`, and `HideField`/`HideMethod` to hide
-  process-reaching Go members); add it to `jsvm.Config.Extensions`.
+- **`Sandbox`** is a jsvm extension (`OnInit`, `Modules`, `HTTPClient`, `HideField`/`HideMethod` to hide
+  process-reaching Go members, and `FilterTypes` to declare those members `never` in the app's `types.d.ts`); add it
+  to `jsvm.Config.Extensions`.
 - **`GuardedDBConnect(maxQuery)`** is a `core.DBConnectFunc`: set it as the app's `DBConnect` to open the databases
   through SQLite's authorizer, with a deadline for statements that have none.
 - **`InstallEgressPolicy(sandbox.EgressPolicy{Allow: ...})`** routes Go's default HTTP transport through the

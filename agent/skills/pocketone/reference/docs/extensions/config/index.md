@@ -20,8 +20,11 @@ cfg, err := config.Load(config.FromArgs(os.Args[1:]))
 if err != nil {
 	log.Fatal(err)
 }
-appCfg, _ := config.App.Get()
-app := pocketbase.NewWithConfig(pocketbase.Config{DefaultDataDir: cfg.ResolvePath(appCfg.Dir)})
+a, err := standard.AppFromConfig(cfg) // the whole app section, ext/standard
+if err != nil {
+	log.Fatal(err)
+}
+app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
@@ -109,7 +112,7 @@ The single app, for every command that opens it: data dir, dev mode, encryption,
 | `encryption_env` | string |  | Name of the environment variable holding a 32-character key that encrypts the app settings. The --encryptionEnv flag wins. |
 | `query_timeout` | duration |  | Default timeout for SELECT queries, such as 30s. The --queryTimeout flag wins. |
 | `hooks_dir` | string |  | The JS hooks folder. Default: pb_hooks next to pb_data. The --hooksDir flag wins. |
-| `jsvm` | string |  | The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $tokens and JS contracts are off). The --jsvm flag wins. |
+| `jsvm` | string |  | The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $apiTokens and JS contracts are off). The --jsvm flag wins. |
 | `hooks_pool` | int |  | Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
 | `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
 | `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |

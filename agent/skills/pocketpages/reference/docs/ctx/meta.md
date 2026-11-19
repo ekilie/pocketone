@@ -3,14 +3,14 @@
 
 A per-request key/value store for page metadata (title, description). Set with two arguments, read with one. In templates it's also available as `meta`.
 
-```ejs
+```ets
 <!-- a page -->
 <% meta('title', data.product.getString('name')) %>
 <% meta('description', data.product.getString('summary')) %>
 ```
 
-```ejs
-<!-- +layout.ejs -->
+```ets
+<!-- +layout.ets -->
 <title><%= meta('title') || 'My shop' %></title>
 <meta name="description" content="<%= meta('description') %>">
 ```

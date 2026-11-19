@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/evanw/esbuild/pkg/api"
 )
 
 // The EJS compiler turns a template into the source of one JS function:
@@ -181,4 +184,30 @@ func trimExpr(code string) string {
 		return "''"
 	}
 	return "(" + code + ")"
+}
+
+// templateLineRe finds the template line markers CompileEJS writes before each tag's code.
+var templateLineRe = regexp.MustCompile(`__l = (\d+);`)
+
+// stripTemplateTypes turns a compiled .ets template (EJS whose tags hold TypeScript) into plain JS: esbuild, linked
+// into the binary, strips the types from the whole compiled function, since a single tag's code (`if (x) {`) is
+// rarely valid on its own. Types are stripped, not checked. An error names the template line, found from the nearest
+// __l marker before the error.
+func stripTemplateTypes(code string) (string, error) {
+	res := api.Transform(code, api.TransformOptions{Loader: api.LoaderTS, Target: api.ES2017})
+	if len(res.Errors) == 0 {
+		return strings.TrimRight(string(res.Code), ";\n"), nil
+	}
+	m := res.Errors[0]
+	if m.Location == nil {
+		return "", fmt.Errorf("TypeScript: %s", m.Text)
+	}
+	line := 1
+	lines := strings.Split(code, "\n")
+	for i := 0; i < m.Location.Line && i < len(lines); i++ {
+		if sm := templateLineRe.FindStringSubmatch(lines[i]); sm != nil {
+			line, _ = strconv.Atoi(sm[1])
+		}
+	}
+	return "", fmt.Errorf("line %d: TypeScript: %s", line, m.Text)
 }

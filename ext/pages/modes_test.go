@@ -95,7 +95,7 @@ func createStarter(t *testing.T, kit string) string {
 // minimalEdit: in dev mode an edit to a page shows on the next request, with no restart.
 func minimalEdit(t *testing.T, s *modetest.Site) {
 	t.Helper()
-	index := filepath.Join(s.Dir, "pb_pages", "index.ejs")
+	index := filepath.Join(s.Dir, "pb_pages", "index.ets")
 	b, err := os.ReadFile(index)
 	if err != nil {
 		t.Fatal(err)

@@ -32,10 +32,11 @@ tinygo build -target=wasip1 -opt=z -no-debug -scheduler=none -o pb_hooks/summary
 
 ## Call it
 
-The hook is the same as for Go:
+The page code is the same as for Go:
 
-```js
-const out = await $wasm.run.async("summary", { title: e.record.get("title"), body: e.record.get("body") })
+```ts
+const { title, body } = ctx.req.body()
+const out = await $wasm.run.async<{ text: string }>("summary", { title, body })
 ```
 
 ## What's different from Go

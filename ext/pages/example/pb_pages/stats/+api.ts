@@ -1,6 +1,6 @@
 type Stats = { notes: number; users: number; now: string; you: string | null }
 
-export function get(ctx: any) {
+export function get(ctx: pages.Context) {
   const stats: Stats = {
     notes: ctx.app.countRecords('notes'),
     users: ctx.app.countRecords('users'),

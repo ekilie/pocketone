@@ -1,5 +1,5 @@
 // ---- ext/wasm: $wasm ----
-// The pb_hooks API of ext/wasm. The JS engine adds it to pb_data/types.d.ts on every app ext/wasm runs on. ext/wasm is
+// The pb_hooks API of ext/wasm. The JS engine adds it to types.d.ts on every app ext/wasm runs on. ext/wasm is
 // an extension; the files it runs, pb_hooks/<name>.pb.wasm, are modules.
 
 /**

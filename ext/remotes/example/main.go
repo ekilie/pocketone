@@ -13,10 +13,10 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/remotes"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	// registered through their contracts (the standard set does this for you): remotes provides remote/v1 (whoami at
 	// /api/_c/remote/v1, status, restart, logs) and the remote/login/logout/link commands; tokens adds API tokens
 	// and the OAuth server login signs in through
-	if _, err := extkit.Setup(app, []extkit.Extension{tokens.New(tokens.Config{}), remotes.New(remotes.Config{})}, nil, nil); err != nil {
+	if _, err := extkit.Setup(app, []extkit.Extension{apitokens.New(apitokens.Config{}), remotes.New(remotes.Config{})}, nil, nil); err != nil {
 		log.Fatal(err)
 	}
 

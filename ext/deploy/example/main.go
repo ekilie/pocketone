@@ -14,12 +14,12 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/deploy"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/remotes"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
 
 	// registered through their contracts (the standard set does this for you); deploys land next to pb_data
-	exts := []extkit.Extension{tokens.New(tokens.Config{}), remotes.New(remotes.Config{}), deploy.NewExtension(deploy.Config{})}
+	exts := []extkit.Extension{apitokens.New(apitokens.Config{}), remotes.New(remotes.Config{}), deploy.NewExtension(deploy.Config{})}
 	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
 		log.Fatal(err)
 	}

@@ -1,14 +1,14 @@
 ---
 title: API Routes and JSON
-description: Serve JSON and other non-HTML responses from +api.js files and ctx.res.json.
+description: Serve JSON and other non-HTML responses from +api.ts files and ctx.res.json.
 ---
 
 # API Routes and JSON
 
-A `+api.js` file serves its folder's URL without a template. Use it for JSON, feeds, webhooks and anything else that isn't an HTML page.
+A `+api.ts` file serves its folder's URL without a template. Use it for JSON, feeds, webhooks and anything else that isn't an HTML page.
 
-```js
-// pb_pages/feeds/latest/+api.js
+```ts
+// pb_pages/feeds/latest/+api.ts
 module.exports = {
   get(ctx) {
     const posts = ctx.app.findRecordsByFilter('posts', 'published = true', '-created', 20)
@@ -25,18 +25,18 @@ A request to `/feeds/latest` returns:
 
 ## How it works
 
-- `+api.js` has the same exports as `+page.js`: `load`, `get`, `post`, `put`, `patch`, `delete`.
+- `+api.ts` has the same exports as `+page.ts`: `load`, `get`, `post`, `put`, `patch`, `delete`.
 - There is no template, so a handler must send a response. Returning without one is a `500`.
-- `[param]` folders work as for pages: `products/[id]/+api.js` serves `/products/123`.
-- A folder can't have both a `+api.js` and an `index` page.
+- `[param]` folders work as for pages: `products/[id]/+api.ts` serves `/products/123`.
+- A folder can't have both a `+api.ts` and an `index` page.
 - Middleware runs for API routes too.
-- `ctx.httpError()` thrown in a `+api.js` answers with JSON: `{ "status": 404, "message": "..." }`.
+- `ctx.httpError()` thrown in a `+api.ts` answers with JSON: `{ "status": 404, "message": "..." }`.
 - Handlers can be `async`. The response is sent once the handler settles.
 
 ## Async handlers
 
-```js
-// pb_pages/stats/+api.js
+```ts
+// pb_pages/stats/+api.ts
 module.exports = {
   async get(ctx) {
     const orders = await ctx.app.countRecords.async('orders')
@@ -63,10 +63,10 @@ See [res](ctx/res.md).
 
 ## JSON from a page
 
-JSON is only sent through `ctx.res.json` (or a `+api.js`). Template output is never parsed as JSON, even if it looks like JSON. A page's `+page.js` can still answer with JSON for one method:
+JSON is only sent through `ctx.res.json` (or a `+api.ts`). Template output is never parsed as JSON, even if it looks like JSON. A page's `+page.ts` can still answer with JSON for one method:
 
-```js
-// pb_pages/products/[id]/+page.js
+```ts
+// pb_pages/products/[id]/+page.ts
 module.exports = {
   post(ctx) {
     const product = ctx.app.findRecordById('products', ctx.params.id)

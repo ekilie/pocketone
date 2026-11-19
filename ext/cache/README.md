@@ -40,7 +40,7 @@ code asks for:
 ```yaml
 cache:
   max_memory: 512MiB       # the store: every bucket together
-  disk_path: cache         # a disk tier; leave out for memory only
+  disk: true               # a disk tier in pb_cache/cache; leave out for memory only
   max_disk: 10GiB
   defaults:
     max_memory: 16MiB
@@ -57,7 +57,8 @@ The store, ceilings over every bucket together:
 |---|---|
 | `max_memory` | Memory for every bucket together (default 128MiB) |
 | `eviction` | Which values leave memory (or disk) first when the store reaches a ceiling: `lru` (default), `mru`, `fifo`, `lifo` |
-| `disk_path` | Turns on the disk tier there, in a `p1cache` folder. Relative paths are under `pb_data` when the app has the process to itself, and under the working directory when several apps share it (Pocker) |
+| `disk` | Turns on the disk tier in `pb_cache/cache`, next to `pb_data`; on a multisite host, in the host's own `pb_cache` (the store serves every instance) |
+| `disk_path` | Puts the disk tier in a `cache` folder there instead, and turns it on. Relative paths are to the app's folder (the one holding `pb_data`) when the app has the process to itself, and to the working directory when several apps share it (Pocker) |
 | `max_disk` | Size of the disk tier (default 1GiB) |
 
 Each bucket (`defaults` and `buckets.<name>`), its own budget:
@@ -72,8 +73,8 @@ Each bucket (`defaults` and `buckets.<name>`), its own budget:
 
 Sizes take `KiB`, `MiB`, `GiB` (or `KB`, `MB`, `GB`); durations take `s`, `m`, `h`.
 
-A disk tier inside `pb_data` is part of your backups (as throwaway files). To keep it out, give `disk_path` an
-absolute folder outside `pb_data`.
+The disk tier is [`pb_cache`](https://pocketone.dev/docs/folders): never backed up or deployed, and emptied when the
+process starts. `pocketone cache clear cache` empties it by hand.
 
 ## Use
 

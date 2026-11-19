@@ -20,6 +20,7 @@
 
 - [Creating a Page](/docs/extensions/pages/creating-a-page)
 - [Directory Structure](/docs/extensions/pages/directory-structure)
+- [File types](/docs/extensions/pages/file-types)
 - [Routing](/docs/extensions/pages/routing)
 - [Accessing Parameters](/docs/extensions/pages/parameters)
 - [Loading Data](/docs/extensions/pages/loading-data)
@@ -27,11 +28,11 @@
 
 # Templating
 
-- [EJS](/docs/extensions/pages/ejs)
+- [ETS templates](/docs/extensions/pages/ets)
 - [Markdown](/docs/extensions/pages/markdown)
-- [JSX and TSX](/docs/extensions/pages/jsx)
 - [Partials](/docs/extensions/pages/partials)
 - [Layouts and Slots](/docs/extensions/pages/layouts)
+- [Components with TSX](/docs/extensions/pages/jsx)
 
 # Security and Content
 
@@ -43,7 +44,7 @@
 
 # Configuration
 
-- [+config.js](/docs/extensions/pages/config)
+- [+config.ts](/docs/extensions/pages/config)
 - [Caching](/docs/extensions/pages/caching)
 - [Errors](/docs/extensions/pages/errors)
 - [Debugging](/docs/extensions/pages/debugging)
@@ -77,6 +78,7 @@
 # Going Further
 
 - [JavaScript Runtime](/docs/extensions/pages/jsvm)
+- [TypeScript](/docs/extensions/pages/typescript)
 - [Plugin Authoring](/docs/extensions/pages/plugins/authoring)
 
 # Guides

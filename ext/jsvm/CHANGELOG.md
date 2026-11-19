@@ -7,6 +7,16 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+- `types.d.ts` moved from `pb_data/` to the project root, the folder holding `pb_hooks` (next to `pb_data` and `pocketone.yaml`), so a fresh checkout is typed before the app first runs. Delete the old `pb_data/types.d.ts`. Hook and migration files with `/// <reference path="../pb_data/types.d.ts" />` still point at the old place: change them to `../types.d.ts`, or drop the line if a `tsconfig.json` includes `types.d.ts`. Migrations that `migrate` and automigrate write still carry the old line (PocketBase's templates). If you kept your own `tsconfig.json`, change its `pb_data/types.d.ts` to `types.d.ts`. Commit `types.d.ts` and `tsconfig.json`. `Config.TypesDir` still overrides the folder.
+
+### Added
+
+- The app writes a `tsconfig.json` beside `types.d.ts` when there's none (it never overwrites one), including `types.d.ts`, `pb_hooks`, `pb_migrations` and `pb_pages` (JSX checked, `"jsx": "preserve"`), so editors and `tsc --noEmit` work without setup. With hooks embedded in the binary (ext/bundle) and no `TypesDir`, neither file is written.
+- Extensions can change the app's finished `types.d.ts` with `FilterTypes(decl string) string` (`js.TypesFilter` in
+  `ext/extkit/js`), run after every extension's `TypeScript()`. `ext/sandbox` uses it to declare what it hides `never`.
+
 ### Fixed
 
 - A busy app no longer runs its JS VM out of memory. The VM's loop ran about one queued free (a JS value Go had dropped) per request, so under steady concurrent load the frees backed up, Go's finalizers stalled, and after about 25,000 pages at 50 concurrent requests every page and hook failed with `InternalError: out of memory` until the app restarted. The loop now runs the frees a request leaves before it takes the next one; a pages site served 150,000 requests in 30 seconds at a steady 130 MB.

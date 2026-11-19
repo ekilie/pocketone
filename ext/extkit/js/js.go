@@ -167,10 +167,16 @@ type (
 		BindJS(app core.App, rt Runtime)
 	}
 	// Typer declares in TypeScript what the extension binds (its globals, their types), so editors and tsc know them.
-	// The engine appends it to pb_data/types.d.ts. Write it as a .d.ts script: `declare var $name: ...`, no
+	// The engine appends it to types.d.ts. Write it as a .d.ts script: `declare var $name: ...`, no
 	// top-level import or export.
 	Typer interface {
 		TypeScript() string
+	}
+	// TypesFilter changes the app's finished types.d.ts (the engine's declarations plus every Typer's), for an
+	// extension that takes away what JS could otherwise reach, so editors and tsc stop offering it. The engine runs
+	// every TypesFilter in order and writes what the last one returns.
+	TypesFilter interface {
+		FilterTypes(decl string) string
 	}
 )
 

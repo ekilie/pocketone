@@ -7,6 +7,9 @@
 
 # By name
 
+- [agent.chat/v1](/docs/contracts/agent.chat/v1)
+- [agent/v1](/docs/contracts/agent/v1)
+- [api-tokens/v1](/docs/contracts/api-tokens/v1)
 - [bulkmail/v1](/docs/contracts/bulkmail/v1)
 - [cache.clear/v1](/docs/contracts/cache.clear/v1)
 - [cache/v1](/docs/contracts/cache/v1)
@@ -26,5 +29,4 @@
 - [settings/v1](/docs/contracts/settings/v1)
 - [templates/v1](/docs/contracts/templates/v1)
 - [tls/v1](/docs/contracts/tls/v1)
-- [tokens/v1](/docs/contracts/tokens/v1)
 - [vacuum/v1](/docs/contracts/vacuum/v1)

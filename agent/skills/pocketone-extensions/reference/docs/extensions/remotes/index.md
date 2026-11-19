@@ -30,8 +30,8 @@ extkit.Setup(app, []extkit.Extension{remotes.New(remotes.Config{})}, nil, nil) /
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](https://pocketone.dev/docs/extensions/tokens) for API tokens and
-[the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) for browser login.
+The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](https://pocketone.dev/docs/extensions/api-tokens) for API tokens and
+[the OAuth server](https://pocketone.dev/docs/extensions/api-tokens/oauth) for browser login.
 
 ## Configure
 
@@ -89,7 +89,7 @@ pocketone login prod
 
 `login` tries, in order (the command itself never asks for a password):
 
-1. **The browser**, when the remote runs [the OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth). Your browser opens, you sign in
+1. **The browser**, when the remote runs [the OAuth server](https://pocketone.dev/docs/extensions/api-tokens/oauth). Your browser opens, you sign in
    and approve, and the command finishes. Over SSH or without a display it shows a code to enter on another device
    instead; `--device` asks for that, and `--no-browser` prints the URL without opening it.
 2. **A pasted token** (`pbt_...`, a PocketHost token, or a PocketBase auth token). At the prompt, paste it, or pass
@@ -153,8 +153,8 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 | Extension | How they fit |
 |---|---|
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `deploy`, `dev` and `pull` resolve their remote and login through Remotes and find deploy/v1 in whoami's contracts; `restart` and `logs` use remote/v1. |
-| [OAuth](https://pocketone.dev/docs/extensions/tokens/oauth) (in Tokens) | Provides oauth/v1, so whoami lists it; `login` then signs in through the browser (loopback redirect on 127.0.0.1 with PKCE) or a device code. |
-| [Tokens](https://pocketone.dev/docs/extensions/tokens) | Provides the API tokens `login` takes when pasted. Whoami reports a token's id and scopes. |
+| [OAuth](https://pocketone.dev/docs/extensions/api-tokens/oauth) (in Tokens) | Provides oauth/v1, so whoami lists it; `login` then signs in through the browser (loopback redirect on 127.0.0.1 with PKCE) or a device code. |
+| [Tokens](https://pocketone.dev/docs/extensions/api-tokens) | Provides the API tokens `login` takes when pasted. Whoami reports a token's id and scopes. |
 
 ### remote/v1
 
@@ -171,7 +171,7 @@ Whoami says who the request's credential is and what the app offers, so clients 
 
 ```json
 {"auth": {"collection": "_superusers", "id": "…", "email": "admin@example.com"}, "via": "token",
- "tokenId": "…", "scopes": ["deploy", "remote"], "contracts": ["deploy/v1", "oauth/v1", "remote/v1", "tokens/v1"],
+ "tokenId": "…", "scopes": ["deploy", "remote"], "contracts": ["deploy/v1", "oauth/v1", "remote/v1", "api-tokens/v1"],
  "extensions": ["tokens", "remotes", "deploy"],
  "app": {"name": "Acme", "url": "https://myapp.example.com"}}
 ```
@@ -218,10 +218,10 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/remotes"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 func main() {
@@ -231,7 +231,7 @@ func main() {
 	// registered through their contracts (the standard set does this for you): remotes provides remote/v1 (whoami at
 	// /api/_c/remote/v1, status, restart, logs) and the remote/login/logout/link commands; tokens adds API tokens
 	// and the OAuth server login signs in through
-	if _, err := extkit.Setup(app, []extkit.Extension{tokens.New(tokens.Config{}), remotes.New(remotes.Config{})}, nil, nil); err != nil {
+	if _, err := extkit.Setup(app, []extkit.Extension{apitokens.New(apitokens.Config{}), remotes.New(remotes.Config{})}, nil, nil); err != nil {
 		log.Fatal(err)
 	}
 

@@ -44,6 +44,9 @@ require (
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
+	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/agent-chat v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
@@ -54,10 +57,11 @@ require (
 	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/pitr v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/s3-fallback v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -90,6 +94,7 @@ require (
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace (
+	github.com/pockethost/pocketone/ext/api-tokens => ../api-tokens
 	github.com/pockethost/pocketone/ext/autotls => ../autotls
 	github.com/pockethost/pocketone/ext/backups => ../backups
 	github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
@@ -119,10 +124,15 @@ replace (
 	github.com/pockethost/pocketone/ext/settings => ../settings
 	github.com/pockethost/pocketone/ext/standard => ../standard
 	github.com/pockethost/pocketone/ext/stats => ../stats
-	github.com/pockethost/pocketone/ext/tokens => ../tokens
 	github.com/pockethost/pocketone/ext/upgrade => ../upgrade
 )
 
 replace github.com/pockethost/pocketone/ext/cache => ../cache
 
 replace github.com/pockethost/pocketone/ext/templates => ../templates
+
+replace github.com/pockethost/pocketone/ext/agent => ../agent
+
+replace github.com/pockethost/pocketone/ext/uicache => ../uicache
+
+replace github.com/pockethost/pocketone/ext/agent-chat => ../agent-chat

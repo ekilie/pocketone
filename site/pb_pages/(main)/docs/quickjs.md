@@ -152,7 +152,8 @@ curl http://127.0.0.1:8090/typed
 
 PocketOne removes the types when it loads the file, with no build step. An error names the line in your `.ts` file.
 Types aren't checked at run time: run `tsc --noEmit` or rely on your editor. The app writes the whole JS API's types to
-`pb_data/types.d.ts`, and the [JSVM page](/docs/extensions/jsvm#types) has a `tsconfig.json` that uses it.
+`types.d.ts` in your project folder, next to `pb_hooks`, and a `tsconfig.json` that uses it if you don't have one
+([JSVM page](/docs/extensions/jsvm#types)).
 
 ## 5. Async handlers
 

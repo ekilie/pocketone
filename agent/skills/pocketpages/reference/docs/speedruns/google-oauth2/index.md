@@ -82,7 +82,7 @@ browser asked for, and HTTPS is detected from `X-Forwarded-Proto`.
 
 By default, the `auth` plugin uses `/auth/oauth/confirm` as the OAuth2 return path. Change it when you start the flow:
 
-```js
+```ts
 ctx.session.requestOAuth2('google', { redirectPath: '/custom/oauth/callback' })
 ```
 
@@ -92,8 +92,8 @@ Remember to add the new redirect URL to your Google OAuth2 configuration too.
 
 ### 1. Turn on the auth plugin
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth'],
 }
@@ -110,8 +110,8 @@ module.exports = {
 
 ### 3. Start the flow
 
-```js
-// pb_pages/auth/oauth/+page.js
+```ts
+// pb_pages/auth/oauth/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.requestOAuth2(ctx.req.body().provider)
@@ -123,8 +123,8 @@ module.exports = {
 
 ### 4. Callback
 
-```js
-// pb_pages/auth/oauth/confirm/+page.js
+```ts
+// pb_pages/auth/oauth/confirm/+page.ts
 module.exports = {
   load(ctx) {
     try {
@@ -137,8 +137,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/auth/oauth/confirm/index.ejs -->
+```ets
+<!-- pb_pages/auth/oauth/confirm/index.ets -->
 <mark><%= data.error %></mark>
 ```
 
@@ -171,8 +171,8 @@ migrate(
 
 ### 6. Protected routes
 
-```js
-// pb_pages/account/+middleware.js
+```ts
+// pb_pages/account/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()
@@ -181,7 +181,7 @@ module.exports = (ctx, next) => {
 
 ### 7. Auth state in the UI
 
-```ejs
+```ets
 <% if (ctx.auth) { %>
   <div>Welcome, <%= ctx.auth.email() %></div>
   <form method="post" action="/logout"><button>Log out</button></form>
@@ -192,8 +192,8 @@ module.exports = (ctx, next) => {
 
 ### 8. Logout
 
-```js
-// pb_pages/logout/+page.js
+```ts
+// pb_pages/logout/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signOut()

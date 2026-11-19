@@ -16,9 +16,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 // serveApp runs app's router (OnServe included) on a local test server.
@@ -50,7 +50,7 @@ type p1Remote struct {
 	url      string
 	dir      string
 	restarts atomic.Int32
-	tk       *tokens.Tokens
+	tk       *apitokens.Tokens
 }
 
 func newP1Remote(t *testing.T) *p1Remote { return newP1RemoteWith(t, nil) }
@@ -71,19 +71,19 @@ func newP1RemoteWith(t *testing.T, adjust func(*Config)) *p1Remote {
 	}
 	// registered and sealed the way every app is (the standard set), so remote/v1 (restart, logs) mounts
 	exts := []extkit.Extension{
-		tokens.New(tokens.Config{Collections: []string{"_superusers", "users"}}),
+		apitokens.New(apitokens.Config{Collections: []string{"_superusers", "users"}}),
 		remotes.New(remotes.Config{Restart: count}),
 		NewExtension(cfg),
 	}
 	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	r.tk = tokens.For(app)
+	r.tk = apitokens.For(app)
 	// the test app is already bootstrapped: run what OnBootstrap would
 	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(e *core.BootstrapEvent) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
-	if err := tokens.EnsureSchema(app); err != nil {
+	if err := apitokens.EnsureSchema(app); err != nil {
 		t.Fatal(err)
 	}
 	r.url = serveApp(t, app)
@@ -96,7 +96,7 @@ func (r *p1Remote) token(t *testing.T, collection, email string, scopes ...strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, _, err := r.tk.Create(owner, tokens.CreateOptions{Name: "ci", Scopes: scopes})
+	secret, _, err := r.tk.Create(owner, apitokens.CreateOptions{Name: "ci", Scopes: scopes})
 	if err != nil {
 		t.Fatal(err)
 	}

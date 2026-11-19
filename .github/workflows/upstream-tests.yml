@@ -7,9 +7,7 @@
 name: PocketBase tests
 
 on:
-  push:
-    branches: [main]
-    paths-ignore: ['ext/**', 'site/**', 'docs/**', 'agent/**', 'examples/pocketone/**', '**.md']
+  # land.yml calls it when what it lands changes core; pushes to main don't run it again
   pull_request:
     paths-ignore: ['ext/**', 'site/**', 'docs/**', 'agent/**', 'examples/pocketone/**', '**.md']
   schedule:

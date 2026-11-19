@@ -1,0 +1,41 @@
+---
+title: When the model is loading
+description: "The built-in model downloads and loads after the app starts. Fail fast, wait, or show progress: what each $agent call does meanwhile."
+---
+
+# When the model is loading
+
+The built-in model downloads the first time (hundreds of megabytes to a few gigabytes) and loads on every start (a few
+seconds). The app serves meanwhile. What a call does until the model is ready depends on how you make it:
+
+| Call | While the model loads |
+|---|---|
+| `$agent.complete(opts)` | Throws `not_ready` at once, with the progress in the message. A page never hangs on it. |
+| `await $agent.complete.async(opts)` | Waits for the model, up to `opts.wait` (a duration like `"2m"`; default `agent.timeout`), then answers. |
+| `$agent.stream(opts, onText, { onWait })` | With `opts.wait`, waits and calls `onWait(status)` about twice a second, so a page can show "downloading 42%". Without it, throws `not_ready`. |
+| `$agent.warm(opts)` | Returns at once with `warmed: false`; the warm runs once the model is ready. |
+| `$agent.count(text)` | Answers at once with an estimate (`about four characters a token`) until the model can count exactly. |
+
+```ts
+// a page that streams the answer and shows progress while the model downloads
+const stream = ctx.res.sse()
+const r: AgentAnswer = $agent.stream({ system, messages, wait: "10m" }, (t) => stream.send("text", t), {
+  onWait: (s) => stream.send("status", s.message), // "downloading qwen3-1.7b (42%)"
+})
+stream.send("done", JSON.stringify({ text: r.text }))
+```
+
+```go
+// Go has no onWait: poll Status while you wait, or pass Wait and let the call wait for the model
+r, err := agent.Complete(ctx, extkit.Internal, agentv1.CompleteInput{System: system, Messages: messages, Wait: "10m"})
+if st, _ := agent.Status(ctx, extkit.Internal); !st.Ready {
+	log.Println(st.Message) // "downloading qwen3-1.7b (42%)"
+}
+```
+
+Over HTTP, agent/v1 calls take the same `wait` field; without it a loading model answers 503 `not_ready`.
+
+A call that's waiting also waits for a warm of the same prompt start that's still running, rather than reading the
+same text beside it. Warms always let calls go first.
+
+`$agent.status()` says where it is at any time: `{ backend, model, ready, progress, message }`.

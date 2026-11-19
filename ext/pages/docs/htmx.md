@@ -27,20 +27,20 @@ HTMX requests want HTML fragments, not whole pages wrapped in your layout. Put t
 ```
 pb_pages/
   (site)/             # Pages with layouts
-    +layout.ejs       # Main site layout
-    index.ejs         # /
+    +layout.ets       # Main site layout
+    index.ets         # /
     products/
-      index.ejs       # /products
+      index.ets       # /products
   xapi/               # HTMX endpoints (no layouts)
     products/
-      search.ejs      # /xapi/products/search
+      search.ets      # /xapi/products/search
       create/
-        +page.js
-        index.ejs     # /xapi/products/create
+        +page.ts
+        index.ets     # /xapi/products/create
 ```
 
-1. `(site)` holds full pages. Its `+layout.ejs` wraps them, and the group adds nothing to the URL.
-2. `xapi/` holds fragments. No layout applies to them, because there is no `+layout.ejs` at the root.
+1. `(site)` holds full pages. Its `+layout.ets` wraps them, and the group adds nothing to the URL.
+2. `xapi/` holds fragments. No layout applies to them, because there is no `+layout.ets` at the root.
 
 Don't name the folder `api/`: `/api/` belongs to PocketBase.
 
@@ -53,25 +53,25 @@ Render the same fragment on the first page load and in HTMX responses by keeping
 ```
 pb_pages/
   _private/
-    product-card.ejs    # shared partial
+    product-card.ets    # shared partial
   (site)/
     products/
-      index.ejs         # includes the partial
+      index.ets         # includes the partial
   xapi/
     products/
-      more.ejs          # includes the same partial
+      more.ets          # includes the same partial
 ```
 
-```ejs
-<!-- pb_pages/_private/product-card.ejs -->
+```ets
+<!-- pb_pages/_private/product-card.ets -->
 <div class="product-card" id="product-<%%= product.id %>">
   <h3><%%= product.getString('name') %></h3>
   <p><%%= product.getString('description') %></p>
 </div>
 ```
 
-```ejs
-<!-- pb_pages/(site)/products/index.ejs -->
+```ets
+<!-- pb_pages/(site)/products/index.ets -->
 <%% const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 20) %>
 <div class="products-container">
   <%% for (const product of products) { %>
@@ -83,8 +83,8 @@ pb_pages/
 </button>
 ```
 
-```ejs
-<!-- pb_pages/xapi/products/more.ejs -->
+```ets
+<!-- pb_pages/xapi/products/more.ets -->
 <%%
   const page = Number(ctx.req.query('page') ?? 1)
   const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 20, (page - 1) * 20)
@@ -97,7 +97,7 @@ pb_pages/
 ## Search as you type
 
 ```html
-<!-- pb_pages/(site)/index.ejs -->
+<!-- pb_pages/(site)/index.ets -->
 <input
   type="search"
   name="q"
@@ -109,8 +109,8 @@ pb_pages/
 <div id="search-results"></div>
 ```
 
-```ejs
-<!-- pb_pages/xapi/products/search.ejs -->
+```ets
+<!-- pb_pages/xapi/products/search.ets -->
 <%%
   const products = ctx.app.findRecordsByFilter(
     'products', 'name ~ {:q}', 'name', 20, 0, { q: ctx.req.query('q') ?? '' }
@@ -124,7 +124,7 @@ pb_pages/
 ## Forms
 
 ```html
-<!-- pb_pages/(site)/products/new.ejs -->
+<!-- pb_pages/(site)/products/new.ets -->
 <form hx-post="/xapi/products/create" hx-target="#products-list" hx-swap="beforeend">
   <input type="text" name="name" placeholder="Product Name" required />
   <textarea name="description" placeholder="Description" required></textarea>
@@ -133,8 +133,8 @@ pb_pages/
 <div id="products-list"></div>
 ```
 
-```js
-// pb_pages/xapi/products/create/+page.js
+```ts
+// pb_pages/xapi/products/create/+page.ts
 module.exports = {
   post(ctx) {
     const { name, description } = ctx.req.body()
@@ -147,8 +147,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/xapi/products/create/index.ejs -->
+```ets
+<!-- pb_pages/xapi/products/create/index.ets -->
 <%%- include('product-card', { product: data.product }) %>
 ```
 
@@ -156,8 +156,8 @@ module.exports = {
 
 Update more than one element with a single response:
 
-```ejs
-<!-- pb_pages/xapi/products/create/index.ejs -->
+```ets
+<!-- pb_pages/xapi/products/create/index.ets -->
 <%%- include('product-card', { product: data.product }) %>
 <div id="product-count" hx-swap-oob="true"><%%= ctx.app.countRecords('products') %> Products</div>
 ```
@@ -174,25 +174,25 @@ Update more than one element with a single response:
 
 With the [`realtime` plugin](plugins/realtime.md), a page can push rendered HTML to every subscriber. A template has `include()`, so render the partial there and send it:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = { plugins: ['realtime'] }
 ```
 
-```js
-// pb_pages/xapi/chat/+page.js
+```ts
+// pb_pages/xapi/chat/+page.ts
 module.exports = {
   post() {}, // accept POST; the page below does the work
 }
 ```
 
-```ejs
-<!-- pb_pages/xapi/chat/index.ejs -->
+```ets
+<!-- pb_pages/xapi/chat/index.ets -->
 <%% ctx.realtime.send('chat', include('chat-msg', { message: ctx.req.body().message })) %>
 ```
 
 ```html
-<!-- pb_pages/(site)/index.ejs -->
+<!-- pb_pages/(site)/index.ets -->
 <form hx-post="/xapi/chat" hx-swap="none" hx-on::after-request="if(event.detail.successful) this.reset()">
   <input type="text" name="message" />
   <button type="submit">Send</button>

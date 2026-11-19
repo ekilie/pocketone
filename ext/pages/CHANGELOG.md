@@ -9,10 +9,31 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ### Added
 
+- TypeScript types for page code, in the app's `types.d.ts`: `pages.Context` (`ctx`), `pages.Handlers`
+  (`+page`/`+api`), `pages.Middleware`, `pages.Config`, `pages.PluginFactory` and `pages.Props` for TSX, plus JSX
+  element types. Use them with `satisfies` or as annotations and check with `tsc` or your editor; add your own
+  `ctx.data` keys by extending `pages.Data`. See the new TypeScript docs page.
 - Page code can be async. PocketPages awaits promises from `load`, the method handlers, `+api` handlers and
   `+middleware` (`await next()` included), and allows `await` in EJS templates (`<%- await include(...) %>` for an
   async partial) and in JSX/TSX components, async ones anywhere in the tree. Use the `.async` twin of a Go function
   (`await ctx.app.countRecords.async('orders')`) to wait outside the VM. Sync pages run exactly as before.
+- `.ets` templates: EJS whose tags hold TypeScript. Types are stripped by the esbuild built into the binary, never
+  checked, and a TypeScript syntax error names the template line. `.ets` works everywhere `.ejs` does (pages,
+  layouts, error pages, partials), and an `include` name without an extension tries `.ets` first.
+- A `tsx` starter kit, for apps written as TSX components.
+
+### Changed
+
+- The docs, starter kits and example app use TypeScript throughout: `.ts` code and `.ets` templates, with TSX
+  as the component alternative (one style per app). A new File types page lists both styles and the plain-JavaScript
+  twins (`.js`, `.ejs`, `.jsx`), which keep working unchanged.
+
+### Fixed
+
+- In a `.jsx`/`.tsx` template, an empty slot is now falsy, so `slot('title') || 'fallback'` falls back (it always
+  printed the empty slot).
+- `ctx.pb()`'s `getFullList` returns the records. It returned them nested in an array (`[[...]]`, or one list per
+  batch), so lists rendered blank. Every SDK response is now plain JS data.
 
 ## 0.1.0 (2026-11-17)
 

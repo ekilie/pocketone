@@ -9,7 +9,7 @@ Each request runs as one unit under the app's usual JS limits (execution time, m
 
 Use [`ctx.app`](https://pocketone.dev/docs/extensions/pages/ctx/app), which is `$app`. PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/) cover [database operations](https://pocketbase.io/docs/js-database/) and [record operations](https://pocketbase.io/docs/js-records/):
 
-```js
+```ts
 const records = ctx.app.findRecordsByFilter(
   'articles',
   'status = {:status} && author = {:author}',
@@ -32,7 +32,7 @@ cd myapp
 npm install some-package
 ```
 
-```js
+```ts
 const somePackage = require('some-package')
 ```
 

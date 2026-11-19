@@ -10,18 +10,18 @@ myapp/
   pb_migrations/
   pb_public/
   pb_pages/
-    +config.js
-    +layout.ejs
-    index.ejs
-    about.ejs
+    +config.ts
+    +layout.ets
+    index.ets
+    about.ets
     _private/
-      nav.ejs
+      nav.ets
     assets/
       app.css
     products/
       [id]/
-        +page.js
-        index.ejs
+        +page.ts
+        index.ets
 ```
 
 ## Special names
@@ -30,7 +30,7 @@ A file or folder name starting with one of these characters is never a URL:
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+layout.ejs` (or `.jsx`, `.tsx`), `+middleware.js`, `+page.js`, `+api.js`, one of each per folder. `+config.js`, `+error.ejs` and `+404.ejs` are allowed only at the top of `pb_pages`. Any other `+` name, any other extension (such as `+layout.md`), and a top-only file in a subfolder are errors at startup. |
+| `+` | Framework file: `+layout.ets` (or `+layout.tsx`), `+middleware.ts`, `+page.ts`, `+api.ts`, one of each per folder. `+config.ts`, `+error.ets` and `+404.ets` are allowed only at the top of `pb_pages`. Any other `+` name, any other extension (such as `+layout.md`), and a top-only file in a subfolder are errors at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
 | `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
@@ -39,7 +39,7 @@ A file or folder name starting with one of these characters is never a URL:
 
 ## Groups
 
-A folder named `(name)` groups files without adding a URL segment: `(marketing)/pricing.ejs` serves `/pricing`. A group can have its own `+layout.ejs`, `+middleware.js` and `_private/`.
+A folder named `(name)` groups files without adding a URL segment: `(marketing)/pricing.ets` serves `/pricing`. A group can have its own `+layout.ets`, `+middleware.ts` and `_private/`.
 
 ## What else
 

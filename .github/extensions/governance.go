@@ -136,7 +136,7 @@ func standardMembers(rev string) map[string]bool {
 
 // approval is who may approve one area of a change.
 type approval struct {
-	Area   string   // "core", "ext/tokens (standard)", "contract restore/v1", ...
+	Area   string   // "core", "ext/api-tokens (standard)", "contract restore/v1", ...
 	AnyOf  []string // any one of these approves the area
 	Reason string
 }

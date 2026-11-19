@@ -14,32 +14,38 @@ CSV. Splitting lines on commas works until a field holds a comma, a quote or a l
 module reads CSV properly with the [csv](https://crates.io/crates/csv) crate (quotes, `""` inside quotes, CRLF line
 ends, Excel's UTF-8 BOM) and gives back one JSON object per row, keyed by the header line.
 
-## The hook
+## The route
 
-A route a superuser posts a file to, which imports it into `contacts` (`name` text, required; `email` email):
+An API route a superuser posts a file to, which imports it into `contacts` (`name` text, required; `email` email):
 
-```js
-// pb_hooks/csv.pb.js: superusers import contacts from a CSV file (the request body)
-routerAdd("POST", "/import/contacts", async (e) => {
-  const csv = new Uint8Array(toBytes(e.request.body))
-  const { rows, errors } = await $wasm.run.async("csv", csv)
-  const contacts = e.app.findCollectionByNameOrId("contacts")
-  e.app.runInTransaction((txApp) => {
+```ts
+// pb_pages/import/contacts/+api.ts: superusers import contacts from a CSV file (the request body)
+interface CsvImport {
+  rows: Array<{ name: string; email: string }> // one object per row, keyed by the header line
+  errors: Array<{ line: number; message: string }>
+}
+
+export async function post(ctx: any) {
+  if (!ctx.auth?.isSuperuser()) throw ctx.httpError(403, "Superusers only")
+  const csv = new Uint8Array(toBytes(ctx.req.event.request.body))
+  const { rows, errors } = await $wasm.run.async<CsvImport>("csv", csv)
+  const contacts = ctx.app.findCollectionByNameOrId("contacts")
+  ctx.app.runInTransaction((txApp: any) => {
     for (const row of rows) {
       const contact = new Record(contacts)
       contact.load({ name: row.name, email: row.email })
       txApp.save(contact) // an invalid row throws: nothing is imported
     }
   })
-  return e.json(200, { imported: rows.length, skipped: errors })
-}, $apis.requireSuperuserAuth())
+  return ctx.res.json({ imported: rows.length, skipped: errors })
+}
 ```
 
 ```sh
 curl -H "Authorization: $TOKEN" --data-binary @contacts.csv http://127.0.0.1:8090/import/contacts
 ```
 
-The file is the request body, sent as it is. In a transaction, the import is all or nothing: a row the collection
+The file is the request body, sent as it is; `ctx.req.event` is PocketBase's request event, and its `request.body` is the raw body. In a transaction, the import is all or nothing: a row the collection
 refuses (a blank `name`, a bad email) stops it with that row's error, and nothing is saved. A row with the wrong
 number of fields doesn't stop it; it's skipped and listed with its line number:
 
@@ -63,7 +69,7 @@ for result in reader.records() {
 
 `run` reads comma-separated files, `tsv` tab-separated and `semicolon` semicolon-separated, which is what spreadsheets
 save in many European locales: `$wasm.call.async("csv", "semicolon", csv)`. Every value comes back as a string, as it
-is in the file; convert numbers and dates in the hook, or let the collection's field types do it.
+is in the file; convert numbers and dates in your page code, or let the collection's field types do it.
 
 ## Build
 

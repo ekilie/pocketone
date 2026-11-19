@@ -21,6 +21,9 @@ The table is generated from each contract's README and every extension's `Contra
 
 | Contract | What it promises | Provided by | Required by | Works with | Owners |
 |---|---|---|---|---|---|
+| [`agent.chat/v1`](agent/chat/v1/README.md) | Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | agent-chat |  |  | @benallfree |
+| [`agent/v1`](agent/v1/README.md) | Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model. | agent | agent-chat |  | @benallfree |
+| [`api-tokens/v1`](api-tokens/v1/README.md) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | api-tokens |  | deploy, mcp, remotes | @benallfree |
 | [`bulkmail/v1`](bulkmail/v1/README.md) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](cache/clear/v1/README.md) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
 | [`cache/v1`](cache/v1/README.md) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
@@ -32,15 +35,14 @@ The table is generated from each contract's README and every extension's `Contra
 | [`mail.fallback/v1`](mail/fallback/v1/README.md) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](mail/feedback/v1/README.md) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](mail/suppression/v1/README.md) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |
-| [`mcp/v1`](mcp/v1/README.md) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  |  | @benallfree |
-| [`oauth/v1`](oauth/v1/README.md) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
+| [`mcp/v1`](mcp/v1/README.md) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  | wasm | @benallfree |
+| [`oauth/v1`](oauth/v1/README.md) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | api-tokens |  | mcp | @benallfree |
 | [`remote/v1`](remote/v1/README.md) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](restore/v1/README.md) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
 | [`runtime/v1`](runtime/v1/README.md) | What runs a multisite host's instances (as isolates, in containers), in preference order. | docker, pocker |  |  | @benallfree |
-| [`settings/v1`](settings/v1/README.md) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr, vacuum | @benallfree |
-| [`templates/v1`](templates/v1/README.md) | An extension's own pages as Go templates a project can eject and edit. | templates |  | tokens | @benallfree |
+| [`settings/v1`](settings/v1/README.md) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | agent, bulkmail, mailrelay, pitr, vacuum | @benallfree |
+| [`templates/v1`](templates/v1/README.md) | An extension's own pages as Go templates a project can eject and edit. | templates |  | api-tokens | @benallfree |
 | [`tls/v1`](tls/v1/README.md) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |
-| [`tokens/v1`](tokens/v1/README.md) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | tokens |  | deploy, mcp, remotes | @benallfree |
 | [`vacuum/v1`](vacuum/v1/README.md) | Compacting an app's databases so freed space goes back to the disk, and when it last happened. | vacuum |  |  | @benallfree |
 
 <!-- /contracts:catalogue -->
@@ -52,8 +54,8 @@ The table is generated from each contract's README and every extension's `Contra
 - **Service:** a Go interface, looked up in the same process (`fallbackv1.Contract.Of(app)`).
 - **Wire:** a service with an HTTP API under `/api/_c/<id>/`, generated from its interface: each method is an
   operation with its own HTTP method, path and token scope (`//op: POST restart scope=remote`); inputs and results are
-  JSON, uploads (`extkit.RawIn`), downloads (`extkit.RawOut`) or streams (`extkit.Stream`, sent as server-sent
-  events). It gets action hooks (`remotev1.OnRestart`, `onRemoteRestart` in `pb_hooks`), an MCP tool per JSON
+  JSON, uploads (`extkit.RawIn`), downloads (`extkit.RawOut`) or streams (`extkit.Stream`, sent as server-sent events:
+  a GET or a POST, pushed as they happen with `Run` or polled with `Poll`). It gets action hooks (`remotev1.OnRestart`, `onRemoteRestart` in `pb_hooks`), an MCP tool per JSON
   operation and a client. Every caller (HTTP, MCP, Go) passes the same scope check and hooks.
 - **Routed:** a contract whose provider is an `http.Handler` serving everything under `/api/_c/<id>/` as it is, for an
   API a protocol shapes (OAuth) or an existing API moved under a contract (deploy/v1).
@@ -115,6 +117,11 @@ type Deployer interface {
 ```
 
 Methods take `ctx`, then (wire) `extkit.Auth`, then at most one input; they return `error` or one value and `error`.
+A contract `pb_hooks` can touch (`//contract:js hooks` or `open`) also gets `zz_contract.d.ts`, its TypeScript for
+`types.d.ts`: each action hook typed with its operation's input (`onExampleUpload(handler: (e:
+contracts.CallEvent<contracts.example.v1.UploadInput>) => void)`), and for `open` the interface `e.provide` checks
+(`contracts.Providers["mail.fallback/v1"]`). Hooks see the Go value, so fields carry Go names with the first letter
+lowered (`maxTokens`); a JS provider gets JSON, so fields carry their json names, `omitempty` ones optional.
 The doc comment of a wire method is its MCP tool's description. Contracts are reviewed like PocketOne's core: a
 contract is a promise every implementation keeps.
 

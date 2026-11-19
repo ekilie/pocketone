@@ -5,12 +5,13 @@ type Lang = { name: string; ext: string; note: string }
 
 const langs: Lang[] = [
   { name: 'EJS', ext: '.ejs', note: 'Classic templates, compiled to JS in Go.' },
+  { name: 'ETS', ext: '.ets', note: 'EJS with TypeScript in its tags, types stripped by esbuild.' },
   { name: 'Markdown', ext: '.md', note: 'EJS first, then goldmark.' },
   { name: 'JSX', ext: '.jsx', note: 'Components rendered to HTML on the server.' },
   { name: 'TSX', ext: '.tsx', note: 'Same, with TypeScript types stripped by esbuild.' },
 ]
 
-export default function JSXDemo({ ctx, slot, include }: any) {
+export default function JSXDemo({ ctx, slot, include }: pages.Props) {
   slot('title', 'JSX and TSX')
   const q: string = ctx.req.query('q') || ''
   const shown = langs.filter((l) => !q || l.name.toLowerCase().includes(q.toLowerCase()))
@@ -41,7 +42,7 @@ export default function JSXDemo({ ctx, slot, include }: any) {
 
       <h2>Mixing</h2>
       <p>TSX can include an EJS partial:</p>
-      {include('badge-card', { href: '/', title: 'From _private/badge-card.ejs', text: 'Locals become variables.' })}
+      {include('badge-card', { href: '/', title: 'From _private/badge-card.ets', text: 'Locals become variables.' })}
     </>
   )
 }

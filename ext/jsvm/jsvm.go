@@ -3,6 +3,7 @@ package jsvm
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -51,11 +53,16 @@ func Register(app core.App, config Config) error {
 	if p.config.MigrationsFilesPattern == "" {
 		p.config.MigrationsFilesPattern = `^.*\.(js|cjs|mjs|ts|cts|mts)$`
 	}
-	if p.config.TypesDir == "" {
-		p.config.TypesDir = app.DataDir()
-	}
-	if p.extension(func(e any) bool { _, ok := e.(js.HookFiler); return ok }) != nil {
+	embedded := p.extension(func(e any) bool { _, ok := e.(js.HookFiler); return ok }) != nil
+	if embedded {
 		p.config.HooksWatch = false // the files don't come from HooksDir
+	}
+	// types.d.ts and tsconfig.json go in the project root, the folder holding pb_hooks (not pb_hooks itself: its
+	// watcher restarts the app on any change there). Embedded hooks have no sources on disk to type, so nothing is
+	// written unless TypesDir says where.
+	writeTypes := p.config.TypesDir != "" || !embedded
+	if p.config.TypesDir == "" {
+		p.config.TypesDir = filepath.Dir(filepath.Clean(p.config.HooksDir))
 	}
 	if p.config.VM.Blocking == nil {
 		p.config.VM.Blocking = PBBlocking
@@ -69,8 +76,14 @@ func Register(app core.App, config Config) error {
 		if err := e.Next(); err != nil {
 			return err
 		}
+		if !writeTypes {
+			return nil
+		}
 		if err := p.refreshTypesFile(); err != nil {
 			color.Yellow("Unable to refresh app types file: %v", err)
+		}
+		if err := p.writeTSConfig(); err != nil {
+			color.Yellow("Unable to write tsconfig.json: %v", err)
 		}
 		return nil
 	})
@@ -480,12 +493,66 @@ func (p *plugin) watchHooks() error {
 func (p *plugin) fullTypesPath() string { return filepath.Join(p.config.TypesDir, typesFileName) }
 
 func (p *plugin) relativeTypesPath(basepath string) string {
-	full := p.fullTypesPath()
-	rel, err := filepath.Rel(basepath, full)
-	if err != nil {
-		return full
+	return relPath(basepath, p.fullTypesPath())
+}
+
+// relPath is target relative to base with forward slashes (as TypeScript wants them), or target when it has none.
+func relPath(base, target string) string {
+	absBase, err1 := filepath.Abs(base)
+	absTarget, err2 := filepath.Abs(target)
+	if err1 != nil || err2 != nil {
+		return filepath.ToSlash(target)
 	}
-	return rel
+	rel, err := filepath.Rel(absBase, absTarget)
+	if err != nil {
+		return filepath.ToSlash(absTarget)
+	}
+	return filepath.ToSlash(rel)
+}
+
+const tsconfigFileName = "tsconfig.json"
+
+// writeTSConfig writes tsconfig.json next to types.d.ts so editors type hooks, migrations and pages, only when the
+// project has none: an existing one is the developer's and never touched.
+func (p *plugin) writeTSConfig() error {
+	path := filepath.Join(p.config.TypesDir, tsconfigFileName)
+	if _, err := os.Stat(path); err == nil || !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return os.WriteFile(path, p.tsconfigContent(), 0644)
+}
+
+// tsconfigContent includes types.d.ts, the hooks and migrations folders (wherever they are) and pb_pages.
+func (p *plugin) tsconfigContent() []byte {
+	glob := func(dir string) string {
+		rel := relPath(p.config.TypesDir, dir)
+		if rel == "." {
+			return "**/*"
+		}
+		return rel + "/**/*"
+	}
+	include := []string{typesFileName}
+	for _, g := range []string{glob(p.config.HooksDir), glob(p.config.MigrationsDir), "pb_pages/**/*"} {
+		if !slices.Contains(include, g) {
+			include = append(include, g)
+		}
+	}
+	inc, _ := json.Marshal(include)
+	return []byte(`{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "preserve",
+    "skipLibCheck": true
+  },
+  "include": ` + strings.ReplaceAll(string(inc), `","`, `", "`) + `
+}
+`)
 }
 
 // refreshTypesFile writes the TS declarations: the engine's (generated, embedded) and every extension's (js.Typer),
@@ -502,7 +569,8 @@ func (p *plugin) refreshTypesFile() error {
 	return os.WriteFile(full, content, 0644)
 }
 
-// typesContent is types.d.ts for this app: the engine's declarations, then each extension's.
+// typesContent is types.d.ts for this app: the engine's declarations, then each extension's, then passed through
+// each extension's filter (js.TypesFilter).
 func (p *plugin) typesContent() []byte {
 	out := append([]byte{}, typesFile...)
 	for _, e := range p.config.Extensions {
@@ -512,6 +580,11 @@ func (p *plugin) typesContent() []byte {
 				out = append(out, d...)
 				out = append(out, '\n')
 			}
+		}
+	}
+	for _, e := range p.config.Extensions {
+		if f, ok := e.(js.TypesFilter); ok {
+			out = []byte(f.FilterTypes(string(out)))
 		}
 	}
 	return out

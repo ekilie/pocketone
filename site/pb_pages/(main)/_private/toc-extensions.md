@@ -7,6 +7,10 @@
 
 # Standard extensions
 
+- [Agent](/docs/extensions/agent/extension)
+- [Agent Chat](/docs/extensions/agent-chat)
+- [API Tokens](/docs/extensions/api-tokens)
+- [API Tokens: OAuth](/docs/extensions/api-tokens/oauth)
 - [Auto TLS](/docs/extensions/autotls)
 - [Backups](/docs/extensions/backups)
 - [Bulk Mail](/docs/extensions/bulkmail)
@@ -20,11 +24,11 @@
 - [Pages: PocketPages v1 specification](/docs/extensions/pages/spec)
 - [PITR](/docs/extensions/pitr)
 - [Remotes](/docs/extensions/remotes)
+- [S3 Fallback](/docs/extensions/s3-fallback)
 - [S3 Redirect](/docs/extensions/s3redirect)
 - [Settings](/docs/extensions/settings)
 - [Templates](/docs/extensions/templates)
-- [Tokens](/docs/extensions/tokens)
-- [Tokens: OAuth](/docs/extensions/tokens/oauth)
+- [UI Cache](/docs/extensions/uicache)
 - [Upgrade](/docs/extensions/upgrade)
 - [Vacuum](/docs/extensions/vacuum)
 - [WASM](/docs/extensions/wasm/extension)
@@ -45,7 +49,6 @@
 # Services for your instances
 
 - [Mail Relay](/docs/extensions/mailrelay)
-- [S3 Fallback](/docs/extensions/s3-fallback)
 - [Server Timing](/docs/extensions/servertiming)
 
 # Sell it as a service

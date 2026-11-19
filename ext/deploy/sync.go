@@ -21,7 +21,7 @@ import (
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
-// Two-way sync for `dev`: the project's code set (pb_* folders except pb_data, package.json, bun.lock(b), patches/)
+// Two-way sync for `dev`: the project's code set (pb_* folders except pb_data and pb_cache, package.json, bun.lock(b), patches/)
 // is kept the same locally and on the remote. node_modules is only pushed (built from package.json and the lockfile),
 // pb_data is never synced.
 //

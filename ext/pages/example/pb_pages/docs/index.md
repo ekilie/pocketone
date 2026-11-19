@@ -18,11 +18,11 @@ The image above is a relative path; the rendered `src` is fingerprinted and serv
 
 | File | URL |
 |---|---|
-| `index.ejs` | `/` |
+| `index.ets` | `/` |
 | `docs/index.md` | `/docs` |
-| `notes/[id].ejs` | `/notes/abc123` |
+| `notes/[id].ets` | `/notes/abc123` |
 
-```js
+```ts
 // notes/+page.ts
 export function load(ctx) {
   return { notes: ctx.pb().collection('notes').getFullList({ sort: '-created' }) }

@@ -82,9 +82,6 @@ var defaultCacheDir = func() (string, error) {
 	return filepath.Join(base, "pocketone", "wasm"), err
 }
 
-// cacheOverride, set only by the tests (Cold), replaces every Host's cache.
-var cacheOverride func() wazero.CompilationCache
-
 // newRuntime builds a runtime for one call: the memory cap, WASI, and a run that stops when its context ends. With a
 // cache, the call must close its compiled module when it's done: the cache's engine outlives the runtime, and would
 // keep the module's machine code in memory otherwise.
@@ -92,9 +89,6 @@ func newRuntime(ctx context.Context, maxCallMemoryMB int, cache wazero.Compilati
 	cfg := wazero.NewRuntimeConfig().
 		WithMemoryLimitPages(uint32(maxCallMemoryMB) * 16). // 64 KiB pages
 		WithCloseOnContextDone(true)
-	if cacheOverride != nil {
-		cache = cacheOverride()
-	}
 	if cache != nil {
 		cfg = cfg.WithCompilationCache(cache)
 	}

@@ -36,12 +36,12 @@ func (p *Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
 		Implements: extkit.IDs("mcp/v1"),
 		Defaults:   extkit.IDs("mcp/v1"), // another MCP server can replace it; the contract tools stay
-		WorksWith:  extkit.IDs("tokens/v1", "oauth/v1"),
+		WorksWith:  extkit.IDs("api-tokens/v1", "oauth/v1"),
 	}
 }
 
 //go:embed jsbind.d.ts
 var jsTypes string
 
-// TypeScript declares the extension's JS API for pb_data/types.d.ts (extkit/js Typer).
+// TypeScript declares the extension's JS API for types.d.ts (extkit/js Typer).
 func (p *Extension) TypeScript() string { return jsTypes }

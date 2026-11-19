@@ -9,7 +9,7 @@ source: "ext/pages/docs/ctx/asset.md"
 
 Returns the URL for a static file in `pb_pages`, with its content hash. In templates it's also available as `asset`.
 
-```ejs
+```ets
 <link rel="stylesheet" href="<%%= asset('/assets/app.css') %>">
 <!-- <link rel="stylesheet" href="/assets/app.3f9a1c2b7d4e.css"> -->
 ```

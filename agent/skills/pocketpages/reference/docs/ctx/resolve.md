@@ -3,12 +3,12 @@
 
 Loads a module from a `_private/` folder. The lookup starts at the **route's** folder (the page being served), wherever `ctx.resolve` is called from, so a layout or partial gets the same answer as the page: `_private/` in the route's folder, then each parent folder up to `pb_pages/`. A name starting with `/` looks only in `pb_pages/_private/`. Without an extension, the name, then `.js`, `.ts` and `.json` are tried.
 
-```js
-// pb_pages/_private/shout.js
+```ts
+// pb_pages/_private/shout.ts
 module.exports = (s) => String(s).toUpperCase()
 ```
 
-```ejs
+```ets
 <p><%= ctx.resolve('shout')('hi') %></p>  <!-- HI -->
 ```
 
@@ -21,7 +21,7 @@ module.exports = (s) => String(s).toUpperCase()
 | `script` | The text wrapped in `<script>` |
 | `style` | The text wrapped in `<style>` |
 
-```ejs
+```ets
 <head>
   <%- ctx.resolve('theme.css', { mode: 'style' }) %>
   <%- ctx.resolve('widgets.js', { mode: 'script' }) %>

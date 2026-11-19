@@ -67,8 +67,9 @@ A Zig module never says it's Zig, so the manifest says `"language": "Zig"`.
 
 ## Call it
 
-```js
-const out = await $wasm.run.async("summary", { title: e.record.get("title"), body: e.record.get("body") })
+```ts
+const { title, body } = ctx.req.body()
+const out = await $wasm.run.async<{ text: string }>("summary", { title, body })
 ```
 
 ## C libraries

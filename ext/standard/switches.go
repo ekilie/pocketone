@@ -2,15 +2,15 @@ package standard
 
 import "github.com/pockethost/pocketone/ext/extkit"
 
-// Switch is the pocketone.yaml section of a standard member that has no section of its own: `tokens: {enabled: false}`
-// turns tokens off on a single app, and extensions that require it turn off too.
+// Switch is the pocketone.yaml section of a standard member that has no section of its own: `api-tokens: {enabled: false}`
+// turns api-tokens off on a single app, and extensions that require it turn off too.
 type Switch struct {
 	Enabled *bool `yaml:"enabled" doc:"On unless false. Extensions that require it turn off too, and the startup lines say why."`
 }
 
-// switchMembers are the standard members without a section of their own. Members with one (cache, s3redirect, pitr)
+// switchMembers are the standard members without a section of their own. Members with one (cache, storage, s3redirect, pitr)
 // read `enabled` there themselves.
-var switchMembers = []string{"settings", "templates", "tokens", "remotes", "mcp", "pages", "backups", "bulkmail", "deploy", "wasm"}
+var switchMembers = []string{"settings", "templates", "api-tokens", "remotes", "mcp", "pages", "backups", "bulkmail", "deploy", "wasm", "uicache", "agent-chat"}
 
 // switches are their sections, registered at init so the config file's check knows them before the set is built.
 var switches = map[string]*extkit.Section[Switch]{}

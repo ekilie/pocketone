@@ -66,6 +66,7 @@ func main() {
 		problems = append(problems, checkContracts()...)
 		problems = append(problems, checkOwnership()...)
 		problems = append(problems, checkChangelogs()...)
+		problems = append(problems, checkTablePrefixes()...)
 		if len(problems) > 0 {
 			for _, p := range problems {
 				fmt.Println("::error::" + p)
@@ -86,6 +87,10 @@ func main() {
 		}
 	case "test":
 		if err := runTest(os.Args[2:]); err != nil {
+			fail(err)
+		}
+	case "quick":
+		if err := runQuick(os.Args[2:]); err != nil {
 			fail(err)
 		}
 	case "release":
@@ -134,7 +139,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples | extensions contracts | extensions approvers <base> <head> | extensions test [dir...] | extensions release vX.Y.Z [YYYY-MM-DD] | extensions release-notes vX.Y.Z")
+	fmt.Fprintln(os.Stderr, "usage: extensions affected <base> <head> | extensions check [dir...] | extensions examples | extensions contracts | extensions approvers <base> <head> | extensions test [dir...] | extensions quick [dir...] | extensions release vX.Y.Z [YYYY-MM-DD] | extensions release-notes vX.Y.Z")
 	os.Exit(2)
 }
 

@@ -4,6 +4,7 @@ package restorev1
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -18,7 +19,12 @@ var (
 )
 
 // Contract is restore/v1.
-var Contract = extkit.NewContract[Restorer]("restore/v1", extkit.One).HostProvidable().JS(extkit.JSHooks, nil)
+var Contract = extkit.NewContract[Restorer]("restore/v1", extkit.One).HostProvidable().JS(extkit.JSHooks, nil).JSTypes(jsTypes)
+
+// jsTypes is restore/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to the app's types.d.ts.
+//
+//go:embed zz_contract.d.ts
+var jsTypes string
 
 // W is restore/v1's wire side: routes at /api/_c/restore/v1/<op>, action hooks, MCP tools and the client.
 var W = extkit.NewWire(Contract, "restore", func(inner Restorer, g *extkit.Guard[Restorer]) Restorer {

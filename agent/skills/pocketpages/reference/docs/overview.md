@@ -12,21 +12,21 @@ Use PocketPages to create slim and modern web apps:
 
 ## Hello world in just one file
 
-```ejs
-<!-- pb_pages/index.ejs -->
+```ets
+<!-- pb_pages/index.ets -->
 <%= `Hello, world!` %>
 ```
 
 <%- include('browser', { content: `Hello, world!` }) %>
 
-Inside `<%` and `%>` you write plain JavaScript. Every page gets a `ctx` object with the request, the response, your data, and the app itself (`ctx.app`), so you can read and write records directly.
+Inside `<%` and `%>` you write TypeScript; types are stripped, never checked, so plain JavaScript works too. Every page gets a `ctx` object with the request, the response, your data, and the app itself (`ctx.app`), so you can read and write records directly.
 
 ## Retro file-based routing
 
-Files become URLs, and `+layout.ejs` files wrap the pages below them:
+Files become URLs, and `+layout.ets` files wrap the pages below them:
 
-```ejs
-<!-- pb_pages/+layout.ejs -->
+```ets
+<!-- pb_pages/+layout.ets -->
 <html>
   <body style="background-color: #b5dcb5">
     <%- slot() %>

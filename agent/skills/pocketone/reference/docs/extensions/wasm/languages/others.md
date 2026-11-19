@@ -12,7 +12,7 @@ The languages below weren't tried for these docs. What's said of each is what it
 | Nim, Odin, D | Through C or LLVM | Each can target `wasm32-wasi`, through C (`zig cc`) or its own LLVM backend. |
 | Grain, MoonBit | Check the target | Both build WebAssembly; a module runs here only if their WASI output is preview 1 with no other imports. |
 | Kotlin/Wasm, Dart, Java (WasmGC) | No | They need WebAssembly GC. |
-| Python, Ruby, JavaScript | Not as interpreters | An interpreter built for WASI (CPython, Ruby, QuickJS) needs its standard library as files, and no folder is mounted. A tool that bundles the script and interpreter into one preview 1 program (Javy's static mode for JavaScript) can work, at a few MB per module. For JS, pb_hooks are already JavaScript. |
+| Python, Ruby, JavaScript | Not as interpreters | An interpreter built for WASI (CPython, Ruby, QuickJS) needs its standard library as files, and no folder is mounted. A tool that bundles the script and interpreter into one preview 1 program (Javy's static mode for JavaScript) can work, at a few MB per module. For JS, your page code is already JavaScript. |
 
 To check a module without an app, run it with the [wazero CLI](https://wazero.io), which runs it with the same engine:
 

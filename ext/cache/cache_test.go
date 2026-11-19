@@ -288,15 +288,15 @@ func TestDiskWipedOnStart(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "keep.txt"), []byte("mine"), 0o644)
 	os.MkdirAll(filepath.Join(s.lim.dir, "zz"), 0o755)
 	os.WriteFile(filepath.Join(s.lim.dir, "zz", "notes"), []byte("mine too"), 0o644)
-	if countFiles(t, s.lim.dir) != 3 {
-		t.Fatal("setup: want one blob file plus two others in the tier")
+	if countFiles(t, dir) != 4 {
+		t.Fatal("setup: want one blob file, a temp file and two others in the tier")
 	}
 	s2 := newTestStore(t, poolLimits{maxMem: 1 << 20, dir: dir, maxDisk: 1 << 20})
 	if len(s2.blobs) != 0 {
 		t.Fatal("a new store should start empty")
 	}
-	if countFiles(t, s2.lim.dir) != 1 || countFiles(t, dir) != 2 {
-		t.Fatalf("wipe removed the wrong files: %d in the tier, %d in all", countFiles(t, s2.lim.dir), countFiles(t, dir))
+	if countFiles(t, dir) != 2 { // keep.txt and zz/notes
+		t.Fatalf("wipe removed the wrong files: %d left", countFiles(t, dir))
 	}
 }
 
@@ -428,19 +428,50 @@ func TestProviderCaps(t *testing.T) {
 	}
 }
 
-func TestSingleAppDiskUnderDataDir(t *testing.T) {
-	app, err := tests.NewTestApp()
-	if err != nil {
-		t.Fatal(err)
+// The disk tier goes in pb_cache/cache next to pb_data (disk: true), or in a cache folder in disk_path, relative to the
+// app's folder on a single app.
+func TestDiskTierFolder(t *testing.T) {
+	on := true
+	for _, tc := range []struct {
+		name string
+		cfg  Config
+		want func(appDir string) string
+	}{
+		{"disk", Config{Disk: &on}, func(d string) string { return filepath.Join(d, "pb_cache", "cache") }},
+		{"disk_path", Config{DiskPath: "tmpcache"}, func(d string) string { return filepath.Join(d, "tmpcache", "cache") }},
+		{"off", Config{}, func(string) string { return "" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			appDir := t.TempDir()
+			app := core.NewBaseApp(core.BaseAppConfig{DataDir: filepath.Join(appDir, "pb_data")})
+			x := New(tc.cfg)
+			if err := x.Register(app, nil); err != nil {
+				t.Fatal(err)
+			}
+			defer x.Close(ctx)
+			if got := x.store.lim.dir; got != tc.want(appDir) {
+				t.Fatalf("disk tier at %q, want %q", got, tc.want(appDir))
+			}
+		})
 	}
-	defer app.Cleanup()
-	x := New(Config{DiskPath: "cache"})
+}
+
+// Under a host that set its pb_cache, the shared store goes there, not in the first instance's folder.
+func TestDiskTierOnHost(t *testing.T) {
+	root := t.TempDir()
+	host := extkit.NewScope("multisite")
+	host.SetCacheRoot(filepath.Join(root, "pb_cache"))
+	app := core.NewBaseApp(core.BaseAppConfig{DataDir: filepath.Join(root, "i1", "pb_data")})
+	extkit.SetAppID(app, "i1")
+	extkit.AttachHost(app, host, "i1")
+	on := true
+	x := New(Config{Disk: &on})
 	if err := x.Register(app, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer x.Close(ctx)
-	if want := filepath.Join(app.DataDir(), "cache", blobsDir); x.store.lim.dir != want {
-		t.Fatalf("disk tier at %s, want %s", x.store.lim.dir, want)
+	if want := filepath.Join(root, "pb_cache", "cache"); x.store.lim.dir != want {
+		t.Fatalf("disk tier at %q, want %q", x.store.lim.dir, want)
 	}
 }
 

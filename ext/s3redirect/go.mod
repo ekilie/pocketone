@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
+	github.com/johannesboyne/gofakes3 v1.2.0
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 )
 
@@ -24,8 +25,10 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
+	go.shabbyrobe.org/gocovmerge v0.0.0-20230507111327-fa4f82cfbf4d // indirect
 	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/image v0.48.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
@@ -33,6 +36,7 @@ require (
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	modernc.org/libc v1.80.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect

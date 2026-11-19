@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -257,8 +257,8 @@ func (s *Server) send(c *Call, req *Request, max int) (*Response, error) {
 	orig := c.Event.Request
 	ctx := orig.Context()
 	if c.Grant != nil && len(c.Grant.Scopes) > 0 {
-		// a scoped connection: ext/tokens checks this request like a scoped token's
-		ctx = tokensv1.WithScopes(ctx, c.Grant.Scopes)
+		// a scoped connection: ext/api-tokens checks this request like a scoped token's
+		ctx = apitokensv1.WithScopes(ctx, c.Grant.Scopes)
 	}
 	r := httptest.NewRequestWithContext(ctx, method, target, body)
 	r.Host = orig.Host

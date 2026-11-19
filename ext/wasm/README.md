@@ -3,20 +3,20 @@ owners: ["@octavonu"]
 version: 0.0.1
 title: "WASM"
 group: binary
-summary: "Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box."
+summary: "Bring your own WASM: Go, Rust or Zig modules called from page code, each a closed box."
 ---
 
 # WASM
 
 **Bring your own WASM (BYOW).** Call code written in Go, Rust, Zig or anything else that builds for WASI from
-pb_hooks, when you need a library from another language or more speed than JS gives you. A module is a small program
-compiled to WebAssembly that your hooks call like a function. Input in, output out, or an error. It can't reach the database, files, network, environment or other
-processes; your hook gives it what it needs and decides what to do with the result.
+your page code, when you need a library from another language or more speed than JS gives you. A module is a small program
+compiled to WebAssembly that your code calls like a function. Input in, output out, or an error. It can't reach the database, files, network, environment or other
+processes; your code gives it what it needs and decides what to do with the result.
 
 One call does it:
 
-```js
-const out = await $wasm.run.async("summary", { title: "Hello", body: "one two three" })
+```ts
+const out = await $wasm.run.async<{ text: string; words: number }>("summary", { title: "Hello", body: "one two three" })
 // out is { text: "Hello", words: 3 }
 ```
 
@@ -24,18 +24,21 @@ const out = await $wasm.run.async("summary", { title: "Hello", body: "one two th
 the JSON it writes back, parsed. If the module fails, the call rejects with a `WasmError`. Calls are only `async`: the
 module runs off the JS engine, so the app keeps serving other requests while it works.
 
-In a hook, the input comes from the record and the output goes back into it:
+In an API route, the input comes from the request and the output goes into the record it saves:
 
-```js
-// pb_hooks/main.pb.js
-onRecordCreate(async (e) => {
-  const out = await $wasm.run.async("summary", { title: e.record.get("title"), body: e.record.get("body") })
-  e.record.set("summary", out.text)
-  return e.next()
-}, "posts")
+```ts
+// pb_pages/posts/+api.ts
+export async function post(ctx: any) {
+  const { title, body } = ctx.req.body()
+  const out = await $wasm.run.async<{ text: string }>("summary", { title, body })
+  const record = new Record(ctx.app.findCollectionByNameOrId("posts"))
+  record.load({ title, body, summary: out.text })
+  ctx.app.save(record)
+  return ctx.res.json(201, { id: record.id, summary: out.text })
+}
 ```
 
-Use it for what JS hooks do badly or slowly: parsing (EDIFACT, XML, binary formats), crypto, validation, number
+Use it for what JS does badly or slowly: parsing (EDIFACT, XML, binary formats), crypto, validation, number
 crunching, or a library that only exists in Go, Rust or C.
 
 WASM is an extension; the `.pb.wasm` files it runs are modules. Beyond this page: a page for [each language](docs/languages/index.md) (C, Go, TinyGo, Rust, Zig, AssemblyScript), [keeping state in JS](docs/guides/state.md) between calls, and [recipes](docs/recipes/index.md) built on real libraries (Markdown, HTML sanitizing, thumbnails, QR codes, diffs, CSV).
@@ -44,7 +47,7 @@ WASM is an extension; the `.pb.wasm` files it runs are modules. Beyond this page
 
 WASM is built into `pocketone`: it's a member of the [standard set](../standard/README.md), which every app gets,
 standalone or an instance on a multisite host, and the set binds `$wasm` into the JS engine ([`ext/jsvm`](../jsvm/README.md)). Put a
-`.pb.wasm` file in `pb_hooks` and call it.
+`.pb.wasm` file in `pb_hooks` and call it from your page code.
 
 In your own build, the set already has it. To change its settings, replace the member:
 
@@ -66,8 +69,8 @@ app.Start()
 
 `$wasm` needs PocketOne's JS engine; with PocketBase's own (`--jsvm goja`) extensions bind nothing.
 
-The module is `github.com/pockethost/pocketone/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`, beside the JS
-hooks; nothing else needs setting up.
+The module is `github.com/pockethost/pocketone/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`; nothing else
+needs setting up.
 
 ## Configure
 
@@ -89,11 +92,11 @@ Its `pocketone.yaml` section has only `enabled`: `wasm: {enabled: false}` turns 
 
 ### Modules are files
 
-A module is one file beside your JS hooks, `pb_hooks/<name>.pb.wasm`, called as `<name>`:
+A module is one file in `pb_hooks/`, `pb_hooks/<name>.pb.wasm`, called as `<name>`:
 
 ```
-pb_hooks/main.pb.js
 pb_hooks/summary.pb.wasm
+pb_pages/posts/+api.ts
 ```
 
 It ships with the rest of your code: git, `pocketone deploy`, or SFTP. Like `node script.js`, every call reads the
@@ -132,7 +135,7 @@ nothing gets the defaults:
 |---|---|
 | `description` | what it does |
 | `version` | the author's version, as you write it (`1.2.0`, `2026-11-15`): up to 32 letters, digits and `.+_-`; only shown |
-| `functions` | the functions hooks may call (default `["run"]`) |
+| `functions` | the functions your code may call (default `["run"]`) |
 | `language` | what it's written in, shown when the module doesn't say: a Go module always does, a Rust one unless it's stripped (`strip = true`), a Zig one never |
 | `repository` | where its source is: an `http(s)` URL (no `javascript:`, no credentials), at most 256 characters |
 | `examples` | up to 16 calls to try it with: `function` (default `run`), `input` (a JSON string is the module's stdin as it is, anything else goes as JSON, as with `$wasm.run.async`) and, optionally, the `output` it gives |
@@ -150,32 +153,33 @@ for anything, so a manifest that expects more (dependencies, permissions) is sho
 `$wasm.modules()`, and the module runs with the defaults. A manifest is at most 64 KB. `$wasm.modules()` checks it
 with wazero's interpreter (below), within the module's limits.
 
-### Calling from pb_hooks
+### Calling from page code
 
-```js
+```ts
 await $wasm.run.async(name, input)            // the module's "run"
-await $wasm.call.async(name, function, input) // one of its functions (its first argument)
-await $wasm.inspect.async(name, function, input) // {output, stderr, error, compileMs, runMs}, for trying a module out
+await $wasm.call.async(name, fn, input)       // one of its functions (its first argument)
+await $wasm.inspect.async(name, fn, input)    // {output, stderr, error, compileMs, runMs}, for trying a module out
 $wasm.modules()  // [{name, running, description, version, functions, language, repository, examples, size, error}]
 $wasm.limits()   // {maxCallMemoryMB, timeoutMs, maxConcurrent, maxModulesMB, maxPayload}
 ```
 
-Calls are async only, in an async hook. The JS engine runs one VM per app and can't interrupt a call into Go, so a
+Calls are async only, in an async handler. The JS engine runs one VM per app and can't interrupt a call into Go, so a
 module called synchronously would hold the VM, and with it every other hook and request of the app, while it compiles
 and runs (a Go module's first call compiles for over a second). A call runs off the VM instead, and the app serves other
 requests meanwhile. `$wasm.run(...)` without `.async` throws, saying so.
 
 The input is the module's stdin: a string or bytes (an `ArrayBuffer`, a `Uint8Array` or another typed array) as they are, nothing for
-`undefined` or `null`, anything else as JSON. So `$wasm.run.async("edifact", e.record.get("raw"))` hands over the raw text,
+`undefined` or `null`, anything else as JSON. So `$wasm.run.async("edifact", raw)`, with `raw` a string, hands over the raw text,
 byte for byte. The output is the module's stdout: parsed if it's JSON, a string if not, `null` if empty.
 
 A failed call rejects with an `Error` named `WasmError`, with `code`, `message`, `retryable` and `module`:
 
-```js
+```ts
 try {
-  e.record.set("summary", (await $wasm.run.async("summary", post)).text)
+  record.set("summary", (await $wasm.run.async<{ text: string }>("summary", post)).text)
 } catch (err) {
-  if (err.name !== "WasmError" || err.code !== "empty_body") throw err
+  const w = err as WasmError
+  if (w.name !== "WasmError" || w.code !== "empty_body") throw err
 }
 ```
 
@@ -193,18 +197,18 @@ try {
 
 `$wasm.inspect.async` makes the same call but never rejects for it: it returns the output (or `null`), the `error`
 as `{code, message, retryable}` (or `null`), what the module wrote to stderr (up to 64 KB), and how long compiling
-and running took. It's for pages that let a superuser try a module out; hooks use `run` and `call`.
+and running took. It's for pages that let a superuser try a module out; other code uses `run` and `call`.
 
 The time limit covers the run; compiling comes before it (below).
 
-`$wasm` is declared in each app's `pb_data/types.d.ts` ([`wasm.d.ts`](wasm.d.ts)), for code completion and `tsc`.
+`$wasm` is declared in each app's `types.d.ts` ([`wasm.d.ts`](wasm.d.ts)), for code completion and `tsc`.
 
 ### Writing a module
 
 A module is a plain WASI program (`wasip1`), the way you'd write a command-line tool: read stdin, write stdout, exit.
 The function asked for is its first argument (`os.Args[1]`, `"run"` for `$wasm.run.async`, `--describe` for its manifest,
 above). To fail, exit non-zero; if
-stderr is a JSON object `{"code", "message", "retryable"}`, hooks get it as is, any other text becomes the
+stderr is a JSON object `{"code", "message", "retryable"}`, your code gets it as is, any other text becomes the
 `message` of a `module_error`. Anything it writes to stderr on success goes to the app's log (Logs in the
 dashboard), so stderr is its log.
 
@@ -294,12 +298,13 @@ few milliseconds and under 1 MB.
 | [Multisite](../multisite/README.md) | Add it to the host's standard set and Pocker gives it to every instance it runs (Docker containers run stock images): one extension value serves them all. Each instance has its own modules, in its own `pb_hooks/`, its own call slots and limits. Each call reads the instance's module file as it is then; nothing runs between calls (below). A module change reloads just that instance, like a `.pb.js` change. |
 | [Sandbox](../sandbox/README.md) | `$wasm` is safe to give a hostile tenant: a module gets nothing but its input. A call can't be interrupted by the JS engine's time limits, so `Timeout` (and compiling) bound it instead. |
 | [Deploy](../deploy/README.md) | `pocketone deploy` sends the modules with the rest of `pb_hooks/`. |
+| [MCP](../mcp/README.md) | The app's `/mcp` gets `wasm_list_modules` (superusers only): every module by name, with its manifest (functions, examples) and whether it runs. Agents connecting are told how to call a module with `$wasm`, so one working on the site knows its modules even without their sources. |
 
 ### Per-instance settings (Pocker)
 
 Each instance can override `maxCallMemoryMB`, `maxConcurrent`, `maxModulesMB`, `timeout` (a duration, like `5s`) and
 `maxPayload` in its `extensions.wasm` settings, over the Config given to `New`, key by key. `enabled: false` turns
-`$wasm` off for that instance (`typeof $wasm === "undefined"` in its hooks). A change restarts just that instance, on
+`$wasm` off for that instance (`typeof $wasm === "undefined"` in its JS). A change restarts just that instance, on
 its next request:
 
 ```yaml
@@ -317,12 +322,12 @@ after it, from its folder: nothing to reload.
 
 ### Building on WASM
 
-There's no Go API, endpoint or form for calling a module: pb_hooks (`$wasm`) are the only way in, so whatever
+There's no Go API, endpoint or form for calling a module: the app's JS code (`$wasm`) is the only way in, so whatever
 reaches a module went through the app's own code.
 
 ## Example
 
-[`example/main.go`](example/main.go) runs one app with a `posts` collection and the hook above; its folder is laid
+[`example/main.go`](example/main.go) runs one app with a `posts` collection and a hook that fills each new post's summary; its folder is laid
 out like an instance (`pb_data/`, `pb_hooks/`). Build the module into `example/pb_hooks/`, then
 `cd example && go run . serve --dev` and create a post.
 
@@ -393,14 +398,14 @@ so `/wasm`-style pages and the wazero CLI can try it), built with the command in
 
 | Module | Language | What it shows |
 |---|---|---|
-| [`summary/go`](example/summary/go), [`summary/tinygo`](example/summary/tinygo), [`summary/rust`](example/summary/rust), [`summary/zig`](example/summary/zig), [`summary/c`](example/summary/c), [`summary/assemblyscript`](example/summary/assemblyscript) | Go, TinyGo, Rust, Zig, C, AssemblyScript | The same module in six languages: the hook above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; TinyGo ~280 KB and ~65 ms; Rust, Zig, C and AssemblyScript under 100 KB and 10–25 ms). |
+| [`summary/go`](example/summary/go), [`summary/tinygo`](example/summary/tinygo), [`summary/rust`](example/summary/rust), [`summary/zig`](example/summary/zig), [`summary/c`](example/summary/c), [`summary/assemblyscript`](example/summary/assemblyscript) | Go, TinyGo, Rust, Zig, C, AssemblyScript | The same module in six languages: the summary above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; TinyGo ~280 KB and ~65 ms; Rust, Zig, C and AssemblyScript under 100 KB and 10–25 ms). |
 | [`summary/wat`](example/summary/wat), [`summary/llvm`](example/summary/llvm) | WAT, LLVM IR | The C summary written by hand in two assembly languages, for fun: WebAssembly text calling WASI directly (1.8 KB), and LLVM IR built by clang with wasi-libc (3.8 KB). See [WAT](docs/languages/wat.md) and [LLVM IR](docs/languages/llvm.md). |
-| [`stats-tinygo`](example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the hook stores in a record and passes in with each call ([Keeping state in JS](docs/guides/state.md)). |
-| [`markdown`](example/markdown), [`sanitize-html`](example/sanitize-html), [`diff`](example/diff), [`thumbnail`](example/thumbnail), [`qrcode`](example/qrcode), [`csv`](example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with a tested hook in the [recipes](docs/recipes/index.md). |
+| [`stats-tinygo`](example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the app stores in a record and passes in with each call ([Keeping state in JS](docs/guides/state.md)). |
+| [`markdown`](example/markdown), [`sanitize-html`](example/sanitize-html), [`diff`](example/diff), [`thumbnail`](example/thumbnail), [`qrcode`](example/qrcode), [`csv`](example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with page code in the [recipes](docs/recipes/index.md). |
 | [`crypto`](example/crypto) | Go | What an app used to run with `$os.exec`: AES-256-GCM. The key comes in with each call; the module can't keep it or send it anywhere. |
-| [`waflows`](example/waflows) | Rust | What pb_hooks can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. The hook keeps the JSON and HTTP; the module does only those two. |
+| [`waflows`](example/waflows) | Rust | What JS can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. Your code keeps the JSON and HTTP; the module does only those two. |
 | [`edifact-orders-rust`](example/edifact-orders-rust) | Rust | A real format with a real library (edifact-rs): an EDIFACT ORDERS message, as raw text, read into an order. |
-| [`order-xml`](example/order-xml) | Rust | The same order from XML (roxmltree), so a hook takes either format and stores one shape. |
+| [`order-xml`](example/order-xml) | Rust | The same order from XML (roxmltree), so one route takes either format and stores one shape. |
 | [`devil`](example/devil) | Rust | Is it safe? It tries, in plain sight, to read the app's database and `/etc/passwd`, list folders, write a file, read the environment, run `sh -c id` and send to `attacker.example`. Every try says `refused`. |
 | [`memhog`](example/memhog) | Rust | What does it cost? It asks for more memory than `MaxCallMemoryMB`: that call fails as `crashed`, saying which limit it hit, and the app goes on. `probe` shows the limit from inside. |
 
@@ -432,8 +437,8 @@ functions and nothing behind them:
 - **Bounded:** memory, time, input and output size, and how many calls run at once (see Configure).
 
 It does get a real clock and real random numbers (crypto nonces need them). Data from the app, secrets and API
-responses reach a module only as input from your hook, and the result goes nowhere but back to the hook: the network
-stays with `$http.send` in pb_hooks.
+responses reach a module only as input from your code, and the result goes nowhere but back to it: the network
+stays with `$http.send` in your JS.
 
 ## How it works
 

@@ -17,7 +17,7 @@ import (
 type Kind int
 
 const (
-	// KindPage is a template (.ejs, .md).
+	// KindPage is a template (.ets, .ejs, .md, .tsx, .jsx).
 	KindPage Kind = iota
 	// KindAPI is a folder's +api.js.
 	KindAPI
@@ -76,12 +76,12 @@ type Table struct {
 
 var (
 	paramRe     = regexp.MustCompile(`^\[([A-Za-z_][A-Za-z0-9_]*)\]$`)
-	templateExt = map[string]bool{".ejs": true, ".md": true, ".jsx": true, ".tsx": true}
+	templateExt = map[string]bool{".ets": true, ".ejs": true, ".md": true, ".jsx": true, ".tsx": true}
 )
 
 // Framework files by stem, with the extensions each may have.
 var (
-	tplExts  = map[string]bool{".ejs": true, ".jsx": true, ".tsx": true}
+	tplExts  = map[string]bool{".ets": true, ".ejs": true, ".jsx": true, ".tsx": true}
 	codeExts = map[string]bool{".js": true, ".ts": true}
 	// rootOnly are + files allowed only at the top of pb_pages.
 	rootOnly = map[string]map[string]bool{"+config": codeExts, "+error": tplExts, "+404": tplExts}

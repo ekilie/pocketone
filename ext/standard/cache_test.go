@@ -119,7 +119,7 @@ func TestPockerInstancesShareTheHostCache(t *testing.T) {
 
 	// on disk: the layout once for all four keys, and each instance's whoami (one file per distinct bytes)
 	files := map[string]bool{}
-	_ = filepath.WalkDir(filepath.Join(cacheDir, "p1cache"), func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(filepath.Join(cacheDir, "cache"), func(p string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() {
 			b, _ := os.ReadFile(p)
 			files[string(b)] = !files[string(b)] // flips back to false on a second file of the same bytes

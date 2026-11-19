@@ -419,7 +419,7 @@ func restReference(m *manifest) string {
 	var b strings.Builder
 	b.WriteString(refFrontMatter("REST reference", "Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input."))
 	b.WriteString("# REST reference\n\nEvery contract API a PocketOne app with its [standard extensions](/docs/extensions/standard) answers, under `/api/_c/<contract>/`. PocketBase's own API (records, collections, auth, files, settings…) is unchanged; see the [PocketBase docs](/docs/pocketbase).\n\n")
-	b.WriteString("- **Auth:** an `Authorization` header with a superuser's auth token or an [API token](/docs/extensions/tokens). Each operation needs its token scope; a superuser's own auth token passes every scope.\n")
+	b.WriteString("- **Auth:** an `Authorization` header with a superuser's auth token or an [API token](/docs/extensions/api-tokens). Each operation needs its token scope; a superuser's own auth token passes every scope.\n")
 	b.WriteString("- **Discovery:** `GET /api/_c/remote/v1` says who you are and lists every contract the app offers ([remote/v1](/docs/contracts/remote/v1)).\n")
 	b.WriteString("- **Input:** a JSON body for `POST`, query parameters for `GET`. **Answers** are JSON; streams are server-sent events.\n")
 	b.WriteString("- **Same as the CLI and MCP:** every operation here is also a `pocketone` command and an MCP tool, behind the same checks ([how](/docs/features/remote)).\n\n")

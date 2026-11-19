@@ -7,12 +7,12 @@ source: "ext/pages/docs/plugins/datastar.md"
 
 # Datastar Add-on
 
-The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a JS plugin that ships with PocketPages
+The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a custom plugin that ships with PocketPages
 rather than a built-in: copy [`addons/datastar.js`](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/datastar.js)
-into `pb_pages/_private/` (the `datastar` starter kit already has it) and list it in `+config.js` by name:
+into `pb_pages/_private/` (the `datastar` starter kit already has it) and list it in `+config.ts` by name:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['datastar'],
 }
@@ -23,7 +23,7 @@ a colon between the attribute name and its key (`data-on:click`, `data-bind:name
 `data-class:active`, `data-attr:href`); the older hyphen form (`data-on-click`) is ignored. See the
 [Datastar attribute reference](https://data-star.dev/reference/attributes).
 
-```ejs
+```ets
 <head>
   <%%- ctx.datastar.scripts() %>
 </head>
@@ -54,7 +54,7 @@ When a request has the `Datastar-Request: true` header, the rendered page is sen
 
 This is how this site navigates between docs pages: the layout calls
 
-```ejs
+```ets
 <%%- ctx.datastar.scripts({ spa: { scope: '#toc', selector: '#content' } }) %>
 ```
 
@@ -65,15 +65,15 @@ return you to where you were scrolled.
 
 ## Example: a counter
 
-```ejs
-<!-- pb_pages/counter/index.ejs -->
+```ets
+<!-- pb_pages/counter/index.ets -->
 <button data-on:click="@post('/counter')">
   Count: <span id="count"><%%= ctx.store('count') || 0 %></span>
 </button>
 ```
 
-```js
-// pb_pages/counter/+page.js
+```ts
+// pb_pages/counter/+page.ts
 module.exports = {
   post(ctx) {
     const count = (ctx.store('count') || 0) + 1
@@ -85,7 +85,7 @@ module.exports = {
 
 ## Example: reading signals
 
-```js
+```ts
 module.exports = {
   post(ctx) {
     const { name, email } = ctx.datastar.signals()
@@ -102,11 +102,11 @@ module.exports = {
 
 With the `realtime` plugin on, `ctx.datastar.realtime.*` sends patches to every realtime subscriber instead of the current response:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = { plugins: ['realtime', 'datastar'] }
 ```
 
-```js
+```ts
 ctx.datastar.realtime.patchElements(`<span id="count">${count}</span>`)
 ```

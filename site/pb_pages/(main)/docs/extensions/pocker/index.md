@@ -59,7 +59,7 @@ pocker:
   max_js_execution: 30s     # default limits; each instance can override them
   max_js_allocation: 64MiB
   isolate_config:           # every instance's config, in pocketone.yaml's shape
-    tokens: { enabled: false }
+    api-tokens: { enabled: false }
 ```
 
 `isolate_config` holds one section per extension the instances run (the standard set's members and your own
@@ -98,7 +98,7 @@ Runtime provider pocker: instances run as isolates in this process (root folder,
 | `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
-| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
+| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as api-tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
 
 ## Use
 

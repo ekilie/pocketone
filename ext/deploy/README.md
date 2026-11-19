@@ -28,12 +28,12 @@ superusers, and the `deploy`, `dev`, `pull`, `logs` and `restart` commands are t
 nothing to install.
 
 In your own Go build, register it before the app starts. [Remotes](../remotes/README.md) gives the commands their
-remotes and logins, and [Tokens](../tokens/README.md) lets you deploy with API tokens:
+remotes and logins, and [Tokens](../api-tokens/README.md) lets you deploy with API tokens:
 
 ```go
 app := pocketbase.New()
 extkit.Setup(app, []extkit.Extension{
-	tokens.New(tokens.Config{}),   // optional: API tokens with the deploy scope
+	apitokens.New(apitokens.Config{}),   // optional: API tokens with the deploy scope
 	remotes.New(remotes.Config{}), // remote/v1 (whoami, restart, logs), login
 	deploy.NewExtension(deploy.Config{}), // deploy/v1 + deploy/dev/pull/logs/restart commands
 }, nil, nil)
@@ -178,7 +178,7 @@ reconnects by itself if it drops.
 
 ### Deploy history
 
-Every deploy is recorded in the `_deploys` collection of the receiving app: status, file counts, bytes, commit,
+Every deploy is recorded in the `_deploy_deploys` collection of the receiving app: status, file counts, bytes, commit,
 message, source, token name, superuser and any error. Superusers can browse it in the dashboard.
 
 ## Integrations
@@ -188,8 +188,8 @@ message, source, token name, superuser and any error. Superusers can browse it i
 | Extension | How they fit |
 |---|---|
 | [Remotes](../remotes/README.md) | Gives the commands their remotes, saved logins and CI tokens. The commands find deploy/v1 in the remote's whoami, and `restart` and `logs` use its remote/v1 (deploy requires it). |
-| [OAuth](../tokens/OAUTH.md) (in Tokens) | `pocketone login` signs in through the browser when the remote runs it. |
-| [Tokens](../tokens/README.md) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. Add `remote` for `--restart` and `remote:read` for `dev`'s logs. |
+| [OAuth](../api-tokens/OAUTH.md) (in Tokens) | `pocketone login` signs in through the browser when the remote runs it. |
+| [Tokens](../api-tokens/README.md) | Deploy registers the `deploy` and `deploy:read` scopes, so you can make API tokens for CI that can only deploy or only read. Add `remote` for `--restart` and `remote:read` for `dev`'s logs. |
 | [Multisite](../multisite/README.md) | A multisite host can serve the same API for all its instances with its own backend: build it with `deploy.New` (below). PocketHost does this. |
 
 ### Building on Deploy
@@ -229,12 +229,12 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/deploy"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/remotes"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 func main() {
@@ -242,7 +242,7 @@ func main() {
 	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
 
 	// registered through their contracts (the standard set does this for you); deploys land next to pb_data
-	exts := []extkit.Extension{tokens.New(tokens.Config{}), remotes.New(remotes.Config{}), deploy.NewExtension(deploy.Config{})}
+	exts := []extkit.Extension{apitokens.New(apitokens.Config{}), remotes.New(remotes.Config{}), deploy.NewExtension(deploy.Config{})}
 	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
 		log.Fatal(err)
 	}

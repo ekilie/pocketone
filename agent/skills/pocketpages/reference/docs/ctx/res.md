@@ -20,14 +20,14 @@ Once a response is sent, the later steps of the request (handlers, template, lay
 
 ## Status and headers
 
-```ejs
+```ets
 <% ctx.res.status(404).header('Cache-Control', 'no-store') %>
 <h1>Not here</h1>
 ```
 
 ## Redirects
 
-```js
+```ts
 return ctx.res.redirect('/login')
 return ctx.res.redirect('/account', { flash: 'Saved' })
 return ctx.res.redirect('/new-home', 301) // or { status: 301 }
@@ -35,7 +35,7 @@ return ctx.res.redirect('/new-home', 301) // or { status: 301 }
 
 ## Cookies
 
-```js
+```ts
 ctx.res.cookie('theme', 'dark', { maxAge: 60 * 60 * 24 * 365 })
 ctx.res.cookie('prefs', { compact: true })   // objects are JSON.stringify'd
 ctx.res.clearCookie('theme')
@@ -47,7 +47,7 @@ ctx.res.clearCookie('theme')
 
 ## JSON, HTML, text and files
 
-```js
+```ts
 return ctx.res.json({ ok: true })
 return ctx.res.json(201, { id: record.id })
 return ctx.res.html('<p>Fragment</p>')
@@ -59,8 +59,8 @@ return ctx.res.file('downloads/manual.pdf')
 
 `sse()` starts a `text/event-stream` response and returns `{ send(event, data, { id, retry }?), comment(text), close() }`:
 
-```js
-// pb_pages/clock/+api.js
+```ts
+// pb_pages/clock/+api.ts
 module.exports = {
   get(ctx) {
     const stream = ctx.res.sse()

@@ -13,6 +13,7 @@
 
 - [Creating a Page](../creating-a-page.md)
 - [Directory Structure](../directory-structure.md)
+- [File types](../file-types.md)
 - [Routing](../routing.md)
 - [Accessing Parameters](../parameters.md)
 - [Loading Data](../loading-data.md)
@@ -20,11 +21,11 @@
 
 # Templating
 
-- [EJS](../ejs.md)
+- [ETS templates](../ets.md)
 - [Markdown](../markdown.md)
-- [JSX and TSX](../jsx.md)
 - [Partials](../partials.md)
 - [Layouts and Slots](../layouts.md)
+- [Components with TSX](../jsx.md)
 
 # Security and Content
 
@@ -36,7 +37,7 @@
 
 # Configuration
 
-- [+config.js](../config.md)
+- [+config.ts](../config.md)
 - [Caching](../caching.md)
 - [Errors](../errors.md)
 - [Debugging](../debugging.md)
@@ -70,6 +71,7 @@
 # Going Further
 
 - [JavaScript Runtime](../jsvm.md)
+- [TypeScript](../typescript.md)
 - [Plugin Authoring](../plugins/authoring.md)
 
 # Guides

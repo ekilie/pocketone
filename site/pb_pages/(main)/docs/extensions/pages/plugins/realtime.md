@@ -9,8 +9,8 @@ source: "ext/pages/docs/plugins/realtime.md"
 
 The `realtime` plugin sends messages to [PocketBase realtime](https://pocketbase.io/docs/realtime/) subscribers.
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['realtime'],
 }
@@ -20,8 +20,8 @@ module.exports = {
 
 Sends `data` to the subscribers of `topic`. `filter(client)` may limit the recipients.
 
-```js
-// pb_pages/ping/+api.js
+```ts
+// pb_pages/ping/+api.ts
 module.exports = {
   post(ctx) {
     ctx.realtime.send('ping', { at: new Date().toISOString() })
@@ -42,7 +42,7 @@ On the client, subscribe with the PocketBase JS SDK:
 
 ## Filtering recipients
 
-```js
+```ts
 ctx.realtime.send('alerts', 'Maintenance at 10:00', {
   filter: (client) => !!client.get('auth'),
 })
@@ -52,15 +52,15 @@ ctx.realtime.send('alerts', 'Maintenance at 10:00', {
 
 For hypermedia libraries (HTMX, Datastar), send rendered HTML. `include()` is available in templates, so render the partial there:
 
-```js
-// pb_pages/xapi/chat/+page.js
+```ts
+// pb_pages/xapi/chat/+page.ts
 module.exports = {
   post() {}, // accept POST; the page renders and sends
 }
 ```
 
-```ejs
-<!-- pb_pages/xapi/chat/index.ejs -->
+```ets
+<!-- pb_pages/xapi/chat/index.ets -->
 <%% ctx.realtime.send('chat', include('chat-msg', { message: ctx.req.body().message })) %>
 ```
 

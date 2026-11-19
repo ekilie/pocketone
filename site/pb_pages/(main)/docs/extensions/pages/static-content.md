@@ -7,7 +7,7 @@ source: "ext/pages/docs/static-content.md"
 
 # Serving Static Content in PocketPages
 
-Any file in `pb_pages` that isn't a page (`.ejs`, `.md`, `.jsx`, `.tsx`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
+Any file in `pb_pages` that isn't a page (`.ets`, `.md` or `.tsx`, or the [JavaScript versions](/docs/extensions/pages/file-types#javascript-works-too) `.ejs` and `.jsx`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
 
 ```
 pb_pages/
@@ -19,7 +19,7 @@ pb_pages/
   (marketing)/
     brochure.pdf       -> /brochure.pdf
   favicon.ico          -> /favicon.ico
-  index.ejs            -> /  (a page, not static)
+  index.ets            -> /  (a page, not static)
 ```
 
 - The content type comes from the extension.

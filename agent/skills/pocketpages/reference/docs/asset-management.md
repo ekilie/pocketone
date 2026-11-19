@@ -21,7 +21,7 @@ pb_pages/
 
 Use `asset()` (the same as `ctx.asset()`):
 
-```ejs
+```ets
 <link rel="stylesheet" href="<%= asset('/assets/app.css') %>">
 <img src="<%= asset('header.jpg') %>">
 ```

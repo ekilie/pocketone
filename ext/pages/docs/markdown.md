@@ -1,15 +1,15 @@
 ---
 title: Markdown Support
-description: .md pages and partials run through EJS, then Markdown, with YAML front matter passed to meta().
+description: .md pages and partials run their tags as plain JavaScript, then Markdown, with YAML front matter passed to meta().
 ---
 
 # Markdown Support
 
-A `.md` file is a page, just like an `.ejs` file. Markdown is always on.
+A `.md` file is a page, just like an `.ets` file. Markdown is always on.
 
 ## How it works
 
-1. **EJS first**: the file runs through EJS, so every [EJS tag](ejs.md) works in Markdown.
+1. **Tags first**: the file runs through EJS, so the same tags as [ETS](ets.md) work in Markdown. Markdown is content, and its tags are a small escape hatch: plain JavaScript inside, with no TypeScript stripping.
 2. **Then Markdown**: the result is rendered as Markdown: CommonMark plus GFM tables, strikethrough, task lists and autolinks.
 
 ## Front matter
@@ -27,7 +27,7 @@ description: A detailed guide about something interesting
 
 Read the values in a layout with `meta`:
 
-```ejs
+```ets
 <title><%%= meta('title') %></title>
 <meta name="description" content="<%%= meta('description') %>">
 ```
@@ -46,13 +46,13 @@ Relative image paths go through [`ctx.asset`](ctx/asset.md), so they get fingerp
 
 ## Markdown partials
 
-A `.md` file in a `_private/` folder can be included from EJS with `include()`. It's rendered the same way, EJS then Markdown:
+A `.md` file in a `_private/` folder can be included from an `.ets` template with `include()`. It's rendered the same way, tags then Markdown:
 
-```ejs
+```ets
 <%%- include('intro') %>
 ```
 
 ## Notes
 
-- Layouts are `+layout.ejs`, `+layout.jsx` or `+layout.tsx`. A layout can't be Markdown: `+layout.md` is an error at
+- Layouts are `+layout.ets` (or `+layout.tsx`, see [TSX](jsx.md)). A layout can't be Markdown: `+layout.md` is an error at
   startup. A Markdown page is still wrapped by the layouts above it.

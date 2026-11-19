@@ -3,6 +3,37 @@
 
 A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extensions/mcp)): PocketBase's whole API as `pb_*` tools, the tools your `pb_hooks` add, and one tool per operation of every contract the app provides, listed here for the [standard set](https://pocketone.dev/docs/extensions/standard). Each contract tool calls the contract, so it passes the same token scope check and hooks as the REST API and the CLI ([how](https://pocketone.dev/docs/features/remote)). Uploads and downloads have no tool.
 
+## agent.chat/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/agent.chat/v1). Answered by [Agent Chat](https://pocketone.dev/docs/extensions/agent-chat) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `agent_chat_new` | Starts a chat and returns it; its id is how the app finds it again. |  | `chat` | `title` (string), `meta` (json) |
+| `agent_chat_send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to agent/v1, saves both turns, and folds older messages into the summary when it's due. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `wait` (string) |
+| `agent_chat_send_stream` | Is Send with the answer as it's written: agent/v1 chunks, the last one with done and the result. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `wait` (string) |
+| `agent_chat_get` | Returns a chat. |  | `chat:read` | `id` (string) |
+| `agent_chat_history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). |  | `chat:read` | `id` (string), `limit` (int), `before` (string) |
+| `agent_chat_update` | Sets a chat's title or meta (fields left out stay). |  | `chat` | `id` (string), `title` (json), `meta` (json) |
+| `agent_chat_list` | Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value. |  | `chat:read` | `meta` (json), `limit` (int), `offset` (int) |
+| `agent_chat_forget` | Deletes a chat, its messages and the model's state for it. |  | `chat` | `id` (string) |
+| `agent_chat_forget_where` | Deletes every chat whose meta matches (as in List), e.g. |  | `chat` | `meta` (json), `limit` (int), `offset` (int) |
+
+## agent/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/agent/v1). Answered by [Agent](https://pocketone.dev/docs/extensions/agent/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `agent_complete` | Answers a prompt or a conversation with the app's language model. |  | `agent` | `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `model` (string), `thread` (string), `wait` (string) |
+| `agent_stream` | Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result. |  | `agent` | `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `model` (string), `thread` (string), `wait` (string) |
+| `agent_status` | Says which model answers the app's prompts and whether it's ready. | yes | `agent:read` |  |
+| `agent_warm` | Reads the start of prompts ahead of the calls that use it (a preamble, say), so they skip reading it. |  | `agent` | `system` (string), `messages` (json), `prompt` (string), `wait` (string) |
+| `agent_forget` | Releases a warm: its text may leave the cache like any other. |  | `agent` | `id` (string) |
+| `agent_count` | Says how many tokens a text or a conversation is for the app's model, for budgeting what to send. |  | `agent:read` | `text` (string), `system` (string), `messages` (json) |
+| `agent_threads` | Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread). | yes | `agent:read` |  |
+| `agent_forget_thread` | Drops a thread's kept state, in memory and on disk. |  | `agent` | `id` (string) |
+
 ## bulkmail/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/bulkmail/v1). Answered by [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) in the standard set.

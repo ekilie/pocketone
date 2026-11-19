@@ -53,7 +53,7 @@ templatesv1.Contract.Provide(app, myTemplates)
 | Extension | |
 |---|---|
 | [templates](https://pocketone.dev/docs/extensions/templates) | provides |
-| [tokens](https://pocketone.dev/docs/extensions/tokens) | works with |
+| [api-tokens](https://pocketone.dev/docs/extensions/api-tokens) | works with |
 
 <!-- /contracts:index -->
 

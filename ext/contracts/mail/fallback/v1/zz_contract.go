@@ -4,6 +4,7 @@ package fallbackv1
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/mailer"
@@ -16,7 +17,12 @@ var (
 )
 
 // Contract is mail.fallback/v1.
-var Contract = extkit.NewContract[Sender]("mail.fallback/v1", extkit.Many).JS(extkit.JSOpen, func(o *extkit.JSObject) Sender { return jsSender{o} })
+var Contract = extkit.NewContract[Sender]("mail.fallback/v1", extkit.Many).JS(extkit.JSOpen, func(o *extkit.JSObject) Sender { return jsSender{o} }).JSTypes(jsTypes)
+
+// jsTypes is mail.fallback/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to the app's types.d.ts.
+//
+//go:embed zz_contract.d.ts
+var jsTypes string
 
 // jsSender is a provider written in pb_hooks: onContracts((e) => e.provide("mail.fallback/v1", { send(in) {...} })).
 // Inputs and results cross as JSON, so JS sees their json field names.

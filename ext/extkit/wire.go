@@ -104,14 +104,22 @@ type RawOut struct {
 	Status      int // the HTTP status; 0 means 200
 }
 
-// Stream is an operation result that keeps sending entries (logs): the route sends them as server-sent events, one
-// `event: <op>` per entry, the initial ones first, then whatever Poll returns, until the client goes away.
+// Stream is an operation result that keeps sending entries: the route sends them as server-sent events, one
+// `event: <op>` per entry, the initial ones first, then either what Run pushes as it happens (an answer being written)
+// or whatever Poll returns (a log being tailed), until it's over or the client goes away.
 type Stream struct {
 	Initial []any
-	Poll    func() []any // called every StreamPoll; nil = only the initial entries
-	Close   func()
+	Poll    func() []any // called every StreamPoll; nil = only the initial entries (ignored when Run is set)
+	// Run, when set, pushes entries as they happen: it calls send for each, in order, and returns when the stream is
+	// over. send fails once the receiver is gone; Run should then stop. ctx ends when the receiver goes away. A Run
+	// error reaches HTTP clients as a final `event: error` with the contract error. In the same process, call Run
+	// yourself with your own send.
+	Run   func(ctx context.Context, send func(entry any) error) error
+	Close func()
 	// Done, on a client's stream, closes when the server ends it (or the connection drops). Nil on a server's.
 	Done <-chan struct{}
+	// Err, on a client's stream, is the error the server ended it with (its `event: error`), once Done is closed.
+	Err func() error
 }
 
 // StreamPoll and StreamPing pace a stream: how often Poll runs, and how often a comment keeps idle connections open.
@@ -393,7 +401,7 @@ func ProvidedScopes(app core.App) []WireScope {
 }
 
 // WireScopes lists the token scopes of every wire contract linked into the binary (not ScopePublic or ScopeAny), so
-// a token service (ext/tokens) can offer and enforce them.
+// a token service (ext/api-tokens) can offer and enforce them.
 func WireScopes() []WireScope {
 	wiresMu.Lock()
 	ws := append([]mounter(nil), wires...)
@@ -647,7 +655,7 @@ func opPath(id ContractID, op string) string {
 
 // Mount serves the contract inside app at /api/_c/<id>/, calling whoever provides it after the seal. Finish mounts
 // every wire contract the seal gave a provider; call it yourself only on a router you build. Auth comes from the
-// request: PocketBase's own auth, and ext/tokens' API tokens (their scopes).
+// request: PocketBase's own auth, and ext/api-tokens' API tokens (their scopes).
 func (w *Wire[T]) Mount(app core.App, se *core.ServeEvent) {
 	for _, op := range w.Ops {
 		op := op
@@ -689,7 +697,7 @@ func readOpRequest(r *http.Request, rawIn bool) (OpRequest, error) {
 	return req, nil
 }
 
-// authOf reads who the request acts as: a PocketBase auth record, and when ext/tokens authenticated it, the token's
+// authOf reads who the request acts as: a PocketBase auth record, and when ext/api-tokens authenticated it, the token's
 // id and scopes.
 func authOf(e *core.RequestEvent) Auth {
 	if e.Auth == nil {
@@ -700,9 +708,9 @@ func authOf(e *core.RequestEvent) Auth {
 	if e.Auth.IsSuperuser() {
 		a.Kind = "superuser"
 	}
-	if id, _ := e.Get("tokens.id").(string); id != "" {
+	if id, _ := e.Get("api-tokens.id").(string); id != "" {
 		a.Kind, a.ID = "token", id
-		a.Scopes, _ = e.Get("tokens.scopes").([]string)
+		a.Scopes, _ = e.Get("api-tokens.scopes").([]string)
 		if a.Scopes != nil && len(a.Scopes) == 0 {
 			a.Scopes = nil // an unscoped token has the owner's full rights
 		}
@@ -713,7 +721,7 @@ func authOf(e *core.RequestEvent) Auth {
 // HostHandler answers the contract for a host's instances, in front of the runtime (on a multisite host: one of its
 // InstanceRoutes, after the gates, with multisite.InstanceID as instance): requests under /api/_c/<id>/ on
 // an instance's hostname are served by the host's provider for that instance; everything else goes to next. instance
-// maps a request to its instance id; auth authenticates it at the host (stock images have no ext/tokens).
+// maps a request to its instance id; auth authenticates it at the host (stock images have no ext/api-tokens).
 func (w *Wire[T]) HostHandler(host *Scope, instance func(*http.Request) (string, bool), auth func(*http.Request) Auth, next http.Handler) http.Handler {
 	root := opPath(w.C.id, "")
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -821,8 +829,24 @@ func writeStream(w http.ResponseWriter, r *http.Request, event string, s Stream)
 		}
 		return rc.Flush()
 	}
-	if err := send(s.Initial); err != nil || s.Poll == nil {
+	if err := send(s.Initial); err != nil {
 		return err
+	}
+	if s.Run != nil {
+		err := s.Run(r.Context(), func(e any) error { return send([]any{e}) })
+		if err != nil && r.Context().Err() == nil {
+			var ce *Error
+			if !errors.As(err, &ce) {
+				ce = &Error{Code: "internal", Message: err.Error(), Status: http.StatusInternalServerError}
+			}
+			b, _ := json.Marshal(ce)
+			_, _ = fmt.Fprintf(w, "event: error\ndata: %s\n\n", b)
+			_ = rc.Flush()
+		}
+		return nil
+	}
+	if s.Poll == nil {
+		return nil
 	}
 	poll := time.NewTicker(StreamPoll)
 	ping := time.NewTicker(StreamPing)
@@ -946,26 +970,61 @@ func (c *Caller) CallRawOut(ctx context.Context, method, path string, in any) (R
 	return RawOut{Body: res.Body, ContentType: res.Header.Get("Content-Type")}, nil
 }
 
-// CallStream opens a streaming operation. Its Initial is empty; Poll returns the entries received since the last
-// call (decoded JSON); Close ends it.
+// CallStream opens a GET streaming operation (CallStreamMethod with GET).
 func (c *Caller) CallStream(ctx context.Context, path string, in any) (Stream, error) {
+	return c.CallStreamMethod(ctx, http.MethodGet, path, in)
+}
+
+// CallStreamMethod opens a streaming operation: a GET sends in as the query, other methods as a JSON body. Its Initial
+// is empty; Poll returns the entries received since the last call (decoded JSON); Close ends it; after Done, Err is
+// the error the server ended it with, if any.
+func (c *Caller) CallStreamMethod(ctx context.Context, method, path string, in any) (Stream, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	res, err := c.do(ctx, http.MethodGet, path, EncodeQuery(in), nil, "")
+	var (
+		res *http.Response
+		err error
+	)
+	if method == http.MethodGet {
+		res, err = c.do(ctx, method, path, EncodeQuery(in), nil, "")
+	} else {
+		b, merr := json.Marshal(in)
+		if merr != nil {
+			cancel()
+			return Stream{}, merr
+		}
+		res, err = c.do(ctx, method, path, nil, bytes.NewReader(b), "application/json")
+	}
 	if err != nil {
 		cancel()
 		return Stream{}, err
 	}
 	var mu sync.Mutex
 	var pending []any
+	var serverErr error
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		sc := bufio.NewScanner(res.Body)
 		sc.Buffer(make([]byte, 64*1024), 4*1024*1024)
+		event := ""
 		for sc.Scan() {
 			line := sc.Text()
+			if ev, ok := strings.CutPrefix(line, "event: "); ok {
+				event = ev
+				continue
+			}
 			data, ok := strings.CutPrefix(line, "data: ")
 			if !ok {
+				continue
+			}
+			if event == "error" {
+				ce := &Error{}
+				if json.Unmarshal([]byte(data), ce) != nil || ce.Code == "" {
+					ce = &Error{Code: "internal", Message: data}
+				}
+				mu.Lock()
+				serverErr = ce
+				mu.Unlock()
 				continue
 			}
 			var v any
@@ -977,6 +1036,11 @@ func (c *Caller) CallStream(ctx context.Context, path string, in any) (Stream, e
 		}
 	}()
 	return Stream{
+		Err: func() error {
+			mu.Lock()
+			defer mu.Unlock()
+			return serverErr
+		},
 		Poll: func() []any {
 			mu.Lock()
 			defer mu.Unlock()
@@ -1007,7 +1071,7 @@ type Tool struct {
 }
 
 // Tools are the contract's MCP tools on app: <name>_<op>, e.g. deploy_check, remote_status. Uploads and downloads have
-// no tool; a stream's tool returns its initial entries.
+// no tool; a stream's tool returns its initial entries, and a pushed stream's (Run) everything it pushes until it ends.
 func (w *Wire[T]) Tools(app core.App) []Tool {
 	out := make([]Tool, 0, len(w.Ops))
 	for _, op := range w.Ops {
@@ -1043,9 +1107,14 @@ func (w *Wire[T]) Tools(app core.App) []Tool {
 				res, err := op.Invoke(ctx, impl, a, req)
 				if s, isStream := res.(Stream); isStream && err == nil {
 					if s.Close != nil {
-						s.Close()
+						defer s.Close()
 					}
-					return s.Initial, nil
+					if s.Run == nil {
+						return s.Initial, nil
+					}
+					entries := append([]any(nil), s.Initial...)
+					err := s.Run(ctx, func(e any) error { entries = append(entries, e); return nil })
+					return entries, err
 				}
 				return res, err
 			},

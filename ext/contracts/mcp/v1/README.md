@@ -61,6 +61,7 @@ error="invalid_token"` challenge, never a guest's answer.
 | Extension | |
 |---|---|
 | [mcp](../../../../ext/mcp/README.md) | provides (default) |
+| [wasm](../../../../ext/wasm/README.md) | works with |
 
 <!-- /contracts:index -->
 

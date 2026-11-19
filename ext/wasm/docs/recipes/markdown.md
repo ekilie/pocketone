@@ -1,6 +1,6 @@
 ---
 title: Markdown to HTML
-description: Render Markdown posts to HTML in a hook with pulldown-cmark, then clean them with sanitize-html.
+description: Render Markdown posts to HTML in page code with pulldown-cmark, then clean them with sanitize-html.
 ---
 
 # Markdown to HTML
@@ -12,27 +12,28 @@ record is saved, and keep the HTML beside the Markdown: pages then show it with 
 [pulldown-cmark](https://crates.io/crates/pulldown-cmark), the CommonMark parser behind rustdoc and mdBook, with
 tables, strikethrough and task lists on.
 
-## The hook
+## The route
 
 A `posts` collection with a `body` text field (the Markdown) and an `html` text field:
 
-```js
-// pb_hooks/posts.pb.js: posts are written in Markdown; html is what your pages show
-async function renderPost(markdown) {
-  const html = (await $wasm.run.async("markdown", markdown || "")) ?? ""
-  return (await $wasm.run.async("sanitize-html", html)) ?? "" // users wrote it: keep only safe HTML
+```ts
+// pb_pages/posts/+api.ts: posts are written in Markdown; html is what your pages show
+async function renderPost(markdown: string): Promise<string> {
+  const html = (await $wasm.run.async<string | null>("markdown", markdown || "")) ?? ""
+  return (await $wasm.run.async<string | null>("sanitize-html", html)) ?? "" // users wrote it: keep only safe HTML
 }
 
-onRecordCreate(async (e) => {
-  e.record.set("html", await renderPost(e.record.get("body")))
-  return e.next()
-}, "posts")
-
-onRecordUpdate(async (e) => {
-  e.record.set("html", await renderPost(e.record.get("body")))
-  return e.next()
-}, "posts")
+export async function post(ctx: any) {
+  if (!ctx.auth) throw ctx.httpError(401, "Sign in to post")
+  const { body } = ctx.req.body()
+  const record = new Record(ctx.app.findCollectionByNameOrId("posts"))
+  record.load({ body, html: await renderPost(body) })
+  ctx.app.save(record)
+  return ctx.res.json(201, { id: record.id })
+}
 ```
+
+A route that saves an edit sets `html` the same way, from the new body, before it saves.
 
 CommonMark passes raw HTML through, so `<script>` in a post would reach your pages. The second call runs the result
 through [sanitize-html](sanitize-html.md), which keeps the formatting and drops scripts, event handlers and

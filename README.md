@@ -51,50 +51,77 @@ extensions that provide each one.
 
 ## Standard Extensions
 
-These extensions ship with every `pocketone` binary. They do not add runtime overhead if you
-choose not to use them.
+Everything in this section ships in every `pocketone` binary. Some are on in every app, some wait until you configure
+them, and the multisite group runs only when `pocketone.yaml` asks for many instances. An extension you don't use adds
+no runtime overhead.
 
-| Extension | Description |
-|---|---|
-| **[PITR](ext/pitr/README.md)** (Litestream) | Point-in-time restore of your database, from Settings → Backups or `pocketone pitr restore`. On by default; `--pitr=false` turns it off. |
-| **[Backups](ext/backups/README.md)** | Restore to a moment from your own backups (the latest one before it) when PITR is off. |
-| **[Settings](ext/settings/README.md)** | One API for the settings your extensions keep (PITR's bucket, Bulk Mail's sender). |
-| **[Auto TLS](ext/autotls/README.md)** | On-demand certificates and wildcards through ACME. |
-| **[Bulk Mail](ext/bulkmail/README.md)** | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
-| **[Pages](ext/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. |
-| **[MCP](ext/mcp/README.md)** | An MCP endpoint at `/mcp` so agents can manage your app and call its tools. |
-| **[S3 Redirect](ext/s3redirect/README.md)** | File downloads as short-lived signed S3 redirects. |
-| **[Tokens](ext/tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes, and an [OAuth server](ext/tokens/OAUTH.md) for `pocketone login` and MCP sign-in. |
-| **[Deploy](ext/deploy/README.md)** | `pocketone deploy \| dev \| pull \| logs` and the deploy API. |
-| **[Remotes](ext/remotes/README.md)** | Named remotes and saved logins for the `pocketone` command. |
-| **[Upgrade](ext/upgrade/README.md)** | `pocketone upgrade` to the latest release; the old executable is kept as `pocketone-<version>`, never deleted. |
+### In every app
 
-Planned, not in the binary yet: **[Vacuum](ext/vacuum/README.md)**, scheduled SQLite VACUUM.
+| Extension | What it does | Default |
+|---|---|---|
+| **[PITR](ext/pitr/README.md)** (Litestream) | Point-in-time restore of your database, from Settings → Backups or `pocketone pitr restore`. | On; `--pitr=false` turns it off |
+| **[Backups](ext/backups/README.md)** | Restore to a moment from your own backups (the latest one before it) when PITR is off. | On |
+| **[Settings](ext/settings/README.md)** | One API for the settings your extensions keep (PITR's bucket, Bulk Mail's sender). | On |
+| **[Pages](ext/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. | On when `pb_pages` exists |
+| **[MCP](ext/mcp/README.md)** | An MCP endpoint at `/mcp` so agents can manage your app and call its tools. | On |
+| **[API Tokens](ext/api-tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes, and an [OAuth server](ext/api-tokens/OAUTH.md) for `pocketone login` and MCP sign-in. | On |
+| **[Deploy](ext/deploy/README.md)** | `pocketone deploy \| dev \| pull \| logs` and the deploy API. | On |
+| **[Remotes](ext/remotes/README.md)** | Named remotes and saved logins for the `pocketone` command. | On |
+| **[Bulk Mail](ext/bulkmail/README.md)** | Campaigns to your app's own users, with audiences from a collection, a view or SQL. | On; sends nothing until you start a campaign |
+| **[S3 Redirect](ext/s3redirect/README.md)** | File downloads as short-lived signed S3 redirects. | On when S3 file storage is on |
+| **[S3 Fallback](ext/s3-fallback/README.md)** | A default bucket for uploads and backups when an app hasn't set its own S3; on a multisite host, each instance gets its own folder. | Off until the `storage` section |
+| **[Agent](ext/agent/README.md)** | A language model for your app: your own API, or a small model PocketOne runs itself. | Off until you name a model or an API |
+| **[Agent Chat](ext/agent-chat/README.md)** | Stored conversations with your app's language model, with history and summaries. | On (needs Agent) |
+| **[WASM](ext/wasm/README.md)** | Go, Rust or Zig modules called from page code, each a closed box. | On when `pb_hooks` holds a `.pb.wasm` file |
+| **[Cache](ext/cache/README.md)** | Cache buckets for every app in the process from one shared store. | On |
+| **[Templates](ext/templates/README.md)** | Theme an extension's own pages (the OAuth sign-in screens). | On |
+| **[UI Cache](ext/uicache/README.md)** | Dashboard cache headers that let updates through browsers and CDNs. | On |
+| **[Vacuum](ext/vacuum/README.md)** | Compacts your app's SQLite databases on a schedule. | Off until turned on in Settings or `pocketone.yaml` |
+| **[Mail Trap](ext/mailtrap/README.md)** | Mail from an app without SMTP lands in a built-in inbox at http://127.0.0.1:8025 instead of `sendmail`. | On in dev mode with SMTP off |
+| **[JSVM](ext/jsvm/README.md)** | PocketOne's JS engine for `pb_hooks` and page code: QuickJS, one VM per app, hard limits. | On; `jsvm: goja` runs PocketBase's own engine |
+| **[Config](ext/config/README.md)** | The `pocketone.yaml` config file, with secrets in a `.env` beside it. | On when the file exists |
+
+### Commands and serving
+
+| Extension | What it does | Default |
+|---|---|---|
+| **[Upgrade](ext/upgrade/README.md)** | `pocketone upgrade` to the latest release; the old executable is kept as `pocketone-<version>`, never deleted. | Always there |
+| **[Desktop](ext/desktop/README.md)** | `pocketone desktop build`: your app as a native desktop app for macOS, Windows and Linux. | Always there; builds need Docker |
+| **[Auto TLS](ext/autotls/README.md)** | On-demand certificates and wildcards through ACME. | Off until `--autotls` |
+
+### Many instances on one server
+
+`pocketone serve` runs a single app unless `pocketone.yaml` has a `multisite` section. With one, it hosts many
+instances, routed by hostname ([PocketBase isolates](https://pocketone.dev/docs/features/isolates)).
+
+| Extension | What it does | Default |
+|---|---|---|
+| **[Multisite](ext/multisite/README.md)** | Many instances behind one listener, routed by hostname, run in-process (Pocker), in containers (Docker), or both. | Off until the `multisite` section |
+| **[Pocker](ext/pocker/README.md)** | Hundreds of PocketOne instances in one Go process. | On in multisite |
+| **[Docker](ext/docker/README.md)** | Each instance in its own container. | Off until the `docker` section |
+| **[Firewall](ext/firewall/README.md)** | Peer allow-lists, trusted proxies and rate limits for a host. | Off until the `firewall` or `rate_limits` section |
+| **[Edge](ext/edge/README.md)** | The fleet layer: forward to the edge that owns an instance. | Off until the `edges` or `mothership` section |
+| **[Mothership](ext/mothership/README.md)** | A control plane and its edges, across regions (the binary has the edge side). | Off until the `mothership` section |
+| **[Stats](ext/stats/README.md)** | Disk use and last request for each instance. | On in multisite |
+| **[Server Timing](ext/servertiming/README.md)** | `Server-Timing` headers for each step of a request. | On in multisite |
 
 ## Community Extensions
 
-These extensions are maintained by PocketHost and the community and are MIT. You can mix and match them to create your
-own custom PocketOne experience.
+These aren't in the `pocketone` binary: add them to your own Go build. They're maintained by PocketHost and the
+community and are MIT.
 
 **Run many instances**
 
 | Extension | Description |
 |---|---|
-| **[Pocker](ext/pocker/README.md)** | Hundreds of PocketOne instances in one Go process, routed by hostname. |
-| **[Schedules](ext/schedules/README.md)** | Planned. Scheduled webhooks that wake sleeping instances (headed into Pocker). |
-| **[Mothership](ext/mothership/README.md)** | A control plane and its edges, across regions. Needs Pocker. |
 | **[Sandbox](ext/sandbox/README.md)** | Confines untrusted JS hooks, SQL and outbound network ([how is this safe?](ext/sandbox/README.md#how-is-this-safe)). Required for Multitenant. |
-| **[Multisite](ext/multisite/README.md)** | Many instances behind one listener, routed by hostname, run in-process (Pocker), in containers (Docker), or both. |
-| **[Firewall](ext/firewall/README.md)** | Peer allow-lists, trusted proxies and rate limits for a host. |
-| **[Edge](ext/edge/README.md)** | The fleet layer: forward to the edge that owns an instance. |
+| **[Schedules](ext/schedules/README.md)** | Planned. Scheduled webhooks that wake sleeping instances (headed into Pocker). |
 
 **Services for your instances**
 
 | Extension | Description |
 |---|---|
 | **[Mail Relay](ext/mailrelay/README.md)** | Outgoing mail for instances without SMTP, sent as `<instance>@<your domain>` through your relay, with limits. |
-| **[S3 Fallback](ext/s3-fallback/README.md)** | A default bucket for uploads and backups when an instance hasn't set its own S3. |
-| **[Server Timing](ext/servertiming/README.md)** | `Server-Timing` headers for each step of a request. |
 
 **Sell it as a service**
 
@@ -104,11 +131,12 @@ own custom PocketOne experience.
 | **[Multitenant Billing](ext/tenant-billing/README.md)** | Planned. Plans, quotas and the billing provider hook for Multitenant. |
 | **[Multitenant Billing LemonSqueezy Adapter](ext/tenant-billing-ls/README.md)** | Planned. Lemon Squeezy as the billing provider. |
 
-**For extension authors**
+**For your own build**
 
 | Extension | Description |
 |---|---|
-| **[Mail Trap](ext/mailtrap/README.md)** | Dev mode: an app without SMTP sends to a built-in inbox at http://127.0.0.1:8025 instead of `sendmail`. |
+| **[Standard](ext/standard/README.md)** | The binary's per-app set as one Go value: start your own build from it and add your extensions. |
+| **[Bundle](ext/bundle/README.md)** | Your app's hooks, migrations and public files embedded in the binary. |
 | **[Dev Users](ext/devusers/devusers.go)** | Local testing only: a superuser and a user with password `password`. Every extension's `example/` uses it. |
 
 ## Contribute an extension

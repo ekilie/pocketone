@@ -11,9 +11,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/api-tokens/apitokenstest"
 	"github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"github.com/pockethost/pocketone/ext/standard"
-	"github.com/pockethost/pocketone/ext/tokens/tokenstest"
 )
 
 // Two stock apps: app1's `link` signs in to app2 through app2's OAuth server (a browser grant), never a password,
@@ -39,7 +39,7 @@ func TestLinkSignsInThroughOAuth(t *testing.T) {
 	remoteclient.OpenBrowser = func(u string) error {
 		go func() {
 			// on failure it also fails the CLI's sign-in, so link returns now instead of waiting out its timeout
-			browserErr <- tokenstest.ApproveOrFail(u, tokenstest.Login{Collection: core.CollectionNameSuperusers, Email: "admin@example.com", Password: "password1234"})
+			browserErr <- apitokenstest.ApproveOrFail(u, apitokenstest.Login{Collection: core.CollectionNameSuperusers, Email: "admin@example.com", Password: "password1234"})
 		}()
 		return nil
 	}

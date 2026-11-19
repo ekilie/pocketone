@@ -9,7 +9,7 @@ source: "ext/pages/docs/ctx/app.md"
 
 The app (`$app`): records, collections, settings. Page code calls it directly, with no HTTP round trip.
 
-```js
+```ts
 module.exports = {
   load(ctx) {
     return {

@@ -33,17 +33,27 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
-### PocketBase
+### Upgrading
 
-- Built on PocketBase v0.42.3 plus one later upstream commit (c5003ce6; was v0.42.2). Realtime subscription changes no longer need to come from the connection's IP, OAuth2 redirects also accept the subscribing IP and log failures at WARN, and S3 multipart uploads that S3 reports as failed in a 200 response now fail. See its [changelog](CHANGELOG.pocketbase.md).
+1. The tokens extension is now `api-tokens`: rename `tokens:` to `api-tokens:` in `pocketone.yaml`, use `$apiTokens` in JS hooks (was `$tokens`), and upgrade the `pocketone` CLI with your apps (the token API moved to `/api/_c/api-tokens/v1`). Its collections are renamed on the first start ([ext/api-tokens changelog](ext/api-tokens/CHANGELOG.md)).
 
 ### Added
 
 - `pocketone` runs WASM modules: put a `<name>.pb.wasm` in `pb_hooks` and call it from your hooks with `await $wasm.run.async(name, input)` ([ext/wasm](ext/wasm/README.md)).
+- Contract streams can push: a stream operation (`extkit.Stream`) may be a POST with a JSON body, and its provider can send entries as they happen with `Run` instead of being polled every 500 ms; a `Run` error ends the stream with `event: error`. `pocketone remote <contract> <op>` and the generated clients follow ([Contracts](ext/contracts/README.md)).
+
+- Extensions can own their schema: an extension that has `Migrations()` gets them applied at startup, after PocketBase's own migrations and before the app's `pb_migrations`, recorded in `_extension_migrations` apart from the app's history. `pocketone extensions migrations` lists them; `pocketone extensions migrate down <extension> [n]` reverts them ([Writing an extension](docs/extensions.md#your-schema-migrations-and-table-names)).
+- `pb_data/types.d.ts` types every contract `pb_hooks` can touch, generated from its Go interface: action hooks take their operation's input (`onAgentComplete((e) => e.input.maxTokens ...)`), and `e.provide("mail.fallback/v1", ...)` checks the object's methods and arguments; unknown ids stay untyped ([Contracts](ext/contracts/README.md#write-the-interface)).
+- `pb_cache/`, next to `pb_data`, is where extensions keep files they can rebuild, one folder each (`pb_cache/<extension>/`). It's never backed up, deployed or synced; `pocketone cache` shows what's in it and `pocketone cache clear [extension...]` empties it ([Folders](https://pocketone.dev/docs/folders)). Add `pb_cache/` to your app's `.gitignore`.
 
 ### Changed
 
+- Extension collections are named `_<extension>_<table>`, with hyphens in the extension's name as underscores (`_agent_chat_messages` for agent-chat); the conformance test no longer accepts a bare `_<extension>`, and CI refuses a table that falls under another extension's longer prefix ([Writing an extension](docs/extensions.md#your-schema-migrations-and-table-names)).
 - Extensions keep their end-user docs in `ext/<name>/docs/` (was `site/`). `docs/index.md` is required and names the main docs nav section that links it (`section: Reference`); the README is the extension's page in the Extensions reference, at `/docs/extensions/<name>/extension`, and no longer appears in the docs' sidebar ([Writing an extension](docs/extensions.md)).
+
+### PocketBase
+
+- Built on PocketBase v0.42.3 plus one later upstream commit (c5003ce6; was v0.42.2). Realtime subscription changes no longer need to come from the connection's IP, OAuth2 redirects also accept the subscribing IP and log failures at WARN, and S3 multipart uploads that S3 reports as failed in a 200 response now fail. See its [changelog](CHANGELOG.pocketbase.md).
 
 ## v0.0.1-alpha.7 (2026-11-17)
 

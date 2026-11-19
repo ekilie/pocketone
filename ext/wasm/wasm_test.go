@@ -283,9 +283,10 @@ func TestIsolation(t *testing.T) {
 }
 
 // TestConcurrentCalls: calls running at once each get a fresh instance, so none sees another's input or output
-// (each counts its own words). MaxModulesMB is raised so the Go module (4.3 MB) runs many at once.
+// (each counts its own words). MaxConcurrent and MaxModulesMB let all 20 calls of the Go module (4.3 MB) run at once:
+// with the default 8, the rest wait for a slot only up to Timeout, which a slow CI runner overran.
 func TestConcurrentCalls(t *testing.T) {
-	e := withBasic(t, wasm.Config{MaxModulesMB: 200})
+	e := withBasic(t, wasm.Config{MaxConcurrent: 20, MaxModulesMB: 200})
 	var wg sync.WaitGroup
 	errs := make(chan error, 20)
 	for i := range 20 {
@@ -317,6 +318,7 @@ func TestConcurrentCalls(t *testing.T) {
 // doesn't answer, the defaults, and Modules lists it; the JS hooks, other files, an upload in progress (a hidden
 // file) and a name pb_hooks can't call are left out. A missing module's error names the file it looked for.
 func TestLoadAndStatus(t *testing.T) {
+	t.Parallel()
 	code := module(t, basic)
 	plain := moduleTags(t, basic, "nodescribe")
 	e := newApp(t, wasm.Config{}, func(app core.App, dir string) {
@@ -434,6 +436,7 @@ func TestSettings(t *testing.T) {
 // TestLanguage: what a module's producers section says wins over the manifest; without one, the manifest's language
 // shows. Examples come through with their function defaulted to run.
 func TestLanguage(t *testing.T) {
+	t.Parallel()
 	code := moduleTags(t, basic, "claimrust") // its --describe says Rust
 	e := newApp(t, wasm.Config{}, func(_ core.App, dir string) {
 		install(t, dir, "basic", code)
@@ -514,8 +517,8 @@ func TestMaxConcurrent(t *testing.T) {
 // TestCold: with no cache (CacheDir "off"), every call compiles the module. Compiling isn't counted in Timeout: a Go
 // module takes longer than 300 ms to compile and still runs.
 func TestCold(t *testing.T) {
-	wasm.Cold(t)
-	e := withBasic(t, wasm.Config{Timeout: 300 * time.Millisecond})
+	t.Parallel()
+	e := withBasic(t, wasm.Config{Timeout: 300 * time.Millisecond, CacheDir: "off"})
 	for i := range 2 {
 		start := time.Now()
 		out, err := call(t, e, "basic", "run", map[string]string{"text": "x"})

@@ -1,6 +1,0 @@
-<script server>
-  const { roomName } = params
-  const messages = ctx.store(`room_${roomName}`) || []
-</script>
-
-<%- include('chat.ejs', { roomName, messages }) %>

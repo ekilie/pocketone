@@ -1,4 +1,4 @@
-/// <reference path="../pb_data/types.d.ts" />
+/// <reference path="../types.d.ts" />
 // Demo data: a public "notes" collection (anyone reads, signed-in users write their own) with three notes by
 // user@example.com, the local test user that ext/devusers keeps at password "password".
 migrate(
