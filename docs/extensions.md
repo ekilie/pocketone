@@ -493,12 +493,13 @@ ext/<name>/
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
 - **Examples are TypeScript page code and Go.** Show server code as [PocketPages](/docs/extensions/pages) page code in
-  TypeScript (`+api.ts`, `+page.ts`, modules in `_private/`, and `.tsx` when a whole page template is needed), and the
+  TypeScript (`+api.ts`, `+page.ts`, modules in `_private/`, and an `.ets` template when the example needs a page), and the
   same thing in Go when an app's Go code can do it. Not `pb_hooks`, and not JavaScript: pages give routes a file
   structure people can read, and TypeScript carries the types.
-  - **In `docs/`**, put the TS and Go versions of one example in consecutive fenced blocks (```` ```ts ```` then
-    ```` ```go ````, nothing between). pocketone.dev shows them as tabs, one language at a time; the reader's pick
-    carries across every example and page. On GitHub they're just consecutive blocks.
+  - **In `docs/`**, put the versions of one example in consecutive fenced blocks (```` ```ts ````, ```` ```go ````, and
+    ```` ```ets ```` when it needs a template), nothing between. pocketone.dev shows them as tabs (TS | Go | ETS), one at
+    a time; the reader's pick carries across every example and page. On GitHub they're just consecutive blocks. Put a
+    line of text between blocks that aren't alternatives (a `+page.ts` and the `.ets` template it feeds) so both show.
   - **In the README**, keep samples inline: when you show the Go version too, put a line of text before it ("In Go:")
     so the two don't become tabs and the README reads as plain Markdown.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another

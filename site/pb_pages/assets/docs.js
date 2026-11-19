@@ -1,6 +1,6 @@
 // Docs pages swap #content and #page-footer without a reload (Datastar; see
 // _private/docs-footer.js). This keeps up with each swap: it turns runs of
-// Go, JS, TS, EJS, JSX and TSX code blocks into tabs, highlights the new page's code blocks
+// TS, Go and ETS code blocks into tabs, highlights the new page's code blocks
 // (Prism only runs once, on page load), sets the tab
 // title from #page-footer's data-title, and loads giscus into the footer's
 // <section data-giscus-term> slot whenever it comes back empty or its term
@@ -60,13 +60,10 @@
     }
   }
 
-  // Code tabs: a Go, JS, TS, EJS, JSX or TSX code block directly followed by another of those is one example written
-  // several ways. Each run becomes a tabbed block, and picking a language picks it in every group on the page (and is
+  // Code tabs: a TS, Go or ETS code block directly followed by another of those is one example written several ways
+  // (ETS when the example needs a page template). Each run becomes a tabbed block, and picking a language picks it in every group on the page (and is
   // remembered). The Markdown needs nothing special: on GitHub and in llms.txt the blocks just follow each other.
-  const tabLangs = { go: 'Go', js: 'JS', javascript: 'JS', ts: 'TS', typescript: 'TS', ejs: 'EJS', jsx: 'JSX', tsx: 'TSX' }
-  // only alternatives group: code with code, templates with templates (a +page.js and its EJS template are two halves
-  // of one example, both shown)
-  const family = (lang) => (lang === 'EJS' || lang === 'JSX' || lang === 'TSX' ? 'template' : 'code')
+  const tabLangs = { ts: 'TS', typescript: 'TS', go: 'Go', ets: 'ETS' }
   const langOf = (el) => {
     const pre = el?.matches?.('pre') ? el : el?.matches?.('div.code-toolbar') ? el.querySelector('pre') : null
     const m = pre?.querySelector('code')?.className.match(/language-(\w+)/)
@@ -92,7 +89,6 @@
       const run = [first]
       for (let next = first.nextElementSibling; next && langOf(next); next = next.nextElementSibling) {
         if (run.some((el) => langOf(el) === langOf(next))) break // the same language twice: separate examples
-        if (family(langOf(next)) !== family(langOf(first))) break // code next to its template: both shown
         run.push(next)
       }
       run.forEach((el) => seen.add(el))
