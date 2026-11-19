@@ -95,6 +95,7 @@ func TestModuleTooLarge(t *testing.T) {
 // TestUnknownImports: a module that can't run here is refused when it loads, saying why: one built for host
 // functions this host doesn't have (v1's pb_fetch, an Extism PDK's), or a library with no main to run.
 func TestUnknownImports(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		code func(t *testing.T) []byte
@@ -105,6 +106,7 @@ func TestUnknownImports(t *testing.T) {
 		{"library", func(t *testing.T) []byte { return build(t, basic, "", true) }, "not a WASI program (no _start)"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			code := tc.code(t)
 			e := newApp(t, wasm.Config{}, func(_ core.App, dir string) { install(t, dir, "phone", code) })
 			if i, _ := info(t, e, "phone"); !strings.Contains(i.Error, tc.want) {

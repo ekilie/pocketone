@@ -28,6 +28,7 @@ func cacheFiles(t *testing.T, dir string) int {
 // a restarted app with the same CacheDir, load it from there instead of compiling. Another module adds its own entry,
 // and "off" turns the cache off.
 func TestCompilationCache(t *testing.T) {
+	// not parallel: it times calls, and a parallel test compiling the same module holds its compile lock
 	dir := t.TempDir()
 	cfg := wasm.Config{CacheDir: dir}
 	e := withBasic(t, cfg)
