@@ -1590,10 +1590,12 @@
     font-weight: 600;
     cursor: pointer;
   }
-  & .code-tabs-bar > button[aria-selected="true"] {
-    border-color: var(--color-base-300);
-    background: var(--color-base-200);
+  & .code-tabs-bar > button:hover {
     color: var(--color-base-content);
+  }
+  & .code-tabs-bar > button[aria-selected="true"] {
+    background: #282c34; /* the code blocks' own background (pre, above), so the tab joins its block */
+    color: #ccc;
   }
   & .code-tabs-panel :where(pre, div.code-toolbar) {
     margin-top: 0;
