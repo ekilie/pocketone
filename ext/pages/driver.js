@@ -209,7 +209,9 @@
           rt.setSlot(String(name), html)
           return undefined
         }
-        return j.raw(rt.getSlot(String(name)))
+        // an empty slot is '' (falsy), so slot('title') || 'fallback' falls back
+        var got = rt.getSlot(String(name))
+        return got === undefined || got === null || got === '' ? '' : j.raw(got)
       }
       props.children = j.raw(rt.wrapped())
       var pendingSlots = null
@@ -557,6 +559,18 @@
     }
     var pbClient = null,
       pbToken = null
+    // sdkFetch is the SDK's transport. The body is parsed here, not in Go, so the SDK gets real JS arrays and objects:
+    // a Go-backed list isn't spread by concat, which nested getFullList's records ([[...]]).
+    function sdkFetch(opts) {
+      var res = rt.apiSend(opts)
+      var json = null
+      if (res.raw) {
+        try {
+          json = JSON.parse(res.raw)
+        } catch (e) {}
+      }
+      return { statusCode: res.statusCode, headers: res.headers, raw: res.raw, json: json }
+    }
     ctx.pb = function () {
       var token = rt.authToken()
       if (pbClient && pbToken === token) return pbClient
@@ -564,7 +578,7 @@
       var pb = new Client(rt.sdkBaseURL)
       if (token) pb.authStore.save(token, JSON.parse(rt.authRecordJSON()))
       pb.beforeSend = function (url, options) {
-        options.fetch = rt.apiSend
+        options.fetch = sdkFetch
         return { url: url, options: options }
       }
       pbClient = pb
