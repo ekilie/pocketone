@@ -38,7 +38,7 @@ h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Exten
 }})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/pocker`.
+The module is `pocketone.dev/ext/pocker`.
 
 ## Configure
 
@@ -197,9 +197,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 //go:embed ui

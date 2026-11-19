@@ -20,7 +20,7 @@ package deployv1
 import (
 	"net/http"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Contract is deploy/v1.

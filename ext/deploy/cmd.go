@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
-	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
+	"pocketone.dev/ext/deploy/internal/glob"
+	"pocketone.dev/ext/extkit"
 )
 
 // Commands returns the client commands: deploy, dev, pull, logs.

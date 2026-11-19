@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
 )
 
 // extension is a configurable test extension: each field turns on one way of breaking the rules.

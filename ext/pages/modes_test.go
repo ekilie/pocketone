@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // Every PocketPages starter, the way a new user meets it: `pocketone pages create` and the next steps it prints

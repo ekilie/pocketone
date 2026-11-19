@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // errBodyTooLarge is what $http.send reports when a response is over HTTPSendMaxBody.

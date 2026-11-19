@@ -14,7 +14,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
-	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
+	templatesv1 "pocketone.dev/ext/contracts/templates/v1"
 )
 
 var set = fstest.MapFS{

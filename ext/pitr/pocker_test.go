@@ -2,9 +2,9 @@ package pitr
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"net/http"
 	"net/http/httptest"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"strings"
 	"sync"
 	"testing"
@@ -13,8 +13,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/pocker"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/pocker"
 )
 
 // Under the multitenant host: the restore route stages, app.Restart() restarts only that instance, the staged DB is

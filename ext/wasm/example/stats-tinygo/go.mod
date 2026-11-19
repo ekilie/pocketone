@@ -1,3 +1,3 @@
-module github.com/pockethost/pocketone/ext/wasm/example/stats-tinygo
+module pocketone.dev/ext/wasm/example/stats-tinygo
 
 go 1.24

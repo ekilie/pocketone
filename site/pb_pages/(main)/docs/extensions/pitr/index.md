@@ -206,8 +206,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pitr"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/pitr"
 )
 
 func main() {
@@ -227,7 +227,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/pitr`, Litestream v0.5.18 (pinned).
+- Go module `pocketone.dev/ext/pitr`, Litestream v0.5.18 (pinned).
   [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pitr/example/main.go) runs one app with local history.
 - Litestream continuously copies `data.db` to its destination: the app's own bucket (its PITR settings), else a
   filesystem of kind `litestream` (an `OnFilesystemCreate` handler, such as S3 Fallback), else `pb_data/litestream/`.

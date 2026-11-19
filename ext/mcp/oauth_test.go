@@ -19,7 +19,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/api-tokens"
+	"pocketone.dev/ext/api-tokens"
 )
 
 // The whole Claude connector flow against a real HTTP server: 401 → protected resource metadata → authorization

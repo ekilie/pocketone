@@ -6,7 +6,7 @@ package extkit
 //
 //	extkit.Command = "pockethost"
 //
-// or at link time: go build -ldflags "-X github.com/pockethost/pocketone/ext/extkit.Command=pockethost".
+// or at link time: go build -ldflags "-X pocketone.dev/ext/extkit.Command=pockethost".
 var Command = "pocketone"
 
 // Version is the build's product version ("0.0.2", "dev+87f81fd2"), for remote/v1's status. The binary sets it once

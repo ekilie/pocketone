@@ -20,7 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
+	"pocketone.dev/ext/deploy/internal/glob"
 )
 
 // File is one file of the tree.

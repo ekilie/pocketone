@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	mcpv1 "pocketone.dev/ext/contracts/mcp/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // ToolListModules is the MCP tool that lists the app's modules: an agent connected to the app's /mcp learns which

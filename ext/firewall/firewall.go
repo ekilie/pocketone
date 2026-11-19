@@ -6,18 +6,18 @@ package firewall
 
 import (
 	"fmt"
-	gatev1 "github.com/pockethost/pocketone/ext/contracts/gate/v1"
 	"math"
 	"net/http"
 	"net/netip"
+	gatev1 "pocketone.dev/ext/contracts/gate/v1"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // Config is the process-wide part of the firewall (the config file `firewall:`). Rate limits are `rate_limits:` (the

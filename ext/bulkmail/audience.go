@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	suppressionv1 "github.com/pockethost/pocketone/ext/contracts/mail/suppression/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"net/mail"
+	suppressionv1 "pocketone.dev/ext/contracts/mail/suppression/v1"
+	"pocketone.dev/ext/extkit"
 	"regexp"
 	"strings"
 

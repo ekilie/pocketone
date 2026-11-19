@@ -39,7 +39,7 @@ err = h.Run(ctx)
 
 At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker, docker`.
 
-The module is `github.com/pockethost/pocketone/ext/multisite`.
+The module is `pocketone.dev/ext/multisite`.
 
 ## Configure
 
@@ -191,7 +191,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 type echoRuntime struct{}

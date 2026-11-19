@@ -1,20 +1,20 @@
-module github.com/pockethost/pocketone/ext/backups
+module pocketone.dev/ext/backups
 
 go 1.27
 
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
-replace github.com/pockethost/pocketone/ext/extkit => ../extkit
+replace pocketone.dev/ext/extkit => ../extkit
 
-replace github.com/pockethost/pocketone/ext/contracts => ../contracts
+replace pocketone.dev/ext/contracts => ../contracts
 
-replace github.com/pockethost/pocketone/ext/devusers => ../devusers
+replace pocketone.dev/ext/devusers => ../devusers
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -51,4 +51,4 @@ require (
 	modernc.org/sqlite v1.62.0 // indirect
 )
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+replace pocketone.dev/ext/jsvm => ../jsvm

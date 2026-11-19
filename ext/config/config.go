@@ -18,8 +18,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/extkit"
 	"gopkg.in/yaml.v3"
+	"pocketone.dev/ext/extkit"
 )
 
 // FileName is the config file looked for by default.

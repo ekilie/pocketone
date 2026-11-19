@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // ImageRepo is where release build images are published, tagged v<version>.

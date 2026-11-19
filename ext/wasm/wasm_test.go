@@ -17,8 +17,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/wasm"
 )
 
 const basic = "testdata/basic"

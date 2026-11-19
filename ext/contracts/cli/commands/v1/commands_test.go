@@ -10,15 +10,15 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
-	examplev1 "github.com/pockethost/pocketone/ext/contracts/internal/example/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/mail/feedback/v1" // public raw ops: no commands
-	_ "github.com/pockethost/pocketone/ext/contracts/mail/suppression/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	"github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
-	_ "github.com/pockethost/pocketone/ext/contracts/restore/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
+	clicmdv1 "pocketone.dev/ext/contracts/cli/commands/v1"
+	examplev1 "pocketone.dev/ext/contracts/internal/example/v1"
+	_ "pocketone.dev/ext/contracts/mail/feedback/v1" // public raw ops: no commands
+	_ "pocketone.dev/ext/contracts/mail/suppression/v1"
+	_ "pocketone.dev/ext/contracts/remote/v1"
+	"pocketone.dev/ext/contracts/remote/v1/remoteclient"
+	_ "pocketone.dev/ext/contracts/restore/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 func TestPathOf(t *testing.T) {

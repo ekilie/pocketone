@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
+	"pocketone.dev/ext/deploy/internal/glob"
 )
 
 func TestGlob(t *testing.T) {

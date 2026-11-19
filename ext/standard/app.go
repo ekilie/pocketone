@@ -3,8 +3,8 @@ package standard
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
-	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/config"
+	"pocketone.dev/ext/jsvm"
 )
 
 // The JS engines a single app can run (`app: jsvm:` in pocketone.yaml).

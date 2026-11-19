@@ -25,7 +25,7 @@ app.Start()
 ```
 
 With ext/standard's set, add it as an extra, as the stock binary does: `set.Add(mailtrap.New())`. The module is
-`github.com/pockethost/pocketone/ext/mailtrap`.
+`pocketone.dev/ext/mailtrap`.
 
 ## Configure
 
@@ -94,8 +94,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailtrap"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/mailtrap"
 )
 
 func main() {

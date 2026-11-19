@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // probe is pb_hooks code that calls $agent the way an app does, and reports what it got.

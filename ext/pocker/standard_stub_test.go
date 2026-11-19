@@ -2,8 +2,8 @@ package pocker
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // testStandard stands in for ext/standard's set in pocker's own tests (pocker can't import it): Pocker requires a

@@ -93,8 +93,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/vacuum"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/vacuum"
 )
 
 func main() {

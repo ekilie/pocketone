@@ -3,8 +3,8 @@ package mcp
 import (
 	_ "embed"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // Name is the extension's key: its pocketone.yaml switch and an instance's `extensions.<name>`.

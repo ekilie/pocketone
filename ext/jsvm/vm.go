@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 	"reflect"
 	"sync/atomic"
 	"time"

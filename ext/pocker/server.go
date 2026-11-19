@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
 	"log/slog"
 	"net/http"
 	"net/netip"
 	"path/filepath"
+	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/sandbox"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/sandbox"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Server wires a [Config], an [InstanceSource] and a [Manager] into one HTTP server.

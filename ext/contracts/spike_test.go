@@ -15,9 +15,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
-	examplev1 "github.com/pockethost/pocketone/ext/contracts/internal/example/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+	examplev1 "pocketone.dev/ext/contracts/internal/example/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // ---- toy extensions -----------------------------------------------------------------------------------------

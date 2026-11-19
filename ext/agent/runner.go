@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/agent/engine"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/agent/engine"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // localModel is a model loaded in this process (the engine package, through engine.go).

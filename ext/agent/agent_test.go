@@ -19,10 +19,10 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
-	"github.com/pockethost/pocketone/ext/agent/engine"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/agent/engine"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // serve fires the app's OnServe hooks, as `serve` does (the runner starts there).

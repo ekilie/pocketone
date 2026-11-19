@@ -3,9 +3,9 @@ package apitokens_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
 )
 
 func TestConformance(t *testing.T) {

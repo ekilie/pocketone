@@ -2,7 +2,7 @@
 // guarded wrapper (scope check + action hooks), the routes' operations, typed hook helpers, the HTTP client and the JS
 // adapter. Run it with go:generate in the contract's package:
 //
-//	//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//	//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 //
 //	// Deployer sends a project's code to an app.
 //	//
@@ -471,7 +471,7 @@ import (
 	"reflect"
 {{- end}}
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 {{- range .Imports}}
 	{{.}}
 {{- end}}

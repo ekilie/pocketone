@@ -3,20 +3,20 @@ package servertiming
 import (
 	"context"
 	"errors"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pocker"
+	"pocketone.dev/ext/pocker"
 )
 
 // timings parses `a;dur=1.0;desc="x", b;dur=2.0` into names and millisecond durations.

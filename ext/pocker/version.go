@@ -39,7 +39,7 @@ func versionFrom(stamped string, bi *debug.BuildInfo) string {
 		}
 		v := d.Version
 		if d.Replace != nil {
-			v = d.Replace.Version // e.g. github.com/pockethost/pocketone v0.0.2-0.2026…; "" for a local path
+			v = d.Replace.Version // e.g. pocketone.dev v0.0.2-0.2026…; "" for a local path
 		}
 		if v != "" && v != "(devel)" {
 			if m := pseudoRe.FindStringSubmatch(v); m != nil {

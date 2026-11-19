@@ -3,9 +3,9 @@ package pages_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
-	"github.com/pockethost/pocketone/ext/pages"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
+	"pocketone.dev/ext/pages"
 )
 
 func TestConformance(t *testing.T) {

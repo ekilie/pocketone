@@ -1,4 +1,4 @@
-module github.com/pockethost/pocketone/ext/pitr
+module pocketone.dev/ext/pitr
 
 go 1.27
 
@@ -6,13 +6,13 @@ require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/benbjohnson/litestream v0.5.18
-	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 	github.com/superfly/ltx v0.5.2
 	gopkg.in/yaml.v3 v3.0.1
+	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/pocker v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -43,10 +43,6 @@ require (
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
-	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -70,27 +66,31 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.62.0 // indirect
+	pocketone.dev/ext/config v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/jsvm v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 )
 
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace (
-	github.com/pockethost/pocketone/ext/pocker => ../pocker
-	github.com/pockethost/pocketone/ext/sandbox => ../sandbox
+	pocketone.dev/ext/pocker => ../pocker
+	pocketone.dev/ext/sandbox => ../sandbox
 )
 
-replace github.com/pockethost/pocketone/ext/devusers => ../devusers
+replace pocketone.dev/ext/devusers => ../devusers
 
-replace github.com/pockethost/pocketone/ext/edge => ../edge
+replace pocketone.dev/ext/edge => ../edge
 
-replace github.com/pockethost/pocketone/ext/multisite => ../multisite
+replace pocketone.dev/ext/multisite => ../multisite
 
-replace github.com/pockethost/pocketone/ext/extkit => ../extkit
+replace pocketone.dev/ext/extkit => ../extkit
 
-replace github.com/pockethost/pocketone/ext/config => ../config
+replace pocketone.dev/ext/config => ../config
 
-replace github.com/pockethost/pocketone/ext/contracts => ../contracts
+replace pocketone.dev/ext/contracts => ../contracts
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+replace pocketone.dev/ext/jsvm => ../jsvm
 
-replace github.com/pockethost/pocketone/ext/wasm => ../wasm
+replace pocketone.dev/ext/wasm => ../wasm

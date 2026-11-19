@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/wasm"
 )
 
 func runs(t *testing.T, e env, name string) bool {

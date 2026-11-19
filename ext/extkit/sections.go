@@ -23,7 +23,7 @@ type SectionSource interface {
 type SectionInfo struct {
 	Name    string
 	Doc     string
-	Owner   string // import path of the package that registered it, e.g. github.com/pockethost/pocketone/ext/pitr
+	Owner   string // import path of the package that registered it, e.g. pocketone.dev/ext/pitr
 	Default any    // a fresh copy of the defaults
 	check   func(SectionSource) error
 }

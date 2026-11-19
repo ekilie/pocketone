@@ -13,9 +13,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // What answers an app's prompts, as its admins choose it in Settings → LLM.

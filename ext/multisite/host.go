@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"log/slog"
 	"net/http"
+	"pocketone.dev/ext/extkit"
 	"time"
 )
 

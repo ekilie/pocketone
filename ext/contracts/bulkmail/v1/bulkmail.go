@@ -6,13 +6,13 @@
 // A wire contract at /api/_c/bulkmail/v1.
 package bulkmailv1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import (
 	"context"
 	"encoding/json"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Campaigns runs an app's bulk mail campaigns.

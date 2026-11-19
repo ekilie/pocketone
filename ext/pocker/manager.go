@@ -12,13 +12,13 @@ import (
 	"sync"
 	"time"
 
-	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
-	"github.com/pockethost/pocketone/ext/multisite"
+	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
+	"pocketone.dev/ext/multisite"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // HealthPath answers on any host with the engine's status (see [multisite.DefaultHealthPath]).

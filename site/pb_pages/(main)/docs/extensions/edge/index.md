@@ -30,7 +30,7 @@ if edges != nil {
 h, err := multisite.FromConfig(opts)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/edge`.
+The module is `pocketone.dev/ext/edge`.
 
 ## Configure
 

@@ -3,9 +3,9 @@ package vacuum_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
-	"github.com/pockethost/pocketone/ext/vacuum"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
+	"pocketone.dev/ext/vacuum"
 )
 
 func TestConformance(t *testing.T) {

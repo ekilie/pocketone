@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 )
 
 // A settings change from instance.source/v1 stops the running app before the next one starts: by the time the

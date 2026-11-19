@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/agent/engine"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/agent/engine"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // The primitives under agent/v1's newer operations: waiting for the model, warming prompts, counting tokens and

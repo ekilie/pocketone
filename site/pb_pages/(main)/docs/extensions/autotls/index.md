@@ -27,8 +27,8 @@ In your own Go build, register it before the app starts:
 
 ```go
 import (
-	"github.com/pockethost/pocketone/ext/autotls"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/autotls"
+	"pocketone.dev/ext/extkit"
 )
 
 app := pocketbase.New()
@@ -161,7 +161,7 @@ Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](https://githu
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/autotls`.
+- Go module `pocketone.dev/ext/autotls`.
 - On a single app, an `OnServe` hook swaps the TLS config of PocketBase's HTTPS server for CertMagic's. PocketBase's
   own host policy (the `serve` domains and `www.`) decides which on-demand hostnames are allowed. The certificate
   manager stops when the app terminates.

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
 )
 
 // mapCache is a cache/v1 provider for tests: one map shared by every app it's provided on, counting writes.
@@ -19,7 +19,9 @@ type mapCache struct {
 	sets int
 }
 
-func (c *mapCache) Bucket(name string, _ cachev1.Options) (cachev1.Bucket, error) { return mapBucket{c, name}, nil }
+func (c *mapCache) Bucket(name string, _ cachev1.Options) (cachev1.Bucket, error) {
+	return mapBucket{c, name}, nil
+}
 
 func (c *mapCache) Clear(context.Context) error {
 	c.mu.Lock()

@@ -1,4 +1,4 @@
-module github.com/pockethost/pocketone/ext/devusers
+module pocketone.dev/ext/devusers
 
 go 1.27
 

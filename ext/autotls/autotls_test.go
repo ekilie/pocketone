@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/sandbox"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/sandbox"
 )
 
 func freeAddr(t *testing.T) string {

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Cache gives an app its buckets. Each app has its own: a bucket named "x" on one app never sees another app's "x",

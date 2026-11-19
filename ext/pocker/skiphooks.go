@@ -3,7 +3,7 @@ package pocker
 import (
 	"fmt"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // hookExtensions are the jsvm extensions every app runs with: the sandbox (OnInit, Modules, HTTPClient, hidden

@@ -8,8 +8,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailtrap"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/mailtrap"
 )
 
 func main() {

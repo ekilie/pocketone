@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // BindJS exposes scopes to an app's JS hooks as the $apiTokens global. Add it to the jsvm OnInit (the standard

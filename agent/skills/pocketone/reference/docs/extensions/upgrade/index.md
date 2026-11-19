@@ -15,7 +15,7 @@ Upgrade is built into `pocketone`: the `upgrade` command is always there. There'
 In your own Go build, register the command before the app starts:
 
 ```go
-import "github.com/pockethost/pocketone/ext/upgrade"
+import "pocketone.dev/ext/upgrade"
 
 app := pocketbase.New()
 upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
@@ -109,7 +109,7 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/upgrade"
+	"pocketone.dev/ext/upgrade"
 )
 
 func main() {

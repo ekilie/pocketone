@@ -2,7 +2,7 @@ package extkit
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // AppSet is a set of per-app extensions a host registers on every app it starts, in this order:

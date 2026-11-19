@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // okRuntime answers every request 200: the firewall's headers and 429s are what's under test.

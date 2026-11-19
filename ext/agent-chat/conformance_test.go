@@ -3,10 +3,10 @@ package agentchat_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/agent"
-	agentchat "github.com/pockethost/pocketone/ext/agent-chat"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
+	"pocketone.dev/ext/agent"
+	agentchat "pocketone.dev/ext/agent-chat"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
 )
 
 func TestConformance(t *testing.T) {

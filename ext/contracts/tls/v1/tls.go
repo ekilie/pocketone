@@ -7,8 +7,8 @@ package tlsv1
 import (
 	"context"
 	"crypto/tls"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"net/http"
+	"pocketone.dev/ext/extkit"
 )
 
 // Provider supplies the main listener's TLS. served reports whether a hostname belongs to an instance, for providers

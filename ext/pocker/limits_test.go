@@ -2,13 +2,13 @@ package pocker
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"strings"
 	"sync"
 	"testing"

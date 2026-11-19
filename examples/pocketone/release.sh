@@ -84,7 +84,7 @@ step "checking the version is unused"
 if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
   [ "$(git rev-parse "$version^{commit}")" = "$sha" ] || die "tag $version already exists on another commit"
 fi
-code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' "https://proxy.golang.org/github.com/pockethost/pocketone/@v/$version.info" || true)
+code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' "https://proxy.golang.org/pocketone.dev/@v/$version.info" || true)
 [ "$code" != 200 ] || [ "$(git rev-parse -q --verify "refs/tags/$version^{commit}" || true)" = "$sha" ] ||
   die "the Go proxy already knows $version; pick the next version"
 

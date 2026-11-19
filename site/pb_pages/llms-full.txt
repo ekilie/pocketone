@@ -1818,7 +1818,7 @@ r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.Comp
 
 The examples show each thing in TypeScript, as [PocketPages](https://pocketone.dev/docs/extensions/pages/overview) page code (`+api.ts`,
 `+page.ts`), and in Go: pick one above any example and the pages remember it. The Go examples call the contract package
-(`agentv1`, from `github.com/pockethost/pocketone/ext/contracts/agent/v1`) with a `context.Context` named `ctx`;
+(`agentv1`, from `pocketone.dev/ext/contracts/agent/v1`) with a `context.Context` named `ctx`;
 `agent` stands for `agentv1.Contract.Must(app)`.
 
 Use it for the small jobs that come up around your data: label a support ticket, pull an address out of an email,
@@ -2296,7 +2296,7 @@ How a multisite host runs its instances (as isolates in its own process with [po
 ## App extensions: `extkit`
 
 Write an extension once, against [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) (its own module,
-`github.com/pockethost/pocketone/ext/extkit`; core has no part in it), and the same value runs on every app:
+`pocketone.dev/ext/extkit`; core has no part in it), and the same value runs on every app:
 
 ```go
 type Extension struct{ cfg Config }
@@ -2344,7 +2344,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   `pb_migrations`.
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
-  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/extkit.Command=pockethost"`.
+  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X pocketone.dev/ext/extkit.Command=pockethost"`.
 - [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
   [`ext/standard/example`](https://github.com/pockethost/pocketone/blob/main/ext/standard/example/main.go) a complete program.
 
@@ -2519,7 +2519,7 @@ PocketOne keeps PocketBase's module path, so upstream merges stay clean. Point i
 ```
 require ganigeorgiev.com/pocketbase/pocketbase v0.41.1
 
-replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone <commit or version>
+replace ganigeorgiev.com/pocketbase/pocketbase => pocketone.dev <commit or version>
 ```
 
 Go only honors `replace` in the main module, so the final binary's `go.mod` needs this line, not only your
@@ -2656,7 +2656,7 @@ core doesn't offer yet:
 
 ```
 ext/<name>/
-  go.mod            module github.com/pockethost/pocketone/ext/<name>
+  go.mod            module pocketone.dev/ext/<name>
   README.md         the extension's docs, and its page on pocketone.dev (below)
   CHANGELOG.md      its changes, newest first (see Changelogs)
   TODO.md           optional: work that waits for something else to exist first (see Blocked work)
@@ -2871,7 +2871,7 @@ go run ./.github/extensions approvers origin/main HEAD   # who may approve each 
 
 ## Planned extensions
 
-Our own extensions live in this repo under [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext), each as its own Go module (`github.com/pockethost/pocketone/ext/<name>`). See [ext/README.md](https://github.com/pockethost/pocketone/blob/main/ext/README.md).
+Our own extensions live in this repo under [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext), each as its own Go module (`pocketone.dev/ext/<name>`). See [ext/README.md](https://github.com/pockethost/pocketone/blob/main/ext/README.md).
 
 
 ---
@@ -2890,7 +2890,7 @@ extension that implements a contract can stand in for another. PocketOne answers
 app?" at startup and prints the answer.
 
 Every contract lives here, standard or community; extensions live in `ext/<name>`. Each contract is a package named
-for its id and major version: `deploy/v1` is `github.com/pockethost/pocketone/ext/contracts/deploy/v1`,
+for its id and major version: `deploy/v1` is `pocketone.dev/ext/contracts/deploy/v1`,
 `mail.fallback/v1` is `.../mail/fallback/v1`. A change to what a contract promises is a new major version (`v2`) next
 to the old one.
 
@@ -2981,7 +2981,7 @@ A contract is an interface with `//contract:` directives; [`contractgen`](https:
 (`zz_contract.go`) with `go generate ./...`. A test fails when a generated file is stale.
 
 ```go
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 // Deployer sends a project's code to an app.
 //
@@ -9154,10 +9154,10 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	"github.com/pockethost/pocketone/ext/agent"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/agent"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {
@@ -9273,7 +9273,7 @@ const answer: AgentAnswer = $agent.chat(id, { system: preamble }).send("How do I
 In Go:
 
 ```go
-chats := chatv1.Contract.Must(app) // agent.chat/v1, from github.com/pockethost/pocketone/ext/contracts/agent/chat/v1
+chats := chatv1.Contract.Must(app) // agent.chat/v1, from pocketone.dev/ext/contracts/agent/chat/v1
 c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: json.RawMessage(`{"user":"` + e.Auth.Id + `"}`)})
 res, err := chats.Send(ctx, extkit.Internal, chatv1.SendInput{ID: c.ID, System: preamble, Text: "How do I export my notes?"})
 ```
@@ -9292,7 +9292,7 @@ member). In your own Go build, next to Agent:
 extkit.Setup(app, []extkit.Extension{agent.New(), agentchat.New()}, nil, nil)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/agent-chat`. Its two collections come from its own migration,
+The module is `pocketone.dev/ext/agent-chat`. Its two collections come from its own migration,
 `0001_chats` in [schema.go](https://github.com/pockethost/pocketone/blob/main/ext/agent-chat/schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
 They stay empty until your app starts a chat.
 
@@ -9388,10 +9388,10 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 
-	"github.com/pockethost/pocketone/ext/agent"
-	agentchat "github.com/pockethost/pocketone/ext/agent-chat"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/agent"
+	agentchat "pocketone.dev/ext/agent-chat"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {
@@ -9445,7 +9445,7 @@ To use `$apiTokens` in `pb_hooks`, bind it in jsvm's `OnInit` (the stock binary 
 jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { tokens.BindJS(app, rt) }})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/api-tokens`.
+The module is `pocketone.dev/ext/api-tokens`.
 
 ## Configure
 
@@ -9688,8 +9688,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/devusers"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/devusers"
 )
 
 func main() {
@@ -10040,8 +10040,8 @@ In your own Go build, register it before the app starts:
 
 ```go
 import (
-	"github.com/pockethost/pocketone/ext/autotls"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/autotls"
+	"pocketone.dev/ext/extkit"
 )
 
 app := pocketbase.New()
@@ -10174,7 +10174,7 @@ Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](https://githu
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/autotls`.
+- Go module `pocketone.dev/ext/autotls`.
 - On a single app, an `OnServe` hook swaps the TLS config of PocketBase's HTTPS server for CertMagic's. PocketBase's
   own host policy (the `serve` domains and `www.`) decides which on-demand hostnames are allowed. The certificate
   manager stops when the app terminates.
@@ -10210,7 +10210,7 @@ Backups is built into `pocketone` and **on by default**; there's nothing to inst
 extkit.Setup(app, []extkit.Extension{backups.New()}, nil, nil)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/backups`.
+The module is `pocketone.dev/ext/backups`.
 
 ## Configure
 
@@ -10267,9 +10267,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/backups"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/backups"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {
@@ -10327,7 +10327,7 @@ jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { extkit.BindJS(a
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/bulkmail`.
+The module is `pocketone.dev/ext/bulkmail`.
 
 ## Configure
 
@@ -10553,11 +10553,11 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/bulkmail"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/bulkmail"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
 )
 
 func main() {
@@ -10585,7 +10585,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/bulkmail`, an [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension.
+- Go module `pocketone.dev/ext/bulkmail`, an [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension.
   [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
 - The audience is resolved when sending starts and queued into a ledger first (one row per campaign and address,
   unique). A background sender then mails one message at a time through the app's mail client, at the lower of the
@@ -10781,10 +10781,10 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	"github.com/pockethost/pocketone/ext/cache"
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/cache"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {
@@ -10887,7 +10887,7 @@ app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/config`. [`examples/pocketone/main.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go)
+The module is `pocketone.dev/ext/config`. [`examples/pocketone/main.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go)
 shows the full wiring: every `app` key as a flag default, and the `server` keys as the serve command's defaults.
 
 ## Configure
@@ -11159,7 +11159,7 @@ app.Start()
 
 The [standard set](https://pocketone.dev/docs/extensions/standard) does this for you.
 
-The module is `github.com/pockethost/pocketone/ext/deploy`. `deploy.Config{DisableServer: true}` keeps only the
+The module is `pocketone.dev/ext/deploy`. `deploy.Config{DisableServer: true}` keeps only the
 commands, for a binary that deploys elsewhere but must not accept deploys.
 
 ## Configure
@@ -11366,12 +11366,12 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/deploy"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/deploy"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/remotes"
 )
 
 func main() {
@@ -11409,7 +11409,7 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/deploy`. [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
+- Go module `pocketone.dev/ext/deploy`. [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
   deploys and can deploy (logins from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
 - A deploy is a hash diff: the client sends a manifest, uploads only the missing files in bundles, then commits.
 - On a single app the files are swapped in while it runs; a restart (when a client asks) is `app.Restart()`, which
@@ -11590,9 +11590,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 
-	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
-	"github.com/pockethost/pocketone/ext/desktop"
-	"github.com/pockethost/pocketone/ext/extkit"
+	clicmdv1 "pocketone.dev/ext/contracts/cli/commands/v1"
+	"pocketone.dev/ext/desktop"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {
@@ -11652,7 +11652,7 @@ stock PocketBase. In your own Go build, register it where you'd register `plugin
 jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", MigrationsDir: "pb_migrations"})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/jsvm`.
+The module is `pocketone.dev/ext/jsvm`.
 
 ## Configure
 
@@ -11828,8 +11828,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
 )
 
 func main() {
@@ -11906,7 +11906,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-Tools that `pb_hooks` declare before MCP registers wait for it. The module is `github.com/pockethost/pocketone/ext/mcp`.
+Tools that `pb_hooks` declare before MCP registers wait for it. The module is `pocketone.dev/ext/mcp`.
 
 ## Configure
 
@@ -12192,11 +12192,11 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/mcp"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/mcp"
 )
 
 func main() {
@@ -12293,7 +12293,7 @@ pages.RegisterCommand(app.RootCmd)      // the `pages create` and `pages starter
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/pages`. See [example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) and
+The module is `pocketone.dev/ext/pages`. See [example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) and
 [Create your own extension](https://pocketone.dev/docs/writing-an-extension).
 
 ## Configure
@@ -12473,9 +12473,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/pages"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/pages"
 )
 
 func main() {
@@ -13376,8 +13376,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pitr"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/pitr"
 )
 
 func main() {
@@ -13397,7 +13397,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/pitr`, Litestream v0.5.18 (pinned).
+- Go module `pocketone.dev/ext/pitr`, Litestream v0.5.18 (pinned).
   [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pitr/example/main.go) runs one app with local history.
 - Litestream continuously copies `data.db` to its destination: the app's own bucket (its PITR settings), else a
   filesystem of kind `litestream` (an `OnFilesystemCreate` handler, such as S3 Fallback), else `pb_data/litestream/`.
@@ -13450,7 +13450,7 @@ extkit.Setup(app, []extkit.Extension{remotes.New(remotes.Config{})}, nil, nil) /
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](https://pocketone.dev/docs/extensions/api-tokens) for API tokens and
+The module is `pocketone.dev/ext/remotes`. Add [Tokens](https://pocketone.dev/docs/extensions/api-tokens) for API tokens and
 [the OAuth server](https://pocketone.dev/docs/extensions/api-tokens/oauth) for browser login.
 
 ## Configure
@@ -13638,10 +13638,10 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/remotes"
 )
 
 func main() {
@@ -13694,7 +13694,7 @@ set := standard.New()
 set.S3Fallback = s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
+The module is `pocketone.dev/ext/s3-fallback`.
 
 ## Configure
 
@@ -13834,7 +13834,7 @@ pocketone serve --s3Redirect=false
 In your own Go build, register it before the app starts:
 
 ```go
-import "github.com/pockethost/pocketone/ext/s3redirect"
+import "pocketone.dev/ext/s3redirect"
 
 app := pocketbase.New()
 s3redirect.MustRegister(app, s3redirect.Config{TTL: 5 * time.Minute})
@@ -13984,8 +13984,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/s3redirect"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/s3redirect"
 )
 
 func main() {
@@ -14010,7 +14010,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/s3redirect`, no dependencies beyond PocketOne.
+- Go module `pocketone.dev/ext/s3redirect`, no dependencies beyond PocketOne.
 - The redirect is an `OnFileDownloadRequest` handler; the hook already exists upstream, so there's no core change.
 - Signing is SigV4 query-string auth in [`sigv4`](https://github.com/pockethost/pocketone/blob/main/ext/s3redirect/sigv4/sigv4.go), checked against AWS's documented example. It needs
   no change to PocketBase's S3 client. The TTL is clamped to between 1 second and 7 days.
@@ -14041,7 +14041,7 @@ Settings is built into `pocketone` and **on by default**; there's nothing to ins
 extkit.Setup(app, []extkit.Extension{settings.New(), pitr.New(pitr.Config{})}, nil, nil)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/settings`.
+The module is `pocketone.dev/ext/settings`.
 
 ## Configure
 
@@ -14092,10 +14092,10 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/pitr"
-	"github.com/pockethost/pocketone/ext/settings"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/pitr"
+	"pocketone.dev/ext/settings"
 )
 
 func main() {
@@ -14211,9 +14211,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/templates"
+	templatesv1 "pocketone.dev/ext/contracts/templates/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/templates"
 )
 
 func main() {
@@ -14263,7 +14263,7 @@ UI Cache is built into `pocketone` and **on by default**; there's nothing to ins
 extkit.Setup(app, []extkit.Extension{uicache.New()}, nil, nil)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/uicache`.
+The module is `pocketone.dev/ext/uicache`.
 
 ## Configure
 
@@ -14316,9 +14316,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/uicache"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/uicache"
 )
 
 func main() {
@@ -14364,7 +14364,7 @@ Upgrade is built into `pocketone`: the `upgrade` command is always there. There'
 In your own Go build, register the command before the app starts:
 
 ```go
-import "github.com/pockethost/pocketone/ext/upgrade"
+import "pocketone.dev/ext/upgrade"
 
 app := pocketbase.New()
 upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
@@ -14458,7 +14458,7 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/upgrade"
+	"pocketone.dev/ext/upgrade"
 )
 
 func main() {
@@ -14573,8 +14573,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/vacuum"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/vacuum"
 )
 
 func main() {
@@ -14671,7 +14671,7 @@ app.Start()
 
 `$wasm` needs PocketOne's JS engine; with PocketBase's own (`--jsvm goja`) extensions bind nothing.
 
-The module is `github.com/pockethost/pocketone/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`; nothing else
+The module is `pocketone.dev/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`; nothing else
 needs setting up.
 
 ## Configure
@@ -14954,11 +14954,11 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/wasm"
 )
 
 func main() {
@@ -15109,7 +15109,7 @@ h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath,
 	Extensions: []multisite.Extension{&docker.Provider{Resolve: cfg.ResolvePath}}})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/docker`. Add `docker.NewCommand(...)` to your root command for the
+The module is `pocketone.dev/ext/docker`. Add `docker.NewCommand(...)` to your root command for the
 `docker seed` and `docker update` commands.
 
 ## Configure
@@ -15320,8 +15320,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/docker"
+	"pocketone.dev/ext/multisite"
 )
 
 func main() {
@@ -15408,7 +15408,7 @@ if edges != nil {
 h, err := multisite.FromConfig(opts)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/edge`.
+The module is `pocketone.dev/ext/edge`.
 
 ## Configure
 
@@ -15514,7 +15514,7 @@ a `firewall` or `rate_limits` section; there's nothing else to install.
 In your own Go build, importing the package registers it with the host, with the same rule:
 
 ```go
-import _ "github.com/pockethost/pocketone/ext/firewall"
+import _ "pocketone.dev/ext/firewall"
 ```
 
 Or build one in Go and add it to the host's gates, as [the example](#example) does.
@@ -15650,8 +15650,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/firewall"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/firewall"
 )
 
 type okRuntime struct{}
@@ -15719,7 +15719,7 @@ if err := mothership.EnsureCollections(app); err != nil {
 }
 ```
 
-The module is `github.com/pockethost/pocketone/ext/mothership`. In your own edge build, `mirror.FromSection(log)`
+The module is `pocketone.dev/ext/mothership`. In your own edge build, `mirror.FromSection(log)`
 returns the mirror for the config (nil without a `mothership` section); use it as the host's instance source and the
 router's edge source, as [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go) does.
 
@@ -15874,7 +15874,7 @@ err = h.Run(ctx)
 
 At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker, docker`.
 
-The module is `github.com/pockethost/pocketone/ext/multisite`.
+The module is `pocketone.dev/ext/multisite`.
 
 ## Configure
 
@@ -16026,7 +16026,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 type echoRuntime struct{}
@@ -16110,7 +16110,7 @@ h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Exten
 }})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/pocker`.
+The module is `pocketone.dev/ext/pocker`.
 
 ## Configure
 
@@ -16290,9 +16290,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 //go:embed ui
@@ -16603,7 +16603,7 @@ The module path stays `ganigeorgiev.com/pocketbase/pocketbase`, so a build pins 
 `replace` line:
 
 ```
-replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone v0.0.1
+replace ganigeorgiev.com/pocketbase/pocketbase => pocketone.dev v0.0.1
 ```
 
 
@@ -16639,7 +16639,7 @@ jsvm.MustRegister(app, jsvm.Config{
 })
 ```
 
-The module is `github.com/pockethost/pocketone/ext/sandbox`. The SQL guard and the outbound network rules are
+The module is `pocketone.dev/ext/sandbox`. The SQL guard and the outbound network rules are
 separate calls (see Integrations).
 
 ## Configure
@@ -16726,9 +16726,9 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/sandbox"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/sandbox"
 )
 
 func main() {
@@ -16907,7 +16907,7 @@ Scheduled webhooks per instance, called in-process even while the instance sleep
 **Runs on:** [pocker](https://pocketone.dev/docs/extensions/pocker) (multitenant).
 
 > **Planned.** Nothing is published here yet. This folder will hold the extension's Go module
-> (`github.com/pockethost/pocketone/ext/schedules`), its tests and a minimal `example/main.go` that builds and shows the
+> (`pocketone.dev/ext/schedules`), its tests and a minimal `example/main.go` that builds and shows the
 > feature. See [Create your own extension](https://pocketone.dev/docs/writing-an-extension).
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
@@ -17086,7 +17086,7 @@ so a restart doesn't measure everything again or forget last-request times.
 
 ### Rules: criteria an app can replace
 
-`rules` (package `github.com/pockethost/pocketone/ext/stats/rules`, standard library only) is the engine policies
+`rules` (package `pocketone.dev/ext/stats/rules`, standard library only) is the engine policies
 are built from, on an edge or a mothership. A subject is whatever the caller evaluates: an instance's facts on an
 edge, an account with its instances on a mothership.
 
@@ -17146,8 +17146,8 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/stats"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/stats"
 )
 
 func main() {
@@ -17182,7 +17182,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/stats`. The stock binary wires it in
+- Go module `pocketone.dev/ext/stats`. The stock binary wires it in
   [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go).
 - `Run` loads recorded facts from a `Loader` sink, then waits for the host's instance list to load (checking every
   second). From then on, once a minute, it asks the policy for decisions on the current facts, measures the instances
@@ -17229,7 +17229,7 @@ set.Add(mailrelay.New(mailrelay.Config{
 }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/mailrelay`. It also registers on a standalone app, but a standalone
+The module is `pocketone.dev/ext/mailrelay`. It also registers on a standalone app, but a standalone
 app can set up its own SMTP and doesn't need a relay.
 
 ## Configure
@@ -17345,11 +17345,11 @@ import (
 	"os/signal"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailrelay"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/mailrelay"
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 func main() {
@@ -17446,7 +17446,7 @@ In your own host build, list it first among the host extensions, so its header c
 h, err := multisite.FromConfig(multisite.Options{Extensions: []multisite.Extension{servertiming.New() /*, other host extensions */}})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/servertiming`.
+The module is `pocketone.dev/ext/servertiming`.
 
 ## Configure
 
@@ -17667,7 +17667,7 @@ jsvm.MustRegister(app, jsvm.Config{
 bundle.Public(app, public, true)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/bundle`.
+The module is `pocketone.dev/ext/bundle`.
 
 ## Configure
 
@@ -17708,9 +17708,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/bundle"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/bundle"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
 )
 
 //go:embed hooks public
@@ -17774,7 +17774,7 @@ app.Start()
 ```
 
 With ext/standard's set, add it as an extra, as the stock binary does: `set.Add(mailtrap.New())`. The module is
-`github.com/pockethost/pocketone/ext/mailtrap`.
+`pocketone.dev/ext/mailtrap`.
 
 ## Configure
 
@@ -17843,8 +17843,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailtrap"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/mailtrap"
 )
 
 func main() {
@@ -18079,10 +18079,10 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/pitr"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/pitr"
+	"pocketone.dev/ext/standard"
 )
 
 func main() {

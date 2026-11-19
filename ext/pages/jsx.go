@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/evanw/esbuild/pkg/api"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // JSX/TSX pages and TypeScript modules (SPEC 4.5). esbuild, linked into the binary, strips types and turns JSX into

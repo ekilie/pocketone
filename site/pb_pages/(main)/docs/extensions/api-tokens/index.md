@@ -35,7 +35,7 @@ To use `$apiTokens` in `pb_hooks`, bind it in jsvm's `OnInit` (the stock binary 
 jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { tokens.BindJS(app, rt) }})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/api-tokens`.
+The module is `pocketone.dev/ext/api-tokens`.
 
 ## Configure
 
@@ -278,8 +278,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/devusers"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/devusers"
 )
 
 func main() {

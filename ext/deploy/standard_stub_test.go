@@ -2,8 +2,8 @@ package deploy
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // testStandard stands in for ext/standard's set: Pocker requires one, and this test is about this extension, not

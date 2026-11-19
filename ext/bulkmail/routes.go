@@ -12,11 +12,11 @@ import (
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	bulkmailv1 "github.com/pockethost/pocketone/ext/contracts/bulkmail/v1"
-	feedbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/feedback/v1"
-	suppressionv1 "github.com/pockethost/pocketone/ext/contracts/mail/suppression/v1"
-	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	bulkmailv1 "pocketone.dev/ext/contracts/bulkmail/v1"
+	feedbackv1 "pocketone.dev/ext/contracts/mail/feedback/v1"
+	suppressionv1 "pocketone.dev/ext/contracts/mail/suppression/v1"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Bulk mail has no routes of its own: its API is the bulkmail/v1, mail.suppression/v1 and mail.feedback/v1

@@ -1,14 +1,14 @@
-module github.com/pockethost/pocketone/ext/contracts
+module pocketone.dev/ext/contracts
 
 go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	gopkg.in/yaml.v3 v3.0.1
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/jsvm v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -47,6 +47,6 @@ require (
 
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
-replace github.com/pockethost/pocketone/ext/extkit => ../extkit
+replace pocketone.dev/ext/extkit => ../extkit
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+replace pocketone.dev/ext/jsvm => ../jsvm

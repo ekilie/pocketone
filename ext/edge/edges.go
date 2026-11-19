@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Edge is one server in a fleet: another edge requests can be forwarded to.

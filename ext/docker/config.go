@@ -3,13 +3,13 @@ package docker
 import (
 	"context"
 	"errors"
-	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
 	"log/slog"
 	"net/http"
+	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/multisite"
 )
 
 // SectionConfig is the `docker` section (pocketone.yaml, ext/config): settings for running each instance in its

@@ -3,9 +3,9 @@ package cache_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/cache"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
+	"pocketone.dev/ext/cache"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
 )
 
 func TestConformance(t *testing.T) {

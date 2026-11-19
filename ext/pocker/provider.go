@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/multisite"
 )
 
 // SectionConfig is the `pocker` section (pocketone.yaml, ext/config): settings for running instances as isolates.

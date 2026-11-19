@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 type fake struct{ saved json.RawMessage }

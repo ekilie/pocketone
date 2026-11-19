@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/config"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/standard"
 )
 
 // The app section reaches every field a single app is built from, with paths relative to the config file.

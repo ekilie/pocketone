@@ -33,7 +33,7 @@ jsvm.MustRegister(app, jsvm.Config{
 })
 ```
 
-The module is `github.com/pockethost/pocketone/ext/sandbox`. The SQL guard and the outbound network rules are
+The module is `pocketone.dev/ext/sandbox`. The SQL guard and the outbound network rules are
 separate calls (see Integrations).
 
 ## Configure
@@ -120,9 +120,9 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/sandbox"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/sandbox"
 )
 
 func main() {

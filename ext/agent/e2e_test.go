@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // The real engine end to end through agent/v1: AGENT_GGUF=<a Qwen3 .gguf> go test -run TestRealModel -v

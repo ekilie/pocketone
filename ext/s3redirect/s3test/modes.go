@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // Helpers for mode tests (ext/extkit/modetest) of file downloads: an app's files, uploaded and fetched over HTTP like a

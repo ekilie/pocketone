@@ -19,10 +19,10 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/bundle"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/standard"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"pocketone.dev/ext/bundle"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/standard"
 )
 
 // App is a desktop app.

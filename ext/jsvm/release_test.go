@@ -3,7 +3,7 @@ package jsvm
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // holder is Go state that keeps a JS object, reached from a NativeFunc the object itself holds: the shape of a

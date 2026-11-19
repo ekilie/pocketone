@@ -3,15 +3,15 @@ package standard_test
 import (
 	"context"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
+	"pocketone.dev/ext/extkit"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 // Every Pocker instance gets the standard set, with its own extensions.<name> settings, and pb_hooks sees its JS APIs.

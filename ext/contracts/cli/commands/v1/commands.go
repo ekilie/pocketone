@@ -22,10 +22,10 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"pocketone.dev/ext/contracts/remote/v1/remoteclient"
+	"pocketone.dev/ext/extkit"
 )
 
 // Command is one `pocketone` command.

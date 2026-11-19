@@ -170,10 +170,10 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	"github.com/pockethost/pocketone/ext/cache"
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/cache"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {

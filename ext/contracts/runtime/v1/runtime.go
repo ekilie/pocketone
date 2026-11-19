@@ -8,10 +8,10 @@ package runtimev1
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"net/http"
+	"pocketone.dev/ext/extkit"
 
-	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
+	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
 )
 
 // Runtime runs instances on this host.

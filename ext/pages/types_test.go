@@ -11,8 +11,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/pages"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/pages"
 )
 
 // The app's types.d.ts carries the pages declarations when the extension is on.

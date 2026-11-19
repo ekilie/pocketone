@@ -10,18 +10,18 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/autotls"
-	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/edge"
-	_ "github.com/pockethost/pocketone/ext/firewall" // turns on with a firewall / rate_limits section
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/mothership/mirror"
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/servertiming"
-	"github.com/pockethost/pocketone/ext/standard"
-	"github.com/pockethost/pocketone/ext/stats"
+	"pocketone.dev/ext/autotls"
+	"pocketone.dev/ext/config"
+	"pocketone.dev/ext/docker"
+	"pocketone.dev/ext/edge"
+	_ "pocketone.dev/ext/firewall" // turns on with a firewall / rate_limits section
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/mothership/mirror"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/servertiming"
+	"pocketone.dev/ext/standard"
+	"pocketone.dev/ext/stats"
 )
 
 // serveMany runs the binary as a multi-instance host when pocketone.yaml names a provider: instances from the

@@ -26,7 +26,7 @@ h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath,
 	Extensions: []multisite.Extension{&docker.Provider{Resolve: cfg.ResolvePath}}})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/docker`. Add `docker.NewCommand(...)` to your root command for the
+The module is `pocketone.dev/ext/docker`. Add `docker.NewCommand(...)` to your root command for the
 `docker seed` and `docker update` commands.
 
 ## Configure
@@ -237,8 +237,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/docker"
+	"pocketone.dev/ext/multisite"
 )
 
 func main() {

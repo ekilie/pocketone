@@ -105,7 +105,7 @@ reviews and audits every core change. Ask the user before making one; never chan
 
 ```
 ext/<name>/
-  go.mod               module github.com/pockethost/pocketone/ext/<name>
+  go.mod               module pocketone.dev/ext/<name>
   README.md            its docs and its page on pocketone.dev
   CHANGELOG.md         required
   TODO.md              optional: work that waits on something else existing first

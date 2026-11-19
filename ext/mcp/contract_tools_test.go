@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	restorev1 "github.com/pockethost/pocketone/ext/contracts/restore/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	restorev1 "pocketone.dev/ext/contracts/restore/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // fakeRestorer is a restore/v1 provider that records the moment it was asked for.

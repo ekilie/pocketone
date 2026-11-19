@@ -11,15 +11,15 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/pockethost/pocketone/ext/contracts/agent/chat/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/bulkmail/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/mail/feedback/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/mail/suppression/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/restore/v1"
-	_ "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	_ "pocketone.dev/ext/contracts/agent/chat/v1"
+	_ "pocketone.dev/ext/contracts/agent/v1"
+	_ "pocketone.dev/ext/contracts/bulkmail/v1"
+	_ "pocketone.dev/ext/contracts/mail/feedback/v1"
+	_ "pocketone.dev/ext/contracts/mail/suppression/v1"
+	_ "pocketone.dev/ext/contracts/remote/v1"
+	_ "pocketone.dev/ext/contracts/restore/v1"
+	_ "pocketone.dev/ext/contracts/settings/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 func contractTypes() string {

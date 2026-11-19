@@ -6,7 +6,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
+	templatesv1 "pocketone.dev/ext/contracts/templates/v1"
 )
 
 // Pages the server renders.

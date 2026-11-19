@@ -31,7 +31,7 @@ In your own host build, list it first among the host extensions, so its header c
 h, err := multisite.FromConfig(multisite.Options{Extensions: []multisite.Extension{servertiming.New() /*, other host extensions */}})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/servertiming`.
+The module is `pocketone.dev/ext/servertiming`.
 
 ## Configure
 

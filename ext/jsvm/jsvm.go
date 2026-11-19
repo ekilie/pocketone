@@ -22,7 +22,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/template"
 	"github.com/fatih/color"
 	"github.com/fsnotify/fsnotify"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 const typesFileName = "types.d.ts"

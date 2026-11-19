@@ -2,11 +2,11 @@ package mirror
 
 import (
 	"fmt"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"log/slog"
+	"pocketone.dev/ext/extkit"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/edge"
+	"pocketone.dev/ext/edge"
 )
 
 // FileConfig is pocketone.yaml's `mothership` section (`$VAR` values come from the private .env through ext/config).

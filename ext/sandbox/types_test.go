@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/jsvm"
 )
 
 // appTypes is the types.d.ts jsvm writes for an app with these extensions.

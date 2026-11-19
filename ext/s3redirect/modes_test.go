@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
-	"github.com/pockethost/pocketone/ext/s3redirect/s3test"
+	"pocketone.dev/ext/extkit/modetest"
+	"pocketone.dev/ext/s3redirect/s3test"
 )
 
 // The pocketone binary, as a single app and as an isolate on a multisite host (Pocker), with the app's own S3 in

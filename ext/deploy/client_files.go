@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
+	"pocketone.dev/ext/extkit"
 	"strings"
 	"time"
 
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
 )
 
 // FileEntry is one entry of a remote listing.

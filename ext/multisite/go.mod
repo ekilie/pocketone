@@ -1,13 +1,13 @@
-module github.com/pockethost/pocketone/ext/multisite
+module pocketone.dev/ext/multisite
 
 go 1.27
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v3 v3.0.1
+	pocketone.dev/ext/config v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -46,9 +46,9 @@ require (
 
 replace (
 	ganigeorgiev.com/pocketbase/pocketbase => ../..
-	github.com/pockethost/pocketone/ext/config => ../config
-	github.com/pockethost/pocketone/ext/contracts => ../contracts
-	github.com/pockethost/pocketone/ext/extkit => ../extkit
+	pocketone.dev/ext/config => ../config
+	pocketone.dev/ext/contracts => ../contracts
+	pocketone.dev/ext/extkit => ../extkit
 )
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+replace pocketone.dev/ext/jsvm => ../jsvm

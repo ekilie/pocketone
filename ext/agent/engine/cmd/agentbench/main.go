@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/agent/engine"
-	"github.com/pockethost/pocketone/ext/agent/engine/internal/benchhooks"
+	"pocketone.dev/ext/agent/engine"
+	"pocketone.dev/ext/agent/engine/internal/benchhooks"
 )
 
 var ollamaURL = "http://127.0.0.1:11434"

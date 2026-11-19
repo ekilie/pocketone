@@ -27,7 +27,7 @@ set.Add(mailrelay.New(mailrelay.Config{
 }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/mailrelay`. It also registers on a standalone app, but a standalone
+The module is `pocketone.dev/ext/mailrelay`. It also registers on a standalone app, but a standalone
 app can set up its own SMTP and doesn't need a relay.
 
 ## Configure
@@ -143,11 +143,11 @@ import (
 	"os/signal"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailrelay"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/mailrelay"
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 func main() {

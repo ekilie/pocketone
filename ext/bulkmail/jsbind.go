@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // BindJS exposes the Go service to an app's JS hooks as the $bulkmail global. Add it to the jsvm OnInit (next to

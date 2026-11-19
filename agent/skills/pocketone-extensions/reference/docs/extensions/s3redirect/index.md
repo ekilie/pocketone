@@ -26,7 +26,7 @@ pocketone serve --s3Redirect=false
 In your own Go build, register it before the app starts:
 
 ```go
-import "github.com/pockethost/pocketone/ext/s3redirect"
+import "pocketone.dev/ext/s3redirect"
 
 app := pocketbase.New()
 s3redirect.MustRegister(app, s3redirect.Config{TTL: 5 * time.Minute})
@@ -176,8 +176,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/s3redirect"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/s3redirect"
 )
 
 func main() {
@@ -202,7 +202,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/s3redirect`, no dependencies beyond PocketOne.
+- Go module `pocketone.dev/ext/s3redirect`, no dependencies beyond PocketOne.
 - The redirect is an `OnFileDownloadRequest` handler; the hook already exists upstream, so there's no core change.
 - Signing is SigV4 query-string auth in [`sigv4`](https://github.com/pockethost/pocketone/blob/main/ext/s3redirect/sigv4/sigv4.go), checked against AWS's documented example. It needs
   no change to PocketBase's S3 client. The TTL is clamped to between 1 second and 7 days.

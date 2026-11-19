@@ -81,9 +81,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/templates"
+	templatesv1 "pocketone.dev/ext/contracts/templates/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/templates"
 )
 
 func main() {

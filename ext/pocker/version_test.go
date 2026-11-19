@@ -9,7 +9,7 @@ func TestVersion(t *testing.T) {
 	dep := func(v string, replace string) *debug.BuildInfo {
 		m := &debug.Module{Path: coreModule, Version: v}
 		if replace != "" {
-			m.Replace = &debug.Module{Path: "github.com/pockethost/pocketone", Version: replace}
+			m.Replace = &debug.Module{Path: "pocketone.dev", Version: replace}
 		}
 		return &debug.BuildInfo{Deps: []*debug.Module{m}}
 	}

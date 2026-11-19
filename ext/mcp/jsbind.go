@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // BindJS exposes the MCP server to an app's JS hooks as the $mcp global. Add it to the jsvm OnInit:

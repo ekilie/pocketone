@@ -17,17 +17,17 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	tlsv1 "github.com/pockethost/pocketone/ext/contracts/tls/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	tlsv1 "pocketone.dev/ext/contracts/tls/v1"
+	"pocketone.dev/ext/extkit"
 	"strings"
 
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/cloudflare"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // Config is the `autotls` section (pocketone.yaml), or the settings given in Go.

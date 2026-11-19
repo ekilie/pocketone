@@ -1,17 +1,17 @@
-module github.com/pockethost/pocketone/ext/wasm
+module pocketone.dev/ext/wasm
 
 go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/standard v0.0.0-00010101000000-000000000000
 	github.com/tetratelabs/wazero v1.12.0
+	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/jsvm v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/pocker v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/sandbox v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/standard v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -44,24 +44,6 @@ require (
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
-	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/agent-chat v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/pitr v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/s3-fallback v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.45.0 // indirect
@@ -89,50 +71,68 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.62.0 // indirect
+	pocketone.dev/ext/agent v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/agent-chat v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/api-tokens v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/backups v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/cache v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/config v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/pages v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/pitr v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/s3-fallback v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/settings v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/templates v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/uicache v0.0.0-00010101000000-000000000000 // indirect
 )
 
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
 replace (
-	github.com/pockethost/pocketone/ext/api-tokens => ../api-tokens
-	github.com/pockethost/pocketone/ext/autotls => ../autotls
-	github.com/pockethost/pocketone/ext/backups => ../backups
-	github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
-	github.com/pockethost/pocketone/ext/bundle => ../bundle
-	github.com/pockethost/pocketone/ext/config => ../config
-	github.com/pockethost/pocketone/ext/contracts => ../contracts
-	github.com/pockethost/pocketone/ext/deploy => ../deploy
-	github.com/pockethost/pocketone/ext/devusers => ../devusers
-	github.com/pockethost/pocketone/ext/docker => ../docker
-	github.com/pockethost/pocketone/ext/edge => ../edge
-	github.com/pockethost/pocketone/ext/extkit => ../extkit
-	github.com/pockethost/pocketone/ext/firewall => ../firewall
-	github.com/pockethost/pocketone/ext/jsvm => ../jsvm
-	github.com/pockethost/pocketone/ext/mailrelay => ../mailrelay
-	github.com/pockethost/pocketone/ext/mailtrap => ../mailtrap
-	github.com/pockethost/pocketone/ext/mcp => ../mcp
-	github.com/pockethost/pocketone/ext/mothership => ../mothership
-	github.com/pockethost/pocketone/ext/multisite => ../multisite
-	github.com/pockethost/pocketone/ext/pages => ../pages
-	github.com/pockethost/pocketone/ext/pitr => ../pitr
-	github.com/pockethost/pocketone/ext/pocker => ../pocker
-	github.com/pockethost/pocketone/ext/remotes => ../remotes
-	github.com/pockethost/pocketone/ext/s3-fallback => ../s3-fallback
-	github.com/pockethost/pocketone/ext/s3redirect => ../s3redirect
-	github.com/pockethost/pocketone/ext/sandbox => ../sandbox
-	github.com/pockethost/pocketone/ext/servertiming => ../servertiming
-	github.com/pockethost/pocketone/ext/settings => ../settings
-	github.com/pockethost/pocketone/ext/standard => ../standard
-	github.com/pockethost/pocketone/ext/stats => ../stats
-	github.com/pockethost/pocketone/ext/upgrade => ../upgrade
+	pocketone.dev/ext/api-tokens => ../api-tokens
+	pocketone.dev/ext/autotls => ../autotls
+	pocketone.dev/ext/backups => ../backups
+	pocketone.dev/ext/bulkmail => ../bulkmail
+	pocketone.dev/ext/bundle => ../bundle
+	pocketone.dev/ext/config => ../config
+	pocketone.dev/ext/contracts => ../contracts
+	pocketone.dev/ext/deploy => ../deploy
+	pocketone.dev/ext/devusers => ../devusers
+	pocketone.dev/ext/docker => ../docker
+	pocketone.dev/ext/edge => ../edge
+	pocketone.dev/ext/extkit => ../extkit
+	pocketone.dev/ext/firewall => ../firewall
+	pocketone.dev/ext/jsvm => ../jsvm
+	pocketone.dev/ext/mailrelay => ../mailrelay
+	pocketone.dev/ext/mailtrap => ../mailtrap
+	pocketone.dev/ext/mcp => ../mcp
+	pocketone.dev/ext/mothership => ../mothership
+	pocketone.dev/ext/multisite => ../multisite
+	pocketone.dev/ext/pages => ../pages
+	pocketone.dev/ext/pitr => ../pitr
+	pocketone.dev/ext/pocker => ../pocker
+	pocketone.dev/ext/remotes => ../remotes
+	pocketone.dev/ext/s3-fallback => ../s3-fallback
+	pocketone.dev/ext/s3redirect => ../s3redirect
+	pocketone.dev/ext/sandbox => ../sandbox
+	pocketone.dev/ext/servertiming => ../servertiming
+	pocketone.dev/ext/settings => ../settings
+	pocketone.dev/ext/standard => ../standard
+	pocketone.dev/ext/stats => ../stats
+	pocketone.dev/ext/upgrade => ../upgrade
 )
 
-replace github.com/pockethost/pocketone/ext/cache => ../cache
+replace pocketone.dev/ext/cache => ../cache
 
-replace github.com/pockethost/pocketone/ext/templates => ../templates
+replace pocketone.dev/ext/templates => ../templates
 
-replace github.com/pockethost/pocketone/ext/agent => ../agent
+replace pocketone.dev/ext/agent => ../agent
 
-replace github.com/pockethost/pocketone/ext/uicache => ../uicache
+replace pocketone.dev/ext/uicache => ../uicache
 
-replace github.com/pockethost/pocketone/ext/agent-chat => ../agent-chat
+replace pocketone.dev/ext/agent-chat => ../agent-chat

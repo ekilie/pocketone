@@ -11,8 +11,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	clicmdv1 "pocketone.dev/ext/contracts/cli/commands/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's name.

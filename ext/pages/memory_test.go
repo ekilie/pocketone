@@ -5,8 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
 )
 
 // TestRequestsDontAccumulate: what a request leaves in the app's VM is freed once the request is done. Each request's

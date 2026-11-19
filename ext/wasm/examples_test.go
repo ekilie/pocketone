@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/wasm"
 )
 
 // checkExamples runs every example in the module's manifest and checks it gives the output it says. An example that

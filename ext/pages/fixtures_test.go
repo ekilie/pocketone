@@ -14,7 +14,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/jsvm"
 )
 
 // rendering is false until the JS pass exists; cases that need it are skipped.

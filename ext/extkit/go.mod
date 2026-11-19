@@ -1,4 +1,4 @@
-module github.com/pockethost/pocketone/ext/extkit
+module pocketone.dev/ext/extkit
 
 go 1.27
 

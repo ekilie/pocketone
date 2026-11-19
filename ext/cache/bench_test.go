@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
 )
 
 // BenchmarkParallel is many instances using the store at once: 32 spaces, 80% reads, values of 1-8 KiB from a set

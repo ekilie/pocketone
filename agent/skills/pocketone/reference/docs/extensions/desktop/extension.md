@@ -162,9 +162,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 
-	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
-	"github.com/pockethost/pocketone/ext/desktop"
-	"github.com/pockethost/pocketone/ext/extkit"
+	clicmdv1 "pocketone.dev/ext/contracts/cli/commands/v1"
+	"pocketone.dev/ext/desktop"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {

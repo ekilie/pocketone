@@ -9,9 +9,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/backups"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/backups"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {

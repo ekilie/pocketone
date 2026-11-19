@@ -30,7 +30,7 @@ jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { extkit.BindJS(a
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/bulkmail`.
+The module is `pocketone.dev/ext/bulkmail`.
 
 ## Configure
 
@@ -223,11 +223,11 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/bulkmail"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/bulkmail"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
 )
 
 func main() {
@@ -255,7 +255,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/bulkmail`, an [`extkit`](../extkit/extkit.go) extension.
+- Go module `pocketone.dev/ext/bulkmail`, an [`extkit`](../extkit/extkit.go) extension.
   [`example/main.go`](example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
 - The audience is resolved when sending starts and queued into a ledger first (one row per campaign and address,
   unique). A background sender then mails one message at a time through the app's mail client, at the lower of the

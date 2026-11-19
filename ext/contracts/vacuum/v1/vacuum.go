@@ -6,13 +6,13 @@
 // A wire contract at /api/_c/vacuum/v1.
 package vacuumv1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import (
 	"context"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Vacuum reports on compacting the app's databases.

@@ -3,21 +3,21 @@ package multiinstance
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/pages"
-	"github.com/pockethost/pocketone/ext/pocker"
+	"pocketone.dev/ext/pages"
+	"pocketone.dev/ext/pocker"
 )
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))

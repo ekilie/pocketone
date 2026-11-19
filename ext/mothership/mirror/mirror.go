@@ -21,12 +21,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/multisite"
 	"log/slog"
 	"net/http"
 	"net/url"
+	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/multisite"
 	"reflect"
 	"sort"
 	"strings"
@@ -34,8 +34,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/edge"
 	"gopkg.in/yaml.v3"
+	"pocketone.dev/ext/edge"
 )
 
 // Record is a mothership record as JSON (the fields a view asked for).

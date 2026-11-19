@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
+	"pocketone.dev/ext/wasm"
 )
 
 // probe is a pb_hooks route that tells what $wasm looks like in an instance, and calls a module.

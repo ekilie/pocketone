@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"pocketone.dev/ext/extkit"
 )
 
 // annSource is the cobra annotation [Mount] puts on the commands it attaches: who answers the command.
@@ -193,7 +193,7 @@ func packageOf(name string) string {
 }
 
 func sourceOfPackage(pkg string) string {
-	const ext = "github.com/pockethost/pocketone/ext/"
+	const ext = "pocketone.dev/ext/"
 	switch {
 	case strings.HasPrefix(pkg, "ganigeorgiev.com/pocketbase/pocketbase"):
 		return "pocketbase"

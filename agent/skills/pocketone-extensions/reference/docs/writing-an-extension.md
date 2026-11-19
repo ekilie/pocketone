@@ -15,7 +15,7 @@ How a multisite host runs its instances (as isolates in its own process with [po
 ## App extensions: `extkit`
 
 Write an extension once, against [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) (its own module,
-`github.com/pockethost/pocketone/ext/extkit`; core has no part in it), and the same value runs on every app:
+`pocketone.dev/ext/extkit`; core has no part in it), and the same value runs on every app:
 
 ```go
 type Extension struct{ cfg Config }
@@ -63,7 +63,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   `pb_migrations`.
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
-  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/extkit.Command=pockethost"`.
+  (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X pocketone.dev/ext/extkit.Command=pockethost"`.
 - [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
   [`ext/standard/example`](https://github.com/pockethost/pocketone/blob/main/ext/standard/example/main.go) a complete program.
 
@@ -238,7 +238,7 @@ PocketOne keeps PocketBase's module path, so upstream merges stay clean. Point i
 ```
 require ganigeorgiev.com/pocketbase/pocketbase v0.41.1
 
-replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone <commit or version>
+replace ganigeorgiev.com/pocketbase/pocketbase => pocketone.dev <commit or version>
 ```
 
 Go only honors `replace` in the main module, so the final binary's `go.mod` needs this line, not only your
@@ -375,7 +375,7 @@ core doesn't offer yet:
 
 ```
 ext/<name>/
-  go.mod            module github.com/pockethost/pocketone/ext/<name>
+  go.mod            module pocketone.dev/ext/<name>
   README.md         the extension's docs, and its page on pocketone.dev (below)
   CHANGELOG.md      its changes, newest first (see Changelogs)
   TODO.md           optional: work that waits for something else to exist first (see Blocked work)
@@ -590,4 +590,4 @@ go run ./.github/extensions approvers origin/main HEAD   # who may approve each 
 
 ## Planned extensions
 
-Our own extensions live in this repo under [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext), each as its own Go module (`github.com/pockethost/pocketone/ext/<name>`). See [ext/README.md](https://github.com/pockethost/pocketone/blob/main/ext/README.md).
+Our own extensions live in this repo under [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext), each as its own Go module (`pocketone.dev/ext/<name>`). See [ext/README.md](https://github.com/pockethost/pocketone/blob/main/ext/README.md).

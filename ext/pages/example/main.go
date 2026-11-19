@@ -14,9 +14,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/pages"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/pages"
 )
 
 func main() {

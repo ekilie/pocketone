@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/config"
-	gatev1 "github.com/pockethost/pocketone/ext/contracts/gate/v1"
-	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/config"
+	gatev1 "pocketone.dev/ext/contracts/gate/v1"
+	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // fakeRuntime is a runtime/v1 provider: a host extension that provides echoRT named name.
@@ -152,4 +152,5 @@ func TestRuntimesFromProviders(t *testing.T) {
 	h, err = FromConfig(Options{Extensions: two, Choices: extkit.Choices{"runtime/v1": []any{"docker"}}})
 	if err != nil || names(h) != "docker" {
 		t.Fatalf("docker only: %v %v", names(h), err)
-	}}
+	}
+}

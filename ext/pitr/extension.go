@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Process settings come from pocketone.yaml's `pitr` section (fields set in Go win), read when the extension first

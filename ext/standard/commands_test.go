@@ -9,8 +9,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	_ "ganigeorgiev.com/pocketbase/pocketbase/migrations"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
+	"pocketone.dev/ext/extkit"
 )
 
 type migExt struct{}

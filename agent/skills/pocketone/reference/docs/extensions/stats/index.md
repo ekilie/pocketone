@@ -144,7 +144,7 @@ so a restart doesn't measure everything again or forget last-request times.
 
 ### Rules: criteria an app can replace
 
-`rules` (package `github.com/pockethost/pocketone/ext/stats/rules`, standard library only) is the engine policies
+`rules` (package `pocketone.dev/ext/stats/rules`, standard library only) is the engine policies
 are built from, on an edge or a mothership. A subject is whatever the caller evaluates: an instance's facts on an
 edge, an account with its instances on a mothership.
 
@@ -204,8 +204,8 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/stats"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/stats"
 )
 
 func main() {
@@ -240,7 +240,7 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/stats`. The stock binary wires it in
+- Go module `pocketone.dev/ext/stats`. The stock binary wires it in
   [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go).
 - `Run` loads recorded facts from a `Loader` sink, then waits for the host's instance list to load (checking every
   second). From then on, once a minute, it asks the policy for decisions on the current facts, measures the instances

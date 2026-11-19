@@ -39,7 +39,7 @@ app.Start()
 
 The [standard set](https://pocketone.dev/docs/extensions/standard) does this for you.
 
-The module is `github.com/pockethost/pocketone/ext/deploy`. `deploy.Config{DisableServer: true}` keeps only the
+The module is `pocketone.dev/ext/deploy`. `deploy.Config{DisableServer: true}` keeps only the
 commands, for a binary that deploys elsewhere but must not accept deploys.
 
 ## Configure
@@ -246,12 +246,12 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/deploy"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/deploy"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/remotes"
 )
 
 func main() {
@@ -289,7 +289,7 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/deploy`. [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
+- Go module `pocketone.dev/ext/deploy`. [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
   deploys and can deploy (logins from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
 - A deploy is a hash diff: the client sends a manifest, uploads only the missing files in bundles, then commits.
 - On a single app the files are swapped in while it runs; a restart (when a client asks) is `app.Restart()`, which

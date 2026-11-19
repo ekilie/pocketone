@@ -7,8 +7,8 @@ import (
 	"io/fs"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 //go:embed ui

@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/sandbox"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/sandbox"
+	"pocketone.dev/ext/standard"
 )
 
 // pocker's isolate_config is every instance's base config: `mcp: {enabled: false}` turns mcp off on each instance,

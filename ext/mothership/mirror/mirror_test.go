@@ -2,17 +2,17 @@ package mirror
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/multisite"
 	"io"
 	"log/slog"
 	"net/http/httptest"
+	"pocketone.dev/ext/multisite"
 	"testing"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/mothership"
+	"pocketone.dev/ext/mothership"
 )
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))

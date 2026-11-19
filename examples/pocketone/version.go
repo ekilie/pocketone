@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/pockethost/pocketone/ext/pocker"
+	"pocketone.dev/ext/pocker"
 )
 
 // upstreamVersion is the PocketBase release PocketOne is built on. Bump it when merging a PocketBase release

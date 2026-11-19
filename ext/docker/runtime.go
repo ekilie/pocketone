@@ -31,8 +31,8 @@ import (
 	"syscall"
 	"time"
 
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	"github.com/pockethost/pocketone/ext/multisite"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
+	"pocketone.dev/ext/multisite"
 )
 
 // Labels on every container this runtime creates.

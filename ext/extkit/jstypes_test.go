@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 type jsTypesProbe interface{ Ping() error }

@@ -33,7 +33,7 @@ pages.RegisterCommand(app.RootCmd)      // the `pages create` and `pages starter
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/pages`. See [example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) and
+The module is `pocketone.dev/ext/pages`. See [example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) and
 [Create your own extension](/docs/writing-an-extension).
 
 ## Configure
@@ -213,9 +213,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/pages"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/pages"
 )
 
 func main() {
