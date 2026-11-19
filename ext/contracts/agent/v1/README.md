@@ -41,10 +41,17 @@ Over HTTP (a superuser, or a token with the `agent` scope):
 | Complete | `POST /api/_c/agent/v1/complete` with `{"prompt": "...", "maxTokens": 100}` | `agent` |
 | Stream | `POST /api/_c/agent/v1/stream`, same input; server-sent events | `agent` |
 | Status | `GET /api/_c/agent/v1` | `agent:read` |
+| Warm | `POST /api/_c/agent/v1/warm` with `{"system": "...", "wait": "30s"}` | `agent` |
+| Forget | `POST /api/_c/agent/v1/forget` with `{"id": "w_..."}` | `agent` |
+| Count | `POST /api/_c/agent/v1/count` with `{"text": "..."}` or `{"system": "...", "messages": [...]}` | `agent:read` |
+| Threads | `GET /api/_c/agent/v1/threads` | `agent:read` |
+| Forget a thread | `POST /api/_c/agent/v1/threads/forget` with `{"id": "..."}` | `agent` |
 
 `complete` takes `prompt` or `messages` (`[{"role": "user", "content": "..."}]`), and optionally `system`, `schema` (a
 JSON schema the answer must match; its parsed value comes back as `data`), `maxTokens`, `temperature`, `stop` and `model` (a hint a
-single-model provider ignores). It answers `text`, `data`, `model`, `backend` (`app`, `runner` or `host`),
+single-model provider ignores), `thread` (a conversation's name: the provider keeps the model's state after the call
+and continues from it when the next call starts the same way, so it reads only what's new; a cache, not storage) and
+`wait` (how long to wait for a loading model, as a duration; without it a loading model fails at once). It answers `text`, `data`, `model`, `backend` (`app`, `runner` or `host`),
 `stopReason` and `usage` (`inputTokens`, `outputTokens`, and `cachedTokens`: how much of the prompt came from a
 cache of an earlier prompt that started the same way). Errors: `not_configured` (503), `not_ready` (503, still downloading or loading), `busy`
 (429, the app already has as many calls going as its host allows).
@@ -56,13 +63,23 @@ with a callback (from Go, call the returned `extkit.Stream`'s `Run`).
 
 `status` says which backend and model answer, and whether the model is ready (with download progress).
 
+`warm` reads the start of later prompts ahead of them (a preamble, say) and keeps it in the prompt cache until
+`forget`: calls that start the same way skip reading it. It returns at once with `{"id", "warmed": false}` and warms in
+the background, unless `wait` says how long to wait for it. The id is the same for the same text on the same app (not
+per model: the provider warms it again after a model change). A provider without a prompt cache (an app's own API,
+which caches prompts itself) answers `warmed: false` with a message, never an error.
+
+`count` gives a text's or a conversation's tokens (`exact: false` when the provider can only estimate). `threads`
+lists the threads whose state is kept (`id`, `tokens`, `bytes`, `where`: memory or disk, `usedAt`).
+
 From Go: `agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{...})`.
 
 ## Provide
 
 Implement `agentv1.Agent` and provide it in `Register` (`agentv1.Contract.Provide(app, a)`), or on a host for every
 instance (`agentv1.Contract.ProvideForInstances(hostScope, func(id string) agentv1.Agent {...})`). A host's provider
-should honor the instance's own API settings, so its admins can leave the shared model without changing code.
+should honor the instance's own API settings, so its admins can leave the shared model without changing code, and
+keep each instance's warms, threads and prompt cache apart from every other instance's.
 
 ## Extensions
 

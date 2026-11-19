@@ -157,8 +157,8 @@ func jsonOf(v any, err error) (string, error) {
 }
 
 // streamJS is $agent.stream(opts, onText, {onWait}): onText(piece) as the answer is written (false stops it). With
-// opts.wait, a model that's still loading is waited for first, calling onWait(status) about twice a second (to show
-// progress); without it, a loading model fails at once with not_ready.
+// opts.wait, a model that's still loading is waited for first (waitWithStatus); without it, a loading model fails at
+// once with not_ready.
 func streamJS(c js.Call, get func() (agentv1.Agent, error)) (any, error) {
 	opts, _ := c.Arg(0).Export().(map[string]any)
 	if opts == nil {
@@ -176,23 +176,10 @@ func streamJS(c js.Call, get func() (agentv1.Agent, error)) (any, error) {
 	if obj := c.Arg(2).Object(); obj != nil {
 		onWait = obj.Get("onWait").Func()
 	}
-	if d, _ := time.ParseDuration(in.Wait); d > 0 {
-		deadline := time.Now().Add(d)
-		for time.Now().Before(deadline) {
-			st, err := a.Status(context.Background(), extkit.Internal)
-			if err != nil || st.Ready || st.Backend == "" {
-				break
-			}
-			if onWait != nil {
-				s, _ := toJS(st)
-				if _, err := onWait.Call(s); err != nil {
-					return nil, errors.New(js.Message(err))
-				}
-			}
-			time.Sleep(500 * time.Millisecond)
-		}
-		in.Wait = ""
+	if err := waitWithStatus(a, in.Wait, onWait); err != nil {
+		return nil, err
 	}
+	in.Wait = ""
 	s, err := a.Stream(context.Background(), extkit.Internal, in)
 	if err != nil {
 		return nil, err
@@ -200,19 +187,52 @@ func streamJS(c js.Call, get func() (agentv1.Agent, error)) (any, error) {
 	if s.Close != nil {
 		defer s.Close()
 	}
-	fn := c.Arg(1).Func()
+	res, err := runStream(s, c.Arg(1).Func())
+	if err != nil {
+		return nil, err
+	}
+	return jsonOf(res, nil)
+}
+
+// waitWithStatus waits up to wait (a duration) for a's model to be ready, calling onWait(status) about twice a second
+// while it isn't. It returns at once with no wait, a ready model, or no model configured (the call then says why).
+func waitWithStatus(a agentv1.Agent, wait string, onWait js.Func) error {
+	d, _ := time.ParseDuration(wait)
+	if d <= 0 {
+		return nil
+	}
+	deadline := time.Now().Add(d)
+	for time.Now().Before(deadline) {
+		st, err := a.Status(context.Background(), extkit.Internal)
+		if err != nil || st.Ready || st.Backend == "" {
+			return nil
+		}
+		if onWait != nil {
+			v, _ := toJS(st)
+			if _, err := onWait.Call(v); err != nil {
+				return errors.New(js.Message(err))
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	return nil
+}
+
+// runStream runs an agent/v1 stream on the calling VM, calling onText(piece) for each piece (false stops it), and
+// returns the result.
+func runStream(s extkit.Stream, onText js.Func) (*agentv1.CompleteResult, error) {
 	var res *agentv1.CompleteResult
 	var cbErr error
-	err = s.Run(context.Background(), func(e any) error {
+	err := s.Run(context.Background(), func(e any) error {
 		ch, _ := e.(agentv1.Chunk)
 		if ch.Done {
 			res = ch.Result
 			return nil
 		}
-		if fn == nil || ch.Text == "" {
+		if onText == nil || ch.Text == "" {
 			return nil
 		}
-		v, err := fn.Call(ch.Text)
+		v, err := onText.Call(ch.Text)
 		if err != nil {
 			cbErr = errors.New(js.Message(err))
 			return cbErr
@@ -229,7 +249,7 @@ func streamJS(c js.Call, get func() (agentv1.Agent, error)) (any, error) {
 		return nil, err
 	}
 	if res == nil {
-		return nil, errors.New("$agent.stream: the answer ended without a result")
+		return nil, errors.New("the answer ended without a result")
 	}
-	return jsonOf(res, nil)
+	return res, nil
 }

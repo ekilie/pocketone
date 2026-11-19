@@ -488,5 +488,44 @@ declare var $agent: {
     list(): { id: string; tokens: number; bytes: number; where: "memory" | "disk"; usedAt: string }[]
     forget(id: string): void
   }
+  /** Starts a stored chat (agent.chat/v1, the agent-chat extension) and returns its id. */
+  newChat(opts?: { title?: string; meta?: Record<string, any> }): string
+  /** A stored chat by id, with the options every send uses. */
+  chat(id: string, opts?: AgentChatOptions): AgentChat
+  chats: {
+    /** Chats, most recently updated first; meta keeps those whose meta has each key with that value. */
+    list(opts?: { meta?: Record<string, any>; limit?: number; offset?: number }): AgentChatInfo[]
+    /** Deletes every chat whose meta matches; returns how many. */
+    forget(opts: { meta: Record<string, any> }): number
+  }
+}
+
+type AgentChatOptions = {
+  system?: string
+  /** Sent after the question, not saved: text, or a function of the question. */
+  context?: string | ((question: string) => string)
+  /** Messages sent before the summary takes over (default 12). */
+  window?: number
+  /** Fold the oldest messages into the summary once this many are past the window (default 6). */
+  summarizeEvery?: number
+  maxTokens?: number
+  temperature?: number
+  wait?: string
+}
+
+type AgentChatInfo = { id: string; title: string; summary: string; meta: any; messages: number; created: string; updated: string }
+
+type AgentChat = {
+  id: string
+  /** Asks and saves both turns. With onText, streams the answer to it. */
+  send: ((text: string, opts?: { onText?: (text: string) => boolean | void; onWait?: (s: AgentStatus) => void; schema?: object | string; context?: string | ((q: string) => string) }) => AgentAnswer) & {
+    async(text: string, opts?: { schema?: object | string; context?: string | ((q: string) => string) }): Promise<AgentAnswer>
+  }
+  get(): AgentChatInfo
+  history(opts?: { limit?: number; before?: string }): { id: string; role: "user" | "assistant"; content: string; created: string }[]
+  summary(): string
+  title(text?: string): string
+  meta(obj?: Record<string, any>): any
+  forget(): void
 }
 `
