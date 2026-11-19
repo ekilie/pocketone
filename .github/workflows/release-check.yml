@@ -43,7 +43,7 @@ jobs:
           sudo apt-get install -y -q qemu-user-static || sudo apt-get install -y -q qemu-user
           q=$(command -v qemu-arm-static || command -v qemu-arm)
           echo "QEMU_ARM=$q" >> "$GITHUB_ENV"
-          "$q" --version | head -1
+          "$q" --version
       - name: Test under QEMU
         working-directory: ext/jsvm
         env:
