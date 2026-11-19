@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.0.2 (2026-11-18)
+
 ### Changed
 
 - Releases come from `pocketonehq/pocketone` by default (the repo moved there from `pockethost/pocketone`, which redirects).

@@ -33,20 +33,12 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
-### Upgrading
-
-- Go import paths moved from `github.com/pockethost/pocketone/...` to `pocketone.dev/...` (the code is still on GitHub; pocketone.dev points Go at it). In your own Go code, replace `github.com/pockethost/pocketone/` with `pocketone.dev/` in imports and `go.mod` (for example `pocketone.dev/ext/multisite`), change `replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone <version>` to `=> pocketone.dev <version>`, then run `go mod tidy`.
-
-### Changed
-
-- PocketOne's Go modules are now `pocketone.dev/ext/<name>`, `pocketone.dev/examples/pocketone` and `pocketone.dev` (core, for the `replace`), so the import path no longer names where the repo lives.
-- The repo moved to [github.com/pocketonehq/pocketone](https://github.com/pocketonehq/pocketone) (old `pockethost/pocketone` links redirect), and its PocketBase mirror to `github.com/pocketonehq/pocketbase`. In an existing clone: `git remote set-url origin https://github.com/pocketonehq/pocketone.git`.
-
 ## v0.0.1-alpha.8 (2026-11-18)
 
 ### Upgrading
 
 1. The tokens extension is now `api-tokens`: rename `tokens:` to `api-tokens:` in `pocketone.yaml`, use `$apiTokens` in JS hooks (was `$tokens`), and upgrade the `pocketone` CLI with your apps (the token API moved to `/api/_c/api-tokens/v1`). Its collections are renamed on the first start ([ext/api-tokens changelog](ext/api-tokens/CHANGELOG.md)).
+2. Go import paths moved from `github.com/pockethost/pocketone/...` to `pocketone.dev/...` (the code is still on GitHub; pocketone.dev points Go at it). In your own Go code, replace `github.com/pockethost/pocketone/` with `pocketone.dev/` in imports and `go.mod` (for example `pocketone.dev/ext/multisite`), change `replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone <version>` to `=> pocketone.dev <version>`, then run `go mod tidy`.
 
 ### Added
 
@@ -60,6 +52,8 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 - Extension collections are named `_<extension>_<table>`, with hyphens in the extension's name as underscores (`_agent_chat_messages` for agent-chat); the conformance test no longer accepts a bare `_<extension>`, and CI refuses a table that falls under another extension's longer prefix ([Writing an extension](docs/extensions.md#your-schema-migrations-and-table-names)).
 - Extensions keep their end-user docs in `ext/<name>/docs/` (was `site/`). `docs/index.md` is required and names the main docs nav section that links it (`section: Reference`); the README is the extension's page in the Extensions reference, at `/docs/extensions/<name>/extension`, and no longer appears in the docs' sidebar ([Writing an extension](docs/extensions.md)).
+- PocketOne's Go modules are now `pocketone.dev/ext/<name>`, `pocketone.dev/examples/pocketone` and `pocketone.dev` (core, for the `replace`), so the import path no longer names where the repo lives.
+- The repo moved to [github.com/pocketonehq/pocketone](https://github.com/pocketonehq/pocketone) (old `pockethost/pocketone` links redirect), and its PocketBase mirror to `github.com/pocketonehq/pocketbase`. In an existing clone: `git remote set-url origin https://github.com/pocketonehq/pocketone.git`.
 
 ### Extensions
 
@@ -78,6 +72,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 - [Sandbox](ext/sandbox/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
 - [Standard Set](ext/standard/CHANGELOG.md#010-2026-11-18) 0.0.2 → 0.1.0 (has upgrade steps)
 - [UI Cache](ext/uicache/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
+- [Upgrade](ext/upgrade/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
 - [WASM](ext/wasm/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
 
 ### PocketBase
