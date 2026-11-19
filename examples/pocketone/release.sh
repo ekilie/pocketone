@@ -3,7 +3,8 @@
 # (.github/workflows/release-check.yml: every module, PocketBase's suite on our core, ext/jsvm on 32-bit ARM, every
 # release target). Run from a clean checkout of main, in sync with origin:
 #
-#   go run ./.github/extensions release vX.Y.Z      # stamp the changelogs; commit and push to main
+#   go run ./.github/extensions release vX.Y.Z      # stamp the changelogs; write Highlights and the blog post
+#                                                    # (site/pb_pages/(main)/blog/pocketone-vX-Y-Z.md); land them
 #   examples/pocketone/release.sh --check            # start the release check on origin/main (~15-25 min)
 #   examples/pocketone/release.sh --status           # how that check is doing
 #   examples/pocketone/release.sh vX.Y.Z             # once it passed: tag, push the tag, goreleaser (draft release)
@@ -69,6 +70,9 @@ esac
 
 version=$1
 [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || die "not a version: $version"
+# every release has its blog post, which the notes link to and the Discussions announcement carries (CHANGELOG.md)
+post="site/pb_pages/(main)/blog/pocketone-${version//./-}.md"
+[ -f "$post" ] || die "no blog post for $version: write $post from the release's Highlights and land it first"
 sha=$(in_sync)
 
 step "checking the release check on ${sha:0:9}"
