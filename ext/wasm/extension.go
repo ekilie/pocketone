@@ -91,5 +91,5 @@ func (x *Extension) BindJS(app core.App, rt js.Runtime) {
 //go:embed wasm.d.ts
 var jsTypes string
 
-// TypeScript implements jsvm's Typer: $wasm's declarations, added to the app's pb_data/types.d.ts.
+// TypeScript implements jsvm's Typer: $wasm's declarations, added to the app's types.d.ts.
 func (x *Extension) TypeScript() string { return jsTypes }

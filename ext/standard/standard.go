@@ -220,7 +220,7 @@ func (s *Set) Prepare(app core.App, layers func(name string) extkit.Config) (*ex
 }
 
 // JSExtensions implements [extkit.AppSet]: JS contracts, plus every extension on for app that declares its JS API's
-// types (js.Typer), for pb_data/types.d.ts.
+// types (js.Typer), for types.d.ts.
 func (s *Set) JSExtensions(app core.App) []any {
 	out := []any{extkit.JSContracts(app)}
 	if plan, _ := app.Store().Get(planKey).(*extkit.Plan); plan != nil {

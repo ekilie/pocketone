@@ -1,0 +1,3 @@
+# types.d.ts and tsconfig.json the JS engine writes when an example runs (apps commit theirs)
+**/example/**/types.d.ts
+**/example/**/tsconfig.json

@@ -27,7 +27,9 @@ type Config struct {
 	// MigrationsFilesPattern picks the migration files (default `^.*(\.js|\.ts)$`).
 	MigrationsFilesPattern string
 
-	// TypesDir is where types.d.ts is written (default pb_data).
+	// TypesDir is where types.d.ts (rewritten at every start) and tsconfig.json (written once, never overwritten)
+	// go: default the project root, the folder holding HooksDir. With hooks from a js.HookFiler (embedded) and no
+	// TypesDir, neither is written.
 	TypesDir string
 
 	// VM sets the engine's limits (memory, CPU and wall time per task, queue, async calls).

@@ -12,10 +12,16 @@ import (
 	"github.com/pockethost/pocketone/ext/standard"
 )
 
-// An app with the standard set gets its extensions' JS API in pb_data/types.d.ts, and hooks using them type-check.
+// An app with the standard set gets its extensions' JS API in types.d.ts (in the project root, beside pb_hooks), and
+// hooks using them type-check with the tsconfig.json written beside it.
 func TestTypesFileHasTheSetsJSAPI(t *testing.T) {
 	app, _ := newApp(t, standard.New(), nil)
-	types, err := os.ReadFile(filepath.Join(app.DataDir(), "types.d.ts"))
+	root := filepath.Dir(app.DataDir())
+	types, err := os.ReadFile(filepath.Join(root, "types.d.ts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tsconfig, err := os.ReadFile(filepath.Join(root, "tsconfig.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +30,7 @@ func TestTypesFileHasTheSetsJSAPI(t *testing.T) {
 		"declare function onContracts(", "declare class ContractError", "interface Function {",
 	} {
 		if !strings.Contains(string(types), want) {
-			t.Errorf("pb_data/types.d.ts has no %q", want)
+			t.Errorf("types.d.ts has no %q", want)
 		}
 	}
 
@@ -34,10 +40,8 @@ func TestTypesFileHasTheSetsJSAPI(t *testing.T) {
 	}
 	dir := t.TempDir()
 	files := map[string]string{
-		"pb_data/types.d.ts": string(types),
-		"tsconfig.json": `{"compilerOptions": {"target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
-			"lib": ["ES2022"], "strict": true, "noEmit": true, "skipLibCheck": true},
-			"include": ["pb_data/types.d.ts", "pb_hooks/**/*"]}`,
+		"types.d.ts":    string(types),
+		"tsconfig.json": string(tsconfig),
 		"pb_hooks/main.pb.ts": `
 			$mcp.addEndpoint({
 				name: "notes_archive", description: "Archive a note.", method: "POST", path: "/api/notes/{id}/archive",

@@ -43,5 +43,5 @@ func (p *Extension) Contracts() extkit.Contracts {
 //go:embed jsbind.d.ts
 var jsTypes string
 
-// TypeScript declares the extension's JS API for pb_data/types.d.ts (extkit/js Typer).
+// TypeScript declares the extension's JS API for types.d.ts (extkit/js Typer).
 func (p *Extension) TypeScript() string { return jsTypes }

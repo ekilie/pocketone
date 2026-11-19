@@ -1,4 +1,4 @@
-/// <reference path="../pb_data/types.d.ts" />
+/// <reference path="../types.d.ts" />
 
 // A tool from JS: write the REST endpoint, then the tool wrapper ($mcp.addEndpoint at the top level).
 
