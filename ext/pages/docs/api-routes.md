@@ -17,17 +17,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/feeds/latest/+api.ts
-type PostSummary = { id: string; title: string }
-
-export function get(ctx: any) {
-  const posts = ctx.app.findRecordsByFilter('posts', 'published = true', '-created', 20)
-  const out: PostSummary[] = posts.map((p: any) => ({ id: p.id, title: p.getString('title') }))
-  return ctx.res.json(out)
-}
-```
-
 A request to `/feeds/latest` returns:
 
 ```json
@@ -53,14 +42,6 @@ module.exports = {
     const orders = await ctx.app.countRecords.async('orders')
     return ctx.res.json({ orders })
   },
-}
-```
-
-```ts
-// pb_pages/stats/+api.ts
-export async function get(ctx: any) {
-  const orders: number = await ctx.app.countRecords.async('orders')
-  return ctx.res.json({ orders })
 }
 ```
 
@@ -91,14 +72,6 @@ module.exports = {
     const product = ctx.app.findRecordById('products', ctx.params.id)
     return ctx.res.json({ id: product.id, name: product.getString('name') })
   },
-}
-```
-
-```ts
-// pb_pages/products/[id]/+page.ts
-export function post(ctx: any) {
-  const product = ctx.app.findRecordById('products', ctx.params.id)
-  return ctx.res.json({ id: product.id, name: product.getString('name') })
 }
 ```
 

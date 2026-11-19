@@ -13,34 +13,10 @@ A per-request key/value store for page metadata (title, description). Set with t
 <%% meta('description', data.product.getString('summary')) %>
 ```
 
-```tsx
-// a page
-export default function Product({ data, meta }: any) {
-  meta('title', data.product.getString('name'))
-  meta('description', data.product.getString('summary'))
-  return <h1>{data.product.getString('name')}</h1>
-}
-```
-
 ```ejs
 <!-- +layout.ejs -->
 <title><%%= meta('title') || 'My shop' %></title>
 <meta name="description" content="<%%= meta('description') %>">
-```
-
-```tsx
-// +layout.tsx
-export default function Layout({ meta, children }: any) {
-  return (
-    <html>
-      <head>
-        <title>{meta('title') || 'My shop'}</title>
-        <meta name="description" content={meta('description')} />
-      </head>
-      <body>{children}</body>
-    </html>
-  )
-}
 ```
 
 Layouts render after the page, so they see what the page set.

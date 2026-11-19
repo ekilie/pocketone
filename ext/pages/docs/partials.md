@@ -14,17 +14,6 @@ Partials are reusable templates that you include from other templates. They live
 <%%- include('card', { product }) %>
 ```
 
-```tsx
-export default function Page({ data, include }: any) {
-  return (
-    <>
-      {include('nav')}
-      {include('card', { product: data.product })}
-    </>
-  )
-}
-```
-
 - `include(name, locals?)` renders a template from a `_private/` folder and returns its text. Use `<%%-` so its HTML isn't escaped.
 - `name` may omit the extension; `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
 - The partial sees the same `ctx`, plus `locals` as top-level variables.
@@ -79,28 +68,12 @@ Pass only what the partial needs:
 <%%- include('user-card', { name: user.getString('name'), joined: user.getString('created') }) %>
 ```
 
-```tsx
-{include('user-card', { name: user.getString('name'), joined: user.getString('created') })}
-```
-
 ```ejs
 <!-- _private/user-card.ejs -->
 <div class="card">
   <h3><%%= name %></h3>
   <p>Joined <%%= joined %></p>
 </div>
-```
-
-```tsx
-// _private/user-card.tsx
-export default function UserCard({ name, joined }: { name: string; joined: string }) {
-  return (
-    <div class="card">
-      <h3>{name}</h3>
-      <p>Joined {joined}</p>
-    </div>
-  )
-}
 ```
 
 Partials can also read `ctx`, `data` and `params` directly. Passing values explicitly keeps them easy to reuse.

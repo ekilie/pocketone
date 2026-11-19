@@ -15,14 +15,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/+config.ts
-export default {
-  plugins: ['auth', 'realtime', 'datastar'],
-  debug: false,
-}
-```
-
 ## Options
 
 | Key | Default | |

@@ -30,18 +30,6 @@ Read them through `params` (the same object as `ctx.params`):
 <p>Review: <%%= params.reviewId %></p>
 ```
 
-```tsx
-// products/[productId]/reviews/[reviewId].tsx
-export default function Review({ params }: { params: { productId: string; reviewId: string } }) {
-  return (
-    <>
-      <h1>Product: {params.productId}</h1>
-      <p>Review: {params.reviewId}</p>
-    </>
-  )
-}
-```
-
 Route parameters are always strings. `ctx.params` never includes query parameters.
 
 ## Query parameters
@@ -55,18 +43,6 @@ Read the query string with `ctx.req.query()`:
 ```ejs
 <p>Sort by: <%%= ctx.req.query('sort') %></p>
 <p>Tags: <%%= ctx.req.query('tag', { all: true }).join(', ') %></p>
-```
-
-```tsx
-export default function Products({ ctx }: any) {
-  const tags: string[] = ctx.req.query('tag', { all: true })
-  return (
-    <>
-      <p>Sort by: {ctx.req.query('sort')}</p>
-      <p>Tags: {tags.join(', ')}</p>
-    </>
-  )
-}
 ```
 
 | Call | Returns |

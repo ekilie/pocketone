@@ -21,11 +21,6 @@ Use PocketPages to create slim and modern web apps:
 <%%= `Hello, world!` %>
 ```
 
-```tsx
-// pb_pages/index.tsx
-export default () => <>{`Hello, world!`}</>
-```
-
 <%- include('browser', { content: `Hello, world!` }) %>
 
 Inside `<%%` and `%>` you write plain JavaScript. Every page gets a `ctx` object with the request, the response, your data, and the app itself (`ctx.app`), so you can read and write records directly.
@@ -41,15 +36,6 @@ Files become URLs, and `+layout.ejs` files wrap the pages below them:
     <%%- slot() %>
   </body>
 </html>
-```
-
-```tsx
-// pb_pages/+layout.tsx
-export default ({ children }: any) => (
-  <html>
-    <body style="background-color: #b5dcb5">{children}</body>
-  </html>
-)
 ```
 
 <%- include('browser', { bodyTags: `style="background-color: #b5dcb5"`, content: `Hello, world!` }) %>

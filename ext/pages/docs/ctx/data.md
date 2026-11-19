@@ -17,14 +17,6 @@ module.exports = (ctx, next) => {
 }
 ```
 
-```ts
-// +middleware.ts
-export default (ctx: any, next: () => any) => {
-  ctx.data.user = ctx.auth
-  return next()
-}
-```
-
 ```js
 // +page.js
 module.exports = {
@@ -34,25 +26,10 @@ module.exports = {
 }
 ```
 
-```ts
-// +page.ts
-export function load(ctx: any) {
-  return { products: ctx.app.findAllRecords('products') }  // Object.assign'd into ctx.data
-}
-```
-
 ```ejs
 <%% for (const p of data.products) { %>
   <li><%%= p.getString('name') %></li>
 <%% } %>
-```
-
-```tsx
-export default ({ data }: any) => (
-  <ul>
-    {data.products.map((p: any) => <li>{p.getString('name')}</li>)}
-  </ul>
-)
 ```
 
 A handler's returned object is shallow-assigned into `ctx.data`. There is no deep merge.

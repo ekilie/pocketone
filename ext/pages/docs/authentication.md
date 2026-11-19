@@ -32,14 +32,6 @@ module.exports = (ctx, next) => {
 }
 ```
 
-```ts
-// pb_pages/account/+middleware.ts
-export default (ctx: any, next: () => any) => {
-  if (!ctx.auth) return ctx.res.redirect('/login')
-  return next()
-}
-```
-
 ```ejs
 <%% if (ctx.auth) { %>
   <p>Welcome, <%%= ctx.auth.email() %></p>
@@ -47,18 +39,6 @@ export default (ctx: any, next: () => any) => {
 <%% } else { %>
   <a href="/login">Log in</a>
 <%% } %>
-```
-
-```tsx
-export default function Account({ ctx }: any) {
-  if (!ctx.auth) return <a href="/login">Log in</a>
-  return (
-    <>
-      <p>Welcome, {ctx.auth.email()}</p>
-      <form method="post" action="/logout"><button>Log out</button></form>
-    </>
-  )
-}
 ```
 
 ## Passwords
@@ -78,19 +58,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/login/+page.ts
-export function post(ctx: any) {
-  const { email, password }: { email: string; password: string } = ctx.req.body()
-  try {
-    ctx.session.signInWithPassword(email, password)
-  } catch (e) {
-    return { error: e.message, email }
-  }
-  return ctx.res.redirect('/')
-}
-```
-
 ```ejs
 <!-- pb_pages/login/index.ejs -->
 <form method="post">
@@ -101,24 +68,6 @@ export function post(ctx: any) {
   <button type="submit">Log in</button>
 </form>
 <%% if (data.error) { %><mark><%%= data.error %></mark><%% } %>
-```
-
-```tsx
-// pb_pages/login/index.tsx
-export default function Login({ data }: any) {
-  return (
-    <>
-      <form method="post">
-        <label>Email</label>
-        <input name="email" type="email" value={data.email} />
-        <label>Password</label>
-        <input name="password" type="password" />
-        <button type="submit">Log in</button>
-      </form>
-      {data.error && <mark>{data.error}</mark>}
-    </>
-  )
-}
 ```
 
 ### Registration
@@ -160,24 +109,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/login/otp/+page.ts
-type OTPForm = { step: 'request' | 'confirm'; email: string; otpId: string; code: string }
-
-export function post(ctx: any) {
-  const { step, email, otpId, code }: OTPForm = ctx.req.body()
-  try {
-    if (step === 'request') {
-      return { otpId: ctx.session.requestOTP(email), email }
-    }
-    ctx.session.signInWithOTP(otpId, code)
-    return ctx.res.redirect('/', { flash: 'Signed in' })
-  } catch (e) {
-    return { error: e.message, otpId, email }
-  }
-}
-```
-
 ```ejs
 <!-- pb_pages/login/otp/index.ejs -->
 <%% if (data.error) { %><mark><%%= data.error %></mark><%% } %>
@@ -197,35 +128,6 @@ export function post(ctx: any) {
     <button type="submit">Sign in</button>
   </form>
 <%% } %>
-```
-
-```tsx
-// pb_pages/login/otp/index.tsx
-export default function OTP({ data }: any) {
-  return (
-    <>
-      {data.error && <mark>{data.error}</mark>}
-
-      {!data.otpId ? (
-        <form method="post">
-          <input type="hidden" name="step" value="request" />
-          <input name="email" type="email" required />
-          <button type="submit">Send code</button>
-        </form>
-      ) : (
-        <>
-          <p>Check your email for the code.</p>
-          <form method="post">
-            <input type="hidden" name="step" value="confirm" />
-            <input type="hidden" name="otpId" value={data.otpId} />
-            <input name="code" required />
-            <button type="submit">Sign in</button>
-          </form>
-        </>
-      )}
-    </>
-  )
-}
 ```
 
 ## OAuth2

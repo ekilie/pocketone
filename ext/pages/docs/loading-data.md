@@ -24,22 +24,6 @@ The simplest way is a `<%% %>` block at the top of your template:
 <%% } %>
 ```
 
-```tsx
-export default function Products({ ctx }: any) {
-  const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 100)
-  return (
-    <>
-      <h1>Products</h1>
-      {products.map((product: any) => (
-        <div class="product">
-          <h2>{product.getString('name')}</h2>
-        </div>
-      ))}
-    </>
-  )
-}
-```
-
 ## Server script blocks
 
 For better formatting support in editors, you can write `<script server<%- '>' %>` instead of `<%% %>`. They mean the same thing:
@@ -74,37 +58,11 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/products/[id]/+page.ts
-export function load(ctx: any) {
-  ctx.data.product = ctx.app.findRecordById('products', ctx.params.id)
-}
-
-export function post(ctx: any) {
-  const { qty } = ctx.req.body()
-  // ...
-  return ctx.res.redirect(`/products/${ctx.params.id}`, { flash: 'Added to cart' })
-}
-```
-
 ```ejs
 <!-- pb_pages/products/[id]/index.ejs -->
 <h1><%%= data.product.getString('name') %></h1>
 <%% const flash = ctx.flash() %>
 <%% if (flash) { %><p><%%= flash %></p><%% } %>
-```
-
-```tsx
-// pb_pages/products/[id]/index.tsx
-export default function Product({ ctx, data }: any) {
-  const flash = ctx.flash()
-  return (
-    <>
-      <h1>{data.product.getString('name')}</h1>
-      {flash && <p>{flash}</p>}
-    </>
-  )
-}
 ```
 
 ### Exports
@@ -148,17 +106,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/dashboard/+page.ts
-export async function load(ctx: any) {
-  const [orders, users]: number[] = await Promise.all([
-    ctx.app.countRecords.async('orders'),
-    ctx.app.countRecords.async('users'),
-  ])
-  return { orders, users }
-}
-```
-
 What an async handler returns is used just like a returned object, and an error it throws (or a rejected promise)
 fails the request like any other error. You can also `await` right in a template: see [EJS](ejs.md#await) and
 [JSX](jsx.md#async-components).
@@ -190,16 +137,6 @@ Every handler is optional. A page renders for any method, like PHP, so a templat
 <%% } %>
 ```
 
-```tsx
-// pb_pages/contact.tsx, no +page.ts
-export default function Contact({ ctx }: any) {
-  if (ctx.req.method === 'POST') return <p>Thanks, {ctx.req.body().name}!</p>
-  return (
-    <form method="post"><input name="name" /><button>Send</button></form>
-  )
-}
-```
-
 A `post` (or `put`, ...) handler in `+page.js` is the tidier place for form logic as a page grows, but you don't need
 one. Only routes with nothing to render, [`+api.js`](api-routes.md) and a `+page.js` without a page, answer `405`
 for a method they have no handler for.
@@ -228,29 +165,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/contact/+page.ts
-type ContactForm = { email: string; message: string; department: string }
-
-export function load(ctx: any) {
-  return { departments: ctx.app.findAllRecords('departments') }
-}
-
-export function post(ctx: any) {
-  const { email, message, department }: ContactForm = ctx.req.body()
-  try {
-    const record = new Record(ctx.app.findCollectionByNameOrId('messages'))
-    record.set('email', email)
-    record.set('message', message)
-    record.set('department', department)
-    ctx.app.save(record)
-  } catch (e) {
-    return { error: 'Failed to send message', values: { email, message, department } }
-  }
-  return ctx.res.redirect('/contact', { flash: 'Thanks, we got your message.' })
-}
-```
-
 ```ejs
 <!-- pb_pages/contact/index.ejs -->
 <%% const flash = ctx.flash() %>
@@ -269,30 +183,6 @@ export function post(ctx: any) {
 </form>
 ```
 
-```tsx
-// pb_pages/contact/index.tsx
-export default function Contact({ ctx, data }: any) {
-  const flash = ctx.flash()
-  return (
-    <>
-      {flash && <p>{flash}</p>}
-      {data.error && <mark>{data.error}</mark>}
-
-      <form method="post">
-        <input name="email" type="email" value={data.values?.email} />
-        <select name="department">
-          {data.departments.map((d: any) => (
-            <option value={d.id}>{d.getString('name')}</option>
-          ))}
-        </select>
-        <textarea name="message">{data.values?.message}</textarea>
-        <button type="submit">Send</button>
-      </form>
-    </>
-  )
-}
-```
-
 ## Pages without a template
 
 A `+page.js` in a folder with no page file serves the folder's URL from JS. Use it for a page you'd rather build in
@@ -308,27 +198,12 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/logout/+page.ts
-export function post(ctx: any) {
-  ctx.session.signOut()
-  return ctx.res.redirect('/')
-}
-```
-
 ```js
 // pb_pages/hello/+page.js
 module.exports = {
   get(ctx) {
     return ctx.res.html(`<h1>Hello ${ctx.auth ? ctx.auth.getString('name') : 'there'}</h1>`)
   },
-}
-```
-
-```ts
-// pb_pages/hello/+page.ts
-export function get(ctx: any) {
-  return ctx.res.html(`<h1>Hello ${ctx.auth ? ctx.auth.getString('name') : 'there'}</h1>`)
 }
 ```
 

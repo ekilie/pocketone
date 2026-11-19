@@ -74,13 +74,4 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/clock/+api.ts
-export function get(ctx: any) {
-  const stream = ctx.res.sse()
-  stream.send('time', new Date().toISOString())
-  stream.close()
-}
-```
-
 Streaming is only available through `sse()`. Templates return their text all at once.

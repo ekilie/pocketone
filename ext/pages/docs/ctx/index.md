@@ -15,22 +15,9 @@ module.exports = (ctx, next) => next()
 module.exports = { load(ctx) {} }
 ```
 
-```ts
-// +middleware.ts
-export default (ctx: any, next: () => any) => next()
-
-// +page.ts / +api.ts
-export function load(ctx: any) {}
-```
-
 ```ejs
 <!-- any template -->
 <p><%%= ctx.req.url.pathname %></p>
-```
-
-```tsx
-// any .tsx template: ctx is a prop
-export default ({ ctx }: any) => <p>{ctx.req.url.pathname}</p>
 ```
 
 In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`, `ctx.params`, `ctx.asset` and `ctx.meta`.

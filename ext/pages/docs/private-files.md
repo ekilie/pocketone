@@ -68,11 +68,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/products/_private/queries.ts
-export const featured = (app: any) => app.findRecordsByFilter('products', 'featured = true', '-created', 10)
-```
-
 ## Notes
 
 1. Files in `_private/` are never served.

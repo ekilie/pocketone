@@ -22,18 +22,6 @@ module.exports = {
 }
 ```
 
-```ts
-// pb_pages/posts/+page.ts
-export function load(ctx: any) {
-  const page = ctx.pb().collection('posts').getList(1, 20, {
-    filter: 'published = true',
-    sort: '-created',
-    expand: 'author',
-  })
-  return { posts: page.items }
-}
-```
-
 - **It acts as the visitor.** When someone is signed in (`ctx.auth`, for example through the `auth` plugin), the
   client is authenticated as them; otherwise it's a guest. Your collections' API rules, `expand` and hidden fields
   apply exactly as they would in the browser.

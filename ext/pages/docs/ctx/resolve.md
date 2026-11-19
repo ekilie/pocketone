@@ -12,11 +12,6 @@ Loads a module from a `_private/` folder. The lookup starts at the **route's** f
 module.exports = (s) => String(s).toUpperCase()
 ```
 
-```ts
-// pb_pages/_private/shout.ts
-export default (s: unknown): string => String(s).toUpperCase()
-```
-
 ```ejs
 <p><%%= ctx.resolve('shout')('hi') %></p>  <!-- HI -->
 ```
