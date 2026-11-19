@@ -419,14 +419,17 @@ func (rt *Runtime) ServeInstance(w http.ResponseWriter, r *http.Request, inst mu
 		c.inflight.Add(-1)
 	}()
 	// a request that is safe to repeat, dropped without an answer while the instance restarted (PocketBase's hooks
-	// watcher restarting it in place, or the runtime replacing the container), goes once more
-	if rt.proxy(w, r, c, inst, false) {
-		rt.proxy(w, r, c, inst, true)
+	// watcher restarting it in place, or the runtime replacing the container), goes again, for up to StartTimeout. A
+	// pb_hooks change restarts it twice in a row (PocketBase in place, then the runtime's new container), so one
+	// repeat isn't enough: the repeat can land in the second restart.
+	var deadline time.Time // StartTimeout after the first drop
+	for rt.proxy(w, r, c, inst, &deadline) {
 	}
 }
 
-// proxy starts the instance if needed and proxies r to it. True: nothing was written and r should go again.
-func (rt *Runtime) proxy(w http.ResponseWriter, r *http.Request, c *ctr, inst multisite.Instance, last bool) (again bool) {
+// proxy starts the instance if needed and proxies r to it. True: nothing was written and r should go again; it goes
+// again until *deadline, which the first drop sets.
+func (rt *Runtime) proxy(w http.ResponseWriter, r *http.Request, c *ctr, inst multisite.Instance, deadline *time.Time) (again bool) {
 	port, err := rt.ensure(r.Context(), c, inst)
 	if err != nil {
 		rt.log.Warn("docker: instance failed to start", "instance", inst.ID, "error", err)
@@ -458,10 +461,14 @@ func (rt *Runtime) proxy(w http.ResponseWriter, r *http.Request, c *ctr, inst mu
 			}
 			var op *net.OpError
 			dialErr := errors.As(err, &op) && op.Op == "dial"
-			if !last && (errors.Is(err, io.EOF) || dialErr) && safeToRepeat(r) {
+			dropped := droppedUnanswered(err)
+			if (dropped || dialErr) && deadline.IsZero() {
+				*deadline = time.Now().Add(rt.cfg.StartTimeout)
+			}
+			if time.Now().Before(*deadline) && (dropped || dialErr) && safeToRepeat(r) {
 				// wait until this container answers again; if it was stopped or replaced meanwhile, ensure (on the
 				// next try) finds or starts the current one
-				if !rt.waitAnswering(r.Context(), px) && dialErr {
+				if !rt.waitAnswering(r.Context(), px, *deadline) && dialErr {
 					rt.forget(c, port)
 				}
 				if r.Context().Err() == nil {
@@ -480,6 +487,14 @@ func (rt *Runtime) proxy(w http.ResponseWriter, r *http.Request, c *ctr, inst mu
 	return again
 }
 
+// droppedUnanswered: the instance (or Docker's port proxy in front of it, once the instance behind it is gone) closed
+// or reset the connection before answering, as it does while it restarts. "server closed idle connection" is
+// net/http's unexported error for a kept-alive connection the instance closed as the request went out.
+func droppedUnanswered(err error) bool {
+	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, syscall.EPIPE) || strings.Contains(err.Error(), "server closed idle connection")
+}
+
 // safeToRepeat: requests that can be sent again after the instance dropped them without an answer.
 func safeToRepeat(r *http.Request) bool {
 	switch r.Method {
@@ -489,12 +504,11 @@ func safeToRepeat(r *http.Request) bool {
 	return false
 }
 
-// waitAnswering waits until the instance's port answers HTTP again (any status), while the same container runs, for
-// up to StartTimeout. False: the container is gone or was replaced (the caller's 502 then starts a fresh one), or it
-// didn't come back.
-func (rt *Runtime) waitAnswering(ctx context.Context, p proxied) bool {
+// waitAnswering waits until the instance's port answers HTTP again (any status), while the same container runs, until
+// deadline. False: the container is gone or was replaced (the caller's next try then finds or starts the current one),
+// or it didn't come back.
+func (rt *Runtime) waitAnswering(ctx context.Context, p proxied, deadline time.Time) bool {
 	url := "http://127.0.0.1:" + strconv.Itoa(p.port) + "/"
-	deadline := time.Now().Add(rt.cfg.StartTimeout)
 	for i := 0; ; i++ {
 		select {
 		case <-ctx.Done():

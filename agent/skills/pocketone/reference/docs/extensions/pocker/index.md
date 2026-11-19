@@ -3,6 +3,8 @@
 
 Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
 normal app folder and starts on its first request, in tens of milliseconds. Pocker provides
 [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1) for [Multisite](https://pocketone.dev/docs/extensions/multisite); its peer [Docker](https://pocketone.dev/docs/extensions/docker) runs each instance in a container instead.

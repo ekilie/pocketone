@@ -59,6 +59,21 @@ A template returns its text. There is no `echo()`; anything you want in the outp
 </ul>
 ```
 
+## await
+
+A template can `await`. Any tag that uses `await` turns the template into an async one, and PocketPages waits for it
+before it sends the page:
+
+```ejs
+<%% const orders = await ctx.app.countRecords.async('orders') %>
+<p><%%= orders %> orders</p>
+```
+
+- Including a partial that uses `await` gives you a promise. Print it with `<%%- await include('stats') %>`.
+- Printing a promise without `await` is an error, so you won't get `[object Promise]` in your page.
+- A slot whose content awaits takes an async function: `<%% await slot('title', async () => { %>...<%% }) %>`.
+- A template without `await` runs as a plain function, so sync templates cost nothing extra.
+
 ## Caching
 
 A template is compiled once per content hash and reused, so an edited file is recompiled on the next request.

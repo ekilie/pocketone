@@ -11,17 +11,16 @@ its own folder in the bucket and can't reach anything outside it. The credential
 
 ## Install
 
-S3 Fallback isn't built into `pocketone`; add it to a Go build. On a [multisite](https://pocketone.dev/docs/extensions/multisite) host, add it
-to the host's standard set; Pocker gives it to every instance it runs (Docker containers run stock images):
+S3 Fallback is in the [standard set](https://pocketone.dev/docs/extensions/standard), so it's built into `pocketone` and every isolate on a
+[multisite](https://pocketone.dev/docs/extensions/multisite) host has it (Docker containers run stock images). It does nothing until the
+`storage` section below mounts a backend. Its main use is a multisite host, where each instance gets its own folder in
+one bucket; a single app with mounts keeps its files at the backend's root.
+
+In your own Go build, reconfigure the member instead of adding it again:
 
 ```go
-set.Add(s3fallback.New(s3fallback.Config{}))
-```
-
-On a standalone app, register it with the backends and mounts in Go:
-
-```go
-extkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
+set := standard.New()
+set.S3Fallback = s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts})
 ```
 
 The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
@@ -58,6 +57,27 @@ instances:
 The old shape (`bucket:` with `uploads:` / `backups:`) still works, with a warning: it becomes a backend named
 `default`, mounted for uploads and backups.
 
+### pocketone.yaml reference
+
+#### `storage:`
+
+A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On for every instance unless false; an instance's extensions.storage.enabled overrides it. |
+| `backends` | map of object |  | Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style. |
+| `mounts` | map of string |  | Filesystem kind (storage, backups, litestream, ...) to backend name. |
+| `bucket.endpoint` | string |  | S3 endpoint URL. |
+| `bucket.bucket` | string |  | Bucket name. |
+| `bucket.region` | string |  | Bucket region (auto for R2). |
+| `bucket.access_key` | string |  | Access key id. |
+| `bucket.secret` | string |  | Secret key; use a $VAR from the .env. |
+| `bucket.prefix` | string |  | Prepended to every key, to share a bucket. |
+| `bucket.force_path_style` | bool |  | Path-style addressing, for MinIO and similar servers. |
+| `uploads` | bool |  | Deprecated: with bucket, false keeps uploads off it. |
+| `backups` | bool |  | Deprecated: with bucket, false keeps backups off it. |
+
 ## Use
 
 There's nothing to do day to day. To an instance nothing is configured: Settings show S3 off, and uploads, thumbs,
@@ -92,8 +112,8 @@ It applies to instances created with the extension on. Files already on an insta
 
 ## Example
 
-There's no `example/main.go` yet. [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show
-it on a standalone app and under Pocker, against MinIO.
+There's no `example/main.go` yet. [`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go) shows it on the `pocketone` binary, as a single app
+and on a multisite host; [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show it in Go.
 
 ## How it works
 
@@ -105,7 +125,7 @@ it on a standalone app and under Pocker, against MinIO.
 
 ### Status
 
-Works and is tested against MinIO; not yet deployed.
+Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go)); not yet deployed.
 
 ## License
 

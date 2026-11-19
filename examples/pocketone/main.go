@@ -1,5 +1,5 @@
 // Command pocketone is the standard PocketOne binary: PocketBase's examples/base plus the standard set (ext/standard:
-// settings, tokens (with its OAuth server), remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm) and the
+// settings, tokens (with its OAuth server), remotes, mcp, pages, storage (s3-fallback), s3redirect, pitr, backups, bulkmail, deploy, wasm) and the
 // extras added here (autotls, mailtrap, upgrade). It's its own module so core's go.mod stays upstream's.
 package main
 
@@ -22,9 +22,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
 	"github.com/pockethost/pocketone/ext/autotls"
 	"github.com/pockethost/pocketone/ext/config"
+	"github.com/pockethost/pocketone/ext/desktop"
 	"github.com/pockethost/pocketone/ext/docker"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/mailtrap"
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pitr"
@@ -55,17 +55,13 @@ func main() {
 			return
 		}
 	}
-	appCfg, _ := config.App.Get()
-	if err := cfg.AllowEnv(appCfg.EnvAllow); err != nil { // only the .env names the app may read
+	// the app section: what the app is built from, and the defaults of the app flags below
+	appCfg, err := standard.AppFromConfig(cfg)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	app := pocketbase.NewWithConfig(pocketbase.Config{
-		DefaultDev:           or(appCfg.Dev, osutils.IsProbablyGoRun()),
-		DefaultDataDir:       cfg.ResolvePath(appCfg.Dir),
-		DefaultEncryptionEnv: appCfg.EncryptionEnv,
-		DefaultQueryTimeout:  appCfg.QueryTimeout,
-	})
+	app := pocketbase.NewWithConfig(appCfg.PocketBase)
 	// `pocketone --version`: "0.0.2 (PocketBase 0.41.1)", like `pockethost --version`
 	app.RootCmd.Version = versionString()
 	app.RootCmd.SetVersionTemplate("{{.Version}}\n")
@@ -79,11 +75,12 @@ func main() {
 	}))
 
 	// The standard set: every PocketOne app's extensions (settings, tokens with its OAuth server, remotes, mcp, pages,
-	// s3redirect, pitr, backups, bulkmail, deploy, wasm). The flags below reconfigure members; extras are added after them.
+	// storage (s3-fallback), s3redirect, pitr, backups, bulkmail, deploy, wasm). The flags below reconfigure members; extras are added after them.
 	set := standard.New()
 	set.Providers = standard.ConfiguredProviders() // pocketone.yaml's providers: section
 	set.Add(vacuum.New())                          // compacts the app's databases on the `vacuum` section's schedule
 	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
+	set.Add(desktop.New())                         // `pocketone desktop build`: this folder's app as a native desktop app
 
 	// ---------------------------------------------------------------
 	// Flags: each lives on the commands that read it (flags.go). The app flags go on every command that opens this
@@ -100,7 +97,7 @@ func main() {
 	appFlags.StringVar(
 		&hooksDir,
 		"hooksDir",
-		cfg.ResolvePath(appCfg.HooksDir),
+		appCfg.JS.HooksDir,
 		"the directory with the JS app hooks",
 	)
 
@@ -116,7 +113,7 @@ func main() {
 	appFlags.StringVar(
 		&jsEngine,
 		"jsvm",
-		orStr(appCfg.JSVM, defaultJSEngine()),
+		appCfg.JSEngine,
 		"the JS engine: quickjs (PocketOne's) or goja (PocketBase's own, for pure PocketBase compatibility)",
 	)
 
@@ -124,7 +121,7 @@ func main() {
 	appFlags.IntVar(
 		&hooksPool,
 		"hooksPool",
-		orInt(appCfg.HooksPool, 15),
+		appCfg.JS.HooksPoolSize,
 		"only with --jsvm goja: the JS runtimes kept ready for hooks",
 	)
 
@@ -132,7 +129,7 @@ func main() {
 	appFlags.StringVar(
 		&migrationsDir,
 		"migrationsDir",
-		cfg.ResolvePath(appCfg.MigrationsDir),
+		appCfg.JS.MigrationsDir,
 		"the directory with the user defined migrations",
 	)
 
@@ -284,17 +281,12 @@ func main() {
 	// ---------------------------------------------------------------
 
 	// the standard set, then pb_hooks and pb_migrations through the JS engine, then the contracts sealed
-	if err := registerSet(app, set, jsEngine, jsvm.Config{
-		MigrationsDir: migrationsDir,
-		HooksDir:      hooksDir,
-		HooksWatch:    hooksWatch,
-		HooksPoolSize: hooksPool,
-		VM: jsvm.VMConfig{ // app: js_limits: in pocketone.yaml; 0 keeps each default
-			MemoryLimit: int64(appCfg.JSLimits.Memory),
-			TaskBudget:  appCfg.JSLimits.TaskTime,
-			TaskWall:    appCfg.JSLimits.TaskWall,
-		},
-	}); err != nil {
+	jsCfg := appCfg.JS // js_limits and the rest of the app section, then the flags
+	jsCfg.MigrationsDir = migrationsDir
+	jsCfg.HooksDir = hooksDir
+	jsCfg.HooksWatch = hooksWatch
+	jsCfg.HooksPoolSize = hooksPool
+	if err := registerSet(app, set, jsEngine, jsCfg); err != nil {
 		log.Fatal(err)
 	}
 	pages.RegisterCommand(app.RootCmd)            // `pocketone pages create <name> [--starter kit]`, `pocketone pages starters`
@@ -365,13 +357,6 @@ func firstArg(args []string) string {
 func or(v *bool, def bool) bool {
 	if v != nil {
 		return *v
-	}
-	return def
-}
-
-func orInt(v, def int) int {
-	if v != 0 {
-		return v
 	}
 	return def
 }

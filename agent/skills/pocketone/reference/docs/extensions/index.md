@@ -15,11 +15,13 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Cache](https://pocketone.dev/docs/extensions/cache) | Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once. |
 | [Config](https://pocketone.dev/docs/extensions/config) | The pocketone.yaml config file, with secrets in a .env beside it. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
+| [Desktop](https://pocketone.dev/docs/extensions/desktop/extension) | Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine. |
 | [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [PITR](https://pocketone.dev/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |
 | [Remotes](https://pocketone.dev/docs/extensions/remotes) | Named remotes and saved logins for the pocketone command. |
+| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Settings](https://pocketone.dev/docs/extensions/settings) | One API for the settings an app's admins change for its extensions. On by default. |
 | [Templates](https://pocketone.dev/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
@@ -51,7 +53,6 @@ Shared services a host gives every instance it runs.
 | Extension | What it does |
 |---|---|
 | [Mail Relay](https://pocketone.dev/docs/extensions/mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
-| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [Server Timing](https://pocketone.dev/docs/extensions/servertiming) | Server-Timing headers for each step of a request. |
 
 ## Sell it as a service

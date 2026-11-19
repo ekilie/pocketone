@@ -33,6 +33,7 @@ import (
 	"github.com/pockethost/pocketone/ext/pages"
 	"github.com/pockethost/pocketone/ext/pitr"
 	"github.com/pockethost/pocketone/ext/remotes"
+	s3fallback "github.com/pockethost/pocketone/ext/s3-fallback"
 	"github.com/pockethost/pocketone/ext/s3redirect"
 	"github.com/pockethost/pocketone/ext/settings"
 	"github.com/pockethost/pocketone/ext/templates"
@@ -50,6 +51,7 @@ type Set struct {
 	Remotes    *remotes.Extension
 	MCP        *mcp.Extension
 	Pages      *pages.Extension
+	S3Fallback *s3fallback.Extension
 	S3Redirect *s3redirect.Extension
 	PITR       *pitr.Extension
 	Backups    *backups.Extension
@@ -76,6 +78,7 @@ func New() *Set {
 		Remotes:    remotes.New(remotes.Config{}),
 		MCP:        mcp.New(mcp.Config{}),
 		Pages:      pages.New(pages.Config{}),
+		S3Fallback: s3fallback.New(s3fallback.Config{}),
 		S3Redirect: s3redirect.New(s3redirect.Config{}),
 		PITR:       pitr.New(pitr.Config{}),
 		Backups:    backups.New(),
@@ -111,7 +114,7 @@ type member struct {
 func (s *Set) members() []member {
 	m := []member{
 		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
-		{"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"Agent", s.Agent},
+		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"Agent", s.Agent},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
 		if isNil(m[i].ext) {
@@ -137,6 +140,8 @@ func isNil(e extkit.Extension) bool {
 		return v == nil
 	case *pages.Extension:
 		return v == nil
+	case *s3fallback.Extension:
+		return v == nil
 	case *s3redirect.Extension:
 		return v == nil
 	case *pitr.Extension:
@@ -158,7 +163,11 @@ func isNil(e extkit.Extension) bool {
 func (s *Set) check() error {
 	for _, m := range s.members() {
 		if m.ext == nil {
-			return fmt.Errorf("standard: Set.%s is nil; members can be reconfigured, not removed (an app turns one off with `%s: {enabled: false}`)", m.field, strings.ToLower(m.field))
+			key := strings.ToLower(m.field)
+			if m.field == "S3Fallback" {
+				key = s3fallback.Name // its section is `storage`
+			}
+			return fmt.Errorf("standard: Set.%s is nil; members can be reconfigured, not removed (an app turns one off with `%s: {enabled: false}`)", m.field, key)
 		}
 	}
 	seen := map[string]bool{}

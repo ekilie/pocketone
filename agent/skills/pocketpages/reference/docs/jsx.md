@@ -48,6 +48,33 @@ JSX renders straight to HTML on the server. There's no virtual DOM, no hydration
 - `true` renders a bare attribute. `false`, `null` and `undefined` leave it out.
 - `<html>` gets `<!doctype html>` in front of it, since JSX can't write a doctype.
 
+## Async components
+
+Any component can be `async`, including the file's default export. The render waits for every async component in the
+tree, and sibling components run at the same time:
+
+```tsx
+// pb_pages/dashboard.tsx
+async function Count({ collection }: { collection: string }) {
+  const n = await $app.countRecords.async(collection)
+  return <b>{n}</b>
+}
+
+export default async function Dashboard({ ctx }: any) {
+  const user = ctx.auth ? await ctx.app.findRecordById.async('users', ctx.auth.id) : null
+  return (
+    <main>
+      <p>Hi {user ? user.getString('name') : 'there'}</p>
+      <p>
+        <Count collection="orders" /> orders, <Count collection="users" /> users
+      </p>
+    </main>
+  )
+}
+```
+
+`include()` of a partial that awaits, and `slot(name, content)` with async content, work the same way.
+
 ## Layouts
 
 ```tsx

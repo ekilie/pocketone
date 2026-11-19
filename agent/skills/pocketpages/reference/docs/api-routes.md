@@ -27,6 +27,22 @@ A request to `/feeds/latest` returns:
 - A folder can't have both a `+api.js` and an `index` page.
 - Middleware runs for API routes too.
 - `ctx.httpError()` thrown in a `+api.js` answers with JSON: `{ "status": 404, "message": "..." }`.
+- Handlers can be `async`. The response is sent once the handler settles.
+
+## Async handlers
+
+```js
+// pb_pages/stats/+api.js
+module.exports = {
+  async get(ctx) {
+    const orders = await ctx.app.countRecords.async('orders')
+    return ctx.res.json({ orders })
+  },
+}
+```
+
+An async handler still has to send a response. Returning a value without calling `ctx.res.json` (or another
+`ctx.res` method) is a `500`, as it is for a sync handler.
 
 ## Sending responses
 

@@ -8,6 +8,8 @@ summary: "Hundreds of PocketBase instances in one Go process, routed by hostname
 
 # Pocker
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
 normal app folder and starts on its first request, in tens of milliseconds. Pocker provides
 [runtime/v1](../contracts/runtime/v1/README.md) for [Multisite](../multisite/README.md); its peer [Docker](../docker/README.md) runs each instance in a container instead.

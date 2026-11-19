@@ -283,9 +283,10 @@ func TestIsolation(t *testing.T) {
 }
 
 // TestConcurrentCalls: calls running at once each get a fresh instance, so none sees another's input or output
-// (each counts its own words). MaxModulesMB is raised so the Go module (4.3 MB) runs many at once.
+// (each counts its own words). MaxConcurrent and MaxModulesMB let all 20 calls of the Go module (4.3 MB) run at once:
+// with the default 8, the rest wait for a slot only up to Timeout, which a slow CI runner overran.
 func TestConcurrentCalls(t *testing.T) {
-	e := withBasic(t, wasm.Config{MaxModulesMB: 200})
+	e := withBasic(t, wasm.Config{MaxConcurrent: 20, MaxModulesMB: 200})
 	var wg sync.WaitGroup
 	errs := make(chan error, 20)
 	for i := range 20 {

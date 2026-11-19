@@ -63,6 +63,7 @@ error="invalid_token"` challenge, never a guest's answer.
 | Extension | |
 |---|---|
 | [mcp](/docs/extensions/mcp) | provides (default) |
+| [wasm](/docs/extensions/wasm/extension) | works with |
 
 <!-- /contracts:index -->
 

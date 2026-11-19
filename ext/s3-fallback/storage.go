@@ -272,4 +272,4 @@ func open(b *Bucket, prefix string) (*filesystem.System, error) {
 }
 
 // Section is the key of the `storage` section (pocketone.yaml): storage backends and mounts for a multisite host.
-var Section = extkit.NewSection(Name, Config{}, "S3 storage backends and mounts for a multisite host's instances: uploads, backups, PITR history.")
+var Section = extkit.NewSection(Name, Config{}, "A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.")

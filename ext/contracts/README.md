@@ -24,7 +24,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`bulkmail/v1`](bulkmail/v1/README.md) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](cache/clear/v1/README.md) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
 | [`cache/v1`](cache/v1/README.md) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
-| [`cli.commands/v1`](cli/commands/v1/README.md) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. |  |  |  | @benallfree |
+| [`cli.commands/v1`](cli/commands/v1/README.md) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. | desktop |  |  | @benallfree |
 | [`deploy/v1`](deploy/v1/README.md) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](gate/v1/README.md) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](http/wrap/v1/README.md) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |
@@ -32,7 +32,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`mail.fallback/v1`](mail/fallback/v1/README.md) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](mail/feedback/v1/README.md) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](mail/suppression/v1/README.md) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |
-| [`mcp/v1`](mcp/v1/README.md) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  |  | @benallfree |
+| [`mcp/v1`](mcp/v1/README.md) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  | wasm | @benallfree |
 | [`oauth/v1`](oauth/v1/README.md) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
 | [`remote/v1`](remote/v1/README.md) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](restore/v1/README.md) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |

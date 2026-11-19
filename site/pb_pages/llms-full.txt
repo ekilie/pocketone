@@ -22,6 +22,28 @@ or endorsed by the PocketBase project.
 
 Run `pocketone` the way you run `pocketbase`. These are the differences you'll notice; [New in PocketOne](https://pocketone.dev/docs/features) compares each one with PocketBase.
 
+### Hooks with async, import and TypeScript
+
+Your `pb_hooks` run on QuickJS with PocketBase's JS API, so they work unchanged, and they also get:
+`async` handlers with `await` (the app keeps serving while one waits), ES module `import` and `node_modules` packages,
+`.pb.ts` TypeScript files, globals shared by every handler, and memory and time limits.
+[QuickJS hooks](https://pocketone.dev/docs/quickjs) walks through each one.
+
+### Pages in TSX, TypeScript or EJS
+
+Put `.tsx`, `.jsx`, `.ejs` or Markdown files in a `pb_pages` folder and they're server-rendered pages, with your
+records a function call away. Components `import` each other, route files can be TypeScript, and every part of a
+page can `await`. esbuild is built into
+the binary, so there's no Node, no `npm install` and no build step. This site is one. `pocketone pages create myapp`
+starts a new site from a starter kit. [PocketPages](https://pocketone.dev/docs/features/sites) shows a page in TSX.
+
+### Hundreds of apps in one process
+
+Add a `multisite` section to `pocketone.yaml` and one `pocketone` process runs hundreds of PocketBase apps as
+isolates, routed by hostname. Each is a complete app with its own data, hooks and dashboard. It starts on its first
+request in tens of milliseconds, costs about 3 MB while it runs, and is sandboxed from the others. No container per app.
+[PocketBase isolates](https://pocketone.dev/docs/features/isolates) shows it running in a minute.
+
 ### Point-in-time restore, on by default
 
 Your database is replicated with Litestream, so you can restore it to any moment from **Settings → Backups** or with
@@ -31,12 +53,6 @@ Your database is replicated with Litestream, so you can restore it to any moment
 
 In dev mode (`serve --dev`), an app with no SMTP settings doesn't send through the system's `sendmail`. The mail is
 caught and shown at `http://127.0.0.1:8025`.
-
-### Server-rendered pages
-
-Put `.ejs` and Markdown files in a `pb_pages` folder and they're served as pages, with no build step. This site is
-one. `pocketone pages create myapp` starts a new site from a starter kit. Full docs are under
-[Pages](https://pocketone.dev/docs/extensions/pages/overview).
 
 ### A config file
 
@@ -192,24 +208,76 @@ PocketOne yet.
 
 ## What's added
 
-Point-in-time restore, deploys from your terminal, API tokens and OAuth, MCP for AI agents, bulk mail, server-rendered
-sites and more, all on by default. [New in PocketOne](https://pocketone.dev/docs/features) lists them side by side with what PocketBase
-gives you.
+Everything below is on by default. For each one, here's how you'd handle it in PocketBase and what PocketOne brings.
 
-## Read the PocketBase docs for the rest
+### Hooks
 
-This site doesn't copy PocketBase's docs. For everything PocketOne leaves as it is, read them at pocketbase.io:
+PocketBase runs `pb_hooks` on goja: CommonJS `require`, synchronous handlers, and a pool of runtimes that each load
+your hook files. PocketOne runs the same JS API on QuickJS, so your hooks keep working, and adds `async`/`await`, ES
+module `import` with `node_modules` packages, `.pb.ts` TypeScript, globals shared by every handler, and memory and time
+limits. [QuickJS hooks](https://pocketone.dev/docs/quickjs)
 
-- [Introduction](https://pocketbase.io/docs/)
-- [Collections](https://pocketbase.io/docs/collections/)
-- [API rules and filters](https://pocketbase.io/docs/api-rules-and-filters/)
-- [Authentication](https://pocketbase.io/docs/authentication/)
-- [Files upload and handling](https://pocketbase.io/docs/files-handling/)
-- [Working with relations](https://pocketbase.io/docs/working-with-relations/)
-- [Extend with JavaScript](https://pocketbase.io/docs/js-overview/)
-- [Extend with Go](https://pocketbase.io/docs/go-overview/)
-- [Going to production](https://pocketbase.io/docs/going-to-production/)
-- [Web APIs reference](https://pocketbase.io/docs/api-records/)
+### Sites
+
+PocketBase serves static files and single-page apps from `pb_public`, and hooks can render HTML with `$template`.
+PocketOne adds server-rendered pages: a `.tsx`, `.jsx`, `.ejs` or `.md` file in `pb_pages` becomes a route, with
+`await` everywhere and no build step. [PocketPages sites](https://pocketone.dev/docs/features/sites)
+
+### Many apps on one server
+
+A PocketBase app is one process, and you host several by running a process, container or VM for each. PocketOne can
+run hundreds of apps as isolates inside one process; each starts on its first request in tens of milliseconds, uses
+about 3 MB and is sandboxed from the others. [PocketBase isolates](https://pocketone.dev/docs/features/isolates)
+
+### Backups and restore
+
+PocketBase makes backups on a schedule, to local disk or S3, and restores a whole backup. PocketOne also records every
+change, so you can restore to any second in the last 72 hours, and undo the restore. [Point-in-time
+restore](https://pocketone.dev/docs/features/restore)
+
+### Deploying
+
+A PocketBase app is a folder you copy to the server; hooks reload when they change, and migrations run on the next
+start. PocketOne adds `pocketone deploy`, which uploads only what changed, and `pocketone dev`, which keeps a local
+folder and the running app in step both ways and streams the logs. [Deploy and live sync](https://pocketone.dev/docs/features/deploy)
+
+### Admin from anywhere
+
+PocketBase's CLI runs on the machine that holds `pb_data`, and the dashboard and REST API work from anywhere. PocketOne
+adds a remote CLI: sign in once, then run admin commands against any app from your terminal, a script or an agent.
+[Remote CLI](https://pocketone.dev/docs/features/remote)
+
+### Tokens
+
+A PocketBase auth token acts as its account, and changing the account's token key signs out all of its tokens at once.
+PocketOne adds named, scoped API tokens that you revoke one by one, and makes your app an OAuth server that apps and
+agents sign in through. [API tokens and OAuth](https://pocketone.dev/docs/features/tokens)
+
+### AI agents
+
+PocketBase offers a REST API and realtime subscriptions, with official JavaScript and Dart SDKs. PocketOne also serves
+MCP at `/mcp` on every app, with OAuth sign-in, so Claude and other agents work with your app as you, using your own
+tools from `pb_hooks` too. [MCP for AI agents](https://pocketone.dev/docs/features/mcp)
+
+### Mail
+
+PocketBase sends account mail (verification, password reset, email change, one-time codes), and your hooks can send any
+message through its mailer. PocketOne adds campaigns from the dashboard, with unsubscribes, suppression and pacing
+handled. [Bulk mail](https://pocketone.dev/docs/features/bulk-mail)
+
+### Desktop apps
+
+A PocketBase app is a server: you host it, and people reach it from a browser. PocketOne can also build the same app
+folder into a native desktop app for macOS, Windows and Linux, with your hooks, migrations and public files inside one
+executable and each user's data on their own machine. It's a preview. [Desktop apps](https://pocketone.dev/docs/extensions/desktop)
+
+### Configuration
+
+In PocketBase, app settings live in the dashboard and `serve` takes its options as command-line flags. PocketOne adds
+`pocketone.yaml`, one file next to your app for those options and every extension's, with a `.env` for secrets.
+[pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml)
+
+Smaller additions are listed under [Also built in](https://pocketone.dev/docs/features#also-built-in).
 
 
 ---
@@ -263,20 +331,83 @@ Source: https://pocketone.dev/docs/features
 
 # New in PocketOne
 
-PocketOne does everything PocketBase does, and adds the features below. They're built in and on by default, whether
-you run the `pocketone` binary yourself or a host runs your app. There's nothing to install.
+PocketOne does everything PocketBase does, and adds the features below. They're all built into the `pocketone`
+binary, and most are on by default. There's nothing to install.
 
-| | PocketBase gives you | PocketOne adds |
-|---|---|---|
-| [Point-in-time restore](https://pocketone.dev/docs/features/restore) | Backups you schedule, restored whole | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
-| [Deploy and live sync](https://pocketone.dev/docs/features/deploy) | Copy files to the server yourself, then restart | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
-| [Remote CLI](https://pocketone.dev/docs/features/remote) | A CLI for the machine that holds `pb_data` | Admin commands against any app, from your terminal, a script or an agent |
-| [API tokens and OAuth](https://pocketone.dev/docs/features/tokens) | Auth tokens with the account's full rights | Named, scoped tokens you revoke one by one; your app is an OAuth server |
-| [MCP for AI agents](https://pocketone.dev/docs/features/mcp) | No MCP | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
-| [Bulk mail](https://pocketone.dev/docs/features/bulk-mail) | Account mail: verification, password reset | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
-| [PocketPages sites](https://pocketone.dev/docs/features/sites) | Static files from `pb_public` | Server-rendered pages from `pb_pages`, with direct access to your records |
-| [QuickJS hooks](https://pocketone.dev/docs/quickjs) | Hooks on goja | The same JS API with imports, TypeScript, async handlers, shared globals and hard limits |
-| [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml) | Flags on every start | One config file, with every extension's options and a `.env` for secrets |
+Three of them set PocketOne apart: hooks with `async`, `import` and TypeScript,
+async pages in TSX, and hundreds of apps running as isolates in one process.
+
+## Modern JavaScript on the server
+
+**[Hooks with async, import and TypeScript](https://pocketone.dev/docs/quickjs).** Your `pb_hooks` run on QuickJS with the same JS API you
+already use, plus:
+
+- `async` handlers and `await`. The app keeps serving other requests while a handler waits on the database or an HTTP
+  call.
+- ES modules: `import` and `export` between your files, and packages from `node_modules`.
+- TypeScript: write `.pb.ts` files and they run as they are.
+- Globals shared by every handler, and memory and time limits that stop a runaway script instead of the app.
+
+```ts
+// pb_hooks/orders.pb.ts
+import { total } from "./lib/pricing.mjs"
+
+routerAdd("GET", "/api/orders/{id}/total", async (e) => {
+  const order = await e.app.findRecordById.async("orders", e.request.pathValue("id"))
+  return e.json(200, { total: total(order) })
+})
+```
+
+**[Pages in TSX, TypeScript or EJS](https://pocketone.dev/docs/features/sites).** Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in `pb_pages`
+and it's a server-rendered page, with your records a function call away. Components `import` each other, and `+page.ts`
+and `+api.ts` route files are TypeScript. Every part of a page can `await`: loaders, handlers, middleware, EJS tags and
+`async` components, and sibling components render at the same time. esbuild is built into the binary: no Node, no
+`npm install`, no build step.
+
+```tsx
+// pb_pages/products/[id].tsx
+import Price from './_private/Price'
+
+export default async function Product({ ctx }: any) {
+  const product = await ctx.app.findRecordById.async('products', ctx.params.id)
+  return (
+    <article>
+      <h1>{product.getString('name')}</h1>
+      <Price cents={product.getInt('price')} />
+    </article>
+  )
+}
+```
+
+## Hundreds of apps in one process
+
+**[PocketBase isolates](https://pocketone.dev/docs/features/isolates).** One `pocketone` process runs hundreds of PocketBase apps as
+isolates, routed by hostname. Each is a complete app with its own data, hooks and dashboard. It starts on its first
+request in tens of milliseconds, costs about 3 MB while it runs, and is sandboxed from the others: its own memory cap,
+time limits, files, SQL and secrets. No container per app, no idle memory to pay for.
+
+```yaml
+# pocketone.yaml: every hostname you ask for becomes its own app (dev mode)
+multisite: {}
+instances: { dev: true }
+pocker: { root: ./pb_root }
+```
+
+## Everything new at a glance
+
+| | What you get |
+|---|---|
+| [QuickJS hooks](https://pocketone.dev/docs/quickjs) | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
+| [PocketPages sites](https://pocketone.dev/docs/features/sites) | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
+| [PocketBase isolates](https://pocketone.dev/docs/features/isolates) | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
+| [Point-in-time restore](https://pocketone.dev/docs/features/restore) | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
+| [Deploy and live sync](https://pocketone.dev/docs/features/deploy) | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
+| [Remote CLI](https://pocketone.dev/docs/features/remote) | Admin commands against any app, from your terminal, a script or an agent |
+| [API tokens and OAuth](https://pocketone.dev/docs/features/tokens) | Named, scoped tokens you revoke one by one; your app is an OAuth server |
+| [MCP for AI agents](https://pocketone.dev/docs/features/mcp) | `/mcp` on every app, with OAuth sign-in and your own tools from `pb_hooks` |
+| [Bulk mail](https://pocketone.dev/docs/features/bulk-mail) | Campaigns from the dashboard, with unsubscribes, suppression and pacing |
+| [Desktop apps](https://pocketone.dev/docs/extensions/desktop) | The same folder builds into native macOS, Windows and Linux apps with `pocketone desktop build`, each user's data on their machine (preview) |
+| [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml) | One config file, with every extension's options and a `.env` for secrets |
 
 Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to
 build on it, follow its **How it works** links to the [extension](https://pocketone.dev/docs/extensions) pages.
@@ -294,769 +425,14 @@ Smaller additions you'll notice without a page of their own:
 - **Settings and cache:** one settings screen and one shared memory budget for every feature
   ([Settings](https://pocketone.dev/docs/extensions/settings), [Cache](https://pocketone.dev/docs/extensions/cache)).
 
-Coming from PocketBase? [What stays the same](https://pocketone.dev/docs/pocketbase).
-
-
----
-
-Source: https://pocketone.dev/docs/features/restore
-
-# Point-in-time restore
-
-> **PocketBase:** backups you schedule, restored whole. **PocketOne:** every change is recorded, and you restore to any second in the last 72 hours.
-
-Deleted the wrong records, ran a bad migration, or let a script loose on production? Pick a moment from before it
-happened, and your app's data goes back to how it was then.
-
-This is on for every PocketOne app. You don't need to set anything up.
-
-## How far back you can go
-
-PocketOne records every change to your database as it happens and keeps **the last 72 hours**. You can restore to any
-second inside that window.
-
-If history recording is turned off, the app restores from your PocketBase backups instead: the latest backup made at or
-before the moment you pick. The steps below are the same either way. The app tells you which point it used.
-
-## Restore from the dashboard
-
-1. Sign in to the dashboard as a superuser and open **Settings → Backups**.
-2. Find **Restore to a moment**. It shows how far back you can go.
-3. Under **Restore to**, pick the date and time to go back to, then click **Restore**.
-
-The app keeps serving while it rebuilds the old data, then restarts with it. That takes a few seconds for most apps.
-
-## Changed your mind? Undo the restore
-
-The data you replaced is kept, and changes keep being recorded after a restore. So after a restore, the section shows
-when you restored and to what time, with an **Undo this restore** button. Click it to put things back as they were
-just before you restored.
-
-## What's covered
-
-- **Restored:** your database: records, collections, rules, settings and superusers.
-- **Not restored:** uploaded files, `pb_hooks`, `pb_public` and the logs. Keep those in your PocketBase backups, or in
-  your own source control.
-
-Only superusers can see or run a restore.
-
-## From your terminal
-
-Sign in to your app once ([Remote CLI](https://pocketone.dev/docs/features/remote)), then:
-
-```bash
-pocketone remote restore points        # how far back you can go
-pocketone remote restore to --at -2h   # back to two hours ago
-```
-
-`--at` takes a duration from now (`-2h`, `-30m`), a local time (`2026-11-10 15:00`) or an RFC 3339 time
-(`2026-11-10T15:00:00Z`).
-
-On the machine that runs the app, you can also work from its files directly. Pull a copy of the old database to look
-through without touching the live one, or restore in place while the server is stopped (it's swapped in at the next
-start):
-
-```bash
-pocketone pitr restore --at 2026-11-10T15:00:00Z --to /tmp/then.db   # a copy, safe any time
-pocketone pitr restore --at 2026-11-10T15:00:00Z                     # in place, server stopped
-```
-
-## From an agent
-
-An agent connected to your app over [MCP](https://pocketone.dev/docs/reference/mcp) has two tools: `restore_points` to see how far back it
-can go, and `restore_restore_to` to restore. It needs a token with the `restore` scope, and only a superuser can grant
-one.
-
-## Keep history somewhere safer
-
-By default, history is kept on the same disk as your database. That protects you from mistakes, but not from losing
-the disk. To keep it in your own S3-compatible bucket, open **Settings → Backups → Point-in-time restore**, tick **Store
-the history in my own S3 bucket**, fill in the bucket details, click **Test connection**, then **Save**.
-
-## Change how far back it goes, or turn it off
-
-In `pocketone.yaml`:
-
-```yaml
-pitr:
-  retention: 168h   # keep a week instead of 72 hours
-  # enabled: false  # stop recording; restores then use your backups
-```
-
-A longer window uses more storage. Every key is in the [pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
-
-## How it works
-
-- [PITR](https://pocketone.dev/docs/extensions/pitr) records the history with Litestream and restores to any second.
-- [Backups](https://pocketone.dev/docs/extensions/backups) restores from PocketBase's own backups when PITR is off.
-- Both answer the same [restore/v1](https://pocketone.dev/docs/contracts/restore/v1) contract, which is why the dashboard, the command and
-  the MCP tools don't care which one is on.
-
-
----
-
-Source: https://pocketone.dev/docs/features/deploy
-
-# Deploy and live sync
-
-> **PocketBase:** you copy files to the server yourself and restart it. **PocketOne:** `pocketone deploy` uploads only what changed, and `pocketone dev` keeps a folder in step both ways.
-
-Write your hooks, migrations and pages on your own machine, then send them to your running app with one command. Only
-the files that changed are uploaded, and the app swaps them in while it keeps serving.
-
-This is on for every PocketOne app. Its superusers can deploy to it, and the `pocketone` command can deploy to any
-PocketOne app. You don't need to set anything up.
-
-## Deploy from your terminal
-
-Run these from your project folder, the one that holds `pb_hooks`, `pb_pages` and the rest:
-
-```bash
-pocketone link https://myapp.example.com   # add the app as a remote and sign in, once
-pocketone deploy                           # upload what changed
-```
-
-`link` signs you in through your browser when the app offers it, or asks for an API token. When the deploy is done you
-see a line like `Deployed <id>: 3 changed, 0 deleted, 41 unchanged.` With nothing to send, it says
-`Up to date: no changes.`
-
-A few more ways to run it:
-
-```bash
-pocketone deploy prod -m "fix signup"   # to the remote named prod, with a note
-pocketone deploy --dry-run              # list what would be sent, send nothing
-pocketone deploy --restart              # restart afterwards if migrations or packages changed
-pocketone restart                       # restart later instead
-```
-
-Every command takes a remote's name or a URL. Without one, it uses the project's default remote.
-[Remote CLI](https://pocketone.dev/docs/features/remote) covers adding more remotes and signing in.
-
-## When changes take effect
-
-- **Right away:** `pb_hooks`, `pb_pages` and `pb_public`. Hooks reload by themselves, and pages and public files are
-  read fresh on the next request.
-- **After a restart:** migrations and npm packages. The deploy tells you `Migrations or packages changed` and leaves
-  the restart to you: pass `--restart`, or run `pocketone restart`. Your first deploy that creates `pb_hooks` needs a
-  restart too.
-
-A deploy never restarts the app on its own.
-
-## Work live with `dev`
-
-```bash
-pocketone dev
-```
-
-`dev` keeps your folder and the app in step both ways, and streams the app's logs. Your edits go up half a second after
-you save. Changes made on the app, such as the migrations the dashboard writes when you edit a collection, come down
-within a few seconds. After you upload a migration or new packages, type `r` and Enter to restart the app. Stop with
-Ctrl+C.
-
-If a file changed on both sides, your copy wins and the app's copy is saved in `.pocketone/conflicts/`. `dev` keeps
-its state in `.pocketone/`, so add that folder to `.gitignore`. To leave files out, list gitignore-style patterns in
-`.pocketoneignore`.
-
-## Pull files and read logs
-
-```bash
-pocketone pull                         # download pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json
-pocketone pull pb_hooks pb_public/index.html
-pocketone logs                         # the last 100 lines, then follow
-```
-
-## Deploy from CI
-
-1. Sign in to the dashboard as a superuser and open **Settings → API tokens**.
-2. Fill in a **Name**, such as `ci`.
-3. Under **Scopes**, tick `deploy`. Add `remote` if CI will pass `--restart`.
-4. Click **Create token** and copy it. It's shown only once.
-
-In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for the remote named `prod`) to that token, then run
-`pocketone deploy --restart`. The commit is recorded from `$GITHUB_SHA`, `$CI_COMMIT_SHA` or git `HEAD`, or pass
-`--commit`.
-
-## From an agent
-
-An agent with a terminal runs the same `pocketone deploy`. Over [MCP](https://pocketone.dev/docs/reference/mcp), it can restart the app
-with `remote_restart` and read its log with `remote_logs`. There's no MCP tool that uploads files.
-
-## What's sent
-
-- **Sent:** every `pb_*` folder except `pb_data` (so `pb_hooks`, `pb_migrations`, `pb_pages`, `pb_public`,
-  `pb_templates`), plus `package.json`, `bun.lock` or `bun.lockb`, and `patches/`. Dotfiles are included, such as
-  `pb_public/.well-known`.
-- **Packages:** with a `package.json`, the production `node_modules` tree goes too, so your hooks can `require` npm
-  packages. Dev dependencies stay behind. `--no-node-modules` leaves the app's `node_modules` alone.
-- **Never sent:** `pb_data` (your live data), `.git*` files and symlinks. Add your own patterns with `-e`.
-
-Only superusers, or an API token with the `deploy` scope, can deploy. A token with `deploy:read` can only pull files
-and read logs. Every deploy is recorded in the app's `_deploys` collection: who, when, what changed, the commit and your
-note. Superusers can browse it in the dashboard.
-
-## Change it
-
-There's nothing to set in `pocketone.yaml`. Your project's remotes are kept in `.pocketbase/remotes.json`, which you
-can commit. Your logins are saved in your home folder, never in the project. Every `pocketone.yaml` key is in the
-[pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
-
-## How it works
-
-- [Deploy](https://pocketone.dev/docs/extensions/deploy) gives the app its deploy API and adds the `deploy`, `dev`, `pull`, `logs` and
-  `restart` commands.
-- [Remotes](https://pocketone.dev/docs/extensions/remotes) keeps your remotes and logins, and gives the app its restart and logs.
-- [Tokens](https://pocketone.dev/docs/extensions/tokens) makes the API tokens CI uses.
-- The commands talk to the [deploy/v1](https://pocketone.dev/docs/contracts/deploy/v1) and [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)
-  contracts, so they work against any app or host that offers them.
-
-
----
-
-Source: https://pocketone.dev/docs/features/remote
-
-# Remote CLI
-
-> **PocketBase:** the CLI works only on the machine that holds `pb_data`. **PocketOne:** sign in once, then run admin commands against any app from your terminal, a script or an agent.
-
-Everything an extension lets you do to an app, you can do from afar, three ways:
-
-- the `pocketone` command, against any app you've signed in to;
-- the REST API, from a script or another service;
-- MCP, from an agent such as Claude.
-
-Nobody writes these by hand. Each extension API is a [contract](https://pocketone.dev/docs/how-pocketone-fits-together): a Go interface with one method per
-operation. PocketOne generates the command, the endpoint and the tool from that interface. Install an extension, or
-use a host that provides a contract, and its commands show up in the `pocketone` you already have. There's no other
-tool to install.
-
-## From your terminal
-
-Sign in to an app once, then run its commands:
-
-```bash
-pocketone remote add prod https://myapp.example.com --default
-pocketone login prod
-pocketone remote whoami        # who you are there, your token's scopes, and the contracts the app offers
-pocketone remote restore points
-pocketone remote restore to --at -2h
-```
-
-`remote restore to` calls [restore/v1](https://pocketone.dev/docs/contracts/restore/v1) on the app. On an app with
-[PITR](https://pocketone.dev/docs/extensions/pitr), you get the data as it was two hours ago, to the second. On an app with
-[Backups](https://pocketone.dev/docs/extensions/backups) only, you get the latest backup before that. The command is the same either way.
-
-How a command is named and read:
-
-- **Name:** `remote`, the contract's name, then the operation. restore/v1's `restore_to` is `remote restore to`,
-  mail.suppression/v1's `check` is `remote mail suppression check`, remote/v1's `status` is `remote status`.
-- **Flags:** one per field of the operation's input: `--at`, `--email`, `--campaign`.
-  - Times take RFC 3339 (`2026-11-10T15:00:00Z`), a local time (`2026-11-10 15:00`) or a duration from now (`-2h`).
-  - Lists take `a,b` or a repeated flag.
-  - Anything else takes JSON, or `@file` to read it from a file.
-- **Whole input:** `--json` takes the whole input as JSON (`@file` reads a file, `-` reads stdin). Flags you also
-  give override its fields.
-- **Which app:** `--remote` (`-r`) takes a remote's name or a URL. Without it you get the project's default remote.
-- **Output:** JSON, so you can pipe it to `jq`. A stream (`remote logs`) prints one JSON line per entry until Ctrl-C.
-- **Errors:** if the app doesn't offer the contract, the command says so ("this remote doesn't offer restore/v1").
-
-In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for one remote) to an [API token](https://pocketone.dev/docs/extensions/tokens) instead of
-signing in. [Remotes](https://pocketone.dev/docs/extensions/remotes) covers remotes and saved logins.
-
-## From a script: REST
-
-Every operation is an endpoint under `/api/_c/<contract>/`:
-
-```bash
-curl -X POST https://myapp.example.com/api/_c/restore/v1/restore \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"at": "2026-11-10T15:00:00Z"}'
-```
-
-`GET /api/_c/remote/v1` is the one fixed path. It answers who you are and lists every contract the app offers.
-
-## From an agent: MCP
-
-An app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extensions/mcp)). Each operation is a tool named after its contract and
-operation (`restore_points`, `restore_restore_to`, `remote_status`). Add `https://myapp.example.com/mcp` to Claude and
-sign in.
-
-## The same checks every way
-
-The command, the endpoint and the tool all call the contract, so each passes the same checks:
-
-- **Token scope:** each operation needs a token scope (`restore`, `restore:read`). An API token carries only the
-  scopes it was given. A superuser's own sign-in passes all of them.
-- **Superuser:** only superusers may call an operation, unless it's public.
-- **Hooks:** the same hooks run, in Go and in `pb_hooks` (`onRestoreRestoreTo`).
-
-## Every command, endpoint and tool
-
-- [CLI reference](https://pocketone.dev/docs/reference/cli): every command of `pocketone`, PocketBase's own included.
-- [REST reference](https://pocketone.dev/docs/reference/rest): every contract endpoint.
-- [MCP reference](https://pocketone.dev/docs/reference/mcp): every contract tool.
-
-Each [contract page](https://pocketone.dev/docs/contracts) lists its operations all three ways. Each extension page lists the commands
-it adds and the contracts it answers.
-
-## Your own commands
-
-An extension can replace a generated command with its own, or add new ones under `remote`, by providing
-[cli.commands/v1](https://pocketone.dev/docs/contracts/cli.commands/v1). [Writing an extension](https://pocketone.dev/docs/writing-an-extension) explains how.
-
-
----
-
-Source: https://pocketone.dev/docs/features/tokens
-
-# API tokens and OAuth
-
-> **PocketBase:** auth tokens carry the account's full rights and can't be revoked one by one. **PocketOne:** named, scoped tokens you revoke individually, and your app is an OAuth server that apps and agents sign in through.
-
-A script, a CI job or another service can't type a password. Give it an API token instead: a long secret that starts
-with `pbt_`, acts as the account that owns it, and can be limited to a few scopes and given an expiry. Revoke it, and
-it stops working at once.
-
-This is on for every PocketOne app. You don't need to set anything up. Ordinary PocketBase sign-ins keep working as
-before.
-
-## Create a token in the dashboard
-
-1. Sign in to the dashboard as a superuser and open **Settings → API tokens** (under **Access**).
-2. Fill in a **Name**, so you can recognize the token later.
-3. Optionally set **Expires in (days)**. Leave it empty and the token never expires.
-4. Tick the **Scopes** the token needs. Tick none and it gets its owner's full rights.
-5. The token is yours by default. To make one for another account, fill in **Owner collection** and
-   **Owner (id or email)**.
-6. Click **Create token**, then copy it. It's shown only once and never stored.
-
-Send it with each request:
-
-```bash
-curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collections/notes/records
-```
-
-## See and revoke tokens
-
-The same screen lists every token: its name, its first characters, owner, scopes, expiry and when it was last used
-(time and IP). Click **Revoke** and confirm to delete one. Anything using it stops working at once.
-
-## Let apps and tools sign in
-
-Some clients sign in for you instead of asking for a pasted token: `pocketone login`, Claude and other
-[AI agents](https://pocketone.dev/docs/features/mcp), or an app of your own. They send you to your app's own sign-in pages:
-
-1. Sign in with whatever the collection allows: a password, an emailed code, or (for app users) Google and
-   other providers, plus a second step if the account has MFA. Click **Sign in as a superuser** to sign in as one.
-2. The consent page names the client and the account it will act as. Choose **Full access**, or **Only these** and
-   tick the scopes it may use.
-3. Click **Allow**.
-
-On a machine with no browser (over SSH, say), the client shows a code instead. Open
-`https://<your app>/api/_c/oauth/v1/device/verify`, enter it under **Connect a device**, sign in and allow. Codes last
-10 minutes.
-
-Each sign-in becomes an API token named `<client> (OAuth)`, bound to exactly what you approved. It shows up under
-**Settings → API tokens** with an `oauth: <client id>` label. Click **Revoke** to disconnect the client.
-`pocketone logout` revokes a browser login from your terminal.
-
-## From your terminal
-
-On the machine that runs the app, the `token` command works on the app's data folder, even before the first serve:
-
-```bash
-pocketone token create --superuser admin@example.com --name ci --scope deploy --ttl 720h   # prints the secret
-pocketone token create --collection users --record user@example.com --name script
-pocketone token list
-pocketone token revoke <id>
-pocketone token revoke --all --superuser admin@example.com
-```
-
-`--scope` can be repeated. Without `--ttl` the token never expires.
-
-For CI that runs `pocketone` against your app, put the token in `P1_TOKEN` instead of signing in
-([Remote CLI](https://pocketone.dev/docs/features/remote)).
-
-To let an app of your own sign people in, register it once:
-
-```bash
-pocketone oauth clients add --name "My app" --redirect https://myapp.example.com/callback
-```
-
-It prints the client id, and a secret once. Add `--public` for a desktop or mobile app with no secret. Claude, the
-`pocketone` CLI and other MCP clients don't need this.
-
-## From pb_hooks
-
-Add your own scopes, and they show up in the dashboard and on the consent page:
-
-```js
-// pb_hooks/scopes.pb.js
-$tokens.registerScope({ name: 'notes:read', description: 'Read notes',
-  paths: ['/api/collections/notes/records'], methods: ['GET'] })
-
-routerAdd('GET', '/api/notes/summary', (e) => { /* ... */ },
-  $apis.requireAuth(), $tokens.requireScope('notes:read'))
-```
-
-A collection rule can check a scope too: `@request.headers.x_token_scope_notes_read = "1"`.
-
-## What a token can do
-
-- **No scopes:** everything its owner can do.
-- **With scopes:** only the requests its scopes cover. Anything else gets `403`.
-- **Which scopes:** the ones features add (`deploy`, and one for each admin feature, often with a `:read`
-  version, such as `restore` and `restore:read`), plus your own. Some, like `deploy`, only superusers can hold. The
-  [CLI reference](https://pocketone.dev/docs/reference/cli) and [MCP reference](https://pocketone.dev/docs/reference/mcp) name the scope each operation needs.
-- **Expiry:** never, unless you set one. Tokens from a sign-in last 30 days, and the client renews them; AI agents'
-  tokens never expire. Expired tokens are deleted once a day.
-- **Gone with the account:** deleting an account deletes its tokens.
-- **No way around a revoke:** a token can't be traded for a PocketBase auth token, so revoking it really ends its
-  access.
-
-Only superusers see **Settings → API tokens**. Other signed-in users manage their own tokens through the
-[token API](https://pocketone.dev/docs/contracts/tokens/v1). A token with scopes can only create tokens within those scopes.
-
-## Change it or turn it off
-
-There's no `pocketone.yaml` key for API tokens: they're always on, and a token does nothing until someone creates one.
-To limit what a token can do, give it scopes and an expiry, or revoke it. Every key is in the
-[pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
-
-To restyle the sign-in pages, copy them into your app with `pocketone template eject oauth`.
-
-## How it works
-
-- [Tokens](https://pocketone.dev/docs/extensions/tokens) stores the tokens (only a hash of each secret), checks them on every request and
-  adds the dashboard screen.
-- [OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) runs the sign-in and consent pages and issues tokens for what you
-  approved.
-- They answer the [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1) and [oauth/v1](https://pocketone.dev/docs/contracts/oauth/v1) contracts.
-- [Templates](https://pocketone.dev/docs/extensions/templates) lets you restyle the sign-in pages.
-
-
----
-
-Source: https://pocketone.dev/docs/features/mcp
-
-# MCP for AI agents
-
-> **PocketBase:** no MCP server. **PocketOne:** every app serves MCP at `/mcp`, with OAuth sign-in, so Claude and other agents work with your app as you.
-
-Point Claude, or any other MCP client, at your app and sign in. The agent can then read and change your data, check on
-the app and run admin tasks, as you and with your rights, nothing more.
-
-Every PocketOne app serves MCP at `/mcp`. It's on by default. You don't need to set anything up.
-
-## Connect Claude
-
-1. In your MCP client, add `https://<your app>/mcp` as a remote MCP server. In Claude, that's a custom connector.
-2. A browser opens on your app's sign-in page. Sign in as an app user, or click **Sign in as a superuser**.
-3. The consent page names the client and the account it will act as. Choose **Full access**, or **Only these** and tick
-   what the agent may do.
-4. Click **Allow**.
-
-The agent stays connected until you disconnect it.
-
-In Claude Code:
-
-```bash
-claude mcp add --transport http my-app https://<your app>/mcp
-claude mcp login my-app        # or /mcp in a session
-```
-
-Claude and Claude Code connect without any setup on your side. Other MCP clients register themselves with your app
-first.
-
-## What the agent can do
-
-Every tool call is one request to your app's own API, made as whoever signed in. Your API rules, hooks and rate limits
-apply as they would to any request.
-
-- **PocketBase's whole API**, as `pb_*` tools: records (`pb_list_records`, `pb_create_record`, …), files and auth for
-  everyone; collections, settings, logs, crons, SQL and backups for superusers. SQL (`pb_run_sql`) goes straight to
-  the database, past API rules and hooks.
-- **Admin tasks** each feature adds, such as `restore_points` and `restore_restore_to` to
-  [undo a mistake](https://pocketone.dev/docs/features/restore), or `remote_status` and `remote_logs` to check on the app. The
-  [MCP reference](https://pocketone.dev/docs/reference/mcp) lists them all.
-- **Your app's own tools**, from `pb_hooks` (below).
-
-A superuser gets what the API gives superusers. An app user gets what your collection rules give them, and doesn't see
-the superuser-only tools.
-
-## Add your own tools
-
-Write the endpoint as you would anyway, then declare its tool at the top level of a `pb_hooks` file:
-
-```js
-// pb_hooks/blog.pb.js
-routerAdd('POST', '/api/blog/posts/{id}/publish', (e) => { /* … */ }, $apis.requireSuperuserAuth())
-
-$mcp.addEndpoint({
-  name: 'blog_publish_post',
-  description: 'Publish a draft post and email subscribers.',
-  method: 'POST',
-  path: '/api/blog/posts/{id}/publish', // {id} comes from the tool's id argument
-  inputSchema: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
-})
-$mcp.instructions('blog_publish_post also emails subscribers.')
-```
-
-The tool runs the request as the caller, so the route's own auth check is what protects it. When your app has its own
-tools, agents are told to prefer them over `pb_*`.
-
-## What's covered
-
-- **Limited to scopes:** with **Only these**, each call is checked like a request from an
-  [API token](https://pocketone.dev/docs/features/tokens) with those scopes. Calls they don't cover get `403`, and tools they can't reach
-  are hidden.
-- **Only for MCP:** the agent's token works on `/mcp` and nowhere else.
-- **Not tools:** sign-in endpoints that hand out a new token, and realtime subscriptions. A file download through
-  `pb_download_file` is capped at 10 MB.
-- **Browsers:** a web page on another site can't call `/mcp`. Clients that send no `Origin` header, such as Claude's
-  servers and Claude Code, can.
-
-Anyone who can sign in to your app can connect an agent, with their own rights. To give an agent less, choose
-**Only these**, or sign it in as an account with fewer rights.
-
-## Disconnect an agent
-
-Each connection is an [API token](https://pocketone.dev/docs/features/tokens) named `<client> (OAuth)`. Open **Settings → API tokens**,
-find the one with the `oauth: <client id>` label, and click **Revoke**.
-
-## Paste a token instead
-
-A client that can't sign in can send a PocketBase auth token, or an API token, as `Authorization: Bearer …`. An API
-token with scopes works only if one of them covers `/mcp`, so to limit an agent, use the consent page instead.
-
-## Change it or turn it off
-
-There's no `pocketone.yaml` key for MCP: it always serves `/mcp`, and an agent can do nothing until someone signs it
-in. The name agents see is your app's **Settings → Application → Application name**. Every key is in the
-[pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
-
-`$mcp` isn't available in `pb_hooks` when the app runs PocketBase's own JS engine (`jsvm: goja`).
-
-## How it works
-
-- [MCP](https://pocketone.dev/docs/extensions/mcp) serves `/mcp` and turns each tool call into a request to your app's API.
-- The [OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) in [Tokens](https://pocketone.dev/docs/extensions/tokens) runs the sign-in and consent
-  pages, and issues the agent's token.
-- Admin tools come from the [contracts](https://pocketone.dev/docs/contracts) your app answers. Another MCP server can stand in through
-  the [mcp/v1](https://pocketone.dev/docs/contracts/mcp/v1) contract and serve the same tools.
-
-Looking to teach a coding agent how to build with PocketOne? That's a different thing: see
-[Teach your coding agent](https://pocketone.dev/docs/agents).
-
-
----
-
-Source: https://pocketone.dev/docs/features/bulk-mail
-
-# Bulk mail
-
-> **PocketBase:** sends account mail (verification, password reset); campaigns need your own code or another service. **PocketOne:** campaigns from the dashboard, with unsubscribes, suppression and pacing handled.
-
-Got a newsletter, a launch or a change to announce? Write it once, pick which users get it, and your app sends it at a
-steady pace through its own mail settings. Every message gets an unsubscribe link, and people who unsubscribe, bounce
-or complain are never mailed again.
-
-This is on for every PocketOne app. Nothing is sent until a superuser starts a campaign.
-
-## Before your first campaign
-
-1. Sign in to the dashboard as a superuser and open **Settings → Mail**. Set up your mail server and sender there, as
-   you would for any PocketBase app. Campaigns send through them.
-2. Below that form, in the **Bulk mail** section, fill in **Postal address**. It's shown in every campaign footer, and
-   anti-spam laws require one. Click **Save bulk mail settings**.
-3. Open **Settings → Application** and check that **Application URL** is the address people reach your app on.
-   Unsubscribe links are built from it.
-
-## Send a campaign from the dashboard
-
-1. Open **Mail** in the dashboard menu and click **New campaign**. It starts as a draft for the verified users of
-   `users`.
-2. Fill in **Name**, **Subject** and **Body**. Use `{{record.name}}` (any field of the user's record), `{{email}}` and
-   `{{campaign.name}}` to fill in each message.
-3. Under **Audience**, pick who gets it. With **Filter**, choose the **Collection**, an optional **Filter** in the same
-   syntax as API rules (such as `verified = true`), and the **Email field**. Click **Count recipients** to see how
-   many match, how many are suppressed, and a few sample addresses.
-4. Click **Save changes**. Click **Preview** to see the message for one recipient, or fill in **Test address** and
-   click **Send test**.
-5. Click **Send** and confirm.
-
-The campaign page shows its progress and a **Recipients** table. While it runs, you can **Pause**, **Resume** or
-**Cancel** it.
-
-To send later, set **Schedule (UTC)** before you save. The button then says **Schedule**. To send slower than your
-app's limit, set **Max per second**.
-
-For audiences a filter can't express, choose **SQL** and write a read-only `SELECT` that returns an `email` column.
-Every other column it returns can be used in the message as `{{record.column}}`. A view works too: pick it as the
-**Collection**.
-
-## Send it again to new users
-
-Each address gets a campaign at most once. Click **Send** on a finished campaign and only users who match now but
-weren't mailed before get it.
-
-## From your terminal
-
-Write the campaign in the dashboard first. Then sign in to your app once
-([Remote CLI](https://pocketone.dev/docs/features/remote)) and run it from your terminal:
-
-```bash
-pocketone remote bulkmail preview --campaign <id>                  # see the message
-pocketone remote bulkmail test --campaign <id> --to you@example.com
-pocketone remote bulkmail start --campaign <id>
-pocketone remote bulkmail pause --campaign <id>                    # also resume, cancel
-```
-
-`--limit 100` on `start` queues at most 100 new recipients, to send a campaign in batches. To see who an audience
-reaches before you send:
-
-```bash
-pocketone remote bulkmail count --audience '{"collection": "users", "filter": "verified = true", "email_field": "email"}'
-```
-
-## From pb_hooks
-
-`$bulkmail` does the same from your JS hooks:
-
-```js
-const { count, suppressed } = $bulkmail.count({ collection: "users", filter: "verified = true", email_field: "email" })
-$bulkmail.start("CAMPAIGN_ID")
-$bulkmail.suppress("someone@example.com")
-```
-
-## From an agent
-
-An agent connected to your app over [MCP](https://pocketone.dev/docs/reference/mcp) has a tool for each step: `bulkmail_count`,
-`bulkmail_preview`, `bulkmail_test`, `bulkmail_start`, `bulkmail_pause`, `bulkmail_resume` and `bulkmail_cancel`.
-Count and preview need a token with the `bulkmail:read` scope, the rest the `bulkmail` scope. Only superusers can run
-campaigns.
-
-## Unsubscribes, bounces and complaints
-
-- **Unsubscribe:** every message ends with a footer holding your postal address and an unsubscribe link. It also
-  carries the one-click unsubscribe headers that Gmail and Yahoo require from bulk senders. Opening the link shows a
-  confirm button, so link scanners can't unsubscribe anyone.
-- **Suppressions:** **Mail → Suppressions** lists the addresses that never get campaign mail, whatever the audience
-  says. Unsubscribes are added automatically. Click **Add address** to add one by hand, or **Export CSV** to download
-  the list.
-- **Bounces and complaints:** to add those to the list too, open **Bounces and complaints** in the **Bulk mail**
-  section. For Amazon SES, subscribe your SNS topic to the **Amazon SES (SNS) endpoint** shown there. For other
-  providers, set a **Webhook secret** and point the provider at the **Generic webhook** URL.
-
-## Limits
-
-- Your app sends at most **5 messages a second** and **5,000 a day** (UTC), across all campaigns. The **Bulk mail**
-  section shows your app's limits and how many it sent today. A host may set other limits for your app.
-- A message counts as sent only once the mail server accepts it, so a restart doesn't send twice or skip anyone.
-- A permanent error from the mail server fails that recipient. Other errors are retried, up to three attempts.
-- A campaign pauses itself when more than 5% of its sends fail after the first 100, or when spam complaints pass 0.3%
-  of its sends (at least 3). The reason shows next to its status.
-
-## Try it locally
-
-In dev mode with SMTP off, `pocketone` catches every mail, campaigns included, in an inbox at http://127.0.0.1:8025:
-
-```bash
-pocketone serve --dev
-```
-
-## Change it
-
-There's no `pocketone.yaml` section for bulk mail; the [pocketone.yaml reference](https://pocketone.dev/docs/config-reference) lists none.
-Sending uses your **Settings → Mail** server and sender, and you lower the pace per campaign with **Max per second**.
-
-## How it works
-
-- [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) runs the campaigns, the pages in the dashboard and `$bulkmail`.
-- [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1) is the contract behind the command, the REST API and the MCP tools.
-- [mail.suppression/v1](https://pocketone.dev/docs/contracts/mail.suppression/v1) keeps the suppression list and the unsubscribe link.
-- [mail.feedback/v1](https://pocketone.dev/docs/contracts/mail.feedback/v1) takes bounce and complaint reports from your mail provider.
-
-
----
-
-Source: https://pocketone.dev/docs/features/sites
-
-# PocketPages sites
-
-> **PocketBase:** `pb_public` serves static files. **PocketOne:** PocketPages renders pages on the server from `pb_pages`, with direct access to your records.
-
-Put EJS or Markdown files in a `pb_pages` folder next to `pb_data`, and your app serves them as web pages. Each file
-is a route, and page code can read and write your records directly. This is PocketPages, built into PocketOne.
-
-It's on for every PocketOne app whenever a `pb_pages` folder exists. No folder, no pages. There's nothing to install
-and no build step.
-
-## Hello world
-
-1. Make a folder for your app with a page in it:
-
-   ```bash
-   mkdir -p myapp/pb_pages && cd myapp
-   echo '<%= `Hello, world!` %>' > pb_pages/index.ejs
-   ```
-
-2. Create a superuser, then start the app:
-
-   ```bash
-   pocketone superuser upsert you@example.com <password> --dir ./pb_data
-   pocketone serve --dir ./pb_data
-   ```
-
-3. Open http://127.0.0.1:8090. You see `Hello, world!`
-
-Edit the file and reload the browser. Changes show up right away, with no restart.
-
-To start from something bigger, `pocketone pages starters` lists the starter kits and
-`pocketone pages create myapp --starter <kit>` makes a new app from one.
-
-## What's covered
-
-- **Files are routes:** `pb_pages/about.ejs` serves `/about`, and `pb_pages/blog/index.ejs` serves `/blog`.
-- **Templates:** EJS, Markdown, JSX and TSX, with layouts, partials, middleware and JSON routes.
-- **Leftovers go on:** a URL no page matches goes on to `pb_public`, then to PocketBase. URLs under `/api/` and `/_/`
-  always belong to PocketBase.
-- **Errors:** in dev mode you get detailed error pages. Otherwise visitors see a plain error page and the details go to
-  the log.
-- **Not with `--jsvm goja`:** pages run in PocketOne's own JS engine, so they're off when you serve with PocketBase's.
-
-To send your pages to a running app, see [Deploy and live sync](https://pocketone.dev/docs/features/deploy).
-
-## Change it
-
-To serve pages from another folder, pass `--pagesDir` to `pocketone serve`, or set `server.pages_dir` in
-`pocketone.yaml` ([pocketone.yaml reference](https://pocketone.dev/docs/config-reference)). Settings for the site itself, such as which
-PocketPages plugins to load, go in `pb_pages/+config.js` ([+config.js](https://pocketone.dev/docs/extensions/pages/config)).
-
-## Learn more
-
-The full PocketPages docs:
-
-- [Installation](https://pocketone.dev/docs/extensions/pages/installation) and [starter kits](https://pocketone.dev/docs/extensions/pages/starter-kits)
-- [Creating a page](https://pocketone.dev/docs/extensions/pages/creating-a-page) and [routing](https://pocketone.dev/docs/extensions/pages/routing)
-- [Loading data](https://pocketone.dev/docs/extensions/pages/loading-data)
-- [Layouts and slots](https://pocketone.dev/docs/extensions/pages/layouts)
-- [Authentication](https://pocketone.dev/docs/extensions/pages/authentication)
-- [Going live](https://pocketone.dev/docs/extensions/pages/deploying)
-
-## How it works
-
-- [Pages](https://pocketone.dev/docs/extensions/pages/extension) serves the `pb_pages` folder and adds the `pages create` and
-  `pages starters` commands. Page code runs in your app's JS engine.
-- [PocketPages](https://pocketone.dev/docs/extensions/pages) is the home of its docs, guides and plugins.
+Coming from PocketBase? [What stays the same, and how each feature compares](https://pocketone.dev/docs/pocketbase).
 
 
 ---
 
 Source: https://pocketone.dev/docs/quickjs
 
-# QuickJS hooks
-
-> **PocketBase:** hooks run on goja: CommonJS only, no async handlers, no state shared between handlers. **PocketOne:** the same JS API on QuickJS, with imports, TypeScript, async handlers, shared globals and hard limits.
+# QuickJS hooks: async, import and TypeScript
 
 PocketOne runs your `pb_hooks` and `pb_migrations` on [QuickJS](https://pocketone.dev/docs/extensions/jsvm) instead of goja, the engine
 stock PocketBase uses. It's the same JS API (`$app`, `routerAdd`, `onRecordCreate`, `cronAdd`, `$http`, …), so your
@@ -1363,11 +739,917 @@ contracts, shared globals and async handlers.
 
 ---
 
+Source: https://pocketone.dev/docs/features/sites
+
+# PocketPages: sites in TSX, TypeScript or EJS
+
+Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in a `pb_pages` folder next to `pb_data`, and your app serves it as a web
+page. Each file is a route. Components `import` each other, route files can be TypeScript (`+page.ts`, `+api.ts`), and
+page code reads and writes your records directly. Every part of a page can `await`, and the app keeps serving other
+requests while it waits. This is PocketPages, built into PocketOne.
+
+esbuild is built into the `pocketone` binary, so TSX and TypeScript compile the first time a page is used: no Node, no
+`npm install`, no bundler, no build step. It's on for every PocketOne app whenever a `pb_pages` folder exists. No folder,
+no pages.
+
+## A product page in TSX
+
+The page is an `async` component: it awaits its record, then renders it with another component.
+
+```tsx
+// pb_pages/products/[id].tsx
+import Price from './_private/Price'
+
+export default async function Product({ ctx }: any) {
+  const product = await ctx.app.findRecordById.async('products', ctx.params.id)
+  return (
+    <article>
+      <h1>{product.getString('name')}</h1>
+      <Price cents={product.getInt('price')} />
+    </article>
+  )
+}
+```
+
+```tsx
+// pb_pages/products/_private/Price.tsx
+export default ({ cents }: { cents: number }) => <span class="price">${(cents / 100).toFixed(2)}</span>
+```
+
+`/products/<id>` now answers with `<article><h1>Mug</h1><span class="price">$12.50</span></article>`. Edit any of the
+files and reload: the change shows up with no restart.
+
+## await anywhere
+
+`.async` twins of Go functions (`findRecordById.async`, `countRecords.async`, ...) do their work
+outside the JS VM, so the app serves other requests while a page waits.
+
+- **Components:** any component can be `async`. Sibling components run at the same time, so these two counts load in
+  parallel:
+
+  ```tsx
+  async function Count({ collection }: { collection: string }) {
+    const n = await $app.countRecords.async(collection)
+    return <b>{n}</b>
+  }
+
+  export default () => <p><Count collection="orders" /> orders, <Count collection="users" /> users</p>
+  ```
+
+- **Loaders and handlers:** `load`, `get`, `post` and the rest in `+page.ts`, `+api.ts` handlers, and `+middleware`
+  can be `async`.
+- **EJS:** a tag can `await`: `<% const n = await ctx.app.countRecords.async('orders') %>`.
+- **Sync stays free:** a page without `await` runs exactly as before.
+
+[Loading data](https://pocketone.dev/docs/extensions/pages/loading-data#async-loading), [EJS](https://pocketone.dev/docs/extensions/pages/ejs#await) and
+[JSX and TSX](https://pocketone.dev/docs/extensions/pages/jsx#async-components) have the details.
+
+JSX renders to plain HTML on the server. There's no virtual DOM and no client-side React, so pair it with htmx,
+Datastar or plain `<script>` tags for interactivity. TypeScript types are stripped, not checked; run `tsc --noEmit` or
+rely on your editor. [JSX and TSX](https://pocketone.dev/docs/extensions/pages/jsx) has the details.
+
+## Prefer EJS? Hello world
+
+1. Make a folder for your app with a page in it:
+
+   ```bash
+   mkdir -p myapp/pb_pages && cd myapp
+   echo '<%= `Hello, world!` %>' > pb_pages/index.ejs
+   ```
+
+2. Create a superuser, then start the app:
+
+   ```bash
+   pocketone superuser upsert you@example.com <password> --dir ./pb_data
+   pocketone serve --dir ./pb_data
+   ```
+
+3. Open http://127.0.0.1:8090. You see `Hello, world!`
+
+Edit the file and reload the browser. Changes show up right away, with no restart.
+
+To start from something bigger, `pocketone pages starters` lists the starter kits and
+`pocketone pages create myapp --starter <kit>` makes a new app from one.
+
+## What's covered
+
+- **Files are routes:** `pb_pages/about.ejs` serves `/about`, and `pb_pages/blog/index.ejs` serves `/blog`.
+- **Templates:** TSX, JSX, EJS and Markdown, mixed freely (an EJS page can sit in a TSX layout), with layouts,
+  partials, middleware and JSON routes. Route files (`+page`, `+api`, `+middleware`) can be `.ts` or `.js`.
+- **Leftovers go on:** a URL no page matches goes on to `pb_public`, then to PocketBase. URLs under `/api/` and `/_/`
+  always belong to PocketBase.
+- **Errors:** in dev mode you get detailed error pages. Otherwise visitors see a plain error page and the details go to
+  the log.
+- **Not with `--jsvm goja`:** pages run in PocketOne's own JS engine, so they're off when you serve with PocketBase's.
+
+To send your pages to a running app, see [Deploy and live sync](https://pocketone.dev/docs/features/deploy).
+
+## Change it
+
+To serve pages from another folder, pass `--pagesDir` to `pocketone serve`, or set `server.pages_dir` in
+`pocketone.yaml` ([pocketone.yaml reference](https://pocketone.dev/docs/config-reference)). Settings for the site itself, such as which
+PocketPages plugins to load, go in `pb_pages/+config.js` ([+config.js](https://pocketone.dev/docs/extensions/pages/config)).
+
+## Learn more
+
+The full PocketPages docs:
+
+- [Installation](https://pocketone.dev/docs/extensions/pages/installation) and [starter kits](https://pocketone.dev/docs/extensions/pages/starter-kits)
+- [JSX and TSX](https://pocketone.dev/docs/extensions/pages/jsx)
+- [Creating a page](https://pocketone.dev/docs/extensions/pages/creating-a-page) and [routing](https://pocketone.dev/docs/extensions/pages/routing)
+- [Loading data](https://pocketone.dev/docs/extensions/pages/loading-data)
+- [Layouts and slots](https://pocketone.dev/docs/extensions/pages/layouts)
+- [Authentication](https://pocketone.dev/docs/extensions/pages/authentication)
+- [Going live](https://pocketone.dev/docs/extensions/pages/deploying)
+
+## How it works
+
+- [Pages](https://pocketone.dev/docs/extensions/pages/extension) serves the `pb_pages` folder and adds the `pages create` and
+  `pages starters` commands. Page code runs in your app's JS engine.
+- [PocketPages](https://pocketone.dev/docs/extensions/pages) is the home of its docs, guides and plugins.
+
+
+---
+
+Source: https://pocketone.dev/docs/features/isolates
+
+# PocketBase isolates: hundreds of apps in one process
+
+An isolate is a complete PocketOne app: its own folder, `pb_data`, `pb_hooks`, `pb_migrations`, dashboard and
+superusers, at its own hostname. What's different is where it runs. Instead of a process or container of its own, it
+runs inside one shared `pocketone` process, with its own JavaScript VM, and the host routes each request to it by
+hostname.
+
+Most apps sit idle most of the time, so a process or container per app is mostly paying for nothing. Isolates make a
+server full of PocketBase apps cheap: SaaS with one app per customer, a site per client, a preview app per branch.
+
+It's built into `pocketone`. You don't need Docker, Kubernetes or a separate host program.
+
+## Try it in a minute
+
+Put this `pocketone.yaml` in an empty folder:
+
+```yaml
+server: { http: "127.0.0.1:8090" }
+multisite: {}
+instances: { dev: true }
+pocker: { root: ./pb_root }
+```
+
+Start it, then ask for any hostname:
+
+```bash
+pocketone serve
+curl -H 'Host: blog.localhost' http://127.0.0.1:8090/api/health
+curl -H 'Host: shop.localhost' http://127.0.0.1:8090/api/health
+```
+
+In dev mode, each new hostname becomes an app: its folder appears under `pb_root/` and it starts on that first
+request. Open `http://blog.localhost:8090/_/` for that app's own dashboard.
+
+On a laptop, each new app answered its first request in about 45 ms, and later requests in under a millisecond. A
+hundred running apps took the process from 53 MB to 365 MB: about 3 MB each.
+
+## Run it for real
+
+List your apps and their hostnames in an instances file:
+
+```yaml
+# instances.yaml
+instances:
+  - id: blog                          # also its folder: pb_root/blog
+    hosts: [blog.example.com]
+  - id: shop
+    hosts: [shop.example.com]
+    secrets: { STRIPE_KEY: sk_live_... }   # seen only by this app's hooks
+    limits: { max_js_execution: 60s }
+```
+
+```yaml
+# pocketone.yaml
+multisite: {}
+instances: { file: ./instances.yaml }
+pocker: { root: ./pb_root }
+```
+
+The host checks the file every 2 seconds, so adding, changing or removing an app needs no restart. In production,
+only the hostnames listed there are served. [Auto TLS](https://pocketone.dev/docs/extensions/autotls) gets certificates for them.
+
+## What each app gets
+
+- **Everything a PocketOne app has.** [Point-in-time restore](https://pocketone.dev/docs/features/restore), [API tokens](https://pocketone.dev/docs/features/tokens),
+  [MCP](https://pocketone.dev/docs/features/mcp), [PocketPages](https://pocketone.dev/docs/features/sites), [bulk mail](https://pocketone.dev/docs/features/bulk-mail) and the rest
+  are on in every isolate. Each can be turned off per app.
+- **Its own deploys.** [`pocketone deploy`](https://pocketone.dev/docs/features/deploy) and the [Remote CLI](https://pocketone.dev/docs/features/remote) work
+  against each app's hostname.
+- **Its own restarts.** A change to its `pb_hooks`, a restore or its settings restarts that app alone. Nothing else
+  notices.
+
+## Sandboxed from each other
+
+Isolates share a process, so PocketOne puts the walls inside it. Assume every app's owner is hostile:
+
+- **Memory:** each app's JS has a hard cap (64 MiB by default). Going past it is an out-of-memory error for that app
+  only.
+- **CPU:** every JS call (hook, route, cron, migration) is stopped after `max_js_execution`. At most
+  `max_concurrent_js` calls per app run at once.
+- **Files, SQL and network:** an app's hooks and SQL reach only its own data. Outbound requests can't reach private
+  networks unless you allow them.
+- **Failures stay put:** a broken hooks file, a panic or a failed migration takes down that app alone. It answers 502
+  until it's fixed.
+- **Secrets:** each app's hooks see only its own `secrets`.
+
+Every limit has a default for the whole host and an override per app. [Sandbox](https://pocketone.dev/docs/extensions/sandbox) lists every
+check.
+
+## When to use containers instead
+
+An isolate runs the PocketOne code in the `pocketone` binary. For an app that needs a specific PocketBase release, use
+the [Docker](https://pocketone.dev/docs/extensions/docker) runtime, which runs each app in its own container with the official binary of the
+version it asks for. One host can run both.
+
+## How it works
+
+- [Multisite](https://pocketone.dev/docs/extensions/multisite) takes over `serve` when `pocketone.yaml` has a `multisite` section. It
+  routes each request by hostname, applies the gates, and hands it to a runtime.
+- [Pocker](https://pocketone.dev/docs/extensions/pocker) is the runtime that runs apps as isolates in the host's process.
+- [Sandbox](https://pocketone.dev/docs/extensions/sandbox) confines each isolate's JS, SQL and outbound network.
+- [Docker](https://pocketone.dev/docs/extensions/docker) is the container runtime, for apps that need it.
+
+
+---
+
+Source: https://pocketone.dev/docs/features/restore
+
+# Point-in-time restore
+
+Deleted the wrong records, ran a bad migration, or let a script loose on production? Pick a moment from before it
+happened, and your app's data goes back to how it was then.
+
+This is on for every PocketOne app. You don't need to set anything up.
+
+## How far back you can go
+
+PocketOne records every change to your database as it happens and keeps **the last 72 hours**. You can restore to any
+second inside that window.
+
+If history recording is turned off, the app restores from your PocketBase backups instead: the latest backup made at or
+before the moment you pick. The steps below are the same either way. The app tells you which point it used.
+
+## Restore from the dashboard
+
+1. Sign in to the dashboard as a superuser and open **Settings → Backups**.
+2. Find **Restore to a moment**. It shows how far back you can go.
+3. Under **Restore to**, pick the date and time to go back to, then click **Restore**.
+
+The app keeps serving while it rebuilds the old data, then restarts with it. That takes a few seconds for most apps.
+
+## Changed your mind? Undo the restore
+
+The data you replaced is kept, and changes keep being recorded after a restore. So after a restore, the section shows
+when you restored and to what time, with an **Undo this restore** button. Click it to put things back as they were
+just before you restored.
+
+## What's covered
+
+- **Restored:** your database: records, collections, rules, settings and superusers.
+- **Not restored:** uploaded files, `pb_hooks`, `pb_public` and the logs. Keep those in your PocketBase backups, or in
+  your own source control.
+
+Only superusers can see or run a restore.
+
+## From your terminal
+
+Sign in to your app once ([Remote CLI](https://pocketone.dev/docs/features/remote)), then:
+
+```bash
+pocketone remote restore points        # how far back you can go
+pocketone remote restore to --at -2h   # back to two hours ago
+```
+
+`--at` takes a duration from now (`-2h`, `-30m`), a local time (`2026-11-10 15:00`) or an RFC 3339 time
+(`2026-11-10T15:00:00Z`).
+
+On the machine that runs the app, you can also work from its files directly. Pull a copy of the old database to look
+through without touching the live one, or restore in place while the server is stopped (it's swapped in at the next
+start):
+
+```bash
+pocketone pitr restore --at 2026-11-10T15:00:00Z --to /tmp/then.db   # a copy, safe any time
+pocketone pitr restore --at 2026-11-10T15:00:00Z                     # in place, server stopped
+```
+
+## From an agent
+
+An agent connected to your app over [MCP](https://pocketone.dev/docs/reference/mcp) has two tools: `restore_points` to see how far back it
+can go, and `restore_restore_to` to restore. It needs a token with the `restore` scope, and only a superuser can grant
+one.
+
+## Keep history somewhere safer
+
+By default, history is kept on the same disk as your database. That protects you from mistakes, but not from losing
+the disk. To keep it in your own S3-compatible bucket, open **Settings → Backups → Point-in-time restore**, tick **Store
+the history in my own S3 bucket**, fill in the bucket details, click **Test connection**, then **Save**.
+
+## Change how far back it goes, or turn it off
+
+In `pocketone.yaml`:
+
+```yaml
+pitr:
+  retention: 168h   # keep a week instead of 72 hours
+  # enabled: false  # stop recording; restores then use your backups
+```
+
+A longer window uses more storage. Every key is in the [pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
+
+## How it works
+
+- [PITR](https://pocketone.dev/docs/extensions/pitr) records the history with Litestream and restores to any second.
+- [Backups](https://pocketone.dev/docs/extensions/backups) restores from PocketBase's own backups when PITR is off.
+- Both answer the same [restore/v1](https://pocketone.dev/docs/contracts/restore/v1) contract, which is why the dashboard, the command and
+  the MCP tools don't care which one is on.
+
+
+---
+
+Source: https://pocketone.dev/docs/features/deploy
+
+# Deploy and live sync
+
+Write your hooks, migrations and pages on your own machine, then send them to your running app with one command. Only
+the files that changed are uploaded, and the app swaps them in while it keeps serving.
+
+This is on for every PocketOne app. Its superusers can deploy to it, and the `pocketone` command can deploy to any
+PocketOne app. You don't need to set anything up.
+
+## Deploy from your terminal
+
+Run these from your project folder, the one that holds `pb_hooks`, `pb_pages` and the rest:
+
+```bash
+pocketone link https://myapp.example.com   # add the app as a remote and sign in, once
+pocketone deploy                           # upload what changed
+```
+
+`link` signs you in through your browser when the app offers it, or asks for an API token. When the deploy is done you
+see a line like `Deployed <id>: 3 changed, 0 deleted, 41 unchanged.` With nothing to send, it says
+`Up to date: no changes.`
+
+A few more ways to run it:
+
+```bash
+pocketone deploy prod -m "fix signup"   # to the remote named prod, with a note
+pocketone deploy --dry-run              # list what would be sent, send nothing
+pocketone deploy --restart              # restart afterwards if migrations or packages changed
+pocketone restart                       # restart later instead
+```
+
+Every command takes a remote's name or a URL. Without one, it uses the project's default remote.
+[Remote CLI](https://pocketone.dev/docs/features/remote) covers adding more remotes and signing in.
+
+## When changes take effect
+
+- **Right away:** `pb_hooks`, `pb_pages` and `pb_public`. Hooks reload by themselves, and pages and public files are
+  read fresh on the next request.
+- **After a restart:** migrations and npm packages. The deploy tells you `Migrations or packages changed` and leaves
+  the restart to you: pass `--restart`, or run `pocketone restart`. Your first deploy that creates `pb_hooks` needs a
+  restart too.
+
+A deploy never restarts the app on its own.
+
+## Work live with `dev`
+
+```bash
+pocketone dev
+```
+
+`dev` keeps your folder and the app in step both ways, and streams the app's logs. Your edits go up half a second after
+you save. Changes made on the app, such as the migrations the dashboard writes when you edit a collection, come down
+within a few seconds. After you upload a migration or new packages, type `r` and Enter to restart the app. Stop with
+Ctrl+C.
+
+If a file changed on both sides, your copy wins and the app's copy is saved in `.pocketone/conflicts/`. `dev` keeps
+its state in `.pocketone/`, so add that folder to `.gitignore`. To leave files out, list gitignore-style patterns in
+`.pocketoneignore`.
+
+## Pull files and read logs
+
+```bash
+pocketone pull                         # download pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json
+pocketone pull pb_hooks pb_public/index.html
+pocketone logs                         # the last 100 lines, then follow
+```
+
+## Deploy from CI
+
+1. Sign in to the dashboard as a superuser and open **Settings → API tokens**.
+2. Fill in a **Name**, such as `ci`.
+3. Under **Scopes**, tick `deploy`. Add `remote` if CI will pass `--restart`.
+4. Click **Create token** and copy it. It's shown only once.
+
+In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for the remote named `prod`) to that token, then run
+`pocketone deploy --restart`. The commit is recorded from `$GITHUB_SHA`, `$CI_COMMIT_SHA` or git `HEAD`, or pass
+`--commit`.
+
+## From an agent
+
+An agent with a terminal runs the same `pocketone deploy`. Over [MCP](https://pocketone.dev/docs/reference/mcp), it can restart the app
+with `remote_restart` and read its log with `remote_logs`. There's no MCP tool that uploads files.
+
+## What's sent
+
+- **Sent:** every `pb_*` folder except `pb_data` (so `pb_hooks`, `pb_migrations`, `pb_pages`, `pb_public`,
+  `pb_templates`), plus `package.json`, `bun.lock` or `bun.lockb`, and `patches/`. Dotfiles are included, such as
+  `pb_public/.well-known`.
+- **Packages:** with a `package.json`, the production `node_modules` tree goes too, so your hooks can `require` npm
+  packages. Dev dependencies stay behind. `--no-node-modules` leaves the app's `node_modules` alone.
+- **Never sent:** `pb_data` (your live data), `.git*` files and symlinks. Add your own patterns with `-e`.
+
+Only superusers, or an API token with the `deploy` scope, can deploy. A token with `deploy:read` can only pull files
+and read logs. Every deploy is recorded in the app's `_deploys` collection: who, when, what changed, the commit and your
+note. Superusers can browse it in the dashboard.
+
+## Change it
+
+There's nothing to set in `pocketone.yaml`. Your project's remotes are kept in `.pocketbase/remotes.json`, which you
+can commit. Your logins are saved in your home folder, never in the project. Every `pocketone.yaml` key is in the
+[pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
+
+## How it works
+
+- [Deploy](https://pocketone.dev/docs/extensions/deploy) gives the app its deploy API and adds the `deploy`, `dev`, `pull`, `logs` and
+  `restart` commands.
+- [Remotes](https://pocketone.dev/docs/extensions/remotes) keeps your remotes and logins, and gives the app its restart and logs.
+- [Tokens](https://pocketone.dev/docs/extensions/tokens) makes the API tokens CI uses.
+- The commands talk to the [deploy/v1](https://pocketone.dev/docs/contracts/deploy/v1) and [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)
+  contracts, so they work against any app or host that offers them.
+
+
+---
+
+Source: https://pocketone.dev/docs/features/remote
+
+# Remote CLI
+
+Everything an extension lets you do to an app, you can do from afar, three ways:
+
+- the `pocketone` command, against any app you've signed in to;
+- the REST API, from a script or another service;
+- MCP, from an agent such as Claude.
+
+Nobody writes these by hand. Each extension API is a [contract](https://pocketone.dev/docs/how-pocketone-fits-together): a Go interface with one method per
+operation. PocketOne generates the command, the endpoint and the tool from that interface. Install an extension, or
+use a host that provides a contract, and its commands show up in the `pocketone` you already have. There's no other
+tool to install.
+
+## From your terminal
+
+Sign in to an app once, then run its commands:
+
+```bash
+pocketone remote add prod https://myapp.example.com --default
+pocketone login prod
+pocketone remote whoami        # who you are there, your token's scopes, and the contracts the app offers
+pocketone remote restore points
+pocketone remote restore to --at -2h
+```
+
+`remote restore to` calls [restore/v1](https://pocketone.dev/docs/contracts/restore/v1) on the app. On an app with
+[PITR](https://pocketone.dev/docs/extensions/pitr), you get the data as it was two hours ago, to the second. On an app with
+[Backups](https://pocketone.dev/docs/extensions/backups) only, you get the latest backup before that. The command is the same either way.
+
+How a command is named and read:
+
+- **Name:** `remote`, the contract's name, then the operation. restore/v1's `restore_to` is `remote restore to`,
+  mail.suppression/v1's `check` is `remote mail suppression check`, remote/v1's `status` is `remote status`.
+- **Flags:** one per field of the operation's input: `--at`, `--email`, `--campaign`.
+  - Times take RFC 3339 (`2026-11-10T15:00:00Z`), a local time (`2026-11-10 15:00`) or a duration from now (`-2h`).
+  - Lists take `a,b` or a repeated flag.
+  - Anything else takes JSON, or `@file` to read it from a file.
+- **Whole input:** `--json` takes the whole input as JSON (`@file` reads a file, `-` reads stdin). Flags you also
+  give override its fields.
+- **Which app:** `--remote` (`-r`) takes a remote's name or a URL. Without it you get the project's default remote.
+- **Output:** JSON, so you can pipe it to `jq`. A stream (`remote logs`) prints one JSON line per entry until Ctrl-C.
+- **Errors:** if the app doesn't offer the contract, the command says so ("this remote doesn't offer restore/v1").
+
+In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for one remote) to an [API token](https://pocketone.dev/docs/extensions/tokens) instead of
+signing in. [Remotes](https://pocketone.dev/docs/extensions/remotes) covers remotes and saved logins.
+
+## From a script: REST
+
+Every operation is an endpoint under `/api/_c/<contract>/`:
+
+```bash
+curl -X POST https://myapp.example.com/api/_c/restore/v1/restore \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"at": "2026-11-10T15:00:00Z"}'
+```
+
+`GET /api/_c/remote/v1` is the one fixed path. It answers who you are and lists every contract the app offers.
+
+## From an agent: MCP
+
+An app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extensions/mcp)). Each operation is a tool named after its contract and
+operation (`restore_points`, `restore_restore_to`, `remote_status`). Add `https://myapp.example.com/mcp` to Claude and
+sign in.
+
+## The same checks every way
+
+The command, the endpoint and the tool all call the contract, so each passes the same checks:
+
+- **Token scope:** each operation needs a token scope (`restore`, `restore:read`). An API token carries only the
+  scopes it was given. A superuser's own sign-in passes all of them.
+- **Superuser:** only superusers may call an operation, unless it's public.
+- **Hooks:** the same hooks run, in Go and in `pb_hooks` (`onRestoreRestoreTo`).
+
+## Every command, endpoint and tool
+
+- [CLI reference](https://pocketone.dev/docs/reference/cli): every command of `pocketone`, PocketBase's own included.
+- [REST reference](https://pocketone.dev/docs/reference/rest): every contract endpoint.
+- [MCP reference](https://pocketone.dev/docs/reference/mcp): every contract tool.
+
+Each [contract page](https://pocketone.dev/docs/contracts) lists its operations all three ways. Each extension page lists the commands
+it adds and the contracts it answers.
+
+## Your own commands
+
+An extension can replace a generated command with its own, or add new ones under `remote`, by providing
+[cli.commands/v1](https://pocketone.dev/docs/contracts/cli.commands/v1). [Writing an extension](https://pocketone.dev/docs/writing-an-extension) explains how.
+
+
+---
+
+Source: https://pocketone.dev/docs/features/tokens
+
+# API tokens and OAuth
+
+A script, a CI job or another service can't type a password. Give it an API token instead: a long secret that starts
+with `pbt_`, acts as the account that owns it, and can be limited to a few scopes and given an expiry. Revoke it, and
+it stops working at once.
+
+This is on for every PocketOne app. You don't need to set anything up. Ordinary PocketBase sign-ins keep working as
+before.
+
+## Create a token in the dashboard
+
+1. Sign in to the dashboard as a superuser and open **Settings → API tokens** (under **Access**).
+2. Fill in a **Name**, so you can recognize the token later.
+3. Optionally set **Expires in (days)**. Leave it empty and the token never expires.
+4. Tick the **Scopes** the token needs. Tick none and it gets its owner's full rights.
+5. The token is yours by default. To make one for another account, fill in **Owner collection** and
+   **Owner (id or email)**.
+6. Click **Create token**, then copy it. It's shown only once and never stored.
+
+Send it with each request:
+
+```bash
+curl -H "Authorization: Bearer pbt_…" https://myapp.example.com/api/collections/notes/records
+```
+
+## See and revoke tokens
+
+The same screen lists every token: its name, its first characters, owner, scopes, expiry and when it was last used
+(time and IP). Click **Revoke** and confirm to delete one. Anything using it stops working at once.
+
+## Let apps and tools sign in
+
+Some clients sign in for you instead of asking for a pasted token: `pocketone login`, Claude and other
+[AI agents](https://pocketone.dev/docs/features/mcp), or an app of your own. They send you to your app's own sign-in pages:
+
+1. Sign in with whatever the collection allows: a password, an emailed code, or (for app users) Google and
+   other providers, plus a second step if the account has MFA. Click **Sign in as a superuser** to sign in as one.
+2. The consent page names the client and the account it will act as. Choose **Full access**, or **Only these** and
+   tick the scopes it may use.
+3. Click **Allow**.
+
+On a machine with no browser (over SSH, say), the client shows a code instead. Open
+`https://<your app>/api/_c/oauth/v1/device/verify`, enter it under **Connect a device**, sign in and allow. Codes last
+10 minutes.
+
+Each sign-in becomes an API token named `<client> (OAuth)`, bound to exactly what you approved. It shows up under
+**Settings → API tokens** with an `oauth: <client id>` label. Click **Revoke** to disconnect the client.
+`pocketone logout` revokes a browser login from your terminal.
+
+## From your terminal
+
+On the machine that runs the app, the `token` command works on the app's data folder, even before the first serve:
+
+```bash
+pocketone token create --superuser admin@example.com --name ci --scope deploy --ttl 720h   # prints the secret
+pocketone token create --collection users --record user@example.com --name script
+pocketone token list
+pocketone token revoke <id>
+pocketone token revoke --all --superuser admin@example.com
+```
+
+`--scope` can be repeated. Without `--ttl` the token never expires.
+
+For CI that runs `pocketone` against your app, put the token in `P1_TOKEN` instead of signing in
+([Remote CLI](https://pocketone.dev/docs/features/remote)).
+
+To let an app of your own sign people in, register it once:
+
+```bash
+pocketone oauth clients add --name "My app" --redirect https://myapp.example.com/callback
+```
+
+It prints the client id, and a secret once. Add `--public` for a desktop or mobile app with no secret. Claude, the
+`pocketone` CLI and other MCP clients don't need this.
+
+## From pb_hooks
+
+Add your own scopes, and they show up in the dashboard and on the consent page:
+
+```js
+// pb_hooks/scopes.pb.js
+$tokens.registerScope({ name: 'notes:read', description: 'Read notes',
+  paths: ['/api/collections/notes/records'], methods: ['GET'] })
+
+routerAdd('GET', '/api/notes/summary', (e) => { /* ... */ },
+  $apis.requireAuth(), $tokens.requireScope('notes:read'))
+```
+
+A collection rule can check a scope too: `@request.headers.x_token_scope_notes_read = "1"`.
+
+## What a token can do
+
+- **No scopes:** everything its owner can do.
+- **With scopes:** only the requests its scopes cover. Anything else gets `403`.
+- **Which scopes:** the ones features add (`deploy`, and one for each admin feature, often with a `:read`
+  version, such as `restore` and `restore:read`), plus your own. Some, like `deploy`, only superusers can hold. The
+  [CLI reference](https://pocketone.dev/docs/reference/cli) and [MCP reference](https://pocketone.dev/docs/reference/mcp) name the scope each operation needs.
+- **Expiry:** never, unless you set one. Tokens from a sign-in last 30 days, and the client renews them; AI agents'
+  tokens never expire. Expired tokens are deleted once a day.
+- **Gone with the account:** deleting an account deletes its tokens.
+- **No way around a revoke:** a token can't be traded for a PocketBase auth token, so revoking it really ends its
+  access.
+
+Only superusers see **Settings → API tokens**. Other signed-in users manage their own tokens through the
+[token API](https://pocketone.dev/docs/contracts/tokens/v1). A token with scopes can only create tokens within those scopes.
+
+## Change it or turn it off
+
+There's no `pocketone.yaml` key for API tokens: they're always on, and a token does nothing until someone creates one.
+To limit what a token can do, give it scopes and an expiry, or revoke it. Every key is in the
+[pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
+
+To restyle the sign-in pages, copy them into your app with `pocketone template eject oauth`.
+
+## How it works
+
+- [Tokens](https://pocketone.dev/docs/extensions/tokens) stores the tokens (only a hash of each secret), checks them on every request and
+  adds the dashboard screen.
+- [OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) runs the sign-in and consent pages and issues tokens for what you
+  approved.
+- They answer the [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1) and [oauth/v1](https://pocketone.dev/docs/contracts/oauth/v1) contracts.
+- [Templates](https://pocketone.dev/docs/extensions/templates) lets you restyle the sign-in pages.
+
+
+---
+
+Source: https://pocketone.dev/docs/features/mcp
+
+# MCP for AI agents
+
+Point Claude, or any other MCP client, at your app and sign in. The agent can then read and change your data, check on
+the app and run admin tasks, as you and with your rights, nothing more.
+
+Every PocketOne app serves MCP at `/mcp`. It's on by default. You don't need to set anything up.
+
+## Connect Claude
+
+1. In your MCP client, add `https://<your app>/mcp` as a remote MCP server. In Claude, that's a custom connector.
+2. A browser opens on your app's sign-in page. Sign in as an app user, or click **Sign in as a superuser**.
+3. The consent page names the client and the account it will act as. Choose **Full access**, or **Only these** and tick
+   what the agent may do.
+4. Click **Allow**.
+
+The agent stays connected until you disconnect it.
+
+In Claude Code:
+
+```bash
+claude mcp add --transport http my-app https://<your app>/mcp
+claude mcp login my-app        # or /mcp in a session
+```
+
+Claude and Claude Code connect without any setup on your side. Other MCP clients register themselves with your app
+first.
+
+## What the agent can do
+
+Every tool call is one request to your app's own API, made as whoever signed in. Your API rules, hooks and rate limits
+apply as they would to any request.
+
+- **PocketBase's whole API**, as `pb_*` tools: records (`pb_list_records`, `pb_create_record`, …), files and auth for
+  everyone; collections, settings, logs, crons, SQL and backups for superusers. SQL (`pb_run_sql`) goes straight to
+  the database, past API rules and hooks.
+- **Admin tasks** each feature adds, such as `restore_points` and `restore_restore_to` to
+  [undo a mistake](https://pocketone.dev/docs/features/restore), or `remote_status` and `remote_logs` to check on the app. The
+  [MCP reference](https://pocketone.dev/docs/reference/mcp) lists them all.
+- **Your app's own tools**, from `pb_hooks` (below).
+
+A superuser gets what the API gives superusers. An app user gets what your collection rules give them, and doesn't see
+the superuser-only tools.
+
+## Add your own tools
+
+Write the endpoint as you would anyway, then declare its tool at the top level of a `pb_hooks` file:
+
+```js
+// pb_hooks/blog.pb.js
+routerAdd('POST', '/api/blog/posts/{id}/publish', (e) => { /* … */ }, $apis.requireSuperuserAuth())
+
+$mcp.addEndpoint({
+  name: 'blog_publish_post',
+  description: 'Publish a draft post and email subscribers.',
+  method: 'POST',
+  path: '/api/blog/posts/{id}/publish', // {id} comes from the tool's id argument
+  inputSchema: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+})
+$mcp.instructions('blog_publish_post also emails subscribers.')
+```
+
+The tool runs the request as the caller, so the route's own auth check is what protects it. When your app has its own
+tools, agents are told to prefer them over `pb_*`.
+
+## What's covered
+
+- **Limited to scopes:** with **Only these**, each call is checked like a request from an
+  [API token](https://pocketone.dev/docs/features/tokens) with those scopes. Calls they don't cover get `403`, and tools they can't reach
+  are hidden.
+- **Only for MCP:** the agent's token works on `/mcp` and nowhere else.
+- **Not tools:** sign-in endpoints that hand out a new token, and realtime subscriptions. A file download through
+  `pb_download_file` is capped at 10 MB.
+- **Browsers:** a web page on another site can't call `/mcp`. Clients that send no `Origin` header, such as Claude's
+  servers and Claude Code, can.
+
+Anyone who can sign in to your app can connect an agent, with their own rights. To give an agent less, choose
+**Only these**, or sign it in as an account with fewer rights.
+
+## Disconnect an agent
+
+Each connection is an [API token](https://pocketone.dev/docs/features/tokens) named `<client> (OAuth)`. Open **Settings → API tokens**,
+find the one with the `oauth: <client id>` label, and click **Revoke**.
+
+## Paste a token instead
+
+A client that can't sign in can send a PocketBase auth token, or an API token, as `Authorization: Bearer …`. An API
+token with scopes works only if one of them covers `/mcp`, so to limit an agent, use the consent page instead.
+
+## Change it or turn it off
+
+There's no `pocketone.yaml` key for MCP: it always serves `/mcp`, and an agent can do nothing until someone signs it
+in. The name agents see is your app's **Settings → Application → Application name**. Every key is in the
+[pocketone.yaml reference](https://pocketone.dev/docs/config-reference).
+
+`$mcp` isn't available in `pb_hooks` when the app runs PocketBase's own JS engine (`jsvm: goja`).
+
+## How it works
+
+- [MCP](https://pocketone.dev/docs/extensions/mcp) serves `/mcp` and turns each tool call into a request to your app's API.
+- The [OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) in [Tokens](https://pocketone.dev/docs/extensions/tokens) runs the sign-in and consent
+  pages, and issues the agent's token.
+- Admin tools come from the [contracts](https://pocketone.dev/docs/contracts) your app answers. Another MCP server can stand in through
+  the [mcp/v1](https://pocketone.dev/docs/contracts/mcp/v1) contract and serve the same tools.
+
+Looking to teach a coding agent how to build with PocketOne? That's a different thing: see
+[Teach your coding agent](https://pocketone.dev/docs/agents).
+
+
+---
+
+Source: https://pocketone.dev/docs/features/bulk-mail
+
+# Bulk mail
+
+Got a newsletter, a launch or a change to announce? Write it once, pick which users get it, and your app sends it at a
+steady pace through its own mail settings. Every message gets an unsubscribe link, and people who unsubscribe, bounce
+or complain are never mailed again.
+
+This is on for every PocketOne app. Nothing is sent until a superuser starts a campaign.
+
+## Before your first campaign
+
+1. Sign in to the dashboard as a superuser and open **Settings → Mail**. Set up your mail server and sender there, as
+   you would for any PocketBase app. Campaigns send through them.
+2. Below that form, in the **Bulk mail** section, fill in **Postal address**. It's shown in every campaign footer, and
+   anti-spam laws require one. Click **Save bulk mail settings**.
+3. Open **Settings → Application** and check that **Application URL** is the address people reach your app on.
+   Unsubscribe links are built from it.
+
+## Send a campaign from the dashboard
+
+1. Open **Mail** in the dashboard menu and click **New campaign**. It starts as a draft for the verified users of
+   `users`.
+2. Fill in **Name**, **Subject** and **Body**. Use `{{record.name}}` (any field of the user's record), `{{email}}` and
+   `{{campaign.name}}` to fill in each message.
+3. Under **Audience**, pick who gets it. With **Filter**, choose the **Collection**, an optional **Filter** in the same
+   syntax as API rules (such as `verified = true`), and the **Email field**. Click **Count recipients** to see how
+   many match, how many are suppressed, and a few sample addresses.
+4. Click **Save changes**. Click **Preview** to see the message for one recipient, or fill in **Test address** and
+   click **Send test**.
+5. Click **Send** and confirm.
+
+The campaign page shows its progress and a **Recipients** table. While it runs, you can **Pause**, **Resume** or
+**Cancel** it.
+
+To send later, set **Schedule (UTC)** before you save. The button then says **Schedule**. To send slower than your
+app's limit, set **Max per second**.
+
+For audiences a filter can't express, choose **SQL** and write a read-only `SELECT` that returns an `email` column.
+Every other column it returns can be used in the message as `{{record.column}}`. A view works too: pick it as the
+**Collection**.
+
+## Send it again to new users
+
+Each address gets a campaign at most once. Click **Send** on a finished campaign and only users who match now but
+weren't mailed before get it.
+
+## From your terminal
+
+Write the campaign in the dashboard first. Then sign in to your app once
+([Remote CLI](https://pocketone.dev/docs/features/remote)) and run it from your terminal:
+
+```bash
+pocketone remote bulkmail preview --campaign <id>                  # see the message
+pocketone remote bulkmail test --campaign <id> --to you@example.com
+pocketone remote bulkmail start --campaign <id>
+pocketone remote bulkmail pause --campaign <id>                    # also resume, cancel
+```
+
+`--limit 100` on `start` queues at most 100 new recipients, to send a campaign in batches. To see who an audience
+reaches before you send:
+
+```bash
+pocketone remote bulkmail count --audience '{"collection": "users", "filter": "verified = true", "email_field": "email"}'
+```
+
+## From pb_hooks
+
+`$bulkmail` does the same from your JS hooks:
+
+```js
+const { count, suppressed } = $bulkmail.count({ collection: "users", filter: "verified = true", email_field: "email" })
+$bulkmail.start("CAMPAIGN_ID")
+$bulkmail.suppress("someone@example.com")
+```
+
+## From an agent
+
+An agent connected to your app over [MCP](https://pocketone.dev/docs/reference/mcp) has a tool for each step: `bulkmail_count`,
+`bulkmail_preview`, `bulkmail_test`, `bulkmail_start`, `bulkmail_pause`, `bulkmail_resume` and `bulkmail_cancel`.
+Count and preview need a token with the `bulkmail:read` scope, the rest the `bulkmail` scope. Only superusers can run
+campaigns.
+
+## Unsubscribes, bounces and complaints
+
+- **Unsubscribe:** every message ends with a footer holding your postal address and an unsubscribe link. It also
+  carries the one-click unsubscribe headers that Gmail and Yahoo require from bulk senders. Opening the link shows a
+  confirm button, so link scanners can't unsubscribe anyone.
+- **Suppressions:** **Mail → Suppressions** lists the addresses that never get campaign mail, whatever the audience
+  says. Unsubscribes are added automatically. Click **Add address** to add one by hand, or **Export CSV** to download
+  the list.
+- **Bounces and complaints:** to add those to the list too, open **Bounces and complaints** in the **Bulk mail**
+  section. For Amazon SES, subscribe your SNS topic to the **Amazon SES (SNS) endpoint** shown there. For other
+  providers, set a **Webhook secret** and point the provider at the **Generic webhook** URL.
+
+## Limits
+
+- Your app sends at most **5 messages a second** and **5,000 a day** (UTC), across all campaigns. The **Bulk mail**
+  section shows your app's limits and how many it sent today. A host may set other limits for your app.
+- A message counts as sent only once the mail server accepts it, so a restart doesn't send twice or skip anyone.
+- A permanent error from the mail server fails that recipient. Other errors are retried, up to three attempts.
+- A campaign pauses itself when more than 5% of its sends fail after the first 100, or when spam complaints pass 0.3%
+  of its sends (at least 3). The reason shows next to its status.
+
+## Try it locally
+
+In dev mode with SMTP off, `pocketone` catches every mail, campaigns included, in an inbox at http://127.0.0.1:8025:
+
+```bash
+pocketone serve --dev
+```
+
+## Change it
+
+There's no `pocketone.yaml` section for bulk mail; the [pocketone.yaml reference](https://pocketone.dev/docs/config-reference) lists none.
+Sending uses your **Settings → Mail** server and sender, and you lower the pace per campaign with **Max per second**.
+
+## How it works
+
+- [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) runs the campaigns, the pages in the dashboard and `$bulkmail`.
+- [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1) is the contract behind the command, the REST API and the MCP tools.
+- [mail.suppression/v1](https://pocketone.dev/docs/contracts/mail.suppression/v1) keeps the suppression list and the unsubscribe link.
+- [mail.feedback/v1](https://pocketone.dev/docs/contracts/mail.feedback/v1) takes bounce and complaint reports from your mail provider.
+
+
+---
+
 Source: https://pocketone.dev/docs/pocketone-yaml
 
 # pocketone.yaml
-
-> **PocketBase:** settings are flags you type on every start. **PocketOne:** one file next to your app holds them, every extension's options and a `.env` for secrets.
 
 Every `pocketone` flag has a default. `pocketone.yaml` lets you change those defaults in one file, next to your app,
 instead of typing them on every start. The same file holds each extension's options, and your secrets go in a `.env`
@@ -1511,6 +1793,98 @@ providers:
 
 - [pocketone.yaml reference](https://pocketone.dev/docs/config-reference): every section and key.
 - [Config](https://pocketone.dev/docs/extensions/config): how the file is found, `.env` rules, and loading it in your own Go build.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop
+
+# Desktop apps
+
+Your app is a folder: `pb_hooks`, `pb_migrations` and `pb_public`. `pocketone serve` runs it as a server, as always.
+`pocketone desktop build` turns the same folder into an app your users double-click:
+
+```sh
+pocketone serve                  # the app as a server
+pocketone desktop build          # a desktop app for this machine, in dist/
+pocketone desktop build --all    # macOS, Windows and Linux, arm64 and amd64
+```
+
+All you need is `pocketone` and Docker. The build runs in a build image that holds Go and PocketOne's source, so
+there's no Go, C compiler or Xcode to install, and every platform builds from any machine.
+
+> **Preview.** Desktop builds work today, but how a desktop app handles trust and settings is still settling (see
+> [What's next](#whats-next)). The desktop runtime uses Wails' cgo-free backends, which Wails marks experimental on
+> macOS and Linux.
+
+## How it works
+
+The desktop app is your PocketOne app plus a window:
+
+1. Your `pb_hooks`, `pb_migrations` and `pb_public` are embedded in the executable. Nothing is read from disk, so
+   nobody can change a shipped app's hooks.
+2. When it starts, it runs your app's server on a private `127.0.0.1` port, applying your migrations to the user's data.
+3. It opens a native window on that server, using the system's own webview: WebKit on macOS, WebView2 on Windows,
+   WebKitGTK on Linux.
+
+Your pages call the API with `fetch`, exactly as they do in a browser. The PocketBase JS SDK, realtime and file
+uploads work the same, because it's the same server.
+
+## Try it: hello world
+
+PocketOne's source has a hello-world app in `ext/desktop/example/hello`: a hook, a migration and one page that lists
+and adds greetings.
+
+```js
+// pb_hooks/main.pb.js
+routerAdd("GET", "/api/hello", (e) => {
+  const rows = $app.findRecordsByFilter("greetings", "", "-created", 50, 0)
+  return e.json(200, { message: "Hello from PocketOne hooks", greetings: rows.map((r) => r.get("text")) })
+})
+```
+
+Its `pocketone.yaml` keeps the server's data in the folder and names the desktop app:
+
+```yaml
+app:
+  dir: pb_data
+server:
+  public_dir: pb_public
+desktop:
+  name: Hello
+  id: dev.pocketone.hello
+  width: 900
+  height: 640
+```
+
+Run it both ways:
+
+```sh
+cd ext/desktop/example/hello
+pocketone superuser upsert admin@example.com password
+pocketone serve                  # http://127.0.0.1:8090
+pocketone desktop build          # dist/darwin-arm64/Hello.app on an Apple Silicon Mac
+open dist/darwin-arm64/Hello.app
+```
+
+The server and the desktop app keep separate data: the server's in `pb_data/`, the desktop app's in your app-data
+folder.
+
+## Next
+
+- [Building](https://pocketone.dev/docs/extensions/desktop/build): targets, the build image, building with your own Go, and what lands in `dist/`.
+- [How the app runs](https://pocketone.dev/docs/extensions/desktop/runtime): where each user's data lives, upgrades, the window and what each platform needs.
+- [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing): signing and notarizing for macOS, signing for Windows, and checksums for Linux.
+- [Extension reference](https://pocketone.dev/docs/extensions/desktop/extension): the `desktop` section of `pocketone.yaml` and building on the runtime from Go.
+
+## What's next
+
+A desktop app has one person at the keyboard and data on their machine, so PocketBase's users and superusers don't
+quite fit. Being worked out:
+
+- **Trust:** requests from the app's own window run as its owner, and nothing else on the machine can reach the server.
+- **Settings:** a native Preferences window for the settings your app and its extensions declare, since the superuser
+  dashboard isn't part of a shipped app.
 
 
 ---
@@ -2316,7 +2690,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`bulkmail/v1`](https://pocketone.dev/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](https://pocketone.dev/docs/contracts/cache.clear/v1) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
 | [`cache/v1`](https://pocketone.dev/docs/contracts/cache/v1) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
-| [`cli.commands/v1`](https://pocketone.dev/docs/contracts/cli.commands/v1) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. |  |  |  | @benallfree |
+| [`cli.commands/v1`](https://pocketone.dev/docs/contracts/cli.commands/v1) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. | desktop |  |  | @benallfree |
 | [`deploy/v1`](https://pocketone.dev/docs/contracts/deploy/v1) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](https://pocketone.dev/docs/contracts/gate/v1) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](https://pocketone.dev/docs/contracts/http.wrap/v1) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |
@@ -2324,7 +2698,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`mail.fallback/v1`](https://pocketone.dev/docs/contracts/mail.fallback/v1) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](https://pocketone.dev/docs/contracts/mail.feedback/v1) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](https://pocketone.dev/docs/contracts/mail.suppression/v1) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |
-| [`mcp/v1`](https://pocketone.dev/docs/contracts/mcp/v1) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  |  | @benallfree |
+| [`mcp/v1`](https://pocketone.dev/docs/contracts/mcp/v1) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  | wasm | @benallfree |
 | [`oauth/v1`](https://pocketone.dev/docs/contracts/oauth/v1) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
 | [`remote/v1`](https://pocketone.dev/docs/contracts/remote/v1) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](https://pocketone.dev/docs/contracts/restore/v1) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
@@ -2457,11 +2831,13 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Cache](https://pocketone.dev/docs/extensions/cache) | Cache buckets for every app in the process from one shared store: bytes or Go values, a budget per bucket, LRU/MRU/FIFO/LIFO eviction, TTLs, a cold disk tier that keeps identical values once. |
 | [Config](https://pocketone.dev/docs/extensions/config) | The pocketone.yaml config file, with secrets in a .env beside it. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
+| [Desktop](https://pocketone.dev/docs/extensions/desktop/extension) | Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine. |
 | [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [PITR](https://pocketone.dev/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |
 | [Remotes](https://pocketone.dev/docs/extensions/remotes) | Named remotes and saved logins for the pocketone command. |
+| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Settings](https://pocketone.dev/docs/extensions/settings) | One API for the settings an app's admins change for its extensions. On by default. |
 | [Templates](https://pocketone.dev/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
@@ -2493,7 +2869,6 @@ Shared services a host gives every instance it runs.
 | Extension | What it does |
 |---|---|
 | [Mail Relay](https://pocketone.dev/docs/extensions/mailrelay) | Outgoing mail for instances without SMTP, through your relay, with limits. |
-| [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback) | A default bucket for uploads and backups when an instance has no S3 of its own. |
 | [Server Timing](https://pocketone.dev/docs/extensions/servertiming) | Server-Timing headers for each step of a request. |
 
 ## Sell it as a service
@@ -2585,6 +2960,80 @@ Deploys the project's code set (pb\_\* folders except pb\_data, package.json, bu
 | `-v`, `--verbose` | bool | – | list every file |
 
 From [Deploy](https://pocketone.dev/docs/extensions/deploy).
+
+## pocketone desktop
+
+Commands under desktop
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
+
+### pocketone desktop build
+
+Build this folder's app as a native desktop app (this platform; --all for every platform)
+
+```
+pocketone desktop build
+```
+
+Compiles the PocketOne app in the current folder into a desktop app: pb\_hooks, pb\_migrations and pb\_public are
+embedded in the executable, which runs the app's server on a private 127.0.0.1 port and shows it in a native window.
+Each user's data lives in their own app-data folder, named by the app id.
+
+Without flags it builds for this machine. --all builds macOS (arm64, amd64), Windows (amd64, arm64) and Linux
+(amd64, arm64); --target picks some. The apps land in dist/, macOS's as an .app and a .dmg.
+
+With a sign section in pocketone.yaml it signs what it built afterwards, here on this machine: macOS with your
+Developer ID (and notarizes), Windows with your command, Linux with GPG. --no-sign skips it.
+
+It runs in Docker, in the build image matching this pocketone (Go and PocketOne's source, vendored, so it needs
+nothing else and works offline once the image is here). --local builds with your own Go and a PocketOne checkout.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--all` | bool | – | build for every platform |
+| `--image` | string | – | the build image (default pocketone-build:dev) |
+| `--local` | bool | – | build with your own Go instead of the build image |
+| `--no-sign` | bool | – | skip pocketone.yaml's desktop.sign section (builds stay signed ad hoc) |
+| `--out` | string | `dist` | the folder the apps are written to |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | a PocketOne checkout: `--local` builds against it; a development pocketone builds its image from it (default $P1\_SOURCE, else the checkout this folder is in) |
+| `--target` | stringSlice | – | platforms to build, as os/arch (darwin/arm64,windows/amd64,...) |
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
+
+### pocketone desktop image
+
+Build the desktop build image from a PocketOne checkout
+
+```
+pocketone desktop image
+```
+
+Builds the image desktop build runs in (Go plus this checkout's source, vendored) and tags it. A release
+publishes it as ghcr.io/pockethost/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne checkout (default $P1\_SOURCE, else the one this folder is in) |
+| `--tag` | string | `pocketone-build:dev` | the image's tag |
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
+
+### pocketone desktop prepare
+
+Write the build image's vendored module into &lt;dir&gt; (the build image's Dockerfile runs this)
+
+```
+pocketone desktop prepare <dir>
+```
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – | the PocketOne source tree |
+
+From [Desktop](https://pocketone.dev/docs/extensions/desktop/extension).
 
 ## pocketone dev
 
@@ -3942,6 +4391,23 @@ Turns the deploy extension off on a single app (`enabled: false`). On a multisit
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
+#### `desktop:`
+
+How `pocketone desktop build` names and sizes the desktop app built from this folder.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | string |  | The app's name: the window title and the executable's name. Default: the folder's name. |
+| `id` | string |  | Reverse-DNS app id (dev.example.notes): names the app's data folder on each user's machine and its single-instance lock. Default: app.pocketone.<name>. |
+| `width` | int |  | The window's starting width. Default: 1024. |
+| `height` | int |  | The window's starting height. Default: 768. |
+| `sign.macos.identity` | string |  | The signing identity in your keychain, as security find-identity -v -p codesigning shows it: Developer ID Application: Your Name (TEAMID). |
+| `sign.macos.notary_profile` | string |  | The notarytool keychain profile (xcrun notarytool store-credentials <profile>). Set: each DMG is notarized and stapled. Empty: signed, not notarized. |
+| `sign.windows.command` | string |  | The command that signs one executable in place; {file} is its path. signtool on Windows, osslsigncode anywhere, or your signing service's tool. |
+| `sign.linux.gpg_key` | string |  | The GPG key to sign with (its email or id). Each build gets <name>.sha256 and a detached <name>.asc signature. |
+
+Owned by [Desktop](https://pocketone.dev/docs/extensions/desktop).
+
 #### `docker:`
 
 Runtime provider docker: each instance in its own container with the PocketBase (pb:) or PocketOne (p1:) binary of its version (image, binary cache and manifest, instance root, default version, idle stop, limits).
@@ -4169,6 +4635,27 @@ Turns the settings extension off on a single app (`enabled: false`). On a multis
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `storage:`
+
+A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On for every instance unless false; an instance's extensions.storage.enabled overrides it. |
+| `backends` | map of object |  | Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style. |
+| `mounts` | map of string |  | Filesystem kind (storage, backups, litestream, ...) to backend name. |
+| `bucket.endpoint` | string |  | S3 endpoint URL. |
+| `bucket.bucket` | string |  | Bucket name. |
+| `bucket.region` | string |  | Bucket region (auto for R2). |
+| `bucket.access_key` | string |  | Access key id. |
+| `bucket.secret` | string |  | Secret key; use a $VAR from the .env. |
+| `bucket.prefix` | string |  | Prepended to every key, to share a bucket. |
+| `bucket.force_path_style` | bool |  | Path-style addressing, for MinIO and similar servers. |
+| `uploads` | bool |  | Deprecated: with bucket, false keeps uploads off it. |
+| `backups` | bool |  | Deprecated: with bucket, false keeps backups off it. |
+
+Owned by [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback).
 
 #### `templates:`
 
@@ -4770,7 +5257,9 @@ them.
 
 <!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
 
-No extension declares this contract yet.
+| Extension | |
+|---|---|
+| [desktop](https://pocketone.dev/docs/extensions/desktop/extension) | provides |
 
 <!-- /contracts:index -->
 
@@ -5292,6 +5781,7 @@ error="invalid_token"` challenge, never a guest's answer.
 | Extension | |
 |---|---|
 | [mcp](https://pocketone.dev/docs/extensions/mcp) | provides (default) |
+| [wasm](https://pocketone.dev/docs/extensions/wasm/extension) | works with |
 
 <!-- /contracts:index -->
 
@@ -5949,6 +6439,352 @@ Says who compacts the app's databases, whether and how often, and how the last r
 ## License
 
 MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/build
+
+# Building
+
+Run `pocketone desktop build` in your app's folder, the one with `pb_hooks`, `pb_migrations` or `pb_public`. It embeds
+those folders in a desktop app for each platform you ask for.
+
+```sh
+pocketone desktop build                                        # this machine's platform
+pocketone desktop build --all                                  # all six below
+pocketone desktop build --target windows/amd64,linux/amd64     # some of them
+pocketone desktop build --out builds                           # somewhere other than dist/
+pocketone desktop build --no-sign                              # skip the sign section
+```
+
+| Platform | `--target` | You get |
+|---|---|---|
+| macOS, Apple Silicon | `darwin/arm64` | `dist/darwin-arm64/<name>.app` and `<name>.dmg` |
+| macOS, Intel | `darwin/amd64` | `dist/darwin-amd64/<name>.app` and `<name>.dmg` |
+| Windows, x64 | `windows/amd64` | `dist/windows-amd64/<name>.exe` |
+| Windows, Arm | `windows/arm64` | `dist/windows-arm64/<name>.exe` |
+| Linux, x64 | `linux/amd64` | `dist/linux-amd64/<name>` |
+| Linux, Arm | `linux/arm64` | `dist/linux-arm64/<name>` |
+
+Each is one file (or one `.app` bundle) of about 40 MB, with your app and PocketOne inside. Windows builds open no
+console window.
+
+On a Mac, each macOS build also comes as a `.dmg`: the app and a link to Applications to drag it onto. With a `sign`
+section in `pocketone.yaml`, every build is signed for you; see [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing).
+
+## Name and size
+
+`pocketone.yaml`'s `desktop` section names the app and sizes its window:
+
+```yaml
+desktop:
+  name: Notes              # window title and file name; default: the folder's name
+  id: dev.example.notes    # where each user's data lives; default: app.pocketone.<name>
+  width: 900               # starting window size; default 1024 × 768
+  height: 640
+```
+
+Choose the `id` once and keep it. It names the folder each user's data lives in, so a new `id` is a new, empty app for
+everyone who installed the old one.
+
+## The build image
+
+Builds run in Docker, in the build image for your `pocketone`'s version: `ghcr.io/pockethost/pocketone-build:v<version>`,
+pulled the first time. It holds Go, PocketOne's source and every dependency, vendored, so once it's here builds work
+offline, and the same `pocketone` version always builds the same app.
+
+`pocketone desktop build` mounts your app folder and the output folder into it, builds every platform there, and
+keeps Go's build cache in a Docker volume (`pocketone-build-cache`), so rebuilds take seconds. On a Mac it then signs
+the macOS bundles ad hoc, so they run on that Mac.
+
+A development `pocketone`, built from a PocketOne checkout, has no published image. It builds its own,
+`pocketone-build:dev`, from that checkout the first time (a minute or two). `pocketone desktop image` rebuilds it after
+you change the source.
+
+## Without Docker
+
+With Go 1.27 or newer and a PocketOne checkout, `--local` builds with your own Go instead:
+
+```sh
+pocketone desktop build --local --all                        # inside the checkout
+pocketone desktop build --local --source ~/src/pocketone     # anywhere else (or set P1_SOURCE)
+```
+
+It needs no C compiler either: every platform cross-compiles with plain Go.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/runtime
+
+# How the app runs
+
+A desktop app is your PocketOne app, with the standard extensions, its server on a private port, and a native window
+in front.
+
+## Each user's data
+
+Every user has their own data, in their own app-data folder, named by your app's `id`:
+
+| Platform | Data folder |
+|---|---|
+| macOS | `~/Library/Application Support/<id>/pb_data` |
+| Windows | `%AppData%\<id>\pb_data` |
+| Linux | `~/.config/<id>/pb_data` |
+
+It's an ordinary `pb_data`, so everything that works on one, from backups to point-in-time restore, works here too.
+
+## Upgrades
+
+Your migrations run every time the app starts. Ship a new version with new migrations, and each user's data is
+upgraded the first time they open it, the same way `pocketone serve` upgrades a server's.
+
+## The server and the window
+
+- The server listens on a free `127.0.0.1` port, chosen each time, so it never collides with anything else.
+- The window opens once the server answers.
+- Only one copy runs at a time.
+- Your hooks, migrations and public files come from the executable, never from disk.
+- There is no superuser, and the superuser installer page never opens: the people using a desktop app aren't its
+  admins.
+
+## What each platform needs
+
+| Platform | Needs |
+|---|---|
+| macOS | macOS 11 or newer |
+| Windows | The WebView2 runtime, which Windows 10 and 11 already have |
+| Linux | The GTK 4 and WebKitGTK 6.0 libraries; without them the app says which package to install |
+
+## Sharing your app
+
+A build runs on the machine that built it. Before you give it to other people, sign it (and on macOS, notarize it), so
+it opens without warnings: [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing) has the steps for each platform.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/signing
+
+# Signing and sharing
+
+`pocketone desktop build` gives you apps that run on the machine that built them. Before you send them to other people,
+sign them, so each operating system knows the app comes from you and hasn't been changed since:
+
+| Platform | Unsigned, your users see | To sign, you need |
+|---|---|---|
+| macOS | "can't be opened", until they approve it in System Settings | An Apple Developer account and a Mac |
+| Windows | A SmartScreen "Windows protected your PC" warning | A code-signing certificate |
+| Linux | Nothing; Linux doesn't check | Optional: a GPG key, to publish a signature |
+
+## Let desktop build sign
+
+Add a `sign` section to `pocketone.yaml`, and every `pocketone desktop build` signs what it built, on your machine,
+with your certificates. Name only the platforms you sign for:
+
+```yaml
+desktop:
+  name: Hello
+  id: dev.pocketone.hello
+  sign:
+    macos:
+      identity: "Developer ID Application: Your Name (ABCDE12345)"
+      notary_profile: pocketone-notary     # omit to sign without notarizing
+    windows:
+      # any command that signs {file} in place
+      command: signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a {file}
+    linux:
+      gpg_key: you@example.com
+```
+
+- **macOS:** it signs each `.app` with your Developer ID and the hardened runtime, puts it in a `.dmg`, signs the DMG,
+  sends it to Apple to notarize, and staples the result to both. You get the raw `.app` and the `.dmg`.
+- **Windows:** it runs your command on each `.exe`, with `{file}` replaced by its path. Use `signtool`, `osslsigncode`
+  or your signing service's tool, whichever fits your certificate.
+- **Linux:** it writes `<name>.sha256` and a detached `<name>.asc` GPG signature beside each binary.
+
+Before it builds anything, it checks that the tools are installed, that the identity is in your keychain and that the
+GPG key exists, so a missing piece fails in a second, not after the build. `pocketone desktop build --no-sign` skips
+the section, for a quick build to try out.
+
+Signing happens on your machine, not in the build image, because that's where your keychain and certificates are. So
+macOS builds are signed, notarized and put in a DMG only when you build on a Mac; built elsewhere, they're unsigned
+`.app` bundles. Windows and Linux builds sign anywhere their tools run (`signtool` only runs on Windows;
+`osslsigncode` runs everywhere).
+
+The sections below are the one-time setup for each platform, and the commands `desktop build` runs, if you'd rather
+sign by hand.
+
+## macOS
+
+macOS wants two things for an app downloaded from the internet: a **Developer ID signature**, and **notarization**,
+where Apple scans the app and records that it did. You do both on a Mac, with the tools that come with Xcode.
+
+### Once: get a Developer ID certificate
+
+1. Join the [Apple Developer Program](https://developer.apple.com/programs/) (paid, yearly).
+2. In Xcode, open **Settings → Accounts**, add your Apple ID, select your team and choose **Manage Certificates**.
+   Click **+** and pick **Developer ID Application**. Xcode creates the certificate and puts it in your keychain.
+3. Check that it's there and copy its name:
+
+   ```sh
+   security find-identity -v -p codesigning
+   #  1) 3F2A…  "Developer ID Application: Your Name (ABCDE12345)"
+   ```
+
+   `ABCDE12345` is your team ID.
+
+4. Create an [app-specific password](https://account.apple.com) for your Apple ID (**Sign-In and Security →
+   App-Specific Passwords**), and save it for the notary tool under a profile name:
+
+   ```sh
+   xcrun notarytool store-credentials pocketone-notary \
+     --apple-id you@example.com --team-id ABCDE12345 --password <app-specific password>
+   ```
+
+### By hand: sign, notarize, staple
+
+`desktop build` does this for you with a `sign.macos` section. By hand, for each macOS build (`dist/darwin-arm64/Hello.app`, `dist/darwin-amd64/Hello.app`):
+
+1. **Sign** with your Developer ID, the hardened runtime (`--options runtime`, which notarization requires) and a
+   secure timestamp. `--force` replaces the ad hoc signature the build added:
+
+   ```sh
+   codesign --force --options runtime --timestamp \
+     --sign "Developer ID Application: Your Name (ABCDE12345)" dist/darwin-arm64/Hello.app
+   codesign --verify --strict --verbose=2 dist/darwin-arm64/Hello.app
+   ```
+
+2. **Notarize:** zip the app and send it to Apple. It usually takes a few minutes:
+
+   ```sh
+   ditto -c -k --keepParent dist/darwin-arm64/Hello.app Hello.zip
+   xcrun notarytool submit Hello.zip --keychain-profile pocketone-notary --wait
+   ```
+
+   If it says `Invalid`, `xcrun notarytool log <submission id> --keychain-profile pocketone-notary` shows why.
+
+3. **Staple** the result to the app, so it opens even when the user is offline, and check it:
+
+   ```sh
+   xcrun stapler staple dist/darwin-arm64/Hello.app
+   spctl --assess --type execute --verbose dist/darwin-arm64/Hello.app
+   # dist/darwin-arm64/Hello.app: accepted
+   # source=Notarized Developer ID
+   ```
+
+4. **Package** the stapled app to share it. A zip:
+
+   ```sh
+   ditto -c -k --keepParent dist/darwin-arm64/Hello.app Hello-macos-arm64.zip
+   ```
+
+   or a disk image, which you sign too:
+
+   ```sh
+   hdiutil create -volname Hello -srcfolder dist/darwin-arm64/Hello.app -ov -format UDZO Hello.dmg
+   codesign --timestamp --sign "Developer ID Application: Your Name (ABCDE12345)" Hello.dmg
+   ```
+
+One download for both kinds of Mac: join the two executables with `lipo` before you sign, and ship one app.
+
+```sh
+cp -R dist/darwin-arm64/Hello.app Hello.app
+lipo -create dist/darwin-arm64/Hello.app/Contents/MacOS/Hello dist/darwin-amd64/Hello.app/Contents/MacOS/Hello \
+  -output Hello.app/Contents/MacOS/Hello
+```
+
+### Without an Apple Developer account
+
+Without a Developer ID, macOS still runs your app, but anyone who downloads it is warned first. What they see depends on
+how it's signed:
+
+| Your app is | Someone who downloads it sees |
+|---|---|
+| Signed ad hoc (what `desktop build` does with no `sign.macos`) | "Apple could not verify it is free of malware", and the app doesn't open |
+| Signed with a self-signed certificate | The same warning |
+| Signed with a Developer ID, not notarized | A similar warning |
+| Signed with a Developer ID and notarized | Only "downloaded from the internet, open it?" |
+
+The warning only appears for downloaded apps, which macOS marks as quarantined. An app you build and run on your own
+Mac opens without it.
+
+**Opening it anyway.** For yourself, testers and people you know, that's fine. They:
+
+1. Open the app and dismiss the warning.
+2. Go to **System Settings → Privacy & Security**, scroll to **Security** and click **Open Anyway** next to the app.
+3. Confirm, and the app opens from then on.
+
+Or, if they're comfortable with Terminal, they remove the quarantine mark, and the app opens normally:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Hello.app
+```
+
+**Self-signing.** You can make your own code-signing certificate: in Keychain Access, choose **Keychain Access →
+Certificate Assistant → Create a Certificate**, set **Certificate Type** to **Code Signing**, and then mark it
+**Always Trust** for code signing (double-click it, open **Trust**). Its name then goes in `sign.macos.identity`, without
+`notary_profile`, since Apple only notarizes Developer ID apps.
+
+It doesn't remove the warning: macOS can't trust a certificate it doesn't know, so a self-signed app gets the same
+warning as an ad hoc one. What it gives you is the same identity from one version to the next, so macOS remembers what
+your users allowed the app to do (files, camera, keychain items) when they update.
+
+For an app you give to the public, only a Developer ID and notarization open it without warnings.
+
+## Windows
+
+Windows checks an **Authenticode** signature. You need a code-signing certificate from a certificate authority, such
+as DigiCert, Sectigo or SSL.com. Certificates issued today keep their key on a hardware token or in the CA's cloud
+signing service rather than in a file, so how you sign depends on which you get.
+
+### Once: get a certificate
+
+- **Organization validation (OV):** the CA checks that your business exists. For an individual, pick a certificate
+  issued to you by name.
+- **Extended validation (EV):** a stricter check, for businesses.
+- **A cloud signing service**, such as Azure Trusted Signing, signs without a token, for organizations it can verify.
+
+Either way, a new certificate starts with no reputation: SmartScreen may still warn for a while, until enough people
+have installed your signed app.
+
+### By hand: sign with signtool
+
+On Windows, with the Windows SDK installed (it includes `signtool`) and your certificate on its token or in the
+certificate store:
+
+```bat
+signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a dist\windows-amd64\Hello.exe
+signtool verify /pa /v dist\windows-amd64\Hello.exe
+```
+
+`/a` picks the best certificate it finds; `/sha1 <thumbprint>` picks one exactly. A cloud signing service gives you
+its own `signtool` plugin or tool; follow its instructions for the same step. Sign `windows-arm64` the same way.
+
+### From a Mac or Linux
+
+[osslsigncode](https://github.com/mtrojnar/osslsigncode) signs Windows executables on macOS and Linux, if your
+certificate's key is in a file or on a token it can reach:
+
+```sh
+osslsigncode sign -pkcs12 certificate.pfx -pass "$PFX_PASSWORD" -n "Hello" \
+  -t http://timestamp.digicert.com -in dist/windows-amd64/Hello.exe -out Hello.exe
+```
+
+## Linux
+
+Linux runs the binary you give it; there's no signature check to pass. What you can do is let people check the
+download is yours and intact:
+
+```sh
+cd dist/linux-amd64
+sha256sum Hello > Hello.sha256          # a checksum to publish next to the download
+gpg --armor --detach-sign Hello         # Hello.asc: a signature anyone with your public key can check
+```
+
+Users check with `sha256sum -c Hello.sha256` and `gpg --verify Hello.asc Hello`. Packaging the app as a `.deb`,
+Flatpak or AppImage, where the package or repository is signed, also works.
 
 
 ---
@@ -6814,8 +7650,11 @@ cfg, err := config.Load(config.FromArgs(os.Args[1:]))
 if err != nil {
 	log.Fatal(err)
 }
-appCfg, _ := config.App.Get()
-app := pocketbase.NewWithConfig(pocketbase.Config{DefaultDataDir: cfg.ResolvePath(appCfg.Dir)})
+a, err := standard.AppFromConfig(cfg) // the whole app section, ext/standard
+if err != nil {
+	log.Fatal(err)
+}
+app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
@@ -7349,6 +8188,195 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 - `Config.Dir` and `Config.StoreDir` move the deploy folder and the upload store; `Config.Prefix` moves the API.
 - Logs on a single app come from its own `_logs` table; entries at error level and above are marked as stderr.
 - The `node_modules` collector is [`nodemodules`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/nodemodules/nodemodules.go), a port of the npm CLI's.
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/desktop/extension
+
+# Desktop
+
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+The same app folder you run with `pocketone serve` becomes a desktop app: `pocketone desktop build` compiles your
+`pb_hooks`, `pb_migrations` and `pb_public` into one executable that runs the app's server on a private `127.0.0.1`
+port and shows it in a native window (the system webview, through [Wails](https://wails.io)). Your users install
+nothing else, and each one's data stays on their machine.
+
+All you need is `pocketone` and Docker: the build runs in a build image with Go and PocketOne's source, and every
+platform builds from any machine, with no C compiler or Xcode. The desktop runtime uses Wails' cgo-free backends,
+which Wails marks experimental on macOS and Linux.
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+Desktop is built into `pocketone`. Builds run in [Docker](https://docs.docker.com/get-docker/), in the build image
+for your `pocketone`'s version (`ghcr.io/pockethost/pocketone-build:v<version>`), pulled on first use. It holds Go
+and PocketOne's source with every dependency vendored, so once it's here builds work offline. A named volume
+(`pocketone-build-cache`) keeps Go's build cache, so rebuilds take seconds.
+
+A development `pocketone` (built from a checkout) builds its own image, `pocketone-build:dev`, from that checkout on
+first use (`pocketone desktop image` rebuilds it). With Go 1.27 or newer and a checkout, `--local` skips Docker and
+builds with your own Go (`--source` or `P1_SOURCE` names the checkout when you aren't in it).
+
+## Configure
+
+`pocketone.yaml`'s `desktop` section names and sizes the app:
+
+```yaml
+desktop:
+  name: Notes              # window title and executable name; default: the folder's name
+  id: dev.example.notes    # names each user's data folder and the single-instance lock; default: app.pocketone.<name>
+  width: 900               # starting window size; default 1024 × 768
+  height: 640
+```
+
+Pick the `id` once and keep it: it's where your users' data lives, so a new id is a new, empty app for them.
+
+A `sign` section signs every build for the platforms it names (`--no-sign` skips it): macOS with your Developer ID,
+notarized and packaged as a DMG; Windows with your signing command; Linux with a checksum and a GPG signature. See
+[Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing).
+
+```yaml
+desktop:
+  sign:
+    macos:
+      identity: "Developer ID Application: Your Name (ABCDE12345)"
+      notary_profile: pocketone-notary
+    windows:
+      command: signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a {file}
+    linux:
+      gpg_key: you@example.com
+```
+
+### pocketone.yaml reference
+
+#### `desktop:`
+
+How `pocketone desktop build` names and sizes the desktop app built from this folder.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | string |  | The app's name: the window title and the executable's name. Default: the folder's name. |
+| `id` | string |  | Reverse-DNS app id (dev.example.notes): names the app's data folder on each user's machine and its single-instance lock. Default: app.pocketone.<name>. |
+| `width` | int |  | The window's starting width. Default: 1024. |
+| `height` | int |  | The window's starting height. Default: 768. |
+| `sign.macos.identity` | string |  | The signing identity in your keychain, as security find-identity -v -p codesigning shows it: Developer ID Application: Your Name (TEAMID). |
+| `sign.macos.notary_profile` | string |  | The notarytool keychain profile (xcrun notarytool store-credentials <profile>). Set: each DMG is notarized and stapled. Empty: signed, not notarized. |
+| `sign.windows.command` | string |  | The command that signs one executable in place; {file} is its path. signtool on Windows, osslsigncode anywhere, or your signing service's tool. |
+| `sign.linux.gpg_key` | string |  | The GPG key to sign with (its email or id). Each build gets <name>.sha256 and a detached <name>.asc signature. |
+
+## Use
+
+In your app's folder:
+
+```sh
+pocketone serve            # the app as a normal server, as always
+pocketone desktop build    # a desktop app for this machine, in dist/
+pocketone desktop build --all                                  # macOS, Windows and Linux, arm64 and amd64
+pocketone desktop build --target windows/amd64,linux/amd64     # some of them
+```
+
+`dist/<os>-<arch>/` gets `<name>.app` on macOS (signed ad hoc when you build on a Mac, so it runs there), `<name>.exe` on
+Windows (no console window), and `<name>` on Linux.
+
+What the desktop app does when it starts:
+
+- **Its data** goes in the user's own app-data folder, by `id`: `~/Library/Application Support/<id>/pb_data` on
+  macOS, `%AppData%\<id>\pb_data` on Windows, `~/.config/<id>/pb_data` on Linux.
+- **Your migrations** run on every start, so a new version of your app upgrades each user's data.
+- **Your hooks and public files** are read from the executable, never from disk.
+- **It serves** on a free `127.0.0.1` port and opens the window on it. Only one copy runs at a time (Wails' single-instance lock, by `id`).
+- **There is no superuser** and the installer page never opens; the app's users aren't its admins.
+
+What each platform needs:
+
+- **macOS:** 11 or newer. Apps you send to others need signing and notarization with your own Apple Developer ID;
+  unsigned, macOS asks them to approve the app in System Settings first.
+- **Windows:** the WebView2 runtime, which Windows 10 and 11 already have.
+- **Linux:** the GTK 4 and WebKitGTK 6.0 libraries; without them the app says which package to install.
+
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone desktop build`](https://pocketone.dev/docs/reference/cli#pocketone-desktop-build) | Build this folder's app as a native desktop app (this platform; --all for every platform) |
+| [`pocketone desktop image`](https://pocketone.dev/docs/reference/cli#pocketone-desktop-image) | Build the desktop build image from a PocketOne checkout |
+| [`pocketone desktop prepare <dir>`](https://pocketone.dev/docs/reference/cli#pocketone-desktop-prepare) | Write the build image's vendored module into &lt;dir&gt; (the build image's Dockerfile runs this) |
+
+## Integrations
+
+| Extension | How they fit |
+|---|---|
+| [Bundle](https://pocketone.dev/docs/extensions/bundle) | The desktop app serves your hooks, migrations and public files from the executable through Bundle. |
+| [Standard](https://pocketone.dev/docs/extensions/standard) | The desktop app runs the standard set, as `pocketone serve` does. |
+| [JSVM](https://pocketone.dev/docs/extensions/jsvm) | Your hooks run in PocketOne's QuickJS engine. |
+
+### Building on Desktop
+
+The runtime is its own module, `ext/desktop/runtime`, so the `pocketone` binary never links Wails. Your own Go
+program can use it directly:
+
+```go
+desktop.Run(desktop.App{Name: "Notes", ID: "dev.example.notes", Hooks: hooks, Migrations: migrations, Public: public})
+```
+
+Build it with `CGO_ENABLED=0 go build -tags purego` for macOS and Linux (Wails' cgo-free backends); Windows needs no
+tag. The build image is [image/Dockerfile](https://github.com/pockethost/pocketone/blob/main/ext/desktop/image/Dockerfile): a `pocketone` and the vendored module `pocketone desktop
+prepare` writes.
+
+## Example
+
+[example/hello](https://github.com/pockethost/pocketone/tree/main/ext/desktop/example/hello) is a hello-world app: a hook (`GET /api/hello`), a migration (a `greetings`
+collection with one row) and a page that lists and adds greetings.
+
+```sh
+cd ext/desktop/example/hello
+pocketone superuser upsert admin@example.com password
+pocketone serve                 # http://127.0.0.1:8090
+pocketone desktop build         # dist/darwin-arm64/Hello.app on an Apple Silicon Mac
+```
+
+[example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/desktop/example/main.go) is a PocketBase app with only this extension, to show the command.
+
+```go
+// Command example is a PocketBase app with only the desktop extension: `go run . desktop build` in an app folder
+// (one with pb_hooks, pb_migrations or pb_public, like ./hello) builds it as a desktop app. The pocketone binary
+// has the same command.
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+
+	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
+	"github.com/pockethost/pocketone/ext/desktop"
+	"github.com/pockethost/pocketone/ext/extkit"
+)
+
+func main() {
+	app := pocketbase.New()
+	if _, err := extkit.Setup(app, []extkit.Extension{desktop.New()}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	clicmdv1.Mount(app, app.RootCmd) // the commands extensions provide; the standard set does this for pocketone
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
 
 ## License
 
@@ -8400,6 +9428,11 @@ For a URL that matches a page or API route, one JS call does all of this, in ord
 The call runs under the app's usual JS limits (execution time, memory), as one unit. If any step sends a response
 (`ctx.res.redirect`, `json`, `html`, `text`, `file`, `sse`), the later steps are skipped.
 
+**Async.** Middleware, `load`, method handlers, templates and components may be `async` (or return a promise). Each
+step waits for the one before it to settle, while the app's event loop runs, so `await` works on the `.async` twin of
+any Go function (`await ctx.app.countRecords.async('orders')`) and on any other promise. A rejected promise fails the
+request like a thrown error. Sync code never makes a promise, so it runs exactly as it would without this.
+
 ### 3.1 Middleware
 
 ```js
@@ -8414,6 +9447,9 @@ module.exports = (ctx, next) => {
 - One signature: `(ctx, next)`. Call `next()` to continue; return its result.
 - Returning without calling `next()` ends the request. If no response was sent, that's an error (500, and in dev
   the error page names the middleware file).
+- Middleware may be async: `await next()` returns once the rest of the request (later middleware, handlers,
+  template, layouts) has finished, and throws what it threw, so code after it can act on the outcome. A sync
+  middleware that calls `next()` without returning it still has the rest of the request awaited after it.
 - Share data through `ctx.data`.
 
 ### 3.2 Handlers: `+page.js`
@@ -8437,6 +9473,7 @@ module.exports = {
   `GET` (only the body is dropped), so keep side effects in `post`/`put`/`patch`/`delete`.
 - A handler may set `ctx.data` fields, or return a plain object, which is shallow-assigned into `ctx.data`
   (`Object.assign`). There is no deep merge.
+- Handlers may be async. A returned promise is awaited, and what it settles to is treated as a returned value.
 - A `+page.js` applies to every page in its folder. `ctx.route.name` tells them apart.
 - A method with no handler still renders the page, for every method (like PHP): a template can handle a form itself
   by checking `ctx.req.method`, with no `+page.js`.
@@ -8480,6 +9517,11 @@ module.exports = {
 
 - Escaping replaces `&` `<` `>` `"` `'` with `&amp;` `&lt;` `&gt;` `&#34;` `&#39;`. `null` and `undefined` output as an empty string.
 - A template is compiled once per content hash and reused.
+- **`await`.** A template whose code uses `await` (in any tag) is compiled as an async function, so
+  `<% const n = await ctx.app.countRecords.async('orders') %>` works. Including an async partial returns a promise:
+  print it with `<%- await include('name') %>`, which makes the including template async too. Printing a promise
+  without `await` is an error, not `[object Promise]`. `await slot('name', async () => { %>...<% })` defines a slot
+  whose content awaits. Templates without `await` stay plain functions.
 
 **In scope inside a template:** `ctx`, `data` (= `ctx.data`), `params` (= `ctx.params`), `include`, `slot`, `asset`
 (= `ctx.asset`), `meta` (= `ctx.meta`), `require` (the same `require` as page code, 1).
@@ -8585,6 +9627,9 @@ export default function Product({ data, slot }: any) {
   its locals become props.
 - Components are ordinary modules: `import Card from './_private/Card'` (resolved like `require`, 3.2). Partials
   are looked up with extensions in this order: `.ejs`, `.md`, `.jsx`, `.tsx`.
+- **Async components.** Any component may be `async`, the file's default export included. The render waits for it
+  wherever it sits in the tree; sibling async components run concurrently. `include()` of an async partial and
+  `slot(name, content)` with async content work the same way, and a layout reads the slot once it has settled.
 
 **TypeScript modules.** `+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and any `.ts` file reached by
 `require`/`import` work like their `.js` versions. A module whose only export is `export default` behaves like
@@ -9356,6 +10401,143 @@ func main() {
 	}
 }
 ```
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/s3-fallback
+
+# S3 Fallback
+
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount
+each kind of file on one: record uploads, backup zips, PITR history, or any extension's own kind. Every instance gets
+its own folder in the bucket and can't reach anything outside it. The credentials never reach the instance.
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+S3 Fallback is in the [standard set](https://pocketone.dev/docs/extensions/standard), so it's built into `pocketone` and every isolate on a
+[multisite](https://pocketone.dev/docs/extensions/multisite) host has it (Docker containers run stock images). It does nothing until the
+`storage` section below mounts a backend. Its main use is a multisite host, where each instance gets its own folder in
+one bucket; a single app with mounts keeps its files at the backend's root.
+
+In your own Go build, reconfigure the member instead of adding it again:
+
+```go
+set := standard.New()
+set.S3Fallback = s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts})
+```
+
+The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
+
+## Configure
+
+The `storage` section of `pocketone.yaml` is read on first use. Fields set in Go win.
+
+```yaml
+storage:
+  backends:                        # named S3-compatible destinations
+    r2-eu:   { endpoint: https://<account>.eu.r2.cloudflarestorage.com, bucket: pocketbase-eu, region: auto, access_key: $R2_KEY, secret: $R2_SECRET }
+    b2-cold: { endpoint: ..., bucket: ph-backups, region: ..., access_key: ..., secret: ... }
+  mounts:                          # filesystem kind -> backend
+    storage:    r2-eu              # record uploads
+    backups:    b2-cold            # backup zips
+    litestream: r2-eu              # PITR history (ext/pitr)
+  # enabled: false                 # off for every instance
+```
+
+Each backend also takes `prefix` (prepended to every key, so several deployments can share a bucket) and
+`force_path_style` (for MinIO and similar servers). With no mounts the extension does nothing and files stay on local
+disk, as in PocketBase.
+
+Each instance can turn it off in its own settings, from `instances.yaml` or a mothership. Only `enabled` is read per
+instance; backends and mounts are the operator's:
+
+```yaml
+instances:
+  - id: blog
+    extensions: { storage: { enabled: false } }
+```
+
+The old shape (`bucket:` with `uploads:` / `backups:`) still works, with a warning: it becomes a backend named
+`default`, mounted for uploads and backups.
+
+### pocketone.yaml reference
+
+#### `storage:`
+
+A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On for every instance unless false; an instance's extensions.storage.enabled overrides it. |
+| `backends` | map of object |  | Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style. |
+| `mounts` | map of string |  | Filesystem kind (storage, backups, litestream, ...) to backend name. |
+| `bucket.endpoint` | string |  | S3 endpoint URL. |
+| `bucket.bucket` | string |  | Bucket name. |
+| `bucket.region` | string |  | Bucket region (auto for R2). |
+| `bucket.access_key` | string |  | Access key id. |
+| `bucket.secret` | string |  | Secret key; use a $VAR from the .env. |
+| `bucket.prefix` | string |  | Prepended to every key, to share a bucket. |
+| `bucket.force_path_style` | bool |  | Path-style addressing, for MinIO and similar servers. |
+| `uploads` | bool |  | Deprecated: with bucket, false keeps uploads off it. |
+| `backups` | bool |  | Deprecated: with bucket, false keeps backups off it. |
+
+## Use
+
+There's nothing to do day to day. To an instance nothing is configured: Settings show S3 off, and uploads, thumbs,
+`$app.newFilesystem()` and the Backups screen work as before. Files land in the bucket under
+`<prefix>instances/<id>/<kind>/`. Downloads stream through the server, or redirect to the bucket with
+[S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect).
+
+When an instance turns on its own S3 (Settings → Files storage, or Settings → Backups), PocketBase's normal code takes
+over with the instance's credentials. Files already in the default bucket stay there, as PocketBase's own S3 switch
+doesn't move files either.
+
+It applies to instances created with the extension on. Files already on an instance's local disk are not read or moved.
+
+## Integrations
+
+### Works with
+
+| Extension | How they fit |
+|---|---|
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance the set reaches gets the extension. An isolate (Pocker) gets the root `instances/<id>/`. |
+| [PITR](https://pocketone.dev/docs/extensions/pitr) | Mount `litestream` and every instance without its own bucket keeps its history there. An instance's own PITR bucket still wins. |
+| [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | Downloads become signed redirects to the bucket. Nothing to wire: the fenced filesystem signs with its prefix, so S3 Redirect treats it like any S3 mount. |
+
+### Building on S3 Fallback
+
+- **Your own kind.** Any kind an extension asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
+  PITR's `litestream` works this way. Uploads and backups step aside when the app turned on its own S3; for other
+  kinds, the extension asking checks its own app setting first.
+- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for an app that has
+  the process to itself, `instances/<id>/` for an isolate, as under Pocker). `FS(root, kind)` returns the same
+  fenced filesystem outside a hook; close it when done. `Config()` returns the effective configuration.
+
+## Example
+
+There's no `example/main.go` yet. [`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go) shows it on the `pocketone` binary, as a single app
+and on a multisite host; [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show it in Go.
+
+## How it works
+
+- PocketBase asks `OnFilesystemCreate` before it creates a filesystem. For a mounted kind, the extension answers with the
+  backend, fenced to `<backend prefix><root><kind>/`. An instance can't list, read, write or delete anything outside
+  it.
+- The fence is a driver that adds the prefix to every key and strips it from listings. Signed download URLs are made
+  with the backend's own credentials.
+
+### Status
+
+Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go)); not yet deployed.
 
 ## License
 
@@ -10954,6 +12136,7 @@ few milliseconds and under 1 MB.
 | [Multisite](https://pocketone.dev/docs/extensions/multisite) | Add it to the host's standard set and Pocker gives it to every instance it runs (Docker containers run stock images): one extension value serves them all. Each instance has its own modules, in its own `pb_hooks/`, its own call slots and limits. Each call reads the instance's module file as it is then; nothing runs between calls (below). A module change reloads just that instance, like a `.pb.js` change. |
 | [Sandbox](https://pocketone.dev/docs/extensions/sandbox) | `$wasm` is safe to give a hostile tenant: a module gets nothing but its input. A call can't be interrupted by the JS engine's time limits, so `Timeout` (and compiling) bound it instead. |
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | `pocketone deploy` sends the modules with the rest of `pb_hooks/`. |
+| [MCP](https://pocketone.dev/docs/extensions/mcp) | The app's `/mcp` gets `wasm_list_modules` (superusers only): every module by name, with its manifest (functions, examples) and whether it runs. Agents connecting are told how to call a module with `$wasm`, so one working on the site knows its modules even without their sources. |
 
 ### Per-instance settings (Pocker)
 
@@ -11891,6 +13074,8 @@ Source: https://pocketone.dev/docs/extensions/multisite
 
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](https://pocketone.dev/docs/extensions/firewall)), and a runtime serves it:
 [pocker](https://pocketone.dev/docs/extensions/pocker) runs instances as isolates in its own process, [docker](https://pocketone.dev/docs/extensions/docker) runs each in its own container,
@@ -12128,6 +13313,8 @@ Source: https://pocketone.dev/docs/extensions/pocker
 # Pocker
 
 Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
 
 Many PocketOne instances in one process (like Docker, but for PocketOne), routed by hostname. Each instance is a
 normal app folder and starts on its first request, in tens of milliseconds. Pocker provides
@@ -13465,123 +14652,6 @@ MIT
 
 ---
 
-Source: https://pocketone.dev/docs/extensions/s3-fallback
-
-# S3 Fallback
-
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
-
-A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount
-each kind of file on one: record uploads, backup zips, PITR history, or any extension's own kind. Every instance gets
-its own folder in the bucket and can't reach anything outside it. The credentials never reach the instance.
-
-[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
-
-## Install
-
-S3 Fallback isn't built into `pocketone`; add it to a Go build. On a [multisite](https://pocketone.dev/docs/extensions/multisite) host, add it
-to the host's standard set; Pocker gives it to every instance it runs (Docker containers run stock images):
-
-```go
-set.Add(s3fallback.New(s3fallback.Config{}))
-```
-
-On a standalone app, register it with the backends and mounts in Go:
-
-```go
-extkit.MustRegister(app, s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts}))
-```
-
-The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
-
-## Configure
-
-The `storage` section of `pocketone.yaml` is read on first use. Fields set in Go win.
-
-```yaml
-storage:
-  backends:                        # named S3-compatible destinations
-    r2-eu:   { endpoint: https://<account>.eu.r2.cloudflarestorage.com, bucket: pocketbase-eu, region: auto, access_key: $R2_KEY, secret: $R2_SECRET }
-    b2-cold: { endpoint: ..., bucket: ph-backups, region: ..., access_key: ..., secret: ... }
-  mounts:                          # filesystem kind -> backend
-    storage:    r2-eu              # record uploads
-    backups:    b2-cold            # backup zips
-    litestream: r2-eu              # PITR history (ext/pitr)
-  # enabled: false                 # off for every instance
-```
-
-Each backend also takes `prefix` (prepended to every key, so several deployments can share a bucket) and
-`force_path_style` (for MinIO and similar servers). With no mounts the extension does nothing and files stay on local
-disk, as in PocketBase.
-
-Each instance can turn it off in its own settings, from `instances.yaml` or a mothership. Only `enabled` is read per
-instance; backends and mounts are the operator's:
-
-```yaml
-instances:
-  - id: blog
-    extensions: { storage: { enabled: false } }
-```
-
-The old shape (`bucket:` with `uploads:` / `backups:`) still works, with a warning: it becomes a backend named
-`default`, mounted for uploads and backups.
-
-## Use
-
-There's nothing to do day to day. To an instance nothing is configured: Settings show S3 off, and uploads, thumbs,
-`$app.newFilesystem()` and the Backups screen work as before. Files land in the bucket under
-`<prefix>instances/<id>/<kind>/`. Downloads stream through the server, or redirect to the bucket with
-[S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect).
-
-When an instance turns on its own S3 (Settings → Files storage, or Settings → Backups), PocketBase's normal code takes
-over with the instance's credentials. Files already in the default bucket stay there, as PocketBase's own S3 switch
-doesn't move files either.
-
-It applies to instances created with the extension on. Files already on an instance's local disk are not read or moved.
-
-## Integrations
-
-### Works with
-
-| Extension | How they fit |
-|---|---|
-| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance the set reaches gets the extension. An isolate (Pocker) gets the root `instances/<id>/`. |
-| [PITR](https://pocketone.dev/docs/extensions/pitr) | Mount `litestream` and every instance without its own bucket keeps its history there. An instance's own PITR bucket still wins. |
-| [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | Downloads become signed redirects to the bucket. Nothing to wire: the fenced filesystem signs with its prefix, so S3 Redirect treats it like any S3 mount. |
-
-### Building on S3 Fallback
-
-- **Your own kind.** Any kind an extension asks for through PocketBase's `OnFilesystemCreate` is served when it's mounted.
-  PITR's `litestream` works this way. Uploads and backups step aside when the app turned on its own S3; for other
-  kinds, the extension asking checks its own app setting first.
-- **Go API.** `Bind(app, root)` serves an app's filesystems from the mounts under `root` (`""` for an app that has
-  the process to itself, `instances/<id>/` for an isolate, as under Pocker). `FS(root, kind)` returns the same
-  fenced filesystem outside a hook; close it when done. `Config()` returns the effective configuration.
-
-## Example
-
-There's no `example/main.go` yet. [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show
-it on a standalone app and under Pocker, against MinIO.
-
-## How it works
-
-- PocketBase asks `OnFilesystemCreate` before it creates a filesystem. For a mounted kind, the extension answers with the
-  backend, fenced to `<backend prefix><root><kind>/`. An instance can't list, read, write or delete anything outside
-  it.
-- The fence is a driver that adds the prefix to every key and strips it from listings. Signed download URLs are made
-  with the backend's own credentials.
-
-### Status
-
-Works and is tested against MinIO; not yet deployed.
-
-## License
-
-MIT
-
-
----
-
 Source: https://pocketone.dev/docs/extensions/servertiming
 
 # Server Timing
@@ -14041,7 +15111,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
+PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
@@ -14061,6 +15131,24 @@ app.Start()
 `NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
+To build the app from `pocketone.yaml`'s `app` section (data folder, dev mode, hooks and migrations folders, JS engine
+and its limits), load the file and pass what `AppFromConfig` returns:
+
+```go
+cfg, err := config.Load(config.FromArgs(os.Args[1:]))
+if err != nil {
+	log.Fatal(err)
+}
+a, err := standard.AppFromConfig(cfg)
+if err != nil {
+	log.Fatal(err)
+}
+app := standard.New().NewApp(a.PocketBase, a.JS)
+```
+
+Every `app` key reaches your build this way, including ones added in later releases. Your own flags override the
+fields they cover.
+
 ## Configure
 
 - **Reconfigure a member:** replace it, e.g. `set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour})`. A
@@ -14068,7 +15156,7 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 - **Turn one off:** on a single app, `enabled: false` in its `pocketone.yaml` section (`tokens: {enabled: false}`);
   for every instance under Pocker, in its `pocker: isolate_config:` section, and for one instance, in its
   `extensions.<name>`. Extensions that require it turn off too, and
-  say why. cache, s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
+  say why. cache, storage (s3-fallback), s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
 - **Add your own:** `set.Add(myextension.New())`. Extras register after the members, under the same rules.
 - **Pick providers:** `set.Providers` is `pocketone.yaml`'s `providers:` section, for a contract more than one
   extension provides.
@@ -14164,7 +15252,7 @@ Turns the wasm extension off on a single app (`enabled: false`). On a multisite 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm
 standard: tokens/v1 ← tokens
 ```
 
@@ -14829,6 +15917,28 @@ module.exports = {
 
 If a handler sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file`, `sse`), the page doesn't render.
 
+### Async loading
+
+`load` and the method handlers can be `async`. PocketPages waits for them before it renders. Every Go function has an
+`.async` twin that does its work outside the JS VM, so other requests keep running while it waits:
+
+```js
+// pb_pages/dashboard/+page.js
+module.exports = {
+  async load(ctx) {
+    const [orders, users] = await Promise.all([
+      ctx.app.countRecords.async('orders'),
+      ctx.app.countRecords.async('users'),
+    ])
+    return { orders, users }
+  },
+}
+```
+
+What an async handler returns is used just like a returned object, and an error it throws (or a rejected promise)
+fails the request like any other error. You can also `await` right in a template: see [EJS](https://pocketone.dev/docs/extensions/pages/ejs#await) and
+[JSX](https://pocketone.dev/docs/extensions/pages/jsx#async-components).
+
 ### One `+page.js` per folder
 
 A `+page.js` applies to every page in its folder. Use `ctx.route.name` to tell them apart:
@@ -14971,6 +16081,22 @@ A request to `/feeds/latest` returns:
 - A folder can't have both a `+api.js` and an `index` page.
 - Middleware runs for API routes too.
 - `ctx.httpError()` thrown in a `+api.js` answers with JSON: `{ "status": 404, "message": "..." }`.
+- Handlers can be `async`. The response is sent once the handler settles.
+
+## Async handlers
+
+```js
+// pb_pages/stats/+api.js
+module.exports = {
+  async get(ctx) {
+    const orders = await ctx.app.countRecords.async('orders')
+    return ctx.res.json({ orders })
+  },
+}
+```
+
+An async handler still has to send a response. Returning a value without calling `ctx.res.json` (or another
+`ctx.res` method) is a `500`, as it is for a sync handler.
 
 ## Sending responses
 
@@ -15063,6 +16189,21 @@ A template returns its text. There is no `echo()`; anything you want in the outp
 <% } -%>
 </ul>
 ```
+
+## await
+
+A template can `await`. Any tag that uses `await` turns the template into an async one, and PocketPages waits for it
+before it sends the page:
+
+```ejs
+<% const orders = await ctx.app.countRecords.async('orders') %>
+<p><%= orders %> orders</p>
+```
+
+- Including a partial that uses `await` gives you a promise. Print it with `<%- await include('stats') %>`.
+- Printing a promise without `await` is an error, so you won't get `[object Promise]` in your page.
+- A slot whose content awaits takes an async function: `<% await slot('title', async () => { %>...<% }) %>`.
+- A template without `await` runs as a plain function, so sync templates cost nothing extra.
 
 ## Caching
 
@@ -15180,6 +16321,33 @@ JSX renders straight to HTML on the server. There's no virtual DOM, no hydration
 - `style` takes a string or an object: `{ marginTop: 4 }` renders `margin-top:4`.
 - `true` renders a bare attribute. `false`, `null` and `undefined` leave it out.
 - `<html>` gets `<!doctype html>` in front of it, since JSX can't write a doctype.
+
+## Async components
+
+Any component can be `async`, including the file's default export. The render waits for every async component in the
+tree, and sibling components run at the same time:
+
+```tsx
+// pb_pages/dashboard.tsx
+async function Count({ collection }: { collection: string }) {
+  const n = await $app.countRecords.async(collection)
+  return <b>{n}</b>
+}
+
+export default async function Dashboard({ ctx }: any) {
+  const user = ctx.auth ? await ctx.app.findRecordById.async('users', ctx.auth.id) : null
+  return (
+    <main>
+      <p>Hi {user ? user.getString('name') : 'there'}</p>
+      <p>
+        <Count collection="orders" /> orders, <Count collection="users" /> users
+      </p>
+    </main>
+  )
+}
+```
+
+`include()` of a partial that awaits, and `slot(name, content)` with async content, work the same way.
 
 ## Layouts
 
@@ -15483,6 +16651,17 @@ module.exports = (ctx, next) => {
 - One signature: `(ctx, next)`. Call `next()` to continue, and return its result.
 - Returning without calling `next()` ends the request. If no response was sent, that's an error (a `500`; in dev mode the error page names the middleware file).
 - Share data through `ctx.data`.
+- Middleware can be `async`. `await next()` returns once the rest of the request has run, and throws what it threw.
+
+```js
+// pb_pages/+middleware.js
+module.exports = async (ctx, next) => {
+  ctx.data.unread = await ctx.app.countRecords.async('notifications', $dbx.hashExp({ read: false }))
+  const started = Date.now()
+  await next()
+  ctx.log.info('rendered', ctx.route.path, Date.now() - started, 'ms')
+}
+```
 
 ## Order
 

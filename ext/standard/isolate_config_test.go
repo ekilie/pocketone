@@ -14,6 +14,7 @@ import (
 
 	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"github.com/pockethost/pocketone/ext/pocker"
+	"github.com/pockethost/pocketone/ext/sandbox"
 	"github.com/pockethost/pocketone/ext/standard"
 )
 
@@ -53,6 +54,7 @@ func TestPockerIsolateConfig(t *testing.T) {
 
 // A section for an extension the instances don't run is refused.
 func TestPockerIsolateConfigUnknownSection(t *testing.T) {
+	t.Cleanup(sandbox.UninstallEgressPolicy) // the host installs it process-wide; it blocks loopback for later tests
 	srv := &pocker.Server{Config: pocker.DefaultConfig(), Standard: standard.New()}
 	srv.Config.PBRoot = t.TempDir()
 	srv.Config.IsolateConfig = map[string]map[string]any{"app": {"dev": true}}

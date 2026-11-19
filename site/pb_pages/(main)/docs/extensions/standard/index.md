@@ -10,7 +10,7 @@ source: "ext/standard/README.md"
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
+PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy and WASM modules called from pb_hooks. Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
@@ -30,6 +30,24 @@ app.Start()
 `NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
+To build the app from `pocketone.yaml`'s `app` section (data folder, dev mode, hooks and migrations folders, JS engine
+and its limits), load the file and pass what `AppFromConfig` returns:
+
+```go
+cfg, err := config.Load(config.FromArgs(os.Args[1:]))
+if err != nil {
+	log.Fatal(err)
+}
+a, err := standard.AppFromConfig(cfg)
+if err != nil {
+	log.Fatal(err)
+}
+app := standard.New().NewApp(a.PocketBase, a.JS)
+```
+
+Every `app` key reaches your build this way, including ones added in later releases. Your own flags override the
+fields they cover.
+
 ## Configure
 
 - **Reconfigure a member:** replace it, e.g. `set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour})`. A
@@ -37,7 +55,7 @@ their contracts. On an app you built yourself, call `set.Register(app, jsvmConfi
 - **Turn one off:** on a single app, `enabled: false` in its `pocketone.yaml` section (`tokens: {enabled: false}`);
   for every instance under Pocker, in its `pocker: isolate_config:` section, and for one instance, in its
   `extensions.<name>`. Extensions that require it turn off too, and
-  say why. cache, s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
+  say why. cache, storage (s3-fallback), s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
 - **Add your own:** `set.Add(myextension.New())`. Extras register after the members, under the same rules.
 - **Pick providers:** `set.Providers` is `pocketone.yaml`'s `providers:` section, for a contract more than one
   extension provides.
@@ -133,7 +151,7 @@ Turns the wasm extension off on a single app (`enabled: false`). On a multisite 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, tokens, remotes, mcp, pages, s3redirect, pitr, backups, bulkmail, deploy, wasm
+standard: on: settings, templates, cache, tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm
 standard: tokens/v1 ← tokens
 ```
 

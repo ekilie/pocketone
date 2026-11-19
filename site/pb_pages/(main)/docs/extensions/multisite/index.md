@@ -9,6 +9,8 @@ source: "ext/multisite/README.md"
 
 Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
+> Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
+
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](/docs/extensions/firewall)), and a runtime serves it:
 [pocker](/docs/extensions/pocker) runs instances as isolates in its own process, [docker](/docs/extensions/docker) runs each in its own container,

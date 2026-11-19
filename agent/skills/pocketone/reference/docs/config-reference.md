@@ -89,6 +89,23 @@ Turns the deploy extension off on a single app (`enabled: false`). On a multisit
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
+#### `desktop:`
+
+How `pocketone desktop build` names and sizes the desktop app built from this folder.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | string |  | The app's name: the window title and the executable's name. Default: the folder's name. |
+| `id` | string |  | Reverse-DNS app id (dev.example.notes): names the app's data folder on each user's machine and its single-instance lock. Default: app.pocketone.<name>. |
+| `width` | int |  | The window's starting width. Default: 1024. |
+| `height` | int |  | The window's starting height. Default: 768. |
+| `sign.macos.identity` | string |  | The signing identity in your keychain, as security find-identity -v -p codesigning shows it: Developer ID Application: Your Name (TEAMID). |
+| `sign.macos.notary_profile` | string |  | The notarytool keychain profile (xcrun notarytool store-credentials <profile>). Set: each DMG is notarized and stapled. Empty: signed, not notarized. |
+| `sign.windows.command` | string |  | The command that signs one executable in place; {file} is its path. signtool on Windows, osslsigncode anywhere, or your signing service's tool. |
+| `sign.linux.gpg_key` | string |  | The GPG key to sign with (its email or id). Each build gets <name>.sha256 and a detached <name>.asc signature. |
+
+Owned by [Desktop](https://pocketone.dev/docs/extensions/desktop).
+
 #### `docker:`
 
 Runtime provider docker: each instance in its own container with the PocketBase (pb:) or PocketOne (p1:) binary of its version (image, binary cache and manifest, instance root, default version, idle stop, limits).
@@ -316,6 +333,27 @@ Turns the settings extension off on a single app (`enabled: false`). On a multis
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `storage:`
+
+A default S3 bucket for apps without their own (on a multisite host, one folder per instance): backends and mounts for uploads, backups, PITR history.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On for every instance unless false; an instance's extensions.storage.enabled overrides it. |
+| `backends` | map of object |  | Named S3-compatible destinations: endpoint, bucket, region, access_key, secret, prefix, force_path_style. |
+| `mounts` | map of string |  | Filesystem kind (storage, backups, litestream, ...) to backend name. |
+| `bucket.endpoint` | string |  | S3 endpoint URL. |
+| `bucket.bucket` | string |  | Bucket name. |
+| `bucket.region` | string |  | Bucket region (auto for R2). |
+| `bucket.access_key` | string |  | Access key id. |
+| `bucket.secret` | string |  | Secret key; use a $VAR from the .env. |
+| `bucket.prefix` | string |  | Prepended to every key, to share a bucket. |
+| `bucket.force_path_style` | bool |  | Path-style addressing, for MinIO and similar servers. |
+| `uploads` | bool |  | Deprecated: with bucket, false keeps uploads off it. |
+| `backups` | bool |  | Deprecated: with bucket, false keeps backups off it. |
+
+Owned by [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback).
 
 #### `templates:`
 

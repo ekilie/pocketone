@@ -1,0 +1,148 @@
+# main moves only through here. A push to land/<name> (.github/land.sh does it) runs what main needs, on exactly the
+# commits being landed (origin/main..the land branch), and fast-forwards main to the land branch only if all of it
+# passes. So main only ever points at a commit that passed, and the slow tests run here instead of on your machine.
+#
+#   extensions   the extension rules; affected modules' tidy, build, vet and go test -race (extensions.yml)
+#   core-audit   every commit that changes core carries a Core-Audit trailer (core-audit.yml)
+#   pocketbase   PocketBase's suite on our core, when the land changes core (upstream-tests.yml)
+#   generated    .github/regenerate.sh changes nothing: main never carries stale generated files
+#
+# Then `land` pushes the land branch to main without force: if main moved meanwhile and the land branch doesn't
+# contain it, the push is refused and the run says to merge origin/main and land again. A later land that contains an
+# earlier one may finish first; the earlier one then finds main already there and passes. Re-pushing the same land
+# branch cancels its previous run.
+#
+# The push to main uses the LAND_DEPLOY_KEY repository secret (the private half of a deploy key with write access), so
+# main's push workflows (site.yml's regenerate and deploy) run on it; a push made with GITHUB_TOKEN would start none.
+name: land
+
+on:
+  push:
+    branches: ['land/**']
+
+concurrency:
+  group: land-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      base: ${{ steps.range.outputs.base }}
+      head: ${{ steps.range.outputs.head }}
+      core: ${{ steps.range.outputs.core }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: What this lands
+        id: range
+        run: |
+          set -euo pipefail
+          base=$(git rev-parse origin/main)
+          head=$GITHUB_SHA
+          if ! git merge-base --is-ancestor "$base" "$head"; then
+            echo "::error::main has commits ${GITHUB_REF_NAME} doesn't. Run  git merge origin/main  and land again (.github/land.sh)."
+            exit 1
+          fi
+          {
+            echo "### Landing on main"
+            echo
+            git log --format='- `%h` %s' "$base..$head"
+          } >> "$GITHUB_STEP_SUMMARY"
+          core=false
+          [ -n "$(.github/core-audit/core-diff.sh --files "$base" "$head" || true)" ] && core=true
+          echo "core changed: $core"
+          { echo "base=$base"; echo "head=$head"; echo "core=$core"; } >> "$GITHUB_OUTPUT"
+
+  extensions:
+    needs: prepare
+    uses: ./.github/workflows/extensions.yml
+    with:
+      base: ${{ needs.prepare.outputs.base }}
+      head: ${{ needs.prepare.outputs.head }}
+
+  core-audit:
+    needs: prepare
+    uses: ./.github/workflows/core-audit.yml
+    with:
+      base: ${{ needs.prepare.outputs.base }}
+      head: ${{ needs.prepare.outputs.head }}
+
+  pocketbase:
+    needs: prepare
+    if: needs.prepare.outputs.core == 'true'
+    uses: ./.github/workflows/upstream-tests.yml
+
+  generated:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: site/sync/go.mod
+          cache-dependency-path: "**/go.sum"
+      - name: site/sync tests
+        working-directory: site/sync
+        run: go test .
+      - name: Generated files are current
+        run: |
+          set -euo pipefail
+          .github/regenerate.sh
+          stale=$(git status --porcelain)
+          if [ -n "$stale" ]; then
+            echo "::error::generated files are stale; run .github/regenerate.sh, commit what it changes and land again:"
+            echo "$stale" | sed 's/^/  /'
+            exit 1
+          fi
+
+  land:
+    needs: [prepare, extensions, core-audit, pocketbase, generated]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every check passed
+        env:
+          PREPARE: ${{ needs.prepare.result }}
+          EXTENSIONS: ${{ needs.extensions.result }}
+          CORE_AUDIT: ${{ needs.core-audit.result }}
+          POCKETBASE: ${{ needs.pocketbase.result }}
+          GENERATED: ${{ needs.generated.result }}
+        run: |
+          echo "prepare: $PREPARE, extensions: $EXTENSIONS, core-audit: $CORE_AUDIT, pocketbase: $POCKETBASE, generated: $GENERATED"
+          [ "$PREPARE" = success ] && [ "$EXTENSIONS" = success ] && [ "$CORE_AUDIT" = success ] \
+            && { [ "$POCKETBASE" = success ] || [ "$POCKETBASE" = skipped ]; } && [ "$GENERATED" = success ] \
+            || { echo "::error::not landed: a check failed (see the jobs above). Fix it, then land again."; exit 1; }
+      - name: Deploy key is set
+        env:
+          KEY: ${{ secrets.LAND_DEPLOY_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::LAND_DEPLOY_KEY is not set: add a deploy key with write access and its private half as this repository secret"; exit 1; }
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.head }}
+          fetch-depth: 0
+          ssh-key: ${{ secrets.LAND_DEPLOY_KEY }}
+      - name: Fast-forward main
+        env:
+          HEAD_SHA: ${{ needs.prepare.outputs.head }}
+        run: |
+          set -euo pipefail
+          if git push origin "$HEAD_SHA:refs/heads/main"; then
+            echo "landed $(git log -1 --format='%h %s' "$HEAD_SHA") on main" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            git fetch -q origin main
+            if git merge-base --is-ancestor "$HEAD_SHA" origin/main; then
+              echo "main already contains this land (a later land that includes it got there first)" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::main moved while this ran. Run  git merge origin/main  and land again (.github/land.sh)."
+              exit 1
+            fi
+          fi
+          # Done with the land branch, unless someone pushed to it again meanwhile.
+          git push --force-with-lease="refs/heads/$GITHUB_REF_NAME:$HEAD_SHA" origin ":refs/heads/$GITHUB_REF_NAME" \
+            || echo "::notice::left $GITHUB_REF_NAME in place: it moved since this run started"

@@ -72,6 +72,7 @@ func fakeSMTP(t *testing.T) (string, <-chan string) {
 // test needs no second loopback address (ext/pocker's TestEgressFromApps covers the rest on Linux).
 func TestEgressMailAndHTTPClient(t *testing.T) {
 	InstallEgressPolicy(EgressPolicy{Allow: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}})
+	t.Cleanup(UninstallEgressPolicy)
 
 	app := core.NewBaseApp(core.BaseAppConfig{DataDir: t.TempDir()})
 	BindMail(app)

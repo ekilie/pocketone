@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Before a push reaches main's path, the quick checks (go run ./.github/extensions quick: the extension rules, then
+# `go mod tidy -diff` and `go vet` in every module the push affects; ~20 s) catch what would break a module outright.
+# The tests run in CI on the land branch (.github/workflows/land.yml), off your machine.
+#
+# - A push to a land/ branch (what .github/land.sh does) runs the quick checks.
+# - A push straight to main is refused: main moves only when a land branch passes CI. Use .github/land.sh.
+# - Every other push (work branches, core-changes, tags) is left alone.
+#
+# `git push --no-verify` skips this hook. Turn the hooks on once per clone:  git config core.hooksPath .github/hooks
+set -euo pipefail
+
+check=0
+while read -r local_ref local_sha remote_ref _remote_sha; do
+  [ "$local_sha" = 0000000000000000000000000000000000000000 ] && continue # a delete
+  case "$remote_ref" in
+    refs/heads/main)
+      {
+        echo "pre-push: refused a push straight to main."
+        echo "  main moves only when a land branch passes CI. Land this commit with:  .github/land.sh"
+        echo "  (git push --no-verify overrides this, for emergencies.)"
+      } >&2
+      exit 1
+      ;;
+    refs/heads/land/*)
+      if [ "$local_sha" != "$(git rev-parse HEAD)" ]; then
+        echo "pre-push: $local_ref isn't HEAD; skipping the quick checks (they check HEAD)" >&2
+        continue
+      fi
+      check=1
+      ;;
+  esac
+done
+
+[ "$check" = 1 ] || exit 0
+
+echo "$(date +%T) pre-push: quick checks (go run ./.github/extensions quick)" >&2
+limit=()
+command -v timeout >/dev/null && limit=(timeout 600)
+if ! ${limit[@]+"${limit[@]}"} go run ./.github/extensions quick >&2; then
+  echo "$(date +%T) pre-push: quick checks failed; push refused (git push --no-verify overrides)" >&2
+  exit 1
+fi
+echo "$(date +%T) pre-push: quick checks passed" >&2

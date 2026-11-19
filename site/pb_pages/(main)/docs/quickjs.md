@@ -1,11 +1,9 @@
 ---
-title: QuickJS hooks
+title: "QuickJS hooks: async, import and TypeScript"
 description: PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
 ---
 
-# QuickJS hooks
-
-> **PocketBase:** hooks run on goja: CommonJS only, no async handlers, no state shared between handlers. **PocketOne:** the same JS API on QuickJS, with imports, TypeScript, async handlers, shared globals and hard limits.
+# QuickJS hooks: async, import and TypeScript
 
 PocketOne runs your `pb_hooks` and `pb_migrations` on [QuickJS](/docs/extensions/jsvm) instead of goja, the engine
 stock PocketBase uses. It's the same JS API (`$app`, `routerAdd`, `onRecordCreate`, `cronAdd`, `$http`, …), so your

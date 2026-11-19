@@ -13,12 +13,14 @@
 - [Cache](/docs/extensions/cache)
 - [Config](/docs/extensions/config)
 - [Deploy](/docs/extensions/deploy)
+- [Desktop](/docs/extensions/desktop/extension)
 - [JSVM](/docs/extensions/jsvm)
 - [MCP](/docs/extensions/mcp)
 - [Pages](/docs/extensions/pages/extension)
 - [Pages: PocketPages v1 specification](/docs/extensions/pages/spec)
 - [PITR](/docs/extensions/pitr)
 - [Remotes](/docs/extensions/remotes)
+- [S3 Fallback](/docs/extensions/s3-fallback)
 - [S3 Redirect](/docs/extensions/s3redirect)
 - [Settings](/docs/extensions/settings)
 - [Templates](/docs/extensions/templates)
@@ -44,7 +46,6 @@
 # Services for your instances
 
 - [Mail Relay](/docs/extensions/mailrelay)
-- [S3 Fallback](/docs/extensions/s3-fallback)
 - [Server Timing](/docs/extensions/servertiming)
 
 # Sell it as a service
