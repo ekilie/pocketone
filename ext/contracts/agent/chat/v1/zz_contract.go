@@ -4,6 +4,7 @@ package chatv1
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -18,7 +19,12 @@ var (
 )
 
 // Contract is agent.chat/v1.
-var Contract = extkit.NewContract[Chats]("agent.chat/v1", extkit.One).JS(extkit.JSHooks, nil)
+var Contract = extkit.NewContract[Chats]("agent.chat/v1", extkit.One).JS(extkit.JSHooks, nil).JSTypes(jsTypes)
+
+// jsTypes is agent.chat/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to pb_data/types.d.ts.
+//
+//go:embed zz_contract.d.ts
+var jsTypes string
 
 // W is agent.chat/v1's wire side: routes at /api/_c/agent.chat/v1/<op>, action hooks, MCP tools and the client.
 var W = extkit.NewWire(Contract, "chat", func(inner Chats, g *extkit.Guard[Chats]) Chats {

@@ -27,7 +27,9 @@
 //	contract:js closed|hooks|open     what an app's pb_hooks may do with it (default closed)
 //
 // Methods take ctx first; a wire contract's take extkit.Auth second; then at most one input value. They return error,
-// or one value and error. The generated file is zz_contract.go.
+// or one value and error. The generated files are zz_contract.go and, for a contract pb_hooks can touch (contract:js
+// hooks or open), zz_contract.d.ts: its TypeScript declarations (ts.go), which zz_contract.go embeds for ext/extkit to
+// add to pb_data/types.d.ts.
 package main
 
 import (
@@ -94,7 +96,19 @@ func main() {
 		fmt.Fprintln(os.Stderr, "contractgen:", err)
 		os.Exit(1)
 	}
+	ts, err := renderTS(dir, c)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "contractgen:", err)
+		os.Exit(1)
+	}
 	if err := os.WriteFile(filepath.Join(dir, "zz_contract.go"), src, 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "contractgen:", err)
+		os.Exit(1)
+	}
+	tsPath := filepath.Join(dir, "zz_contract.d.ts")
+	if ts == "" {
+		_ = os.Remove(tsPath)
+	} else if err := os.WriteFile(tsPath, []byte(ts), 0o644); err != nil {
 		fmt.Fprintln(os.Stderr, "contractgen:", err)
 		os.Exit(1)
 	}
@@ -446,6 +460,9 @@ package {{.Package}}
 
 import (
 	"context"
+{{- if ne .JS "JSClosed"}}
+	_ "embed"
+{{- end}}
 {{- if .NeedsJSON}}
 	"encoding/json"
 {{- end}}
@@ -473,7 +490,14 @@ var (
 // Contract is {{.ID}}.
 var Contract = {{if eq .Cardinality "Keyed"}}extkit.NewKeyedContract[{{.Iface}}]("{{.ID}}", func(v {{.Iface}}) string { return v.{{.Key}}() }){{else}}extkit.NewContract[{{.Iface}}]("{{.ID}}", extkit.{{.Cardinality}}){{end}}
 {{- if .Host}}.HostProvidable(){{end}}
-{{- if ne .JS "JSClosed"}}.JS(extkit.{{.JS}}, {{if eq .JS "JSOpen"}}func(o *extkit.JSObject) {{.Iface}} { return js{{.Iface}}{o} }{{else}}nil{{end}}){{end}}
+{{- if ne .JS "JSClosed"}}.JS(extkit.{{.JS}}, {{if eq .JS "JSOpen"}}func(o *extkit.JSObject) {{.Iface}} { return js{{.Iface}}{o} }{{else}}nil{{end}}).JSTypes(jsTypes){{end}}
+{{- if ne .JS "JSClosed"}}
+
+// jsTypes is {{.ID}}'s TypeScript declarations for pb_hooks (zz_contract.d.ts), added to pb_data/types.d.ts.
+//
+//go:embed zz_contract.d.ts
+var jsTypes string
+{{- end}}
 
 {{- if .Wire}}
 
