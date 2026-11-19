@@ -7,11 +7,11 @@ description: The app's in-memory store, shared across requests.
 
 The app's in-memory store (`$app.store()`). Set with two arguments, read with one.
 
-```js
+```ts
 ctx.store('visits', (ctx.store('visits') || 0) + 1)
 ```
 
-```ejs
+```ets
 <p>Visits since start: <%%= ctx.store('visits') %></p>
 ```
 

@@ -34,7 +34,7 @@ Start the app once so `pb_data/types.d.ts` exists, then run `npx tsc -p .` or op
 | `pages.Handlers` | A `+page.ts` or `+api.ts`: `load`, `get`, `post`, `put`, `patch`, `delete` |
 | `pages.Middleware` | A `+middleware.ts`: `(ctx, next) => ...` |
 | `pages.Config` | `+config.ts` |
-| `pages.PluginFactory`, `pages.Plugin` | A JS plugin |
+| `pages.PluginFactory`, `pages.Plugin` | A custom plugin |
 | `pages.Props<L>` | A `.tsx` page, layout or partial; `L` types an `include`'s locals |
 
 `satisfies` keeps your own return types and checks the shape:
@@ -72,7 +72,7 @@ A component you import and use as `<Card />` gets only the props you pass it, no
 
 ## Your own data, plugins and helpers
 
-`ctx.data` accepts any key. To type yours, or what a JS plugin adds to `ctx`, add to the interfaces in a `.d.ts` file of your own, say `pb_pages/types.d.ts`:
+`ctx.data` accepts any key. To type yours, or what a custom plugin adds to `ctx`, add to the interfaces in a `.d.ts` file of your own, say `pb_pages/_private/types.d.ts` (in `_private/`, so it isn't served like other files in `pb_pages`):
 
 ```ts
 declare namespace pages {
@@ -86,4 +86,4 @@ declare namespace pages {
 }
 ```
 
-`ctx.session` and `ctx.realtime` are typed as always there; at runtime they exist only when the `auth` and `realtime` plugins are on in `+config.js`.
+`ctx.session` and `ctx.realtime` are typed as always there; at runtime they exist only when the `auth` and `realtime` plugins are on in `+config.ts`.

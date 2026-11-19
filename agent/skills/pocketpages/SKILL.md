@@ -1,18 +1,34 @@
 ---
 name: pocketpages
-description: Build, debug and deploy PocketPages v1 apps, the file-routed server-rendered pages built into PocketOne (the `pages` extension). Use whenever a project has a `pb_pages/` folder, a `+layout.ejs`, `+page.js`, `+config.js`, `+middleware.js` or `+api.js` file, mentions `pocketone pages`, or the user asks for a server-rendered site on PocketOne or PocketBase. Covers routing, `+page.js` handlers, middleware, layouts and slots, partials, the `ctx` API, plugins (auth, realtime, the Datastar add-on), JSVM limits, and running and deploying with `pocketone`. This is v1 on PocketOne, not the old npm package (0.x, `pb_hooks/pages/`); for a 0.x project, read reference/docs/moving-from-0x.md first.
+description: Build, debug and deploy PocketPages v1 apps, the file-routed server-rendered pages built into PocketOne (the `pages` extension). Use whenever a project has a `pb_pages/` folder, a `+layout.ets`, `+page.ts`, `+config.ts`, `+middleware.ts` or `+api.ts` file (or their `.ejs`/`.js` twins), mentions `pocketone pages`, or the user asks for a server-rendered site on PocketOne or PocketBase. Covers routing, `+page.ts` handlers, middleware, layouts and slots, partials, the `ctx` API, plugins (auth, realtime, the Datastar add-on), JSVM limits, and running and deploying with `pocketone`. This is v1 on PocketOne, not the old npm package (0.x, `pb_hooks/pages/`); for a 0.x project, read reference/docs/moving-from-0x.md first.
 ---
 
 # PocketPages v1
 
 PocketPages v1 is the `pages` extension built into PocketOne. Files in a `pb_pages/` folder next to `pb_data/` become
-routes, like PHP. Pages are EJS, Markdown, JSX or TSX templates rendered on the server, with PocketBase's JSVM API
+routes, like PHP. Pages are ETS templates (EJS tags holding TypeScript), Markdown or TSX components rendered on the server, with PocketBase's JSVM API
 (`$app`, `Record`, `$dbx`, `$security`, ...) available. No npm install, no boot file, no build step, no Node server.
 
 It is **not** the npm `pocketpages` package (0.x). That one lived in `pb_hooks/pages/`, passed an `api` object and had
 `+load.js`/`+get.js` loaders. Most 0.x code needs changes: see [moving-from-0x](reference/docs/moving-from-0x.md).
 
 The contract is [reference/docs/spec.md](reference/docs/spec.md). Where a doc and the SPEC differ, trust the SPEC.
+
+## Write TypeScript and ETS
+
+- **Code is `.ts`, templates are `.ets`.** Code: `+page`, `+api`, `+middleware`, `+config`, `_private/` modules,
+  plugins. Templates: pages, `+layout`, `+error`, `+404`, partials. ETS is EJS syntax whose tags hold TypeScript.
+  Types are stripped, never checked: no build step, no `tsconfig`.
+- **One style per app.** Use TSX (`.tsx` components) only when the app already uses it or the user asks for it.
+- **`.js`, `.ejs` and `.jsx` are the plain-JavaScript twins** of `.ts`, `.ets` and `.tsx` and behave the same.
+  Existing apps (0.x ports included) keep them: don't rename a user's existing files unasked, and match the app's
+  style when adding files.
+- **`.md` pages run EJS tags with plain JavaScript**, not TypeScript.
+- **Types:** annotate with the `pages` namespace from the app's `types.d.ts` (no import): `load(ctx: pages.Context)`,
+  `({ children, slot }: pages.Props)`, `module.exports = { ... } satisfies pages.Handlers`, `pages.Middleware`,
+  `pages.Config`. See [typescript](reference/docs/typescript.md).
+
+More: [file-types](reference/docs/file-types.md), [ets](reference/docs/ets.md).
 
 ## This is not Node
 
@@ -22,13 +38,13 @@ Page code (middleware, handlers, templates, plugins) runs in the app's JS VM (Qu
   (`$http.send`, `$os`, `$security`, ...) and `ctx` helpers.
 - **Sync by default, async when you want.** `ctx.app`, `ctx.pb()` and `$http.send()` return results directly; don't
   `await` them. To wait outside the VM, `await` a Go function's `.async` twin
-  (`await ctx.app.countRecords.async('orders')`): middleware (`await next()`), `load`, handlers, EJS templates and
-  JSX components may all be `async`. In EJS, an async partial needs `<%- await include('name') %>`.
+  (`await ctx.app.countRecords.async('orders')`): middleware (`await next()`), `load`, handlers, ETS templates and
+  TSX components may all be `async`. In a template, an async partial needs `<%- await include('name') %>`.
 - **Records are Go objects.** Read with `record.get('x')` / `record.getString('x')` / `record.getInt('x')`, write
   with `record.set('x', v)`. `record.id` works.
 - **`$app` finders take positional arguments**, and bind user input with `{:name}` placeholders, never string
   interpolation:
-  ```js
+  ```ts
   ctx.app.findRecordsByFilter('posts', 'status = {:s}', '-created', 20, 0, { s: 'published' })
   ctx.app.findFirstRecordByData('products', 'slug', ctx.params.slug) // throws if not found
   ctx.app.findRecordById('posts', id)                                  // throws if not found
@@ -49,12 +65,12 @@ myapp/
   pb_migrations/
   pb_public/
   pb_pages/         # the app
-    +config.js      # optional: plugins, debug (top level only)
-    +layout.ejs     # optional: wraps every page
-    +middleware.js  # optional: runs for every route below
-    +error.ejs      # optional: error page (top level only)
-    +404.ejs        # optional: not-found page (top level only)
-    index.ejs       # /
+    +config.ts      # optional: plugins, debug (top level only)
+    +layout.ets     # optional: wraps every page
+    +middleware.ts  # optional: runs for every route below
+    +error.ets      # optional: error page (top level only)
+    +404.ets        # optional: not-found page (top level only)
+    index.ets       # /
     _private/       # partials and modules, never served
     assets/app.css  # static file at /assets/app.css
 ```
@@ -80,23 +96,23 @@ pocketone serve --dir ./pb_data --dev
 
 | File / folder | Meaning |
 |---|---|
-| `about.ejs`, `about.md`, `about.jsx`, `about.tsx` | Page at `/about` |
+| `about.ets`, `about.md`, `about.tsx` | Page at `/about` |
 | `docs/index.md` | Page at `/docs` (and `/docs/`) |
-| `products/[id].ejs`, `[id]/index.ejs` | One segment → `ctx.params.id` (string). Must be the whole segment |
+| `products/[id].ets`, `[id]/index.ets` | One segment → `ctx.params.id` (string). Must be the whole segment |
 | `(group)/` | Groups files, scopes layouts/middleware/`_private`. **Not in the URL** |
-| `robots.txt.ejs`, `feed.xml.ejs` | `/robots.txt` as `text/plain`, `/feed.xml` as XML; no layouts |
-| `+layout.ejs` / `.jsx` / `.tsx` | Wraps pages in this folder and below. One per folder. Innermost applies first |
-| `+middleware.js` / `.ts` | `(ctx, next)`, runs root first for every route below |
-| `+page.js` / `.ts` | Handlers for every page in this folder: `load`, `get`, `post`, `put`, `patch`, `delete` |
-| `+page.js` with no template | Serves the folder URL from JS (e.g. `logout/+page.js` → `/logout`) |
-| `+api.js` / `.ts` | Serves the folder URL with no template (JSON, feeds, webhooks) |
-| `+config.js`, `+error.*`, `+404.*` | Top of `pb_pages` only |
+| `robots.txt.ets`, `feed.xml.ets` | `/robots.txt` as `text/plain`, `/feed.xml` as XML; no layouts |
+| `+layout.ets` / `.tsx` | Wraps pages in this folder and below. One per folder. Innermost applies first |
+| `+middleware.ts` | `(ctx, next)`, runs root first for every route below |
+| `+page.ts` | Handlers for every page in this folder: `load`, `get`, `post`, `put`, `patch`, `delete` |
+| `+page.ts` with no template | Serves the folder URL from code (e.g. `logout/+page.ts` → `/logout`) |
+| `+api.ts` | Serves the folder URL with no template (JSON, feeds, webhooks) |
+| `+config.ts`, `+error.*`, `+404.*` | Top of `pb_pages` only |
 | `_private/` | Partials for `include()`, modules for `require()` / `ctx.resolve()`. Never served |
 | name starting `_`, `-`, `.` | Not routed (`-` for drafts and build inputs like `-app.tailwind.css`). Top-level `.well-known/` is served |
 | any other file (`.css`, `.png`, `.html`, `.js`) | Static file at its path (groups removed), with ETag |
 
 Which route wins: `/api/...` and `/_/...` always belong to PocketBase. A literal segment beats `[param]`, compared
-from the left. Segment counts must match: `products/[id].ejs` doesn't match `/products/1/reviews`. A URL nothing in
+from the left. Segment counts must match: `products/[id].ets` doesn't match `/products/1/reviews`. A URL nothing in
 `pb_pages` matches falls through to `pb_public`, then PocketBase. Matching is case-sensitive; a trailing slash matches
 the same route.
 
@@ -104,9 +120,9 @@ Details: [routing](reference/docs/routing.md), [directory-structure](reference/d
 
 ## Request flow
 
-1. Plugins: every `extendContext(ctx)`, then every `onRequest(ctx)`, in `+config.js` order.
-2. Every `+middleware.js` from `pb_pages/` down to the route's folder (groups included).
-3. The folder's `+page.js` or `+api.js`: `load`, then the handler for the request method, if any.
+1. Plugins: every `extendContext(ctx)`, then every `onRequest(ctx)`, in `+config.ts` order.
+2. Every `+middleware.ts` from `pb_pages/` down to the route's folder (groups included).
+3. The folder's `+page.ts` or `+api.ts`: `load`, then the handler for the request method, if any.
 4. The template, then layouts, innermost first.
 5. The response: `200 text/html` unless code set a status or sent something else.
 
@@ -114,10 +130,10 @@ If any step sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file`
 
 - **A page renders for any HTTP method.** Handlers are optional; a template can handle a form itself by checking
   `ctx.req.method`. `HEAD` runs `load` and `get` like `GET`, so keep side effects in `post`/`put`/`patch`/`delete`.
-- Only routes with nothing to render (`+api.js`, a template-less `+page.js`) answer `405` for a method with no
+- Only routes with nothing to render (`+api.ts`, a template-less `+page.ts`) answer `405` for a method with no
   handler, and they must send a response or it's a 500.
 - A handler can set `ctx.data.x` or return a plain object, which is **shallow**-assigned into `ctx.data`.
-- **JSON is only sent by `ctx.res.json()`** (or from `+api.js`). Template output is never parsed as JSON.
+- **JSON is only sent by `ctx.res.json()`** (or from `+api.ts`). Template output is never parsed as JSON.
 
 More: [loading-data](reference/docs/loading-data.md), [middleware](reference/docs/middleware.md), [api-routes](reference/docs/api-routes.md).
 
@@ -125,8 +141,8 @@ More: [loading-data](reference/docs/loading-data.md), [middleware](reference/doc
 
 **Page with a handler**
 
-```js
-// pb_pages/posts/[slug]/+page.js
+```ts
+// pb_pages/posts/[slug]/+page.ts
 module.exports = {
   load(ctx) {
     try {
@@ -138,8 +154,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<%# pb_pages/posts/[slug]/index.ejs %>
+```ets
+<%# pb_pages/posts/[slug]/index.ets %>
 <% meta('title', data.post.getString('title')) %>
 <article>
   <h1><%= data.post.getString('title') %></h1>
@@ -149,8 +165,8 @@ module.exports = {
 
 **Layout with slots and flash**
 
-```ejs
-<%# pb_pages/+layout.ejs %>
+```ets
+<%# pb_pages/+layout.ets %>
 <!doctype html>
 <html>
   <head>
@@ -170,8 +186,8 @@ A page sets a named slot with `<% slot('title', () => { %>About<% }) %>`; it out
 
 **Form POST + redirect with a flash**
 
-```js
-// pb_pages/contact/+page.js
+```ts
+// pb_pages/contact/+page.ts
 module.exports = {
   post(ctx) {
     const { email, message } = ctx.req.body()
@@ -188,10 +204,10 @@ module.exports = {
 }
 ```
 
-**Auth guard middleware** (with `plugins: ['auth']` in `+config.js`)
+**Auth guard middleware** (with `plugins: ['auth']` in `+config.ts`)
 
-```js
-// pb_pages/account/+middleware.js
+```ts
+// pb_pages/account/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/auth/login', { flash: 'Please sign in' })
   return next()
@@ -200,8 +216,8 @@ module.exports = (ctx, next) => {
 
 **JSON route**
 
-```js
-// pb_pages/feeds/latest/+api.js
+```ts
+// pb_pages/feeds/latest/+api.ts
 module.exports = {
   get(ctx) {
     const posts = ctx.app.findRecordsByFilter('posts', 'published = true', '-created', 20, 0)
@@ -212,26 +228,26 @@ module.exports = {
 
 ## Templates, partials, modules
 
-- EJS tags: `<% code %>`, `<%= escaped %>`, `<%- raw %>`, `<%# comment %>`, `-%>` and `<%_ _%>` trim whitespace,
+- Template tags (ETS, and `.md`): `<% code %>`, `<%= escaped %>`, `<%- raw %>`, `<%# comment %>`, `-%>` and `<%_ _%>` trim whitespace,
   `<script server> ... </script>` is the same as `<% ... %>`.
 - **In scope in templates:** `ctx`, `data`, `params`, `meta`, `asset`, `include`, `slot`, `require`, and `locals`.
   Everything else is on `ctx` (`ctx.auth`, `ctx.req`, `ctx.res`, `ctx.resolve`, `ctx.env`, ...).
 - **There is no `echo()`.** A template returns its text; output goes through tags.
 - `include(name, locals?)` renders a partial from `_private/`: the current template's folder, then each parent up to
-  `pb_pages/`. Extensions are optional (`.ejs`, `.md`, `.jsx`, `.tsx` tried in that order). `/name` looks only in
+  `pb_pages/`. Extensions are optional (`.ets`, `.ejs`, `.md`, `.jsx`, `.tsx` tried in that order). `/name` looks only in
   `pb_pages/_private/`; `/blog/_private/card` is a path from the top. Use `<%- include(...) %>`.
 - **Partials get `locals`.** Passed values are top-level variables, and `locals` is the whole object, so test optional
   ones with `locals.subtitle` (a bare `subtitle` throws if it wasn't passed). Partials also see `ctx`, `data`, `params`.
 - `ctx.include(name, locals?)` renders a partial from JS (handlers, middleware, plugins).
 - `ctx.resolve(name, { mode })` loads a `_private/` module, looked up from the **route's** folder. Modes: `require`
   (default), `raw`, `script`, `style`.
-- **Markdown (`.md`)**: YAML front matter (each key goes to `ctx.meta`), then EJS, then Markdown (CommonMark + GFM).
+- **Markdown (`.md`)**: YAML front matter (each key goes to `ctx.meta`), then EJS tags (plain JavaScript), then Markdown (CommonMark + GFM).
   Headings get ids; relative images go through `asset`. Layouts can't be Markdown.
-- **JSX/TSX**: default export is a component; props `ctx`, `data`, `params`, `meta`, `asset`, `include`, `slot`,
+- **TSX** (or `.jsx`): default export is a component; props `ctx`, `data`, `params`, `meta`, `asset`, `include`, `slot`,
   `children`. Server HTML only: no hydration, event-handler props are dropped (use `onclick="..."`, `hx-get`,
   `data-on:click`). Compiled by esbuild in the binary; types are stripped, not checked.
 
-More: [ejs](reference/docs/ejs.md), [partials](reference/docs/partials.md), [layouts](reference/docs/layouts.md),
+More: [ets](reference/docs/ets.md), [partials](reference/docs/partials.md), [layouts](reference/docs/layouts.md),
 [markdown](reference/docs/markdown.md), [jsx](reference/docs/jsx.md), [ctx overview](reference/docs/ctx/index.md).
 
 ## `ctx` at a glance
@@ -246,8 +262,8 @@ More: [ejs](reference/docs/ejs.md), [partials](reference/docs/partials.md), [lay
 | `ctx.flash()` | One-time message from the previous redirect, or `undefined` |
 | `ctx.meta(k, v?)`, `ctx.asset(path)` | Page metadata / fingerprinted static URL (`/assets/app.3f9a1c2b7d4e.css`) |
 | `ctx.env(name)`, `ctx.log.*`, `ctx.store(k, v?)` | Env var (`''` if unset) / `debug`, `info`, `warn`, `error` / app in-memory store |
-| `ctx.httpError(status, msg)` | Throw it for a 404/403/...; JSON in `+api.js` |
-| `ctx.pagesDir`, `ctx.dev`, `ctx.error` | `pb_pages` path / dev mode flag / `{ status, message }` in `+error.ejs` |
+| `ctx.httpError(status, msg)` | Throw it for a 404/403/...; JSON in `+api.ts` |
+| `ctx.pagesDir`, `ctx.dev`, `ctx.error` | `pb_pages` path / dev mode flag / `{ status, message }` in `+error.ets` |
 | `ctx.session`, `ctx.realtime`, `ctx.datastar` | Added by the `auth`, `realtime` and Datastar plugins |
 
 Cookies set with `ctx.res.cookie` are `HttpOnly`, `SameSite=Lax`, `path=/` (and `Secure` on HTTPS) by default.
@@ -257,17 +273,17 @@ Reference: [req](reference/docs/ctx/req.md), [res](reference/docs/ctx/res.md), [
 
 ## Plugins
 
-```js
-// pb_pages/+config.js — must export an object
+```ts
+// pb_pages/+config.ts — must export an object
 module.exports = {
   plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
 }
 ```
 
-- Only two keys: `plugins` and `debug`. EJS and Markdown are always on; they aren't plugins.
-- A string is required as a module first (`_private/<name>.js`, then a `node_modules` package, or a `./path`);
-  only if none is found is it a built-in (`auth`, `realtime`). `require('./_private/x.js')` loads one exact file;
+- Only two keys: `plugins` and `debug`. ETS and Markdown are always on; they aren't plugins.
+- A string is required as a module first (`_private/<name>.ts`, then a `node_modules` package, or a `./path`);
+  only if none is found is it a built-in (`auth`, `realtime`). `require('./_private/x.ts')` loads one exact file;
   `{ factory, ...options }` passes options.
 - **`auth`** (built in): `pb_auth` cookie sessions and `ctx.session`: `register`, `signInWithPassword`, `requestOTP`,
   `signInWithOTP`, `signInAnonymously`, `requestOAuth2`, `signInWithOAuth2`, `signIn(record)`, `signOut`,
@@ -289,17 +305,17 @@ Details: [plugins](reference/docs/plugins/index.md), [auth](reference/docs/plugi
 These are **startup errors** (logged as `pages: ...` with the file path; the previous route table keeps serving):
 
 - 0.x loader files: `+load.js`, `+get.js`, `+post.js`, ... Any `+` name other than `+config`, `+layout`,
-  `+middleware`, `+page`, `+api`, `+error`, `+404` is an error. Use one `+page.js` exporting `load`, `get`, `post`, ...
-- `+layout.md` (a layout must be `.ejs`, `.jsx` or `.tsx`), or two layouts in one folder.
+  `+middleware`, `+page`, `+api`, `+error`, `+404` is an error. Use one `+page.ts` exporting `load`, `get`, `post`, ...
+- `+layout.md` (a layout must be `.ets` or `.tsx`, or their `.ejs`/`.jsx` twins), or two layouts in one folder.
 - `*.pb.js` / `*.pb.ts` hook files in `pb_pages`. They belong in `pb_hooks`.
 - A `pb_pages/api/` folder (`/api/` is PocketBase's). Use `xapi/`, `feeds/`, `hooks/`, ...
-- `post-[id].ejs`: a param must be the whole segment. Folders can't start with `+`.
-- `+config.js`, `+error`, `+404` below the top level; a `+api.js` beside an `index` page; a static file and a page
+- `post-[id].ets`: a param must be the whole segment. Folders can't start with `+`.
+- `+config.ts`, `+error`, `+404` below the top level; a `+api.ts` beside an `index` page; a static file and a page
   claiming the same URL.
 
 These **fail on every request** (500, reason in the log and on the dev error page):
 
-- `+config.js` exporting a function (`module.exports = (api) => ({...})`), unknown keys, a plugin listed twice, or a
+- `+config.ts` exporting a function (`module.exports = (api) => ({...})`), unknown keys, a plugin listed twice, or a
   name that's neither a module nor a built-in.
 - A plugin with 0.x hooks (`onExtendContextApi`, `onRender`, `onResponse`, `handles`). Use `extendContext`,
   `onRequest(ctx)`, `transform`.
@@ -318,8 +334,8 @@ These **change quietly** from 0.x:
 
 ## Debugging
 
-- Run with `--dev`, or set `debug: true` in `+config.js`: error pages show the message, file and line (mapped to the
-  `.ejs`/`.md` source) and a trimmed stack. Otherwise users see "Something went wrong".
+- Run with `--dev`, or set `debug: true` in `+config.ts`: error pages show the message, file and line (mapped to the
+  `.ets`/`.md` source) and a trimmed stack. Otherwise users see "Something went wrong".
 - `ctx.log.debug()` prints only in dev mode or with `debug: true`; `info`/`warn`/`error` always go to the app's log.
 - A change doesn't show up? Look for a `pages:` startup error in the log: a bad name or route conflict keeps the
   previous routes serving.
@@ -358,18 +374,19 @@ Getting started
 Routing and request flow
 - [routing](reference/docs/routing.md): files to URLs, params, groups, API routes, precedence.
 - [parameters](reference/docs/parameters.md): `ctx.params` and `ctx.req.query()`.
-- [loading-data](reference/docs/loading-data.md): inline loading, `+page.js` handlers, template-less pages.
+- [loading-data](reference/docs/loading-data.md): inline loading, `+page.ts` handlers, template-less pages.
 - [middleware](reference/docs/middleware.md): `(ctx, next)`, order, common uses.
-- [api-routes](reference/docs/api-routes.md): `+api.js` and JSON responses.
+- [api-routes](reference/docs/api-routes.md): `+api.ts` and JSON responses.
 - [errors](reference/docs/errors.md): thrown errors, `ctx.httpError`, `+error` and `+404` pages.
 
 Templates
-- [ejs](reference/docs/ejs.md): EJS tags, escaping, what's in scope.
+- [file-types](reference/docs/file-types.md): `.ts`/`.ets`/`.tsx`, their JavaScript twins, `.md`.
+- [ets](reference/docs/ets.md): ETS templates: EJS tags holding TypeScript, escaping, what's in scope.
 - [layouts](reference/docs/layouts.md): `+layout` files and named slots.
 - [partials](reference/docs/partials.md): `include()`, lookup order, `locals`.
 - [private-files](reference/docs/private-files.md): `_private/` folders and unrouted names.
 - [markdown](reference/docs/markdown.md): `.md` pages, front matter, heading ids.
-- [jsx](reference/docs/jsx.md): `.jsx`/`.tsx` pages, layouts and partials.
+- [jsx](reference/docs/jsx.md): `.tsx` (and `.jsx`) pages, layouts and partials.
 - [static-content](reference/docs/static-content.md), [asset-management](reference/docs/asset-management.md), [caching](reference/docs/caching.md): static files and ETags, `asset()` URLs, what's cached.
 
 The `ctx` object
@@ -386,13 +403,13 @@ The `ctx` object
 - [ctx/env](reference/docs/ctx/env.md), [ctx/log](reference/docs/ctx/log.md), [ctx/store](reference/docs/ctx/store.md): environment variables, logging, the in-memory store.
 
 Plugins
-- [plugins/index](reference/docs/plugins/index.md): built-ins, JS plugins, add-ons, lookup order.
+- [plugins/index](reference/docs/plugins/index.md): built-ins, custom plugins, add-ons, lookup order.
 - [plugins/auth](reference/docs/plugins/auth.md), [authentication](reference/docs/authentication.md): `ctx.session`; full sign-in flows (password, OTP, OAuth2, anonymous).
 - [plugins/realtime](reference/docs/plugins/realtime.md), [realtime](reference/docs/realtime.md): `ctx.realtime.send()`; receiving in the browser.
 - [plugins/datastar](reference/docs/plugins/datastar.md): the Datastar add-on and `ctx.datastar`.
 - [htmx](reference/docs/htmx.md): using htmx: fragments without layouts, forms, realtime.
-- [plugins/authoring](reference/docs/plugins/authoring.md): writing a JS plugin.
-- [config](reference/docs/config.md): `+config.js` options.
+- [plugins/authoring](reference/docs/plugins/authoring.md): writing a custom plugin.
+- [config](reference/docs/config.md): `+config.ts` options.
 
 Runtime, debugging, deploying
 - [jsvm](reference/docs/jsvm.md): the JS runtime, `$app`, npm packages.

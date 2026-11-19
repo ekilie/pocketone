@@ -11,13 +11,13 @@ PocketBase pushes realtime messages to browsers over server-sent events. In Pock
 
 Turn on the [`realtime` plugin](plugins/realtime.md) and call `ctx.realtime.send()`:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = { plugins: ['realtime'] }
 ```
 
-```js
-// pb_pages/rooms/[id]/+api.js
+```ts
+// pb_pages/rooms/[id]/+api.ts
 module.exports = {
   post(ctx) {
     ctx.realtime.send(`rooms/${ctx.params.id}/delta`, ctx.req.body())
@@ -28,7 +28,7 @@ module.exports = {
 
 Limit recipients with a filter:
 
-```js
+```ts
 ctx.realtime.send('alerts', 'Hi', { filter: (client) => !!client.get('auth') })
 ```
 

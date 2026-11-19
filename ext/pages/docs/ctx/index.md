@@ -7,15 +7,15 @@ description: Reference for ctx, the one object per request passed to middleware,
 
 PocketPages creates one `ctx` object per request and passes it to middleware, handlers, templates and plugins.
 
-```js
-// +middleware.js
+```ts
+// +middleware.ts
 module.exports = (ctx, next) => next()
 
-// +page.js / +api.js
+// +page.ts / +api.ts
 module.exports = { load(ctx) {} }
 ```
 
-```ejs
+```ets
 <!-- any template -->
 <p><%%= ctx.req.url.pathname %></p>
 ```
@@ -45,7 +45,7 @@ In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`,
 | `ctx.pagesDir` | Absolute path of the app's `pb_pages` folder (read-only), e.g. for `$os.readDir` |
 | `ctx.dev` | `true` in dev mode |
 | [`ctx.httpError(status, message)`](../errors.md) | An error to throw for a specific status |
-| [`ctx.error`](../errors.md) | `{ status, message }`, in `+error.ejs` |
+| [`ctx.error`](../errors.md) | `{ status, message }`, in `+error.ets` |
 
 ## Added by plugins
 
@@ -55,4 +55,4 @@ In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`,
 | `ctx.realtime` | [realtime](../plugins/realtime.md) |
 | `ctx.datastar` | [datastar](../plugins/datastar.md) |
 
-JS plugins can add their own members with [`extendContext`](../plugins/authoring.md).
+Custom plugins can add their own members with [`extendContext`](../plugins/authoring.md).

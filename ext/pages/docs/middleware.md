@@ -1,11 +1,11 @@
 ---
 title: Using Middleware in PocketPages
-description: +middleware.js files run root first for every route below them, with one (ctx, next) signature.
+description: +middleware.ts files run root first for every route below them, with one (ctx, next) signature.
 ---
 
 # Middleware
 
-Middleware files (`+middleware.js`) run before your handlers and templates. Use them to:
+Middleware files (`+middleware.ts`) run before your handlers and templates. Use them to:
 
 - Check authentication
 - Load data a whole section shares
@@ -14,8 +14,8 @@ Middleware files (`+middleware.js`) run before your handlers and templates. Use 
 
 ## Basic example
 
-```js
-// pb_pages/admin/+middleware.js
+```ts
+// pb_pages/admin/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   ctx.data.section = 'admin'
@@ -28,8 +28,8 @@ module.exports = (ctx, next) => {
 - Share data through `ctx.data`.
 - Middleware can be `async`. `await next()` returns once the rest of the request has run, and throws what it threw.
 
-```js
-// pb_pages/+middleware.js
+```ts
+// pb_pages/+middleware.ts
 module.exports = async (ctx, next) => {
   ctx.data.unread = await ctx.app.countRecords.async('notifications', $dbx.hashExp({ read: false }))
   const started = Date.now()
@@ -40,22 +40,22 @@ module.exports = async (ctx, next) => {
 
 ## Order
 
-Every `+middleware.js` from `pb_pages/` down to the route's folder runs, root first. Groups count too.
+Every `+middleware.ts` from `pb_pages/` down to the route's folder runs, root first. Groups count too.
 
 ```
 pb_pages/
-  +middleware.js         # runs first (all routes)
+  +middleware.ts         # runs first (all routes)
   products/
-    +middleware.js       # runs second (/products/...)
+    +middleware.ts       # runs second (/products/...)
     [id]/
-      +middleware.js     # runs third (/products/[id])
+      +middleware.ts     # runs third (/products/[id])
 ```
 
 The full order for a request is:
 
 1. Plugins' `onRequest`
 2. Middleware, root first
-3. The folder's `+page.js` or `+api.js` (`load`, then the method's handler)
+3. The folder's `+page.ts` or `+api.ts` (`load`, then the method's handler)
 4. The template, then layouts, innermost first
 5. The response
 
@@ -65,7 +65,7 @@ If any step sends a response, the later steps are skipped.
 
 ### Auth guard
 
-```js
+```ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()
@@ -74,8 +74,8 @@ module.exports = (ctx, next) => {
 
 ### Request validation
 
-```js
-// pb_pages/products/[id]/+middleware.js
+```ts
+// pb_pages/products/[id]/+middleware.ts
 module.exports = (ctx, next) => {
   if (!/^[a-z0-9]+$/.test(ctx.params.id)) throw ctx.httpError(400, 'Invalid ID')
   return next()
@@ -84,15 +84,15 @@ module.exports = (ctx, next) => {
 
 ### Shared data
 
-```js
-// pb_pages/+middleware.js
+```ts
+// pb_pages/+middleware.ts
 module.exports = (ctx, next) => {
   ctx.data.categories = ctx.app.findRecordsByFilter('categories', 'active = true', 'name', 100)
   return next()
 }
 ```
 
-```ejs
+```ets
 <nav>
   <%% for (const c of data.categories) { %>
     <a href="/categories/<%%= c.id %>"><%%= c.getString('name') %></a>
@@ -102,7 +102,7 @@ module.exports = (ctx, next) => {
 
 ### Headers
 
-```js
+```ts
 module.exports = (ctx, next) => {
   ctx.res.header('X-Frame-Options', 'DENY')
   return next()
