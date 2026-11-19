@@ -498,8 +498,9 @@ ext/<name>/
   structure people can read, and TypeScript carries the types.
   - **In `docs/`**, put the versions of one example in consecutive fenced blocks (```` ```ts ````, ```` ```go ````, and
     ```` ```ets ```` when it needs a template), nothing between. pocketone.dev shows them as tabs (TS | Go | ETS), one at
-    a time; the reader's pick carries across every example and page. On GitHub they're just consecutive blocks. Put a
-    line of text between blocks that aren't alternatives (a `+page.ts` and the `.ets` template it feeds) so both show.
+    a time. TS and ETS are the same choice, TypeScript, against Go: a group has one or the other, never both (a
+    `+page.ts` next to the `.ets` template it feeds shows both blocks), and picking any tab switches every group on every
+    page to that side and remembers it. On GitHub they're just consecutive blocks.
   - **In the README**, keep samples inline: when you show the Go version too, put a line of text before it ("In Go:")
     so the two don't become tabs and the README reads as plain Markdown.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another

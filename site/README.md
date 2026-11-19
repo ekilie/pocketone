@@ -14,7 +14,7 @@ under `/docs/extensions/pages`.
 - `pb_pages/(main)/blog/`: every `.md` file there is a post (front matter: title, description, date, author, tags).
 - `pb_pages/assets/site.css` is the whole stylesheet: hand-written, no build step.
 - Code tabs (`pb_pages/assets/docs.js`): consecutive ```` ```ts ````, ```` ```go ```` and ```` ```ets ```` blocks on a page
-  become one tabbed example (TS | Go | ETS); the reader's language is kept in
+  become one tabbed example (TS | Go | ETS); TS and ETS are one preference against Go and never share a group; the reader's language is kept in
   `localStorage` (`code-lang`) and applies to every group. Extension docs (`ext/*/docs`) use them (examples are
   TypeScript page code, not hooks or JS); READMEs keep samples inline (text between languages).
 - `design/`: the logo and mascot (the joey in the pocket). `mark.svg` is the source; `design/render.sh` renders
