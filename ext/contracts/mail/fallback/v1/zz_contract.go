@@ -19,7 +19,7 @@ var (
 // Contract is mail.fallback/v1.
 var Contract = extkit.NewContract[Sender]("mail.fallback/v1", extkit.Many).JS(extkit.JSOpen, func(o *extkit.JSObject) Sender { return jsSender{o} }).JSTypes(jsTypes)
 
-// jsTypes is mail.fallback/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to pb_data/types.d.ts.
+// jsTypes is mail.fallback/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to the app's types.d.ts.
 //
 //go:embed zz_contract.d.ts
 var jsTypes string

@@ -21,7 +21,7 @@ var (
 // Contract is mail.feedback/v1.
 var Contract = extkit.NewContract[Receiver]("mail.feedback/v1", extkit.One).JS(extkit.JSHooks, nil).JSTypes(jsTypes)
 
-// jsTypes is mail.feedback/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to pb_data/types.d.ts.
+// jsTypes is mail.feedback/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to the app's types.d.ts.
 //
 //go:embed zz_contract.d.ts
 var jsTypes string

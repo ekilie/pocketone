@@ -2492,7 +2492,7 @@ standard: bulkmail off: needs mail.fallback/v1, which nothing provides
   The startup lines show it (`pb_hooks: provides mail.fallback/v1; requires restore/v1`). Methods run on pooled
   runtimes like any hook handler, so they can't use the file's local variables. A Go extension that *requires* a
   contract only JS provides is resolved before the JS runs: name `pb_hooks` under `providers:` for it in
-  `pocketone.yaml`. `pb_data/types.d.ts` types both sides from the contract's Go interface: `e.provide` checks the object
+  `pocketone.yaml`. `types.d.ts` types both sides from the contract's Go interface: `e.provide` checks the object
   against the contract (`contracts.Providers`), and each action hook's `e.input` has its operation's input type.
 - **CLI:** every operation of a wire contract is a `pocketone remote ...` command with no code (`remote restore to
   --at -2h`), flags from its input. Provide [cli.commands/v1](../ext/contracts/cli/commands/v1/README.md) to replace
@@ -2998,7 +2998,7 @@ type Deployer interface {
 
 Methods take `ctx`, then (wire) `extkit.Auth`, then at most one input; they return `error` or one value and `error`.
 A contract `pb_hooks` can touch (`//contract:js hooks` or `open`) also gets `zz_contract.d.ts`, its TypeScript for
-`pb_data/types.d.ts`: each action hook typed with its operation's input (`onExampleUpload(handler: (e:
+`types.d.ts`: each action hook typed with its operation's input (`onExampleUpload(handler: (e:
 contracts.CallEvent<contracts.example.v1.UploadInput>) => void)`), and for `open` the interface `e.provide` checks
 (`contracts.Providers["mail.fallback/v1"]`). Hooks see the Go value, so fields carry Go names with the first letter
 lowered (`maxTokens`); a JS provider gets JSON, so fields carry their json names, `omitempty` ones optional.
@@ -21050,24 +21050,13 @@ Source: https://pocketone.dev/docs/extensions/pages/typescript
 
 PocketOne strips the types from `.ts` and `.tsx` files and runs them; it never checks them. To check them, use `tsc` or your editor with the types PocketOne writes for your app.
 
-When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
+When the app starts, it writes `types.d.ts` next to `pb_pages` (in the project folder, beside `pb_data` and `pocketone.yaml`) with the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
 
 ## Set up
 
-Put a `tsconfig.json` next to `pb_pages`:
+The app also writes a `tsconfig.json` there when you don't have one. It includes `types.d.ts`, `pb_hooks`, `pb_migrations` and `pb_pages`, with JSX checking on (`"jsx": "preserve"`, so no React runtime is needed). Start the app once, then run `npx tsc -p .` or open the folder in your editor. Commit both files, so a fresh checkout is typed before the app first runs.
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2022"],
-    "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true,
-    "jsx": "preserve"
-  },
-  "include": ["pb_data/types.d.ts", "pb_pages/**/*"]
-}
-```
-
-Start the app once so `pb_data/types.d.ts` exists, then run `npx tsc -p .` or open the folder in your editor. `"jsx": "preserve"` lets `tsc` check JSX without a React runtime; `skipLibCheck` skips two type errors inside PocketBase's own generated declarations.
+If you keep your own `tsconfig.json`, include `types.d.ts` and `pb_pages/**/*`, and set `"jsx": "preserve"` and `"skipLibCheck": true` (PocketBase's generated declarations have two type errors of their own).
 
 ## The types
 

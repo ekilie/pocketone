@@ -21,7 +21,7 @@ var (
 // Contract is restore/v1.
 var Contract = extkit.NewContract[Restorer]("restore/v1", extkit.One).HostProvidable().JS(extkit.JSHooks, nil).JSTypes(jsTypes)
 
-// jsTypes is restore/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to pb_data/types.d.ts.
+// jsTypes is restore/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to the app's types.d.ts.
 //
 //go:embed zz_contract.d.ts
 var jsTypes string

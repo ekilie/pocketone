@@ -547,6 +547,7 @@ func (p *plugin) tsconfigContent() []byte {
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "jsx": "preserve",
     "skipLibCheck": true
   },
   "include": ` + strings.ReplaceAll(string(inc), `","`, `", "`) + `

@@ -131,7 +131,7 @@ func (c *Contract[T]) JS(policy JSPolicy, adapt func(o *JSObject) T) *Contract[T
 
 // JSTypes sets the contract's TypeScript declarations for pb_hooks: its types, its action hooks typed per operation,
 // and (for JSOpen) its entry in contracts.Providers, which types e.provide. contractgen generates them from the Go
-// interface (zz_contract.d.ts). They reach pb_data/types.d.ts only while the contract is open to JS. Call it after JS.
+// interface (zz_contract.d.ts). They reach the app's types.d.ts only while the contract is open to JS. Call it after JS.
 func (c *Contract[T]) JSTypes(ts string) *Contract[T] {
 	jsMu.Lock()
 	defer jsMu.Unlock()

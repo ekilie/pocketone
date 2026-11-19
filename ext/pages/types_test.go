@@ -17,7 +17,7 @@ import (
 
 // The app's types.d.ts carries the pages declarations when the extension is on.
 func TestTypesInAppTypesFile(t *testing.T) {
-	got := appTypes(t)
+	got, _ := appTypes(t)
 	for _, want := range []string{"declare namespace pages", "interface Context", "declare namespace JSX"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("types.d.ts should contain %q", want)
@@ -127,7 +127,8 @@ func TestTypesCheckWithTSC(t *testing.T) {
 	}
 }
 
-func appTypes(t *testing.T) string {
+// appTypes is the types.d.ts and tsconfig.json the JS engine writes for an app with pages on.
+func appTypes(t *testing.T) (types, tsconfig string) {
 	t.Helper()
 	app, err := tests.NewTestApp()
 	if err != nil {
@@ -136,9 +137,10 @@ func appTypes(t *testing.T) string {
 	defer app.Cleanup()
 	dir := t.TempDir()
 	if err := jsvm.Register(app, jsvm.Config{
-		HooksDir:   filepath.Join(dir, "pb_hooks"),
-		TypesDir:   dir,
-		Extensions: []any{pages.New(pages.Config{})},
+		HooksDir:      filepath.Join(dir, "pb_hooks"),
+		MigrationsDir: filepath.Join(dir, "pb_migrations"),
+		TypesDir:      dir,
+		Extensions:    []any{pages.New(pages.Config{})},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +151,11 @@ func appTypes(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return string(b)
+	c, err := os.ReadFile(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b), string(c)
 }
 
 func runTSC(t *testing.T, files map[string]string) (string, error) {
@@ -159,14 +165,9 @@ func runTSC(t *testing.T, files map[string]string) (string, error) {
 		t.Skip("tsc isn't installed")
 	}
 	dir := t.TempDir()
-	all := map[string]string{
-		"pb_data/types.d.ts": appTypes(t),
-		// skipLibCheck: PocketBase's generated declarations have two type errors of their own
-		"tsconfig.json": `{"compilerOptions": {"target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
-			"lib": ["ES2022"], "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true,
-			"jsx": "preserve"},
-			"include": ["pb_data/types.d.ts", "pb_pages/**/*"]}`,
-	}
+	types, tsconfig := appTypes(t)
+	// the files as the engine writes them in the project folder, so its own tsconfig.json is what's tested
+	all := map[string]string{"types.d.ts": types, "tsconfig.json": tsconfig}
 	for k, v := range files {
 		all[k] = v
 	}

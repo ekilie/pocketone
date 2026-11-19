@@ -9,24 +9,13 @@ source: "ext/pages/docs/typescript.md"
 
 PocketOne strips the types from `.ts` and `.tsx` files and runs them; it never checks them. To check them, use `tsc` or your editor with the types PocketOne writes for your app.
 
-When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
+When the app starts, it writes `types.d.ts` next to `pb_pages` (in the project folder, beside `pb_data` and `pocketone.yaml`) with the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
 
 ## Set up
 
-Put a `tsconfig.json` next to `pb_pages`:
+The app also writes a `tsconfig.json` there when you don't have one. It includes `types.d.ts`, `pb_hooks`, `pb_migrations` and `pb_pages`, with JSX checking on (`"jsx": "preserve"`, so no React runtime is needed). Start the app once, then run `npx tsc -p .` or open the folder in your editor. Commit both files, so a fresh checkout is typed before the app first runs.
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2022"],
-    "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true,
-    "jsx": "preserve"
-  },
-  "include": ["pb_data/types.d.ts", "pb_pages/**/*"]
-}
-```
-
-Start the app once so `pb_data/types.d.ts` exists, then run `npx tsc -p .` or open the folder in your editor. `"jsx": "preserve"` lets `tsc` check JSX without a React runtime; `skipLibCheck` skips two type errors inside PocketBase's own generated declarations.
+If you keep your own `tsconfig.json`, include `types.d.ts` and `pb_pages/**/*`, and set `"jsx": "preserve"` and `"skipLibCheck": true` (PocketBase's generated declarations have two type errors of their own).
 
 ## The types
 

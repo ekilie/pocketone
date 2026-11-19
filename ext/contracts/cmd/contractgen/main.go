@@ -29,7 +29,7 @@
 // Methods take ctx first; a wire contract's take extkit.Auth second; then at most one input value. They return error,
 // or one value and error. The generated files are zz_contract.go and, for a contract pb_hooks can touch (contract:js
 // hooks or open), zz_contract.d.ts: its TypeScript declarations (ts.go), which zz_contract.go embeds for ext/extkit to
-// add to pb_data/types.d.ts.
+// add to the app's types.d.ts.
 package main
 
 import (
@@ -493,7 +493,7 @@ var Contract = {{if eq .Cardinality "Keyed"}}extkit.NewKeyedContract[{{.Iface}}]
 {{- if ne .JS "JSClosed"}}.JS(extkit.{{.JS}}, {{if eq .JS "JSOpen"}}func(o *extkit.JSObject) {{.Iface}} { return js{{.Iface}}{o} }{{else}}nil{{end}}).JSTypes(jsTypes){{end}}
 {{- if ne .JS "JSClosed"}}
 
-// jsTypes is {{.ID}}'s TypeScript declarations for pb_hooks (zz_contract.d.ts), added to pb_data/types.d.ts.
+// jsTypes is {{.ID}}'s TypeScript declarations for pb_hooks (zz_contract.d.ts), added to the app's types.d.ts.
 //
 //go:embed zz_contract.d.ts
 var jsTypes string

@@ -1,7 +1,7 @@
 package main
 
 // TypeScript declarations (zz_contract.d.ts) for a contract pb_hooks can touch (contract:js hooks or open), from its
-// type-checked Go package. ext/extkit embeds each one in pb_data/types.d.ts.
+// type-checked Go package. ext/extkit embeds each one in the app's types.d.ts.
 //
 // Two views of a Go type, because JS meets a contract's values two ways:
 //

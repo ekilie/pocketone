@@ -1,6 +1,6 @@
 package contracts_test
 
-// Contracts' TypeScript declarations in pb_data/types.d.ts: typed action hooks and e.provide, checked by tsc.
+// Contracts' TypeScript declarations in the app's types.d.ts: typed action hooks and e.provide, checked by tsc.
 
 import (
 	"context"
