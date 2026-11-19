@@ -1,6 +1,8 @@
 package pages
 
 import (
+	_ "embed"
+
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -31,3 +33,11 @@ func (p *Extension) Register(app core.App, _ extkit.Config) error {
 func (p *Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{WorksWith: extkit.IDs("cache/v1")}
 }
+
+//go:embed pages.d.ts
+var jsTypes string
+
+// TypeScript implements the JS engine's Typer (extkit/js): the types of page code (pages.Context, pages.Handlers,
+// pages.Middleware, pages.Config, pages.Props, JSX), added to the app's types.d.ts. Page code gets no globals from
+// them; files use the types by name.
+func (p *Extension) TypeScript() string { return jsTypes }

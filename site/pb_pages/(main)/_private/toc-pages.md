@@ -77,6 +77,7 @@
 # Going Further
 
 - [JavaScript Runtime](/docs/extensions/pages/jsvm)
+- [TypeScript](/docs/extensions/pages/typescript)
 - [Plugin Authoring](/docs/extensions/pages/plugins/authoring)
 
 # Guides

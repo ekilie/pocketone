@@ -226,6 +226,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Pages: Going Further
 
 - [JavaScript Runtime](https://pocketone.dev/docs/extensions/pages/jsvm): Where page code runs, what it can reach, and using npm packages from pb_pages/node_modules.
+- [TypeScript](https://pocketone.dev/docs/extensions/pages/typescript): Type-check page code against ctx, handlers, middleware, +config, plugins and JSX components, with the types PocketOne writes for your app.
 
 ## Pages: Guides
 

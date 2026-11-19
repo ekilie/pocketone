@@ -9,6 +9,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ### Added
 
+- TypeScript types for page code, in the app's `pb_data/types.d.ts`: `pages.Context` (`ctx`), `pages.Handlers`
+  (`+page`/`+api`), `pages.Middleware`, `pages.Config`, `pages.PluginFactory` and `pages.Props` for TSX, plus JSX
+  element types. Use them with `satisfies` or as annotations and check with `tsc` or your editor; add your own
+  `ctx.data` keys by extending `pages.Data`. See the new TypeScript docs page.
 - Page code can be async. PocketPages awaits promises from `load`, the method handlers, `+api` handlers and
   `+middleware` (`await next()` included), and allows `await` in EJS templates (`<%- await include(...) %>` for an
   async partial) and in JSX/TSX components, async ones anywhere in the tree. Use the `.async` twin of a Go function
