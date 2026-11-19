@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.3 (2026-11-19)
+
 ### Fixed
 
 - A sandboxed app's database (every Pocker instance's) speaks SQLite's SQL dialect again: renaming a collection, and any migration that renames one (API Tokens' `0001_rename_tokens`), failed with `near "RENAME": syntax error`, which stopped the instance from starting.

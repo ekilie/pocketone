@@ -7,7 +7,7 @@ source: "ext/sandbox/README.md"
 
 # Sandbox
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 Confines one PocketOne app's JS hooks and migrations, so apps from people you don't know can share one process.
 File access stays inside the app's folder, host primitives are gone, every JS call has a time limit, raw SQL can't
