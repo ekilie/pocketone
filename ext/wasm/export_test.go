@@ -4,8 +4,6 @@ import (
 	"context"
 	"os"
 	"testing"
-
-	"github.com/tetratelabs/wazero"
 )
 
 // For the tests only (this file isn't part of the package outside go test): modules are otherwise called only from
@@ -22,12 +20,6 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
-}
-
-// Cold turns caching off until t ends, as with CacheDir "off": every call compiles its module.
-func Cold(t *testing.T) {
-	cacheOverride = func() wazero.CompilationCache { return nil }
-	t.Cleanup(func() { cacheOverride = nil })
 }
 
 // CacheMaxAge is how old a cache file gets before the cache prunes it.

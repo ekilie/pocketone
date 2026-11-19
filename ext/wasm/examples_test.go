@@ -54,8 +54,9 @@ func checkExamples(t *testing.T, e env, name string) {
 
 // TestSummaryExample: the summary module, in Go, TinyGo, Rust and Zig, gives the same answers.
 func TestSummaryExample(t *testing.T) {
+	t.Parallel()
 	for _, lang := range []string{"go", "tinygo", "rust", "zig"} {
-		t.Run(lang, func(t *testing.T) { testSummary(t, lang) })
+		t.Run(lang, func(t *testing.T) { t.Parallel(); testSummary(t, lang) })
 	}
 }
 
@@ -108,10 +109,13 @@ func testSummary(t *testing.T, lang string) {
 	}
 	t.Logf("%s: %s per call, run only (the test cache skips compiling)", lang, (time.Since(start) / 100).Round(10*time.Microsecond))
 
-	wasm.Cold(t) // as outside the tests: each call compiles
+	if raceEnabled {
+		return // under -race, compiling takes ten times as long and the timing means nothing
+	}
+	cold := newApp(t, wasm.Config{CacheDir: "off"}, func(_ core.App, dir string) { install(t, dir, "summary", code) })
 	start = time.Now()
-	for range 3 {
-		if _, err := call(t, e, "summary", "run", map[string]string{"title": "t", "body": "a b c"}); err != nil {
+	for range 3 { // as with CacheDir "off": each call compiles
+		if _, err := call(t, cold, "summary", "run", map[string]string{"title": "t", "body": "a b c"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -127,8 +131,10 @@ var rebuild = flag.Bool("rebuild", false, "rebuild every prebuilt example in Doc
 // with none of those compilers installed, so a change to ext/wasm that breaks a real module shows here. With -update, each is
 // rebuilt from its source first, in Docker (example/toolchains/Dockerfile).
 func TestPrebuiltExamples(t *testing.T) {
+	t.Parallel()
 	for _, p := range prebuilt {
 		t.Run(strings.TrimPrefix(p.dir, "example/"), func(t *testing.T) {
+			t.Parallel()
 			path := filepath.Join(p.dir, p.file)
 			if *update {
 				if err := os.WriteFile(path, buildExample(t, p.dir), 0o644); err != nil {
@@ -175,6 +181,7 @@ func TestPrebuiltMatchSources(t *testing.T) {
 
 // TestHostileModule: a module that tries every way out of the box gets nothing, and can't take the host down.
 func TestHostileModule(t *testing.T) {
+	t.Parallel()
 	src := "testdata/evil"
 	code := module(t, src)
 	reached := false
