@@ -160,12 +160,12 @@ func runTSC(t *testing.T, files map[string]string) (string, error) {
 	}
 	dir := t.TempDir()
 	all := map[string]string{
-		"pb_data/types.d.ts": appTypes(t),
+		"types.d.ts": appTypes(t),
 		// skipLibCheck: PocketBase's generated declarations have two type errors of their own
 		"tsconfig.json": `{"compilerOptions": {"target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
 			"lib": ["ES2022"], "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true,
 			"jsx": "preserve"},
-			"include": ["pb_data/types.d.ts", "pb_pages/**/*"]}`,
+			"include": ["types.d.ts", "pb_pages/**/*"]}`,
 	}
 	for k, v := range files {
 		all[k] = v

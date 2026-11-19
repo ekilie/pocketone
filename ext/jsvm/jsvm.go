@@ -522,7 +522,8 @@ func (p *plugin) writeTSConfig() error {
 	return os.WriteFile(path, p.tsconfigContent(), 0644)
 }
 
-// tsconfigContent includes types.d.ts, the hooks and migrations folders (wherever they are) and pb_pages.
+// tsconfigContent includes types.d.ts, the hooks and migrations folders (wherever they are) and pb_pages. "jsx":
+// "preserve" lets editors check PocketPages .tsx pages without a React runtime.
 func (p *plugin) tsconfigContent() []byte {
 	glob := func(dir string) string {
 		rel := relPath(p.config.TypesDir, dir)
@@ -547,7 +548,8 @@ func (p *plugin) tsconfigContent() []byte {
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "preserve"
   },
   "include": ` + strings.ReplaceAll(string(inc), `","`, `", "`) + `
 }

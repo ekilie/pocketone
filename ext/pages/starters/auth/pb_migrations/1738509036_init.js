@@ -1,4 +1,4 @@
-/// <reference path="../pb_data/types.d.ts" />
+/// <reference path="../types.d.ts" />
 migrate(
   (app) => {
     // Send mail to a local maildev (`npx maildev`, web UI on :1080)

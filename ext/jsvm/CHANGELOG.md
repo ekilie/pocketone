@@ -13,7 +13,7 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ### Added
 
-- The app writes a `tsconfig.json` beside `types.d.ts` when there's none (it never overwrites one), including `types.d.ts`, `pb_hooks`, `pb_migrations` and `pb_pages`, so editors and `tsc --noEmit` work without setup. With hooks embedded in the binary (ext/bundle) and no `TypesDir`, neither file is written.
+- The app writes a `tsconfig.json` beside `types.d.ts` when there's none (it never overwrites one), including `types.d.ts`, `pb_hooks`, `pb_migrations` and `pb_pages`, with `"jsx": "preserve"` for PocketPages `.tsx` pages, so editors and `tsc --noEmit` work without setup. With hooks embedded in the binary (ext/bundle) and no `TypesDir`, neither file is written.
 - Extensions can change the app's finished `types.d.ts` with `FilterTypes(decl string) string` (`js.TypesFilter` in
   `ext/extkit/js`), run after every extension's `TypeScript()`. `ext/sandbox` uses it to declare what it hides `never`.
 

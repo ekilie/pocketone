@@ -7,11 +7,11 @@ description: Type-check page code against ctx, handlers, middleware, +config, pl
 
 PocketOne strips the types from `.ts` and `.tsx` files and runs them; it never checks them. To check them, use `tsc` or your editor with the types PocketOne writes for your app.
 
-When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
+When the app starts, PocketOne writes `types.d.ts` in the project root (the folder holding `pb_pages`, `pb_hooks` and `pb_data`) with the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
 
 ## Set up
 
-Put a `tsconfig.json` next to `pb_pages`:
+Start the app once. Beside `types.d.ts` it writes a `tsconfig.json` if the project has none, so open the folder in your editor or run `npx tsc -p .`. Commit both files. A `tsconfig.json` of your own is never touched; give it these settings:
 
 ```json
 {
@@ -20,11 +20,11 @@ Put a `tsconfig.json` next to `pb_pages`:
     "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true,
     "jsx": "preserve"
   },
-  "include": ["pb_data/types.d.ts", "pb_pages/**/*"]
+  "include": ["types.d.ts", "pb_pages/**/*"]
 }
 ```
 
-Start the app once so `pb_data/types.d.ts` exists, then run `npx tsc -p .` or open the folder in your editor. `"jsx": "preserve"` lets `tsc` check JSX without a React runtime; `skipLibCheck` skips two type errors inside PocketBase's own generated declarations.
+`"jsx": "preserve"` lets `tsc` check JSX without a React runtime; `skipLibCheck` skips two type errors inside PocketBase's own generated declarations.
 
 ## The types
 
