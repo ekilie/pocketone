@@ -143,7 +143,9 @@ func TestPrebuiltExamples(t *testing.T) {
 			}
 			code := prebuiltModule(t, p.dir)
 			name := strings.TrimSuffix(p.file, ".pb.wasm")
-			e := newApp(t, wasm.Config{}, func(_ core.App, dir string) { install(t, dir, name, code) })
+			// A minute, not the 5 s default: this checks outputs, not limits, and every example runs at once (under
+			// -race on a loaded CI runner, memhog's probe writing 30 MB took longer than 5 s).
+			e := newApp(t, wasm.Config{Timeout: time.Minute}, func(_ core.App, dir string) { install(t, dir, name, code) })
 			if i, _ := info(t, e, name); !i.Running || i.Error != "" {
 				t.Fatalf("%+v", i)
 			}
