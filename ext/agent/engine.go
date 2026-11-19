@@ -15,8 +15,8 @@ type engineModel struct {
 	file string
 }
 
-func loadEngine(path string, threads int) (localModel, error) {
-	m, err := engine.Load(path, engine.LoadOptions{Threads: threads})
+func loadEngine(path string, cfg Config) (localModel, error) {
+	m, err := engine.Load(path, engine.LoadOptions{Threads: cfg.Threads, PromptCache: cfg.promptCacheBytes()})
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (e *engineModel) generate(ctx context.Context, prompt string, o genOptions)
 	res, err := e.m.Generate(ctx, prompt, engine.GenerateOptions{
 		MaxTokens: o.MaxTokens, Temperature: o.Temperature, TopP: 0.9, TopK: 40, Stop: o.Stop, Constraint: o.Constraint,
 	}, o.OnText)
-	g := genResult{Text: res.Text, InputTokens: res.PromptTokens, OutputTokens: res.OutputTokens,
+	g := genResult{Text: res.Text, InputTokens: res.PromptTokens, OutputTokens: res.OutputTokens, CachedTokens: res.CachedTokens,
 		StopReason: stopReason(res.StopReason), Prefill: res.Prefill, Decode: res.Decode}
 	if ctx.Err() != nil && g.StopReason == "" {
 		g.StopReason = "cancelled"

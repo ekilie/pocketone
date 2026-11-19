@@ -32,14 +32,14 @@ type genOptions struct {
 }
 
 type genResult struct {
-	Text                      string
-	InputTokens, OutputTokens int
-	StopReason                string
-	Prefill, Decode           time.Duration
+	Text                                    string
+	InputTokens, OutputTokens, CachedTokens int
+	StopReason                              string
+	Prefill, Decode                         time.Duration
 }
 
 // loadModel opens a GGUF file with the built-in engine. A variable so tests can stand in a fake.
-var loadModel = func(path string, threads int) (localModel, error) { return loadEngine(path, threads) }
+var loadModel = func(path string, cfg Config) (localModel, error) { return loadEngine(path, cfg) }
 
 // runner is one model this process runs, shared by every app that uses it (a single app, or every instance of a
 // host). It downloads and loads the model in the background; until then it answers ErrNotReady.
@@ -105,7 +105,7 @@ func (r *runner) start() {
 	}
 	r.phase.Store("loading")
 	t := time.Now()
-	m, err := loadModel(r.src.Path, r.cfg.Threads)
+	m, err := loadModel(r.src.Path, r.cfg)
 	if err != nil {
 		r.fail(fmt.Errorf("loading %s: %w", r.src.Name, err))
 		return
@@ -211,7 +211,7 @@ func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxToke
 		return agentv1.CompleteResult{}, err
 	}
 	out := agentv1.CompleteResult{Text: g.Text, Model: r.src.Name, Backend: backend, StopReason: g.StopReason,
-		Usage: agentv1.Usage{InputTokens: g.InputTokens, OutputTokens: g.OutputTokens}}
+		Usage: agentv1.Usage{InputTokens: g.InputTokens, OutputTokens: g.OutputTokens, CachedTokens: g.CachedTokens}}
 	if len(in.Schema) > 0 {
 		data, jerr := extractJSON(out.Text)
 		if jerr != nil {

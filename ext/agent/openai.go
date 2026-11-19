@@ -50,8 +50,11 @@ type streamChunk struct {
 		FinishReason *string     `json:"finish_reason"`
 	} `json:"choices"`
 	Usage *struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
+		PromptTokens        int `json:"prompt_tokens"`
+		CompletionTokens    int `json:"completion_tokens"`
+		PromptTokensDetails struct {
+			CachedTokens int `json:"cached_tokens"` // OpenAI and others: the prompt's start came from their cache
+		} `json:"prompt_tokens_details"`
 	} `json:"usage"`
 }
 
@@ -77,8 +80,11 @@ type chatResponse struct {
 		FinishReason string      `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
+		PromptTokens        int `json:"prompt_tokens"`
+		CompletionTokens    int `json:"completion_tokens"`
+		PromptTokensDetails struct {
+			CachedTokens int `json:"cached_tokens"` // OpenAI and others: the prompt's start came from their cache
+		} `json:"prompt_tokens_details"`
 	} `json:"usage"`
 	Error *struct {
 		Message string `json:"message"`
@@ -157,7 +163,8 @@ func (b *apiBackend) run(ctx context.Context, in agentv1.CompleteInput, onText f
 		out = agentv1.CompleteResult{
 			Text: cr.Choices[0].Message.Content, Model: cr.Model,
 			StopReason: finishReason(cr.Choices[0].FinishReason),
-			Usage:      agentv1.Usage{InputTokens: cr.Usage.PromptTokens, OutputTokens: cr.Usage.CompletionTokens},
+			Usage: agentv1.Usage{InputTokens: cr.Usage.PromptTokens, OutputTokens: cr.Usage.CompletionTokens,
+				CachedTokens: cr.Usage.PromptTokensDetails.CachedTokens},
 		}
 	}
 	out.Backend = "app"
@@ -198,7 +205,8 @@ func readStream(body io.Reader, onText func(string) bool) (agentv1.CompleteResul
 			out.Model = c.Model
 		}
 		if c.Usage != nil {
-			out.Usage = agentv1.Usage{InputTokens: c.Usage.PromptTokens, OutputTokens: c.Usage.CompletionTokens}
+			out.Usage = agentv1.Usage{InputTokens: c.Usage.PromptTokens, OutputTokens: c.Usage.CompletionTokens,
+				CachedTokens: c.Usage.PromptTokensDetails.CachedTokens}
 		}
 		for _, ch := range c.Choices {
 			if ch.FinishReason != nil {

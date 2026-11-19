@@ -121,13 +121,19 @@ function answer(ctx, messages, onText) {
     .map((m) => m.content)
     .join(' ')
   const context = search(kb, query, 3)
-  const system = [
-    kb.preamble,
-    'Documentation excerpts:',
-    ...context.map((s, i) => `[${i + 1}] ${s.title}\n${s.text}`),
-  ].join('\n\n')
+  // The preamble and the conversation so far never change between turns, so they go first, and the excerpts (which
+  // change with every question) ride along with the new question. A prompt that starts the same as the last one is
+  // read only from where it differs: the model keeps the start in its prompt cache.
+  const excerpts = context.map((s, i) => `[${i + 1}] ${s.title}\n${s.text}`).join('\n\n')
+  const last = recent[recent.length - 1]
+  const turns = [
+    ...recent.slice(0, -1),
+    // the question first: next turn, this message is history with the question alone, and the shared start runs to
+    // the end of the question
+    { role: 'user', content: `${last.content}\n\nDocumentation excerpts to answer from:\n\n${excerpts}` },
+  ]
   const started = Date.now()
-  const opts = { system, messages: recent, maxTokens: 350, temperature: 0.3 }
+  const opts = { system: kb.preamble, messages: turns, maxTokens: 350, temperature: 0.3 }
   const res = onText ? $agent.stream(opts, onText) : $agent.complete(opts)
   return {
     answer: res.text.trim(),

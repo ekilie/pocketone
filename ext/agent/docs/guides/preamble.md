@@ -10,8 +10,8 @@ answers. It's the biggest lever you have on the answers, and the one people most
 
 ```js
 const r = $agent.complete({
-  system: preamble + "\n\nDocumentation excerpts:\n\n" + excerpts,
-  messages: recentTurns,
+  system: preamble, // the same text on every call
+  messages: [...recentTurns, { role: "user", content: question + "\n\nDocumentation excerpts:\n\n" + excerpts }],
   maxTokens: 350,
 })
 ```
@@ -30,7 +30,8 @@ Four short parts, in this order:
 4. **The shape of an answer.** "Answer in a few sentences or a short list." If you need data rather than prose, use a
    [schema](structured.md) instead of describing the format in words.
 
-Then the material it should use (the [excerpts](context.md) that match the question), then the conversation.
+The material it should use (the [excerpts](context.md) that match the question) goes with the question, not in the
+preamble: see [Keep it the same](#keep-it-the-same).
 
 ```markdown
 You are the help assistant for Acme Notes, a note-taking app. You answer questions from people using it.
@@ -60,12 +61,12 @@ many. Aim for under 150 words.
 ## Keep it the same
 
 Write the preamble once, as a file (`pb_pages/_private/preamble.md`, read with `$os.readFile`), and send it unchanged
-on every call, first. Then put what changes (the excerpts, the conversation) after it.
+on every call, first. Then the conversation, then the new question with its excerpts.
 
-That order matters for speed. Providers like OpenAI, Anthropic and Google keep the work they've done on the start of a
-prompt for a few minutes and reuse it when the next prompt starts with exactly the same text, so a long, unchanging
-preamble is cheaper and faster the second time. Anything that varies at the top (today's date, the user's name) breaks
-that: put it after the preamble, or in the user's turn. See [Remembering conversations](conversations.md#what-big-models-cache).
+That order matters for speed. The built-in model, like OpenAI, Anthropic and Google, keeps the work it did on the start
+of a prompt and reuses it when the next prompt starts with exactly the same text, so a long, unchanging preamble is
+read once, not on every call. Anything that varies at the top (today's date, the user's name, the excerpts) breaks
+that: put it in the user's turn instead. See [Remembering conversations](conversations.md#prompt-caching).
 
 ## Test it
 

@@ -89,22 +89,33 @@ same way you add your docs as context:
 
 Let people see and delete their notes. Only use a user's notes in that user's chats.
 
-## What big models cache
+## Prompt caching
 
-Big providers make long, repeated prompts cheaper with **prompt caching**. While a model reads a prompt, it computes
-an internal state for every token, and the provider keeps that state for the start of a prompt for a few minutes. When
-your next call starts with exactly the same text, the model skips re-reading it, so it costs less and answers sooner:
+While a model reads a prompt, it computes an internal state for every token. **Prompt caching** keeps that state for
+the start of recent prompts, so when the next prompt starts with exactly the same text, the model skips re-reading that
+part: the answer starts sooner, and with a paid API it costs less.
 
+- **The built-in model** does it by itself. It keeps the start of recent prompts in memory (`agent.prompt_cache_mb`,
+  256 MB by default, about 1,100 tokens of a Qwen3 model; `-1` turns it off). On a laptop, a second prompt that shares
+  a 150-token preamble starts answering five to eight times sooner.
 - **OpenAI** does it by itself for prompts over about a thousand tokens.
 - **Anthropic** caches up to the points you mark in the request (`cache_control`).
-- **Google Gemini** caches automatically, and also lets you create a named cache with a lifetime for a large shared
-  document.
+- **Google Gemini** caches automatically, and can also hold a named cache with a lifetime for a large shared document.
 
-The cache matches the beginning of the prompt only, and only if it's identical. That's why the order is: the
-preamble (never changes), then your docs or notes (change per question), then the conversation (grows), then the new
-question. A date or name at the top invalidates everything after it. A cache isn't memory, either: it's a speed-up for
-text you send again, not a way to stop sending it.
+`usage.cachedTokens` in the answer says how much of the prompt came from a cache, for the built-in model and for
+providers that report it.
 
-A model PocketOne runs reads the whole prompt on every call; it keeps nothing between calls. That makes the window and
-the summary above matter more: on a small server, a few hundred words of preamble and context and the last few turns
-is about right.
+The cache matches the start of the prompt only, and only if it's identical. So order a prompt from what never changes
+to what changes most:
+
+1. the preamble;
+2. the conversation so far, exactly as you sent it last time (or the summary, then the recent turns);
+3. the new question, and after it, the excerpts or notes picked for it.
+
+The excerpts go after the question, in the same turn, because they change with every question: anywhere earlier,
+they'd break the match for everything that follows. With this order, each turn re-reads only what's new since the last
+one: the previous answer, the new question and its excerpts. A date or a name at the top invalidates everything after
+it.
+
+A cache isn't memory: it makes text you send again cheaper to read, but you still send it. The window and the summary
+above still decide how much that is.

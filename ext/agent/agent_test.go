@@ -108,7 +108,7 @@ func (f *fakeModel) close() error { return nil }
 func useFake(t *testing.T, fake *fakeModel) string {
 	t.Helper()
 	prev := loadModel
-	loadModel = func(string, int) (localModel, error) { return fake, nil }
+	loadModel = func(string, Config) (localModel, error) { return fake, nil }
 	runnersMu.Lock()
 	runners = map[string]*runner{}
 	runnersMu.Unlock()

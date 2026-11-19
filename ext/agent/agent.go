@@ -45,6 +45,7 @@ type Config struct {
 	Model       string      `yaml:"model" json:"model" doc:"The model to run: qwen3-0.6b, qwen3-1.7b or qwen3-4b (downloaded once), hf:<org>/<repo>/<file>.gguf, or a path to a .gguf file. Empty: none."`
 	Threads     int         `yaml:"threads" json:"threads" doc:"CPU threads for the model (default: half the cores)."`
 	Parallel    int         `yaml:"parallel" json:"parallel" doc:"Answers written at once; the rest wait their turn (default 1)."`
+	PromptCache int         `yaml:"prompt_cache_mb" json:"prompt_cache_mb" doc:"Memory in MB for keeping the start of recent prompts, so one that begins the same way (a preamble, a chat so far) isn't read again (default 256, about 1,100 tokens of a Qwen3 model; -1 turns it off)."`
 	MaxTokens   int         `yaml:"max_tokens" json:"max_tokens" doc:"Longest answer, in tokens, when a call doesn't say (default 512)."`
 	Timeout     string      `yaml:"timeout" json:"timeout" doc:"Longest a call may take, waiting included (default 2m)."`
 	CacheDir    string      `yaml:"cache_dir" json:"cache_dir" doc:"Where downloaded models are kept (default: the user cache folder's pocketone/models)."`
@@ -79,6 +80,17 @@ func (c Config) withDefaults() Config {
 		c.PerInstance.Concurrency = 2
 	}
 	return c
+}
+
+// promptCacheBytes is the built-in model's prompt cache budget: prompt_cache_mb (default 256), 0 when turned off.
+func (c Config) promptCacheBytes() int64 {
+	switch {
+	case c.PromptCache < 0:
+		return 0
+	case c.PromptCache == 0:
+		return 256 << 20
+	}
+	return int64(c.PromptCache) << 20
 }
 
 func (c Config) timeout() time.Duration {

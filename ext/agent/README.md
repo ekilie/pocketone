@@ -46,6 +46,7 @@ Until you choose there, `pocketone.yaml` decides: the model it names runs built 
 agent:
   model: qwen3-1.7b   # qwen3-0.6b, qwen3-1.7b, qwen3-4b, hf:<org>/<repo>/<file>.gguf, or a path to a .gguf file
   threads: 4          # default: half your CPU cores
+  prompt_cache_mb: 256 # keeps the start of recent prompts so a repeated one isn't read again (-1: off)
 ```
 
 | Model | Download | Memory | Good for |

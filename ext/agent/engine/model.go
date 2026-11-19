@@ -14,6 +14,9 @@ import (
 // LoadOptions configures Load.
 type LoadOptions struct {
 	Threads int // worker threads for matmuls; 0 = number of performance cores (GOMAXPROCS, capped at 8)
+	// PromptCache is the memory, in bytes, for keeping the start of recent prompts so a prompt that begins the same
+	// way skips reading that part again (see prefixcache.go); 0 turns it off.
+	PromptCache int64
 }
 
 // Info describes a loaded model.
@@ -69,6 +72,8 @@ type Model struct {
 
 	stateMu sync.Mutex
 	states  []*state // idle generation states (KV caches), reused to avoid GC churn
+
+	prefix prefixCache // the start of recent prompts (keys and values), for reuse
 }
 
 // getState returns an idle state with room for maxCtx positions and batches of maxN.
@@ -122,6 +127,7 @@ func newModel(g *ggufFile, opts LoadOptions) (*Model, error) {
 		return nil, fmt.Errorf("engine: unsupported architecture %q (want qwen3)", arch)
 	}
 	m := &Model{g: g}
+	m.prefix.budget = opts.PromptCache
 	req := func(k string) (int, error) {
 		v, ok := g.getInt(arch + "." + k)
 		if !ok {

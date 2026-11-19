@@ -81,6 +81,9 @@ type Chunk struct {
 type Usage struct {
 	InputTokens  int `json:"inputTokens"`
 	OutputTokens int `json:"outputTokens"`
+	// CachedTokens is how many of InputTokens weren't read again: they came from a cache of an earlier prompt that
+	// started the same way (the built-in model's prompt cache, or the provider's own).
+	CachedTokens int `json:"cachedTokens,omitempty"`
 }
 
 // Status is the app's model.

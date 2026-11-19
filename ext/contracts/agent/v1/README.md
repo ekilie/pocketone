@@ -45,7 +45,8 @@ Over HTTP (a superuser, or a token with the `agent` scope):
 `complete` takes `prompt` or `messages` (`[{"role": "user", "content": "..."}]`), and optionally `system`, `schema` (a
 JSON schema the answer must match; its parsed value comes back as `data`), `maxTokens`, `temperature`, `stop` and `model` (a hint a
 single-model provider ignores). It answers `text`, `data`, `model`, `backend` (`app`, `runner` or `host`),
-`stopReason` and `usage`. Errors: `not_configured` (503), `not_ready` (503, still downloading or loading), `busy`
+`stopReason` and `usage` (`inputTokens`, `outputTokens`, and `cachedTokens`: how much of the prompt came from a
+cache of an earlier prompt that started the same way). Errors: `not_configured` (503), `not_ready` (503, still downloading or loading), `busy`
 (429, the app already has as many calls going as its host allows).
 
 `stream` sends the same answer as it's written: one `event: stream` per piece, `{"text": "..."}`, then

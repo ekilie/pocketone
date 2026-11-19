@@ -7,9 +7,10 @@ shows `$agent` from page code:
   ([`preamble.md`](pb_pages/_private/preamble.md)) and context files ([`_private/context/`](pb_pages/_private/context),
   eleven pages of pocketone.dev) with `$os.readDir` / `$os.readFile`, splits them into sections, and for each question
   picks the three that match best (BM25, plus a few synonyms: people say "apps", the docs say "instances");
-- **answering, as it's written:** `$agent.stream({ system, messages }, onText)` with the preamble and those sections as
-  the system prompt and the last few turns of the conversation; [`chat/+api.js`](pb_pages/chat/+api.js) forwards each
-  piece to the browser with `ctx.res.sse()`;
+- **answering, as it's written:** `$agent.stream({ system, messages }, onText)` with the preamble as the system prompt,
+  the last few turns, and the excerpts after the new question, so each turn's prompt starts like the last one and the
+  model's prompt cache skips re-reading it; [`chat/+api.js`](pb_pages/chat/+api.js) forwards each piece to the browser
+  with `ctx.res.sse()`;
 - **structured output:** a second call, `$agent.complete({ schema: { type: 'array', ... } })`, suggests three follow-up
   questions; the model can only answer with an array of three strings;
 - **status:** `$agent.status()` for the model's download progress.

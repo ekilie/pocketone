@@ -41,6 +41,7 @@ type Result struct {
 	Text         string
 	Tokens       []int
 	PromptTokens int
+	CachedTokens int // of PromptTokens, how many came from the prompt cache instead of being read again
 	OutputTokens int
 	Prefill      time.Duration // prompt processing, up to the first sampled token
 	Decode       time.Duration // remaining tokens
@@ -98,13 +99,19 @@ func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions
 	rng := rand.New(rand.NewPCG(o.Seed, o.Seed^0x9e3779b97f4a7c15))
 
 	start := time.Now()
-	for pos := 0; pos < len(ids); pos += prefillBatch {
+	from := 0
+	if e, n := m.lookupPrefix(ids); e != nil { // the start of this prompt was read before: reuse it
+		m.restorePrefix(s, e, n)
+		from, res.CachedTokens = n, n
+	}
+	for pos := from; pos < len(ids); pos += prefillBatch {
 		if err := ctx.Err(); err != nil {
 			res.StopReason = "canceled"
 			return res, err
 		}
 		m.forward(s, ids[pos:min(pos+prefillBatch, len(ids))], pos)
 	}
+	m.storePrefix(s, ids)
 
 	var text strings.Builder
 	var pending []byte // bytes not yet forming complete UTF-8

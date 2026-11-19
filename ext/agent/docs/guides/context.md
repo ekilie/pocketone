@@ -45,8 +45,15 @@ function search(kb, question, n) {
 
 function answer(ctx, question) {
   const kb = knowledge(ctx)
-  const system = [kb.preamble, ...search(kb, question, 2).map((d) => `[${d.name}]\n${d.text}`)].join("\n\n")
-  return $agent.complete({ system, prompt: question, maxTokens: 300, temperature: 0.3 })
+  const excerpts = search(kb, question, 2).map((d) => `[${d.name}]\n${d.text}`).join("\n\n")
+  // the preamble stays the same on every call, so the model reads it once (prompt caching); the excerpts change with
+  // the question, so they travel with it
+  return $agent.complete({
+    system: kb.preamble,
+    prompt: `${question}\n\nExcerpts to answer from:\n\n${excerpts}`,
+    maxTokens: 300,
+    temperature: 0.3,
+  })
 }
 
 module.exports = { answer }
