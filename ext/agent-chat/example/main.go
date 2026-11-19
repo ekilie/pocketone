@@ -5,7 +5,7 @@
 //	POST /api/_c/agent.chat/v1/new  {"title": "Support"}            -> {"id": "..."}
 //	POST /api/_c/agent.chat/v1/send {"id": "...", "text": "Hello"}  -> {"answer": {"text": "..."}}
 //
-// In pb_hooks the same is $agent.newChat() and $agent.chat(id).send(text).
+// In page code the same is $agent.newChat() and $agent.chat(id).send(text).
 package main
 
 import (
