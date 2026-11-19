@@ -16,6 +16,14 @@ const r = $agent.complete({
 })
 ```
 
+```ts
+const r: AgentAnswer = $agent.complete({
+  system: preamble, // the same text on every call
+  messages: [...recentTurns, { role: "user", content: question + "\n\nDocumentation excerpts:\n\n" + excerpts }],
+  maxTokens: 350,
+})
+```
+
 ```go
 r, err := agent.Complete(ctx, extkit.Internal, agentv1.CompleteInput{
 	System: preamble, // the same text on every call

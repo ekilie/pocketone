@@ -14,6 +14,11 @@ const r = $agent.complete({ prompt: "Summarize in one sentence: " + record.get("
 // r.text is the summary
 ```
 
+```ts
+const r: AgentAnswer = $agent.complete({ prompt: "Summarize in one sentence: " + record.get("body"), maxTokens: 60 })
+// r.text is the summary
+```
+
 ```go
 r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{
 	Prompt: "Summarize in one sentence: " + record.GetString("body"), MaxTokens: 60})

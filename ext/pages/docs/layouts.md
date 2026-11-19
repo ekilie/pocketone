@@ -37,6 +37,23 @@ In a layout, `slot()` returns the content being wrapped: the page, or the inner 
 </html>
 ```
 
+```tsx
+// pb_pages/+layout.tsx
+export default function Layout({ children }: any) {
+  return (
+    <html lang="en">
+      <head>
+        <title>My Application</title>
+      </head>
+      <body>
+        <main>{children}</main>
+        <footer>&copy; {new Date().getFullYear()} My Application</footer>
+      </body>
+    </html>
+  )
+}
+```
+
 `<%%- slot %>` without parentheses prints the same content, so 0.x layouts that wrote it still work.
 
 ## Named slots
@@ -49,12 +66,33 @@ A page (or an inner layout) defines a named slot with `slot(name, fn)`. `fn`'s o
 <h1><%%= data.product.getString('name') %></h1>
 ```
 
+```tsx
+// pb_pages/products/[id].tsx
+export default function Product({ data, slot }: any) {
+  slot('title', data.product.getString('name'))
+  return <h1>{data.product.getString('name')}</h1>
+}
+```
+
 ```ejs
 <!-- pb_pages/+layout.ejs -->
 <html>
   <head><title><%%- slot('title') || 'My shop' %></title></head>
   <body><%%- slot() %></body>
 </html>
+```
+
+```tsx
+// pb_pages/+layout.tsx
+export default function Layout({ children, slot }: any) {
+  const title = slot('title') // HTML, so test its text for the fallback
+  return (
+    <html>
+      <head><title>{String(title) ? title : 'My shop'}</title></head>
+      <body>{children}</body>
+    </html>
+  )
+}
 ```
 
 - Named slots defined by the page or by any inner layout are visible to every outer layout.
@@ -64,6 +102,14 @@ A page (or an inner layout) defines a named slot with `slot(name, fn)`. `fn`'s o
 <!-- pb_pages/docs/+layout.ejs -->
 <%% slot('title', () => { %>Docs: <%%- slot('title') %><%% }) %>
 <main><%%- slot() %></main>
+```
+
+```tsx
+// pb_pages/docs/+layout.tsx
+export default function DocsLayout({ children, slot }: any) {
+  slot('title', <>Docs: {slot('title')}</>)
+  return <main>{children}</main>
+}
 ```
 
 ## Data in layouts

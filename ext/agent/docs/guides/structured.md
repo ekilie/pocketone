@@ -35,6 +35,33 @@ const r = $agent.complete({
 // r.data: { name: "Dana", city: "Austin", items: [{ what: "blue mugs", count: 3 }, { what: "red plates", count: 2 }] }
 ```
 
+```ts
+const r: AgentAnswer = $agent.complete({
+  system: "Extract the order from the email.",
+  prompt: email,
+  schema: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      city: { type: "string" },
+      items: {
+        type: "array",
+        maxItems: 10,
+        items: {
+          type: "object",
+          properties: { what: { type: "string" }, count: { type: "integer" } },
+          required: ["what", "count"],
+        },
+      },
+    },
+    required: ["name", "city", "items"],
+  },
+  maxTokens: 200,
+})
+// "Hi, this is Dana. Please send 3 blue mugs and 2 red plates to our Austin office."
+// r.data: { name: "Dana", city: "Austin", items: [{ what: "blue mugs", count: 3 }, { what: "red plates", count: 2 }] }
+```
+
 ```go
 r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{
 	System: "Extract the order from the email.",

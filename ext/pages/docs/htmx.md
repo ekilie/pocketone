@@ -70,6 +70,18 @@ pb_pages/
 </div>
 ```
 
+```tsx
+// pb_pages/_private/product-card.tsx
+export default function ProductCard({ product }: any) {
+  return (
+    <div class="product-card" id={`product-${product.id}`}>
+      <h3>{product.getString('name')}</h3>
+      <p>{product.getString('description')}</p>
+    </div>
+  )
+}
+```
+
 ```ejs
 <!-- pb_pages/(site)/products/index.ejs -->
 <%% const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 20) %>
@@ -83,6 +95,23 @@ pb_pages/
 </button>
 ```
 
+```tsx
+// pb_pages/(site)/products/index.tsx
+export default function Products({ ctx, include }: any) {
+  const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 20)
+  return (
+    <>
+      <div class="products-container">
+        {products.map((product: any) => include('product-card', { product }))}
+      </div>
+      <button hx-get="/xapi/products/more?page=2" hx-target=".products-container" hx-swap="beforeend">
+        Load More
+      </button>
+    </>
+  )
+}
+```
+
 ```ejs
 <!-- pb_pages/xapi/products/more.ejs -->
 <%%
@@ -92,6 +121,15 @@ pb_pages/
 <%% for (const product of products) { %>
   <%%- include('product-card', { product }) %>
 <%% } %>
+```
+
+```tsx
+// pb_pages/xapi/products/more.tsx
+export default function More({ ctx, include }: any) {
+  const page = Number(ctx.req.query('page') ?? 1)
+  const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 20, (page - 1) * 20)
+  return <>{products.map((product: any) => include('product-card', { product }))}</>
+}
 ```
 
 ## Search as you type
@@ -147,9 +185,26 @@ module.exports = {
 }
 ```
 
+```ts
+// pb_pages/xapi/products/create/+page.ts
+export function post(ctx: any) {
+  const { name, description }: { name: string; description: string } = ctx.req.body()
+  const product = new Record(ctx.app.findCollectionByNameOrId('products'))
+  product.set('name', name)
+  product.set('description', description)
+  ctx.app.save(product)
+  return { product }
+}
+```
+
 ```ejs
 <!-- pb_pages/xapi/products/create/index.ejs -->
 <%%- include('product-card', { product: data.product }) %>
+```
+
+```tsx
+// pb_pages/xapi/products/create/index.tsx
+export default ({ data, include }: any) => include('product-card', { product: data.product })
 ```
 
 ## Out-of-band updates

@@ -30,4 +30,13 @@ On the next request, `ctx.flash()` returns the message and clears the cookie. It
 <%% } %>
 ```
 
+```tsx
+type Flash = { type: string; text: string }
+
+export default function Alert({ ctx }: any) {
+  const flash: Flash | undefined = ctx.flash()
+  return flash ? <div class={`alert alert-${flash.type}`}>{flash.text}</div> : null
+}
+```
+
 Read it in your layout to show flashes on every page.

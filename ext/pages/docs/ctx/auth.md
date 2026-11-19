@@ -19,6 +19,18 @@ The authenticated record, or `null`. It's set by:
 <%% } %>
 ```
 
+```tsx
+export default function Welcome({ ctx }: any) {
+  if (!ctx.auth) return <a href="/login">Log in</a>
+  return (
+    <>
+      <p>Welcome, {ctx.auth.email()}</p>
+      {!ctx.auth.verified() && <p>Please verify your email.</p>}
+    </>
+  )
+}
+```
+
 `ctx.auth` is a PocketBase record, so the usual record methods work: `get(field)`, `getString(field)`, `email()`, `verified()`, `isSuperuser()`, `collection()`.
 
 ## Protecting pages

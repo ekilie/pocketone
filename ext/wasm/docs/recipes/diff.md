@@ -33,6 +33,29 @@ onRecordUpdate(async (e) => {
 }, "pages")
 ```
 
+```ts
+// pb_hooks/diff.pb.ts: every edit of a page's body is kept as a diff in revisions
+interface Diff {
+  changed: boolean
+  unified: string
+  added: number
+  removed: number
+}
+
+onRecordUpdate(async (e) => {
+  const d = await $wasm.run.async<Diff>("diff", {
+    old: e.record.original().get("body"),
+    new: e.record.get("body"),
+  })
+  e.next()
+  if (d.changed) {
+    const rev = new Record(e.app.findCollectionByNameOrId("revisions"))
+    rev.load({ page: e.record.id, diff: d.unified, added: d.added, removed: d.removed })
+    e.app.save(rev)
+  }
+}, "pages")
+```
+
 `e.record.original()` is the record as it was before this update. The revision is saved after `e.next()`, so only
 once the page itself is saved.
 

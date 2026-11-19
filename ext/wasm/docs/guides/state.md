@@ -89,6 +89,31 @@ routerAdd("POST", "/api/sensors/{id}/readings", async (e) => {
 })
 ```
 
+```ts
+// pb_hooks/sensors.pb.ts
+// POST /api/sensors/{id}/readings {"values": [21.5, 22]}: adds readings to the sensor's running statistics
+type Stats = { count: number; mean: number; m2: number; min: number; max: number } // the module's state
+type Report = { count: number; mean: number; stddev: number; min: number; max: number }
+
+routerAdd("POST", "/api/sensors/{id}/readings", async (e) => {
+  const sensor = $app.findRecordById("sensors", e.request.pathValue("id"))
+  const { values } = e.requestInfo().body as { values: number[] }
+
+  try {
+    const state: Stats | null = JSON.parse(sensor.getString("stats")) // null until the first readings
+    const next = await $wasm.call.async<Stats>("stats", "add", { state, values })
+
+    sensor.set("stats", next)
+    $app.save(sensor)
+    return e.json(200, await $wasm.call.async<Report>("stats", "report", next))
+  } catch (err) {
+    const w = err as WasmError
+    if (w.name !== "WasmError" || w.retryable) throw err
+    return e.json(400, { code: w.code, message: w.message }) // bad_input, bad_value: the caller's mistake
+  }
+})
+```
+
 ```bash
 curl -X POST localhost:8090/api/sensors/<id>/readings -d '{"values":[21.5,22]}'
 # {"count":2,"max":22,"mean":21.75,"min":21.5,"stddev":0.25}

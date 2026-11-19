@@ -35,6 +35,25 @@ onRecordCreate(async (e) => {
 }, "photos")
 ```
 
+```ts
+// pb_hooks/thumbnail.pb.ts: every uploaded photo gets a 256 px PNG thumbnail in its thumb field
+onRecordCreate(async (e) => {
+  const [file] = e.record.getUnsavedFiles("image")
+  if (file) {
+    const reader = file.reader.open()
+    let bytes: Uint8Array
+    try {
+      bytes = new Uint8Array(toBytes(reader))
+    } finally {
+      reader.close()
+    }
+    const thumb = await $wasm.run.async<{ width: number; height: number; png: string }>("thumbnail", bytes)
+    e.record.set("thumb", $filesystem.fileFromBytes(Array.from(Buffer.from(thumb.png, "base64")), "thumb.png"))
+  }
+  return e.next()
+}, "photos")
+```
+
 `getUnsavedFiles` gives the files uploaded with this request, before they're stored. A `Uint8Array` goes to the module
 as raw bytes. The module answers with JSON, `{width, height, png}`, the PNG as base64; `$filesystem.fileFromBytes`
 takes the bytes as a plain array, hence `Array.from`.

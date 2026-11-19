@@ -17,6 +17,8 @@ const id = $agent.newChat({ meta: { user: e.auth.id } })
 const answer = $agent.chat(id, { system: preamble }).send("How do I export my notes?")
 ```
 
+In Go:
+
 ```go
 chats := chatv1.Contract.Must(app) // agent.chat/v1, from github.com/pockethost/pocketone/ext/contracts/agent/chat/v1
 c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: json.RawMessage(`{"user":"` + e.Auth.Id + `"}`)})

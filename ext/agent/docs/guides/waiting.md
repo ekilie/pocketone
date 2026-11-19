@@ -25,6 +25,15 @@ const r = $agent.stream({ system, messages, wait: "10m" }, (t) => stream.send("t
 stream.send("done", JSON.stringify({ text: r.text }))
 ```
 
+```ts
+// a page that streams the answer and shows progress while the model downloads
+const stream = ctx.res.sse()
+const r: AgentAnswer = $agent.stream({ system, messages, wait: "10m" }, (t) => stream.send("text", t), {
+  onWait: (s) => stream.send("status", s.message), // "downloading qwen3-1.7b (42%)"
+})
+stream.send("done", JSON.stringify({ text: r.text }))
+```
+
 ```go
 // Go has no onWait: poll Status while you wait, or pass Wait and let the call wait for the model
 r, err := agent.Complete(ctx, extkit.Internal, agentv1.CompleteInput{System: system, Messages: messages, Wait: "10m"})

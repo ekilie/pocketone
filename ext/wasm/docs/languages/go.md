@@ -62,6 +62,15 @@ onRecordCreate(async (e) => {
 }, "posts")
 ```
 
+```ts
+// pb_hooks/main.pb.ts
+onRecordCreate(async (e) => {
+  const out = await $wasm.run.async<{ text: string }>("summary", { title: e.record.get("title"), body: e.record.get("body") })
+  e.record.set("summary", out.text)
+  return e.next()
+}, "posts")
+```
+
 ## Size
 
 What you import sets the size. The summary (`encoding/json`, `strings`, `fmt`) is 4.3 MB; a module that imports `net/http` is about 11 MB, over the default `MaxModulesMB` of 10, so it can't run until that's raised. Two Go calls run at once with the defaults, and calls that compile at the same time slow each other down ([Which language](../../README.md#which-language) has the numbers).

@@ -23,6 +23,15 @@ module.exports = (ctx, next) => {
 }
 ```
 
+```ts
+// pb_pages/admin/+middleware.ts
+export default (ctx: any, next: () => any) => {
+  if (!ctx.auth) return ctx.res.redirect('/login')
+  ctx.data.section = 'admin'
+  return next()
+}
+```
+
 - One signature: `(ctx, next)`. Call `next()` to continue, and return its result.
 - Returning without calling `next()` ends the request. If no response was sent, that's an error (a `500`; in dev mode the error page names the middleware file).
 - Share data through `ctx.data`.
@@ -31,6 +40,16 @@ module.exports = (ctx, next) => {
 ```js
 // pb_pages/+middleware.js
 module.exports = async (ctx, next) => {
+  ctx.data.unread = await ctx.app.countRecords.async('notifications', $dbx.hashExp({ read: false }))
+  const started = Date.now()
+  await next()
+  ctx.log.info('rendered', ctx.route.path, Date.now() - started, 'ms')
+}
+```
+
+```ts
+// pb_pages/+middleware.ts
+export default async (ctx: any, next: () => Promise<void>) => {
   ctx.data.unread = await ctx.app.countRecords.async('notifications', $dbx.hashExp({ read: false }))
   const started = Date.now()
   await next()
@@ -82,11 +101,27 @@ module.exports = (ctx, next) => {
 }
 ```
 
+```ts
+// pb_pages/products/[id]/+middleware.ts
+export default (ctx: any, next: () => any) => {
+  if (!/^[a-z0-9]+$/.test(ctx.params.id)) throw ctx.httpError(400, 'Invalid ID')
+  return next()
+}
+```
+
 ### Shared data
 
 ```js
 // pb_pages/+middleware.js
 module.exports = (ctx, next) => {
+  ctx.data.categories = ctx.app.findRecordsByFilter('categories', 'active = true', 'name', 100)
+  return next()
+}
+```
+
+```ts
+// pb_pages/+middleware.ts
+export default (ctx: any, next: () => any) => {
   ctx.data.categories = ctx.app.findRecordsByFilter('categories', 'active = true', 'name', 100)
   return next()
 }
@@ -98,6 +133,18 @@ module.exports = (ctx, next) => {
     <a href="/categories/<%%= c.id %>"><%%= c.getString('name') %></a>
   <%% } %>
 </nav>
+```
+
+```tsx
+export default function Page({ data }: any) {
+  return (
+    <nav>
+      {data.categories.map((c: any) => (
+        <a href={`/categories/${c.id}`}>{c.getString('name')}</a>
+      ))}
+    </nav>
+  )
+}
 ```
 
 ### Headers

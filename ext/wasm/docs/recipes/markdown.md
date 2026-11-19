@@ -34,6 +34,24 @@ onRecordUpdate(async (e) => {
 }, "posts")
 ```
 
+```ts
+// pb_hooks/posts.pb.ts: posts are written in Markdown; html is what your pages show
+async function renderPost(markdown: string): Promise<string> {
+  const html = (await $wasm.run.async<string | null>("markdown", markdown || "")) ?? ""
+  return (await $wasm.run.async<string | null>("sanitize-html", html)) ?? "" // users wrote it: keep only safe HTML
+}
+
+onRecordCreate(async (e) => {
+  e.record.set("html", await renderPost(e.record.get("body")))
+  return e.next()
+}, "posts")
+
+onRecordUpdate(async (e) => {
+  e.record.set("html", await renderPost(e.record.get("body")))
+  return e.next()
+}, "posts")
+```
+
 CommonMark passes raw HTML through, so `<script>` in a post would reach your pages. The second call runs the result
 through [sanitize-html](sanitize-html.md), which keeps the formatting and drops scripts, event handlers and
 `javascript:` links. Leave it out only for Markdown you wrote yourself.

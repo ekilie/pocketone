@@ -492,12 +492,14 @@ ext/<name>/
   - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
-- **Show code in each language people use it from.** When an example works from JS hooks and from Go (or TypeScript),
-  write it once per language as consecutive fenced blocks, ```` ```js ````, ```` ```go ```` and ```` ```ts ````,
-  with nothing between them. pocketone.dev shows such a run as tabs (one language at a time; the reader's pick
-  carries across every example and page); on GitHub and in `llms.txt` they're just consecutive blocks. Two blocks of
-  the same language never group, so two separate JS examples in a row stay separate. This works in READMEs and in
-  `docs/` alike.
+- **In `docs/`, show code in each language people use it from, as tabs.** When an example works from JS hooks, TS
+  hooks and Go, write it once per language as consecutive fenced blocks (```` ```js ````, ```` ```ts ````,
+  ```` ```go ````, in that order) with nothing between them. pocketone.dev shows such a run as tabs, one language at a
+  time; the reader's pick carries across every example and page. Templates can do the same with ```` ```ejs ````,
+  ```` ```jsx ```` and ```` ```tsx ```` (PocketPages: JS/TS and EJS/TSX, since page code has no Go form). Two blocks of
+  the same language never group, so separate examples stay separate; on GitHub a run is just consecutive blocks.
+- **In the README, keep samples inline.** Show the language that fits, and when you show a second one, put a line of
+  text before it ("In Go:") so the two don't turn into tabs and the README reads as plain Markdown.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another
   license lives in its author's own repository, not here.
   [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.

@@ -33,6 +33,28 @@ routerAdd("POST", "/import/contacts", async (e) => {
 }, $apis.requireSuperuserAuth())
 ```
 
+```ts
+// pb_hooks/csv.pb.ts: superusers import contacts from a CSV file (the request body)
+interface CsvImport {
+  rows: Array<{ name: string; email: string }> // one object per row, keyed by the header line
+  errors: Array<{ line: number; message: string }>
+}
+
+routerAdd("POST", "/import/contacts", async (e) => {
+  const csv = new Uint8Array(toBytes(e.request.body))
+  const { rows, errors } = await $wasm.run.async<CsvImport>("csv", csv)
+  const contacts = e.app.findCollectionByNameOrId("contacts")
+  e.app.runInTransaction((txApp) => {
+    for (const row of rows) {
+      const contact = new Record(contacts)
+      contact.load({ name: row.name, email: row.email })
+      txApp.save(contact) // an invalid row throws: nothing is imported
+    }
+  })
+  return e.json(200, { imported: rows.length, skipped: errors })
+}, $apis.requireSuperuserAuth())
+```
+
 ```sh
 curl -H "Authorization: $TOKEN" --data-binary @contacts.csv http://127.0.0.1:8090/import/contacts
 ```

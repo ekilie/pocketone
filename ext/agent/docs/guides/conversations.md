@@ -25,6 +25,16 @@ if (chat.meta().user !== e.auth.id) throw new NotFoundError()
 const answer = chat.send(question) // or chat.send(question, { onText }) to stream it
 ```
 
+```ts
+// when a user opens a new chat
+const id: string = $agent.newChat({ meta: { user: e.auth.id } })
+
+// each question
+const chat: AgentChat = $agent.chat(id, { system: preamble, context: (q) => excerptsFor(q) })
+if (chat.meta().user !== e.auth.id) throw new NotFoundError()
+const answer: AgentAnswer = chat.send(question) // or chat.send(question, { onText }) to stream it
+```
+
 ```go
 chats := chatv1.Contract.Must(app)
 

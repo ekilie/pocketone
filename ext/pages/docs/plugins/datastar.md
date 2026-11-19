@@ -70,6 +70,15 @@ return you to where you were scrolled.
 </button>
 ```
 
+```tsx
+// pb_pages/counter/index.tsx
+export default ({ ctx }: any) => (
+  <button data-on:click="@post('/counter')">
+    Count: <span id="count">{ctx.store('count') || 0}</span>
+  </button>
+)
+```
+
 ```js
 // pb_pages/counter/+page.js
 module.exports = {
@@ -78,6 +87,15 @@ module.exports = {
     ctx.store('count', count)
     ctx.datastar.patchElements(`<span id="count">${count}</span>`)
   },
+}
+```
+
+```ts
+// pb_pages/counter/+page.ts
+export function post(ctx: any) {
+  const count: number = (ctx.store('count') || 0) + 1
+  ctx.store('count', count)
+  ctx.datastar.patchElements(`<span id="count">${count}</span>`)
 }
 ```
 

@@ -42,6 +42,15 @@ e.record.set("number", order.number)
 e.record.set("lines", order.lines)
 ```
 
+```ts
+// the raw message, as text: a string goes in as it is
+const raw: string = e.record.get("raw")
+const module = raw.trimStart().startsWith("<") ? "order-xml" : "edifact-orders-rust"
+const order = await $wasm.run.async<{ number: string; lines: object[] }>(module, raw)
+e.record.set("number", order.number)
+e.record.set("lines", order.lines)
+```
+
 ### Crypto pb_hooks doesn't have
 
 [`waflows`](../../example/waflows/src/main.rs) does what a WhatsApp Flows endpoint needs and pb_hooks can't: RSA-OAEP to unwrap the request's key, and AES-GCM with WhatsApp's key and IV. The hook keeps the JSON, the base64 and the HTTP; the module does only those three steps, with bytes as base64:
@@ -52,6 +61,15 @@ const { data: request } = await $wasm.call.async("waflows", "gcm-open", { key, i
 // ... answer the request, then seal the answer with the flipped IV
 const flipped = Buffer.from(body.initial_vector, "base64").map((b) => ~b).toString("base64")
 const { data } = await $wasm.call.async("waflows", "gcm-seal", { key, iv: flipped, data: Buffer.from(JSON.stringify(answer)).toString("base64") })
+```
+
+```ts
+type Data = { data: string } // what each waflows function gives: bytes as base64
+const { data: key } = await $wasm.call.async<Data>("waflows", "rsa-decrypt", { privateKey, data: body.encrypted_aes_key })
+const { data: request } = await $wasm.call.async<Data>("waflows", "gcm-open", { key, iv: body.initial_vector, data: body.encrypted_flow_data })
+// ... answer the request, then seal the answer with the flipped IV
+const flipped = Buffer.from(body.initial_vector, "base64").map((b) => ~b).toString("base64")
+const { data } = await $wasm.call.async<Data>("waflows", "gcm-seal", { key, iv: flipped, data: Buffer.from(JSON.stringify(answer)).toString("base64") })
 ```
 
 [`crypto`](../../example/crypto/main.go) (Go) is AES-256-GCM with a key the hook passes in: `encrypt` takes `{key, text}`, `decrypt` takes `{key, data}`. The module can't keep the key or send it anywhere. Built with Go it's 4 MB: its first call compiles for about a second, and later calls load it in about 40 ms. The same source built with [TinyGo](../languages/tinygo.md) is 348 KB: about 75 ms the first time, a few ms after.

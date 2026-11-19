@@ -24,6 +24,14 @@ onRecordCreate(async (e) => {
 }, "comments")
 ```
 
+```ts
+// pb_hooks/comments.pb.ts: comments arrive as HTML from a rich text editor
+onRecordCreate(async (e) => {
+  e.record.set("html", String((await $wasm.run.async<string | null>("sanitize-html", e.record.get("html") || "")) ?? ""))
+  return e.next()
+}, "comments")
+```
+
 Clean on update too if comments can be edited (the same handler on `onRecordUpdate`).
 
 `String(...)` is there because a module's output comes back parsed when it's JSON: a comment that's just `42` comes

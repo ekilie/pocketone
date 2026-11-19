@@ -40,6 +40,17 @@ const r = $agent.complete({
 })
 ```
 
+```ts
+const r: AgentAnswer = $agent.complete({
+  system: preamble, // never changes: read once, then reused
+  messages: [
+    ...earlierTurns, // same as last time: reused
+    { role: "user", content: `${question}\n\nExcerpts to answer from:\n\n${excerpts}` }, // new: read
+  ],
+  maxTokens: 350,
+})
+```
+
 ```go
 r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{
 	System: preamble, // never changes: read once, then reused
@@ -70,6 +81,11 @@ Every answer reports it in `usage`:
 
 ```js
 const r = $agent.complete({ system: preamble, prompt: question })
+// r.usage: { inputTokens: 431, outputTokens: 52, cachedTokens: 139 }
+```
+
+```ts
+const r: AgentAnswer = $agent.complete({ system: preamble, prompt: question })
 // r.usage: { inputTokens: 431, outputTokens: 52, cachedTokens: 139 }
 ```
 
@@ -105,6 +121,12 @@ const preamble = toString($os.readFile(`${__hooks}/preamble.md`))
 $agent.warm({ system: preamble })
 ```
 
+```ts
+// pb_hooks/agent.pb.ts: at boot, in the background (returns at once, never throws)
+const preamble: string = toString($os.readFile(`${__hooks}/preamble.md`))
+$agent.warm({ system: preamble })
+```
+
 ```go
 // when the app serves, in the background (Warm returns at once without Wait)
 app.OnServe().BindFunc(func(e *core.ServeEvent) error {
@@ -129,6 +151,10 @@ answer included:
 
 ```js
 const r = $agent.complete({ system: preamble, messages: turnsSoFar, thread: chatId })
+```
+
+```ts
+const r: AgentAnswer = $agent.complete({ system: preamble, messages: turnsSoFar, thread: chatId })
 ```
 
 ```go

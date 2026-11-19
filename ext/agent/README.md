@@ -78,6 +78,8 @@ onRecordCreate((e) => {
 }, "tickets")
 ```
 
+In Go:
+
 ```go
 // in your Go app
 app.OnRecordCreate("tickets").BindFunc(func(e *core.RecordEvent) error {

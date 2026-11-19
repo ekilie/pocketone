@@ -27,6 +27,17 @@ routerAdd("GET", "/tickets/{id}/qr.svg", async (e) => {
 }, $apis.requireAuth())
 ```
 
+```ts
+// pb_hooks/qrcode.pb.ts: a ticket's QR code, for its owner, as an image
+routerAdd("GET", "/tickets/{id}/qr.svg", async (e) => {
+  const ticket = e.app.findRecordById("tickets", e.request.pathValue("id"))
+  if (ticket.get("owner") !== e.auth?.id) throw new ForbiddenError()
+  const svg = await $wasm.run.async<string>("qrcode", `https://example.com/check-in/${ticket.get("code")}`)
+  e.response.header().set("Content-Type", "image/svg+xml")
+  return e.string(200, svg)
+}, $apis.requireAuth())
+```
+
 A plain `<img src>` doesn't send the user's PocketBase token, so fetch the image with it (the JS SDK's `pb.send`)
 and show it from a blob URL. Or draw it once, when the ticket is created, and save it in a protected file field:
 then an `<img>` with a [file token](https://pocketbase.io/docs/files-handling/#protected-files) shows it.

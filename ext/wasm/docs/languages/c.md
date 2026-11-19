@@ -72,6 +72,16 @@ onRecordCreate(async (e) => {
 }, "posts")
 ```
 
+```ts
+// pb_hooks/main.pb.ts
+onRecordCreate(async (e) => {
+  const out = await $wasm.run.async<{ text: string; words: number }>("summary", e.record.get("body")) // a string goes in as it is
+  e.record.set("summary", out.text)
+  e.record.set("words", out.words)
+  return e.next()
+}, "posts")
+```
+
 ## C++
 
 `zig c++` builds C++ the same way, with `-fno-exceptions` added:

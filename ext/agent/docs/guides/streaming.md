@@ -15,6 +15,13 @@ const r = $agent.stream({ prompt: question, maxTokens: 300 }, (text) => {
 // r is the whole answer, as $agent.complete returns it
 ```
 
+```ts
+const r: AgentAnswer = $agent.stream({ prompt: question, maxTokens: 300 }, (text) => {
+  // called with each piece, in order; return false to stop the answer there
+})
+// r is the whole answer, as $agent.complete returns it
+```
+
 ```go
 s, err := agent.Stream(ctx, extkit.Internal, agentv1.CompleteInput{Prompt: question, MaxTokens: 300})
 if err != nil {
@@ -44,6 +51,23 @@ module.exports = {
       const r = $agent.stream({ prompt: question, maxTokens: 300 }, (text) => stream.send("text", JSON.stringify(text)))
       stream.send("done", JSON.stringify({ usage: r.usage }))
     } catch (err) {
+      stream.send("error", JSON.stringify(String(err.message || err)))
+    }
+    stream.close()
+  },
+}
+```
+
+```ts
+// pb_pages/ask/+api.ts
+module.exports = {
+  post(ctx) {
+    const { question } = ctx.req.body()
+    const stream = ctx.res.sse()
+    try {
+      const r: AgentAnswer = $agent.stream({ prompt: question, maxTokens: 300 }, (text) => stream.send("text", JSON.stringify(text)))
+      stream.send("done", JSON.stringify({ usage: r.usage }))
+    } catch (err: any) {
       stream.send("error", JSON.stringify(String(err.message || err)))
     }
     stream.close()

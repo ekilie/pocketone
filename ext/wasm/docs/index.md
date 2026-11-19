@@ -13,6 +13,11 @@ const out = await $wasm.run.async("hello", { name: "pocket" })
 // out is { greeting: "Hello, POCKET!" }
 ```
 
+```ts
+const out = await $wasm.run.async<{ greeting: string }>("hello", { name: "pocket" })
+// out is { greeting: "Hello, POCKET!" }
+```
+
 It's built into `pocketone`. There's nothing to install and nothing to configure: put a module in `pb_hooks/` and call it.
 
 ## How it works
@@ -40,6 +45,14 @@ Add a hook that renders a page's Markdown to HTML when it's saved:
 // pb_hooks/notes.pb.js
 onRecordCreate(async (e) => {
   e.record.set("html", await $wasm.run.async("markdown", e.record.get("body")))
+  return e.next()
+}, "notes")
+```
+
+```ts
+// pb_hooks/notes.pb.ts
+onRecordCreate(async (e) => {
+  e.record.set("html", await $wasm.run.async<string>("markdown", e.record.get("body")))
   return e.next()
 }, "notes")
 ```
@@ -88,6 +101,14 @@ Call it from a route:
 // pb_hooks/hello.pb.js
 routerAdd("GET", "/hello/{name}", async (e) => {
   const out = await $wasm.run.async("hello", { name: e.request.pathValue("name") })
+  return e.json(200, out)
+})
+```
+
+```ts
+// pb_hooks/hello.pb.ts
+routerAdd("GET", "/hello/{name}", async (e) => {
+  const out = await $wasm.run.async<{ greeting: string }>("hello", { name: e.request.pathValue("name") })
   return e.json(200, out)
 })
 ```
