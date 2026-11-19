@@ -161,3 +161,35 @@ func TestMigrationsRunAtBootstrap(t *testing.T) {
 		t.Fatal("system migrations didn't run first")
 	}
 }
+
+func TestRenameCollection(t *testing.T) {
+	app := newApp(t)
+	c := core.NewBaseCollection("_old", "pbc_mx_old")
+	c.System = true
+	c.Fields.Add(&core.TextField{Name: "hash"})
+	c.AddIndex("idx_old_hash", true, "hash", "")
+	if err := app.Save(c); err != nil {
+		t.Fatal(err)
+	}
+	list := []Migration{RenameCollection("0001_rename", "pbc_mx_old", "_old", "_mx_new")}
+	if _, err := MigrateUp(app, "mx", list); err != nil || !hasCollection(app, "_mx_new") || hasCollection(app, "_old") {
+		t.Fatalf("up: %v", err)
+	}
+	renamed, _ := app.FindCollectionByNameOrId("pbc_mx_old")
+	if !renamed.System || len(renamed.Indexes) != 1 || !strings.Contains(renamed.Indexes[0], "_mx_new") {
+		t.Fatalf("renamed collection: system %v, indexes %v", renamed.System, renamed.Indexes)
+	}
+	r := core.NewRecord(renamed)
+	r.Set("hash", "x")
+	if err := app.Save(r); err != nil {
+		t.Fatal("the renamed table doesn't work:", err)
+	}
+	if _, err := MigrateDown(app, "mx", list, 0); err != nil || !hasCollection(app, "_old") {
+		t.Fatalf("down: %v", err)
+	}
+	// nothing to rename on a fresh app
+	fresh := newApp(t)
+	if _, err := MigrateUp(fresh, "mx", list); err != nil {
+		t.Fatal(err)
+	}
+}

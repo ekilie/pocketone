@@ -7,8 +7,13 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+1. Deploy history is renamed from `_deploys` to `_deploy_deploys` (its id, `pbc_deploys`, stays) on the first start, by the extension's migration. Code that reads it by name switches to `_deploy_deploys`, or to the id.
+
 ### Changed
 
+- Deploy history is the `_deploy_deploys` collection, following the `_<extension>_<table>` rule; an extension migration renames it.
 - `deploy`, `dev` and the deploy set never include `pb_cache` (extensions' disposable files), like `pb_data`.
 
 ## 0.0.2 (2026-11-17)

@@ -60,7 +60,7 @@ func MustRegister(app core.App, cfg Config) *API {
 }
 
 // Register adds the deploy API to a single app (its own files, auth by API tokens with the deploy scope or a
-// superuser JWT, history in _deploys, logs from the app's _logs) and, on a *pocketbase.PocketBase, the client
+// superuser JWT, history in _deploy_deploys, logs from the app's _logs) and, on a *pocketbase.PocketBase, the client
 // commands deploy, dev, pull, logs and restart. It returns nil API when cfg.DisableServer.
 func Register(app core.App, cfg Config) (*API, error) {
 	if pb, ok := app.(*pocketbase.PocketBase); ok {
@@ -133,7 +133,7 @@ type requestAuth struct {
 
 // AppBackend is the default backend on a single app: one instance (the app), superusers only. A superuser JWT
 // (including an impersonate token) has full access; an API token needs the deploy scope (or none), and
-// deploy:read gives read-only access. History goes to the _deploys collection.
+// deploy:read gives read-only access. History goes to the _deploy_deploys collection.
 type AppBackend struct {
 	App core.App
 }
@@ -167,7 +167,7 @@ func (b *AppBackend) Authenticate(r *http.Request, _ Instance) (Auth, error) {
 	return a, nil
 }
 
-// RecordDeploy implements [Backend]: a row in _deploys.
+// RecordDeploy implements [Backend]: a row in _deploy_deploys.
 func (b *AppBackend) RecordDeploy(_ context.Context, rec DeployRecord) (string, error) {
 	col, err := b.App.FindCachedCollectionByNameOrId(DeploysCollection)
 	if err != nil {
@@ -228,11 +228,11 @@ func (h slogHandler) WithAttrs(a []slog.Attr) slog.Handler {
 func (h slogHandler) WithGroup(n string) slog.Handler { return h.app.Logger().Handler().WithGroup(n) }
 
 // ---------------------------------------------------------------------------------------------------------------
-// _deploys
+// _deploy_deploys
 
 // Deploy history on a single app.
 const (
-	DeploysCollection   = "_deploys"
+	DeploysCollection   = "_deploy_deploys"
 	DeploysCollectionId = "pbc_deploys"
 )
 
@@ -258,7 +258,7 @@ func deploysCollection() *core.Collection {
 	return c
 }
 
-// EnsureSchema creates the _deploys collection if it doesn't exist.
+// EnsureSchema creates the _deploy_deploys collection if it doesn't exist.
 func EnsureSchema(app core.App) error {
 	want := deploysCollection()
 	have, err := app.FindCollectionByNameOrId(want.Id)

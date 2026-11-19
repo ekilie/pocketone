@@ -21,6 +21,12 @@ func NewExtension(cfg Config) *Extension { return &Extension{Config: cfg} }
 // Name implements [extkit.Extension].
 func (p *Extension) Name() string { return Name }
 
+// Migrations implements extkit.Migrator. 0001 renames _deploys (its name before extension tables were
+// `_<extension>_<table>`) to _deploy_deploys; the id stays.
+func (p *Extension) Migrations() []extkit.Migration {
+	return []extkit.Migration{extkit.RenameCollection("0001_rename_deploys", DeploysCollectionId, "_deploys", DeploysCollection)}
+}
+
 // Register implements [extkit.Extension].
 func (p *Extension) Register(app core.App, _ extkit.Config) error {
 	_, err := Register(app, p.Config)

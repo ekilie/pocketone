@@ -273,7 +273,7 @@ func TestMigratorPasses(t *testing.T) {
 	conformance.Run(t, func() extkit.Extension { return migrating{} }) // irreversible: revert steps skipped
 }
 
-// leaky's Down forgets to drop its collection.
+// leaky's Down does nothing.
 type leaky struct{ migrating }
 
 func (leaky) Migrations() []extkit.Migration {
@@ -284,7 +284,7 @@ func (leaky) Migrations() []extkit.Migration {
 
 func TestMigrationLeftoversFail(t *testing.T) {
 	r := check(t, func(tb conformance.TB) { conformance.CheckMigrations(tb, leaky{}, conformance.Options{}) })
-	if !r.has(`"_mig_items" is still there`) {
-		t.Fatalf("leftover collection not reported: %v", r.errors)
+	if !r.has("a Down doesn't undo its Up") {
+		t.Fatalf("a Down that does nothing wasn't reported: %v", r.errors)
 	}
 }

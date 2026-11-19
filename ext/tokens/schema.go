@@ -5,14 +5,21 @@ import (
 	"fmt"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/extkit"
 )
 
 // The schema is a contract: the collection and field ids never change, so other code (a legacy migration, the
 // mothership) can create the same collection first and [EnsureSchema] accepts it.
 const (
-	Collection   = "_tokens"
+	Collection   = "_tokens_tokens"
 	CollectionId = "pbc_tokens"
 )
+
+// Migrations implements extkit.Migrator. 0001 renames _tokens (its name before extension tables were
+// `_<extension>_<table>`) to _tokens_tokens; the id stays.
+func (p *Extension) Migrations() []extkit.Migration {
+	return []extkit.Migration{extkit.RenameCollection("0001_rename_tokens", CollectionId, "_tokens", Collection)}
+}
 
 // ownRule lets an auth record list, view and delete its own tokens through the records API.
 const ownRule = `@request.auth.id != "" && owner = @request.auth.id && owner_collection = @request.auth.collectionId`
@@ -46,7 +53,7 @@ func tokensCollection() *core.Collection {
 	return c
 }
 
-// EnsureSchema creates the _tokens collection if it doesn't exist, and checks an existing one has the expected ids
+// EnsureSchema creates the _tokens_tokens collection if it doesn't exist, and checks an existing one has the expected ids
 // and fields. Safe on every start.
 func EnsureSchema(app core.App) error {
 	want := tokensCollection()

@@ -178,7 +178,7 @@ reconnects by itself if it drops.
 
 ### Deploy history
 
-Every deploy is recorded in the `_deploys` collection of the receiving app: status, file counts, bytes, commit,
+Every deploy is recorded in the `_deploy_deploys` collection of the receiving app: status, file counts, bytes, commit,
 message, source, token name, superuser and any error. Superusers can browse it in the dashboard.
 
 ## Integrations

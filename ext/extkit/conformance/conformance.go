@@ -198,22 +198,15 @@ func CheckCollections(t TB, p extkit.Extension, o Options) {
 	}
 }
 
-// CheckMigrations, for an [extkit.Migrator]: its migrations apply on a fresh app (Run's lifecycle check has already
-// applied them through bootstrap), applying again does nothing, reverting all of them leaves none of the collections
-// they added, and they apply again after that. A list with an irreversible migration (no Down) skips the revert steps.
+// CheckMigrations, for an [extkit.Migrator]: its migrations are applied at bootstrap, applying again does nothing,
+// reverting all of them changes the schema, and applying them again brings back exactly the schema they made. A list
+// with an irreversible migration (no Down) skips the revert steps.
 func CheckMigrations(t TB, p extkit.Extension, o Options) {
 	m, ok := p.(extkit.Migrator)
 	if !ok {
 		return
 	}
 	list := m.Migrations()
-	base := newApp(t, o)
-	if err := start(base, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-	before := snapshot(t, base)
-	_ = stop(base)
-
 	app := newApp(t, o)
 	if err := start(app, p, o.Layers); err != nil {
 		t.Fatal(err)
@@ -236,16 +229,28 @@ func CheckMigrations(t TB, p extkit.Extension, o Options) {
 			return // can't revert: nothing more to check
 		}
 	}
+	applied := snapshot(t, app)
 	if _, err := extkit.MigrateDown(app, p.Name(), list, 0); err != nil {
 		t.Fatalf("reverting all: %v", err)
 	}
-	for name := range snapshot(t, app) {
-		if _, ok := before[name]; !ok && strings.HasPrefix(name, TablePrefix(p.Name())) {
-			t.Errorf("collection %q is still there after reverting every migration", name)
+	if reflect.DeepEqual(snapshot(t, app), applied) {
+		t.Errorf("reverting every migration left the schema as it was: a Down doesn't undo its Up")
+	}
+	if again, err := extkit.MigrateUp(app, p.Name(), list); err != nil || len(again) != len(list) {
+		t.Errorf("applying after reverting: applied %v, err %v; want all %d", again, err, len(list))
+	}
+	after := snapshot(t, app)
+	for name, def := range applied {
+		if after[name] == "" {
+			t.Errorf("collection %q is missing after reverting and applying again", name)
+		} else if after[name] != def {
+			t.Errorf("collection %q differs after reverting and applying again:\n%s\n%s", name, def, after[name])
 		}
 	}
-	if applied, err := extkit.MigrateUp(app, p.Name(), list); err != nil || len(applied) != len(list) {
-		t.Errorf("applying after reverting: applied %v, err %v; want all %d", applied, err, len(list))
+	for name := range after {
+		if applied[name] == "" {
+			t.Errorf("collection %q appeared after reverting and applying again", name)
+		}
 	}
 }
 
@@ -499,7 +504,7 @@ func stop(app *core.BaseApp) error {
 	return err
 }
 
-// snapshot is every collection's definition, minus timestamps.
+// snapshot is every collection's definition, minus timestamps and index quoting.
 func snapshot(t TB, app core.App) map[string]string {
 	t.Helper()
 	cols, err := app.FindAllCollections()
@@ -513,6 +518,13 @@ func snapshot(t TB, app core.App) map[string]string {
 		_ = json.Unmarshal(b, &m)
 		delete(m, "created")
 		delete(m, "updated")
+		if idx, ok := m["indexes"].([]any); ok { // PocketBase re-quotes index SQL when it renames a table
+			for i, v := range idx {
+				if sql, ok := v.(string); ok {
+					idx[i] = strings.NewReplacer("`", "", " ", "", "\n", "", "\t", "").Replace(sql)
+				}
+			}
+		}
 		b, _ = json.Marshal(m)
 		out[c.Name] = string(b)
 	}

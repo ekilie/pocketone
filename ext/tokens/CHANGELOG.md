@@ -7,6 +7,14 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+1. The tokens collection is renamed from `_tokens` to `_tokens_tokens` (its id, `pbc_tokens`, stays) on the first start, by the extension's migration. Code that reads it through the records API by name (`/api/collections/_tokens/records`) switches to `_tokens_tokens`, or to the id.
+
+### Changed
+
+- The tokens collection is `_tokens_tokens`, following the `_<extension>_<table>` rule; an extension migration renames it.
+
 ## 0.1.0 (2026-11-17)
 
 ### Upgrading

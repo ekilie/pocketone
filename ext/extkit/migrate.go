@@ -228,3 +228,22 @@ func bindMigrations(app core.App, exts []Extension) error {
 	})
 	return nil
 }
+
+// RenameCollection is a migration that renames the collection with id from one name to another (Down renames it
+// back). A collection that doesn't exist yet, or already has the new name, is left alone: the extension creates it
+// under the new name. Keep the id: code that finds the collection by id keeps working.
+func RenameCollection(name, id, from, to string) Migration {
+	rename := func(oldName, newName string) func(core.App) error {
+		return func(tx core.App) error {
+			c, err := tx.FindCollectionByNameOrId(id)
+			if err != nil || c.Name != oldName {
+				return nil
+			}
+			c.Name = newName
+			// PocketBase's validation refuses to rename a system collection (an extension's usually are); the save
+			// itself renames the table and its indexes
+			return tx.SaveNoValidate(c)
+		}
+	}
+	return Migration{Name: name, Up: rename(from, to), Down: rename(to, from)}
+}

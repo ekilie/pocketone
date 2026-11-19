@@ -225,7 +225,7 @@ see and manage everyone's.
 | `POST /api/_c/tokens/v1/revoke-all` | Revoke all of yours (superusers: `{ownerCollection, owner}`). |
 | `GET /api/_c/tokens/v1/scopes` | The registered scopes, who may own tokens, and whether you can. |
 
-Owners can also list, view and delete their own tokens through the records API of `_tokens`.
+Owners can also list, view and delete their own tokens through the records API of `_tokens_tokens`.
 
 ## Example
 
@@ -291,7 +291,7 @@ The OAuth server can only sign in accounts of those collections.
 
 ## How it works
 
-- Tokens live in the `_tokens` collection: owner (collection id and record id), name, `hash` (SHA-256 of the secret;
+- Tokens live in the `_tokens_tokens` collection: owner (collection id and record id), name, `hash` (SHA-256 of the secret;
   the secret itself is never stored), display prefix, scopes, expiry, last use (time and IP), OAuth client id and
   audience.
 - The bearer check is a middleware that runs just before PocketBase's own auth middleware; a second one, right after

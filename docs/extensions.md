@@ -98,7 +98,9 @@ func createChats(txApp core.App) error {
   app's `migrate down` and `migrate history-sync` never touch your tables, and turning your extension off keeps its
   history. `pocketone extensions migrations` lists every extension's migrations; `pocketone extensions migrate down
   <extension> [n]` reverts the last n (`0`: all). A migration with no `Down` can't be reverted.
-- **Never edit a migration that has shipped.** Change the schema with a new one.
+- **Never edit a migration that has shipped.** Change the schema with a new one. To rename a collection, use
+  `extkit.RenameCollection(name, id, from, to)`: it renames by id (keep the id, so code that finds it by id keeps
+  working), works on system collections, and reverts.
 - **They build into the binary**, so there are no files to copy into the app. A migration that needs a file (a SQL
   script, a JSON schema) embeds it with `//go:embed` and reads it in `Up`.
 
@@ -110,8 +112,8 @@ reason (a collection the app's users are meant to see and edit, say). When one e
 another's (`agent`'s `_agent_` and `agent-chat`'s `_agent_chat_`), the shorter one never names a table under the longer
 one's prefix; `go run ./.github/extensions check` refuses it.
 
-The conformance test checks a Migrator's migrations too: they apply on a fresh app, applying again does nothing,
-reverting all of them leaves none of its collections behind, and they apply again after that.
+The conformance test checks a Migrator's migrations too: they apply at bootstrap, applying again does nothing,
+reverting all of them changes the schema, and applying them again brings back exactly what they made.
 
 ## Disposable files: `pb_cache`
 

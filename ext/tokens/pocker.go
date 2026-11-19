@@ -13,7 +13,7 @@ import (
 const Name = "tokens"
 
 // Extension is API tokens as a PocketOne extension, a member of ext/standard's set: every app has it, and on a
-// multisite host every instance that runs PocketOne gets its own _tokens, routes and screen. Reconfigure it on the set:
+// multisite host every instance that runs PocketOne gets its own _tokens_tokens, routes and screen. Reconfigure it on the set:
 //
 //	set.Tokens = tokens.New(tokens.Config{})
 //

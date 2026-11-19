@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -55,7 +56,8 @@ type Config struct {
 	// The store, shared by every app in the process: ceilings over every bucket together.
 	Eviction  cachev1.Eviction `yaml:"eviction,omitempty" json:"eviction,omitempty" doc:"Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo."`
 	MaxMemory Size             `yaml:"max_memory,omitempty" json:"max_memory,omitempty" doc:"Memory for every bucket together, such as 512MiB. Default 128MiB."`
-	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker)."`
+	Disk      *bool            `yaml:"disk,omitempty" json:"disk,omitempty" doc:"Turns on a disk tier in pb_cache/cache, next to pb_data (on a multisite host, the host's own pb_cache)."`
+	DiskPath  string           `yaml:"disk_path,omitempty" json:"disk_path,omitempty" doc:"Puts the disk tier in a cache folder there instead of pb_cache, and turns it on. Relative: to the app's folder (the one holding pb_data) when the app has the process to itself, the working directory when several apps share it (Pocker)."`
 	MaxDisk   Size             `yaml:"max_disk,omitempty" json:"max_disk,omitempty" doc:"Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB."`
 
 	// Each app's buckets.
@@ -153,18 +155,37 @@ func (x *Extension) storeFor(app core.App, c Config) (*store, error) {
 		if lim.maxDisk <= 0 {
 			lim.maxDisk = DefaultMaxDisk
 		}
-		if d := c.DiskPath; d != "" {
-			if !filepath.IsAbs(d) && extkit.AppID(app) == "" {
-				d = filepath.Join(app.DataDir(), d) // the app has the process to itself: under its pb_data
-			}
-			if d, x.storeErr = filepath.Abs(d); x.storeErr != nil {
-				return
-			}
-			lim.dir = d
+		lim.dir, x.storeErr = diskDir(app, c)
+		if x.storeErr != nil {
+			return
 		}
 		x.store, x.storeErr = newStore(lim, slog.Default().With("extension", Name)) // the process's, not one app's: it outlives them
 	})
 	return x.store, x.storeErr
+}
+
+// diskDir is the disk tier's folder, which the store owns and empties when it opens: "" for none, pb_cache/cache by
+// default (the host's, for a store every instance shares), or a cache folder in disk_path.
+func diskDir(app core.App, c Config) (string, error) {
+	on := c.DiskPath != "" || (c.Disk != nil && *c.Disk)
+	if c.Disk != nil && !*c.Disk {
+		on = false
+	}
+	if !on {
+		return "", nil
+	}
+	if c.DiskPath == "" {
+		return extkit.HostCacheDir(app, Name) // the store is the process's, so the host's pb_cache
+	}
+	d := c.DiskPath
+	if !filepath.IsAbs(d) && extkit.AppID(app) == "" {
+		d = filepath.Join(filepath.Dir(filepath.Clean(app.DataDir())), d) // the app has the process to itself
+	}
+	d, err := filepath.Abs(filepath.Join(d, Name)) // a folder of its own: the store empties it
+	if err != nil {
+		return "", err
+	}
+	return d, os.MkdirAll(d, 0o755)
 }
 
 // merge lays over's set fields onto base.
@@ -177,6 +198,9 @@ func merge(base, over Config) Config {
 	}
 	if over.MaxMemory != 0 {
 		base.MaxMemory = over.MaxMemory
+	}
+	if over.Disk != nil {
+		base.Disk = over.Disk
 	}
 	if over.DiskPath != "" {
 		base.DiskPath = over.DiskPath

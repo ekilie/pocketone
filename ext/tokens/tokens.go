@@ -5,7 +5,7 @@
 //	app := pocketbase.New()
 //	tokens.MustRegister(app, tokens.Config{})
 //
-// It adds the _tokens collection, the token API (tokens/v1, /api/_c/tokens/v1), an "API tokens" screen under Settings and, on a
+// It adds the _tokens_tokens collection, the token API (tokens/v1, /api/_c/tokens/v1), an "API tokens" screen under Settings and, on a
 // *pocketbase.PocketBase, the `token` command.
 package tokens
 
@@ -83,7 +83,7 @@ func MustRegister(app core.App, cfg Config) *Tokens {
 	return t
 }
 
-// Register adds API tokens to app: the _tokens collection (on bootstrap), the bearer middleware, routes and
+// Register adds API tokens to app: the _tokens_tokens collection (on bootstrap), the bearer middleware, routes and
 // dashboard screen (on serve), and on a *pocketbase.PocketBase the `token` command. Call it before app.Start(), or
 // from an extension's Register (as [Extension] does).
 func Register(app core.App, cfg Config) (*Tokens, error) {
