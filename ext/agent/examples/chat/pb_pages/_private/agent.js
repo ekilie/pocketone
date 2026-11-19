@@ -83,6 +83,9 @@ function knowledge(ctx) {
     avgLength: all.reduce((a, s) => a + s.length, 0) / Math.max(1, all.length),
   }
   cached = kb
+  // read the preamble into the model's prompt cache now, so the first question doesn't wait for it; returns at once,
+  // never throws (with your own API it just says the API caches prompts itself), and the same text keeps the same warm
+  $agent.warm({ system: kb.preamble })
   return kb
 }
 
@@ -107,35 +110,46 @@ function search(kb, query, n) {
     .map((x) => x.s)
 }
 
+// How much conversation to send. Past it, the next question starts a new stretch from the last turn (read once),
+// rather than dropping one turn per question, which would change the start of every prompt.
+const BUDGET = 1800
+
 /**
- * Answers the conversation's last question, armed with the preamble and the best-matching context. onText, if given,
- * gets the answer as it's written ($agent.stream); without it the answer comes back whole ($agent.complete).
+ * Answers the conversation's last question, armed with the preamble and the best-matching context.
+ *
+ * messages are the conversation as the browser keeps it: each earlier question as it was sent (with its excerpts) and
+ * each answer, then the new question. Sending the earlier turns exactly as before lets the model continue from its
+ * state for this conversation (`thread`), so a turn reads only the new question and its excerpts. onText, if given,
+ * gets the answer as it's written ($agent.stream); onWait gets the model's status while it loads.
  */
-function answer(ctx, messages, onText) {
+function answer(ctx, messages, { conversation, onText, onWait } = {}) {
   const kb = knowledge(ctx)
-  const recent = messages.slice(-6) // the last few turns are enough; every token is read on a CPU
+  let recent = messages.map((m) => ({ role: m.role, content: m.content }))
+  let keep = recent.length - 1 // the earlier messages the browser keeps for next time (it adds this turn's two)
+  if (recent.length > 1 && $agent.count({ system: kb.preamble, messages: recent }) > BUDGET) {
+    recent = recent.slice(-1) // a new stretch: just the question
+    keep = 0
+  }
   // the question, plus the one before it, so a follow-up ("and how do I undo that?") still finds its topic
-  const query = recent
+  const query = messages
     .filter((m) => m.role === 'user')
     .slice(-2)
-    .map((m) => m.content)
+    .map((m) => m.question || m.content)
     .join(' ')
   const context = search(kb, query, 3)
   // The preamble and the conversation so far never change between turns, so they go first, and the excerpts (which
-  // change with every question) ride along with the new question. A prompt that starts the same as the last one is
-  // read only from where it differs: the model keeps the start in its prompt cache.
+  // change with every question) ride along with the new question.
   const excerpts = context.map((s, i) => `[${i + 1}] ${s.title}\n${s.text}`).join('\n\n')
   const last = recent[recent.length - 1]
-  const turns = [
-    ...recent.slice(0, -1),
-    // the question first: next turn, this message is history with the question alone, and the shared start runs to
-    // the end of the question
-    { role: 'user', content: `${last.content}\n\nDocumentation excerpts to answer from:\n\n${excerpts}` },
-  ]
+  const sent = `${last.content}\n\nDocumentation excerpts to answer from:\n\n${excerpts}`
+  const turns = [...recent.slice(0, -1), { role: 'user', content: sent }]
   const started = Date.now()
-  const opts = { system: kb.preamble, messages: turns, maxTokens: 350, temperature: 0.3 }
-  const res = onText ? $agent.stream(opts, onText) : $agent.complete(opts)
+  const opts = { system: kb.preamble, messages: turns, maxTokens: 350, temperature: 0.3, wait: '10m' }
+  if (conversation) opts.thread = String(conversation).slice(0, 64)
+  const res = onText ? $agent.stream(opts, onText, { onWait }) : $agent.complete(opts)
   return {
+    sent, // the question as sent: the browser keeps it this way
+    keep,
     answer: res.text.trim(),
     model: res.model,
     backend: res.backend,

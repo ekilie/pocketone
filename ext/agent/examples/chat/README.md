@@ -13,7 +13,13 @@ shows `$agent` from page code:
   with `ctx.res.sse()`;
 - **structured output:** a second call, `$agent.complete({ schema: { type: 'array', ... } })`, suggests three follow-up
   questions; the model can only answer with an array of three strings;
-- **status:** `$agent.status()` for the model's download progress.
+- **status:** `$agent.status()` for the model's download progress, and `wait` with `onWait` so a question asked while
+  the model loads waits for it and the page shows the progress;
+- **warming and threads:** the preamble is warmed when the app first loads it (`$agent.warm`), and each browser
+  conversation is a `thread`: the page keeps each question as it was sent, excerpts included, so the next turn starts
+  exactly the same and the model reads only the new question. When the conversation passes a token budget
+  (`$agent.count`), the next question starts a new stretch instead of dropping one turn at a time. The answer's footer
+  shows how many prompt tokens were cached.
 
 ```
 pb_pages/

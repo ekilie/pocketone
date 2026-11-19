@@ -1,6 +1,6 @@
 ---
 title: Remembering conversations
-description: "A model remembers nothing between calls: keep chats in collections, send the recent turns, summarize the older ones, and recall what matters from past chats."
+description: "A model remembers nothing between calls: use Agent Chat, or keep chats in collections yourself, send the recent turns, summarize the older ones, and recall what matters from past chats."
 ---
 
 # Remembering conversations
@@ -8,6 +8,26 @@ description: "A model remembers nothing between calls: keep chats in collections
 A model remembers nothing between calls. A chat feels continuous only because the app sends the conversation again
 with every question. So "memory" is something you build: you decide what to keep, where, and how much of it to send
 back each time.
+
+## The short way: Agent Chat
+
+The [Agent Chat](../../../agent-chat/README.md) extension does everything below for you: it stores the chats, sends
+the recent turns with a summary of the older ones, keeps the start of each prompt stable for the cache, and gives each
+chat a thread so the built-in model reads only the new question.
+
+```js
+// when a user opens a new chat
+const id = $agent.newChat({ meta: { user: e.auth.id } })
+
+// each question
+const chat = $agent.chat(id, { system: preamble, context: (q) => excerptsFor(q) })
+if (chat.meta().user !== e.auth.id) throw new NotFoundError()
+const answer = chat.send(question) // or chat.send(question, { onText }) to stream it
+```
+
+`$agent.chats.list({ meta: { user } })` lists a user's chats, `chat.history()` reads one back, and
+`$agent.chats.forget({ meta: { user } })` deletes them all when the user goes. The rest of this page is how to build
+the same yourself, when you want your own collections or rules.
 
 ## Keep chats in your app
 
@@ -36,7 +56,8 @@ function ask(ctx, chatId, question) {
 
   const summary = chat.getString("summary")
   const system = preamble(ctx) + (summary ? `\n\nEarlier in this conversation: ${summary}` : "")
-  const r = $agent.complete({ system, messages: [...recent, { role: "user", content: question }], maxTokens: 350 })
+  // thread: the built-in model keeps this chat's state, so next time it reads only the new question
+  const r = $agent.complete({ system, messages: [...recent, { role: "user", content: question }], maxTokens: 350, thread: chatId })
 
   const save = (role, content) => {
     const m = new Record(app.findCollectionByNameOrId("messages"))
@@ -91,10 +112,14 @@ Let people see and delete their notes. Only use a user's notes in that user's ch
 
 ## Keep the start the same
 
-The model keeps the start of recent prompts and skips re-reading it when the next prompt starts the same way. So send
-the preamble first, then the earlier turns exactly as you sent them last time, then the new question with its excerpts
-after it: each turn then reads only what's new. A summary rewritten on every turn changes the start every time, so
-rewrite it every few turns. See [Prompt caching](../prompt-caching.md) for how it works and how to check it.
+The model keeps the start of recent prompts, and with `thread` a chat's whole state, answers included, and skips
+re-reading them when the next prompt starts the same way. So send the preamble first, then the earlier turns exactly
+as you sent them last time, then the new question with its excerpts after it: each turn then reads only what's new.
+
+A window that slides by one turn per question changes the start every time. Prefer stretches: send every turn since
+the last summary, and when that passes your budget (`$agent.count(messages)`), fold the oldest into the summary and
+start a new stretch. Agent Chat works this way (`window`, `summarizeEvery`). See [Prompt caching](../prompt-caching.md)
+for how it works and how to check it.
 
 A cache isn't memory, though: you still send the turns every time. The window and the summary above decide how much
 that is.

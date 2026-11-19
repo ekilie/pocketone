@@ -47,6 +47,8 @@ agent:
   model: qwen3-1.7b   # qwen3-0.6b, qwen3-1.7b, qwen3-4b, hf:<org>/<repo>/<file>.gguf, or a path to a .gguf file
   threads: 4          # default: half your CPU cores
   prompt_cache_mb: 256 # keeps the start of recent prompts so a repeated one isn't read again (-1: off)
+  thread_memory_mb: 512 # conversations' state between calls, in memory (the thread option)
+  thread_cache_gb: 2    # and on disk, in pb_cache/agent/threads (-1: off)
 ```
 
 | Model | Download | Memory | Good for |
@@ -84,9 +86,19 @@ onRecordCreate((e) => {
 - `$agent.stream(opts, onText)` answers the same way, calling `onText(piece)` as the answer is written (return `false`
   to stop); forward the pieces to the browser with `ctx.res.sse()` in a page.
 - `$agent.status()` says which model answers and whether it's ready.
+- `thread: "<id>"` keeps a conversation's state between calls: the next call that sends the same conversation plus a
+  new question reads only the new question ([Threads](#warming-and-threads)).
+- `$agent.warm({ system })` reads a preamble ahead of the calls that start with it, and `$agent.count(text)` counts
+  tokens, for budgeting what you send.
+- For stored chats with history and summaries, add [Agent Chat](../agent-chat/README.md): `$agent.chat(id).send(text)`.
 
 `$agent.complete` waits for the answer, like `$http.send`. A model on your CPU writes maybe 5 to 30 words a second,
 so keep answers short (`maxTokens`) and do long jobs in a cron, not in a request hook.
+
+While the model downloads or loads, `$agent.complete` fails at once with `not_ready`. In an async hook,
+`await $agent.complete.async(opts)` waits for it instead (up to `opts.wait`, default `timeout`), and
+`$agent.stream(opts, onText, { onWait })` with `wait` calls `onWait(status)` while it waits, to show progress
+([When the model is loading](docs/guides/waiting.md)).
 
 It's [agent/v1](../contracts/agent/v1/README.md), also over HTTP (`POST /api/_c/agent/v1/complete`, or
 `/api/_c/agent/v1/stream` for server-sent events, with a superuser or a token with the `agent` scope), on the command line (`pocketone remote agent complete --prompt "..."`) and as
@@ -97,6 +109,7 @@ an MCP tool.
 | Extension | How they fit |
 |---|---|
 | [Settings](../settings/README.md) | Your own API is a settings/v1 section, in the dashboard, the CLI and for agents. |
+| [Agent Chat](../agent-chat/README.md) | Stored conversations on top of agent/v1: `$agent.newChat()`, `$agent.chat(id).send(text)`, `$agent.chats`. Agent binds those methods whenever a provider of agent.chat/v1 runs. |
 | [Multisite](../multisite/README.md) | A host whose `agent` section names a model runs it once for every instance and provides [agent/v1](../contracts/agent/v1/README.md) for them; `$agent` in each instance uses it. Each instance gets a share, set by `per_instance` (below). Each instance's Settings → LLM offers Off, the host's model or its own API; which model runs built in is the host's call. Today only instances that run as isolates ([Pocker](../pocker/README.md)) reach the host's model. |
 
 On a host:
@@ -109,6 +122,8 @@ agent:
   per_instance:
     concurrency: 2        # calls an instance may have waiting or running at once
     max_tokens: 512       # longest answer per call
+    pinned_mb: 64         # memory an instance's warmed prompts may hold
+    thread_cache_gb: 2.5  # disk for an instance's conversation state, in its own pb_cache
 ```
 
 ## Example
@@ -192,6 +207,26 @@ Measured on an Apple M1 Max, a second prompt sharing a ~160-token preamble with 
 The cache matches only an identical start, so order a prompt from what never changes to what changes most: the
 preamble, then the conversation so far, then the new question with the excerpts picked for it after it. See
 [Prompt caching](docs/prompt-caching.md) in the docs.
+
+## Warming and threads
+
+Two more ways to skip reading the same text, both for the built-in model (your own API ignores them; providers cache
+prompts themselves):
+
+- **Warm a preamble:** `$agent.warm({ system: preamble })` reads it now, in the background, and keeps it in the prompt
+  cache until `forget()`, so the first question after a start doesn't wait for it and other prompts can't push it out.
+  It returns `{ id, warmed, forget() }` at once; `await $agent.warm.async(...)` resolves once it's warm. The same text
+  always gets the same id. On a multisite host each instance's warms are capped by `per_instance.pinned_mb`.
+- **Threads:** `thread: chatId` on a call keeps the conversation's whole state afterwards, the model's own answer
+  included, and the next call continues from it as far as its messages start the same way. Send the earlier turns
+  exactly as before (excerpts and all) and each turn reads only the new question. States are kept in memory
+  (`thread_memory_mb`) and on disk at half precision in `pb_cache/agent/threads` (`thread_cache_gb`), least recently
+  used first: a thread survives a restart, and reading it back takes a fraction of a second where re-reading a long
+  chat takes many. `$agent.threads.list()` and `.forget(id)` manage them. On a host each instance's threads are in its
+  own `pb_cache`, within `per_instance.thread_cache_gb`.
+
+A thread is a cache, not storage: your app still sends the conversation. [Agent Chat](../agent-chat/README.md) does
+all of this for you.
 
 ## The built-in engine
 

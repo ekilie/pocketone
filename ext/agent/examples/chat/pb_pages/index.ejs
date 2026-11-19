@@ -87,6 +87,8 @@
 const log = document.getElementById('log'), q = document.getElementById('q'), send = document.getElementById('send')
 const statusEl = document.getElementById('status')
 const history = []
+// one conversation per page load: the server keeps the model's state for it between questions
+const conversation = crypto.randomUUID()
 
 function esc(s) { return s.replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c])) }
 // Markdown for the model's answers: paragraphs, lists, headings, ``` blocks, `code`, **bold**, *italic* and links.
@@ -189,7 +191,7 @@ async function post(url, body) {
 
 async function ask(text) {
   add('me', esc(text))
-  history.push({role: 'user', content: text})
+  history.push({role: 'user', content: text, question: text})
   const pending = add('bot', '<span class="thinking">Thinking…</span>')
   send.disabled = true
   const t = Date.now()
@@ -197,8 +199,9 @@ async function ask(text) {
   try {
     let text = '', r
     // the answer streams in as server-sent events: "text" pieces, then "done" with the sources
-    await streamPost('/chat', {messages: history}, (event, data) => {
-      if (event === 'text') {
+    await streamPost('/chat', {messages: history, conversation}, (event, data) => {
+      if (event === 'status') pending.innerHTML = `<span class="thinking">${esc(data)}</span>`
+      else if (event === 'text') {
         if (!text) clearInterval(tick)
         text += data
         follow(() => { pending.innerHTML = md(text) + '<span class="thinking"> ▍</span>' })
@@ -206,11 +209,15 @@ async function ask(text) {
       else if (event === 'error') throw new Error(data)
     })
     if (!r) throw new Error('the answer stopped early')
-    history.push({role: 'assistant', content: r.answer})
+    // keep the question as it was sent (with its excerpts), so the next prompt starts exactly like this one did;
+    // after a new stretch the server says how many earlier messages to keep
+    const asked = history.pop()
+    history.splice(0, history.length - r.keep)
+    history.push({role: 'user', content: r.sent, question: asked.question}, {role: 'assistant', content: r.answer})
     const src = r.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)).join(' · ')
     follow(() => {
       pending.innerHTML = md(r.answer) +
-        `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in / ${r.usage.outputTokens} out` +
+        `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in (${r.usage.cachedTokens || 0} cached) / ${r.usage.outputTokens} out` +
         `<br>Armed with: ${r.armedWith.map(f => `<code>${esc(f)}</code>`).join(' ')}` +
         (src ? `<br>Sources: ${src}` : '') + '</div>'
     })

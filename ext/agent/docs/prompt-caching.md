@@ -80,10 +80,55 @@ Each remembered token takes about 230 KB for `qwen3-0.6b` and `qwen3-1.7b` (290 
 holds about 1,100 tokens. That's enough for a preamble and a short chat. The least recently used prompts make room for
 new ones. On a small server, lower it to save memory; with more memory and long chats, raise it.
 
+## Warm the preamble
+
+The cache fills as prompts come in, so the first question after a start reads the whole preamble, and a burst of
+other prompts can push it out. `$agent.warm` reads it ahead of time and keeps it:
+
+```js
+// pb_hooks/agent.pb.js: at boot, in the background (returns at once, never throws)
+const preamble = toString($os.readFile(`${__hooks}/preamble.md`))
+$agent.warm({ system: preamble })
+```
+
+It returns `{ id, warmed, message, forget() }`. `warmed` is false while it's still reading (or with your own API, which
+caches by itself; `message` says why). In an async hook, `await $agent.warm.async({ system: preamble })` resolves
+once it's in. The id comes from the text, so warming the same text again finds the same warm and costs nothing; after
+a model change it's warmed again on the new one. `forget()` lets it leave the cache like any other prompt.
+
+A warmed prompt is pinned: it stays in `prompt_cache_mb` until forgotten, so warm the one or two preambles you use,
+not every prompt. On a multisite host each app may pin up to `per_instance.pinned_mb`.
+
+## Threads: a conversation's own state
+
+The cache keeps the start of prompts. A chat needs more: the model's answer from last turn is part of the next prompt,
+and reading it again costs as much as writing it did. `thread` keeps a conversation's whole state between calls, the
+answer included:
+
+```js
+const r = $agent.complete({ system: preamble, messages: turnsSoFar, thread: chatId })
+```
+
+The next call with the same `thread` continues from that state as far as its messages start the same way, so it reads
+only what's new. For that, send the earlier turns exactly as you sent them, question text and excerpts included,
+followed by the model's answer exactly as it came back. Trimming or rewriting the history costs one full read, then
+the thread carries on from there: trim rarely and in big steps, not one turn at a time (`$agent.count(messages)`
+tells you when the conversation passes your budget).
+
+Thread states live in memory (`thread_memory_mb`, default 512) and on disk, at half precision, in
+`pb_cache/agent/threads` (`thread_cache_gb`, default 2): about 115 KB a token on disk for `qwen3-0.6b` and `qwen3-1.7b`.
+The least recently used go first. Reading one back from disk takes a fraction of a second; reading a 2,000-token chat
+again takes 15 to 60 seconds on a small CPU. `$agent.threads.list()` shows what's kept, `$agent.threads.forget(id)`
+drops one. Like the rest of `pb_cache`, they're never backed up and safe to delete.
+
+[Agent Chat](../../agent-chat/README.md) uses the chat's id as its thread and keeps the start stable for you.
+
 ## On a multisite host
 
 The host's model keeps each app's prompts apart: an app only reuses the start of its own prompts, never another app's,
-so answer timing can't reveal what another app sent. The memory budget is the host's, shared by all of them.
+so answer timing can't reveal what another app sent. The memory budget is the host's, shared by all of them. Each
+app's warms are capped by `per_instance.pinned_mb`, and its threads are kept in its own `pb_cache` (counting against
+its disk) within `per_instance.thread_cache_gb`.
 
 ## With your own API
 

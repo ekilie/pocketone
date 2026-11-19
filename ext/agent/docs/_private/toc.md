@@ -10,4 +10,5 @@
 - [Remembering conversations](../guides/conversations.md)
 - [Structured answers](../guides/structured.md)
 - [Streaming answers](../guides/streaming.md)
+- [When the model is loading](../guides/waiting.md)
 - [Your own knowledge](../guides/context.md)
