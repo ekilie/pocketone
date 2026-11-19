@@ -25,6 +25,14 @@ const r = $agent.stream({ system, messages, wait: "10m" }, (t) => stream.send("t
 stream.send("done", JSON.stringify({ text: r.text }))
 ```
 
+```go
+// Go has no onWait: poll Status while you wait, or pass Wait and let the call wait for the model
+r, err := agent.Complete(ctx, extkit.Internal, agentv1.CompleteInput{System: system, Messages: messages, Wait: "10m"})
+if st, _ := agent.Status(ctx, extkit.Internal); !st.Ready {
+	log.Println(st.Message) // "downloading qwen3-1.7b (42%)"
+}
+```
+
 Over HTTP, agent/v1 calls take the same `wait` field; without it a loading model answers 503 `not_ready`.
 
 A call that's waiting also waits for a warm of the same prompt start that's still running, rather than reading the

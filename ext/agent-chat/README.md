@@ -17,6 +17,12 @@ const id = $agent.newChat({ meta: { user: e.auth.id } })
 const answer = $agent.chat(id, { system: preamble }).send("How do I export my notes?")
 ```
 
+```go
+chats := chatv1.Contract.Must(app) // agent.chat/v1, from github.com/pockethost/pocketone/ext/contracts/agent/chat/v1
+c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: json.RawMessage(`{"user":"` + e.Auth.Id + `"}`)})
+res, err := chats.Send(ctx, extkit.Internal, chatv1.SendInput{ID: c.ID, System: preamble, Text: "How do I export my notes?"})
+```
+
 It needs the [Agent](../agent/README.md) extension (agent/v1), which answers. Chats aren't tied to users: your app
 keeps the id (on its own records, or in its frontend) and may put anything in a chat's `meta` to find it again.
 

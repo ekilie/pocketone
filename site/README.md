@@ -13,6 +13,8 @@ under `/docs/extensions/pages`.
   picks which nav a page shows.
 - `pb_pages/(main)/blog/`: every `.md` file there is a post (front matter: title, description, date, author, tags).
 - `pb_pages/assets/site.css` is the whole stylesheet: hand-written, no build step.
+- Code tabs (`pb_pages/assets/docs.js`): consecutive ```` ```js ````, ```` ```go ```` and ```` ```ts ```` blocks on a docs page
+  become one tabbed example; the reader's language is kept in `localStorage` (`code-lang`) and applies to every group.
 - `design/`: the logo and mascot (the joey in the pocket). `mark.svg` is the source; `design/render.sh` renders
   `logo.html` to PNGs in `design/out/` and copies the mark and favicons into `pb_pages/`.
 

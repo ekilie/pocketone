@@ -8,7 +8,8 @@ summary: "A language model for your app's hooks: your own API, or a small model 
 
 # Agent
 
-Agent gives your app a language model to call from `pb_hooks`: `$agent.complete()`. Use it for the small jobs that
+Agent gives your app a language model to call: `$agent.complete()` from `pb_hooks` and pages, or the agent/v1
+contract from Go (`agentv1.Contract.Must(app).Complete(...)`). Use it for the small jobs that
 come up around data: label a support ticket, pull a JSON object out of an email, summarize a record, write a title or
 an alt text.
 
@@ -76,6 +77,31 @@ onRecordCreate((e) => {
   e.next()
 }, "tickets")
 ```
+
+```go
+// in your Go app
+app.OnRecordCreate("tickets").BindFunc(func(e *core.RecordEvent) error {
+	r, err := agentv1.Contract.Must(e.App).Complete(e.Context, extkit.Internal, agentv1.CompleteInput{
+		System:    "Label the support ticket.",
+		Prompt:    e.Record.GetString("body"),
+		Schema:    json.RawMessage(`{"type":"object","properties":{"label":{"enum":["bug","billing","question"]}},"required":["label"]}`),
+		MaxTokens: 30,
+	})
+	if err != nil {
+		return err
+	}
+	var out struct{ Label string }
+	if err := json.Unmarshal(r.Data, &out); err != nil {
+		return err
+	}
+	e.Record.Set("label", out.Label)
+	return e.Next()
+})
+```
+
+In Go, every option below is a field of `agentv1.CompleteInput` (`Prompt`, `Messages`, `Schema`, `Thread`, `Wait`, ...)
+and every `$agent` call is a method of `agentv1.Agent` (`Complete`, `Stream`, `Status`, `Warm`, `Count`, `Threads`);
+pass `extkit.Internal` to call with the app's own rights. The `.async` forms are JS only: Go passes `Wait` instead.
 
 - `prompt`, or `messages` for a conversation; `system`, `maxTokens`, `temperature`, `stop`.
 - `schema`: a JSON schema; the parsed answer comes back as `data`. With a model PocketOne runs, the answer can only be JSON

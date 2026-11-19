@@ -25,6 +25,19 @@ if (chat.meta().user !== e.auth.id) throw new NotFoundError()
 const answer = chat.send(question) // or chat.send(question, { onText }) to stream it
 ```
 
+```go
+chats := chatv1.Contract.Must(app)
+
+// when a user opens a new chat
+meta, _ := json.Marshal(map[string]string{"user": e.Auth.Id})
+c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: meta})
+
+// each question (check the chat's meta is the caller's first, as above)
+res, err := chats.Send(ctx, extkit.Internal, chatv1.SendInput{ID: c.ID, Text: question, System: preamble,
+	Context: excerptsFor(question)}) // or chats.SendStream to stream it
+answer := res.Answer.Text
+```
+
 `$agent.chats.list({ meta: { user } })` lists a user's chats, `chat.history()` reads one back, and
 `$agent.chats.forget({ meta: { user } })` deletes them all when the user goes. The rest of this page is how to build
 the same yourself, when you want your own collections or rules.

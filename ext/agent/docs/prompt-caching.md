@@ -40,6 +40,15 @@ const r = $agent.complete({
 })
 ```
 
+```go
+r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{
+	System: preamble, // never changes: read once, then reused
+	Messages: append(earlierTurns, // same as last time: reused
+		agentv1.Message{Role: "user", Content: question + "\n\nExcerpts to answer from:\n\n" + excerpts}), // new: read
+	MaxTokens: 350,
+})
+```
+
 The excerpts come after the question, in the same turn, because they change with every question. Anywhere earlier,
 they'd change the start of every prompt after them. Put the question first, too: next time this turn is part of the
 history and the excerpts are gone, so a prompt that started with the question still matches up to its end.
@@ -62,6 +71,11 @@ Every answer reports it in `usage`:
 ```js
 const r = $agent.complete({ system: preamble, prompt: question })
 // r.usage: { inputTokens: 431, outputTokens: 52, cachedTokens: 139 }
+```
+
+```go
+r, err := agent.Complete(ctx, extkit.Internal, agentv1.CompleteInput{System: preamble, Prompt: question})
+// r.Usage: {InputTokens: 431, OutputTokens: 52, CachedTokens: 139}
 ```
 
 `cachedTokens` is how much of the prompt came from the cache. If it stays at 0 for prompts that should share a
@@ -91,6 +105,14 @@ const preamble = toString($os.readFile(`${__hooks}/preamble.md`))
 $agent.warm({ system: preamble })
 ```
 
+```go
+// when the app serves, in the background (Warm returns at once without Wait)
+app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+	agentv1.Contract.Must(app).Warm(context.Background(), extkit.Internal, agentv1.WarmInput{System: preamble})
+	return e.Next()
+})
+```
+
 It returns `{ id, warmed, message, forget() }`. `warmed` is false while it's still reading (or with your own API, which
 caches by itself; `message` says why). In an async hook, `await $agent.warm.async({ system: preamble })` resolves
 once it's in. The id comes from the text, so warming the same text again finds the same warm and costs nothing; after
@@ -107,6 +129,10 @@ answer included:
 
 ```js
 const r = $agent.complete({ system: preamble, messages: turnsSoFar, thread: chatId })
+```
+
+```go
+r, err := agent.Complete(ctx, extkit.Internal, agentv1.CompleteInput{System: preamble, Messages: turnsSoFar, Thread: chatID})
 ```
 
 The next call with the same `thread` continues from that state as far as its messages start the same way, so it reads

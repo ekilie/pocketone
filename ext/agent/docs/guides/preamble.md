@@ -16,6 +16,15 @@ const r = $agent.complete({
 })
 ```
 
+```go
+r, err := agent.Complete(ctx, extkit.Internal, agentv1.CompleteInput{
+	System: preamble, // the same text on every call
+	Messages: append(recentTurns,
+		agentv1.Message{Role: "user", Content: question + "\n\nDocumentation excerpts:\n\n" + excerpts}),
+	MaxTokens: 350,
+})
+```
+
 ## What goes in it
 
 Four short parts, in this order:

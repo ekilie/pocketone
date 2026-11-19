@@ -1570,3 +1570,33 @@
     animation: none;
   }
 }
+
+/* Code tabs (assets/docs.js): one example in Go, JS and TS, one language shown at a time */
+.prose .code-tabs {
+  margin-block: 1.25em;
+  & .code-tabs-bar {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: -1px;
+  }
+  & .code-tabs-bar > button {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    background: transparent;
+    color: color-mix(in oklch, var(--color-base-content) 65%, transparent);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  & .code-tabs-bar > button[aria-selected="true"] {
+    border-color: var(--color-base-300);
+    background: var(--color-base-200);
+    color: var(--color-base-content);
+  }
+  & .code-tabs-panel :where(pre, div.code-toolbar) {
+    margin-top: 0;
+    border-top-left-radius: 0;
+  }
+}

@@ -492,6 +492,12 @@ ext/<name>/
   - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
+- **Show code in each language people use it from.** When an example works from JS hooks and from Go (or TypeScript),
+  write it once per language as consecutive fenced blocks, ```` ```js ````, ```` ```go ```` and ```` ```ts ````,
+  with nothing between them. pocketone.dev shows such a run as tabs (one language at a time; the reader's pick
+  carries across every example and page); on GitHub and in `llms.txt` they're just consecutive blocks. Two blocks of
+  the same language never group, so two separate JS examples in a row stay separate. This works in READMEs and in
+  `docs/` alike.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another
   license lives in its author's own repository, not here.
   [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.

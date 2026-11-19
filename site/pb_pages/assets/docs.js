@@ -1,6 +1,7 @@
 // Docs pages swap #content and #page-footer without a reload (Datastar; see
-// _private/docs-footer.js). This keeps up with each swap: it highlights the
-// new page's code blocks (Prism only runs once, on page load), sets the tab
+// _private/docs-footer.js). This keeps up with each swap: it turns runs of Go,
+// JS and TS code blocks into tabs, highlights the new page's code blocks
+// (Prism only runs once, on page load), sets the tab
 // title from #page-footer's data-title, and loads giscus into the footer's
 // <section data-giscus-term> slot whenever it comes back empty or its term
 // changes.
@@ -59,8 +60,79 @@
     }
   }
 
+  // Code tabs: a Go, JS or TS code block directly followed by another of those languages is one example written
+  // several ways. Each run becomes a tabbed block, and picking a language picks it in every group on the page (and is
+  // remembered). The Markdown needs nothing special: on GitHub and in llms.txt the blocks just follow each other.
+  const tabLangs = { go: 'Go', js: 'JS', javascript: 'JS', ts: 'TS', typescript: 'TS' }
+  const langOf = (el) => {
+    const pre = el?.matches?.('pre') ? el : el?.matches?.('div.code-toolbar') ? el.querySelector('pre') : null
+    const m = pre?.querySelector('code')?.className.match(/language-(\w+)/)
+    return m && tabLangs[m[1]] ? tabLangs[m[1]] : null
+  }
+  let preferred = null
+  try {
+    preferred = localStorage.getItem('code-lang')
+  } catch (e) {}
+  const pick = (group, lang) => {
+    const tabs = [...group.querySelectorAll(':scope > .code-tabs-bar > button')]
+    if (!tabs.some((b) => b.dataset.lang === lang)) lang = tabs[0].dataset.lang
+    for (const b of tabs) b.setAttribute('aria-selected', String(b.dataset.lang === lang))
+    for (const p of group.querySelectorAll(':scope > .code-tabs-panel')) p.hidden = p.dataset.lang !== lang
+  }
+  const groupCode = () => {
+    const blocks = [...document.querySelectorAll('#content pre, #content div.code-toolbar')].filter(
+      (el) => !el.closest('.code-tabs') && !(el.matches('pre') && el.parentElement.matches('div.code-toolbar')),
+    )
+    const seen = new Set()
+    for (const first of blocks) {
+      if (seen.has(first) || !langOf(first)) continue
+      const run = [first]
+      for (let next = first.nextElementSibling; next && langOf(next); next = next.nextElementSibling) {
+        if (run.some((el) => langOf(el) === langOf(next))) break // the same language twice: separate examples
+        run.push(next)
+      }
+      run.forEach((el) => seen.add(el))
+      if (run.length < 2) continue
+      const group = document.createElement('div')
+      group.className = 'code-tabs'
+      const bar = document.createElement('div')
+      bar.className = 'code-tabs-bar'
+      bar.setAttribute('role', 'tablist')
+      first.before(group)
+      group.append(bar)
+      for (const el of run) {
+        const lang = langOf(el)
+        const b = document.createElement('button')
+        b.type = 'button'
+        b.setAttribute('role', 'tab')
+        b.dataset.lang = lang
+        b.textContent = lang
+        bar.append(b)
+        const panel = document.createElement('div')
+        panel.className = 'code-tabs-panel'
+        panel.setAttribute('role', 'tabpanel')
+        panel.dataset.lang = lang
+        panel.append(el)
+        group.append(panel)
+      }
+      pick(group, preferred)
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest?.('.code-tabs-bar > button')
+    if (!b) return
+    preferred = b.dataset.lang
+    try {
+      localStorage.setItem('code-lang', preferred)
+    } catch (err) {}
+    const before = b.getBoundingClientRect().top // keep the clicked tab still while other groups change height
+    document.querySelectorAll('.code-tabs').forEach((g) => pick(g, preferred))
+    window.scrollBy(0, b.getBoundingClientRect().top - before)
+  })
+
   const load = () => {
     markCurrent()
+    groupCode()
     highlight()
     const title = document.getElementById('page-footer')?.dataset.title
     if (title && document.title !== title) document.title = title

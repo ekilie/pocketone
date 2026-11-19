@@ -6,13 +6,23 @@ description: "$agent gives your pb_hooks and pages a language model: label recor
 
 # AI in your hooks
 
-**Your hooks can ask a language model.** `$agent.complete()` sends a prompt and gives you the answer, from inside any
-hook or page:
+**Your app can ask a language model.** `$agent.complete()` sends a prompt and gives you the answer, from inside any
+hook or page; Go code calls the same thing through the agent/v1 contract:
 
 ```js
 const r = $agent.complete({ prompt: "Summarize in one sentence: " + record.get("body"), maxTokens: 60 })
 // r.text is the summary
 ```
+
+```go
+r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{
+	Prompt: "Summarize in one sentence: " + record.GetString("body"), MaxTokens: 60})
+// r.Text is the summary
+```
+
+The Go examples on these pages call the contract package (`agentv1`, from `github.com/pockethost/pocketone/ext/contracts/agent/v1`)
+with a `context.Context` named `ctx`; `agent` stands for `agentv1.Contract.Must(app)`. The docs show each example in
+JavaScript and Go: pick one above any example and the pages remember it.
 
 Use it for the small jobs that come up around your data: label a support ticket, pull an address out of an email,
 summarize a long post, write a title or an alt text, answer a question about your docs.

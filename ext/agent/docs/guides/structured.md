@@ -35,6 +35,32 @@ const r = $agent.complete({
 // r.data: { name: "Dana", city: "Austin", items: [{ what: "blue mugs", count: 3 }, { what: "red plates", count: 2 }] }
 ```
 
+```go
+r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{
+	System: "Extract the order from the email.",
+	Prompt: email,
+	Schema: json.RawMessage(`{
+	  "type": "object",
+	  "properties": {
+	    "name": {"type": "string"},
+	    "city": {"type": "string"},
+	    "items": {"type": "array", "maxItems": 10, "items": {"type": "object",
+	      "properties": {"what": {"type": "string"}, "count": {"type": "integer"}}, "required": ["what", "count"]}}
+	  },
+	  "required": ["name", "city", "items"]
+	}`),
+	MaxTokens: 200,
+})
+var order struct {
+	Name, City string
+	Items      []struct {
+		What  string
+		Count int
+	}
+}
+err = json.Unmarshal(r.Data, &order) // {Dana Austin [{blue mugs 3} {red plates 2}]}
+```
+
 ## A promise, not a request
 
 With a built-in model the schema isn't a suggestion the model might ignore: as it writes, every token that would

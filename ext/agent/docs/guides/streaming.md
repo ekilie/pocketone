@@ -15,6 +15,21 @@ const r = $agent.stream({ prompt: question, maxTokens: 300 }, (text) => {
 // r is the whole answer, as $agent.complete returns it
 ```
 
+```go
+s, err := agent.Stream(ctx, extkit.Internal, agentv1.CompleteInput{Prompt: question, MaxTokens: 300})
+if err != nil {
+	return err
+}
+var r *agentv1.CompleteResult
+err = s.Run(ctx, func(e any) error {
+	c := e.(agentv1.Chunk) // a piece of text, in order; the last one is Done, with the whole answer
+	if c.Done {
+		r = c.Result
+	}
+	return nil // an error stops the answer there
+})
+```
+
 ## In a page
 
 A PocketPages API route forwards the pieces to the browser as server-sent events:
@@ -34,6 +49,35 @@ module.exports = {
     stream.close()
   },
 }
+```
+
+```go
+// POST /ask, in your app's Go code (an app's own route; extensions use contracts instead)
+se.Router.POST("/ask", func(e *core.RequestEvent) error {
+	var in struct{ Question string }
+	if err := e.BindBody(&in); err != nil {
+		return e.BadRequestError("send {question}", err)
+	}
+	s, err := agentv1.Contract.Must(e.App).Stream(e.Request.Context(), extkit.Internal,
+		agentv1.CompleteInput{Prompt: in.Question, MaxTokens: 300})
+	if err != nil {
+		return err
+	}
+	e.Response.Header().Set("Content-Type", "text/event-stream")
+	send := func(event string, v any) error {
+		b, _ := json.Marshal(v)
+		_, err := fmt.Fprintf(e.Response, "event: %s\ndata: %s\n\n", event, b)
+		e.Flush()
+		return err
+	}
+	return s.Run(e.Request.Context(), func(ev any) error {
+		if c := ev.(agentv1.Chunk); c.Done {
+			return send("done", map[string]any{"usage": c.Result.Usage})
+		} else {
+			return send("text", c.Text)
+		}
+	})
+})
 ```
 
 In the browser, read the response as it arrives:
