@@ -18,6 +18,13 @@ There is no migration tool. Start a new app with `pocketone pages create <name>`
 
 Delete the `.pb.js` boot file and the `pocketpages` dependencies, and move the contents of `pb_hooks/pages/` to `pb_pages/`.
 
+## JavaScript or TypeScript
+
+Your `.js` and `.ejs` files stay as they are. v1 also runs TypeScript (`.ts` code and `.ets` templates, types
+stripped, never checked), and the rest of these docs use it. Renaming a file from `.js` to `.ts` or `.ejs` to `.ets`
+changes nothing else, so you can switch a file at a time or not at all. This guide shows v1 code as `.js` to match
+yours. See [File types](file-types.md).
+
 ## The context object
 
 0.x passed an `api` object and spread its members into each template. v1 passes one `ctx` object with `req`, `res`, `data`, `params`, `route` and helpers. See the [ctx reference](ctx/index.md).

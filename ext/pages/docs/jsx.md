@@ -1,11 +1,19 @@
 ---
-title: JSX and TSX
-description: Write pages, layouts, partials and error pages as .jsx or .tsx components, rendered to HTML on the server with no build step.
+title: Components with TSX
+description: The component style: pages, layouts and partials as .tsx functions that return markup, rendered to HTML on the server with no build step.
 ---
 
-# JSX and TSX
+# Components with TSX
 
-A `.jsx` or `.tsx` file is a template, just like an `.ejs` file. It can be a page, a layout (`+layout.tsx`), an error page (`+error.tsx`, `+404.tsx`) or a partial in `_private/`. PocketOne compiles it the first time it's used, with esbuild built into the binary: no Node, no `npm install`, no build step. TypeScript types are stripped, not checked; to check them, see [TypeScript](typescript.md).
+PocketPages has two template styles. [ETS](ets.md) is HTML with code in it, and it's the one these docs use. TSX is
+code that returns HTML: every page, layout and partial is a function component. Pick TSX if you think in components
+and want typed props. Either way the page is rendered on the server and sent as plain HTML; nothing runs in the
+browser.
+
+A `.tsx` file can be a page, a layout (`+layout.tsx`), an error page (`+error.tsx`, `+404.tsx`) or a partial in
+`_private/`. PocketOne compiles it the first time it's used, with esbuild built into the binary: no Node, no
+`npm install`, no build step. TypeScript types are stripped, not checked; to check them, see [TypeScript](typescript.md). The `tsx` [starter kit](starter-kits.md)
+begins an app in this style.
 
 ```tsx
 // pb_pages/products/[id].tsx
@@ -39,13 +47,15 @@ The file's default export is a component: a function from props to markup. It ge
 | `slot` | `slot(name)` reads a named slot, `slot(name, content)` sets one, `slot()` is the inner content. |
 | `children` | In a layout, the inner content. |
 
-A partial also gets the locals it was included with, as props. EJS can include a `.jsx` or `.tsx` partial the same way: its locals become props.
+A partial also gets the locals it was included with, as props.
 
 In TypeScript, these props are `pages.Props` (a partial's locals: `pages.Props<{ label: string }>`). A component you import and use as `<Price />` gets only the props you pass it. See [TypeScript](typescript.md).
 
 ## Server-rendered HTML only
 
-JSX renders straight to HTML on the server. There's no virtual DOM, no hydration and no client-side React.
+TSX looks like React, but it isn't: it renders straight to HTML on the server. There's no virtual DOM, no hydration,
+no state and no client-side React. Interactivity comes from the same places as in an ETS app: links, forms, HTMX,
+Datastar or a `<script>`.
 
 - Event handler props (functions) are dropped. Use plain attributes: `onclick="..."`, `hx-get`, `data-on:click`.
 - Text and attribute values are escaped. `dangerouslySetInnerHTML={{ __html: html }}` inserts raw HTML.
@@ -97,10 +107,19 @@ export default function Layout({ children, slot }: pages.Props) {
 }
 ```
 
-Layouts in `.ejs`, `.jsx` and `.tsx` mix freely: an EJS page can sit inside a TSX layout and the other way round.
+## One style per app
 
-## TypeScript modules
+Use TSX for every template in an app: pages, layouts, partials and error pages. Code files (`+page.ts`, `+api.ts`,
+`+middleware.ts`, `+config.ts`) are the same in both styles.
 
-`+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and any `.ts` file reached by `require` or `import` work like their `.js` versions. A module whose only export is `export default` behaves like `module.exports = ...`.
+The two styles can include each other, so you can move an app from one to the other a folder at a time: an ETS page
+can sit inside a TSX layout, and `include()` returns a partial's HTML in either style. Markdown pages are the one mix
+you can't avoid, since `.md` files always run EJS tags (see [Markdown](markdown.md)).
 
-Components are ordinary modules, so `import Card from './_private/Card'` resolves the same way as [`require`](jsvm.md). When a partial name has no extension, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
+## Imports
+
+Components are ordinary modules, so `import Card from './_private/Card'` resolves the same way as
+[`require`](jsvm.md). A module whose only export is `export default` behaves like `module.exports = ...`.
+`include('card')` without an extension tries `.ets`, `.ejs`, `.md`, `.jsx` and `.tsx`, in that order.
+
+`.jsx` works exactly like `.tsx`, without types; see [File types](file-types.md).

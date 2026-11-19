@@ -3,15 +3,15 @@
 
 PocketPages creates one `ctx` object per request and passes it to middleware, handlers, templates and plugins.
 
-```js
-// +middleware.js
+```ts
+// +middleware.ts
 module.exports = (ctx, next) => next()
 
-// +page.js / +api.js
+// +page.ts / +api.ts
 module.exports = { load(ctx) {} }
 ```
 
-```ejs
+```ets
 <!-- any template -->
 <p><%= ctx.req.url.pathname %></p>
 ```
@@ -41,7 +41,7 @@ In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`,
 | `ctx.pagesDir` | Absolute path of the app's `pb_pages` folder (read-only), e.g. for `$os.readDir` |
 | `ctx.dev` | `true` in dev mode |
 | [`ctx.httpError(status, message)`](https://pocketone.dev/docs/extensions/pages/errors) | An error to throw for a specific status |
-| [`ctx.error`](https://pocketone.dev/docs/extensions/pages/errors) | `{ status, message }`, in `+error.ejs` |
+| [`ctx.error`](https://pocketone.dev/docs/extensions/pages/errors) | `{ status, message }`, in `+error.ets` |
 
 ## Added by plugins
 
@@ -51,4 +51,4 @@ In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`,
 | `ctx.realtime` | [realtime](https://pocketone.dev/docs/extensions/pages/plugins/realtime) |
 | `ctx.datastar` | [datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar) |
 
-JS plugins can add their own members with [`extendContext`](https://pocketone.dev/docs/extensions/pages/plugins/authoring).
+Custom plugins can add their own members with [`extendContext`](https://pocketone.dev/docs/extensions/pages/plugins/authoring).

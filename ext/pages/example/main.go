@@ -1,6 +1,6 @@
-// Command example runs one PocketOne app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
-// ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection
-// with three seed notes. From this folder:
+// Command example runs one PocketOne app that serves the demo in ./pb_pages (ETS templates and TypeScript, Markdown,
+// a TSX page, auth, ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection with three seed
+// notes. From this folder:
 //
 //	go run . serve --dir=./pb_data
 //

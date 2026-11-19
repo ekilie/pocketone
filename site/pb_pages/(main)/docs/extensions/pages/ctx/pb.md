@@ -10,8 +10,8 @@ source: "ext/pages/docs/ctx/pb.md"
 `ctx.pb()` returns a [PocketBase JS SDK](https://github.com/pocketbase/js-sdk) client, the same API you use in the
 browser:
 
-```js
-// pb_pages/posts/+page.js
+```ts
+// pb_pages/posts/+page.ts
 module.exports = {
   load(ctx) {
     const page = ctx.pb().collection('posts').getList(1, 20, {
@@ -32,7 +32,7 @@ module.exports = {
   it works the same on any server.
 - **Errors** throw the SDK's `ClientResponseError`:
 
-  ```js
+  ```ts
   try {
     const post = ctx.pb().collection('posts').getOne(ctx.params.id)
   } catch (e) {

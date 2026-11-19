@@ -5,13 +5,13 @@ Partials are reusable templates that you include from other templates. They live
 
 ## Including a partial
 
-```ejs
+```ets
 <%- include('nav') %>
 <%- include('card', { product }) %>
 ```
 
 - `include(name, locals?)` renders a template from a `_private/` folder and returns its text. Use `<%-` so its HTML isn't escaped.
-- `name` may omit the extension; `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
+- `name` may omit the extension; `.ets`, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order (see [File types](https://pocketone.dev/docs/extensions/pages/file-types)).
 - The partial sees the same `ctx`, plus `locals` as top-level variables.
 - `locals` is also the whole object, as in EJS. Use it for optional values: `<%= title %>` throws if `title` wasn't passed, but `<% if (locals.subtitle) { %>` doesn't.
 - Including more than 32 levels deep is an error.
@@ -21,34 +21,34 @@ Partials are reusable templates that you include from other templates. They live
 ```
 pb_pages/
   _private/
-    header.ejs
-    footer.ejs
+    header.ets
+    footer.ets
   blog/
     _private/
-      sidebar.ejs
+      sidebar.ets
     posts/
       _private/
-        post-card.ejs
-      index.ejs
+        post-card.ets
+      index.ets
 ```
 
 PocketPages looks in `_private/` in the current template's folder, then in each parent folder up to `pb_pages/`.
 
-```ejs
-<!-- In blog/posts/index.ejs -->
-<%- include('post-card', { post }) %>  <!-- blog/posts/_private/post-card.ejs -->
-<%- include('sidebar') %>              <!-- blog/_private/sidebar.ejs -->
-<%- include('header') %>               <!-- _private/header.ejs -->
+```ets
+<!-- In blog/posts/index.ets -->
+<%- include('post-card', { post }) %>  <!-- blog/posts/_private/post-card.ets -->
+<%- include('sidebar') %>              <!-- blog/_private/sidebar.ets -->
+<%- include('header') %>               <!-- _private/header.ets -->
 ```
 
 A name starting with `/` looks only in `pb_pages/_private/`:
 
-```ejs
-<%- include('/header') %>  <!-- always pb_pages/_private/header.ejs -->
-<%- include('/blog/_private/sidebar') %>  <!-- a path that names a _private folder: blog/_private/sidebar.ejs -->
+```ets
+<%- include('/header') %>  <!-- always pb_pages/_private/header.ets -->
+<%- include('/blog/_private/sidebar') %>  <!-- a path that names a _private folder: blog/_private/sidebar.ets -->
 ```
 
-The extension is optional. A dotted name such as `include('nav.main')` finds `nav.main.ejs`.
+The extension is optional. A dotted name such as `include('nav.main')` finds `nav.main.ets`.
 
 This means you can:
 
@@ -60,12 +60,12 @@ This means you can:
 
 Pass only what the partial needs:
 
-```ejs
+```ets
 <%- include('user-card', { name: user.getString('name'), joined: user.getString('created') }) %>
 ```
 
-```ejs
-<!-- _private/user-card.ejs -->
+```ets
+<!-- _private/user-card.ets -->
 <div class="card">
   <h3><%= name %></h3>
   <p>Joined <%= joined %></p>
@@ -76,12 +76,12 @@ Partials can also read `ctx`, `data` and `params` directly. Passing values expli
 
 ## Markdown partials
 
-A `.md` partial is rendered as EJS, then Markdown:
+A `.md` partial is rendered like a Markdown page: its tags run as plain JavaScript, then Markdown (see [Markdown](https://pocketone.dev/docs/extensions/pages/markdown)):
 
-```ejs
+```ets
 <%- include('intro') %>  <!-- _private/intro.md -->
 ```
 
 ## JavaScript modules
 
-`_private/` folders also hold JS modules. Load them with [`ctx.resolve()`](https://pocketone.dev/docs/extensions/pages/ctx/resolve), which uses the same lookup.
+`_private/` folders also hold TypeScript modules. Load them with [`ctx.resolve()`](https://pocketone.dev/docs/extensions/pages/ctx/resolve), which uses the same lookup.

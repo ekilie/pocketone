@@ -1,6 +1,8 @@
 # Minimal starter
 
-A single `index.ejs` page: a Tailwind (CDN) splash screen with no layout, no config and no build step. The smallest possible PocketPages app.
+A single `index.ets` page: a Tailwind (CDN) splash screen with no layout, no config and no build step. The smallest possible PocketPages app.
+
+`.ets` is EJS whose tags hold TypeScript; PocketPages strips the types when it loads the page. Code files you add (`+page`, `+api`, `+middleware`, `+config`) are `.ts`.
 
 ```bash
 pocketone pages create myapp --starter minimal

@@ -296,6 +296,9 @@ func (r *request) template(file string) (js.Value, error) {
 			}
 		}
 		code, err := CompileEJS(text)
+		if err == nil && path.Ext(file) == ".ets" {
+			code, err = stripTemplateTypes(code)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", file, err)
 		}
@@ -326,7 +329,7 @@ func (r *request) enter(file string) error {
 func (r *request) leave() { r.depth-- }
 
 // includeExts are tried, in order, for an include name without an extension.
-var includeExts = []string{".ejs", ".md", ".jsx", ".tsx"}
+var includeExts = []string{".ets", ".ejs", ".md", ".jsx", ".tsx"}
 
 // includeFile finds the _private partial name, looked up from file from (SPEC 4.2).
 func (r *request) includeFile(from, name string) (string, error) {

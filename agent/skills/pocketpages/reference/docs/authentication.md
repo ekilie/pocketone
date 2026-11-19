@@ -3,8 +3,8 @@
 
 PocketPages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth'],
 }
@@ -20,15 +20,15 @@ Every `ctx.session` sign-in method sets the cookie, sets `ctx.auth` for the rest
 
 ## Protecting pages
 
-```js
-// pb_pages/account/+middleware.js
+```ts
+// pb_pages/account/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()
 }
 ```
 
-```ejs
+```ets
 <% if (ctx.auth) { %>
   <p>Welcome, <%= ctx.auth.email() %></p>
   <form method="post" action="/logout"><button>Log out</button></form>
@@ -39,8 +39,8 @@ module.exports = (ctx, next) => {
 
 ## Passwords
 
-```js
-// pb_pages/login/+page.js
+```ts
+// pb_pages/login/+page.ts
 module.exports = {
   post(ctx) {
     const { email, password } = ctx.req.body()
@@ -54,8 +54,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/login/index.ejs -->
+```ets
+<!-- pb_pages/login/index.ets -->
 <form method="post">
   <label>Email</label>
   <input name="email" type="email" value="<%= data.email %>" />
@@ -68,8 +68,8 @@ module.exports = {
 
 ### Registration
 
-```js
-// pb_pages/register/+page.js
+```ts
+// pb_pages/register/+page.ts
 module.exports = {
   post(ctx) {
     const { email, password, name } = ctx.req.body()
@@ -87,8 +87,8 @@ module.exports = {
 
 A two-step form: request a code, then sign in with it. Turn on OTP for the collection in the dashboard and set up mail (Settings > Mail settings).
 
-```js
-// pb_pages/login/otp/+page.js
+```ts
+// pb_pages/login/otp/+page.ts
 module.exports = {
   post(ctx) {
     const { step, email, otpId, code } = ctx.req.body()
@@ -105,8 +105,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/login/otp/index.ejs -->
+```ets
+<!-- pb_pages/login/otp/index.ets -->
 <% if (data.error) { %><mark><%= data.error %></mark><% } %>
 
 <% if (!data.otpId) { %>
@@ -137,8 +137,8 @@ Configure the provider in the dashboard (Collections > users > Options > OAuth2)
 </form>
 ```
 
-```js
-// pb_pages/auth/oauth/+page.js
+```ts
+// pb_pages/auth/oauth/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.requestOAuth2(ctx.req.body().provider)
@@ -148,8 +148,8 @@ module.exports = {
 
 `requestOAuth2` stores its state in a cookie and redirects to the provider. The provider sends the user back to `/auth/oauth/confirm` (change it with `{ redirectPath }`):
 
-```js
-// pb_pages/auth/oauth/confirm/+page.js
+```ts
+// pb_pages/auth/oauth/confirm/+page.ts
 module.exports = {
   load(ctx) {
     try {
@@ -162,8 +162,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/auth/oauth/confirm/index.ejs -->
+```ets
+<!-- pb_pages/auth/oauth/confirm/index.ets -->
 <mark><%= data.error %></mark>
 ```
 
@@ -171,8 +171,8 @@ See the [Google OAuth2 speedrun](https://pocketone.dev/docs/extensions/pages/spe
 
 ## Anonymous sign-in
 
-```js
-// pb_pages/try/+page.js
+```ts
+// pb_pages/try/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signInAnonymously()
@@ -187,8 +187,8 @@ If you authenticate a record yourself, set the session cookie with `ctx.session.
 
 ## Signing out
 
-```js
-// pb_pages/logout/+page.js
+```ts
+// pb_pages/logout/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signOut()

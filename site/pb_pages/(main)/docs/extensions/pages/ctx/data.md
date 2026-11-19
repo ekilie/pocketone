@@ -11,16 +11,16 @@ source: "ext/pages/docs/ctx/data.md"
 
 A plain object shared by middleware, handlers and templates. It starts as `{}`. In templates it's also available as `data`.
 
-```js
-// +middleware.js
+```ts
+// +middleware.ts
 module.exports = (ctx, next) => {
   ctx.data.user = ctx.auth
   return next()
 }
 ```
 
-```js
-// +page.js
+```ts
+// +page.ts
 module.exports = {
   load(ctx) {
     return { products: ctx.app.findAllRecords('products') }  // Object.assign'd into ctx.data
@@ -28,7 +28,7 @@ module.exports = {
 }
 ```
 
-```ejs
+```ets
 <%% for (const p of data.products) { %>
   <li><%%= p.getString('name') %></li>
 <%% } %>
@@ -40,8 +40,8 @@ A handler's returned object is shallow-assigned into `ctx.data`. There is no dee
 
 Route parameters from `[name]` segments, as strings. Never includes query parameters (use [`ctx.req.query()`](/docs/extensions/pages/ctx/req)). In templates it's also available as `params`.
 
-```ejs
-<!-- pb_pages/[org]/[repo]/index.ejs, at /acme/web -->
+```ets
+<!-- pb_pages/[org]/[repo]/index.ets, at /acme/web -->
 <p><%%= params.org %>/<%%= params.repo %></p>  <!-- acme/web -->
 ```
 
@@ -51,7 +51,7 @@ Route parameters from `[name]` segments, as strings. Never includes query parame
 
 | Page file | `path` | `name` |
 |---|---|---|
-| `products/[id].ejs` | `/products/[id]` | `[id]` |
+| `products/[id].ets` | `/products/[id]` | `[id]` |
 | `docs/index.md` | `/docs` | `index` |
 
-A `+page.js` applies to every page in its folder; use `ctx.route.name` to tell them apart.
+A `+page.ts` applies to every page in its folder; use `ctx.route.name` to tell them apart.

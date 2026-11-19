@@ -3,7 +3,7 @@
 
 Returns an environment variable, or `''` if it's unset.
 
-```js
+```ts
 const key = ctx.env('STRIPE_SECRET_KEY')
 ```
 

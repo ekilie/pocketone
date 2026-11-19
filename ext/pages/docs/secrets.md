@@ -7,8 +7,8 @@ description: Read API keys and other secrets from environment variables with ctx
 
 Keep API keys, passwords and other secrets in environment variables, and read them with `ctx.env(name)`. It returns `''` when the variable is unset.
 
-```js
-// pb_pages/checkout/+page.js
+```ts
+// pb_pages/checkout/+page.ts
 module.exports = {
   post(ctx) {
     const key = ctx.env('STRIPE_SECRET_KEY')
@@ -24,7 +24,7 @@ module.exports = {
 
 1. **Never put secrets in the page.** Anything a template outputs goes to the browser.
 
-   ```ejs
+   ```ets
    <!-- DON'T -->
    <meta name="api-key" content="<%%= ctx.env('API_KEY') %>">
 

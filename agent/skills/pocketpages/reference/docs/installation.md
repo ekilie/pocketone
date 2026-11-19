@@ -16,7 +16,7 @@ Browse to `http://localhost:8090` and you'll see the starter's home page. The de
 To start editing, open
 
 ```
-myapp/pb_pages/index.ejs
+myapp/pb_pages/index.ets
 ```
 
 Changes appear on the next refresh. The app doesn't restart.

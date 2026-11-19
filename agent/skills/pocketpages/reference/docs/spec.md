@@ -9,6 +9,9 @@ v1 is a clean API. It keeps PocketPages' ideas (a folder of files that become ro
 private partials) and changes the shapes. Apps written for the npm package (0.x) don't run unchanged; "Changes from
 0.x" (section 12) lists every difference.
 
+Code files and templates come in TypeScript (`.ts`, `.ets`, `.tsx`) and plain JavaScript (`.js`, `.ejs`, `.jsx`),
+which behave the same apart from types. Samples here use whichever is shortest; the user docs use `.ts` and `.ets`.
+
 ## 1. The `pb_pages` folder
 
 Pages live in their own folder next to PocketBase's others:
@@ -53,7 +56,7 @@ A path segment (file or folder name) starting with one of these characters is ne
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ejs`, `.jsx` or `.tsx`). `+middleware`, `+page`, `+api` and `+layout`: one of each per folder. `+config`, `+error` and `+404`: only at the top of `pb_pages` (in a subfolder they're an error at startup). Any other `+` name is an error at startup. |
+| `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ets`, `.ejs`, `.jsx` or `.tsx`). `+middleware`, `+page`, `+api` and `+layout`: one of each per folder. `+config`, `+error` and `+404`: only at the top of `pb_pages` (in a subfolder they're an error at startup). Any other `+` name is an error at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
 | `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
@@ -70,7 +73,7 @@ carry their own `+layout.ejs`, `+middleware.js` and `_private/`.
 
 ### 2.1 Pages
 
-A **page** is a template file: `.ejs`, `.md`, `.jsx` or `.tsx` (4.5).
+A **page** is a template file: `.ets`, `.ejs`, `.md`, `.jsx` or `.tsx` (4.1, 4.5).
 
 | File | URL |
 |---|---|
@@ -124,7 +127,7 @@ previous table keeps serving if there was one.
 
 For a URL that matches a page or API route, one JS call does all of this, in order:
 
-1. **Plugins:** every plugin's `extendContext`, then every plugin's `onRequest` (built-in and JS plugins, in config
+1. **Plugins:** every plugin's `extendContext`, then every plugin's `onRequest` (built-in and custom plugins, in config
    order), so an `onRequest` can use what any plugin added to `ctx`.
 2. **Middleware**, root first: every `+middleware.js` from `pb_pages/` down to the route's folder (groups included).
 3. **Handlers**: the folder's `+page.js` (or `+api.js`): `load`, then the handler for the request method.
@@ -208,11 +211,16 @@ module.exports = {
 
 ## 4. Templates
 
-### 4.1 EJS
+### 4.1 EJS and ETS
+
+`.ets` is EJS whose tags hold TypeScript; `.ejs` is the same with plain JavaScript. An `.ets` template is compiled
+like an `.ejs` one, then esbuild (built into the binary) strips the types from the whole compiled function, since one
+tag's code (`if (x) {`) is rarely valid on its own. Types are stripped, not checked. A TypeScript syntax error names
+the template line (from the nearest line marker before it). Everything below applies to both.
 
 | Tag | Meaning |
 |---|---|
-| `<% code %>` | Run JS, no output |
+| `<% code %>` | Run code, no output |
 | `<%= expr %>` | Output, HTML-escaped |
 | `<%- expr %>` | Output, raw |
 | `<%# comment %>` | Nothing |
@@ -247,8 +255,8 @@ A template returns its text. There is no `echo`; anything you want in the output
   that is itself inside a `_private/` folder, the search starts at the folder containing that `_private/` (so its
   siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`, unless it names a `_private/` folder itself
   (`/_private/card`, `/blog/_private/card`, as in 0.x), which is a path from the top of `pb_pages`. `..` is not allowed.
-- `name` may include its extension. The exact name is tried first; then `.ejs`, `.md`, `.jsx` and `.tsx` are added, in
-  that order, so a dotted name such as `nav.main` finds `nav.main.ejs`.
+- `name` may include its extension. The exact name is tried first; then `.ets`, `.ejs`, `.md`, `.jsx` and `.tsx` are
+  added, in that order, so a dotted name such as `nav.main` finds `nav.main.ets`.
 - The partial sees the same `ctx`, plus `locals` as top-level variables. As in EJS, `locals` is also the whole object,
   so an optional one can be tested without a `ReferenceError`: `<% if (locals.subtitle) { %>`. A page or layout gets an
   empty `locals`.
@@ -302,13 +310,14 @@ A `.md` page is EJS first, then Markdown (CommonMark + GFM tables, strikethrough
 
 `.jsx` and `.tsx` files are templates too: pages, layouts (`+layout.tsx`), `+error`/`+404`, and partials in
 `_private/`. They're compiled when first used by esbuild, which is built into the binary (no Node, no build step), and
-cached by content like EJS. TypeScript types are stripped, not checked.
+cached by content like EJS. TypeScript types are stripped, not checked. TSX is the component style; the docs use
+ETS (4.1) and treat TSX as the alternative, one style per app.
 
 ```tsx
 // pb_pages/products/[id].tsx
 import Price from './_private/Price'
 
-export default function Product({ data, slot }: any) {
+export default function Product({ data, slot }: pages.Props) {
   slot('title', data.product.getString('name'))
   return (
     <article class="product">
@@ -329,10 +338,10 @@ export default function Product({ data, slot }: any) {
 - `<html>` renders with `<!doctype html>` in front of it (JSX can't write a doctype).
 - In a layout, `children` is the inner content. `slot(name)` reads a named slot, `slot(name, content)` sets one
   (content is JSX or a string), `slot()` is the same as `children`.
-- `include(name, locals)` returns the partial's HTML, ready to put in JSX. EJS can `include` a `.jsx`/`.tsx` partial:
-  its locals become props.
+- `include(name, locals)` returns the partial's HTML, ready to put in JSX. An EJS/ETS template can `include` a
+  `.jsx`/`.tsx` partial: its locals become props.
 - Components are ordinary modules: `import Card from './_private/Card'` (resolved like `require`, 3.2). Partials
-  are looked up with extensions in this order: `.ejs`, `.md`, `.jsx`, `.tsx`.
+  are looked up with extensions in this order: `.ets`, `.ejs`, `.md`, `.jsx`, `.tsx`.
 - **Async components.** Any component may be `async`, the file's default export included. The render waits for it
   wherever it sits in the tree; sibling async components run concurrently. `include()` of an async partial and
   `slot(name, content)` with async content work the same way, and a layout reads the slot once it has settled.
@@ -445,7 +454,7 @@ module.exports = {
 
 | Key | Default | |
 |---|---|---|
-| `plugins` | `[]` | Module names, built-in names (`auth`, `realtime`), or JS plugin factories such as add-ons (9). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names, built-in names (`auth`, `realtime`), or custom plugin factories such as add-ons (9). Templates and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
 A string in `plugins` is a module name, required from `+config.js` (1): a `_private/` file (`'datastar'` finds
@@ -463,7 +472,7 @@ reason on the page), and the reason goes to the log.
 
 - Anything thrown in middleware, a handler or a template becomes a `500`.
 - **Dev mode or `debug: true`:** an HTML error page with the message, the file and line (template lines map to the
-  `.ejs`/`.md` source), and the stack trimmed to `pb_pages`-relative paths.
+  `.ets`/`.ejs`/`.md` source), and the stack trimmed to `pb_pages`-relative paths.
 - **Otherwise:** a plain "Something went wrong" page. The full error always goes to the app's log.
 - `throw ctx.httpError(status, message)` sends that status (e.g. `404`, `403`) with a plain page showing `message`.
   In a `+api.js` it's JSON: `{ "status": 404, "message": "..." }`.
@@ -523,9 +532,9 @@ Turned on by name in `+config.js` when no module by that name is found (7).
 - `ctx.realtime.client(id)` returns one client by id, or `null`.
 - Sending never waits for slow clients: each message is handed to the client's queue in the background.
 
-### 9.2 JS plugins
+### 9.2 Custom plugins
 
-A JS plugin is a factory that returns hooks:
+A custom plugin is a factory that returns hooks:
 
 ```js
 module.exports = (config) => ({
@@ -543,7 +552,7 @@ module.exports = (config) => ({
 - There's no hook for treating other kinds of files as pages: a page's inner extension already does that
   (`robots.txt.ejs` serves `/robots.txt` as `text/plain`, 4.5).
 - Hooks run in config order. Every hook is optional.
-- JS plugins run with the same permissions as the rest of the app's JS (sandboxed in a multitenant host).
+- Custom plugins run with the same permissions as the rest of the app's code (sandboxed in a multitenant host).
 
 ### 9.3 Add-ons
 

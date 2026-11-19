@@ -27,7 +27,7 @@ func TestPagesStarters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, k := range []string{"minimal", "mvp", "htmx", "daisyui", "daisyui-docs", "datastar", "auth"} {
+	for _, k := range []string{"minimal", "mvp", "htmx", "daisyui", "daisyui-docs", "datastar", "auth", "tsx"} {
 		if !strings.Contains(out, k) {
 			t.Fatalf("missing %s in\n%s", k, out)
 		}
@@ -46,7 +46,7 @@ func TestPagesCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "pb_pages", "index.ejs")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "pb_pages", "index.ets")); err != nil {
 		t.Fatalf("minimal kit not copied: %v\n%s", err, out)
 	}
 	if !strings.Contains(out, "cd "+dir) {
@@ -63,7 +63,7 @@ func TestPagesCreate(t *testing.T) {
 			t.Fatalf("%s: route table: %v", s.Name, errs)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(base, "kit-auth", "pb_pages", "auth", "login", "_private", "password.ejs")); err != nil {
+	if _, err := os.Stat(filepath.Join(base, "kit-auth", "pb_pages", "auth", "login", "_private", "password.ets")); err != nil {
 		t.Fatalf("_private files missing: %v", err)
 	}
 	if m, _ := filepath.Glob(filepath.Join(base, "kit-auth", "pb_migrations", "*.js")); len(m) == 0 {

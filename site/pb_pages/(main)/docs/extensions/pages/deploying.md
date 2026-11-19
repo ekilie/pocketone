@@ -25,7 +25,7 @@ Copy the changed files into `pb_pages`. The route table is rebuilt on any change
 
 ## Before you go live
 
-- Run without `--dev`, and keep `debug: false` in `+config.js`.
+- Run without `--dev`, and keep `debug: false` in `+config.ts`.
 - Set secrets as environment variables (see [Managing Secrets](/docs/extensions/pages/secrets)).
 - Serve over HTTPS. Cookies set with `ctx.res.cookie` are marked `Secure` on HTTPS requests.
 

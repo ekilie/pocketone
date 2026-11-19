@@ -26,7 +26,7 @@ pocketone pages create myapp</code></pre>
 <a href="/docs/extensions/pages/overview" class="btn btn-accent"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z"></path></svg> Read the Docs</a>
 <a href="/docs/extensions/pages/installation" class="btn btn-outline"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Quick Start</a>
 </div>
-<pre><code class="language-ejs">&lt;!-- pb_pages/index.ejs --&gt;
+<pre><code class="language-ets">&lt;!-- pb_pages/index.ets --&gt;
 &lt;%= `Hello, PocketPages!` %&gt;</code></pre>
 <div class="rise" style="--delay: 0.8s; --rise: 30px; width: min(100%, 42rem)"><%- include('browser', { content: 'Hello, PocketPages!' }) %></div>
 </div>
@@ -72,9 +72,9 @@ pocketone pages create myapp</code></pre>
 </div>
 <div class="stack">
 <div class="window">
-<header class="dots">pb_pages/users/[id].ejs</header>
+<header class="dots">pb_pages/users/[id].ets</header>
 <div>
-<pre><code class="language-ejs">&lt;% // Server-side data loading in PocketBase JSVM
+<pre><code class="language-ets">&lt;% // Server-side data loading in PocketBase JSVM
 const user = $app.findRecordById('users', params.id)
 %&gt;
 &lt;!-- Template renders with live data --&gt;
@@ -107,7 +107,7 @@ const user = $app.findRecordById('users', params.id)
 <div class="window soft">
 <header>HTMX + PocketPages</header>
 <div>
-<pre><code class="language-html">&lt;%- include('header.ejs') %&gt;
+<pre><code class="language-html">&lt;%- include('header.ets') %&gt;
 &lt;div hx-get="/fragments/todos"
      hx-trigger="load"
      hx-target="#todo-list"&gt;

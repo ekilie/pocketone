@@ -1,6 +1,6 @@
 ---
 title: Debugging in PocketPages
-description: Dev mode, debug in +config.js, and logging with ctx.log.
+description: Dev mode, debug in +config.ts, and logging with ctx.log.
 ---
 
 # Debugging in PocketPages
@@ -20,9 +20,9 @@ Dev mode turns on:
 
 ## `debug: true`
 
-To get the same in production, set `debug: true` in `+config.js`:
+To get the same in production, set `debug: true` in `+config.ts`:
 
-```js
+```ts
 module.exports = {
   debug: true,
 }
@@ -34,7 +34,7 @@ Turn it off again when you're done. Detailed error pages show error messages, fi
 
 `ctx.log` writes to the app's log:
 
-```js
+```ts
 ctx.log.debug('loaded product', ctx.params.id)  // only in dev mode or with debug: true
 ctx.log.info('order placed')
 ctx.log.warn('stock is low')

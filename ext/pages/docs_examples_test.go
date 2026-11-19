@@ -5,7 +5,7 @@ import "testing"
 // The examples on the JSX and errors docs pages work as written.
 func TestDocsJSXAndNotFoundExamples(t *testing.T) {
 	dir := writeTree(t, map[string]string{
-		"+layout.tsx": `export default function Layout({ children, slot }: any) {
+		"+layout.tsx": `export default function Layout({ children, slot }: pages.Props) {
   return (
     <html>
       <head>
@@ -17,7 +17,7 @@ func TestDocsJSXAndNotFoundExamples(t *testing.T) {
 }`,
 		"products/_private/Price.tsx": "export default ({ cents }: { cents: number }) => <span class=\"price\">${(cents / 100).toFixed(2)}</span>",
 		"products/index.tsx": `import Price from './_private/Price'
-export default function P({ slot }: any) {
+export default function P({ slot }: pages.Props) {
   slot('title', 'Widget')
   return <article class="product"><h1>Widget</h1><Price cents={1999} /></article>
 }`,

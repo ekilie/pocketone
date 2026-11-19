@@ -3,8 +3,8 @@
 
 The `auth` plugin gives you cookie sessions on PocketBase auth. It calls the app directly, not over HTTP.
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth'],
 }
@@ -57,8 +57,8 @@ A bad or expired token throws an error.
 
 ## Example
 
-```js
-// pb_pages/login/+page.js
+```ts
+// pb_pages/login/+page.ts
 module.exports = {
   post(ctx) {
     const { email, password } = ctx.req.body()
@@ -72,8 +72,8 @@ module.exports = {
 }
 ```
 
-```js
-// pb_pages/logout/+page.js
+```ts
+// pb_pages/logout/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signOut()

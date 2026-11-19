@@ -11,8 +11,9 @@ Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [PocketPages sites](https://pocketone.dev/docs/features/sites). This page is the technical reference.
 
-Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
-JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it
+Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: `.ets` templates
+(EJS tags holding TypeScript) or [TSX](/docs/extensions/pages/jsx) components, Markdown pages, layouts, `.ts` middleware and API
+routes, plus static files. Every file type is listed in [File types](/docs/extensions/pages/file-types). Page code runs in your app's JS VM, so it
 can use your data directly. This is PocketPages v1, formerly the npm PocketPages package.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
@@ -47,11 +48,11 @@ pocketone serve --pagesDir /path/to/pb_pages
 
 A relative path resolves against the working directory, like `--hooksDir`. Its `pocketone.yaml` key is `server.pages_dir`.
 
-### +config.js
+### +config.ts
 
-Settings for your pages live in the folder itself, in `pb_pages/+config.js`:
+Settings for your pages live in the folder itself, in `pb_pages/+config.ts`:
 
-```js
+```ts
 module.exports = {
   plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
@@ -60,15 +61,15 @@ module.exports = {
 
 | Key | Default | What it does |
 |---|---|---|
-| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or custom plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). ETS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-`+config.js` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
+`+config.ts` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
 answer with an error, and the reason goes to the log.
 
 ### Dev mode
 
-When the app runs in dev mode (`--dev`, or `app.dev` in `pocketone.yaml`), or `+config.js` sets `debug: true`, you
+When the app runs in dev mode (`--dev`, or `app.dev` in `pocketone.yaml`), or `+config.ts` sets `debug: true`, you
 get detailed error pages with the file and line, and `ctx.log.debug` output. Otherwise visitors see a plain
 "Something went wrong" page and the full error goes to the log.
 
@@ -102,20 +103,20 @@ Add or edit files in `pb_pages` and reload the browser; no restart is needed. A 
 
 ```
 pb_pages/
-  +config.js         settings (above)
-  +layout.ejs        wraps every page
-  +error.ejs         your error page
-  index.ejs          /
+  +config.ts         settings (above)
+  +layout.ets        wraps every page
+  +error.ets         your error page
+  index.ets          /
   about.md           /about
-  blog/[slug].ejs    /blog/anything
-  feeds/rss/+api.js  /feeds/rss, a route without a template
+  blog/[slug].ets    /blog/anything
+  feeds/rss/+api.ts  /feeds/rss, a route without a template
   _private/          partials, never served
   assets/app.css     a static file
 ```
 
-The full contract is in [SPEC.md](/docs/extensions/pages/spec): routes and precedence, middleware, `+page.js` and `+api.js`, EJS,
+The full contract is in [SPEC.md](/docs/extensions/pages/spec): routes and precedence, middleware, `+page.ts` and `+api.ts`, ETS,
 partials, slots and layouts, Markdown, JSX and TSX, the `ctx` object, errors, the built-in `auth` and `realtime`
-plugins, JS plugins, add-ons and the changes from 0.x.
+plugins, custom plugins, add-ons and the changes from 0.x.
 
 Highlights:
 
@@ -133,7 +134,7 @@ page code are logged in full.
 
 ### Try the demo
 
-[`example/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example) is a demo app with EJS, Markdown, JSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
+[`example/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example) is a demo app with ETS, Markdown, TSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
 speed check at `/speed`.
 
 ```bash
@@ -188,17 +189,17 @@ To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pa
 
 - **Read the routes.** `pages.For(app)` returns the service: `Dir()` is the folder, `Table()` the current route
   table, `Errors()` the problems from the last build.
-- **JS plugins.** A factory in `+config.js` can add to `ctx`, run on each request and transform rendered HTML
+- **Custom plugins.** A factory in `+config.ts` can add to `ctx`, run on each request and transform rendered HTML
   ([SPEC.md](/docs/extensions/pages/spec), section 9.2). [Add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md) are built this way.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example/pb_pages): EJS, Markdown, JSX/TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example/pb_pages): ETS, Markdown, TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
 
 ```go
-// Command example runs one PocketOne app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
-// ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection
-// with three seed notes. From this folder:
+// Command example runs one PocketOne app that serves the demo in ./pb_pages (ETS templates and TypeScript, Markdown,
+// a TSX page, auth, ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection with three seed
+// notes. From this folder:
 //
 //	go run . serve --dir=./pb_data
 //

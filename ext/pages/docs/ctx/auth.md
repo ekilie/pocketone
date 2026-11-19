@@ -10,7 +10,7 @@ The authenticated record, or `null`. It's set by:
 - PocketBase's own auth, when the request has an `Authorization` header;
 - the [`auth` plugin](../plugins/auth.md), from its `pb_auth` cookie.
 
-```ejs
+```ets
 <%% if (ctx.auth) { %>
   <p>Welcome, <%%= ctx.auth.email() %></p>
   <%% if (!ctx.auth.verified()) { %><p>Please verify your email.</p><%% } %>
@@ -23,8 +23,8 @@ The authenticated record, or `null`. It's set by:
 
 ## Protecting pages
 
-```js
-// pb_pages/account/+middleware.js
+```ts
+// pb_pages/account/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()

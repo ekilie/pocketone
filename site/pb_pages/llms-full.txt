@@ -5566,7 +5566,7 @@ pocketone pages create myapp</code></pre>
 <a href="/docs/extensions/pages/overview" class="btn btn-accent"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z"></path></svg> Read the Docs</a>
 <a href="/docs/extensions/pages/installation" class="btn btn-outline"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Quick Start</a>
 </div>
-<pre><code class="language-ejs">&lt;!-- pb_pages/index.ejs --&gt;
+<pre><code class="language-ets">&lt;!-- pb_pages/index.ets --&gt;
 &lt;%= `Hello, PocketPages!` %&gt;</code></pre>
 <div class="rise" style="--delay: 0.8s; --rise: 30px; width: min(100%, 42rem)"><%- include('browser', { content: 'Hello, PocketPages!' }) %></div>
 </div>
@@ -5612,9 +5612,9 @@ pocketone pages create myapp</code></pre>
 </div>
 <div class="stack">
 <div class="window">
-<header class="dots">pb_pages/users/[id].ejs</header>
+<header class="dots">pb_pages/users/[id].ets</header>
 <div>
-<pre><code class="language-ejs">&lt;% // Server-side data loading in PocketBase JSVM
+<pre><code class="language-ets">&lt;% // Server-side data loading in PocketBase JSVM
 const user = $app.findRecordById('users', params.id)
 %&gt;
 &lt;!-- Template renders with live data --&gt;
@@ -5647,7 +5647,7 @@ const user = $app.findRecordById('users', params.id)
 <div class="window soft">
 <header>HTMX + PocketPages</header>
 <div>
-<pre><code class="language-html">&lt;%- include('header.ejs') %&gt;
+<pre><code class="language-html">&lt;%- include('header.ets') %&gt;
 &lt;div hx-get="/fragments/todos"
      hx-trigger="load"
      hx-target="#todo-list"&gt;
@@ -12271,8 +12271,9 @@ Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [PocketPages sites](https://pocketone.dev/docs/features/sites). This page is the technical reference.
 
-Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: EJS, Markdown,
-JSX and TSX templates, layouts, middleware and API routes, plus static files. Page code runs in your app's JS VM, so it
+Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: `.ets` templates
+(EJS tags holding TypeScript) or [TSX](https://pocketone.dev/docs/extensions/pages/jsx) components, Markdown pages, layouts, `.ts` middleware and API
+routes, plus static files. Every file type is listed in [File types](https://pocketone.dev/docs/extensions/pages/file-types). Page code runs in your app's JS VM, so it
 can use your data directly. This is PocketPages v1, formerly the npm PocketPages package.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
@@ -12307,11 +12308,11 @@ pocketone serve --pagesDir /path/to/pb_pages
 
 A relative path resolves against the working directory, like `--hooksDir`. Its `pocketone.yaml` key is `server.pages_dir`.
 
-### +config.js
+### +config.ts
 
-Settings for your pages live in the folder itself, in `pb_pages/+config.js`:
+Settings for your pages live in the folder itself, in `pb_pages/+config.ts`:
 
-```js
+```ts
 module.exports = {
   plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
@@ -12320,15 +12321,15 @@ module.exports = {
 
 | Key | Default | What it does |
 |---|---|---|
-| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or JS plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or custom plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). ETS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-`+config.js` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
+`+config.ts` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
 answer with an error, and the reason goes to the log.
 
 ### Dev mode
 
-When the app runs in dev mode (`--dev`, or `app.dev` in `pocketone.yaml`), or `+config.js` sets `debug: true`, you
+When the app runs in dev mode (`--dev`, or `app.dev` in `pocketone.yaml`), or `+config.ts` sets `debug: true`, you
 get detailed error pages with the file and line, and `ctx.log.debug` output. Otherwise visitors see a plain
 "Something went wrong" page and the full error goes to the log.
 
@@ -12362,20 +12363,20 @@ Add or edit files in `pb_pages` and reload the browser; no restart is needed. A 
 
 ```
 pb_pages/
-  +config.js         settings (above)
-  +layout.ejs        wraps every page
-  +error.ejs         your error page
-  index.ejs          /
+  +config.ts         settings (above)
+  +layout.ets        wraps every page
+  +error.ets         your error page
+  index.ets          /
   about.md           /about
-  blog/[slug].ejs    /blog/anything
-  feeds/rss/+api.js  /feeds/rss, a route without a template
+  blog/[slug].ets    /blog/anything
+  feeds/rss/+api.ts  /feeds/rss, a route without a template
   _private/          partials, never served
   assets/app.css     a static file
 ```
 
-The full contract is in [SPEC.md](https://pocketone.dev/docs/extensions/pages/spec): routes and precedence, middleware, `+page.js` and `+api.js`, EJS,
+The full contract is in [SPEC.md](https://pocketone.dev/docs/extensions/pages/spec): routes and precedence, middleware, `+page.ts` and `+api.ts`, ETS,
 partials, slots and layouts, Markdown, JSX and TSX, the `ctx` object, errors, the built-in `auth` and `realtime`
-plugins, JS plugins, add-ons and the changes from 0.x.
+plugins, custom plugins, add-ons and the changes from 0.x.
 
 Highlights:
 
@@ -12393,7 +12394,7 @@ page code are logged in full.
 
 ### Try the demo
 
-[`example/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example) is a demo app with EJS, Markdown, JSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
+[`example/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example) is a demo app with ETS, Markdown, TSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
 speed check at `/speed`.
 
 ```bash
@@ -12448,17 +12449,17 @@ To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pa
 
 - **Read the routes.** `pages.For(app)` returns the service: `Dir()` is the folder, `Table()` the current route
   table, `Errors()` the problems from the last build.
-- **JS plugins.** A factory in `+config.js` can add to `ctx`, run on each request and transform rendered HTML
+- **Custom plugins.** A factory in `+config.ts` can add to `ctx`, run on each request and transform rendered HTML
   ([SPEC.md](https://pocketone.dev/docs/extensions/pages/spec), section 9.2). [Add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md) are built this way.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example/pb_pages): EJS, Markdown, JSX/TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
+[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example/pb_pages): ETS, Markdown, TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
 
 ```go
-// Command example runs one PocketOne app that serves the demo in ./pb_pages (EJS, Markdown, JSX/TSX, auth,
-// ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection
-// with three seed notes. From this folder:
+// Command example runs one PocketOne app that serves the demo in ./pb_pages (ETS templates and TypeScript, Markdown,
+// a TSX page, auth, ctx.pb(), SSE, a JSON route, +404). ./pb_migrations creates a "notes" collection with three seed
+// notes. From this folder:
 //
 //	go run . serve --dir=./pb_data
 //
@@ -12548,6 +12549,9 @@ v1 is a clean API. It keeps PocketPages' ideas (a folder of files that become ro
 private partials) and changes the shapes. Apps written for the npm package (0.x) don't run unchanged; "Changes from
 0.x" (section 12) lists every difference.
 
+Code files and templates come in TypeScript (`.ts`, `.ets`, `.tsx`) and plain JavaScript (`.js`, `.ejs`, `.jsx`),
+which behave the same apart from types. Samples here use whichever is shortest; the user docs use `.ts` and `.ets`.
+
 ## 1. The `pb_pages` folder
 
 Pages live in their own folder next to PocketBase's others:
@@ -12592,7 +12596,7 @@ A path segment (file or folder name) starting with one of these characters is ne
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ejs`, `.jsx` or `.tsx`). `+middleware`, `+page`, `+api` and `+layout`: one of each per folder. `+config`, `+error` and `+404`: only at the top of `pb_pages` (in a subfolder they're an error at startup). Any other `+` name is an error at startup. |
+| `+` | Framework file: `+config`, `+middleware`, `+page`, `+api` (`.js` or `.ts`); `+layout`, `+error`, `+404` (`.ets`, `.ejs`, `.jsx` or `.tsx`). `+middleware`, `+page`, `+api` and `+layout`: one of each per folder. `+config`, `+error` and `+404`: only at the top of `pb_pages` (in a subfolder they're an error at startup). Any other `+` name is an error at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
 | `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
@@ -12609,7 +12613,7 @@ carry their own `+layout.ejs`, `+middleware.js` and `_private/`.
 
 ### 2.1 Pages
 
-A **page** is a template file: `.ejs`, `.md`, `.jsx` or `.tsx` (4.5).
+A **page** is a template file: `.ets`, `.ejs`, `.md`, `.jsx` or `.tsx` (4.1, 4.5).
 
 | File | URL |
 |---|---|
@@ -12663,7 +12667,7 @@ previous table keeps serving if there was one.
 
 For a URL that matches a page or API route, one JS call does all of this, in order:
 
-1. **Plugins:** every plugin's `extendContext`, then every plugin's `onRequest` (built-in and JS plugins, in config
+1. **Plugins:** every plugin's `extendContext`, then every plugin's `onRequest` (built-in and custom plugins, in config
    order), so an `onRequest` can use what any plugin added to `ctx`.
 2. **Middleware**, root first: every `+middleware.js` from `pb_pages/` down to the route's folder (groups included).
 3. **Handlers**: the folder's `+page.js` (or `+api.js`): `load`, then the handler for the request method.
@@ -12747,11 +12751,16 @@ module.exports = {
 
 ## 4. Templates
 
-### 4.1 EJS
+### 4.1 EJS and ETS
+
+`.ets` is EJS whose tags hold TypeScript; `.ejs` is the same with plain JavaScript. An `.ets` template is compiled
+like an `.ejs` one, then esbuild (built into the binary) strips the types from the whole compiled function, since one
+tag's code (`if (x) {`) is rarely valid on its own. Types are stripped, not checked. A TypeScript syntax error names
+the template line (from the nearest line marker before it). Everything below applies to both.
 
 | Tag | Meaning |
 |---|---|
-| `<% code %>` | Run JS, no output |
+| `<% code %>` | Run code, no output |
 | `<%= expr %>` | Output, HTML-escaped |
 | `<%- expr %>` | Output, raw |
 | `<%# comment %>` | Nothing |
@@ -12786,8 +12795,8 @@ A template returns its text. There is no `echo`; anything you want in the output
   that is itself inside a `_private/` folder, the search starts at the folder containing that `_private/` (so its
   siblings are found first). A name starting with `/` looks only in `pb_pages/_private/`, unless it names a `_private/` folder itself
   (`/_private/card`, `/blog/_private/card`, as in 0.x), which is a path from the top of `pb_pages`. `..` is not allowed.
-- `name` may include its extension. The exact name is tried first; then `.ejs`, `.md`, `.jsx` and `.tsx` are added, in
-  that order, so a dotted name such as `nav.main` finds `nav.main.ejs`.
+- `name` may include its extension. The exact name is tried first; then `.ets`, `.ejs`, `.md`, `.jsx` and `.tsx` are
+  added, in that order, so a dotted name such as `nav.main` finds `nav.main.ets`.
 - The partial sees the same `ctx`, plus `locals` as top-level variables. As in EJS, `locals` is also the whole object,
   so an optional one can be tested without a `ReferenceError`: `<% if (locals.subtitle) { %>`. A page or layout gets an
   empty `locals`.
@@ -12841,13 +12850,14 @@ A `.md` page is EJS first, then Markdown (CommonMark + GFM tables, strikethrough
 
 `.jsx` and `.tsx` files are templates too: pages, layouts (`+layout.tsx`), `+error`/`+404`, and partials in
 `_private/`. They're compiled when first used by esbuild, which is built into the binary (no Node, no build step), and
-cached by content like EJS. TypeScript types are stripped, not checked.
+cached by content like EJS. TypeScript types are stripped, not checked. TSX is the component style; the docs use
+ETS (4.1) and treat TSX as the alternative, one style per app.
 
 ```tsx
 // pb_pages/products/[id].tsx
 import Price from './_private/Price'
 
-export default function Product({ data, slot }: any) {
+export default function Product({ data, slot }: pages.Props) {
   slot('title', data.product.getString('name'))
   return (
     <article class="product">
@@ -12868,10 +12878,10 @@ export default function Product({ data, slot }: any) {
 - `<html>` renders with `<!doctype html>` in front of it (JSX can't write a doctype).
 - In a layout, `children` is the inner content. `slot(name)` reads a named slot, `slot(name, content)` sets one
   (content is JSX or a string), `slot()` is the same as `children`.
-- `include(name, locals)` returns the partial's HTML, ready to put in JSX. EJS can `include` a `.jsx`/`.tsx` partial:
-  its locals become props.
+- `include(name, locals)` returns the partial's HTML, ready to put in JSX. An EJS/ETS template can `include` a
+  `.jsx`/`.tsx` partial: its locals become props.
 - Components are ordinary modules: `import Card from './_private/Card'` (resolved like `require`, 3.2). Partials
-  are looked up with extensions in this order: `.ejs`, `.md`, `.jsx`, `.tsx`.
+  are looked up with extensions in this order: `.ets`, `.ejs`, `.md`, `.jsx`, `.tsx`.
 - **Async components.** Any component may be `async`, the file's default export included. The render waits for it
   wherever it sits in the tree; sibling async components run concurrently. `include()` of an async partial and
   `slot(name, content)` with async content work the same way, and a layout reads the slot once it has settled.
@@ -12984,7 +12994,7 @@ module.exports = {
 
 | Key | Default | |
 |---|---|---|
-| `plugins` | `[]` | Module names, built-in names (`auth`, `realtime`), or JS plugin factories such as add-ons (9). EJS and Markdown are always on. |
+| `plugins` | `[]` | Module names, built-in names (`auth`, `realtime`), or custom plugin factories such as add-ons (9). Templates and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
 A string in `plugins` is a module name, required from `+config.js` (1): a `_private/` file (`'datastar'` finds
@@ -13002,7 +13012,7 @@ reason on the page), and the reason goes to the log.
 
 - Anything thrown in middleware, a handler or a template becomes a `500`.
 - **Dev mode or `debug: true`:** an HTML error page with the message, the file and line (template lines map to the
-  `.ejs`/`.md` source), and the stack trimmed to `pb_pages`-relative paths.
+  `.ets`/`.ejs`/`.md` source), and the stack trimmed to `pb_pages`-relative paths.
 - **Otherwise:** a plain "Something went wrong" page. The full error always goes to the app's log.
 - `throw ctx.httpError(status, message)` sends that status (e.g. `404`, `403`) with a plain page showing `message`.
   In a `+api.js` it's JSON: `{ "status": 404, "message": "..." }`.
@@ -13062,9 +13072,9 @@ Turned on by name in `+config.js` when no module by that name is found (7).
 - `ctx.realtime.client(id)` returns one client by id, or `null`.
 - Sending never waits for slow clients: each message is handed to the client's queue in the background.
 
-### 9.2 JS plugins
+### 9.2 Custom plugins
 
-A JS plugin is a factory that returns hooks:
+A custom plugin is a factory that returns hooks:
 
 ```js
 module.exports = (config) => ({
@@ -13082,7 +13092,7 @@ module.exports = (config) => ({
 - There's no hook for treating other kinds of files as pages: a page's inner extension already does that
   (`robots.txt.ejs` serves `/robots.txt` as `text/plain`, 4.5).
 - Hooks run in config order. Every hook is optional.
-- JS plugins run with the same permissions as the rest of the app's JS (sandboxed in a multitenant host).
+- Custom plugins run with the same permissions as the rest of the app's code (sandboxed in a multitenant host).
 
 ### 9.3 Add-ons
 
@@ -18109,21 +18119,21 @@ Use PocketPages to create slim and modern web apps:
 
 ## Hello world in just one file
 
-```ejs
-<!-- pb_pages/index.ejs -->
+```ets
+<!-- pb_pages/index.ets -->
 <%= `Hello, world!` %>
 ```
 
 <%- include('browser', { content: `Hello, world!` }) %>
 
-Inside `<%` and `%>` you write plain JavaScript. Every page gets a `ctx` object with the request, the response, your data, and the app itself (`ctx.app`), so you can read and write records directly.
+Inside `<%` and `%>` you write TypeScript; types are stripped, never checked, so plain JavaScript works too. Every page gets a `ctx` object with the request, the response, your data, and the app itself (`ctx.app`), so you can read and write records directly.
 
 ## Retro file-based routing
 
-Files become URLs, and `+layout.ejs` files wrap the pages below them:
+Files become URLs, and `+layout.ets` files wrap the pages below them:
 
-```ejs
-<!-- pb_pages/+layout.ejs -->
+```ets
+<!-- pb_pages/+layout.ets -->
 <html>
   <body style="background-color: #b5dcb5">
     <%- slot() %>
@@ -18156,6 +18166,13 @@ There is no migration tool. Start a new app with `pocketone pages create <name>`
 | `create-pocketpages` | `pocketone pages create <name> [--starter <kit>]` |
 
 Delete the `.pb.js` boot file and the `pocketpages` dependencies, and move the contents of `pb_hooks/pages/` to `pb_pages/`.
+
+## JavaScript or TypeScript
+
+Your `.js` and `.ejs` files stay as they are. v1 also runs TypeScript (`.ts` code and `.ets` templates, types
+stripped, never checked), and the rest of these docs use it. Renaming a file from `.js` to `.ts` or `.ejs` to `.ets`
+changes nothing else, so you can switch a file at a time or not at all. This guide shows v1 code as `.js` to match
+yours. See [File types](https://pocketone.dev/docs/extensions/pages/file-types).
 
 ## The context object
 
@@ -18331,7 +18348,7 @@ Browse to `http://localhost:8090` and you'll see the starter's home page. The de
 To start editing, open
 
 ```
-myapp/pb_pages/index.ejs
+myapp/pb_pages/index.ets
 ```
 
 Changes appear on the next refresh. The app doesn't restart.
@@ -18378,7 +18395,7 @@ pocketone serve --dir ./pb_data
 `pocketone` keeps `pb_data` next to its executable unless you pass `--dir`; `pb_pages` and `pb_migrations` are found next
 to `pb_data`.
 
-Each starter kit is an ordinary `pb_pages` folder written against the v1 API, so everything in these docs applies to it.
+Each starter kit is an ordinary `pb_pages` folder written against the v1 API, in TypeScript with [ETS templates](https://pocketone.dev/docs/extensions/pages/ets), so everything in these docs applies to it. The **tsx** kit starts an app in the [component style](https://pocketone.dev/docs/extensions/pages/jsx) instead.
 
 | Starter | What it shows | Live demo |
 | --- | --- | --- |
@@ -18389,6 +18406,7 @@ Each starter kit is an ordinary `pb_pages` folder written against the v1 API, so
 | **daisyui-docs** | Documentation site template with DaisyUI and navigation | [pocketpages-daisyui-docs.pockethost.io](https://pocketpages-daisyui-docs.pockethost.io) |
 | **htmx** | HTMX integration for dynamic interactions | [pocketpages-htmx.pockethost.io](https://pocketpages-htmx.pockethost.io) |
 | **datastar** | Realtime chat and counter using Datastar | [pocketpages-datastar.pockethost.io](https://pocketpages-datastar.pockethost.io) |
+| **tsx** | The minimal app written as TSX components (layout, page and a partial) | |
 
 
 ---
@@ -18397,42 +18415,42 @@ Source: https://pocketone.dev/docs/extensions/pages/creating-a-page
 
 # Creating a PocketPages Page
 
-A **page** is a template file, `.ejs` or `.md`, anywhere in `pb_pages/`. Its path becomes its URL.
+A **page** is a template file, `.ets` or `.md`, anywhere in `pb_pages/`. Its path becomes its URL. (A `.tsx` component works too; see [File types](https://pocketone.dev/docs/extensions/pages/file-types).)
 
 ## Creating pages
 
-1. **Create a file**: inside `pb_pages/`, create an `.ejs` file. For example, an "About" page:
+1. **Create a file**: inside `pb_pages/`, create an `.ets` file. For example, an "About" page:
 
 ```text
-pb_pages/about.ejs  -> serves "/about"
+pb_pages/about.ets  -> serves "/about"
 ```
 
 2. **`index` files**: `index` maps to its folder.
 
 ```text
-pb_pages/index.ejs           -> serves "/"
-pb_pages/products/index.ejs  -> serves "/products" (and "/products/")
+pb_pages/index.ets           -> serves "/"
+pb_pages/products/index.ets  -> serves "/products" (and "/products/")
 ```
 
 3. **Nested pages**: folders become URL segments.
 
 ```text
 pb_pages/
-├── index.ejs         -> "/"
-├── about.ejs         -> "/about"
-├── contact.ejs       -> "/contact"
+├── index.ets         -> "/"
+├── about.ets         -> "/about"
+├── contact.ets       -> "/contact"
 └── products/
-    ├── index.ejs     -> "/products"
-    └── details.ejs   -> "/products/details"
+    ├── index.ets     -> "/products"
+    └── details.ets   -> "/products/details"
 ```
 
-4. **Markdown pages**: a `.md` file works the same way. It runs through EJS first, then Markdown. See [Markdown](https://pocketone.dev/docs/extensions/pages/markdown).
+4. **Markdown pages**: a `.md` file works the same way. Its tags run first (plain JavaScript), then Markdown. See [Markdown](https://pocketone.dev/docs/extensions/pages/markdown).
 
 ```text
 pb_pages/docs/routing.md  -> "/docs/routing"
 ```
 
-The extension is always dropped from the URL. To add data or handle forms, put a `+page.js` next to the page; see [Loading Data](https://pocketone.dev/docs/extensions/pages/loading-data).
+The extension is always dropped from the URL. To add data or handle forms, put a `+page.ts` next to the page; see [Loading Data](https://pocketone.dev/docs/extensions/pages/loading-data).
 
 
 ---
@@ -18450,18 +18468,18 @@ myapp/
   pb_migrations/
   pb_public/
   pb_pages/
-    +config.js
-    +layout.ejs
-    index.ejs
-    about.ejs
+    +config.ts
+    +layout.ets
+    index.ets
+    about.ets
     _private/
-      nav.ejs
+      nav.ets
     assets/
       app.css
     products/
       [id]/
-        +page.js
-        index.ejs
+        +page.ts
+        index.ets
 ```
 
 ## Special names
@@ -18470,7 +18488,7 @@ A file or folder name starting with one of these characters is never a URL:
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file: `+layout.ejs` (or `.jsx`, `.tsx`), `+middleware.js`, `+page.js`, `+api.js`, one of each per folder. `+config.js`, `+error.ejs` and `+404.ejs` are allowed only at the top of `pb_pages`. Any other `+` name, any other extension (such as `+layout.md`), and a top-only file in a subfolder are errors at startup. |
+| `+` | Framework file: `+layout.ets` (or `+layout.tsx`), `+middleware.ts`, `+page.ts`, `+api.ts`, one of each per folder. `+config.ts`, `+error.ets` and `+404.ets` are allowed only at the top of `pb_pages`. Any other `+` name, any other extension (such as `+layout.md`), and a top-only file in a subfolder are errors at startup. |
 | `_` | Private. `_private/` folders hold partials and modules for `include()` and `ctx.resolve()`. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes). |
 | `.` | Ignored (dotfiles), except a top-level `.well-known/`, which is served as static files (ACME challenges, `security.txt`, app links). |
@@ -18479,7 +18497,7 @@ A file or folder name starting with one of these characters is never a URL:
 
 ## Groups
 
-A folder named `(name)` groups files without adding a URL segment: `(marketing)/pricing.ejs` serves `/pricing`. A group can have its own `+layout.ejs`, `+middleware.js` and `_private/`.
+A folder named `(name)` groups files without adding a URL segment: `(marketing)/pricing.ets` serves `/pricing`. A group can have its own `+layout.ets`, `+middleware.ts` and `_private/`.
 
 ## What else
 
@@ -18488,6 +18506,67 @@ A folder named `(name)` groups files without adding a URL segment: `(marketing)/
   `pb_hooks/node_modules` and the app folder's `node_modules`, then the app's usual module paths.
 - Pages' own file access (routes, static files, includes, assets) never leaves `pb_pages`.
 - A `pb_pages/api/` folder is an error at startup, because `/api/` belongs to PocketBase.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/pages/file-types
+
+# File types
+
+PocketPages apps are server-rendered pages with no build step. Every file in `pb_pages` is either code, a template or
+a static file, and you write code and templates in TypeScript. PocketOne strips the types when it first uses a file,
+with esbuild built into the binary; it never checks them.
+
+## Code
+
+`+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and the modules in `_private/` are TypeScript files. They export
+functions and objects, and never produce HTML themselves. To check their types with your editor or `tsc`, see
+[TypeScript](https://pocketone.dev/docs/extensions/pages/typescript).
+
+## Templates: pick one style
+
+A template turns data into HTML. There are two styles, and an app uses one of them:
+
+| | ETS | TSX |
+|---|---|---|
+| A file is | HTML with code in `<% %>` tags | a function that returns markup |
+| Pages | `about.ets` | `about.tsx` |
+| Layouts, error pages | `+layout.ets`, `+error.ets`, `+404.ets` | `+layout.tsx`, `+error.tsx`, `+404.tsx` |
+| Partials | `_private/card.ets`, `include('card', { item })` | `_private/Card.tsx`, `<Card item={item} />` |
+| Good for | HTML-first apps, HTMX, Datastar, content sites | apps built from components, typed props |
+| Read more | [ETS templates](https://pocketone.dev/docs/extensions/pages/ets) | [Components with TSX](https://pocketone.dev/docs/extensions/pages/jsx) |
+
+These docs use ETS. It's the closest to what the browser gets: open the file and you see the page.
+
+Both styles render on the server and send plain HTML. Neither has a client runtime, hydration or state; interactivity
+comes from links, forms, HTMX, Datastar or a `<script>`.
+
+The styles can include each other, which helps when you move an app from one to the other, but an app that mixes them
+is harder to read. [Markdown](https://pocketone.dev/docs/extensions/pages/markdown) pages are the exception every app shares: a `.md` file runs EJS tags with
+plain JavaScript inside, as a small escape hatch in content.
+
+## JavaScript works too
+
+Every TypeScript file type has a JavaScript twin that behaves the same, without types. Rename a file and nothing else
+changes:
+
+| TypeScript | JavaScript |
+|---|---|
+| `.ts` | `.js` |
+| `.ets` | `.ejs` |
+| `.tsx` | `.jsx` |
+
+Apps written for [PocketPages 0.x](https://pocketone.dev/docs/extensions/pages/moving-from-0x) use `.js` and `.ejs`, and keep doing so. A folder can't have two
+framework files with the same name, such as `+layout.ets` beside `+layout.ejs`.
+
+## Everything else
+
+| File | What it is |
+|---|---|
+| `.md` | A [Markdown](https://pocketone.dev/docs/extensions/pages/markdown) page or partial |
+| `.json` | Data you can `require` |
+| any other file | A [static file](https://pocketone.dev/docs/extensions/pages/static-content), served as-is |
 
 
 ---
@@ -18502,16 +18581,16 @@ URLs come from the files and folders in `pb_pages/`.
 
 | File | URL |
 |---|---|
-| `index.ejs` | `/` |
-| `about.ejs` | `/about` |
+| `index.ets` | `/` |
+| `about.ets` | `/about` |
 | `docs/index.md` | `/docs` (and `/docs/`) |
 | `docs/routing.md` | `/docs/routing` |
-| `products/[id].ejs` | `/products/123`, with `ctx.params.id = "123"` |
-| `[org]/[repo]/index.ejs` | `/acme/web`, with `ctx.params = { org: "acme", repo: "web" }` |
+| `products/[id].ets` | `/products/123`, with `ctx.params.id = "123"` |
+| `[org]/[repo]/index.ets` | `/acme/web`, with `ctx.params = { org: "acme", repo: "web" }` |
 
 - The extension is dropped. `index` maps to its folder.
-- `[name]` matches exactly one non-empty segment. A parameter must be the whole segment: `post-[id].ejs` is an error at startup.
-- Segment counts must match: `products/[id].ejs` doesn't match `/products/123/reviews`.
+- `[name]` matches exactly one non-empty segment. A parameter must be the whole segment: `post-[id].ets` is an error at startup.
+- Segment counts must match: `products/[id].ets` doesn't match `/products/123/reviews`.
 - A URL with a trailing slash matches the same route as without it. Pages never redirect to add or remove one.
 - Matching is case-sensitive.
 
@@ -18524,18 +18603,18 @@ A folder named `(name)` doesn't add a URL segment. Use groups to give part of th
 ```text
 pb_pages/
   (site)/
-    +layout.ejs     # wraps everything in (site)
-    index.ejs       # /
-    about.ejs       # /about
+    +layout.ets     # wraps everything in (site)
+    index.ets       # /
+    about.ets       # /about
   xapi/
-    count.ejs       # /xapi/count, outside the (site) layout
+    count.ets       # /xapi/count, outside the (site) layout
 ```
 
 ## API routes
 
-A `+api.js` file serves its folder's URL without a template: `feeds/rss/+api.js` serves `/feeds/rss`. `[param]` folders work as for pages. A folder can't have both a `+api.js` and an `index` page. See [API Routes and JSON](https://pocketone.dev/docs/extensions/pages/api-routes).
+A `+api.ts` file serves its folder's URL without a template: `feeds/rss/+api.ts` serves `/feeds/rss`. `[param]` folders work as for pages. A folder can't have both a `+api.ts` and an `index` page. See [API Routes and JSON](https://pocketone.dev/docs/extensions/pages/api-routes).
 
-A `+page.js` in a folder with no page serves the folder's URL from JS too: `logout/+page.js` serves `/logout`. See [Pages without a template](https://pocketone.dev/docs/extensions/pages/loading-data#pages-without-a-template).
+A `+page.ts` in a folder with no page serves the folder's URL from JS too: `logout/+page.ts` serves `/logout`. See [Pages without a template](https://pocketone.dev/docs/extensions/pages/loading-data#pages-without-a-template).
 
 ## Static files
 
@@ -18544,7 +18623,7 @@ Every other file is served as-is at its path, with groups removed: `assets/app.c
 ## Which route wins
 
 1. `/api/...` and `/_/...` belong to PocketBase. Pages never see them.
-2. Among matching routes the most specific wins: segments are compared from the left, and a literal segment beats a `[param]`. So `products/new.ejs` beats `products/[id].ejs` for `/products/new`.
+2. Among matching routes the most specific wins: segments are compared from the left, and a literal segment beats a `[param]`. So `products/new.ets` beats `products/[id].ets` for `/products/new`.
 3. A static file and a page can't claim the same URL (startup error).
 4. A URL nothing in `pb_pages` matches goes on to `pb_public`, then to PocketBase.
 
@@ -18569,17 +18648,17 @@ Use square brackets in file or folder names to capture a URL segment:
 pb_pages/
   products/
     [productId]/
-      index.ejs
+      index.ets
       reviews/
-        [reviewId].ejs
+        [reviewId].ets
 ```
 
 This handles URLs like `/products/123` and `/products/123/reviews/456`.
 
 Read them through `params` (the same object as `ctx.params`):
 
-```ejs
-<!-- products/[productId]/reviews/[reviewId].ejs -->
+```ets
+<!-- products/[productId]/reviews/[reviewId].ets -->
 <h1>Product: <%= params.productId %></h1>
 <p>Review: <%= params.reviewId %></p>
 ```
@@ -18594,7 +18673,7 @@ Read the query string with `ctx.req.query()`:
 /products/123?sort=latest&tag=red&tag=blue
 ```
 
-```ejs
+```ets
 <p>Sort by: <%= ctx.req.query('sort') %></p>
 <p>Tags: <%= ctx.req.query('tag', { all: true }).join(', ') %></p>
 ```
@@ -18607,13 +18686,13 @@ Read the query string with `ctx.req.query()`:
 
 Values are strings. Nothing is parsed for you; if you pass JSON in a query parameter, parse it yourself:
 
-```js
+```ts
 const filters = JSON.parse(ctx.req.query('filters') ?? '{}')
 ```
 
 ## The route itself
 
-`ctx.route` describes the matched route: `{ path, name, file }`. For `products/[productId]/index.ejs`, `path` is `/products/[productId]`, `name` is `index`, and `file` is `products/[productId]/index.ejs`.
+`ctx.route` describes the matched route: `{ path, name, file }`. For `products/[productId]/index.ets`, `path` is `/products/[productId]`, `name` is `index`, and `file` is `products/[productId]/index.ets`.
 
 
 ---
@@ -18622,13 +18701,13 @@ Source: https://pocketone.dev/docs/extensions/pages/loading-data
 
 # Loading Data in PocketPages
 
-You can load data right in a template, or in a `+page.js` file next to it.
+You can load data right in a template, or in a `+page.ts` file next to it.
 
 ## Inline data loading
 
 The simplest way is a `<% %>` block at the top of your template:
 
-```ejs
+```ets
 <%
   const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 100)
 %>
@@ -18645,7 +18724,7 @@ The simplest way is a `<% %>` block at the top of your template:
 
 For better formatting support in editors, you can write `<script server<%- '>' %>` instead of `<% %>`. They mean the same thing:
 
-```ejs
+```ets
 <script server<%- '>' %>
   const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 100)
   const categories = ctx.app.findAllRecords('categories')
@@ -18657,12 +18736,12 @@ For better formatting support in editors, you can write `<script server<%- '>' %
 <% } %>
 ```
 
-## Structured loading with `+page.js`
+## Structured loading with `+page.ts`
 
-A `+page.js` file keeps data loading and form handling out of the template:
+A `+page.ts` file keeps data loading and form handling out of the template:
 
-```js
-// pb_pages/products/[id]/+page.js
+```ts
+// pb_pages/products/[id]/+page.ts
 module.exports = {
   load(ctx) {
     ctx.data.product = ctx.app.findRecordById('products', ctx.params.id)
@@ -18675,8 +18754,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/products/[id]/index.ejs -->
+```ets
+<!-- pb_pages/products/[id]/index.ets -->
 <h1><%= data.product.getString('name') %></h1>
 <% const flash = ctx.flash() %>
 <% if (flash) { %><p><%= flash %></p><% } %>
@@ -18684,7 +18763,7 @@ module.exports = {
 
 ### Exports
 
-`+page.js` exports any of `load`, `get`, `post`, `put`, `patch` and `delete`.
+`+page.ts` exports any of `load`, `get`, `post`, `put`, `patch` and `delete`.
 
 1. `load` runs first, for every method.
 2. Then the handler for the request method runs, if there is one.
@@ -18692,7 +18771,7 @@ module.exports = {
 
 A handler can set fields on `ctx.data`, or return a plain object. A returned object is shallow-assigned into `ctx.data` (`Object.assign`); there is no deep merge.
 
-```js
+```ts
 module.exports = {
   load(ctx) {
     return { departments: ctx.app.findAllRecords('departments') }
@@ -18710,8 +18789,8 @@ If a handler sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file
 `load` and the method handlers can be `async`. PocketPages waits for them before it renders. Every Go function has an
 `.async` twin that does its work outside the JS VM, so other requests keep running while it waits:
 
-```js
-// pb_pages/dashboard/+page.js
+```ts
+// pb_pages/dashboard/+page.ts
 module.exports = {
   async load(ctx) {
     const [orders, users] = await Promise.all([
@@ -18724,14 +18803,14 @@ module.exports = {
 ```
 
 What an async handler returns is used just like a returned object, and an error it throws (or a rejected promise)
-fails the request like any other error. You can also `await` right in a template: see [EJS](https://pocketone.dev/docs/extensions/pages/ejs#await) and
+fails the request like any other error. You can also `await` right in a template: see [ETS](https://pocketone.dev/docs/extensions/pages/ets#await) and
 [JSX](https://pocketone.dev/docs/extensions/pages/jsx#async-components).
 
-### One `+page.js` per folder
+### One `+page.ts` per folder
 
-A `+page.js` applies to every page in its folder. Use `ctx.route.name` to tell them apart:
+A `+page.ts` applies to every page in its folder. Use `ctx.route.name` to tell them apart:
 
-```js
+```ts
 module.exports = {
   load(ctx) {
     if (ctx.route.name === 'details') {
@@ -18745,8 +18824,8 @@ module.exports = {
 
 Every handler is optional. A page renders for any method, like PHP, so a template can handle a form on its own:
 
-```ejs
-<!-- pb_pages/contact.ejs, no +page.js -->
+```ets
+<!-- pb_pages/contact.ets, no +page.ts -->
 <% if (ctx.req.method === 'POST') { %>
   <p>Thanks, <%= ctx.req.body().name %>!</p>
 <% } else { %>
@@ -18754,14 +18833,14 @@ Every handler is optional. A page renders for any method, like PHP, so a templat
 <% } %>
 ```
 
-A `post` (or `put`, ...) handler in `+page.js` is the tidier place for form logic as a page grows, but you don't need
-one. Only routes with nothing to render, [`+api.js`](https://pocketone.dev/docs/extensions/pages/api-routes) and a `+page.js` without a page, answer `405`
+A `post` (or `put`, ...) handler in `+page.ts` is the tidier place for form logic as a page grows, but you don't need
+one. Only routes with nothing to render, [`+api.ts`](https://pocketone.dev/docs/extensions/pages/api-routes) and a `+page.ts` without a page, answer `405`
 for a method they have no handler for.
 
 ## Example: a contact form
 
-```js
-// pb_pages/contact/+page.js
+```ts
+// pb_pages/contact/+page.ts
 module.exports = {
   load(ctx) {
     return { departments: ctx.app.findAllRecords('departments') }
@@ -18782,8 +18861,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/contact/index.ejs -->
+```ets
+<!-- pb_pages/contact/index.ets -->
 <% const flash = ctx.flash() %>
 <% if (flash) { %><p><%= flash %></p><% } %>
 <% if (data.error) { %><mark><%= data.error %></mark><% } %>
@@ -18802,11 +18881,11 @@ module.exports = {
 
 ## Pages without a template
 
-A `+page.js` in a folder with no page file serves the folder's URL from JS. Use it for a page you'd rather build in
+A `+page.ts` in a folder with no page file serves the folder's URL from code. Use it for a page you'd rather build in
 code, or for a URL that only acts and redirects:
 
-```js
-// pb_pages/logout/+page.js
+```ts
+// pb_pages/logout/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signOut()
@@ -18815,8 +18894,8 @@ module.exports = {
 }
 ```
 
-```js
-// pb_pages/hello/+page.js
+```ts
+// pb_pages/hello/+page.ts
 module.exports = {
   get(ctx) {
     return ctx.res.html(`<h1>Hello ${ctx.auth ? ctx.auth.getString('name') : 'there'}</h1>`)
@@ -18827,12 +18906,12 @@ module.exports = {
 - With no template to render, each handler must send a response; returning without one is a 500.
 - Methods without a handler answer `405`, `GET` included: `/logout` above only takes `POST`.
 - Folder middleware runs; layouts don't, so wrap HTML yourself (or render a partial with `ctx.include`).
-- Errors show your `+error.ejs` page. For JSON responses and JSON errors, use [`+api.js`](https://pocketone.dev/docs/extensions/pages/api-routes) instead.
+- Errors show your `+error.ets` page. For JSON responses and JSON errors, use [`+api.ts`](https://pocketone.dev/docs/extensions/pages/api-routes) instead.
 
-## Middleware or `+page.js`?
+## Middleware or `+page.ts`?
 
-- Only the route's own folder's `+page.js` runs.
-- Every `+middleware.js` from `pb_pages/` down to the route's folder runs, root first.
+- Only the route's own folder's `+page.ts` runs.
+- Every `+middleware.ts` from `pb_pages/` down to the route's folder runs, root first.
 
 Use [middleware](https://pocketone.dev/docs/extensions/pages/middleware) for data or checks that a whole section of the site shares.
 
@@ -18843,10 +18922,10 @@ Source: https://pocketone.dev/docs/extensions/pages/api-routes
 
 # API Routes and JSON
 
-A `+api.js` file serves its folder's URL without a template. Use it for JSON, feeds, webhooks and anything else that isn't an HTML page.
+A `+api.ts` file serves its folder's URL without a template. Use it for JSON, feeds, webhooks and anything else that isn't an HTML page.
 
-```js
-// pb_pages/feeds/latest/+api.js
+```ts
+// pb_pages/feeds/latest/+api.ts
 module.exports = {
   get(ctx) {
     const posts = ctx.app.findRecordsByFilter('posts', 'published = true', '-created', 20)
@@ -18863,18 +18942,18 @@ A request to `/feeds/latest` returns:
 
 ## How it works
 
-- `+api.js` has the same exports as `+page.js`: `load`, `get`, `post`, `put`, `patch`, `delete`.
+- `+api.ts` has the same exports as `+page.ts`: `load`, `get`, `post`, `put`, `patch`, `delete`.
 - There is no template, so a handler must send a response. Returning without one is a `500`.
-- `[param]` folders work as for pages: `products/[id]/+api.js` serves `/products/123`.
-- A folder can't have both a `+api.js` and an `index` page.
+- `[param]` folders work as for pages: `products/[id]/+api.ts` serves `/products/123`.
+- A folder can't have both a `+api.ts` and an `index` page.
 - Middleware runs for API routes too.
-- `ctx.httpError()` thrown in a `+api.js` answers with JSON: `{ "status": 404, "message": "..." }`.
+- `ctx.httpError()` thrown in a `+api.ts` answers with JSON: `{ "status": 404, "message": "..." }`.
 - Handlers can be `async`. The response is sent once the handler settles.
 
 ## Async handlers
 
-```js
-// pb_pages/stats/+api.js
+```ts
+// pb_pages/stats/+api.ts
 module.exports = {
   async get(ctx) {
     const orders = await ctx.app.countRecords.async('orders')
@@ -18901,10 +18980,10 @@ See [res](https://pocketone.dev/docs/extensions/pages/ctx/res).
 
 ## JSON from a page
 
-JSON is only sent through `ctx.res.json` (or a `+api.js`). Template output is never parsed as JSON, even if it looks like JSON. A page's `+page.js` can still answer with JSON for one method:
+JSON is only sent through `ctx.res.json` (or a `+api.ts`). Template output is never parsed as JSON, even if it looks like JSON. A page's `+page.ts` can still answer with JSON for one method:
 
-```js
-// pb_pages/products/[id]/+page.js
+```ts
+// pb_pages/products/[id]/+page.ts
 module.exports = {
   post(ctx) {
     const product = ctx.app.findRecordById('products', ctx.params.id)
@@ -18920,17 +18999,38 @@ module.exports = {
 
 ---
 
-Source: https://pocketone.dev/docs/extensions/pages/ejs
+Source: https://pocketone.dev/docs/extensions/pages/ets
 
-# EJS
+# ETS templates
 
-EJS is always on. There is nothing to install or configure.
+An `.ets` file is an HTML page with TypeScript in it. The tags are EJS's, and the code inside them is TypeScript:
+PocketOne strips the types when it compiles the template, with esbuild built into the binary. Types are stripped, not
+checked, so they document your code and help your editor without ever stopping a page. There is nothing to install or
+configure, and no build step.
+
+```ets
+<!-- pb_pages/products/index.ets -->
+<% type Product = { name: string; cents: number }
+const products: Product[] = [{ name: 'Widget', cents: 1999 }] %>
+<ul>
+<% for (const p of products) { -%>
+  <li><%= p.name %>: $<%= (p.cents / 100).toFixed(2) %></li>
+<% } -%>
+</ul>
+```
+
+Nothing checks the types inside an `.ets` file, your editor included: editors don't know `.ets` yet, so associate it
+with EJS for highlighting. For checked types, keep logic in a `+page.ts` or a `_private/` module (see
+[TypeScript](https://pocketone.dev/docs/extensions/pages/typescript)).
+
+What you write is what the browser gets, with the tags filled in. ETS is the template style these docs use
+throughout. [Components with TSX](https://pocketone.dev/docs/extensions/pages/jsx) is the alternative; pick one style per app (see [File types](https://pocketone.dev/docs/extensions/pages/file-types)).
 
 ## Tags
 
 | Tag | Meaning |
 |---|---|
-| `<% code %>` | Run JS, no output |
+| `<% code %>` | Run code, no output |
 | `<%= expr %>` | Output, HTML-escaped |
 | `<%- expr %>` | Output, raw |
 | `<%# comment %>` | Nothing |
@@ -18943,7 +19043,7 @@ EJS is always on. There is nothing to install or configure.
 
 `<%= %>` replaces `&` `<` `>` `"` `'` with `&amp;` `&lt;` `&gt;` `&#34;` `&#39;`. `null` and `undefined` output as an empty string.
 
-```ejs
+```ets
 <p><%= '<b>"x"</b>' %></p>   <!-- <p>&lt;b&gt;&#34;x&#34;&lt;/b&gt;</p> -->
 <p><%- '<b>raw</b>' %></p>    <!-- <p><b>raw</b></p> -->
 <p><%= null %></p>            <!-- <p></p> -->
@@ -18970,7 +19070,7 @@ Inside a template you can use:
 
 A template returns its text. There is no `echo()`; anything you want in the output goes through a tag.
 
-```ejs
+```ets
 <ul>
 <% for (const n of [1, 2]) { -%>
   <li><%= n %></li>
@@ -18983,7 +19083,7 @@ A template returns its text. There is no `echo()`; anything you want in the outp
 A template can `await`. Any tag that uses `await` turns the template into an async one, and PocketPages waits for it
 before it sends the page:
 
-```ejs
+```ets
 <% const orders = await ctx.app.countRecords.async('orders') %>
 <p><%= orders %> orders</p>
 ```
@@ -18992,6 +19092,12 @@ before it sends the page:
 - Printing a promise without `await` is an error, so you won't get `[object Promise]` in your page.
 - A slot whose content awaits takes an async function: `<% await slot('title', async () => { %>...<% }) %>`.
 - A template without `await` runs as a plain function, so sync templates cost nothing extra.
+
+## Errors
+
+A TypeScript syntax error names the file and the template line, like any other template error:
+`index.ets: line 3: TypeScript: Unexpected "="`. A type that's wrong but well formed isn't an error at all, since
+nothing checks it.
 
 ## Caching
 
@@ -19004,11 +19110,11 @@ Source: https://pocketone.dev/docs/extensions/pages/markdown
 
 # Markdown Support
 
-A `.md` file is a page, just like an `.ejs` file. Markdown is always on.
+A `.md` file is a page, just like an `.ets` file. Markdown is always on.
 
 ## How it works
 
-1. **EJS first**: the file runs through EJS, so every [EJS tag](https://pocketone.dev/docs/extensions/pages/ejs) works in Markdown.
+1. **Tags first**: the file runs through EJS, so the same tags as [ETS](https://pocketone.dev/docs/extensions/pages/ets) work in Markdown. Markdown is content, and its tags are a small escape hatch: plain JavaScript inside, with no TypeScript stripping.
 2. **Then Markdown**: the result is rendered as Markdown: CommonMark plus GFM tables, strikethrough, task lists and autolinks.
 
 ## Front matter
@@ -19026,7 +19132,7 @@ description: A detailed guide about something interesting
 
 Read the values in a layout with `meta`:
 
-```ejs
+```ets
 <title><%= meta('title') %></title>
 <meta name="description" content="<%= meta('description') %>">
 ```
@@ -19045,25 +19151,207 @@ Relative image paths go through [`ctx.asset`](https://pocketone.dev/docs/extensi
 
 ## Markdown partials
 
-A `.md` file in a `_private/` folder can be included from EJS with `include()`. It's rendered the same way, EJS then Markdown:
+A `.md` file in a `_private/` folder can be included from an `.ets` template with `include()`. It's rendered the same way, tags then Markdown:
 
-```ejs
+```ets
 <%- include('intro') %>
 ```
 
 ## Notes
 
-- Layouts are `+layout.ejs`, `+layout.jsx` or `+layout.tsx`. A layout can't be Markdown: `+layout.md` is an error at
+- Layouts are `+layout.ets` (or `+layout.tsx`, see [TSX](https://pocketone.dev/docs/extensions/pages/jsx)). A layout can't be Markdown: `+layout.md` is an error at
   startup. A Markdown page is still wrapped by the layouts above it.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/pages/partials
+
+# Using Partials in PocketPages
+
+Partials are reusable templates that you include from other templates. They live in `_private/` folders, which are never routed.
+
+## Including a partial
+
+```ets
+<%- include('nav') %>
+<%- include('card', { product }) %>
+```
+
+- `include(name, locals?)` renders a template from a `_private/` folder and returns its text. Use `<%-` so its HTML isn't escaped.
+- `name` may omit the extension; `.ets`, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order (see [File types](https://pocketone.dev/docs/extensions/pages/file-types)).
+- The partial sees the same `ctx`, plus `locals` as top-level variables.
+- `locals` is also the whole object, as in EJS. Use it for optional values: `<%= title %>` throws if `title` wasn't passed, but `<% if (locals.subtitle) { %>` doesn't.
+- Including more than 32 levels deep is an error.
+
+## Where partials are found
+
+```
+pb_pages/
+  _private/
+    header.ets
+    footer.ets
+  blog/
+    _private/
+      sidebar.ets
+    posts/
+      _private/
+        post-card.ets
+      index.ets
+```
+
+PocketPages looks in `_private/` in the current template's folder, then in each parent folder up to `pb_pages/`.
+
+```ets
+<!-- In blog/posts/index.ets -->
+<%- include('post-card', { post }) %>  <!-- blog/posts/_private/post-card.ets -->
+<%- include('sidebar') %>              <!-- blog/_private/sidebar.ets -->
+<%- include('header') %>               <!-- _private/header.ets -->
+```
+
+A name starting with `/` looks only in `pb_pages/_private/`:
+
+```ets
+<%- include('/header') %>  <!-- always pb_pages/_private/header.ets -->
+<%- include('/blog/_private/sidebar') %>  <!-- a path that names a _private folder: blog/_private/sidebar.ets -->
+```
+
+The extension is optional. A dotted name such as `include('nav.main')` finds `nav.main.ets`.
+
+This means you can:
+
+- Keep section-specific partials in that section's `_private/`.
+- Hoist a shared partial up to a common parent.
+- Override a parent's partial with a local one of the same name, and still reach the root one with `/name`.
+
+## Passing data
+
+Pass only what the partial needs:
+
+```ets
+<%- include('user-card', { name: user.getString('name'), joined: user.getString('created') }) %>
+```
+
+```ets
+<!-- _private/user-card.ets -->
+<div class="card">
+  <h3><%= name %></h3>
+  <p>Joined <%= joined %></p>
+</div>
+```
+
+Partials can also read `ctx`, `data` and `params` directly. Passing values explicitly keeps them easy to reuse.
+
+## Markdown partials
+
+A `.md` partial is rendered like a Markdown page: its tags run as plain JavaScript, then Markdown (see [Markdown](https://pocketone.dev/docs/extensions/pages/markdown)):
+
+```ets
+<%- include('intro') %>  <!-- _private/intro.md -->
+```
+
+## JavaScript modules
+
+`_private/` folders also hold TypeScript modules. Load them with [`ctx.resolve()`](https://pocketone.dev/docs/extensions/pages/ctx/resolve), which uses the same lookup.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/pages/layouts
+
+# Layouts and Slots
+
+`+layout.ets` files wrap pages. A page's layouts are every `+layout` from its own folder up to `pb_pages/`, applied innermost first. A folder may have one layout, written as `+layout.ets` (or `+layout.tsx`, see [TSX](https://pocketone.dev/docs/extensions/pages/jsx)). A layout can't be Markdown: `+layout.md` is an error at startup.
+
+```plaintext
+pb_pages/
+  +layout.ets          # applied last (outermost)
+  products/
+    +layout.ets        # applied first
+    [id].ets
+```
+
+For `/products/123`, `[id].ets` renders, then `products/+layout.ets` wraps it, then `+layout.ets` wraps that.
+
+## `slot()`
+
+In a layout, `slot()` returns the content being wrapped: the page, or the inner layout.
+
+```ets
+<!-- pb_pages/+layout.ets -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>My Application</title>
+</head>
+<body>
+  <main>
+    <%- slot() %>
+  </main>
+  <footer>&copy; <%= new Date().getFullYear() %> My Application</footer>
+</body>
+</html>
+```
+
+`<%- slot %>` without parentheses prints the same content, so 0.x layouts that wrote it still work.
+
+## Named slots
+
+A page (or an inner layout) defines a named slot with `slot(name, fn)`. `fn`'s output is captured and nothing is output in place. A layout reads it with `slot(name)`, which returns `''` if it isn't defined.
+
+```ets
+<!-- pb_pages/products/[id].ets -->
+<% slot('title', () => { %><%= data.product.getString('name') %><% }) %>
+<h1><%= data.product.getString('name') %></h1>
+```
+
+```ets
+<!-- pb_pages/+layout.ets -->
+<html>
+  <head><title><%- slot('title') || 'My shop' %></title></head>
+  <body><%- slot() %></body>
+</html>
+```
+
+- Named slots defined by the page or by any inner layout are visible to every outer layout.
+- Defining the same name again replaces it. Inside the new definition's `fn`, `slot(name)` still returns the previous content, so a layout can wrap it:
+
+```ets
+<!-- pb_pages/docs/+layout.ets -->
+<% slot('title', () => { %>Docs: <%- slot('title') %><% }) %>
+<main><%- slot() %></main>
+```
+
+## Data in layouts
+
+Layouts render after the page, with the same `ctx`. Everything middleware, `+page.ts` and the page put on `ctx.data` or `ctx.meta` is there.
+
+## When layouts are skipped
+
+- When the response isn't HTML (a handler set another `Content-Type`).
+- When a handler or middleware sent the response itself (`ctx.res.json`, `ctx.res.html`, `ctx.res.redirect`, ...).
+- For `+api.ts` routes, which have no template.
+- After `ctx.res.layout(false)`, called from middleware, `+page.ts` or the page itself.
+- With the [Datastar add-on](https://pocketone.dev/docs/extensions/pages/plugins/datastar), for requests that carry `Datastar-Request: true`.
+
+To serve HTML fragments without the site layout, call `ctx.res.layout(false)`, put the layout in a group (`(site)/+layout.ets`) and the fragments outside it, or send them with `ctx.res.html()`.
 
 
 ---
 
 Source: https://pocketone.dev/docs/extensions/pages/jsx
 
-# JSX and TSX
+# Components with TSX
 
-A `.jsx` or `.tsx` file is a template, just like an `.ejs` file. It can be a page, a layout (`+layout.tsx`), an error page (`+error.tsx`, `+404.tsx`) or a partial in `_private/`. PocketOne compiles it the first time it's used, with esbuild built into the binary: no Node, no `npm install`, no build step. TypeScript types are stripped, not checked; to check them, see [TypeScript](https://pocketone.dev/docs/extensions/pages/typescript).
+PocketPages has two template styles. [ETS](https://pocketone.dev/docs/extensions/pages/ets) is HTML with code in it, and it's the one these docs use. TSX is
+code that returns HTML: every page, layout and partial is a function component. Pick TSX if you think in components
+and want typed props. Either way the page is rendered on the server and sent as plain HTML; nothing runs in the
+browser.
+
+A `.tsx` file can be a page, a layout (`+layout.tsx`), an error page (`+error.tsx`, `+404.tsx`) or a partial in
+`_private/`. PocketOne compiles it the first time it's used, with esbuild built into the binary: no Node, no
+`npm install`, no build step. TypeScript types are stripped, not checked; to check them, see [TypeScript](https://pocketone.dev/docs/extensions/pages/typescript). The `tsx` [starter kit](https://pocketone.dev/docs/extensions/pages/starter-kits)
+begins an app in this style.
 
 ```tsx
 // pb_pages/products/[id].tsx
@@ -19097,13 +19385,15 @@ The file's default export is a component: a function from props to markup. It ge
 | `slot` | `slot(name)` reads a named slot, `slot(name, content)` sets one, `slot()` is the inner content. |
 | `children` | In a layout, the inner content. |
 
-A partial also gets the locals it was included with, as props. EJS can include a `.jsx` or `.tsx` partial the same way: its locals become props.
+A partial also gets the locals it was included with, as props.
 
 In TypeScript, these props are `pages.Props` (a partial's locals: `pages.Props<{ label: string }>`). A component you import and use as `<Price />` gets only the props you pass it. See [TypeScript](https://pocketone.dev/docs/extensions/pages/typescript).
 
 ## Server-rendered HTML only
 
-JSX renders straight to HTML on the server. There's no virtual DOM, no hydration and no client-side React.
+TSX looks like React, but it isn't: it renders straight to HTML on the server. There's no virtual DOM, no hydration,
+no state and no client-side React. Interactivity comes from the same places as in an ETS app: links, forms, HTMX,
+Datastar or a `<script>`.
 
 - Event handler props (functions) are dropped. Use plain attributes: `onclick="..."`, `hx-get`, `data-on:click`.
 - Text and attribute values are escaped. `dangerouslySetInnerHTML={{ __html: html }}` inserts raw HTML.
@@ -19155,187 +19445,22 @@ export default function Layout({ children, slot }: pages.Props) {
 }
 ```
 
-Layouts in `.ejs`, `.jsx` and `.tsx` mix freely: an EJS page can sit inside a TSX layout and the other way round.
+## One style per app
 
-## TypeScript modules
+Use TSX for every template in an app: pages, layouts, partials and error pages. Code files (`+page.ts`, `+api.ts`,
+`+middleware.ts`, `+config.ts`) are the same in both styles.
 
-`+page.ts`, `+api.ts`, `+middleware.ts`, `+config.ts` and any `.ts` file reached by `require` or `import` work like their `.js` versions. A module whose only export is `export default` behaves like `module.exports = ...`.
+The two styles can include each other, so you can move an app from one to the other a folder at a time: an ETS page
+can sit inside a TSX layout, and `include()` returns a partial's HTML in either style. Markdown pages are the one mix
+you can't avoid, since `.md` files always run EJS tags (see [Markdown](https://pocketone.dev/docs/extensions/pages/markdown)).
 
-Components are ordinary modules, so `import Card from './_private/Card'` resolves the same way as [`require`](https://pocketone.dev/docs/extensions/pages/jsvm). When a partial name has no extension, `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
+## Imports
 
+Components are ordinary modules, so `import Card from './_private/Card'` resolves the same way as
+[`require`](https://pocketone.dev/docs/extensions/pages/jsvm). A module whose only export is `export default` behaves like `module.exports = ...`.
+`include('card')` without an extension tries `.ets`, `.ejs`, `.md`, `.jsx` and `.tsx`, in that order.
 
----
-
-Source: https://pocketone.dev/docs/extensions/pages/partials
-
-# Using Partials in PocketPages
-
-Partials are reusable templates that you include from other templates. They live in `_private/` folders, which are never routed.
-
-## Including a partial
-
-```ejs
-<%- include('nav') %>
-<%- include('card', { product }) %>
-```
-
-- `include(name, locals?)` renders a template from a `_private/` folder and returns its text. Use `<%-` so its HTML isn't escaped.
-- `name` may omit the extension; `.ejs`, `.md`, `.jsx` and `.tsx` are tried, in that order.
-- The partial sees the same `ctx`, plus `locals` as top-level variables.
-- `locals` is also the whole object, as in EJS. Use it for optional values: `<%= title %>` throws if `title` wasn't passed, but `<% if (locals.subtitle) { %>` doesn't.
-- Including more than 32 levels deep is an error.
-
-## Where partials are found
-
-```
-pb_pages/
-  _private/
-    header.ejs
-    footer.ejs
-  blog/
-    _private/
-      sidebar.ejs
-    posts/
-      _private/
-        post-card.ejs
-      index.ejs
-```
-
-PocketPages looks in `_private/` in the current template's folder, then in each parent folder up to `pb_pages/`.
-
-```ejs
-<!-- In blog/posts/index.ejs -->
-<%- include('post-card', { post }) %>  <!-- blog/posts/_private/post-card.ejs -->
-<%- include('sidebar') %>              <!-- blog/_private/sidebar.ejs -->
-<%- include('header') %>               <!-- _private/header.ejs -->
-```
-
-A name starting with `/` looks only in `pb_pages/_private/`:
-
-```ejs
-<%- include('/header') %>  <!-- always pb_pages/_private/header.ejs -->
-<%- include('/blog/_private/sidebar') %>  <!-- a path that names a _private folder: blog/_private/sidebar.ejs -->
-```
-
-The extension is optional. A dotted name such as `include('nav.main')` finds `nav.main.ejs`.
-
-This means you can:
-
-- Keep section-specific partials in that section's `_private/`.
-- Hoist a shared partial up to a common parent.
-- Override a parent's partial with a local one of the same name, and still reach the root one with `/name`.
-
-## Passing data
-
-Pass only what the partial needs:
-
-```ejs
-<%- include('user-card', { name: user.getString('name'), joined: user.getString('created') }) %>
-```
-
-```ejs
-<!-- _private/user-card.ejs -->
-<div class="card">
-  <h3><%= name %></h3>
-  <p>Joined <%= joined %></p>
-</div>
-```
-
-Partials can also read `ctx`, `data` and `params` directly. Passing values explicitly keeps them easy to reuse.
-
-## Markdown partials
-
-A `.md` partial is rendered as EJS, then Markdown:
-
-```ejs
-<%- include('intro') %>  <!-- _private/intro.md -->
-```
-
-## JavaScript modules
-
-`_private/` folders also hold JS modules. Load them with [`ctx.resolve()`](https://pocketone.dev/docs/extensions/pages/ctx/resolve), which uses the same lookup.
-
-
----
-
-Source: https://pocketone.dev/docs/extensions/pages/layouts
-
-# Layouts and Slots
-
-`+layout.ejs` files wrap pages. A page's layouts are every `+layout` from its own folder up to `pb_pages/`, applied innermost first. A folder may have one layout, written as `+layout.ejs`, `+layout.jsx` or `+layout.tsx`. A layout can't be Markdown: `+layout.md` is an error at startup.
-
-```plaintext
-pb_pages/
-  +layout.ejs          # applied last (outermost)
-  products/
-    +layout.ejs        # applied first
-    [id].ejs
-```
-
-For `/products/123`, `[id].ejs` renders, then `products/+layout.ejs` wraps it, then `+layout.ejs` wraps that.
-
-## `slot()`
-
-In a layout, `slot()` returns the content being wrapped: the page, or the inner layout.
-
-```ejs
-<!-- pb_pages/+layout.ejs -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>My Application</title>
-</head>
-<body>
-  <main>
-    <%- slot() %>
-  </main>
-  <footer>&copy; <%= new Date().getFullYear() %> My Application</footer>
-</body>
-</html>
-```
-
-`<%- slot %>` without parentheses prints the same content, so 0.x layouts that wrote it still work.
-
-## Named slots
-
-A page (or an inner layout) defines a named slot with `slot(name, fn)`. `fn`'s output is captured and nothing is output in place. A layout reads it with `slot(name)`, which returns `''` if it isn't defined.
-
-```ejs
-<!-- pb_pages/products/[id].ejs -->
-<% slot('title', () => { %><%= data.product.getString('name') %><% }) %>
-<h1><%= data.product.getString('name') %></h1>
-```
-
-```ejs
-<!-- pb_pages/+layout.ejs -->
-<html>
-  <head><title><%- slot('title') || 'My shop' %></title></head>
-  <body><%- slot() %></body>
-</html>
-```
-
-- Named slots defined by the page or by any inner layout are visible to every outer layout.
-- Defining the same name again replaces it. Inside the new definition's `fn`, `slot(name)` still returns the previous content, so a layout can wrap it:
-
-```ejs
-<!-- pb_pages/docs/+layout.ejs -->
-<% slot('title', () => { %>Docs: <%- slot('title') %><% }) %>
-<main><%- slot() %></main>
-```
-
-## Data in layouts
-
-Layouts render after the page, with the same `ctx`. Everything middleware, `+page.js` and the page put on `ctx.data` or `ctx.meta` is there.
-
-## When layouts are skipped
-
-- When the response isn't HTML (a handler set another `Content-Type`).
-- When a handler or middleware sent the response itself (`ctx.res.json`, `ctx.res.html`, `ctx.res.redirect`, ...).
-- For `+api.js` routes, which have no template.
-- After `ctx.res.layout(false)`, called from middleware, `+page.js` or the page itself.
-- With the [Datastar add-on](https://pocketone.dev/docs/extensions/pages/plugins/datastar), for requests that carry `Datastar-Request: true`.
-
-To serve HTML fragments without the site layout, call `ctx.res.layout(false)`, put the layout in a group (`(site)/+layout.ejs`) and the fragments outside it, or send them with `ctx.res.html()`.
+`.jsx` works exactly like `.tsx`, without types; see [File types](https://pocketone.dev/docs/extensions/pages/file-types).
 
 
 ---
@@ -19348,7 +19473,7 @@ Source: https://pocketone.dev/docs/extensions/pages/private-files
 
 | Prefix | Meaning |
 |---|---|
-| `+` | Framework file (`+layout.ejs`, `+page.js`, ...) |
+| `+` | Framework file (`+layout.ets`, `+page.ts`, ...) |
 | `_` | Private. `_private/` folders hold partials and modules. Other `_` names are ignored. |
 | `-` | Ignored (drafts, notes) |
 | `.` | Ignored (dotfiles) |
@@ -19358,9 +19483,9 @@ pb_pages/
   _private/        # private (not routable)
   -drafts/         # ignored
   helpers/         # normal folder (routable)
-  +page.js         # framework file (not routable)
-  +layout.ejs      # framework file (not routable)
-  index.ejs        # page
+  +page.ts         # framework file (not routable)
+  +layout.ets      # framework file (not routable)
+  index.ets        # page
 ```
 
 ## The `_private` folder
@@ -19368,29 +19493,29 @@ pb_pages/
 `_private/` folders serve two purposes:
 
 1. Template partials, rendered with [`include()`](https://pocketone.dev/docs/extensions/pages/partials)
-2. JavaScript modules and other files, loaded with [`ctx.resolve()`](https://pocketone.dev/docs/extensions/pages/ctx/resolve)
+2. TypeScript modules and other files, loaded with [`ctx.resolve()`](https://pocketone.dev/docs/extensions/pages/ctx/resolve)
 
 Both use the same lookup: `_private/` in the current template's folder, then each parent folder up to `pb_pages/`. A name starting with `/` looks only in `pb_pages/_private/`.
 
 ```
 pb_pages/
   _private/
-    header.ejs
-    format.js
+    header.ets
+    format.ts
   products/
     _private/
-      product-card.ejs
-      queries.js
-    index.ejs
+      product-card.ets
+      queries.ts
+    index.ets
 ```
 
-```ejs
-<!-- In products/index.ejs -->
+```ets
+<!-- In products/index.ets -->
 <%
-  const queries = ctx.resolve('queries')   // products/_private/queries.js
-  const format = ctx.resolve('format')     // _private/format.js
+  const queries = ctx.resolve('queries')   // products/_private/queries.ts
+  const format = ctx.resolve('format')     // _private/format.ts
 %>
-<%- include('header') %>                  <!-- _private/header.ejs -->
+<%- include('header') %>                  <!-- _private/header.ets -->
 <% for (const p of queries.featured(ctx.app)) { %>
   <%- include('product-card', { p, format }) %>
 <% } %>
@@ -19400,8 +19525,8 @@ pb_pages/
 
 A module in `_private/` is a CommonJS file:
 
-```js
-// pb_pages/products/_private/queries.js
+```ts
+// pb_pages/products/_private/queries.ts
 module.exports = {
   featured: (app) => app.findRecordsByFilter('products', 'featured = true', '-created', 10),
 }
@@ -19420,7 +19545,7 @@ Source: https://pocketone.dev/docs/extensions/pages/middleware
 
 # Middleware
 
-Middleware files (`+middleware.js`) run before your handlers and templates. Use them to:
+Middleware files (`+middleware.ts`) run before your handlers and templates. Use them to:
 
 - Check authentication
 - Load data a whole section shares
@@ -19429,8 +19554,8 @@ Middleware files (`+middleware.js`) run before your handlers and templates. Use 
 
 ## Basic example
 
-```js
-// pb_pages/admin/+middleware.js
+```ts
+// pb_pages/admin/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   ctx.data.section = 'admin'
@@ -19443,8 +19568,8 @@ module.exports = (ctx, next) => {
 - Share data through `ctx.data`.
 - Middleware can be `async`. `await next()` returns once the rest of the request has run, and throws what it threw.
 
-```js
-// pb_pages/+middleware.js
+```ts
+// pb_pages/+middleware.ts
 module.exports = async (ctx, next) => {
   ctx.data.unread = await ctx.app.countRecords.async('notifications', $dbx.hashExp({ read: false }))
   const started = Date.now()
@@ -19455,22 +19580,22 @@ module.exports = async (ctx, next) => {
 
 ## Order
 
-Every `+middleware.js` from `pb_pages/` down to the route's folder runs, root first. Groups count too.
+Every `+middleware.ts` from `pb_pages/` down to the route's folder runs, root first. Groups count too.
 
 ```
 pb_pages/
-  +middleware.js         # runs first (all routes)
+  +middleware.ts         # runs first (all routes)
   products/
-    +middleware.js       # runs second (/products/...)
+    +middleware.ts       # runs second (/products/...)
     [id]/
-      +middleware.js     # runs third (/products/[id])
+      +middleware.ts     # runs third (/products/[id])
 ```
 
 The full order for a request is:
 
 1. Plugins' `onRequest`
 2. Middleware, root first
-3. The folder's `+page.js` or `+api.js` (`load`, then the method's handler)
+3. The folder's `+page.ts` or `+api.ts` (`load`, then the method's handler)
 4. The template, then layouts, innermost first
 5. The response
 
@@ -19480,7 +19605,7 @@ If any step sends a response, the later steps are skipped.
 
 ### Auth guard
 
-```js
+```ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()
@@ -19489,8 +19614,8 @@ module.exports = (ctx, next) => {
 
 ### Request validation
 
-```js
-// pb_pages/products/[id]/+middleware.js
+```ts
+// pb_pages/products/[id]/+middleware.ts
 module.exports = (ctx, next) => {
   if (!/^[a-z0-9]+$/.test(ctx.params.id)) throw ctx.httpError(400, 'Invalid ID')
   return next()
@@ -19499,15 +19624,15 @@ module.exports = (ctx, next) => {
 
 ### Shared data
 
-```js
-// pb_pages/+middleware.js
+```ts
+// pb_pages/+middleware.ts
 module.exports = (ctx, next) => {
   ctx.data.categories = ctx.app.findRecordsByFilter('categories', 'active = true', 'name', 100)
   return next()
 }
 ```
 
-```ejs
+```ets
 <nav>
   <% for (const c of data.categories) { %>
     <a href="/categories/<%= c.id %>"><%= c.getString('name') %></a>
@@ -19517,7 +19642,7 @@ module.exports = (ctx, next) => {
 
 ### Headers
 
-```js
+```ts
 module.exports = (ctx, next) => {
   ctx.res.header('X-Frame-Options', 'DENY')
   return next()
@@ -19551,7 +19676,7 @@ pb_pages/
 
 Use `asset()` (the same as `ctx.asset()`):
 
-```ejs
+```ets
 <link rel="stylesheet" href="<%= asset('/assets/app.css') %>">
 <img src="<%= asset('header.jpg') %>">
 ```
@@ -19584,7 +19709,7 @@ Source: https://pocketone.dev/docs/extensions/pages/static-content
 
 # Serving Static Content in PocketPages
 
-Any file in `pb_pages` that isn't a page (`.ejs`, `.md`, `.jsx`, `.tsx`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
+Any file in `pb_pages` that isn't a page (`.ets`, `.md` or `.tsx`, or the [JavaScript versions](https://pocketone.dev/docs/extensions/pages/file-types#javascript-works-too) `.ejs` and `.jsx`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
 
 ```
 pb_pages/
@@ -19596,7 +19721,7 @@ pb_pages/
   (marketing)/
     brochure.pdf       -> /brochure.pdf
   favicon.ico          -> /favicon.ico
-  index.ejs            -> /  (a page, not static)
+  index.ets            -> /  (a page, not static)
 ```
 
 - The content type comes from the extension.
@@ -19618,8 +19743,8 @@ Source: https://pocketone.dev/docs/extensions/pages/secrets
 
 Keep API keys, passwords and other secrets in environment variables, and read them with `ctx.env(name)`. It returns `''` when the variable is unset.
 
-```js
-// pb_pages/checkout/+page.js
+```ts
+// pb_pages/checkout/+page.ts
 module.exports = {
   post(ctx) {
     const key = ctx.env('STRIPE_SECRET_KEY')
@@ -19635,7 +19760,7 @@ module.exports = {
 
 1. **Never put secrets in the page.** Anything a template outputs goes to the browser.
 
-   ```ejs
+   ```ets
    <!-- DON'T -->
    <meta name="api-key" content="<%= ctx.env('API_KEY') %>">
 
@@ -19665,12 +19790,12 @@ ENV STRIPE_SECRET_KEY=sk_test_...
 
 Source: https://pocketone.dev/docs/extensions/pages/config
 
-# Configuration with `+config.js`
+# Configuration with `+config.ts`
 
-Create `pb_pages/+config.js` to configure PocketPages for the app. It's only allowed at the top of `pb_pages`; a `+config.js` in a subfolder is an error at startup.
+Create `pb_pages/+config.ts` to configure PocketPages for the app. It's only allowed at the top of `pb_pages`; a `+config.ts` in a subfolder is an error at startup.
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth', 'realtime', 'datastar'],
   debug: false,
@@ -19681,12 +19806,12 @@ module.exports = {
 
 | Key | Default | |
 |---|---|---|
-| `plugins` | `[]` | Built-in plugins by name, or JS plugin factories. EJS and Markdown are always on. |
+| `plugins` | `[]` | Built-in plugins by name, or custom plugin factories. ETS templates and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
-`+config.js` must export an object; exporting a function (0.x's `(api) => ({...})` form) is an error.
+`+config.ts` must export an object; exporting a function (0.x's `(api) => ({...})` form) is an error.
 
-`+config.js` runs on each page request, so these aren't caught at startup: unknown keys, names that are neither a
+`+config.ts` runs on each page request, so these aren't caught at startup: unknown keys, names that are neither a
 module nor a built-in, or a plugin listed twice make every page answer with an error (a 500; dev mode shows the
 reason on the page), and the reason goes to the log.
 
@@ -19697,16 +19822,16 @@ Each entry in `plugins` is one of:
 - **A name**, loaded with `require`: a `_private/` file (`'datastar'` for the [Datastar add-on](https://pocketone.dev/docs/extensions/pages/plugins/datastar)),
   then a package in `node_modules`, then a built-in (`'auth'` or `'realtime'`). It must export a plugin factory. See
   [Plugins](https://pocketone.dev/docs/extensions/pages/plugins).
-- **A JS plugin factory**: a function that returns hooks, such as `require('./_private/my-plugin.js')`. A `require`
+- **A custom plugin factory**: a function that returns hooks, such as `require('./_private/my-plugin.ts')`. A `require`
   with a path loads exactly that file, skipping the name lookup, so it's how you choose one copy over another.
 - **An object with a factory and options**: `{ factory, ...options }`. The object is passed to the factory as its `config`.
 
-```js
+```ts
 module.exports = {
   plugins: [
     'auth',
     'realtime',
-    { factory: require('./_private/banner.js'), text: 'Hello' },
+    { factory: require('./_private/banner.ts'), text: 'Hello' },
   ],
 }
 ```
@@ -19728,7 +19853,7 @@ Source: https://pocketone.dev/docs/extensions/pages/caching
 
 `asset()` adds a content hash to a file's URL:
 
-```ejs
+```ets
 <img src="<%= asset('/images/logo.png') %>">
 <!-- <img src="/images/logo.3f9a1c2b7d4e.png"> -->
 ```
@@ -19754,7 +19879,7 @@ The route table is built at startup and rebuilt whenever anything in `pb_pages` 
 
 Rendered pages aren't cached. To let browsers or a CDN cache a page, set a header in a handler or middleware:
 
-```js
+```ts
 module.exports = (ctx, next) => {
   ctx.res.header('Cache-Control', 'public, max-age=60')
   return next()
@@ -19772,7 +19897,7 @@ Source: https://pocketone.dev/docs/extensions/pages/errors
 
 Anything thrown in middleware, a handler or a template becomes a `500`.
 
-- **Dev mode or `debug: true`:** an HTML error page with the message, the file and line (template lines map to the `.ejs` or `.md` source), and the stack trimmed to `pb_pages`-relative paths.
+- **Dev mode or `debug: true`:** an HTML error page with the message, the file and line (template lines map to the `.ets` or `.md` source), and the stack trimmed to `pb_pages`-relative paths.
 - **Otherwise:** a plain "Something went wrong" page.
 
 The full error always goes to the app's log.
@@ -19781,8 +19906,8 @@ The full error always goes to the app's log.
 
 Throw `ctx.httpError()` to answer with a specific status:
 
-```js
-// pb_pages/products/[id]/+page.js
+```ts
+// pb_pages/products/[id]/+page.ts
 module.exports = {
   load(ctx) {
     let product
@@ -19797,27 +19922,27 @@ module.exports = {
 ```
 
 - In a page, it sends that status with a plain page showing `message`.
-- In a `+api.js`, it sends JSON: `{ "status": 404, "message": "No such product" }`.
+- In a `+api.ts`, it sends JSON: `{ "status": 404, "message": "No such product" }`.
 
 ## A custom error page
 
-Create `pb_pages/+error.ejs`. It renders for every `ctx.httpError` and for every `500` outside dev mode, inside the root layout, with `ctx.error = { status, message }`:
+Create `pb_pages/+error.ets`. It renders for every `ctx.httpError` and for every `500` outside dev mode, inside the root layout, with `ctx.error = { status, message }`:
 
-```ejs
-<!-- pb_pages/+error.ejs -->
+```ets
+<!-- pb_pages/+error.ets -->
 <% slot('title', () => { %>Error <%= ctx.error.status %><% }) %>
 <h1><%= ctx.error.status %></h1>
 <p><%= ctx.error.message %></p>
 ```
 
-`+error` and `+404` live only at the top of `pb_pages`. Either may be `.ejs`, `.jsx` or `.tsx`.
+`+error` and `+404` live only at the top of `pb_pages`. Either may be `.ets` or `.tsx`.
 
 ## A custom 404 page
 
-Create `pb_pages/+404.ejs`. It renders inside the root layout, with status `404`, for a `GET` or `HEAD` that nothing answers: no page, no file in `pb_public` and no PocketBase route. It never renders for `/api/` or `/_/`. The root `+middleware.js` runs first, and page code can still change the status.
+Create `pb_pages/+404.ets`. It renders inside the root layout, with status `404`, for a `GET` or `HEAD` that nothing answers: no page, no file in `pb_public` and no PocketBase route. It never renders for `/api/` or `/_/`. The root `+middleware.ts` runs first, and page code can still change the status.
 
-```ejs
-<!-- pb_pages/+404.ejs -->
+```ets
+<!-- pb_pages/+404.ets -->
 <% slot('title', () => { %>Not found<% }) %>
 <h1>Not found</h1>
 <p>Nothing lives at <%= ctx.req.url.pathname %>.</p>
@@ -19845,9 +19970,9 @@ Dev mode turns on:
 
 ## `debug: true`
 
-To get the same in production, set `debug: true` in `+config.js`:
+To get the same in production, set `debug: true` in `+config.ts`:
 
-```js
+```ts
 module.exports = {
   debug: true,
 }
@@ -19859,7 +19984,7 @@ Turn it off again when you're done. Detailed error pages show error messages, fi
 
 `ctx.log` writes to the app's log:
 
-```js
+```ts
 ctx.log.debug('loaded product', ctx.params.id)  // only in dev mode or with debug: true
 ctx.log.info('order placed')
 ctx.log.warn('stock is low')
@@ -19897,7 +20022,7 @@ Copy the changed files into `pb_pages`. The route table is rebuilt on any change
 
 ## Before you go live
 
-- Run without `--dev`, and keep `debug: false` in `+config.js`.
+- Run without `--dev`, and keep `debug: false` in `+config.ts`.
 - Set secrets as environment variables (see [Managing Secrets](https://pocketone.dev/docs/extensions/pages/secrets)).
 - Serve over HTTPS. Cookies set with `ctx.res.cookie` are marked `Secure` on HTTPS requests.
 
@@ -19912,10 +20037,10 @@ Source: https://pocketone.dev/docs/extensions/pages/plugins
 
 # Plugins
 
-Plugins add features to `ctx` and hook into each request. Turn them on in `+config.js`:
+Plugins add features to `ctx` and hook into each request. Turn them on in `+config.ts`:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth', 'realtime', 'datastar'],
 }
@@ -19928,14 +20053,14 @@ Each entry is one of:
   2. `pb_pages/node_modules`, for a package from your `package.json`
   3. the built-in plugins, `'auth'` and `'realtime'`
 
-  A path such as `'./plugins/my-plugin.js'` works too.
-- **A plugin factory**, usually `require('./_private/my-plugin.js')`. Writing the `require` yourself with a path skips
+  A path such as `'./plugins/my-plugin.ts'` works too.
+- **A plugin factory**, usually `require('./_private/my-plugin.ts')`. Writing the `require` yourself with a path skips
   the lookup above and loads exactly that file, which is how you pick one copy over another: `'datastar'` would find
   `_private/datastar.js` first, while `require('./node_modules/datastar')` always loads the package.
 
 Datastar isn't built in. It's an add-on file you copy into `pb_pages/_private/` and list by name.
 
-EJS and Markdown are always on; they aren't plugins.
+ETS templates and Markdown are always on; they aren't plugins.
 
 ## Built-in plugins
 
@@ -19944,14 +20069,14 @@ EJS and Markdown are always on; they aren't plugins.
 | [`auth`](https://pocketone.dev/docs/extensions/pages/plugins/auth) | Cookie sessions on PocketBase auth: sets `ctx.auth` from the `pb_auth` cookie and adds `ctx.session.*` sign-in methods. |
 | [`realtime`](https://pocketone.dev/docs/extensions/pages/plugins/realtime) | `ctx.realtime.send()` to PocketBase realtime subscribers. |
 
-## JS plugins
+## Custom plugins
 
-A JS plugin is a module that exports a factory returning hooks. List it by name, or `require()` it yourself, which you
+A custom plugin is a module that exports a factory returning hooks. List it by name, or `require()` it yourself, which you
 need for options (`{ factory, ...options }`):
 
-```js
+```ts
 module.exports = {
-  plugins: ['auth', 'my-plugin', { factory: require('./_private/other-plugin.js'), color: 'blue' }],
+  plugins: ['auth', 'my-plugin', { factory: require('./_private/other-plugin.ts'), color: 'blue' }],
 }
 ```
 
@@ -19974,8 +20099,8 @@ Source: https://pocketone.dev/docs/extensions/pages/plugins/auth
 
 The `auth` plugin gives you cookie sessions on PocketBase auth. It calls the app directly, not over HTTP.
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth'],
 }
@@ -20028,8 +20153,8 @@ A bad or expired token throws an error.
 
 ## Example
 
-```js
-// pb_pages/login/+page.js
+```ts
+// pb_pages/login/+page.ts
 module.exports = {
   post(ctx) {
     const { email, password } = ctx.req.body()
@@ -20043,8 +20168,8 @@ module.exports = {
 }
 ```
 
-```js
-// pb_pages/logout/+page.js
+```ts
+// pb_pages/logout/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signOut()
@@ -20062,12 +20187,12 @@ Source: https://pocketone.dev/docs/extensions/pages/plugins/datastar
 
 # Datastar Add-on
 
-The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a JS plugin that ships with PocketPages
+The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a custom plugin that ships with PocketPages
 rather than a built-in: copy [`addons/datastar.js`](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/datastar.js)
-into `pb_pages/_private/` (the `datastar` starter kit already has it) and list it in `+config.js` by name:
+into `pb_pages/_private/` (the `datastar` starter kit already has it) and list it in `+config.ts` by name:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['datastar'],
 }
@@ -20078,7 +20203,7 @@ a colon between the attribute name and its key (`data-on:click`, `data-bind:name
 `data-class:active`, `data-attr:href`); the older hyphen form (`data-on-click`) is ignored. See the
 [Datastar attribute reference](https://data-star.dev/reference/attributes).
 
-```ejs
+```ets
 <head>
   <%- ctx.datastar.scripts() %>
 </head>
@@ -20109,7 +20234,7 @@ When a request has the `Datastar-Request: true` header, the rendered page is sen
 
 This is how this site navigates between docs pages: the layout calls
 
-```ejs
+```ets
 <%- ctx.datastar.scripts({ spa: { scope: '#toc', selector: '#content' } }) %>
 ```
 
@@ -20120,15 +20245,15 @@ return you to where you were scrolled.
 
 ## Example: a counter
 
-```ejs
-<!-- pb_pages/counter/index.ejs -->
+```ets
+<!-- pb_pages/counter/index.ets -->
 <button data-on:click="@post('/counter')">
   Count: <span id="count"><%= ctx.store('count') || 0 %></span>
 </button>
 ```
 
-```js
-// pb_pages/counter/+page.js
+```ts
+// pb_pages/counter/+page.ts
 module.exports = {
   post(ctx) {
     const count = (ctx.store('count') || 0) + 1
@@ -20140,7 +20265,7 @@ module.exports = {
 
 ## Example: reading signals
 
-```js
+```ts
 module.exports = {
   post(ctx) {
     const { name, email } = ctx.datastar.signals()
@@ -20157,12 +20282,12 @@ module.exports = {
 
 With the `realtime` plugin on, `ctx.datastar.realtime.*` sends patches to every realtime subscriber instead of the current response:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = { plugins: ['realtime', 'datastar'] }
 ```
 
-```js
+```ts
 ctx.datastar.realtime.patchElements(`<span id="count">${count}</span>`)
 ```
 
@@ -20175,8 +20300,8 @@ Source: https://pocketone.dev/docs/extensions/pages/plugins/realtime
 
 The `realtime` plugin sends messages to [PocketBase realtime](https://pocketbase.io/docs/realtime/) subscribers.
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['realtime'],
 }
@@ -20186,8 +20311,8 @@ module.exports = {
 
 Sends `data` to the subscribers of `topic`. `filter(client)` may limit the recipients.
 
-```js
-// pb_pages/ping/+api.js
+```ts
+// pb_pages/ping/+api.ts
 module.exports = {
   post(ctx) {
     ctx.realtime.send('ping', { at: new Date().toISOString() })
@@ -20208,7 +20333,7 @@ On the client, subscribe with the PocketBase JS SDK:
 
 ## Filtering recipients
 
-```js
+```ts
 ctx.realtime.send('alerts', 'Maintenance at 10:00', {
   filter: (client) => !!client.get('auth'),
 })
@@ -20218,15 +20343,15 @@ ctx.realtime.send('alerts', 'Maintenance at 10:00', {
 
 For hypermedia libraries (HTMX, Datastar), send rendered HTML. `include()` is available in templates, so render the partial there:
 
-```js
-// pb_pages/xapi/chat/+page.js
+```ts
+// pb_pages/xapi/chat/+page.ts
 module.exports = {
   post() {}, // accept POST; the page renders and sends
 }
 ```
 
-```ejs
-<!-- pb_pages/xapi/chat/index.ejs -->
+```ets
+<!-- pb_pages/xapi/chat/index.ets -->
 <% ctx.realtime.send('chat', include('chat-msg', { message: ctx.req.body().message })) %>
 ```
 
@@ -20239,10 +20364,10 @@ Source: https://pocketone.dev/docs/extensions/pages/plugins/authoring
 
 # Plugin Authoring Guide
 
-A JS plugin is a factory that returns hooks:
+A custom plugin is a factory that returns hooks:
 
-```js
-// pb_pages/_private/my-plugin.js
+```ts
+// pb_pages/_private/my-plugin.ts
 module.exports = (config) => ({
   name: 'my-plugin',
   onRequest(ctx) {},                                   // before middleware
@@ -20251,26 +20376,26 @@ module.exports = (config) => ({
 })
 ```
 
-Turn it on in `+config.js`:
+Turn it on in `+config.ts`:
 
-```js
+```ts
 module.exports = {
-  plugins: ['my-plugin'], // pb_pages/_private/my-plugin.js
+  plugins: ['my-plugin'], // pb_pages/_private/my-plugin.ts
 }
 ```
 
 ## `config`
 
-`config` is the plugin's entry in `+config.js` when that entry is an object (`{ factory, ...options }`), else `{}`:
+`config` is the plugin's entry in `+config.ts` when that entry is an object (`{ factory, ...options }`), else `{}`:
 
-```js
+```ts
 module.exports = {
-  plugins: [{ factory: require('./_private/banner.js'), text: 'Beta' }],
+  plugins: [{ factory: require('./_private/banner.ts'), text: 'Beta' }],
 }
 ```
 
-```js
-// pb_pages/_private/banner.js
+```ts
+// pb_pages/_private/banner.ts
 module.exports = (config) => ({
   name: 'banner',
   transform({ html }) {
@@ -20281,7 +20406,7 @@ module.exports = (config) => ({
 
 ## Hooks
 
-Every hook is optional. Hooks run in the order plugins are listed in `+config.js`.
+Every hook is optional. Hooks run in the order plugins are listed in `+config.ts`.
 
 | Hook | When |
 |---|---|
@@ -20292,7 +20417,7 @@ Every hook is optional. Hooks run in the order plugins are listed in `+config.js
 
 ## Example: a context helper
 
-```js
+```ts
 module.exports = () => ({
   name: 'format',
   extendContext(ctx) {
@@ -20301,13 +20426,13 @@ module.exports = () => ({
 })
 ```
 
-```ejs
+```ets
 <p>Posted <%= ctx.formatDate(data.post.getString('created')) %></p>
 ```
 
 ## Permissions
 
-JS plugins run with the same permissions as the rest of the app's JS. Under a multitenant host, that means the instance's sandbox.
+Custom plugins run with the same permissions as the rest of the app's code. Under a multitenant host, that means the instance's sandbox.
 
 
 ---
@@ -20318,15 +20443,15 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx
 
 PocketPages creates one `ctx` object per request and passes it to middleware, handlers, templates and plugins.
 
-```js
-// +middleware.js
+```ts
+// +middleware.ts
 module.exports = (ctx, next) => next()
 
-// +page.js / +api.js
+// +page.ts / +api.ts
 module.exports = { load(ctx) {} }
 ```
 
-```ejs
+```ets
 <!-- any template -->
 <p><%= ctx.req.url.pathname %></p>
 ```
@@ -20356,7 +20481,7 @@ In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`,
 | `ctx.pagesDir` | Absolute path of the app's `pb_pages` folder (read-only), e.g. for `$os.readDir` |
 | `ctx.dev` | `true` in dev mode |
 | [`ctx.httpError(status, message)`](https://pocketone.dev/docs/extensions/pages/errors) | An error to throw for a specific status |
-| [`ctx.error`](https://pocketone.dev/docs/extensions/pages/errors) | `{ status, message }`, in `+error.ejs` |
+| [`ctx.error`](https://pocketone.dev/docs/extensions/pages/errors) | `{ status, message }`, in `+error.ets` |
 
 ## Added by plugins
 
@@ -20366,7 +20491,7 @@ In templates, `data`, `params`, `asset` and `meta` are shortcuts for `ctx.data`,
 | `ctx.realtime` | [realtime](https://pocketone.dev/docs/extensions/pages/plugins/realtime) |
 | `ctx.datastar` | [datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar) |
 
-JS plugins can add their own members with [`extendContext`](https://pocketone.dev/docs/extensions/pages/plugins/authoring).
+Custom plugins can add their own members with [`extendContext`](https://pocketone.dev/docs/extensions/pages/plugins/authoring).
 
 
 ---
@@ -20395,7 +20520,7 @@ Query values and cookies are strings unless you ask for JSON. Nothing is parsed 
 
 ## Examples
 
-```ejs
+```ets
 <p>You asked for <%= ctx.req.url.pathname %><%= ctx.req.url.search %></p>
 <p>Page <%= Number(ctx.req.query('page') ?? 1) %></p>
 <p>Browser: <%= ctx.req.header('User-Agent') %></p>
@@ -20405,8 +20530,8 @@ Query values and cookies are strings unless you ask for JSON. Nothing is parsed 
 
 `body()` parses JSON, `application/x-www-form-urlencoded` and `multipart/form-data`:
 
-```js
-// pb_pages/contact/+page.js
+```ts
+// pb_pages/contact/+page.ts
 module.exports = {
   post(ctx) {
     const { email, message } = ctx.req.body()
@@ -20424,7 +20549,7 @@ module.exports = {
 </form>
 ```
 
-```js
+```ts
 module.exports = {
   post(ctx) {
     const record = ctx.app.findRecordById('users', ctx.auth.id)
@@ -20437,7 +20562,7 @@ module.exports = {
 
 ### Cookies
 
-```js
+```ts
 const theme = ctx.req.cookie('theme')                     // 'dark' or undefined
 const prefs = ctx.req.cookie('prefs', { json: true }) ?? {}
 ```
@@ -20470,14 +20595,14 @@ Once a response is sent, the later steps of the request (handlers, template, lay
 
 ## Status and headers
 
-```ejs
+```ets
 <% ctx.res.status(404).header('Cache-Control', 'no-store') %>
 <h1>Not here</h1>
 ```
 
 ## Redirects
 
-```js
+```ts
 return ctx.res.redirect('/login')
 return ctx.res.redirect('/account', { flash: 'Saved' })
 return ctx.res.redirect('/new-home', 301) // or { status: 301 }
@@ -20485,7 +20610,7 @@ return ctx.res.redirect('/new-home', 301) // or { status: 301 }
 
 ## Cookies
 
-```js
+```ts
 ctx.res.cookie('theme', 'dark', { maxAge: 60 * 60 * 24 * 365 })
 ctx.res.cookie('prefs', { compact: true })   // objects are JSON.stringify'd
 ctx.res.clearCookie('theme')
@@ -20497,7 +20622,7 @@ ctx.res.clearCookie('theme')
 
 ## JSON, HTML, text and files
 
-```js
+```ts
 return ctx.res.json({ ok: true })
 return ctx.res.json(201, { id: record.id })
 return ctx.res.html('<p>Fragment</p>')
@@ -20509,8 +20634,8 @@ return ctx.res.file('downloads/manual.pdf')
 
 `sse()` starts a `text/event-stream` response and returns `{ send(event, data, { id, retry }?), comment(text), close() }`:
 
-```js
-// pb_pages/clock/+api.js
+```ts
+// pb_pages/clock/+api.ts
 module.exports = {
   get(ctx) {
     const stream = ctx.res.sse()
@@ -20533,16 +20658,16 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/data
 
 A plain object shared by middleware, handlers and templates. It starts as `{}`. In templates it's also available as `data`.
 
-```js
-// +middleware.js
+```ts
+// +middleware.ts
 module.exports = (ctx, next) => {
   ctx.data.user = ctx.auth
   return next()
 }
 ```
 
-```js
-// +page.js
+```ts
+// +page.ts
 module.exports = {
   load(ctx) {
     return { products: ctx.app.findAllRecords('products') }  // Object.assign'd into ctx.data
@@ -20550,7 +20675,7 @@ module.exports = {
 }
 ```
 
-```ejs
+```ets
 <% for (const p of data.products) { %>
   <li><%= p.getString('name') %></li>
 <% } %>
@@ -20562,8 +20687,8 @@ A handler's returned object is shallow-assigned into `ctx.data`. There is no dee
 
 Route parameters from `[name]` segments, as strings. Never includes query parameters (use [`ctx.req.query()`](https://pocketone.dev/docs/extensions/pages/ctx/req)). In templates it's also available as `params`.
 
-```ejs
-<!-- pb_pages/[org]/[repo]/index.ejs, at /acme/web -->
+```ets
+<!-- pb_pages/[org]/[repo]/index.ets, at /acme/web -->
 <p><%= params.org %>/<%= params.repo %></p>  <!-- acme/web -->
 ```
 
@@ -20573,10 +20698,10 @@ Route parameters from `[name]` segments, as strings. Never includes query parame
 
 | Page file | `path` | `name` |
 |---|---|---|
-| `products/[id].ejs` | `/products/[id]` | `[id]` |
+| `products/[id].ets` | `/products/[id]` | `[id]` |
 | `docs/index.md` | `/docs` | `index` |
 
-A `+page.js` applies to every page in its folder; use `ctx.route.name` to tell them apart.
+A `+page.ts` applies to every page in its folder; use `ctx.route.name` to tell them apart.
 
 
 ---
@@ -20589,13 +20714,13 @@ A flash is a one-time message that survives one redirect, such as "Saved" after 
 
 ## Setting a flash
 
-```js
+```ts
 return ctx.res.redirect('/account', { flash: 'Saved' })
 ```
 
 The message is stored as JSON in a cookie (`pp_flash`, `HttpOnly`, `Max-Age=300`). It can be any JSON value:
 
-```js
+```ts
 return ctx.res.redirect('/cart', { flash: { type: 'success', text: 'Added to cart' } })
 ```
 
@@ -20603,7 +20728,7 @@ return ctx.res.redirect('/cart', { flash: { type: 'success', text: 'Added to car
 
 On the next request, `ctx.flash()` returns the message and clears the cookie. It returns `undefined` when there is none. Calling it again in the same request returns the same value.
 
-```ejs
+```ets
 <% const flash = ctx.flash() %>
 <% if (flash) { %>
   <div class="alert alert-<%= flash.type %>"><%= flash.text %></div>
@@ -20624,7 +20749,7 @@ The authenticated record, or `null`. It's set by:
 - PocketBase's own auth, when the request has an `Authorization` header;
 - the [`auth` plugin](../plugins/auth.md), from its `pb_auth` cookie.
 
-```ejs
+```ets
 <% if (ctx.auth) { %>
   <p>Welcome, <%= ctx.auth.email() %></p>
   <% if (!ctx.auth.verified()) { %><p>Please verify your email.</p><% } %>
@@ -20637,8 +20762,8 @@ The authenticated record, or `null`. It's set by:
 
 ## Protecting pages
 
-```js
-// pb_pages/account/+middleware.js
+```ts
+// pb_pages/account/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()
@@ -20654,7 +20779,7 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/app
 
 The app (`$app`): records, collections, settings. Page code calls it directly, with no HTTP round trip.
 
-```js
+```ts
 module.exports = {
   load(ctx) {
     return {
@@ -20679,8 +20804,8 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/pb
 `ctx.pb()` returns a [PocketBase JS SDK](https://github.com/pocketbase/js-sdk) client, the same API you use in the
 browser:
 
-```js
-// pb_pages/posts/+page.js
+```ts
+// pb_pages/posts/+page.ts
 module.exports = {
   load(ctx) {
     const page = ctx.pb().collection('posts').getList(1, 20, {
@@ -20701,7 +20826,7 @@ module.exports = {
   it works the same on any server.
 - **Errors** throw the SDK's `ClientResponseError`:
 
-  ```js
+  ```ts
   try {
     const post = ctx.pb().collection('posts').getOne(ctx.params.id)
   } catch (e) {
@@ -20731,7 +20856,7 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/env
 
 Returns an environment variable, or `''` if it's unset.
 
-```js
+```ts
 const key = ctx.env('STRIPE_SECRET_KEY')
 ```
 
@@ -20748,14 +20873,14 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/log
 
 Writes to the app's log.
 
-```js
+```ts
 ctx.log.debug('cart', ctx.data.cart)
 ctx.log.info('order placed')
 ctx.log.warn('stock is low')
 ctx.log.error('payment failed')
 ```
 
-`debug` only shows in dev mode (`--dev`) or with `debug: true` in `+config.js`. See [Debugging](https://pocketone.dev/docs/extensions/pages/debugging).
+`debug` only shows in dev mode (`--dev`) or with `debug: true` in `+config.ts`. See [Debugging](https://pocketone.dev/docs/extensions/pages/debugging).
 
 
 ---
@@ -20766,14 +20891,14 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/meta
 
 A per-request key/value store for page metadata (title, description). Set with two arguments, read with one. In templates it's also available as `meta`.
 
-```ejs
+```ets
 <!-- a page -->
 <% meta('title', data.product.getString('name')) %>
 <% meta('description', data.product.getString('summary')) %>
 ```
 
-```ejs
-<!-- +layout.ejs -->
+```ets
+<!-- +layout.ets -->
 <title><%= meta('title') || 'My shop' %></title>
 <meta name="description" content="<%= meta('description') %>">
 ```
@@ -20800,7 +20925,7 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/asset
 
 Returns the URL for a static file in `pb_pages`, with its content hash. In templates it's also available as `asset`.
 
-```ejs
+```ets
 <link rel="stylesheet" href="<%= asset('/assets/app.css') %>">
 <!-- <link rel="stylesheet" href="/assets/app.3f9a1c2b7d4e.css"> -->
 ```
@@ -20823,12 +20948,12 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/resolve
 
 Loads a module from a `_private/` folder. The lookup starts at the **route's** folder (the page being served), wherever `ctx.resolve` is called from, so a layout or partial gets the same answer as the page: `_private/` in the route's folder, then each parent folder up to `pb_pages/`. A name starting with `/` looks only in `pb_pages/_private/`. Without an extension, the name, then `.js`, `.ts` and `.json` are tried.
 
-```js
-// pb_pages/_private/shout.js
+```ts
+// pb_pages/_private/shout.ts
 module.exports = (s) => String(s).toUpperCase()
 ```
 
-```ejs
+```ets
 <p><%= ctx.resolve('shout')('hi') %></p>  <!-- HI -->
 ```
 
@@ -20841,7 +20966,7 @@ module.exports = (s) => String(s).toUpperCase()
 | `script` | The text wrapped in `<script>` |
 | `style` | The text wrapped in `<style>` |
 
-```ejs
+```ets
 <head>
   <%- ctx.resolve('theme.css', { mode: 'style' }) %>
   <%- ctx.resolve('widgets.js', { mode: 'script' }) %>
@@ -20861,11 +20986,11 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx/store
 
 The app's in-memory store (`$app.store()`). Set with two arguments, read with one.
 
-```js
+```ts
 ctx.store('visits', (ctx.store('visits') || 0) + 1)
 ```
 
-```ejs
+```ets
 <p>Visits since start: <%= ctx.store('visits') %></p>
 ```
 
@@ -20887,7 +21012,7 @@ Each request runs as one unit under the app's usual JS limits (execution time, m
 
 Use [`ctx.app`](https://pocketone.dev/docs/extensions/pages/ctx/app), which is `$app`. PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/) cover [database operations](https://pocketbase.io/docs/js-database/) and [record operations](https://pocketbase.io/docs/js-records/):
 
-```js
+```ts
 const records = ctx.app.findRecordsByFilter(
   'articles',
   'status = {:status} && author = {:author}',
@@ -20910,7 +21035,7 @@ cd myapp
 npm install some-package
 ```
 
-```js
+```ts
 const somePackage = require('some-package')
 ```
 
@@ -20952,7 +21077,7 @@ Start the app once so `pb_data/types.d.ts` exists, then run `npx tsc -p .` or op
 | `pages.Handlers` | A `+page.ts` or `+api.ts`: `load`, `get`, `post`, `put`, `patch`, `delete` |
 | `pages.Middleware` | A `+middleware.ts`: `(ctx, next) => ...` |
 | `pages.Config` | `+config.ts` |
-| `pages.PluginFactory`, `pages.Plugin` | A JS plugin |
+| `pages.PluginFactory`, `pages.Plugin` | A custom plugin |
 | `pages.Props<L>` | A `.tsx` page, layout or partial; `L` types an `include`'s locals |
 
 `satisfies` keeps your own return types and checks the shape:
@@ -20990,7 +21115,7 @@ A component you import and use as `<Card />` gets only the props you pass it, no
 
 ## Your own data, plugins and helpers
 
-`ctx.data` accepts any key. To type yours, or what a JS plugin adds to `ctx`, add to the interfaces in a `.d.ts` file of your own, say `pb_pages/types.d.ts`:
+`ctx.data` accepts any key. To type yours, or what a custom plugin adds to `ctx`, add to the interfaces in a `.d.ts` file of your own, say `pb_pages/_private/types.d.ts` (in `_private/`, so it isn't served like other files in `pb_pages`):
 
 ```ts
 declare namespace pages {
@@ -21004,7 +21129,7 @@ declare namespace pages {
 }
 ```
 
-`ctx.session` and `ctx.realtime` are typed as always there; at runtime they exist only when the `auth` and `realtime` plugins are on in `+config.js`.
+`ctx.session` and `ctx.realtime` are typed as always there; at runtime they exist only when the `auth` and `realtime` plugins are on in `+config.ts`.
 
 
 ---
@@ -21015,8 +21140,8 @@ Source: https://pocketone.dev/docs/extensions/pages/authentication
 
 PocketPages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth'],
 }
@@ -21032,15 +21157,15 @@ Every `ctx.session` sign-in method sets the cookie, sets `ctx.auth` for the rest
 
 ## Protecting pages
 
-```js
-// pb_pages/account/+middleware.js
+```ts
+// pb_pages/account/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()
 }
 ```
 
-```ejs
+```ets
 <% if (ctx.auth) { %>
   <p>Welcome, <%= ctx.auth.email() %></p>
   <form method="post" action="/logout"><button>Log out</button></form>
@@ -21051,8 +21176,8 @@ module.exports = (ctx, next) => {
 
 ## Passwords
 
-```js
-// pb_pages/login/+page.js
+```ts
+// pb_pages/login/+page.ts
 module.exports = {
   post(ctx) {
     const { email, password } = ctx.req.body()
@@ -21066,8 +21191,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/login/index.ejs -->
+```ets
+<!-- pb_pages/login/index.ets -->
 <form method="post">
   <label>Email</label>
   <input name="email" type="email" value="<%= data.email %>" />
@@ -21080,8 +21205,8 @@ module.exports = {
 
 ### Registration
 
-```js
-// pb_pages/register/+page.js
+```ts
+// pb_pages/register/+page.ts
 module.exports = {
   post(ctx) {
     const { email, password, name } = ctx.req.body()
@@ -21099,8 +21224,8 @@ module.exports = {
 
 A two-step form: request a code, then sign in with it. Turn on OTP for the collection in the dashboard and set up mail (Settings > Mail settings).
 
-```js
-// pb_pages/login/otp/+page.js
+```ts
+// pb_pages/login/otp/+page.ts
 module.exports = {
   post(ctx) {
     const { step, email, otpId, code } = ctx.req.body()
@@ -21117,8 +21242,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/login/otp/index.ejs -->
+```ets
+<!-- pb_pages/login/otp/index.ets -->
 <% if (data.error) { %><mark><%= data.error %></mark><% } %>
 
 <% if (!data.otpId) { %>
@@ -21149,8 +21274,8 @@ Configure the provider in the dashboard (Collections > users > Options > OAuth2)
 </form>
 ```
 
-```js
-// pb_pages/auth/oauth/+page.js
+```ts
+// pb_pages/auth/oauth/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.requestOAuth2(ctx.req.body().provider)
@@ -21160,8 +21285,8 @@ module.exports = {
 
 `requestOAuth2` stores its state in a cookie and redirects to the provider. The provider sends the user back to `/auth/oauth/confirm` (change it with `{ redirectPath }`):
 
-```js
-// pb_pages/auth/oauth/confirm/+page.js
+```ts
+// pb_pages/auth/oauth/confirm/+page.ts
 module.exports = {
   load(ctx) {
     try {
@@ -21174,8 +21299,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/auth/oauth/confirm/index.ejs -->
+```ets
+<!-- pb_pages/auth/oauth/confirm/index.ets -->
 <mark><%= data.error %></mark>
 ```
 
@@ -21183,8 +21308,8 @@ See the [Google OAuth2 speedrun](https://pocketone.dev/docs/extensions/pages/spe
 
 ## Anonymous sign-in
 
-```js
-// pb_pages/try/+page.js
+```ts
+// pb_pages/try/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signInAnonymously()
@@ -21199,8 +21324,8 @@ If you authenticate a record yourself, set the session cookie with `ctx.session.
 
 ## Signing out
 
-```js
-// pb_pages/logout/+page.js
+```ts
+// pb_pages/logout/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signOut()
@@ -21244,20 +21369,20 @@ HTMX requests want HTML fragments, not whole pages wrapped in your layout. Put t
 ```
 pb_pages/
   (site)/             # Pages with layouts
-    +layout.ejs       # Main site layout
-    index.ejs         # /
+    +layout.ets       # Main site layout
+    index.ets         # /
     products/
-      index.ejs       # /products
+      index.ets       # /products
   xapi/               # HTMX endpoints (no layouts)
     products/
-      search.ejs      # /xapi/products/search
+      search.ets      # /xapi/products/search
       create/
-        +page.js
-        index.ejs     # /xapi/products/create
+        +page.ts
+        index.ets     # /xapi/products/create
 ```
 
-1. `(site)` holds full pages. Its `+layout.ejs` wraps them, and the group adds nothing to the URL.
-2. `xapi/` holds fragments. No layout applies to them, because there is no `+layout.ejs` at the root.
+1. `(site)` holds full pages. Its `+layout.ets` wraps them, and the group adds nothing to the URL.
+2. `xapi/` holds fragments. No layout applies to them, because there is no `+layout.ets` at the root.
 
 Don't name the folder `api/`: `/api/` belongs to PocketBase.
 
@@ -21270,25 +21395,25 @@ Render the same fragment on the first page load and in HTMX responses by keeping
 ```
 pb_pages/
   _private/
-    product-card.ejs    # shared partial
+    product-card.ets    # shared partial
   (site)/
     products/
-      index.ejs         # includes the partial
+      index.ets         # includes the partial
   xapi/
     products/
-      more.ejs          # includes the same partial
+      more.ets          # includes the same partial
 ```
 
-```ejs
-<!-- pb_pages/_private/product-card.ejs -->
+```ets
+<!-- pb_pages/_private/product-card.ets -->
 <div class="product-card" id="product-<%= product.id %>">
   <h3><%= product.getString('name') %></h3>
   <p><%= product.getString('description') %></p>
 </div>
 ```
 
-```ejs
-<!-- pb_pages/(site)/products/index.ejs -->
+```ets
+<!-- pb_pages/(site)/products/index.ets -->
 <% const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 20) %>
 <div class="products-container">
   <% for (const product of products) { %>
@@ -21300,8 +21425,8 @@ pb_pages/
 </button>
 ```
 
-```ejs
-<!-- pb_pages/xapi/products/more.ejs -->
+```ets
+<!-- pb_pages/xapi/products/more.ets -->
 <%
   const page = Number(ctx.req.query('page') ?? 1)
   const products = ctx.app.findRecordsByFilter('products', 'active = true', 'name', 20, (page - 1) * 20)
@@ -21314,7 +21439,7 @@ pb_pages/
 ## Search as you type
 
 ```html
-<!-- pb_pages/(site)/index.ejs -->
+<!-- pb_pages/(site)/index.ets -->
 <input
   type="search"
   name="q"
@@ -21326,8 +21451,8 @@ pb_pages/
 <div id="search-results"></div>
 ```
 
-```ejs
-<!-- pb_pages/xapi/products/search.ejs -->
+```ets
+<!-- pb_pages/xapi/products/search.ets -->
 <%
   const products = ctx.app.findRecordsByFilter(
     'products', 'name ~ {:q}', 'name', 20, 0, { q: ctx.req.query('q') ?? '' }
@@ -21341,7 +21466,7 @@ pb_pages/
 ## Forms
 
 ```html
-<!-- pb_pages/(site)/products/new.ejs -->
+<!-- pb_pages/(site)/products/new.ets -->
 <form hx-post="/xapi/products/create" hx-target="#products-list" hx-swap="beforeend">
   <input type="text" name="name" placeholder="Product Name" required />
   <textarea name="description" placeholder="Description" required></textarea>
@@ -21350,8 +21475,8 @@ pb_pages/
 <div id="products-list"></div>
 ```
 
-```js
-// pb_pages/xapi/products/create/+page.js
+```ts
+// pb_pages/xapi/products/create/+page.ts
 module.exports = {
   post(ctx) {
     const { name, description } = ctx.req.body()
@@ -21364,8 +21489,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/xapi/products/create/index.ejs -->
+```ets
+<!-- pb_pages/xapi/products/create/index.ets -->
 <%- include('product-card', { product: data.product }) %>
 ```
 
@@ -21373,8 +21498,8 @@ module.exports = {
 
 Update more than one element with a single response:
 
-```ejs
-<!-- pb_pages/xapi/products/create/index.ejs -->
+```ets
+<!-- pb_pages/xapi/products/create/index.ets -->
 <%- include('product-card', { product: data.product }) %>
 <div id="product-count" hx-swap-oob="true"><%= ctx.app.countRecords('products') %> Products</div>
 ```
@@ -21391,25 +21516,25 @@ Update more than one element with a single response:
 
 With the [`realtime` plugin](plugins/realtime.md), a page can push rendered HTML to every subscriber. A template has `include()`, so render the partial there and send it:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = { plugins: ['realtime'] }
 ```
 
-```js
-// pb_pages/xapi/chat/+page.js
+```ts
+// pb_pages/xapi/chat/+page.ts
 module.exports = {
   post() {}, // accept POST; the page below does the work
 }
 ```
 
-```ejs
-<!-- pb_pages/xapi/chat/index.ejs -->
+```ets
+<!-- pb_pages/xapi/chat/index.ets -->
 <% ctx.realtime.send('chat', include('chat-msg', { message: ctx.req.body().message })) %>
 ```
 
 ```html
-<!-- pb_pages/(site)/index.ejs -->
+<!-- pb_pages/(site)/index.ets -->
 <form hx-post="/xapi/chat" hx-swap="none" hx-on::after-request="if(event.detail.successful) this.reset()">
   <input type="text" name="message" />
   <button type="submit">Send</button>
@@ -21449,13 +21574,13 @@ PocketBase pushes realtime messages to browsers over server-sent events. In Pock
 
 Turn on the [`realtime` plugin](plugins/realtime.md) and call `ctx.realtime.send()`:
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = { plugins: ['realtime'] }
 ```
 
-```js
-// pb_pages/rooms/[id]/+api.js
+```ts
+// pb_pages/rooms/[id]/+api.ts
 module.exports = {
   post(ctx) {
     ctx.realtime.send(`rooms/${ctx.params.id}/delta`, ctx.req.body())
@@ -21466,7 +21591,7 @@ module.exports = {
 
 Limit recipients with a filter:
 
-```js
+```ts
 ctx.realtime.send('alerts', 'Hi', { filter: (client) => !!client.get('auth') })
 ```
 
@@ -21625,7 +21750,7 @@ browser asked for, and HTTPS is detected from `X-Forwarded-Proto`.
 
 By default, the `auth` plugin uses `/auth/oauth/confirm` as the OAuth2 return path. Change it when you start the flow:
 
-```js
+```ts
 ctx.session.requestOAuth2('google', { redirectPath: '/custom/oauth/callback' })
 ```
 
@@ -21635,8 +21760,8 @@ Remember to add the new redirect URL to your Google OAuth2 configuration too.
 
 ### 1. Turn on the auth plugin
 
-```js
-// pb_pages/+config.js
+```ts
+// pb_pages/+config.ts
 module.exports = {
   plugins: ['auth'],
 }
@@ -21653,8 +21778,8 @@ module.exports = {
 
 ### 3. Start the flow
 
-```js
-// pb_pages/auth/oauth/+page.js
+```ts
+// pb_pages/auth/oauth/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.requestOAuth2(ctx.req.body().provider)
@@ -21666,8 +21791,8 @@ module.exports = {
 
 ### 4. Callback
 
-```js
-// pb_pages/auth/oauth/confirm/+page.js
+```ts
+// pb_pages/auth/oauth/confirm/+page.ts
 module.exports = {
   load(ctx) {
     try {
@@ -21680,8 +21805,8 @@ module.exports = {
 }
 ```
 
-```ejs
-<!-- pb_pages/auth/oauth/confirm/index.ejs -->
+```ets
+<!-- pb_pages/auth/oauth/confirm/index.ets -->
 <mark><%= data.error %></mark>
 ```
 
@@ -21714,8 +21839,8 @@ migrate(
 
 ### 6. Protected routes
 
-```js
-// pb_pages/account/+middleware.js
+```ts
+// pb_pages/account/+middleware.ts
 module.exports = (ctx, next) => {
   if (!ctx.auth) return ctx.res.redirect('/login')
   return next()
@@ -21724,7 +21849,7 @@ module.exports = (ctx, next) => {
 
 ### 7. Auth state in the UI
 
-```ejs
+```ets
 <% if (ctx.auth) { %>
   <div>Welcome, <%= ctx.auth.email() %></div>
   <form method="post" action="/logout"><button>Log out</button></form>
@@ -21735,8 +21860,8 @@ module.exports = (ctx, next) => {
 
 ### 8. Logout
 
-```js
-// pb_pages/logout/+page.js
+```ts
+// pb_pages/logout/+page.ts
 module.exports = {
   post(ctx) {
     ctx.session.signOut()

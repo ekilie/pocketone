@@ -17,17 +17,17 @@ Use square brackets in file or folder names to capture a URL segment:
 pb_pages/
   products/
     [productId]/
-      index.ejs
+      index.ets
       reviews/
-        [reviewId].ejs
+        [reviewId].ets
 ```
 
 This handles URLs like `/products/123` and `/products/123/reviews/456`.
 
 Read them through `params` (the same object as `ctx.params`):
 
-```ejs
-<!-- products/[productId]/reviews/[reviewId].ejs -->
+```ets
+<!-- products/[productId]/reviews/[reviewId].ets -->
 <h1>Product: <%%= params.productId %></h1>
 <p>Review: <%%= params.reviewId %></p>
 ```
@@ -42,7 +42,7 @@ Read the query string with `ctx.req.query()`:
 /products/123?sort=latest&tag=red&tag=blue
 ```
 
-```ejs
+```ets
 <p>Sort by: <%%= ctx.req.query('sort') %></p>
 <p>Tags: <%%= ctx.req.query('tag', { all: true }).join(', ') %></p>
 ```
@@ -55,10 +55,10 @@ Read the query string with `ctx.req.query()`:
 
 Values are strings. Nothing is parsed for you; if you pass JSON in a query parameter, parse it yourself:
 
-```js
+```ts
 const filters = JSON.parse(ctx.req.query('filters') ?? '{}')
 ```
 
 ## The route itself
 
-`ctx.route` describes the matched route: `{ path, name, file }`. For `products/[productId]/index.ejs`, `path` is `/products/[productId]`, `name` is `index`, and `file` is `products/[productId]/index.ejs`.
+`ctx.route` describes the matched route: `{ path, name, file }`. For `products/[productId]/index.ets`, `path` is `/products/[productId]`, `name` is `index`, and `file` is `products/[productId]/index.ets`.

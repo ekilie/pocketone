@@ -24,7 +24,7 @@ pocketone serve --dir ./pb_data
 `pocketone` keeps `pb_data` next to its executable unless you pass `--dir`; `pb_pages` and `pb_migrations` are found next
 to `pb_data`.
 
-Each starter kit is an ordinary `pb_pages` folder written against the v1 API, so everything in these docs applies to it.
+Each starter kit is an ordinary `pb_pages` folder written against the v1 API, in TypeScript with [ETS templates](/docs/extensions/pages/ets), so everything in these docs applies to it. The **tsx** kit starts an app in the [component style](/docs/extensions/pages/jsx) instead.
 
 | Starter | What it shows | Live demo |
 | --- | --- | --- |
@@ -35,3 +35,4 @@ Each starter kit is an ordinary `pb_pages` folder written against the v1 API, so
 | **daisyui-docs** | Documentation site template with DaisyUI and navigation | [pocketpages-daisyui-docs.pockethost.io](https://pocketpages-daisyui-docs.pockethost.io) |
 | **htmx** | HTMX integration for dynamic interactions | [pocketpages-htmx.pockethost.io](https://pocketpages-htmx.pockethost.io) |
 | **datastar** | Realtime chat and counter using Datastar | [pocketpages-datastar.pockethost.io](https://pocketpages-datastar.pockethost.io) |
+| **tsx** | The minimal app written as TSX components (layout, page and a partial) | |

@@ -27,7 +27,7 @@ Query values and cookies are strings unless you ask for JSON. Nothing is parsed 
 
 ## Examples
 
-```ejs
+```ets
 <p>You asked for <%%= ctx.req.url.pathname %><%%= ctx.req.url.search %></p>
 <p>Page <%%= Number(ctx.req.query('page') ?? 1) %></p>
 <p>Browser: <%%= ctx.req.header('User-Agent') %></p>
@@ -37,8 +37,8 @@ Query values and cookies are strings unless you ask for JSON. Nothing is parsed 
 
 `body()` parses JSON, `application/x-www-form-urlencoded` and `multipart/form-data`:
 
-```js
-// pb_pages/contact/+page.js
+```ts
+// pb_pages/contact/+page.ts
 module.exports = {
   post(ctx) {
     const { email, message } = ctx.req.body()
@@ -56,7 +56,7 @@ module.exports = {
 </form>
 ```
 
-```js
+```ts
 module.exports = {
   post(ctx) {
     const record = ctx.app.findRecordById('users', ctx.auth.id)
@@ -69,7 +69,7 @@ module.exports = {
 
 ### Cookies
 
-```js
+```ts
 const theme = ctx.req.cookie('theme')                     // 'dark' or undefined
 const prefs = ctx.req.cookie('prefs', { json: true }) ?? {}
 ```
