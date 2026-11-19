@@ -3,8 +3,8 @@ package mcp
 import (
 	"errors"
 	"fmt"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/http"
 	"slices"
 	"strings"
@@ -22,8 +22,8 @@ type Grant struct {
 	// PocketBase token). Empty: each MCP request makes a PocketBase token for Auth, as ext/pages' ctx.pb() does
 	// (an OAuth token bound to /mcp isn't accepted on the REST API).
 	Credential string
-	// Scopes, when not empty, limit the connection like an API token limited to them (ext/tokens): tool calls
-	// run with [tokensv1.WithScopes], so requests the scopes don't allow are refused, and tools/list hides tools
+	// Scopes, when not empty, limit the connection like an API token limited to them (ext/api-tokens): tool calls
+	// run with [apitokensv1.WithScopes], so requests the scopes don't allow are refused, and tools/list hides tools
 	// none of them reaches.
 	Scopes []string
 }
@@ -35,7 +35,7 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 )
 
-// Authenticator signs MCP requests in: [OAuth] (the OAuth server in ext/tokens), or [PocketBaseTokenAuth] when the
+// Authenticator signs MCP requests in: [OAuth] (the OAuth server in ext/api-tokens), or [PocketBaseTokenAuth] when the
 // app has no OAuth server.
 type Authenticator interface {
 	// Authenticate checks the request's credentials for resource (the endpoint's canonical URL, which an OAuth token
@@ -69,7 +69,7 @@ func (a PocketBaseTokenAuth) Authenticate(e *core.RequestEvent, _ string) (*Gran
 	return &Grant{Auth: e.Auth, Credential: e.Request.Header.Get("Authorization")}, nil
 }
 
-// AuthorizationServers implements [Authenticator]: the app itself, where ext/tokens' OAuth server answers.
+// AuthorizationServers implements [Authenticator]: the app itself, where ext/api-tokens' OAuth server answers.
 func (a PocketBaseTokenAuth) AuthorizationServers(e *core.RequestEvent, s *Server) []string {
 	return []string{s.publicOrigin(e)}
 }
@@ -94,11 +94,11 @@ func (s *Server) ProtectedResourceMetadata(e *core.RequestEvent) map[string]any 
 	}
 }
 
-// offeredScopes are the app's ext/tokens scopes a connection can be limited to (infrastructure scopes, which no
+// offeredScopes are the app's ext/api-tokens scopes a connection can be limited to (infrastructure scopes, which no
 // tool reaches, aren't offered).
 func (s *Server) offeredScopes() []string {
 	out := []string{}
-	if tk, ok := tokensv1.Contract.Of(s.app); ok {
+	if tk, ok := apitokensv1.Contract.Of(s.app); ok {
 		for _, sc := range tk.Scopes() {
 			if !sc.Infrastructure() {
 				out = append(out, sc.Name)

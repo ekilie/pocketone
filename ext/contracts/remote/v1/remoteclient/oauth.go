@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-// OAuthClientId is the built-in public client of the OAuth server in ext/tokens.
+// OAuthClientId is the built-in public client of the OAuth server in ext/api-tokens.
 const OAuthClientId = "pocketone-cli"
 
 // BrowserLoginOptions are `login`'s flags for the OAuth flow.

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pockethost/pocketone/ext/api-tokens/apitokenstest"
 	"github.com/pockethost/pocketone/ext/extkit/modetest"
-	"github.com/pockethost/pocketone/ext/tokens/tokenstest"
 )
 
 // A local project links to a running app ("prod", a single app or an instance on a host) through the browser sign-in
@@ -78,7 +78,7 @@ func linkWithBrowser(t *testing.T, dir string, env []string, url string) {
 		linkOut.WriteString(line + "\n")
 		if u := strings.TrimSpace(line); strings.HasPrefix(u, "http") && strings.Contains(u, "/authorize?") {
 			go func() {
-				browserErr <- tokenstest.ApproveOrFail(u, tokenstest.Login{Collection: "_superusers", Email: modetest.SuperuserEmail, Password: modetest.SuperuserPassword})
+				browserErr <- apitokenstest.ApproveOrFail(u, apitokenstest.Login{Collection: "_superusers", Email: modetest.SuperuserEmail, Password: modetest.SuperuserPassword})
 			}()
 		}
 	}

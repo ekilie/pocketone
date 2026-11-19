@@ -13,7 +13,7 @@ import (
 // A routed contract brings its own HTTP API instead of generated operations, served under /api/_c/<id>/. It keeps the
 // rest of a contract: the lookup, defaults and providers: choices, host-providability, and whoami's contract list.
 // Use it when a protocol fixes the API's shape (OAuth) or an existing API moves under a contract as it is (deploy/v1's
-// file API, tokens/v1's token API).
+// file API, api-tokens/v1's token API).
 //
 // The provider serves the API one of three ways, checked in this order:
 //

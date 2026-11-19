@@ -20,6 +20,11 @@ Sections named after a PocketOne release are from before extensions had versions
 
 - `pocker: isolate_config:` is every instance's config in pocketone.yaml's shape, one section per extension: `isolate_config: {tokens: {enabled: false}}` turns tokens off on every instance, and an instance's own `extensions.<name>` overrides it. A section for an extension the instances don't run stops startup.
 
+### Changed
+
+- Instances attach to the multisite host's own scope when `Server.Host` is unset, so contracts a host extension provides for its instances reach them.
+- Caches shared by every instance (ext/cache's disk tier) go in the host's own `pb_cache`, in the data root next to the instances' folders.
+
 ## 0.1.0 (2026-11-17)
 
 ### Upgrading

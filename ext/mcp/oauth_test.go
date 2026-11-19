@@ -19,7 +19,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/tokens"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 )
 
 // The whole Claude connector flow against a real HTTP server: 401 → protected resource metadata → authorization
@@ -29,7 +29,7 @@ type oauthEnv struct {
 	t    *testing.T
 	app  *tests.TestApp
 	url  string
-	tk   *tokens.Tokens
+	tk   *apitokens.Tokens
 	http *http.Client
 }
 
@@ -42,11 +42,11 @@ func newOAuthEnv(t *testing.T) *oauthEnv {
 	t.Cleanup(app.Cleanup)
 	// mcp first: the authenticator is picked on serve, so registration order doesn't matter
 	MustRegister(app, Config{})
-	tk := tokens.MustRegister(app, tokens.Config{}) // its OAuth server comes with it
+	tk := apitokens.MustRegister(app, apitokens.Config{}) // its OAuth server comes with it
 	if err := app.OnBootstrap().Trigger(&core.BootstrapEvent{App: app}, func(*core.BootstrapEvent) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
-	if err := tokens.EnsureSchema(app); err != nil {
+	if err := apitokens.EnsureSchema(app); err != nil {
 		t.Fatal(err)
 	}
 	router, err := apis.NewRouter(app)
@@ -311,7 +311,7 @@ func TestOAuthTokens(t *testing.T) {
 	}
 
 	// an API token without an audience and without scopes (full rights) works the same way
-	unbound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "full"})
+	unbound, _, err := o.tk.Create(su, apitokens.CreateOptions{Name: "full"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestOAuthTokens(t *testing.T) {
 	}
 
 	// a token bound to another resource on this host isn't accepted
-	other, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "other", Audience: o.url + "/other"})
+	other, _, err := o.tk.Create(su, apitokens.CreateOptions{Name: "other", Audience: o.url + "/other"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,8 +329,8 @@ func TestOAuthTokens(t *testing.T) {
 	}
 
 	// a token bound to /mcp but limited to some scope signs in there (its scopes limit the tool calls)
-	o.tk.RegisterScope(tokens.Scope{Name: "notes:read", Description: "x", Paths: []string{"/api/collections/notes/records"}})
-	scoped, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "scoped", Audience: o.url + "/mcp", Scopes: []string{"notes:read"}})
+	o.tk.RegisterScope(apitokens.Scope{Name: "notes:read", Description: "x", Paths: []string{"/api/collections/notes/records"}})
+	scoped, _, err := o.tk.Create(su, apitokens.CreateOptions{Name: "scoped", Audience: o.url + "/mcp", Scopes: []string{"notes:read"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func TestOAuthTokens(t *testing.T) {
 	}
 
 	// a token bound to /mcp works there, and tool calls reach the REST API as its owner
-	bound, _, err := o.tk.Create(su, tokens.CreateOptions{Name: "mcp", Audience: o.url + "/mcp"})
+	bound, _, err := o.tk.Create(su, apitokens.CreateOptions{Name: "mcp", Audience: o.url + "/mcp"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func TestSameResource(t *testing.T) {
 
 func TestOAuthIssuerFromOAuthServer(t *testing.T) {
 	h := newHarness(t, Config{}, func(s *Server) {
-		tokens.MustRegister(s.App(), tokens.Config{OAuth: tokens.OAuthConfig{Issuer: "https://auth.example.com/"}})
+		apitokens.MustRegister(s.App(), apitokens.Config{OAuth: apitokens.OAuthConfig{Issuer: "https://auth.example.com/"}})
 	})
 	r := h.do(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", "", "")
 	if as := r.body["authorization_servers"].([]any); len(as) != 1 || as[0] != "https://auth.example.com" {
@@ -388,7 +388,7 @@ func TestScopedConnection(t *testing.T) {
 	notes := core.NewBaseCollection("notes")
 	notes.Fields.Add(&core.TextField{Name: "title"})
 	notes.ListRule = types.Pointer(`@request.auth.id != ""`)
-	notes.CreateRule = types.Pointer(`@request.auth.id != "" && ` + tokens.ScopeRuleField("notes:write") + ` = "1"`)
+	notes.CreateRule = types.Pointer(`@request.auth.id != "" && ` + apitokens.ScopeRuleField("notes:write") + ` = "1"`)
 	if err := o.app.Save(notes); err != nil {
 		t.Fatal(err)
 	}
@@ -398,9 +398,9 @@ func TestScopedConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	recs := "/api/collections/notes/records"
-	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:read", Description: "Read notes", Paths: []string{recs}, Methods: []string{"GET"}})
-	o.tk.MustRegisterScope(tokens.Scope{Name: "notes:write", Description: "Add notes", Paths: []string{recs}, Methods: []string{"POST"}})
-	o.tk.MustRegisterScope(tokens.Scope{Name: "deploy", Description: "Deploy", Paths: []string{"/api/_c/deploy/v1/"}})
+	o.tk.MustRegisterScope(apitokens.Scope{Name: "notes:read", Description: "Read notes", Paths: []string{recs}, Methods: []string{"GET"}})
+	o.tk.MustRegisterScope(apitokens.Scope{Name: "notes:write", Description: "Add notes", Paths: []string{recs}, Methods: []string{"POST"}})
+	o.tk.MustRegisterScope(apitokens.Scope{Name: "deploy", Description: "Deploy", Paths: []string{"/api/_c/deploy/v1/"}})
 	s := For(o.app)
 	s.MustAddEndpoint(Endpoint{Name: "notes_list", Description: "List notes.", Method: "GET", Path: recs})
 	s.MustAddEndpoint(Endpoint{Name: "notes_add", Description: "Add a note.", Method: "POST", Path: recs,

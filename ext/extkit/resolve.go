@@ -227,6 +227,9 @@ func Finish(app core.App, plan *Plan, choices Choices) ([]string, error) {
 		return nil, err
 	}
 	mountWires(app)
+	if err := bindMigrations(app, plan.On); err != nil { // extension migrations, at bootstrap after the system ones
+		return nil, err
+	}
 	names := make([]string, 0, len(plan.On))
 	for _, e := range plan.On {
 		names = append(names, e.Name())

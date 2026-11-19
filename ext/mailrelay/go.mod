@@ -43,6 +43,7 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
@@ -59,7 +60,7 @@ require (
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -143,7 +144,7 @@ replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
 
 replace github.com/pockethost/pocketone/ext/stats => ../stats
 
-replace github.com/pockethost/pocketone/ext/tokens => ../tokens
+replace github.com/pockethost/pocketone/ext/api-tokens => ../api-tokens
 
 replace github.com/pockethost/pocketone/ext/upgrade => ../upgrade
 
@@ -162,3 +163,5 @@ replace github.com/pockethost/pocketone/ext/cache => ../cache
 replace github.com/pockethost/pocketone/ext/wasm => ../wasm
 
 replace github.com/pockethost/pocketone/ext/agent => ../agent
+
+replace github.com/pockethost/pocketone/ext/uicache => ../uicache

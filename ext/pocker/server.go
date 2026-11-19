@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"path/filepath"
 	"strings"
 
 	"github.com/pockethost/pocketone/ext/multisite"
@@ -204,6 +205,11 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 	host := s.Host
 	if host == nil {
 		host = h.Scope // where the host's extensions provide contracts for its instances (multisite.Host.Scope)
+	}
+	if host != nil {
+		// caches shared by every instance (ext/cache's store) go in the host's own pb_cache, next to the instances'
+		// folders (instance IDs have no underscore, so none is named pb_cache)
+		host.SetCacheRoot(filepath.Join(h.DataRoot, extkit.CacheFolder))
 	}
 	s.Manager = NewManager(h.Scope, ManagerOptions{
 		PBRoot:        s.Config.PBRoot,

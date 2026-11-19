@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"log/slog"
 	"net/http"
@@ -60,7 +60,7 @@ func MustRegister(app core.App, cfg Config) *API {
 }
 
 // Register adds the deploy API to a single app (its own files, auth by API tokens with the deploy scope or a
-// superuser JWT, history in _deploys, logs from the app's _logs) and, on a *pocketbase.PocketBase, the client
+// superuser JWT, history in _deploy_deploys, logs from the app's _logs) and, on a *pocketbase.PocketBase, the client
 // commands deploy, dev, pull, logs and restart. It returns nil API when cfg.DisableServer.
 func Register(app core.App, cfg Config) (*API, error) {
 	if pb, ok := app.(*pocketbase.PocketBase); ok {
@@ -95,7 +95,7 @@ func Register(app core.App, cfg Config) (*API, error) {
 	deployv1.Contract.ProvideDefault(app, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var auth requestAuth
 		if e := extkit.RequestEvent(r); e != nil {
-			auth = requestAuth{record: e.Auth, token: tokensv1.FromRequest(e)}
+			auth = requestAuth{record: e.Auth, token: apitokensv1.FromRequest(e)}
 		}
 		api.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestAuthKey{}, auth)))
 	}))
@@ -112,10 +112,10 @@ func Register(app core.App, cfg Config) (*API, error) {
 		}
 		api.opts.PBRoot = cfg.Dir
 		api.opts.DataRoot = cfg.StoreDir
-		if t, ok := tokensv1.Contract.Of(e.App); ok {
-			t.RegisterScope(tokensv1.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages) and read files",
+		if t, ok := apitokensv1.Contract.Of(e.App); ok {
+			t.RegisterScope(apitokensv1.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages) and read files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
-			t.RegisterScope(tokensv1.Scope{Name: ScopeRead, Description: "Read deployed files",
+			t.RegisterScope(apitokensv1.Scope{Name: ScopeRead, Description: "Read deployed files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
 		}
 		return EnsureSchema(e.App)
@@ -128,12 +128,12 @@ type requestAuthKey struct{}
 
 type requestAuth struct {
 	record *core.Record
-	token  *tokensv1.Grant
+	token  *apitokensv1.Grant
 }
 
 // AppBackend is the default backend on a single app: one instance (the app), superusers only. A superuser JWT
 // (including an impersonate token) has full access; an API token needs the deploy scope (or none), and
-// deploy:read gives read-only access. History goes to the _deploys collection.
+// deploy:read gives read-only access. History goes to the _deploy_deploys collection.
 type AppBackend struct {
 	App core.App
 }
@@ -167,7 +167,7 @@ func (b *AppBackend) Authenticate(r *http.Request, _ Instance) (Auth, error) {
 	return a, nil
 }
 
-// RecordDeploy implements [Backend]: a row in _deploys.
+// RecordDeploy implements [Backend]: a row in _deploy_deploys.
 func (b *AppBackend) RecordDeploy(_ context.Context, rec DeployRecord) (string, error) {
 	col, err := b.App.FindCachedCollectionByNameOrId(DeploysCollection)
 	if err != nil {
@@ -228,11 +228,11 @@ func (h slogHandler) WithAttrs(a []slog.Attr) slog.Handler {
 func (h slogHandler) WithGroup(n string) slog.Handler { return h.app.Logger().Handler().WithGroup(n) }
 
 // ---------------------------------------------------------------------------------------------------------------
-// _deploys
+// _deploy_deploys
 
 // Deploy history on a single app.
 const (
-	DeploysCollection   = "_deploys"
+	DeploysCollection   = "_deploy_deploys"
 	DeploysCollectionId = "pbc_deploys"
 )
 
@@ -258,7 +258,7 @@ func deploysCollection() *core.Collection {
 	return c
 }
 
-// EnsureSchema creates the _deploys collection if it doesn't exist.
+// EnsureSchema creates the _deploy_deploys collection if it doesn't exist.
 func EnsureSchema(app core.App) error {
 	want := deploysCollection()
 	have, err := app.FindCollectionByNameOrId(want.Id)

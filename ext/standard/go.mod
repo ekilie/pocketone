@@ -5,6 +5,7 @@ go 1.27
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000
@@ -25,8 +26,9 @@ require (
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000
+	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -67,7 +69,6 @@ require (
 	github.com/psanford/sqlite3vfs v0.0.0-20260519004904-f9180fa2acc9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/superfly/ltx v0.5.2 // indirect
 	github.com/tetratelabs/wazero v1.12.0 // indirect
@@ -141,7 +142,7 @@ replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
 
 replace github.com/pockethost/pocketone/ext/stats => ../stats
 
-replace github.com/pockethost/pocketone/ext/tokens => ../tokens
+replace github.com/pockethost/pocketone/ext/api-tokens => ../api-tokens
 
 replace github.com/pockethost/pocketone/ext/upgrade => ../upgrade
 
@@ -158,3 +159,5 @@ replace github.com/pockethost/pocketone/ext/cache => ../cache
 replace github.com/pockethost/pocketone/ext/wasm => ../wasm
 
 replace github.com/pockethost/pocketone/ext/agent => ../agent
+
+replace github.com/pockethost/pocketone/ext/uicache => ../uicache

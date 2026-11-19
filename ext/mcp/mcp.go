@@ -13,7 +13,7 @@
 // on [For](app); an app's pb_hooks add them with $mcp.addEndpoint (see [BindJS]). The shape is always the same:
 // write the REST endpoint, then the tool wrapper.
 //
-// Sign-in is an [Authenticator]. With the OAuth server in ext/tokens on the app it's [OAuth]: OAuth 2.1 the way Claude
+// Sign-in is an [Authenticator]. With the OAuth server in ext/api-tokens on the app it's [OAuth]: OAuth 2.1 the way Claude
 // connectors expect, so a user adds https://<host>/mcp to Claude and signs in in a browser. Without them it falls
 // back to [PocketBaseTokenAuth] (pasted PocketBase auth tokens).
 package mcp
@@ -65,7 +65,7 @@ type Config struct {
 	// (default: derived from the request).
 	PublicURL string
 
-	// Auth signs requests in. Default: [OAuth] when ext/tokens (with its OAuth server) is registered on the app (decided
+	// Auth signs requests in. Default: [OAuth] when ext/api-tokens (with its OAuth server) is registered on the app (decided
 	// on serve, so registration order doesn't matter), else [PocketBaseTokenAuth].
 	Auth Authenticator
 

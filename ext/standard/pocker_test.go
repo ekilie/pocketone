@@ -31,7 +31,7 @@ func TestPockerInstancesGetTheStandardSet(t *testing.T) {
 	if err := os.MkdirAll(hooks, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	probe := `routerAdd("GET", "/probe", (e) => e.json(200, {mcp: typeof $mcp, tokens: typeof $tokens}))`
+	probe := `routerAdd("GET", "/probe", (e) => e.json(200, {mcp: typeof $mcp, tokens: typeof $apiTokens}))`
 	if err := os.WriteFile(filepath.Join(hooks, "probe.pb.js"), []byte(probe), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestPockerInstancesGetTheStandardSet(t *testing.T) {
 	// each instance's startup lines are in its own log
 	logA, _ := os.ReadFile(filepath.Join(root, "a", "logs", "exec.log"))
 	logB, _ := os.ReadFile(filepath.Join(root, "b", "logs", "exec.log"))
-	if !strings.Contains(string(logA), "standard: on: settings, templates, cache, tokens, remotes, mcp,") {
+	if !strings.Contains(string(logA), "standard: on: settings, templates, cache, api-tokens, remotes, mcp,") {
 		t.Errorf("a's log:\n%s", logA)
 	}
 	if !strings.Contains(string(logB), "mcp off: enabled: false") {

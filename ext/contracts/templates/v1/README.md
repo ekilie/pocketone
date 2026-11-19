@@ -57,7 +57,7 @@ templatesv1.Contract.Provide(app, myTemplates)
 | Extension | |
 |---|---|
 | [templates](../../../../ext/templates/README.md) | provides |
-| [tokens](../../../../ext/tokens/README.md) | works with |
+| [tokens](../../../../ext/api-tokens/README.md) | works with |
 
 <!-- /contracts:index -->
 

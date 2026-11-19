@@ -375,6 +375,16 @@ Turns the tokens extension off on a single app (`enabled: false`). On a multisit
 
 Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
+#### `uicache:`
+
+Turns the uicache extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.uicache`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
 #### `vacuum:`
 
 Defaults for compacting the app's SQLite databases (VACUUM): on or off, and how often. The app's admins change them in Settings.

@@ -37,7 +37,7 @@ type setFlags struct {
 
 func (f *setFlags) bind(c *cobra.Command) {
 	c.Flags().StringSliceVarP(&f.include, "include", "i", nil, "add include patterns (default set: "+strings.Join(DefaultIncludes, ",")+")")
-	c.Flags().StringSliceVarP(&f.exclude, "exclude", "e", nil, "exclude patterns (pb_data is always excluded)")
+	c.Flags().StringSliceVarP(&f.exclude, "exclude", "e", nil, "exclude patterns (pb_data and pb_cache are always excluded)")
 	c.Flags().BoolVar(&f.nodeModules, "node-modules", false, "ship the production node_modules tree (default with a package.json)")
 	c.Flags().BoolVar(&f.noNodeModules, "no-node-modules", false, "don't ship node_modules; leave the remote's alone")
 	c.Flags().BoolVarP(&f.verbose, "verbose", "v", false, "list every file")
@@ -103,7 +103,7 @@ func deployCommand() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "deploy [remote]",
 		Short: "Deploys pb_hooks, pb_migrations, pb_pages, pb_public and packages to a remote",
-		Long: "Deploys the project's code set (pb_* folders except pb_data, package.json, bun.lock(b), patches/, and the " +
+		Long: "Deploys the project's code set (pb_* folders except pb_data and pb_cache, package.json, bun.lock(b), patches/, and the " +
 			"production node_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. " +
 			"Hooks, pages and public files take effect by themselves; migrations and packages apply when the app " +
 			"restarts: pass --restart, or run '" + extkit.Command + " restart' later.",
@@ -336,7 +336,7 @@ func Watch(ctx context.Context, opts CollectOptions, debounce time.Duration, log
 			return true
 		}
 		name := filepath.Base(rel)
-		if name == "pb_data" || name == "node_modules" || strings.HasPrefix(name, ".git") {
+		if name == "pb_data" || name == "pb_cache" || name == "node_modules" || strings.HasPrefix(name, ".git") {
 			return false // a package install changes package.json or the lockfile too
 		}
 		return glob.AnyUnder(include, rel)
@@ -397,7 +397,7 @@ func Watch(ctx context.Context, opts CollectOptions, debounce time.Duration, log
 					addTree(ev.Name)
 				}
 			}
-			if strings.HasPrefix(rel, "pb_data/") || strings.Contains("/"+rel, "/.git") {
+			if strings.HasPrefix(rel, "pb_data/") || strings.HasPrefix(rel, "pb_cache/") || strings.Contains("/"+rel, "/.git") {
 				continue
 			}
 			trigger()

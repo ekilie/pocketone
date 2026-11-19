@@ -108,6 +108,6 @@ can commit. Your logins are saved in your home folder, never in the project. Eve
 - [Deploy](https://pocketone.dev/docs/extensions/deploy) gives the app its deploy API and adds the `deploy`, `dev`, `pull`, `logs` and
   `restart` commands.
 - [Remotes](https://pocketone.dev/docs/extensions/remotes) keeps your remotes and logins, and gives the app its restart and logs.
-- [Tokens](https://pocketone.dev/docs/extensions/tokens) makes the API tokens CI uses.
+- [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) makes the API tokens CI uses.
 - The commands talk to the [deploy/v1](https://pocketone.dev/docs/contracts/deploy/v1) and [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)
   contracts, so they work against any app or host that offers them.

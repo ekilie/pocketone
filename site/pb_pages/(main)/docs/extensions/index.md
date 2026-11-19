@@ -31,6 +31,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Settings](/docs/extensions/settings) | One API for the settings an app's admins change for its extensions. On by default. |
 | [Templates](/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
 | [Tokens](/docs/extensions/tokens) | Long-lived API tokens with scopes. |
+| [UI Cache](/docs/extensions/uicache) | Dashboard cache headers that let updates through browsers and CDNs. On by default. |
 | [Upgrade](/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
 | [Vacuum](/docs/extensions/vacuum) | Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk. |
 | [WASM](/docs/extensions/wasm/extension) | Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box. |

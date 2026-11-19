@@ -122,7 +122,7 @@ func (s *Site) Token(scopes ...string) string {
 	var out struct {
 		Token string `json:"token"`
 	}
-	s.MustJSON(http.MethodPost, "/api/_c/tokens/v1", s.JWT(), map[string]any{"name": "modetest", "scopes": scopes}, 200, &out)
+	s.MustJSON(http.MethodPost, "/api/_c/api-tokens/v1", s.JWT(), map[string]any{"name": "modetest", "scopes": scopes}, 200, &out)
 	if !strings.HasPrefix(out.Token, "pbt_") {
 		s.t.Fatalf("token: %q", out.Token)
 	}

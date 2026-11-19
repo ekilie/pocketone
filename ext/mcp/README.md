@@ -24,13 +24,13 @@ connector, any Streamable HTTP client) can work with your app. No sidecar proces
   `bulkmail_start`, `remote_status`, ...), with input schemas from the contract's types, called through the contract
   so its superuser check, scopes and hooks apply. MCP provides the [mcp/v1](../contracts/mcp/v1/README.md) contract:
   another MCP server can replace this one, and serves the same contract tools.
-- **Sign-in with OAuth** through [the OAuth server](../tokens/OAUTH.md): add `https://<host>/mcp` to Claude and sign
+- **Sign-in with OAuth** through [the OAuth server](../api-tokens/OAUTH.md): add `https://<host>/mcp` to Claude and sign
   in in a browser, as a superuser or an app user. The connection stays signed in until you revoke it.
 
 ## Install
 
-MCP is built into `pocketone` and always on, with [Tokens](../tokens/README.md) and
-[the OAuth server](../tokens/OAUTH.md) for sign-in and `$mcp` in `pb_hooks`. There's nothing to install or turn on.
+MCP is built into `pocketone` and always on, with [Tokens](../api-tokens/README.md) and
+[the OAuth server](../api-tokens/OAUTH.md) for sign-in and `$mcp` in `pb_hooks`. There's nothing to install or turn on.
 
 MCP is a member of the [standard set](../standard/README.md), so every PocketOne app has it: a standalone app or an
 instance on a [multisite host](../multisite/README.md), from the stock binary or your own Go build made with
@@ -48,7 +48,7 @@ Tools that `pb_hooks` declare before MCP registers wait for it. The module is `g
 
 There is no `pocketone.yaml` section, flag, environment variable or settings screen for MCP. In `pocketone` it serves
 `/mcp` with every built-in tool, and:
-- anyone who can sign in through [the OAuth server](../tokens/OAUTH.md) can connect: superusers and app users of
+- anyone who can sign in through [the OAuth server](../api-tokens/OAUTH.md) can connect: superusers and app users of
   any auth collection, each with their own rights;
 - an agent's connection doesn't expire; it lasts until you revoke it;
 - the server's name for clients comes from **Settings → Application → Application name**.
@@ -59,7 +59,7 @@ A Go build can change the path, the tools, the caps and the sign-in (see [Go con
 
 MCP registers no scopes of its own. When an agent connects, the consent page offers **Full access** (the account's
 rights, like a PocketBase auth token) or **Only these**, with a box for each of your
-[token scopes](../tokens/README.md#your-own-scopes) (scopes that only reach contract APIs under `/api/_c/`, like `deploy`, aren't
+[token scopes](../api-tokens/README.md#your-own-scopes) (scopes that only reach contract APIs under `/api/_c/`, like `deploy`, aren't
 offered unless the client asks for them). The protected resource metadata lists the same scopes in
 `scopes_supported`, so a client can ask for some up front; the user can still change the ticks.
 
@@ -182,7 +182,7 @@ endpoint too, to give it the app's meaning (for example `notes_add_note` over `P
 ### In the logs
 
 Without the OAuth server on the app, MCP logs a warning on serve:
-`mcp: the OAuth server (ext/tokens) is off; /mcp accepts pasted PocketBase auth tokens only, and clients can't sign in by themselves`.
+`mcp: the OAuth server (ext/api-tokens) is off; /mcp accepts pasted PocketBase auth tokens only, and clients can't sign in by themselves`.
 In `pocketone` it always is.
 
 ## Integrations
@@ -191,9 +191,9 @@ In `pocketone` it always is.
 
 | Extension | How they fit |
 |---|---|
-| [OAuth](../tokens/OAUTH.md) (in Tokens) | Signs MCP clients in. MCP points clients at it from the protected resource metadata, turns on its client self-registration, and makes tokens bound to `/mcp` never expire. Who may sign in comes from its `Collections` (default: superusers and every auth collection). |
-| [Tokens](../tokens/README.md) | The access tokens are API tokens bound to `https://<host>/mcp` (RFC 8707): they work nowhere else, and are listed and revoked under Settings → API tokens. |
-| Your token scopes | On a full-access connection a tool call holds every scope you registered (except ones its collection can't hold): `$tokens.requireScope` guards pass, and `@request.headers.x_token_scope_<name>` is `"1"` in collection rules. On a connection limited to scopes it holds only those, and requests they don't cover are refused (see [Scopes](#scopes)). |
+| [OAuth](../api-tokens/OAUTH.md) (in Tokens) | Signs MCP clients in. MCP points clients at it from the protected resource metadata, turns on its client self-registration, and makes tokens bound to `/mcp` never expire. Who may sign in comes from its `Collections` (default: superusers and every auth collection). |
+| [Tokens](../api-tokens/README.md) | The access tokens are API tokens bound to `https://<host>/mcp` (RFC 8707): they work nowhere else, and are listed and revoked under Settings → API tokens. |
+| Your token scopes | On a full-access connection a tool call holds every scope you registered (except ones its collection can't hold): `$apiTokens.requireScope` guards pass, and `@request.headers.x_token_scope_<name>` is `"1"` in collection rules. On a connection limited to scopes it holds only those, and requests they don't cover are refused (see [Scopes](#scopes)). |
 | [Pages](../pages/README.md) | A `pb_pages` `+api.js` route is a REST endpoint like any other; declare its tool with `$mcp.addEndpoint`. |
 | [S3 Redirect](../s3redirect/README.md) | `pb_download_file` follows its one redirect to storage. |
 | JS hooks | `$mcp` in `pb_hooks` (above). |
@@ -281,7 +281,7 @@ With Tokens (with its OAuth server) on the app, `/mcp` uses OAuth the way Claude
 4. The access token is an API token bound to `https://<host>/mcp`. It carries the account's rights but works only on
    `/mcp`. Each MCP request makes a PocketBase auth token for the same account, and tool calls reach the REST API
    with it (as Pages' `ctx.pb()` does). For a token limited to scopes, those requests carry the scopes
-   (`tokensv1.WithScopes`, through the tokens/v1 contract), and Tokens checks them as it would a scoped token's request.
+   (`tokensv1.WithScopes`, through the api-tokens/v1 contract), and Tokens checks them as it would a scoped token's request.
 
 Without the OAuth server, `/mcp` falls back to `PocketBaseTokenAuth`: pasted PocketBase auth tokens (`Collections` limits
 which auth collections, default any), and the warning above. `Config.Auth` overrides the choice; `mcp.OAuth{Issuer}`
@@ -314,7 +314,7 @@ claude mcp login pb-example
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 //
-// Sign-in is OAuth (the OAuth server in ext/tokens): add the endpoint to Claude Code and sign in in the browser when it
+// Sign-in is OAuth (the OAuth server in ext/api-tokens): add the endpoint to Claude Code and sign in in the browser when it
 // asks. Tool calls run as whoever signed in.
 //
 //	claude mcp add --transport http pb-example http://127.0.0.1:8090/mcp
@@ -328,11 +328,11 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/extkit/js"
 	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/mcp"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 func main() {
@@ -341,7 +341,7 @@ func main() {
 
 	// OAuth sign-in: API tokens + the authorization server. ext/mcp picks it up on serve and turns on dynamic client
 	// registration.
-	tokens.MustRegister(app, tokens.Config{}) // its OAuth server comes with it
+	apitokens.MustRegister(app, apitokens.Config{}) // its OAuth server comes with it
 
 	server := mcp.MustRegister(app, mcp.Config{
 		Name:        "pb-example",

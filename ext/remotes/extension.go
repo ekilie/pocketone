@@ -31,6 +31,6 @@ func (p *Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
 		Implements: extkit.IDs("remote/v1"),
 		Defaults:   extkit.IDs("remote/v1"), // a multisite host provides it for its instances instead
-		WorksWith:  extkit.IDs("tokens/v1"),
+		WorksWith:  extkit.IDs("api-tokens/v1"),
 	}
 }

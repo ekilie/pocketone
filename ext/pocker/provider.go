@@ -22,7 +22,7 @@ type SectionConfig struct {
 	Limits        `yaml:",inline"`
 	EgressAllow   []string `yaml:"egress_allow" doc:"Private networks (CIDRs) instances may still connect to. Default none: public addresses only."`
 	// IsolateConfig is pocketone.yaml's shape, nested: what every instance gets as its own config.
-	IsolateConfig map[string]map[string]any `yaml:"isolate_config" doc:"Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it."`
+	IsolateConfig map[string]map[string]any `yaml:"isolate_config" doc:"Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as api-tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it."`
 }
 
 // Section is the key of the `pocker` section.

@@ -15,8 +15,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	examplev1 "github.com/pockethost/pocketone/ext/contracts/internal/example/v1"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 )
 
@@ -104,26 +104,28 @@ func wrapExt(name string) *ext {
 
 type sender struct{ name string }
 
-func (s sender) Verify(context.Context, string) (tokensv1.Grant, error) { return tokensv1.Grant{}, nil }
-func (s sender) RegisterScope(tokensv1.Scope) error                     { return nil }
-func (s sender) Scopes() []tokensv1.Scope                               { return nil }
-func (s sender) Reaches([]string, string, string) bool                  { return true }
+func (s sender) Verify(context.Context, string) (apitokensv1.Grant, error) {
+	return apitokensv1.Grant{}, nil
+}
+func (s sender) RegisterScope(apitokensv1.Scope) error { return nil }
+func (s sender) Scopes() []apitokensv1.Scope           { return nil }
+func (s sender) Reaches([]string, string, string) bool { return true }
 
 func mailExt(name string, isDefault bool) *ext {
 	return &ext{name: name,
-		decl: extkit.Contracts{Implements: extkit.IDs("tokens/v1")},
+		decl: extkit.Contracts{Implements: extkit.IDs("api-tokens/v1")},
 		register: func(app core.App) error {
 			if isDefault {
-				tokensv1.Contract.ProvideDefault(app, sender{name})
+				apitokensv1.Contract.ProvideDefault(app, sender{name})
 			} else {
-				tokensv1.Contract.Provide(app, sender{name})
+				apitokensv1.Contract.Provide(app, sender{name})
 			}
 			return nil
 		}}
 }
 
 func needsMailExt() *ext {
-	return &ext{name: "needer", decl: extkit.Contracts{Requires: extkit.IDs("tokens/v1")}}
+	return &ext{name: "needer", decl: extkit.Contracts{Requires: extkit.IDs("api-tokens/v1")}}
 }
 
 func newApp(t *testing.T) *tests.TestApp {
@@ -173,16 +175,16 @@ func TestDefaultStepsAside(t *testing.T) {
 func TestOneConflictNeedsAChoice(t *testing.T) {
 	app := newApp(t)
 	_, err := extkit.Setup(app, []extkit.Extension{mailExt("issuera", false), mailExt("issuerb", false)}, nil, nil)
-	if err == nil || !strings.Contains(err.Error(), "conflict: tokens/v1 has 2 providers (issuera, issuerb)") {
+	if err == nil || !strings.Contains(err.Error(), "conflict: api-tokens/v1 has 2 providers (issuera, issuerb)") {
 		t.Fatalf("err = %v", err)
 	}
 
 	app2 := newApp(t)
-	lines := setup(t, app2, extkit.Choices{"tokens/v1": "issuerb"}, mailExt("issuera", false), mailExt("issuerb", false))
-	if s := tokensv1.Contract.Must(app2).(sender); s.name != "issuerb" {
+	lines := setup(t, app2, extkit.Choices{"api-tokens/v1": "issuerb"}, mailExt("issuera", false), mailExt("issuerb", false))
+	if s := apitokensv1.Contract.Must(app2).(sender); s.name != "issuerb" {
 		t.Fatalf("got %s", s.name)
 	}
-	if !contains(lines, "tokens/v1 ← issuerb (providers:)") {
+	if !contains(lines, "api-tokens/v1 ← issuerb (providers:)") {
 		t.Fatalf("lines %q", lines)
 	}
 }
@@ -194,7 +196,7 @@ func TestChoiceTypos(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	app2 := newApp(t)
-	_, err = extkit.Setup(app2, []extkit.Extension{mailExt("issuera", true)}, nil, extkit.Choices{"tokens/v1": "issuerb"})
+	_, err = extkit.Setup(app2, []extkit.Extension{mailExt("issuera", true)}, nil, extkit.Choices{"api-tokens/v1": "issuerb"})
 	if err == nil || !strings.Contains(err.Error(), "issuerb doesn't provide it here") {
 		t.Fatalf("err = %v", err)
 	}
@@ -202,17 +204,17 @@ func TestChoiceTypos(t *testing.T) {
 
 func TestRequiresTurnsOff(t *testing.T) {
 	app := newApp(t)
-	lines := setup(t, app, extkit.Choices{"tokens/v1": "off"}, mailExt("issuera", true), needsMailExt())
-	if !contains(lines, "needer off: needs tokens/v1, which providers: turns off") {
+	lines := setup(t, app, extkit.Choices{"api-tokens/v1": "off"}, mailExt("issuera", true), needsMailExt())
+	if !contains(lines, "needer off: needs api-tokens/v1, which providers: turns off") {
 		t.Fatalf("lines %q", lines)
 	}
-	if _, ok := tokensv1.Contract.Of(app); ok {
+	if _, ok := apitokensv1.Contract.Of(app); ok {
 		t.Fatal("mail.fallback/v1 should have no provider")
 	}
 
 	app2 := newApp(t)
 	lines = setup(t, app2, nil, needsMailExt())
-	if !contains(lines, "needer off: needs tokens/v1, which nothing provides") {
+	if !contains(lines, "needer off: needs api-tokens/v1, which nothing provides") {
 		t.Fatalf("lines %q", lines)
 	}
 }

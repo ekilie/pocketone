@@ -71,7 +71,7 @@ func do(t *testing.T, h http.Handler, method, path string) (int, string, http.He
 }
 
 func TestEveryAppHasTheStandardSet(t *testing.T) {
-	hooks := map[string]string{"probe.pb.js": `$app.store().set("js", typeof $mcp + "," + typeof $tokens + "," + typeof $bulkmail)`}
+	hooks := map[string]string{"probe.pb.js": `$app.store().set("js", typeof $mcp + "," + typeof $apiTokens + "," + typeof $bulkmail)`}
 	app, h := newApp(t, standard.New(), hooks)
 
 	if got := app.Store().Get("js"); got != "object,object,object" {
@@ -97,10 +97,10 @@ func TestStartupLines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(lines[0], "standard: on: settings, templates, cache, tokens, ") || !strings.Contains(lines[0], "deploy") {
+	if !strings.HasPrefix(lines[0], "standard: on: settings, templates, cache, api-tokens, ") || !strings.Contains(lines[0], "deploy") {
 		t.Fatalf("lines %q", lines)
 	}
-	if !strings.Contains(strings.Join(lines, "\n"), "tokens/v1 ← tokens") {
+	if !strings.Contains(strings.Join(lines, "\n"), "api-tokens/v1 ← api-tokens") {
 		t.Fatalf("lines %q", lines)
 	}
 }

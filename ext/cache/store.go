@@ -35,7 +35,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -45,9 +44,6 @@ import (
 
 // keyOverhead is what a key costs in memory beyond its name: map slot, list elements, struct.
 const keyOverhead = 160
-
-// blobsDir is the disk tier's own folder inside disk_path: the only one the store ever wipes.
-const blobsDir = "p1cache"
 
 type sum [sha256.Size]byte
 
@@ -203,7 +199,6 @@ func newStore(lim poolLimits, log *slog.Logger) (*store, error) {
 	if lim.dir == "" {
 		return s, nil
 	}
-	s.lim.dir = filepath.Join(lim.dir, blobsDir)
 	if err := wipe(s.lim.dir); err != nil {
 		return nil, fmt.Errorf("cache: disk tier %s: %w", s.lim.dir, err)
 	}

@@ -10,9 +10,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 // remoteApp is a test app with remotes and tokens, sealed, served; restart is counted instead of done.
@@ -25,10 +25,10 @@ func remoteApp(t *testing.T) (*tests.TestApp, string, *atomic.Int32) {
 	t.Cleanup(app.Cleanup)
 	var restarts atomic.Int32
 	cfg := Config{Restart: func(core.App) error { restarts.Add(1); return nil }}
-	if _, err := extkit.Setup(app, []extkit.Extension{New(cfg), tokens.New(tokens.Config{})}, nil, nil); err != nil {
+	if _, err := extkit.Setup(app, []extkit.Extension{New(cfg), apitokens.New(apitokens.Config{})}, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := tokens.EnsureSchema(app); err != nil {
+	if err := apitokens.EnsureSchema(app); err != nil {
 		t.Fatal(err)
 	}
 	return app, serve(t, app), &restarts
@@ -40,7 +40,7 @@ func token(t *testing.T, app core.App, scopes ...string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, _, err := tokens.For(app).Create(su, tokens.CreateOptions{Name: "t", Scopes: scopes})
+	secret, _, err := apitokens.For(app).Create(su, apitokens.CreateOptions{Name: "t", Scopes: scopes})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestRemoteWhoami(t *testing.T) {
 	if err != nil || w.Via != "token" || w.Auth == nil || w.Auth.Email != "test@example.com" || len(w.Scopes) != 1 {
 		t.Fatalf("scoped token: %+v %v", w, err)
 	}
-	if len(w.Extensions) != 2 || !slices.Contains(w.Contracts, "tokens/v1") {
+	if len(w.Extensions) != 2 || !slices.Contains(w.Contracts, "api-tokens/v1") {
 		t.Fatalf("signed in: extensions %v contracts %v", w.Extensions, w.Contracts)
 	}
 }

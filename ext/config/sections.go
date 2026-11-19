@@ -66,7 +66,7 @@ type AppConfig struct {
 	EncryptionEnv string        `yaml:"encryption_env" doc:"Name of the environment variable holding a 32-character key that encrypts the app settings. The --encryptionEnv flag wins."`
 	QueryTimeout  time.Duration `yaml:"query_timeout" doc:"Default timeout for SELECT queries, such as 30s. The --queryTimeout flag wins."`
 	HooksDir      string        `yaml:"hooks_dir" doc:"The JS hooks folder. Default: pb_hooks next to pb_data. The --hooksDir flag wins."`
-	JSVM          string        `yaml:"jsvm" doc:"The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $tokens and JS contracts are off). The --jsvm flag wins."`
+	JSVM          string        `yaml:"jsvm" doc:"The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $apiTokens and JS contracts are off). The --jsvm flag wins."`
 	HooksPool     int           `yaml:"hooks_pool" doc:"Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins."`
 	MigrationsDir string        `yaml:"migrations_dir" doc:"The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins."`
 	EnvAllow      []string      `yaml:"env_allow" doc:"Names from the .env the app and its JS hooks may read. Default none."`

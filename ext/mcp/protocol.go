@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"net/http"
@@ -319,7 +319,7 @@ func (s *Server) reaches(g *Grant, t *Endpoint) bool {
 	if g == nil || len(g.Scopes) == 0 || t.Path == "" {
 		return true
 	}
-	tk, ok := tokensv1.Contract.Of(s.app)
+	tk, ok := apitokensv1.Contract.Of(s.app)
 	if !ok {
 		return true
 	}
