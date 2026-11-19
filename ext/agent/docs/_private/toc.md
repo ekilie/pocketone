@@ -2,6 +2,7 @@
 
 - [Choosing a model](../choosing.md)
 - [On a multisite host](../hosting.md)
+- [Prompt caching](../prompt-caching.md)
 
 # Guides
 

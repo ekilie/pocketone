@@ -133,7 +133,7 @@ func (a *hostAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText
 	if maxTokens <= 0 || maxTokens > limit {
 		maxTokens = limit
 	}
-	res, err := a.share.r.complete(ctx, in, maxTokens, "host", onText)
+	res, err := a.share.r.complete(ctx, in, maxTokens, "host", onText, a.id) // each instance's prompt cache is its own
 	return res, err
 }
 

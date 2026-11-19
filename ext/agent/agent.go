@@ -267,7 +267,7 @@ func (a *appAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText 
 		if maxTokens <= 0 {
 			maxTokens = a.cfg.MaxTokens
 		}
-		return r.complete(ctx, in, maxTokens, "runner", onText)
+		return r.complete(ctx, in, maxTokens, "runner", onText, "")
 	}
 	return agentv1.CompleteResult{}, errOff(c)
 }

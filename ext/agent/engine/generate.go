@@ -24,6 +24,9 @@ type GenerateOptions struct {
 	// tried by calling it with the output so far plus that token's bytes, best-scoring first. End-of-turn is allowed
 	// only once it says FitComplete or FitDone, and FitDone ends the output after that token.
 	Constraint func(text string) Fit
+	// CacheScope separates prompt cache entries: a prompt only reuses the cached start of prompts with the same scope.
+	// A host serving several apps passes each app's id, so one app's timing can't tell it what another app sent.
+	CacheScope string
 }
 
 // Fit is how a Constraint judges the output so far.
@@ -100,7 +103,7 @@ func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions
 
 	start := time.Now()
 	from := 0
-	if e, n := m.lookupPrefix(ids); e != nil { // the start of this prompt was read before: reuse it
+	if e, n := m.lookupPrefix(o.CacheScope, ids); e != nil { // the start of this prompt was read before: reuse it
 		m.restorePrefix(s, e, n)
 		from, res.CachedTokens = n, n
 	}
@@ -111,7 +114,7 @@ func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions
 		}
 		m.forward(s, ids[pos:min(pos+prefillBatch, len(ids))], pos)
 	}
-	m.storePrefix(s, ids)
+	m.storePrefix(o.CacheScope, s, ids)
 
 	var text strings.Builder
 	var pending []byte // bytes not yet forming complete UTF-8

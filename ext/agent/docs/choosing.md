@@ -42,7 +42,9 @@ takes about a second and a paragraph ten or more. Keep answers short with `maxTo
 [cron](https://pocketbase.io/docs/js-jobs-scheduling/) rather than in a request.
 
 `agent.threads` in `pocketone.yaml` sets how many CPU threads the model uses (default: half your cores), and
-`agent.parallel` how many answers it writes at once (default 1; the rest wait their turn).
+`agent.parallel` how many answers it writes at once (default 1; the rest wait their turn). The model also keeps the
+start of recent prompts so a repeated preamble isn't read again (`agent.prompt_cache_mb`, see
+[Prompt caching](prompt-caching.md)).
 
 ## Your own API
 

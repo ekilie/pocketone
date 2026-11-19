@@ -39,7 +39,7 @@ func TestPromptCache(t *testing.T) {
 	// while only a is cached: resuming b after a's cached prefix gives exactly what reading a whole and then b's tail
 	// gives without the cache. (Reading only b's first part would batch those tokens differently from how a's read
 	// computed them, which moves the result by rounding, not by anything the cache did.)
-	e, n := m.lookupPrefix(ids)
+	e, n := m.lookupPrefix("", ids)
 	if e == nil || n < prefixMin {
 		t.Fatalf("no cached prefix for b (%d)", n)
 	}
@@ -86,4 +86,38 @@ func argmax(x []float32) int {
 		}
 	}
 	return best
+}
+
+// Entries are only reused in their own scope (an app on a host), and only for a long enough shared start, always
+// leaving the prompt's last token to read.
+func TestPromptCacheScopes(t *testing.T) {
+	seq := func(n int) []int {
+		out := make([]int, n)
+		for i := range out {
+			out[i] = i + 1
+		}
+		return out
+	}
+	m := &Model{}
+	m.prefix.budget = 1 << 30
+	m.prefix.entries = []*prefixEntry{{scope: "a", tokens: seq(100)}}
+	if e, n := m.lookupPrefix("a", seq(120)); e == nil || n != 100 {
+		t.Fatalf("same scope: %v %d", e != nil, n)
+	}
+	if e, _ := m.lookupPrefix("b", seq(120)); e != nil {
+		t.Fatal("another scope reused app a's entry")
+	}
+	if e, _ := m.lookupPrefix("", seq(120)); e != nil {
+		t.Fatal("the empty scope reused app a's entry")
+	}
+	if _, n := m.lookupPrefix("a", seq(100)); n != 99 {
+		t.Fatalf("a prompt equal to the entry: %d cached, want 99 (the last token is always read)", n)
+	}
+	if e, _ := m.lookupPrefix("a", seq(prefixMin-1)); e != nil {
+		t.Fatal("a shared start shorter than prefixMin was reused")
+	}
+	m.prefix.budget = 0
+	if e, _ := m.lookupPrefix("a", seq(120)); e != nil {
+		t.Fatal("cache off, still reused")
+	}
 }

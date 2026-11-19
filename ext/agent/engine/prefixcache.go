@@ -17,6 +17,7 @@ import (
 const prefixMin = 32
 
 type prefixEntry struct {
+	scope  string // whose prompt it was (GenerateOptions.CacheScope): entries are only reused in the same scope
 	tokens []int
 	k, v   [][]float32 // per layer: k [kvd][n] (each channel's positions in a row), v [n*kvd]
 	seq    uint64      // last use, for eviction
@@ -37,7 +38,7 @@ func (m *Model) tokenBytes() int64 {
 
 // lookup finds the cached entry sharing the longest prefix with ids (at least prefixMin tokens, and always leaving
 // the last token of ids to compute, since generation needs its logits). n is how many tokens it covers.
-func (m *Model) lookupPrefix(ids []int) (e *prefixEntry, n int) {
+func (m *Model) lookupPrefix(scope string, ids []int) (e *prefixEntry, n int) {
 	c := &m.prefix
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -45,6 +46,9 @@ func (m *Model) lookupPrefix(ids []int) (e *prefixEntry, n int) {
 		return nil, 0
 	}
 	for _, cand := range c.entries {
+		if cand.scope != scope {
+			continue
+		}
 		l := 0
 		for l < len(cand.tokens) && l < len(ids)-1 && cand.tokens[l] == ids[l] {
 			l++
@@ -77,7 +81,7 @@ func (m *Model) restorePrefix(s *state, e *prefixEntry, n int) {
 }
 
 // storePrefix keeps the first tokens of ids, whose keys and values are in s, unless the cache already has them.
-func (m *Model) storePrefix(s *state, ids []int) {
+func (m *Model) storePrefix(scope string, s *state, ids []int) {
 	c := &m.prefix
 	per := m.tokenBytes()
 	c.mu.Lock()
@@ -92,7 +96,7 @@ func (m *Model) storePrefix(s *state, ids []int) {
 		return
 	}
 	for _, cand := range c.entries { // already cached (as far as an entry would keep)?
-		if len(cand.tokens) >= n && equalInts(cand.tokens[:n], ids[:n]) {
+		if cand.scope == scope && len(cand.tokens) >= n && equalInts(cand.tokens[:n], ids[:n]) {
 			c.seq++
 			cand.seq = c.seq
 			c.mu.Unlock()
@@ -103,7 +107,7 @@ func (m *Model) storePrefix(s *state, ids []int) {
 
 	// copy outside the lock: it's tens of megabytes
 	kvd := m.hp.kvHeads * m.hp.headDim
-	e := &prefixEntry{tokens: append([]int(nil), ids[:n]...), k: make([][]float32, len(s.kc)), v: make([][]float32, len(s.vc))}
+	e := &prefixEntry{scope: scope, tokens: append([]int(nil), ids[:n]...), k: make([][]float32, len(s.kc)), v: make([][]float32, len(s.vc))}
 	for li := range s.kc {
 		k := make([]float32, kvd*n)
 		for i := 0; i < kvd; i++ {

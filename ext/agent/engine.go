@@ -36,7 +36,7 @@ func (e *engineModel) chatPrompt(msgs []agentv1.Message) string {
 
 func (e *engineModel) generate(ctx context.Context, prompt string, o genOptions) (genResult, error) {
 	res, err := e.m.Generate(ctx, prompt, engine.GenerateOptions{
-		MaxTokens: o.MaxTokens, Temperature: o.Temperature, TopP: 0.9, TopK: 40, Stop: o.Stop, Constraint: o.Constraint,
+		MaxTokens: o.MaxTokens, Temperature: o.Temperature, TopP: 0.9, TopK: 40, Stop: o.Stop, Constraint: o.Constraint, CacheScope: o.CacheScope,
 	}, o.OnText)
 	g := genResult{Text: res.Text, InputTokens: res.PromptTokens, OutputTokens: res.OutputTokens, CachedTokens: res.CachedTokens,
 		StopReason: stopReason(res.StopReason), Prefill: res.Prefill, Decode: res.Decode}

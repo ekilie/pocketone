@@ -164,6 +164,35 @@ func main() {
 }
 ```
 
+## Prompt caching
+
+The built-in model keeps the start of recent prompts: the internal state it computed while reading them (the
+attention keys and values). When a new prompt starts with exactly the same text, that state is copied in and only the
+rest is read. Reading the prompt is most of the wait on a CPU, so a repeated preamble or a chat's earlier turns cost
+almost nothing the second time. The answer is the same as reading the whole prompt again: the cached state is exactly
+what the model would recompute.
+
+```yaml
+agent:
+  prompt_cache_mb: 256   # default; -1 turns it off
+```
+
+- **Memory:** each cached token takes about 230 KB for `qwen3-0.6b` and `qwen3-1.7b`, and 290 KB for `qwen3-4b`, so
+  the default 256 MB holds about 1,100 tokens (870 for 4B). The least recently used entries make room for new ones.
+- **What it keeps:** the start of each prompt, as much as fits. A prompt reuses the entry it shares the longest start
+  with, if that's at least 32 tokens; its last token is always read again.
+- **On a multisite host:** each instance's prompts only reuse that instance's entries, so timing can't tell an instance
+  what another one sent. The budget is the host's, shared by all of them.
+- **Seeing it work:** `usage.cachedTokens` in each answer is how many prompt tokens came from the cache. For your own
+  API it's the provider's own figure, when it reports one (OpenAI's `prompt_tokens_details.cached_tokens`).
+
+Measured on an Apple M1 Max, a second prompt sharing a ~160-token preamble with the first: `qwen3-0.6b` read it in
+56 ms instead of 473 ms, `qwen3-1.7b` in 0.13 s instead of 2.2 s.
+
+The cache matches only an identical start, so order a prompt from what never changes to what changes most: the
+preamble, then the conversation so far, then the new question with the excerpts picked for it after it. See
+[Prompt caching](docs/prompt-caching.md) in the docs.
+
 ## The built-in engine
 
 The model runs in `ext/agent/engine`: Go, no cgo, with assembly for the hot loops on arm64 (NEON) and x86 (AVX2), where

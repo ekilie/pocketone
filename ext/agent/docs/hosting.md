@@ -29,5 +29,7 @@ So an app's **Settings → LLM** offers three choices instead of a model list:
 - **API**: the app's own OpenAI-compatible endpoint, for apps that need more than the shared model gives;
 - **Off.**
 
+Each app's prompts are cached separately on the host's model ([Prompt caching](prompt-caching.md#on-a-multisite-host)).
+
 Today apps that run as isolates ([Pocker](../../pocker/README.md)) reach the host's model; apps in containers will
 follow.

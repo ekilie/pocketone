@@ -66,7 +66,7 @@ on every call, first. Then the conversation, then the new question with its exce
 That order matters for speed. The built-in model, like OpenAI, Anthropic and Google, keeps the work it did on the start
 of a prompt and reuses it when the next prompt starts with exactly the same text, so a long, unchanging preamble is
 read once, not on every call. Anything that varies at the top (today's date, the user's name, the excerpts) breaks
-that: put it in the user's turn instead. See [Remembering conversations](conversations.md#prompt-caching).
+that: put it in the user's turn instead. See [Prompt caching](../prompt-caching.md).
 
 ## Test it
 

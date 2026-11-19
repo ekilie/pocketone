@@ -57,11 +57,12 @@ The `schema` makes the model answer with JSON in exactly that shape, and `r.data
 
 - [Choosing a model](choosing.md): built in or your own API, which model, and how fast each is.
 - [Writing a preamble](guides/preamble.md): the system prompt that sets how it answers.
-- [Remembering conversations](guides/conversations.md): keep chats, summarize the old turns, recall past chats, and
-  how big models cache prompts.
+- [Remembering conversations](guides/conversations.md): keep chats, summarize the old turns, recall past chats.
 - [Structured answers](guides/structured.md): JSON you can rely on, even from a small model.
 - [Streaming answers](guides/streaming.md): show an answer as it's written, in a page.
 - [Your own knowledge](guides/context.md): answer questions about your docs or data.
 - [On a multisite host](hosting.md): one model shared by every app on a server.
+- [Prompt caching](prompt-caching.md): how the model skips re-reading what your prompts repeat, and how to order them
+  for it.
 
 The API is [agent/v1](../../contracts/agent/v1/README.md); the extension's reference is [its README](../README.md).

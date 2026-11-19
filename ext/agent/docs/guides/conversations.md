@@ -89,33 +89,12 @@ same way you add your docs as context:
 
 Let people see and delete their notes. Only use a user's notes in that user's chats.
 
-## Prompt caching
+## Keep the start the same
 
-While a model reads a prompt, it computes an internal state for every token. **Prompt caching** keeps that state for
-the start of recent prompts, so when the next prompt starts with exactly the same text, the model skips re-reading that
-part: the answer starts sooner, and with a paid API it costs less.
+The model keeps the start of recent prompts and skips re-reading it when the next prompt starts the same way. So send
+the preamble first, then the earlier turns exactly as you sent them last time, then the new question with its excerpts
+after it: each turn then reads only what's new. A summary rewritten on every turn changes the start every time, so
+rewrite it every few turns. See [Prompt caching](../prompt-caching.md) for how it works and how to check it.
 
-- **The built-in model** does it by itself. It keeps the start of recent prompts in memory (`agent.prompt_cache_mb`,
-  256 MB by default, about 1,100 tokens of a Qwen3 model; `-1` turns it off). On a laptop, a second prompt that shares
-  a 150-token preamble starts answering five to eight times sooner.
-- **OpenAI** does it by itself for prompts over about a thousand tokens.
-- **Anthropic** caches up to the points you mark in the request (`cache_control`).
-- **Google Gemini** caches automatically, and can also hold a named cache with a lifetime for a large shared document.
-
-`usage.cachedTokens` in the answer says how much of the prompt came from a cache, for the built-in model and for
-providers that report it.
-
-The cache matches the start of the prompt only, and only if it's identical. So order a prompt from what never changes
-to what changes most:
-
-1. the preamble;
-2. the conversation so far, exactly as you sent it last time (or the summary, then the recent turns);
-3. the new question, and after it, the excerpts or notes picked for it.
-
-The excerpts go after the question, in the same turn, because they change with every question: anywhere earlier,
-they'd break the match for everything that follows. With this order, each turn re-reads only what's new since the last
-one: the previous answer, the new question and its excerpts. A date or a name at the top invalidates everything after
-it.
-
-A cache isn't memory: it makes text you send again cheaper to read, but you still send it. The window and the summary
-above still decide how much that is.
+A cache isn't memory, though: you still send the turns every time. The window and the summary above decide how much
+that is.
