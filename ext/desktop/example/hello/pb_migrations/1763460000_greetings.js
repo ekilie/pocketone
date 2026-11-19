@@ -1,4 +1,4 @@
-/// <reference path="../pb_data/types.d.ts" />
+/// <reference path="../types.d.ts" />
 // The greetings collection, open to everyone (a demo), with one greeting to start with.
 migrate(
   (app) => {

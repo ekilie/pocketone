@@ -133,8 +133,8 @@ routerAdd("GET", "/hit", (e) => e.json(200, { hits: bump() }))
 `.ts`, `.mts` and `.cts` files run as they are: esbuild strips the types when the file loads, and each file's source
 map is kept, so an error names `pb_hooks/main.pb.mts:12:5` in your source, not in the stripped code.
 
-- There's no type checking at runtime. Check with `tsc --noEmit` or your editor; `pb_data/types.d.ts` types the
-  whole JS API.
+- There's no type checking at runtime. Check with `tsc --noEmit` or your editor; `types.d.ts` and `tsconfig.json`
+  in the project root type the whole JS API.
 - Imports may name the compiled file, as TypeScript's `NodeNext` style does: `import { add } from "./math.js"` loads
   `math.ts` when there's no `math.js`.
 - `import type` and other type-only imports disappear, so a `*.pb.cts` script can use them and stay a script.
@@ -142,7 +142,8 @@ map is kept, so an error names `pb_hooks/main.pb.mts:12:5` in your source, not i
 
 ### Types
 
-When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS API, for your editor and `tsc`:
+When the app starts, `types.d.ts` in the project root (the folder holding `pb_hooks`, next to `pb_data` and
+`pocketone.yaml`) gets the declarations of the whole JS API, for your editor and `tsc`:
 
 - PocketBase's API generated from PocketOne's core (its extra hooks included), by PocketBase's own generator.
 - What this engine adds ([`pocketone.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
@@ -151,17 +152,31 @@ When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS 
 - Each extension's own API, for the extensions on in that app (`$mcp`, `$apiTokens`, `$bulkmail`, `onContracts` and
   the contracts' action hooks).
 
-To type-check, point a `tsconfig.json` at it:
+Beside it, the app writes a `tsconfig.json` when the folder has none, so your editor and `tsc --noEmit` work right
+away. It's yours from then on: the app never overwrites it.
 
 ```json
 {
-  "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "lib": ["ES2022"],
-    "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true },
-  "include": ["pb_data/types.d.ts", "pb_hooks/**/*", "pb_migrations/**/*"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
+  },
+  "include": ["types.d.ts", "pb_hooks/**/*", "pb_migrations/**/*", "pb_pages/**/*"]
 }
 ```
 
-`skipLibCheck` skips two type errors inside PocketBase's own generated declarations. In a PocketOne checkout,
+`skipLibCheck` skips two type errors inside PocketBase's own generated declarations. Commit both files: a fresh
+checkout is then typed before the app first runs, and a diff in `types.d.ts` shows what an upgrade or a new extension
+changed in the JS API. Empty hook files get a `/// <reference path="../types.d.ts" />` line.
+
+`Config.TypesDir` puts both somewhere else. With hooks embedded in the binary ([Bundle](https://pocketone.dev/docs/extensions/bundle)) and
+no `TypesDir`, neither is written. In a PocketOne checkout,
 `go generate` in `ext/jsvm` regenerates the declarations after a core change (the `TestTypes` tests fail until you
 do).
 
@@ -171,7 +186,7 @@ Extensions plug in through `Config.Extensions` with the engine-neutral types in
 [`ext/extkit/js`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/js/js.go). A value implements any of:
 
 - `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API. `TypeScript()`: declare it for editors and
-  `tsc` (appended to `pb_data/types.d.ts`). `FilterTypes(decl)`: change the finished declarations (the sandbox
+  `tsc` (appended to `types.d.ts`). `FilterTypes(decl)`: change the finished declarations (the sandbox
   declares what it hides `never`).
 - `OnCall(rt)`: wrap every handler call; an error refuses it.
 - `HTTPClient(rt)`: the client `$http.send` uses.

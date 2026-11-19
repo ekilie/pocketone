@@ -198,7 +198,7 @@ and running took. It's for pages that let a superuser try a module out; other co
 
 The time limit covers the run; compiling comes before it (below).
 
-`$wasm` is declared in each app's `pb_data/types.d.ts` ([`wasm.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/wasm.d.ts)), for code completion and `tsc`.
+`$wasm` is declared in each app's `types.d.ts` ([`wasm.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/wasm.d.ts)), for code completion and `tsc`.
 
 ### Writing a module
 

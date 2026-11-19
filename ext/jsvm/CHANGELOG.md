@@ -7,8 +7,13 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+- `types.d.ts` moved from `pb_data/` to the project root, the folder holding `pb_hooks` (next to `pb_data` and `pocketone.yaml`), so a fresh checkout is typed before the app first runs. Delete the old `pb_data/types.d.ts`. Hook and migration files with `/// <reference path="../pb_data/types.d.ts" />` still point at the old place: change them to `../types.d.ts`, or drop the line if a `tsconfig.json` includes `types.d.ts`. Migrations that `migrate` and automigrate write still carry the old line (PocketBase's templates). If you kept your own `tsconfig.json`, change its `pb_data/types.d.ts` to `types.d.ts`. Commit `types.d.ts` and `tsconfig.json`. `Config.TypesDir` still overrides the folder.
+
 ### Added
 
+- The app writes a `tsconfig.json` beside `types.d.ts` when there's none (it never overwrites one), including `types.d.ts`, `pb_hooks`, `pb_migrations` and `pb_pages`, so editors and `tsc --noEmit` work without setup. With hooks embedded in the binary (ext/bundle) and no `TypesDir`, neither file is written.
 - Extensions can change the app's finished `types.d.ts` with `FilterTypes(decl string) string` (`js.TypesFilter` in
   `ext/extkit/js`), run after every extension's `TypeScript()`. `ext/sandbox` uses it to declare what it hides `never`.
 

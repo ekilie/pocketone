@@ -44,7 +44,7 @@ type typerExt struct{ decl string }
 
 func (x typerExt) TypeScript() string { return x.decl }
 
-// pb_data/types.d.ts is the engine's declarations plus every extension's (js.Typer).
+// types.d.ts is the engine's declarations plus every extension's (js.Typer).
 func TestTypesFileWithExtensions(t *testing.T) {
 	app, err := tests.NewTestApp()
 	if err != nil {
@@ -64,7 +64,7 @@ func TestTypesFileWithExtensions(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.HasPrefix(string(got), string(typesFile)) || !strings.Contains(string(got), ext.decl) {
-		t.Fatal("pb_data/types.d.ts should be the engine's declarations followed by the extension's")
+		t.Fatal("types.d.ts should be the engine's declarations followed by the extension's")
 	}
 }
 
@@ -124,13 +124,13 @@ func runTSC(t *testing.T, ext typerExt, files map[string]string) (string, error)
 		t.Skip("tsc isn't installed")
 	}
 	dir := t.TempDir()
-	p := &plugin{config: Config{Extensions: []any{ext}}}
+	p := &plugin{config: Config{Extensions: []any{ext}, TypesDir: dir,
+		HooksDir: filepath.Join(dir, "pb_hooks"), MigrationsDir: filepath.Join(dir, "pb_migrations")}}
 	all := map[string]string{
-		"pb_data/types.d.ts": string(p.typesContent()),
-		// skipLibCheck: PocketBase's generated declarations have two type errors of their own
-		"tsconfig.json": `{"compilerOptions": {"target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
-			"lib": ["ES2022"], "strict": true, "noEmit": true, "allowImportingTsExtensions": true, "skipLibCheck": true},
-			"include": ["pb_data/types.d.ts", "pb_hooks/**/*", "pb_migrations/**/*"]}`,
+		"types.d.ts": string(p.typesContent()),
+		// the tsconfig.json the engine writes (skipLibCheck: PocketBase's generated declarations have two type
+		// errors of their own)
+		"tsconfig.json": string(p.tsconfigContent()),
 	}
 	for k, v := range files {
 		all[k] = v

@@ -2,7 +2,7 @@ package jsvm
 
 // TypeScript: .ts, .mts and .cts files (hooks, migrations, modules) go through esbuild, linked into the binary, which
 // strips the types. .ts and .mts are ES modules (TypeScript is written that way); .cts is the CommonJS exception. There is no type checking at runtime; use tsc or your
-// editor with pb_data/types.d.ts for that. Each file's source map is kept, so error positions point at the .ts source.
+// editor with types.d.ts for that. Each file's source map is kept, so error positions point at the .ts source.
 
 import (
 	"encoding/json"
