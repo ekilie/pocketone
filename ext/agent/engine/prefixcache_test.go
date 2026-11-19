@@ -34,47 +34,43 @@ func TestPromptCache(t *testing.T) {
 	if ra.CachedTokens != 0 {
 		t.Fatalf("first prompt: %d cached tokens, want 0", ra.CachedTokens)
 	}
-	rb, err := m.Generate(context.Background(), b, GenerateOptions{MaxTokens: 4}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
 	ids := m.Tokenize(b)
-	if rb.CachedTokens < prefixMin || rb.CachedTokens >= len(ids) {
-		t.Fatalf("second prompt: %d of %d tokens cached", rb.CachedTokens, len(ids))
-	}
-	t.Logf("prompt b: %d tokens, %d from the cache; prefill %v (prompt a: %v)", len(ids), rb.CachedTokens, rb.Prefill, ra.Prefill)
 
-	// the logits after b: read fully, and resumed after the cached prefix
-	full := m.newState(len(ids)+8, prefillBatch)
-	m.forward(full, ids, 0)
+	// while only a is cached: resuming b after a's cached prefix gives exactly what reading a whole and then b's tail
+	// gives without the cache. (Reading only b's first part would batch those tokens differently from how a's read
+	// computed them, which moves the result by rounding, not by anything the cache did.)
 	e, n := m.lookupPrefix(ids)
-	if e == nil {
-		t.Fatal("no cached prefix for b")
+	if e == nil || n < prefixMin {
+		t.Fatalf("no cached prefix for b (%d)", n)
 	}
 	resumed := m.newState(len(ids)+8, prefillBatch)
 	m.restorePrefix(resumed, e, n)
 	m.forward(resumed, ids[n:], n)
-	// the same work without the cache: read a (which filled the cache) whole, then b's tail after the shared part. The
-	// cache must reproduce it exactly. (Reading only b[:n] first would batch those tokens differently from how a's read
-	// computed them, which moves the result by rounding, not by anything the cache did.)
 	aids := m.Tokenize(a)
-	split := m.newState(max(len(ids), len(aids))+8, prefillBatch)
-	m.forward(split, aids, 0)
-	m.forward(split, ids[n:], n)
+	same := m.newState(max(len(ids), len(aids))+8, prefillBatch)
+	m.forward(same, aids, 0)
+	m.forward(same, ids[n:], n)
+	full := m.newState(len(ids)+8, prefillBatch)
+	m.forward(full, ids, 0)
 	diff := func(x, y []float32) (worst float64) {
 		for i := range x {
 			worst = math.Max(worst, math.Abs(float64(x[i]-y[i])))
 		}
 		return worst
 	}
-	if d := diff(split.logits, resumed.logits); d != 0 {
-		t.Fatalf("logits from the cache differ from the same split read without it by %g", d)
+	if d := diff(same.logits, resumed.logits); d != 0 {
+		t.Fatalf("logits from the cache differ from the same reads without it by %g", d)
 	}
-	// against one read of the whole prompt, splitting changes how the prompt is batched, which moves logits a little
-	t.Logf("cached vs uncached: identical; vs one read of b: largest logit difference %.3f", diff(full.logits, split.logits))
-	if argmax(full.logits) != argmax(resumed.logits) {
-		t.Logf("note: the top token differs between one read and the split (a near tie)")
+	t.Logf("cached vs uncached: identical; vs one read of b: largest logit difference %.3f", diff(full.logits, resumed.logits))
+
+	rb, err := m.Generate(context.Background(), b, GenerateOptions{MaxTokens: 4}, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
+	if rb.CachedTokens != n {
+		t.Fatalf("second prompt: %d tokens cached, want %d", rb.CachedTokens, n)
+	}
+	t.Logf("prompt b: %d tokens, %d from the cache; prefill %v (prompt a: %v)", len(ids), rb.CachedTokens, rb.Prefill, ra.Prefill)
 
 	st := m.PromptCache()
 	if st.Bytes > budget || st.Entries == 0 || st.Hits == 0 {
