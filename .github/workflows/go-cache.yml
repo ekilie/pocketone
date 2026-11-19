@@ -1,0 +1,73 @@
+# Warms the Go build cache that extensions.yml's test jobs restore. Each test job only restores it (never saves), so
+# without this every job compiled PocketBase, sqlite and its dependencies with -race from scratch.
+#
+# Why it runs on main: a cache saved on a land/* branch is visible only to that branch, while one saved on main (the
+# default branch) is visible to every land branch and pull request. setup-go's own cache didn't work here either: all
+# jobs shared one key, so the first job to finish (extensions' `plan`, which only builds the .github/extensions tool)
+# saved it and every later job found the key taken.
+#
+# For each extension module it runs exactly what a test job compiles: `go build`, `go vet` and the -race test binaries
+# (`go test -race -run '^$'`, which builds and links every test binary but runs no test), with the same build tags.
+# Each run restores the previous cache, so it compiles only what main changed, and saves under a new key (cache keys
+# are immutable); restores pick the newest by prefix. Go trims cache entries unused for 5 days by itself.
+#
+# Bump the `v1` in both keys (here and in extensions.yml) to start a fresh cache.
+name: go cache
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+# One run at a time; a newer push to main waits for the running one rather than cancelling it (a cancelled run saves
+# nothing).
+concurrency:
+  group: go-cache
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Restore the previous cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-race-v1-${{ runner.os }}-${{ github.sha }}
+          restore-keys: go-race-v1-${{ runner.os }}-
+      - name: Compile every module
+        run: |
+          set -uo pipefail
+          failed=()
+          for mod in $(find ext examples -name go.mod -not -path '*/node_modules/*' -not -path '*/testdata/*' -exec dirname {} \; | sort); do
+            # Same list as moduleTags in .github/extensions/test.go and GOFLAGS in extensions.yml.
+            tags=""
+            [ "$mod" = ext/desktop/runtime ] && tags="-tags=purego"
+            echo "::group::$(date +%T) $mod"
+            if ! (cd "$mod" && GOFLAGS="$tags" bash -c 'go mod download && go build -o /dev/null ./... && go vet ./... && go test -race -count=1 -run "^$" ./... >/dev/null'); then
+              failed+=("$mod")
+            fi
+            echo "::endgroup::"
+          done
+          du -sh ~/.cache/go-build ~/go/pkg/mod
+          # A module that doesn't compile on main still leaves the rest of the cache worth saving; report it, don't fail.
+          if [ ${#failed[@]} -gt 0 ]; then echo "::warning::didn't compile on main: ${failed[*]}"; fi
+          echo "$(date +%T) done"
+      - name: Save the cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-race-v1-${{ runner.os }}-${{ github.sha }}

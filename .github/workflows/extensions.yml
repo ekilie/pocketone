@@ -37,10 +37,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      # No cache here: this job only builds the small .github/extensions tool. (With setup-go's cache on, it saved its
+      # tiny cache first under the key every test job shared, so no test job ever saved a useful one.)
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
+          cache: false
 
       - name: Extension rules
         run: go run ./.github/extensions check
@@ -76,7 +78,17 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          cache-dependency-path: "**/go.sum"
+          cache: false
+      # The build cache go-cache.yml warms on main: compiled -race packages and test binaries' inputs for every module,
+      # plus downloaded modules. Restore only; a land branch's cache would be visible to nobody else.
+      - name: Restore the Go cache from main
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-race-v1-${{ runner.os }}-${{ github.sha }}
+          restore-keys: go-race-v1-${{ runner.os }}-
       # ext/docker's tests run real PocketBase and PocketOne releases, downloaded from GitHub into ~/.cache/ce-docker-test
       # (runtime_test.go); keep them between runs so a GitHub hiccup doesn't fail the job
       - name: Cache ext/docker's test releases
@@ -103,7 +115,7 @@ jobs:
       - name: Build, vet and test
         working-directory: ${{ matrix.module }}
         # ext/desktop/runtime (Wails) builds with its cgo-free backend, as `pocketone desktop build` does; the cgo one
-        # needs GTK headers the runner doesn't have. Same list as moduleTags in .github/extensions/test.go.
+        # needs GTK headers the runner doesn't have. Same list as moduleTags in .github/extensions/test.go and go-cache.yml.
         env:
           GOFLAGS: ${{ matrix.module == 'ext/desktop/runtime' && '-tags=purego' || '' }}
         run: go build -o /dev/null ./... && go vet ./... && go test -race -count=1 -timeout 10m ./...
