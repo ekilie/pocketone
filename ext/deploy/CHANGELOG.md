@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.0 (2026-11-18)
+
 ### Upgrading
 
 1. Deploy history is renamed from `_deploys` to `_deploy_deploys` (its id, `pbc_deploys`, stays) on the first start, by the extension's migration. Code that reads it by name switches to `_deploy_deploys`, or to the id.

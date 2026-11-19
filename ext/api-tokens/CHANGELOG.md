@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.2.0 (2026-11-18)
+
 ### Upgrading
 
 The extension is renamed from `tokens` to `api-tokens`, so "tokens" no longer reads as model tokens next to ext/agent. Upgrade the `pocketone` CLI and your apps together: an older CLI's `login` calls the old API path.

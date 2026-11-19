@@ -6,6 +6,9 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.0.2 (2026-11-18)
+
 ### Changed
 
 - S3 Fallback is a standard extension: built into `pocketone` and on for every app and isolate, doing nothing until the `storage` section mounts a backend. A Go build that added it with `set.Add(s3fallback.New(...))` sets `set.S3Fallback` instead.
+

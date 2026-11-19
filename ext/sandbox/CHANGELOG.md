@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.2 (2026-11-18)
+
 - The app's `types.d.ts` matches what the sandbox allows: `$os.cmd`, `$os.exec`, `$os.exit`, `$filesystem.local` and
   the Go members it hides (`$app.restart`, `bootstrap`, `unsafeWithoutHooks`, a hook's `bindFunc`, `*sql.DB` handles,
   ...) are declared `never`, so `tsc` and editors refuse a call to them instead of offering it.

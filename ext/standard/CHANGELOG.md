@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.1.0 (2026-11-18)
+
 ### Upgrading
 
 1. The member `Tokens` is now `APITokens` (ext/api-tokens, was ext/tokens): `set.APITokens = apitokens.New(apitokens.Config{...})`. Its pocketone.yaml section is `api-tokens:`.

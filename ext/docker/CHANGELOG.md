@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.3 (2026-11-18)
+
 ### Fixed
 
 - A `GET`, `HEAD` or `OPTIONS` request that arrives while a `pb_hooks` change restarts the instance waits for it instead of sometimes failing with 502 "instance unavailable". The change restarts it twice in a row (PocketBase in place, then a new container), and the request was sent again only once; it now goes again until the instance answers, for up to `StartTimeout`. A connection the instance (or Docker's port proxy) resets, or a kept-alive connection it closes as the request goes out, also counts as dropped.

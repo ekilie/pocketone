@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "Desktop"
 group: binary
 summary: "Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine."

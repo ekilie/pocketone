@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.1.0 (2026-11-18)
+
 ### Upgrading
 
 1. The disk tier moved to `pb_cache/cache`, next to `pb_data`. Replace `disk_path: <folder>` with `disk: true` to use it, or keep `disk_path` to choose another place (the tier now goes in a `cache` folder there, relative to the app's folder rather than `pb_data`). Delete the old `p1cache` folder (`pb_data/<disk_path>/p1cache` for a relative path).

@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "UI Cache"
 group: binary
 summary: "Dashboard cache headers that let updates through browsers and CDNs. On by default."

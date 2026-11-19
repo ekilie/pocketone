@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.2
+version: 0.1.0
 title: "Standard Set"
 group: authors
 summary: "The extensions every PocketOne app has, as one set a host configures."

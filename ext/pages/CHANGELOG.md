@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.1 (2026-11-18)
+
 ### Added
 
 - TypeScript types for page code, in the app's `types.d.ts`: `pages.Context` (`ctx`), `pages.Handlers`

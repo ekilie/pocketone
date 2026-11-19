@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.0 (2026-11-18)
+
 ### Upgrading
 
 - `types.d.ts` moved from `pb_data/` to the project root, the folder holding `pb_hooks` (next to `pb_data` and `pocketone.yaml`), so a fresh checkout is typed before the app first runs. Delete the old `pb_data/types.d.ts`. Hook and migration files with `/// <reference path="../pb_data/types.d.ts" />` still point at the old place: change them to `../types.d.ts`, or drop the line if a `tsconfig.json` includes `types.d.ts`. Migrations that `migrate` and automigrate write still carry the old line (PocketBase's templates). If you kept your own `tsconfig.json`, change its `pb_data/types.d.ts` to `types.d.ts`. Commit `types.d.ts` and `tsconfig.json`. `Config.TypesDir` still overrides the folder.

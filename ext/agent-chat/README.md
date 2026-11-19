@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "Agent Chat"
 group: binary
 summary: "Stored conversations with your app's language model: $agent.chat(id).send(text), with history and summaries."

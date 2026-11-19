@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "Sandbox"
 group: many
 summary: "Confines untrusted JS hooks, SQL and outbound network."

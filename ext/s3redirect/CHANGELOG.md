@@ -6,6 +6,9 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.0.2 (2026-11-18)
+
 ### Added
 
 - Package `s3redirect/s3test`: an in-memory S3 server for tests that checks presigned downloads as S3 does, with helpers for mode tests of file downloads.
+

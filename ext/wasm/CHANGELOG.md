@@ -6,6 +6,8 @@ section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 
 ## Unreleased
 
+## 0.0.2 (2026-11-18)
+
 ### Added
 
 - `wasm_list_modules` on the app's MCP server (`mcp/v1`, superusers only): every module by name with its manifest and whether it runs, and instructions telling agents how to call a module with `$wasm.run.async` / `$wasm.call.async`.
@@ -18,3 +20,4 @@ section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 - The Zig example builds with Zig 0.17 (`std.Io`, `std.process.Init`).
 - Compiled modules are kept on disk between calls and restarts (wazero's compilation cache, in `pocketone/wasm` under the user's cache folder; `CacheDir` moves it, `"off"` turns it off): a module's first call compiles it, later calls load its machine code 20 to 30 times faster (Go: 1 s to 38 ms; Rust and Zig: ~30 ms to ~1.3 ms). Memory is still held only while a call runs, and entries older than 30 days are pruned when the process opens the cache.
 - Every example module is built in Docker and kept built, the Go ones (`summary/go`, `crypto`) included: `example/toolchains/Dockerfile` is the build environment for each language (Go, TinyGo, Rust, Zig and C), pinned (images by digest, Zig by checksum), so a rebuild on any machine gives the same bytes; `go test -run TestPrebuiltMatchSources -rebuild` rebuilds them there and checks the bytes.
+

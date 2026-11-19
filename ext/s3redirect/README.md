@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "S3 Redirect"
 group: binary
 summary: "File downloads as short-lived signed S3 redirects."

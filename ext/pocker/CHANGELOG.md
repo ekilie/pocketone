@@ -12,6 +12,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.1 (2026-11-18)
+
 ### Fixed
 
 - Instances attach to the multisite host's own contract scope when `Host` isn't set, so contracts the host provides for its instances (`ProvideForInstances`, such as agent/v1) reach them and the app's own provider steps aside.

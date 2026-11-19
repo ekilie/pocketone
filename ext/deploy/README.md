@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.2
+version: 0.1.0
 title: "Deploy"
 group: binary
 summary: "pocketone deploy, dev, pull and logs, and the deploy API."
