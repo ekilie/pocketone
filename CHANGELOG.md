@@ -12,6 +12,9 @@ every extension that got a new version, with a link to its changes. Upstream Poc
   internal changes don't need one. **A change to one extension goes in that extension's `CHANGELOG.md` instead**, under
   its own `## Unreleased`, with the same headings ([Changelogs](docs/extensions.md#changelogs)).
 - **Group lines under these headings, in this order, and leave out empty ones:**
+  - **Highlights:** written when the release is cut, never per commit: the two to four changes a reader should hear
+    about first (a new feature or extension, a big change), each a bold lead and a sentence or two with a link. Every
+    release that adds something has one, so nothing new hides in the Extensions list.
   - **Upgrading:** what someone on the previous release must do, as steps. Required for anything breaking.
   - **Added**
   - **Changed**
@@ -25,15 +28,27 @@ every extension that got a new version, with a link to its changes. Upstream Poc
      `## Unreleased` (minor when it has upgrade steps, else patch) and stamps that section with it, renames this
      file's `## Unreleased` to `## vX.Y.Z (YYYY-MM-DD)` with an Extensions list, and starts new empty `## Unreleased`
      sections. Review and commit.
-  2. Run `examples/pocketone/release-notes.sh vX.Y.Z > /tmp/notes.md`.
-  3. Run `goreleaser release --config examples/pocketone/.goreleaser.yaml --release-notes /tmp/notes.md`.
+  2. Write the section's **Highlights**, and the release's blog post from them: `site/pb_pages/(main)/blog/pocketone-vX-Y-Z.md`
+     (front matter `title`, `description`, `date`, `author`, `tags: release`), what's new and why it matters, the
+     upgrade steps if any, and links to the docs and the release. Commit both and land them (the post goes live on
+     pocketone.dev with the next site deploy, so land it just before publishing, or right after).
+  3. Run `examples/pocketone/release.sh --check`, then `examples/pocketone/release.sh vX.Y.Z` once it passed: it tags,
+     writes the notes (`examples/pocketone/release-notes.sh vX.Y.Z`) and runs goreleaser, which leaves a draft release.
+  4. Publishing the draft starts its announcement in GitHub Discussions (Announcements, with the release notes;
+     goreleaser sets the category).
 
-  The release header adds the install and upgrade steps on top. Release notes are this file's section for the version,
+  The release header adds a link to the blog post and the install and upgrade steps on top. Release notes are this file's section for the version,
   with its links pointing at the release on GitHub.
 
 ## Unreleased
 
 ## v0.0.1-alpha.8 (2026-11-18)
+
+### Highlights
+
+- **A language model in every app.** `$agent.complete()` and `$agent.stream()` in `pb_hooks` answer from your own API or from a small model PocketOne runs itself, in the same binary: answers that match a JSON schema, threads, prompt caching, and stored conversations with [Agent Chat](ext/agent-chat/README.md). Pick the model in the dashboard under Settings → LLM ([Agent](ext/agent/README.md)).
+- **WASM modules.** Put a `<name>.pb.wasm` built from Go, TinyGo, Rust, Zig or C in `pb_hooks` and call it from your hooks with `await $wasm.run.async(name, input)`; each call runs in its own box with memory and time limits. Thanks to @octavonu ([WASM](ext/wasm/README.md)).
+- **Desktop apps.** `pocketone desktop build` turns the app folder you run with `pocketone serve` into a native desktop app for macOS, Windows and Linux, one executable each, from any machine ([Desktop](ext/desktop/README.md)).
 
 ### Upgrading
 
@@ -57,12 +72,12 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ### Extensions
 
-- [Agent](ext/agent/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
-- [Agent Chat](ext/agent-chat/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
+- [Agent](ext/agent/CHANGELOG.md#002-2026-11-18) 0.0.2 (new)
+- [Agent Chat](ext/agent-chat/CHANGELOG.md#002-2026-11-18) 0.0.2 (new)
 - [API Tokens](ext/api-tokens/CHANGELOG.md#020-2026-11-18) 0.1.0 → 0.2.0 (has upgrade steps)
 - [Cache](ext/cache/CHANGELOG.md#010-2026-11-18) 0.0.2 → 0.1.0 (has upgrade steps)
 - [Deploy](ext/deploy/CHANGELOG.md#010-2026-11-18) 0.0.2 → 0.1.0 (has upgrade steps)
-- [Desktop](ext/desktop/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
+- [Desktop](ext/desktop/CHANGELOG.md#002-2026-11-18) 0.0.2 (new)
 - [Docker](ext/docker/CHANGELOG.md#003-2026-11-18) 0.0.2 → 0.0.3
 - [JSVM](ext/jsvm/CHANGELOG.md#010-2026-11-18) 0.0.2 → 0.1.0 (has upgrade steps)
 - [Pages](ext/pages/CHANGELOG.md#011-2026-11-18) 0.1.0 → 0.1.1
@@ -71,9 +86,9 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 - [S3 Redirect](ext/s3redirect/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
 - [Sandbox](ext/sandbox/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
 - [Standard Set](ext/standard/CHANGELOG.md#010-2026-11-18) 0.0.2 → 0.1.0 (has upgrade steps)
-- [UI Cache](ext/uicache/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
+- [UI Cache](ext/uicache/CHANGELOG.md#002-2026-11-18) 0.0.2 (new)
 - [Upgrade](ext/upgrade/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
-- [WASM](ext/wasm/CHANGELOG.md#002-2026-11-18) 0.0.1 → 0.0.2
+- [WASM](ext/wasm/CHANGELOG.md#002-2026-11-18) 0.0.2 (new)
 
 ### PocketBase
 

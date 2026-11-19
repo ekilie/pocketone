@@ -45,7 +45,8 @@ func TestAbsoluteLinks(t *testing.T) {
 }
 
 // release raises each extension with unreleased lines, stamps its changelog and the root's, and lists the new
-// versions in the root section; an extension with nothing unreleased is left alone.
+// versions in the root section; a new extension keeps its first version and is listed as new; an extension with nothing
+// unreleased is left alone.
 func TestRelease(t *testing.T) {
 	dir := t.TempDir()
 	write := func(p, s string) {
@@ -59,7 +60,9 @@ func TestRelease(t *testing.T) {
 	write("ext/pages/README.md", "---\nowners: [\"@a\"]\nversion: 0.0.1\ntitle: \"Pages\"\n---\n# Pages\n")
 	write("ext/pages/CHANGELOG.md", "# Pages changelog\n\n## Unreleased\n\n### Upgrading\n\n- rename x\n\n## PocketOne v0.0.1 (2026-01-01)\n\n- old\n")
 	write("ext/pitr/README.md", "---\nversion: 0.0.3\ntitle: PITR\n---\n# PITR\n")
-	write("ext/pitr/CHANGELOG.md", "# PITR changelog\n\n## Unreleased\n\n### Fixed\n\n- a fix\n")
+	write("ext/pitr/CHANGELOG.md", "# PITR changelog\n\n## Unreleased\n\n### Fixed\n\n- a fix\n\n## 0.0.3 (2026-01-01)\n\n- old\n")
+	write("ext/fresh/README.md", "---\nversion: 0.0.1\ntitle: Fresh\n---\n# Fresh\n")
+	write("ext/fresh/CHANGELOG.md", "# Fresh changelog\n\n## Unreleased\n\n### Added\n\n- New extension\n")
 	write("ext/quiet/README.md", "---\nversion: 0.2.0\ntitle: Quiet\n---\n# Quiet\n")
 	write("ext/quiet/CHANGELOG.md", "# Quiet changelog\n\n## Unreleased\n")
 	wd, _ := os.Getwd()
@@ -78,6 +81,9 @@ func TestRelease(t *testing.T) {
 	if got := read("ext/pitr/README.md"); !strings.Contains(got, "version: 0.0.4\n") {
 		t.Errorf("pitr, patch: %s", got)
 	}
+	if got := read("ext/fresh/README.md"); !strings.Contains(got, "version: 0.0.1\n") {
+		t.Errorf("fresh is new, so it keeps its first version: %s", got)
+	}
 	if got := read("ext/quiet/README.md"); !strings.Contains(got, "version: 0.2.0\n") {
 		t.Errorf("quiet had nothing: %s", got)
 	}
@@ -86,6 +92,7 @@ func TestRelease(t *testing.T) {
 	}
 	root := read("CHANGELOG.md")
 	want := "## Unreleased\n\n## v0.0.2 (2026-02-02)\n\n### Added\n\n- core thing\n\n### Extensions\n\n" +
+		"- [Fresh](ext/fresh/CHANGELOG.md#001-2026-02-02) 0.0.1 (new)\n" +
 		"- [Pages](ext/pages/CHANGELOG.md#010-2026-02-02) 0.0.1 → 0.1.0 (has upgrade steps)\n" +
 		"- [PITR](ext/pitr/CHANGELOG.md#004-2026-02-02) 0.0.3 → 0.0.4\n\n### PocketBase\n\n- Built on v1\n\n## v0.0.1"
 	if !strings.Contains(root, want) {

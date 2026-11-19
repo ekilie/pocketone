@@ -57,8 +57,13 @@ release:
   # a tag with a prerelease part (v0.1.0-alpha.1) is published as a GitHub prerelease, so it's never "Latest"
   prerelease: auto
   name_template: 'PocketOne {{ .Tag }}'
-  # every release's notes start with how to install or upgrade; the version's own notes (from CHANGELOG.md) follow
+  # publishing the release starts its announcement in Discussions, with these notes
+  discussion_category_name: Announcements
+  # every release's notes start with its blog post (site/pb_pages/(main)/blog/pocketone-vX-Y-Z.md) and how to install
+  # or upgrade; the version's own notes (from CHANGELOG.md) follow
   header: |
+    **[Read the announcement on the blog](https://pocketone.dev/blog/pocketone-{{ replace .Tag "." "-" }})**
+
     ## Install or upgrade
 
     **New install:**

@@ -5,7 +5,7 @@ package main
 // ext/<name>/CHANGELOG.md, so a change to an extension touches only its folder, and lines go under `## Unreleased`.
 //
 // `release vX.Y.Z` cuts a PocketOne release: every extension with lines under its `## Unreleased` gets a new version
-// (minor when it has upgrade steps, else patch), set in its README and stamped on that section; the root changelog's
+// (minor when it has upgrade steps, else patch; a new extension keeps its first one and is listed as new), set in its README and stamped on that section; the root changelog's
 // `## Unreleased` becomes `## vX.Y.Z (date)`, with an Extensions list naming each new version and linking to it.
 // `release-notes vX.Y.Z` prints that section for GitHub, with its links made absolute.
 
@@ -127,6 +127,7 @@ func githubAnchor(heading string) string {
 type bump struct {
 	name, title, from, to, heading string
 	upgrading                      bool
+	isNew                          bool // its first release: no version is stamped in its changelog yet
 }
 
 // release cuts PocketOne version: it raises each extension with unreleased lines, stamps its changelog, and stamps
@@ -151,13 +152,16 @@ func release(version, date string) ([]string, error) {
 		if !e.IsDir() || err1 != nil || err2 != nil {
 			continue
 		}
-		_, body, _, ok := unreleased(string(log))
+		_, body, after, ok := unreleased(string(log))
 		if !ok || !hasLines(body) {
 			continue
 		}
 		fm := readFront(string(readme))
 		b := bump{name: e.Name(), title: strings.Trim(fm["title"], `"`), from: fm["version"], upgrading: upgradingRe.MatchString(body)}
-		if b.to, err = nextVersion(b.from, b.upgrading); err != nil {
+		// A new extension ships at the version its README already has; it's listed as new, not as a raise.
+		if b.isNew = !strings.Contains(after, "## "); b.isNew {
+			b.to = b.from
+		} else if b.to, err = nextVersion(b.from, b.upgrading); err != nil {
 			return nil, fmt.Errorf("%s/README.md: %w", dir, err)
 		}
 		b.heading = b.to + " (" + date + ")"
@@ -185,6 +189,10 @@ func release(version, date string) ([]string, error) {
 		var list strings.Builder
 		list.WriteString("\n### Extensions\n\n")
 		for _, b := range bumps {
+			if b.isNew {
+				fmt.Fprintf(&list, "- [%s](ext/%s/CHANGELOG.md#%s) %s (new)\n", b.title, b.name, githubAnchor(b.heading), b.to)
+				continue
+			}
 			fmt.Fprintf(&list, "- [%s](ext/%s/CHANGELOG.md#%s) %s → %s", b.title, b.name, githubAnchor(b.heading), b.from, b.to)
 			if b.upgrading {
 				list.WriteString(" (has upgrade steps)")
@@ -203,6 +211,10 @@ func release(version, date string) ([]string, error) {
 		changed = append(changed, f)
 	}
 	for _, b := range bumps {
+		if b.isNew {
+			fmt.Printf("%s: %s (new)\n", b.name, b.to)
+			continue
+		}
 		fmt.Printf("%s: %s → %s%s\n", b.name, b.from, b.to, map[bool]string{true: " (has upgrade steps)"}[b.upgrading])
 	}
 	return changed, nil
