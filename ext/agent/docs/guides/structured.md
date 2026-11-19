@@ -61,7 +61,7 @@ var order struct {
 err = json.Unmarshal(r.Data, &order) // {Dana Austin [{blue mugs 3} {red plates 2}]}
 ```
 
-## A promise, not a request
+## How the schema is enforced
 
 With a built-in model the schema isn't a suggestion the model might ignore: as it writes, every token that would
 break the schema is ruled out, so the answer is always JSON of that shape. Even `qwen3-0.6b` fills in a schema
