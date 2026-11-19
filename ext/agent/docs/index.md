@@ -56,6 +56,9 @@ The `schema` makes the model answer with JSON in exactly that shape, and `r.data
 ## What's next
 
 - [Choosing a model](choosing.md): built in or your own API, which model, and how fast each is.
+- [Writing a preamble](guides/preamble.md): the system prompt that sets how it answers.
+- [Remembering conversations](guides/conversations.md): keep chats, summarize the old turns, recall past chats, and
+  how big models cache prompts.
 - [Structured answers](guides/structured.md): JSON you can rely on, even from a small model.
 - [Streaming answers](guides/streaming.md): show an answer as it's written, in a page.
 - [Your own knowledge](guides/context.md): answer questions about your docs or data.
