@@ -15,8 +15,8 @@ under `/docs/extensions/pages`.
 - `pb_pages/assets/site.css` is the whole stylesheet: hand-written, no build step.
 - Code tabs (`pb_pages/assets/docs.js`): consecutive ```` ```js ````, ```` ```ts ````, ```` ```go ````, ```` ```ejs ````,
   ```` ```jsx ```` and ```` ```tsx ```` blocks on a page become one tabbed example; the reader's language is kept in
-  `localStorage` (`code-lang`) and applies to every group. Extension docs (`ext/*/docs`) use them; READMEs keep
-  samples inline (text between languages).
+  `localStorage` (`code-lang`) and applies to every group. Extension docs (`ext/*/docs`) use TS + Go runs (examples
+  are TypeScript page code, not hooks or JS); READMEs keep samples inline (text between languages).
 - `design/`: the logo and mascot (the joey in the pocket). `mark.svg` is the source; `design/render.sh` renders
   `logo.html` to PNGs in `design/out/` and copies the mark and favicons into `pb_pages/`.
 

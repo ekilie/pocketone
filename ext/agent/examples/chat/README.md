@@ -3,7 +3,7 @@
 A chat app about PocketOne, written as a PocketPages app with no Go: `pb_pages` and the stock `pocketone` binary. It
 shows `$agent` from page code:
 
-- **arming the model from disk:** [`_private/agent.js`](pb_pages/_private/agent.js) reads a preamble
+- **arming the model from disk:** [`_private/agent.ts`](pb_pages/_private/agent.ts) reads a preamble
   ([`preamble.md`](pb_pages/_private/preamble.md)) and context files ([`_private/context/`](pb_pages/_private/context),
   eleven pages of pocketone.dev) with `$os.readDir` / `$os.readFile`, splits them into sections, and for each question
   picks the three that match best (BM25, plus a few synonyms: people say "apps", the docs say "instances");
@@ -11,7 +11,7 @@ shows `$agent` from page code:
   `$agent.chat(id, { system }).send(question, { context, onText })` each turn (the agent-chat extension): the chat
   keeps the conversation (the page holds only its id), sends the preamble, the turns so far and the question with its
   excerpts after it, and keeps the question as sent, so each turn's prompt starts like the last one and the model
-  reads only the new question; [`chat/+api.js`](pb_pages/chat/+api.js) forwards each piece to the browser with
+  reads only the new question; [`chat/+api.ts`](pb_pages/chat/+api.ts) forwards each piece to the browser with
   `ctx.res.sse()`;
 - **structured output:** a second call, `$agent.complete({ schema: { type: 'array', ... } })`, suggests three follow-up
   questions; the model can only answer with an array of three strings;
@@ -23,9 +23,9 @@ shows `$agent` from page code:
 ```
 pb_pages/
   index.ejs              the chat page
-  chat/+api.js           POST /chat {chat?, question}: the answer as server-sent events; GET /chat: status and what the app knows
-  chat/suggest/+api.js   POST /chat/suggest: three follow-up questions (JSON schema)
-  _private/agent.js      loads preamble + context, searches, asks the chat ($agent.chat)
+  chat/+api.ts           POST /chat {chat?, question}: the answer as server-sent events; GET /chat: status and what the app knows
+  chat/suggest/+api.ts   POST /chat/suggest: three follow-up questions (JSON schema)
+  _private/agent.ts      loads preamble + context, searches, asks the chat ($agent.chat)
   _private/preamble.md   who the assistant is and how it answers
   _private/context/*.md  what it knows
 ```

@@ -3,12 +3,12 @@ owners: ["@benallfree"]
 version: 0.0.1
 title: "Agent"
 group: binary
-summary: "A language model for your app's hooks: your own API, or a small model PocketOne runs itself in the same binary."
+summary: "A language model for your app: your own API, or a small model PocketOne runs itself in the same binary."
 ---
 
 # Agent
 
-Agent gives your app a language model to call: `$agent.complete()` from `pb_hooks` and pages, or the agent/v1
+Agent gives your app a language model to call: `$agent.complete()` from your pages' code, or the agent/v1
 contract from Go (`agentv1.Contract.Must(app).Complete(...)`). Use it for the small jobs that
 come up around data: label a support ticket, pull a JSON object out of an email, summarize a record, write a title or
 an alt text.
@@ -64,28 +64,36 @@ command (`superuser`, `migrate`); only `serve` starts the model.
 
 ## Use
 
-```js
-// pb_hooks/tickets.pb.js
-onRecordCreate((e) => {
-  const r = $agent.complete({
+```ts
+// pb_pages/tickets/+api.ts: POST /tickets {"body": "..."}
+export function post(ctx: any) {
+  const { body } = ctx.req.body()
+  const r: AgentAnswer = $agent.complete({
     system: "Label the support ticket.",
-    prompt: e.record.get("body"),
+    prompt: body,
     schema: { type: "object", properties: { label: { enum: ["bug", "billing", "question"] } }, required: ["label"] },
     maxTokens: 30,
   })
-  e.record.set("label", r.data.label)
-  e.next()
-}, "tickets")
+  const ticket = new Record(ctx.app.findCollectionByNameOrId("tickets"))
+  ticket.set("body", body)
+  ticket.set("label", r.data.label)
+  ctx.app.save(ticket)
+  return ctx.res.json(201, { id: ticket.id, label: r.data.label })
+}
 ```
 
 In Go:
 
 ```go
-// in your Go app
-app.OnRecordCreate("tickets").BindFunc(func(e *core.RecordEvent) error {
-	r, err := agentv1.Contract.Must(e.App).Complete(e.Context, extkit.Internal, agentv1.CompleteInput{
+// POST /tickets {"body": "..."}, in your app's Go code
+se.Router.POST("/tickets", func(e *core.RequestEvent) error {
+	var in struct{ Body string }
+	if err := e.BindBody(&in); err != nil {
+		return e.BadRequestError("send {body}", err)
+	}
+	r, err := agentv1.Contract.Must(e.App).Complete(e.Request.Context(), extkit.Internal, agentv1.CompleteInput{
 		System:    "Label the support ticket.",
-		Prompt:    e.Record.GetString("body"),
+		Prompt:    in.Body,
 		Schema:    json.RawMessage(`{"type":"object","properties":{"label":{"enum":["bug","billing","question"]}},"required":["label"]}`),
 		MaxTokens: 30,
 	})
@@ -96,8 +104,17 @@ app.OnRecordCreate("tickets").BindFunc(func(e *core.RecordEvent) error {
 	if err := json.Unmarshal(r.Data, &out); err != nil {
 		return err
 	}
-	e.Record.Set("label", out.Label)
-	return e.Next()
+	col, err := e.App.FindCollectionByNameOrId("tickets")
+	if err != nil {
+		return err
+	}
+	ticket := core.NewRecord(col)
+	ticket.Set("body", in.Body)
+	ticket.Set("label", out.Label)
+	if err := e.App.Save(ticket); err != nil {
+		return err
+	}
+	return e.JSON(201, map[string]string{"id": ticket.Id, "label": out.Label})
 })
 ```
 
@@ -121,9 +138,9 @@ pass `extkit.Internal` to call with the app's own rights. The `.async` forms are
 - For stored chats with history and summaries, add [Agent Chat](../agent-chat/README.md): `$agent.chat(id).send(text)`.
 
 `$agent.complete` waits for the answer, like `$http.send`. A model on your CPU writes maybe 5 to 30 words a second,
-so keep answers short (`maxTokens`) and do long jobs in a cron, not in a request hook.
+so keep answers short (`maxTokens`) and do long jobs in a cron, not while a request waits.
 
-While the model downloads or loads, `$agent.complete` fails at once with `not_ready`. In an async hook,
+While the model downloads or loads, `$agent.complete` fails at once with `not_ready`. In async page code,
 `await $agent.complete.async(opts)` waits for it instead (up to `opts.wait`, default `timeout`), and
 `$agent.stream(opts, onText, { onWait })` with `wait` calls `onWait(status)` while it waits, to show progress
 ([When the model is loading](docs/guides/waiting.md)).

@@ -19,12 +19,15 @@ first, then send only what matches.
 
 Keep the preamble and your docs as Markdown files in `pb_pages/_private/` (never served), and read them from page code:
 
-```js
-// pb_pages/_private/assistant.js
-const dir = (ctx) => `${ctx.pagesDir}/_private`
-const read = (path) => toString($os.readFile(path))
+```ts
+// pb_pages/_private/assistant.ts
+type Doc = { name: string; text: string }
+type Knowledge = { preamble: string; docs: Doc[] }
 
-function knowledge(ctx) {
+const dir = (ctx: any): string => `${ctx.pagesDir}/_private`
+const read = (path: string): string => toString($os.readFile(path))
+
+function knowledge(ctx: any): Knowledge {
   const files = $os.readDir(`${dir(ctx)}/context`).filter((e) => e.name().endsWith(".md"))
   return {
     preamble: read(`${dir(ctx)}/preamble.md`),
@@ -33,7 +36,7 @@ function knowledge(ctx) {
 }
 
 // a simple search: the documents sharing the most words with the question
-function search(kb, question, n) {
+function search(kb: Knowledge, question: string, n: number): Doc[] {
   const words = new Set(question.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2))
   return kb.docs
     .map((d) => ({ d, score: d.text.toLowerCase().split(/[^a-z0-9]+/).filter((w) => words.has(w)).length }))
@@ -43,7 +46,7 @@ function search(kb, question, n) {
     .map((x) => x.d)
 }
 
-function answer(ctx, question) {
+export function answer(ctx: any, question: string): AgentAnswer {
   const kb = knowledge(ctx)
   const excerpts = search(kb, question, 2).map((d) => `[${d.name}]\n${d.text}`).join("\n\n")
   // the preamble stays the same on every call, so the model reads it once (prompt caching); the excerpts change with
@@ -55,8 +58,6 @@ function answer(ctx, question) {
     temperature: 0.3,
   })
 }
-
-module.exports = { answer }
 ```
 
 A page calls it with `ctx.resolve("assistant").answer(ctx, question)`. Split long documents into sections at their

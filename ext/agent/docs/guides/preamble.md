@@ -8,14 +8,6 @@ description: "The system prompt that sets who the assistant is and how it answer
 The preamble is the `system` text you send with every call: who the assistant is, what it may use, and how it
 answers. It's the biggest lever you have on the answers, and the one people most often get wrong by writing too much.
 
-```js
-const r = $agent.complete({
-  system: preamble, // the same text on every call
-  messages: [...recentTurns, { role: "user", content: question + "\n\nDocumentation excerpts:\n\n" + excerpts }],
-  maxTokens: 350,
-})
-```
-
 ```ts
 const r: AgentAnswer = $agent.complete({
   system: preamble, // the same text on every call

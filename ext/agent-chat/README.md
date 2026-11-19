@@ -12,9 +12,9 @@ Agent Chat keeps conversations with your app's language model. Start a chat, kee
 it stores every turn, sends the model the recent ones with each new question, folds older ones into a summary so long
 chats stay fast, and with the built-in model keeps each chat's state between turns, so a turn reads only what's new.
 
-```js
-const id = $agent.newChat({ meta: { user: e.auth.id } })
-const answer = $agent.chat(id, { system: preamble }).send("How do I export my notes?")
+```ts
+const id: string = $agent.newChat({ meta: { user: ctx.auth.id } })
+const answer: AgentAnswer = $agent.chat(id, { system: preamble }).send("How do I export my notes?")
 ```
 
 In Go:
@@ -54,7 +54,7 @@ and their data stay. `pocketone extensions migrate down agent-chat` removes them
 | Method | What it does |
 |---|---|
 | `send(text, { onText?, onWait?, schema? })` | Asks, saves both turns, returns agent/v1's answer (`text`, `usage`, ...). With `onText`, streams the answer to it as it's written. |
-| `send.async(text, { schema? })` | The same in an async hook, waiting for a model that's still loading. |
+| `send.async(text, { schema? })` | The same in async page code, waiting for a model that's still loading. |
 | `history({ limit?, before? })` | The chat's messages, oldest first: `{ id, role, content, created }`. |
 | `summary()` | What the older messages were folded into. |
 | `title(text?)`, `meta(object?)` | Read, or set and return. |
@@ -77,12 +77,13 @@ how many.
 The chats are in `_agent_chat_chats` and `_agent_chat_messages`, superuser-only: your routes decide what users see.
 A typical route checks that the chat's `meta.user` is the caller before sending:
 
-```js
-routerAdd("POST", "/api/ask/{chat}", (e) => {
-  const chat = $agent.chat(e.request.pathValue("chat"), { system: preamble })
-  if (chat.meta().user !== e.auth?.id) throw new NotFoundError()
-  return e.json(200, chat.send(e.requestInfo().body.question))
-}, $apis.requireAuth())
+```ts
+// pb_pages/ask/[chat]/+api.ts: POST /ask/<chat id> {"question": "..."}
+export function post(ctx: any) {
+  const chat = $agent.chat(ctx.params.chat, { system: preamble(ctx) })
+  if (!ctx.auth || chat.meta().user !== ctx.auth.id) throw ctx.httpError(404, "no such chat")
+  return ctx.res.json(chat.send(ctx.req.body().question))
+}
 ```
 
 **How a send is built:** the system text, then the summary (when there is one), then every message since the last
@@ -106,7 +107,7 @@ which is what the built-in model's prompt cache and its per-chat thread need to 
 //	POST /api/_c/agent.chat/v1/new  {"title": "Support"}            -> {"id": "..."}
 //	POST /api/_c/agent.chat/v1/send {"id": "...", "text": "Hello"}  -> {"answer": {"text": "..."}}
 //
-// In pb_hooks the same is $agent.newChat() and $agent.chat(id).send(text).
+// In page code the same is $agent.newChat() and $agent.chat(id).send(text).
 package main
 
 import (

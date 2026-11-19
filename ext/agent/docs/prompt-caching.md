@@ -29,17 +29,6 @@ never changes first and what changes most last:
 2. **The conversation so far:** the earlier turns exactly as you sent them last time.
 3. **The new question, then the excerpts** you picked for it ([Your own knowledge](guides/context.md)).
 
-```js
-const r = $agent.complete({
-  system: preamble, // never changes: read once, then reused
-  messages: [
-    ...earlierTurns, // same as last time: reused
-    { role: "user", content: `${question}\n\nExcerpts to answer from:\n\n${excerpts}` }, // new: read
-  ],
-  maxTokens: 350,
-})
-```
-
 ```ts
 const r: AgentAnswer = $agent.complete({
   system: preamble, // never changes: read once, then reused
@@ -79,11 +68,6 @@ What breaks the cache:
 
 Every answer reports it in `usage`:
 
-```js
-const r = $agent.complete({ system: preamble, prompt: question })
-// r.usage: { inputTokens: 431, outputTokens: 52, cachedTokens: 139 }
-```
-
 ```ts
 const r: AgentAnswer = $agent.complete({ system: preamble, prompt: question })
 // r.usage: { inputTokens: 431, outputTokens: 52, cachedTokens: 139 }
@@ -115,16 +99,17 @@ new ones. On a small server, lower it to save memory; with more memory and long 
 The cache fills as prompts come in, so the first question after a start reads the whole preamble, and a burst of
 other prompts can push it out. `$agent.warm` reads it ahead of time and keeps it:
 
-```js
-// pb_hooks/agent.pb.js: at boot, in the background (returns at once, never throws)
-const preamble = toString($os.readFile(`${__hooks}/preamble.md`))
-$agent.warm({ system: preamble })
-```
-
 ```ts
-// pb_hooks/agent.pb.ts: at boot, in the background (returns at once, never throws)
-const preamble: string = toString($os.readFile(`${__hooks}/preamble.md`))
-$agent.warm({ system: preamble })
+// pb_pages/_private/preamble.ts: read once per app, warmed the first time a page asks for it
+let text: string | undefined
+
+export function preamble(ctx: any): string {
+  if (text === undefined) {
+    text = toString($os.readFile(`${ctx.pagesDir}/_private/preamble.md`))
+    $agent.warm({ system: text }) // returns at once and warms in the background; never throws
+  }
+  return text
+}
 ```
 
 ```go
@@ -136,7 +121,7 @@ app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 ```
 
 It returns `{ id, warmed, message, forget() }`. `warmed` is false while it's still reading (or with your own API, which
-caches by itself; `message` says why). In an async hook, `await $agent.warm.async({ system: preamble })` resolves
+caches by itself; `message` says why). In async page code, `await $agent.warm.async({ system: preamble })` resolves
 once it's in. The id comes from the text, so warming the same text again finds the same warm and costs nothing; after
 a model change it's warmed again on the new one. `forget()` lets it leave the cache like any other prompt.
 
@@ -148,10 +133,6 @@ not every prompt. On a multisite host each app may pin up to `per_instance.pinne
 The cache keeps the start of prompts. A chat needs more: the model's answer from last turn is part of the next prompt,
 and reading it again costs as much as writing it did. `thread` keeps a conversation's whole state between calls, the
 answer included:
-
-```js
-const r = $agent.complete({ system: preamble, messages: turnsSoFar, thread: chatId })
-```
 
 ```ts
 const r: AgentAnswer = $agent.complete({ system: preamble, messages: turnsSoFar, thread: chatId })

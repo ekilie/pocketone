@@ -1,11 +1,11 @@
 ---
 title: AssemblyScript
-description: Build a WASM module for pb_hooks in AssemblyScript, a TypeScript-like language, with the WASI shim.
+description: Build a WASM module for your app in AssemblyScript, a TypeScript-like language, with the WASI shim.
 ---
 
 # AssemblyScript
 
-[AssemblyScript](https://www.assemblyscript.org) looks like TypeScript and compiles straight to WebAssembly, so it's the closest you can get to writing a module in the language your hooks are in. Its modules are tiny: the summary example is 10 KB, its first call compiles in about 13 ms, and later calls load it from the cache in half a millisecond.
+[AssemblyScript](https://www.assemblyscript.org) looks like TypeScript and compiles straight to WebAssembly, so it's the closest you can get to writing a module in the language your page code is in. Its modules are tiny: the summary example is 10 KB, its first call compiles in about 13 ms, and later calls load it from the cache in half a millisecond.
 
 It looks like TypeScript, but it isn't: types are WebAssembly's (`i32`, `f64`, `u8`), there's no `any` and no union types, and npm packages written for JavaScript don't work in it. Only packages written for AssemblyScript do.
 
@@ -39,7 +39,7 @@ npm install --save-dev --save-exact assemblyscript @assemblyscript/wasi-shim
 
 ## The module
 
-[`example/summary/assemblyscript`](../../example/summary/assemblyscript/assembly/index.ts) counts the words of a text and returns the first twelve. AssemblyScript's standard library has no JSON, so, like the [C](c.md) example, it takes the text as it is (a hook can pass a string) and prints JSON:
+[`example/summary/assemblyscript`](../../example/summary/assemblyscript/assembly/index.ts) counts the words of a text and returns the first twelve. AssemblyScript's standard library has no JSON, so, like the [C](c.md) example, it takes the text as it is (your code can pass a string) and prints JSON:
 
 ```ts
 // what `summary --describe` prints: AssemblyScript can't embed a file, so the manifest is a string here
@@ -75,22 +75,16 @@ The manifest says `"language": "AssemblyScript"`, since the module doesn't say i
 
 ## Call it
 
-```js
-// pb_hooks/main.pb.js
-onRecordCreate(async (e) => {
-  const out = await $wasm.run.async("summary", e.record.get("body")) // a string goes in as it is
-  e.record.set("summary", out.text)
-  e.record.set("words", out.words)
-  return e.next()
-}, "posts")
-```
+An API route that saves a post with its summary and word count:
 
 ```ts
-// pb_hooks/main.pb.ts
-onRecordCreate(async (e) => {
-  const out = await $wasm.run.async<{ text: string; words: number }>("summary", e.record.get("body")) // a string goes in as it is
-  e.record.set("summary", out.text)
-  e.record.set("words", out.words)
-  return e.next()
-}, "posts")
+// pb_pages/posts/+api.ts
+export async function post(ctx: any) {
+  const { body } = ctx.req.body()
+  const out = await $wasm.run.async<{ text: string; words: number }>("summary", String(body ?? "")) // a string goes in as it is
+  const record = new Record(ctx.app.findCollectionByNameOrId("posts"))
+  record.load({ body, summary: out.text, words: out.words })
+  ctx.app.save(record)
+  return ctx.res.json(201, { id: record.id, summary: out.text, words: out.words })
+}
 ```

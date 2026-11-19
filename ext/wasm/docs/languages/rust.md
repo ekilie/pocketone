@@ -1,6 +1,6 @@
 ---
 title: Rust
-description: Build WASM modules for pb_hooks from Rust, and use crates from crates.io in them.
+description: Build WASM modules for your app from Rust, and use crates from crates.io in them.
 ---
 
 # Rust
@@ -60,8 +60,9 @@ cp target/wasm32-wasip1/release/summary.wasm pb_hooks/summary.pb.wasm
 
 ## Call it
 
-```js
-const out = await $wasm.run.async("summary", { title: e.record.get("title"), body: e.record.get("body") })
+```ts
+const { title, body } = ctx.req.body()
+const out = await $wasm.run.async<{ text: string }>("summary", { title, body })
 ```
 
 ## Crates

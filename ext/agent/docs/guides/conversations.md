@@ -15,23 +15,13 @@ The [Agent Chat](../../../agent-chat/README.md) extension does everything below 
 the recent turns with a summary of the older ones, keeps the start of each prompt stable for the cache, and gives each
 chat a thread so the built-in model reads only the new question.
 
-```js
-// when a user opens a new chat
-const id = $agent.newChat({ meta: { user: e.auth.id } })
-
-// each question
-const chat = $agent.chat(id, { system: preamble, context: (q) => excerptsFor(q) })
-if (chat.meta().user !== e.auth.id) throw new NotFoundError()
-const answer = chat.send(question) // or chat.send(question, { onText }) to stream it
-```
-
 ```ts
 // when a user opens a new chat
-const id: string = $agent.newChat({ meta: { user: e.auth.id } })
+const id: string = $agent.newChat({ meta: { user: ctx.auth.id } })
 
 // each question
 const chat: AgentChat = $agent.chat(id, { system: preamble, context: (q) => excerptsFor(q) })
-if (chat.meta().user !== e.auth.id) throw new NotFoundError()
+if (chat.meta().user !== ctx.auth?.id) throw ctx.httpError(404, "no such chat")
 const answer: AgentAnswer = chat.send(question) // or chat.send(question, { onText }) to stream it
 ```
 
@@ -39,7 +29,7 @@ const answer: AgentAnswer = chat.send(question) // or chat.send(question, { onTe
 chats := chatv1.Contract.Must(app)
 
 // when a user opens a new chat
-meta, _ := json.Marshal(map[string]string{"user": e.Auth.Id})
+meta, _ := json.Marshal(map[string]string{"user": e.Auth.Id}) // e is the request (*core.RequestEvent)
 c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: meta})
 
 // each question (check the chat's meta is the caller's first, as above)
@@ -63,11 +53,11 @@ Store every chat as records, so it survives reloads and belongs to the person wh
 
 Each question then loads what it needs, asks, and saves both turns:
 
-```js
-// pb_pages/_private/chat.js
-const preamble = (ctx) => toString($os.readFile(`${ctx.pagesDir}/_private/preamble.md`))
+```ts
+// pb_pages/_private/chat.ts
+const preamble = (ctx: any): string => toString($os.readFile(`${ctx.pagesDir}/_private/preamble.md`))
 
-function ask(ctx, chatId, question) {
+export function ask(ctx: any, chatId: string, question: string): string {
   const app = ctx.app
   const chat = app.findRecordById("chats", chatId)
   if (chat.getString("user") !== ctx.auth?.id) throw ctx.httpError(404, "no such chat")
@@ -75,14 +65,14 @@ function ask(ctx, chatId, question) {
   const recent = app
     .findRecordsByFilter("messages", "chat = {:chat}", "-created", 6, 0, { chat: chatId })
     .reverse()
-    .map((m) => ({ role: m.getString("role"), content: m.getString("content") }))
+    .map((m: core.Record): AgentMessage => ({ role: m.getString("role") as "user" | "assistant", content: m.getString("content") }))
 
   const summary = chat.getString("summary")
   const system = preamble(ctx) + (summary ? `\n\nEarlier in this conversation: ${summary}` : "")
   // thread: the built-in model keeps this chat's state, so next time it reads only the new question
-  const r = $agent.complete({ system, messages: [...recent, { role: "user", content: question }], maxTokens: 350, thread: chatId })
+  const r: AgentAnswer = $agent.complete({ system, messages: [...recent, { role: "user", content: question }], maxTokens: 350, thread: chatId })
 
-  const save = (role, content) => {
+  const save = (role: string, content: string) => {
     const m = new Record(app.findCollectionByNameOrId("messages"))
     m.set("chat", chatId)
     m.set("role", role)
@@ -104,9 +94,9 @@ and finally doesn't fit. The usual answer has two parts:
 - **A summary of everything before it:** when a chat grows past the window, ask the model to fold the turns that drop
   out into a few sentences, and keep that in the chat's `summary`:
 
-```js
-function summarize(ctx, chat, dropping) {
-  const r = $agent.complete({
+```ts
+export function summarize(ctx: any, chat: core.Record, dropping: AgentMessage[]) {
+  const r: AgentAnswer = $agent.complete({
     system: "Update the summary of this conversation. Keep names, numbers, decisions and open questions. At most 80 words.",
     prompt: `Summary so far: ${chat.getString("summary") || "(none)"}\n\nNew turns:\n` +
       dropping.map((m) => `${m.role}: ${m.content}`).join("\n"),
