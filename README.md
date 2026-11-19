@@ -34,21 +34,6 @@ Start a site from a starter kit with `pocketone pages create myapp` ([pages](ext
 In dev mode (`serve --dev`), an app without SMTP doesn't use the host's `sendmail`: its mail is caught in-process and
 you read it at http://127.0.0.1:8025 ([mailtrap](ext/mailtrap/README.md)).
 
-## How it fits together: contracts
-
-Extensions in PocketOne don't know about each other. They meet through **contracts**: named, versioned promises such
-as `restore/v1`, "put this app's data back as it was at a moment". An extension *provides* a contract, and everything
-else calls the contract, never the extension behind it: the dashboard, the `pocketone` command, AI agents over MCP,
-your `pb_hooks`, other extensions.
-
-So PITR and plain backups both answer `pocketone remote restore to --at -2h` (PITR to the second, backups from the
-latest one before that), and anything better can replace either without changing a single caller. Every API an
-extension offers is a contract under `/api/_c/<id>/`, and one Go interface gives it an HTTP API, CLI commands, MCP
-tools and hooks, all behind the same checks.
-
-Read [How PocketOne fits together](docs/contracts.md), or browse [all contracts](ext/contracts/README.md) with the
-extensions that provide each one.
-
 ## Standard Extensions
 
 Everything in this section ships in every `pocketone` binary. Some are on in every app, some wait until you configure
