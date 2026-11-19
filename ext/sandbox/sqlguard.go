@@ -53,6 +53,9 @@ func GuardedDBConnect(maxQuery time.Duration) core.DBConnectFunc {
 		inner := base.Driver()
 		_ = base.Close()
 		sql.Register(guardDriverName, &guardDriver{inner: inner})
+		// dbx picks its SQL dialect by driver name; unknown names get its generic builder, whose RENAME TABLE (a
+		// collection rename) and other statements SQLite rejects
+		dbx.BuilderFuncMap[guardDriverName] = dbx.BuilderFuncMap["sqlite"]
 	})
 	return func(dbPath string) (*dbx.DB, error) {
 		if dir, err := filepath.Abs(filepath.Dir(dbPath)); err == nil {
