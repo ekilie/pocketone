@@ -15,8 +15,21 @@ PocketOne is a community fork of [PocketBase](https://pocketbase.io). It tracks 
 changes to the core small: only the hooks that let extensions extend and override PocketBase. Every feature lives in an
 extension.
 
-It's maintained by [PocketHost](https://pockethost.io), which runs it in production. PocketOne is not affiliated with
-or endorsed by the PocketBase project.
+It's maintained by [Ben Allfree](https://github.com/benallfree) and contributors. Ben also created
+[PocketHost](https://pockethost.io), which runs PocketOne in production, but PocketOne is its own project, open to
+anyone who wants to help. PocketOne is not affiliated with or endorsed by the PocketBase project.
+
+## Why a fork
+
+PocketBase is a remarkable piece of software, and a lot of that comes from how it's made: one author, a deliberately
+narrow scope, and a careful, steady pace. That focus is a big part of why it's so good, and how PocketBase is run is
+Gani's call to make.
+
+It also means PocketBase isn't set up to take larger contributions from the community, so ideas people want to build
+have nowhere to land upstream: hooks that can do more, apps that run many instances, features anyone can write and
+share. PocketOne is a different path for that work. It stays close to upstream and passes PocketBase's own tests, keeps
+its changes to PocketBase small, and puts everything else in extensions that anyone can build on, improve and send
+back.
 
 ## What it adds
 

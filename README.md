@@ -10,8 +10,16 @@
 
 PocketOne is a community fork of [PocketBase](https://pocketbase.io). It tracks
 upstream and aims to keep its own changes to the core small: just the hooks that let extensions extend and override
-PocketBase. Everything else is an extension. Maintained by [PocketHost](https://pockethost.io); not affiliated with or
-endorsed by the PocketBase project.
+PocketBase. Everything else is an extension.
+
+PocketOne is maintained by [Ben Allfree](https://github.com/benallfree) and contributors. Ben also created
+[PocketHost](https://pockethost.io), which runs PocketOne in production, but PocketOne is its own project, open to
+anyone who wants to help. It is not affiliated with or endorsed by the PocketBase project.
+
+PocketBase is built by one author with a deliberately narrow scope, and that focus is a big part of why it's so good.
+It also means larger community ideas have nowhere to land upstream. PocketOne is a different path for that work: it
+stays close to upstream and keeps its own changes small, and everything else is an extension anyone can build on
+([why a fork](https://pocketone.dev/docs/overview#why-a-fork)).
 
 PocketOne's core passes PocketBase's own test suite, unmodified, on every change and every day, with one documented exception ([compatibility](https://pocketone.dev/docs/compatibility)).
 
@@ -92,8 +100,8 @@ instances, routed by hostname ([PocketBase isolates](https://pocketone.dev/docs/
 
 ## Community Extensions
 
-These aren't in the `pocketone` binary: add them to your own Go build. They're maintained by PocketHost and the
-community and are MIT.
+These aren't in the `pocketone` binary: add them to your own Go build. Each is maintained by the owners
+listed in its README, and all are MIT.
 
 **Run many instances**
 
