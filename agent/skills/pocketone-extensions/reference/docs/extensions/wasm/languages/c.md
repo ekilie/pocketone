@@ -13,7 +13,7 @@ Clang with [wasi-sdk](https://github.com/WebAssembly/wasi-sdk) works too: replac
 
 ## The module
 
-[`example/summary/c`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/c/main.c) counts the words of a text and returns the first twelve. C has no JSON in its standard library, so it takes the text as it is (your code can pass a string) and prints JSON:
+[`example/summary/c`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/c/main.c) counts the words of a text and returns the first twelve. C has no JSON in its standard library, so it takes the text as it is (your code can pass a string) and prints JSON:
 
 ```c
 // what `summary --describe` prints: manifest.json, built in (C23 #embed)

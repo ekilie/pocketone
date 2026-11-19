@@ -124,8 +124,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"pocketone.dev/ext/multisite"
 	"pocketone.dev/ext/firewall"
+	"pocketone.dev/ext/multisite"
 )
 
 type okRuntime struct{}

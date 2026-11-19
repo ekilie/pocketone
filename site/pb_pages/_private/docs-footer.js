@@ -31,11 +31,11 @@ module.exports = function () {
     let html = ''
     const source = ctx.meta('source')
     if (source) {
-      html += `<p class="edit-page"><a href="https://github.com/pockethost/pocketone/edit/main/${esc(source)}" target="_blank">Edit this page on GitHub</a></p>`
+      html += `<p class="edit-page"><a href="https://github.com/pocketonehq/pocketone/edit/main/${esc(source)}" target="_blank">Edit this page on GitHub</a></p>`
     }
     const t = term(ctx)
     if (t) {
-      html += `<section class="comments" data-giscus-term="${esc(t)}"><h2>Questions and comments</h2><p>Comments are a <a href="https://github.com/pockethost/pocketone/discussions/categories/q-a" target="_blank">GitHub Discussions</a> thread; sign in with GitHub to post.</p><div class="giscus"></div></section>`
+      html += `<section class="comments" data-giscus-term="${esc(t)}"><h2>Questions and comments</h2><p>Comments are a <a href="https://github.com/pocketonehq/pocketone/discussions/categories/q-a" target="_blank">GitHub Discussions</a> thread; sign in with GitHub to post.</p><div class="giscus"></div></section>`
     }
     return html
   }

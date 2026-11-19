@@ -4,7 +4,7 @@
 The addresses an app must not send bulk mail to (unsubscribed, bounced, complained, added by hand), and the
 unsubscribe link in every bulk message. Anything that mails many people checks it.
 
-A wire contract ([suppression.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mail/suppression/v1/suppression.go)).
+A wire contract ([suppression.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mail/suppression/v1/suppression.go)).
 
 ## Use
 

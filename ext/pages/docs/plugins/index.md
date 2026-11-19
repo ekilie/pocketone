@@ -52,7 +52,7 @@ See [Plugin Authoring](authoring.md).
 
 | Add-on | Adds |
 |---|---|
-| [Datastar](datastar.md) | `ctx.datastar.*` helpers for [Datastar](https://data-star.dev). Copy [`addons/datastar.js`](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/datastar.js) into `pb_pages/_private/`; the `datastar` starter kit already has it. |
+| [Datastar](datastar.md) | `ctx.datastar.*` helpers for [Datastar](https://data-star.dev). Copy [`addons/datastar.js`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/datastar.js) into `pb_pages/_private/`; the `datastar` starter kit already has it. |
 
 ## Order
 

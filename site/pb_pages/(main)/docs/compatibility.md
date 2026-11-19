@@ -23,7 +23,7 @@ Tests skipped because PocketOne changes what they check on purpose. Everything e
 On a scratch checkout (the script rewrites test files):
 
 ```bash
-git remote add upstream https://github.com/pockethost/pocketbase.git
+git remote add upstream https://github.com/pocketonehq/pocketbase.git
 git config remote.upstream.tagopt --no-tags
 git fetch upstream master
 .github/upstream-tests/run.sh
@@ -31,7 +31,7 @@ git fetch upstream master
 
 | Source | |
 |---|---|
-| Workflow | [`upstream-tests.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/upstream-tests.yml) |
-| Script | [`run.sh`](https://github.com/pockethost/pocketone/blob/main/.github/upstream-tests/run.sh) |
-| Exceptions | [`known-deviations.txt`](https://github.com/pockethost/pocketone/blob/main/.github/upstream-tests/known-deviations.txt) |
-| Every core change | [Changes we made to PocketBase](https://github.com/pockethost/pocketone#changes-we-made-to-pocketbase) |
+| Workflow | [`upstream-tests.yml`](https://github.com/pocketonehq/pocketone/blob/main/.github/workflows/upstream-tests.yml) |
+| Script | [`run.sh`](https://github.com/pocketonehq/pocketone/blob/main/.github/upstream-tests/run.sh) |
+| Exceptions | [`known-deviations.txt`](https://github.com/pocketonehq/pocketone/blob/main/.github/upstream-tests/known-deviations.txt) |
+| Every core change | [Changes we made to PocketBase](https://github.com/pocketonehq/pocketone#changes-we-made-to-pocketbase) |

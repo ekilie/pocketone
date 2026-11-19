@@ -20,7 +20,7 @@ Each skill carries a copy of the docs in its `reference/` folder, so it works of
 **Claude Code**
 
 ```
-/plugin marketplace add pockethost/pocketone
+/plugin marketplace add pocketonehq/pocketone
 /plugin install pocketone@pocketone
 ```
 
@@ -29,10 +29,10 @@ Each skill carries a copy of the docs in its `reference/` folder, so it works of
 **Other agents that read Agent Skills** (Cursor, Codex, Gemini CLI and others)
 
 ```bash
-npx skills add pockethost/pocketone
+npx skills add pocketonehq/pocketone
 ```
 
-Or copy a skill folder into your project yourself. The skills live in [`agent/skills/`](https://github.com/pockethost/pocketone/tree/main/agent/skills).
+Or copy a skill folder into your project yourself. The skills live in [`agent/skills/`](https://github.com/pocketonehq/pocketone/tree/main/agent/skills).
 
 ## llms.txt
 

@@ -13,7 +13,7 @@ Zig's standard library changes between versions. The example is written for Zig 
 
 ## The module
 
-[`example/summary/zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig):
+[`example/summary/zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig):
 
 ```zig
 pub fn main(init: std.process.Init) !void {
@@ -46,7 +46,7 @@ Flush the writer before returning: output still in its buffer is lost when the p
 
 ## Build
 
-In [`build.zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/build.zig), target WASI, make the manifest importable, and set the stack:
+In [`build.zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/build.zig), target WASI, make the manifest importable, and set the stack:
 
 ```zig
 const target = b.standardTargetOptions(.{

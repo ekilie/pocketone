@@ -5,7 +5,7 @@ Remote control of an app from afar: who your credential is and what the app offe
 log. Every client starts here: `GET /api/_c/remote/v1` is the one fixed path, and its answer lists every other
 contract the app offers. Contracts that add an area (deploy/v1) require this one.
 
-A wire contract ([remote.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/remote/v1/remote.go)); a multisite host can provide it for its instances, so it works for
+A wire contract ([remote.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/remote/v1/remote.go)); a multisite host can provide it for its instances, so it works for
 instances running stock PocketBase images.
 
 ## Use
@@ -19,7 +19,7 @@ instances running stock PocketBase images.
 
 - **CLI:** `pocketone remote whoami | status | restart | logs`.
 - **Go:** `remotev1.Contract.Must(app)` in the app, or `remotev1.NewClient(url, token, http)` from outside. The
-  command-line client (linked remotes, saved logins, sign-in) is [remoteclient](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient).
+  command-line client (linked remotes, saved logins, sign-in) is [remoteclient](https://github.com/pocketonehq/pocketone/tree/main/ext/contracts/remote/v1/remoteclient).
 - **Hooks:** `remotev1.OnRestart(app)` in Go, `onRemoteRestart` in `pb_hooks`, for every operation.
 - **MCP:** a tool per operation (`remote_status`, ...).
 

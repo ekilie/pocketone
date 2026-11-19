@@ -16,7 +16,7 @@ point it has at or before it and tells you which one it used. Providers differ o
 
 The app restarts to apply a restore; its data from before the restore is kept until the next one.
 
-A wire contract ([restore.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/restore/v1/restore.go)); a multisite host may provide it for its instances (from host-level
+A wire contract ([restore.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/restore/v1/restore.go)); a multisite host may provide it for its instances (from host-level
 snapshots).
 
 ## Use
@@ -31,7 +31,7 @@ snapshots).
 the `point` it restores from; `422 no_point` when there's nothing at or before the moment, `409 busy` while another
 restore runs. Only superusers may call either.
 
-- **Dashboard:** Settings → Backups gets a "Restore to a moment" section from this contract ([ui/main.js](https://github.com/pockethost/pocketone/blob/main/ext/contracts/restore/v1/ui/main.js)),
+- **Dashboard:** Settings → Backups gets a "Restore to a moment" section from this contract ([ui/main.js](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/restore/v1/ui/main.js)),
   whichever extension provides it: a time picker over pitr's window, or one that says which backup a moment uses.
 - **Go:** `restorev1.Contract.Must(app).RestoreTo(ctx, auth, restorev1.RestoreInput{At: t})`, or
   `restorev1.NewClient(url, token, http)` from outside.

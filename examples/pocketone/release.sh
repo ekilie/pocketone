@@ -8,13 +8,13 @@
 #   examples/pocketone/release.sh --status           # how that check is doing
 #   examples/pocketone/release.sh vX.Y.Z             # once it passed: tag, push the tag, goreleaser (draft release)
 #
-# Pushing the tag also publishes the desktop build image, ghcr.io/pockethost/pocketone-build:vX.Y.Z
+# Pushing the tag also publishes the desktop build image, ghcr.io/pocketonehq/pocketone-build:vX.Y.Z
 # (.github/workflows/build-image.yml); it can be published again from that workflow's Run workflow button.
 #
 # Needs gh (signed in) and goreleaser.
 set -euo pipefail
 
-repo=pockethost/pocketone
+repo=pocketonehq/pocketone
 workflow=release-check.yml
 cd "$(dirname "$0")/../.."
 

@@ -35,7 +35,7 @@ npm install --save-dev --save-exact assemblyscript @assemblyscript/wasi-shim
 
 ## The module
 
-[`example/summary/assemblyscript`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) counts the words of a text and returns the first twelve. AssemblyScript's standard library has no JSON, so, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) example, it takes the text as it is (your code can pass a string) and prints JSON:
+[`example/summary/assemblyscript`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) counts the words of a text and returns the first twelve. AssemblyScript's standard library has no JSON, so, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) example, it takes the text as it is (your code can pass a string) and prints JSON:
 
 ```ts
 // what `summary --describe` prints: AssemblyScript can't embed a file, so the manifest is a string here

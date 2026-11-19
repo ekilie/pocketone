@@ -6,7 +6,7 @@
 
 # PocketOne - A community fork of PocketBase
 
-[![PocketBase tests](https://github.com/pockethost/pocketone/actions/workflows/upstream-tests.yml/badge.svg?branch=main)](https://pocketone.dev/docs/compatibility)
+[![PocketBase tests](https://github.com/pocketonehq/pocketone/actions/workflows/upstream-tests.yml/badge.svg?branch=main)](https://pocketone.dev/docs/compatibility)
 
 PocketOne is a community fork of [PocketBase](https://pocketbase.io). It tracks
 upstream and aims to keep its own changes to the core small: just the hooks that let extensions extend and override
@@ -23,7 +23,7 @@ brew install pockethost/tap/pocketone
 
 That's [Homebrew](https://brew.sh) on macOS or Linux (the formula lives in
 [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap)). Or download the zip for your platform from
-[Releases](https://github.com/pockethost/pocketone/releases). Then:
+[Releases](https://github.com/pocketonehq/pocketone/releases). Then:
 
 ```bash
 pocketone serve
@@ -150,7 +150,7 @@ minimum hook your extension needs, and include a small `example/main.go` that bu
 ## Changes we made to PocketBase
 
 We change PocketBase's own code as little as possible: only the hooks our extensions need, and fixes for bugs we hit in
-production. The [`core-changes` branch](https://github.com/pockethost/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-changes) is current
+production. The [`core-changes` branch](https://github.com/pocketonehq/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-changes) is current
 upstream `master` (PocketBase's release line) plus every one of those changes and nothing else, so you can audit them in one diff. It is rebuilt
 after each upstream pull.
 
@@ -160,10 +160,10 @@ Each hook has its own branch, stacked in this order; its diff shows just that ho
 
 | Hook | What it lets extensions do | Used by | Diff |
 |---|---|---|---|
-| `filesystem.New` / `Driver()` | Wrap a filesystem's blob driver (a key prefix, a fallback). | s3-fallback, s3redirect, sandbox | [diff](https://github.com/pockethost/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-hook/filesystem-driver) |
-| `OnFilesystemCreate` | Supply or wrap the storage and backups filesystems. | s3-fallback, pitr, s3redirect | [diff](https://github.com/pockethost/pocketone/compare/core-hook/filesystem-driver...core-hook/on-filesystem-create) |
-| `BaseAppConfig.AppMigrations` | Give an app its own migrations list, so several apps can share one process. | pocker, sandbox | [diff](https://github.com/pockethost/pocketone/compare/core-hook/on-filesystem-create...core-hook/app-migrations) |
-| `BaseAppConfig.OnLog` | Receive every log entry the app writes, e.g. for per-instance logs. | pocker | [diff](https://github.com/pockethost/pocketone/compare/core-hook/app-migrations...core-hook/on-log) |
+| `filesystem.New` / `Driver()` | Wrap a filesystem's blob driver (a key prefix, a fallback). | s3-fallback, s3redirect, sandbox | [diff](https://github.com/pocketonehq/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-hook/filesystem-driver) |
+| `OnFilesystemCreate` | Supply or wrap the storage and backups filesystems. | s3-fallback, pitr, s3redirect | [diff](https://github.com/pocketonehq/pocketone/compare/core-hook/filesystem-driver...core-hook/on-filesystem-create) |
+| `BaseAppConfig.AppMigrations` | Give an app its own migrations list, so several apps can share one process. | pocker, sandbox | [diff](https://github.com/pocketonehq/pocketone/compare/core-hook/on-filesystem-create...core-hook/app-migrations) |
+| `BaseAppConfig.OnLog` | Receive every log entry the app writes, e.g. for per-instance logs. | pocker | [diff](https://github.com/pocketonehq/pocketone/compare/core-hook/app-migrations...core-hook/on-log) |
 
 ### Bugfixes
 
@@ -171,11 +171,11 @@ Each hook has its own branch, stacked in this order; its diff shows just that ho
 
 | Bug | Description | Fix |
 |---|---|---|
-| Request log shows status 0 | A request that fails with a plain (non-`ApiError`) error is logged with status 0 instead of the status the client got. | [diff](https://github.com/pockethost/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/request-log-status) |
-| Superuser realtime filter drops events | A superuser's realtime subscription filter can't use hidden fields or superuser-only relations, though the same filter works in the list API, so matching events are silently dropped. | [diff](https://github.com/pockethost/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/realtime-superuser-filter) |
-| macOS misses changes from other processes | On macOS, settings and collection changes made by another process aren't picked up: the notify file is written and removed at once, so kqueue never reports it. | [diff](https://github.com/pockethost/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/notify-watcher-macos) |
-| Notify watcher races ClearBootstrap | The notify-dir watcher keeps running after it's closed, so it reads the app's database handles (and can reload settings) while `ClearBootstrap` sets them to nil: a data race, caught by `go test -race`. | [diff](https://github.com/pockethost/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/notify-watcher-race) |
-| Cron stop races its ticker | Since PocketBase v0.42, stopping the cron scheduler (every app shutdown or `ClearBootstrap`) doesn't wait for its ticker goroutine, which reads the ticker as `Stop` sets it to nil: a data race, and a nil-pointer panic when `Stop` wins. Caught by `go test -race`. | [diff](https://github.com/pockethost/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/cron-stop-race) |
+| Request log shows status 0 | A request that fails with a plain (non-`ApiError`) error is logged with status 0 instead of the status the client got. | [diff](https://github.com/pocketonehq/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/request-log-status) |
+| Superuser realtime filter drops events | A superuser's realtime subscription filter can't use hidden fields or superuser-only relations, though the same filter works in the list API, so matching events are silently dropped. | [diff](https://github.com/pocketonehq/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/realtime-superuser-filter) |
+| macOS misses changes from other processes | On macOS, settings and collection changes made by another process aren't picked up: the notify file is written and removed at once, so kqueue never reports it. | [diff](https://github.com/pocketonehq/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/notify-watcher-macos) |
+| Notify watcher races ClearBootstrap | The notify-dir watcher keeps running after it's closed, so it reads the app's database handles (and can reload settings) while `ClearBootstrap` sets them to nil: a data race, caught by `go test -race`. | [diff](https://github.com/pocketonehq/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/notify-watcher-race) |
+| Cron stop races its ticker | Since PocketBase v0.42, stopping the cron scheduler (every app shutdown or `ClearBootstrap`) doesn't wait for its ticker goroutine, which reads the ticker as `Stop` sets it to nil: a data race, and a nil-pointer panic when `Stop` wins. Caught by `go test -race`. | [diff](https://github.com/pocketonehq/pocketone/compare/c5003ce63deee71cc6821f338f0d4e1994b3db40...core-bugfix/cron-stop-race) |
 
 MIT, like PocketBase.
 

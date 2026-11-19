@@ -92,8 +92,8 @@ func DefaultDiscovery() *Discovery {
 			"https://ganigeorgiev.com/meta/pocketbase/pocketbase/download/v{version}/{file}",
 			"https://github.com/pocketbase/pocketbase/releases/download/v{version}/{file}",
 		},
-		PocketOneRefs: "https://github.com/pockethost/pocketone.git/info/refs?service=git-upload-pack",
-		PocketOneHost: "https://github.com/pockethost/pocketone/releases/download/v{version}/{file}",
+		PocketOneRefs: "https://github.com/pocketonehq/pocketone.git/info/refs?service=git-upload-pack",
+		PocketOneHost: "https://github.com/pocketonehq/pocketone/releases/download/v{version}/{file}",
 	}
 }
 

@@ -7,7 +7,7 @@ instance runs on the one it names (`runtime: docker` in its record), else the fi
 version, for example). Having a `multisite` section makes the binary a host; the runtimes are this contract's
 providers.
 
-A host-scope service contract, many providers in order ([runtime.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
+A host-scope service contract, many providers in order ([runtime.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
 
 ## Use
 

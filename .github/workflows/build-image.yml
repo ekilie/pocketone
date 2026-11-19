@@ -1,4 +1,4 @@
-# Publishes the desktop build image for every release: ghcr.io/pockethost/pocketone-build:<tag>, for linux/amd64 and
+# Publishes the desktop build image for every release: ghcr.io/pocketonehq/pocketone-build:<tag>, for linux/amd64 and
 # linux/arm64, built from the release's own commit. A released pocketone pulls the image for its own version
 # (ext/desktop DefaultImage), so `pocketone desktop build` builds against exactly the source it was released from.
 #
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      IMAGE: ghcr.io/pockethost/pocketone-build:${{ inputs.tag || github.ref_name }}
+      IMAGE: ghcr.io/pocketonehq/pocketone-build:${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -53,7 +53,7 @@ jobs:
           push: true
           tags: ${{ env.IMAGE }}
           labels: |
-            org.opencontainers.image.source=https://github.com/pockethost/pocketone
+            org.opencontainers.image.source=https://github.com/pocketonehq/pocketone
             org.opencontainers.image.description=The image pocketone desktop build runs in: Go and PocketOne's source, vendored
             org.opencontainers.image.version=${{ inputs.tag || github.ref_name }}
             org.opencontainers.image.licenses=MIT

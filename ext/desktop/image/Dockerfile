@@ -4,7 +4,7 @@
 #   docker build -f ext/desktop/image/Dockerfile -t pocketone-build:dev .
 #
 # (`pocketone desktop image` runs that; a development pocketone runs it on first use.) Every release tag publishes
-# it for linux/amd64 and linux/arm64 as ghcr.io/pockethost/pocketone-build:<tag> (.github/workflows/build-image.yml).
+# it for linux/amd64 and linux/arm64 as ghcr.io/pocketonehq/pocketone-build:<tag> (.github/workflows/build-image.yml).
 
 # The prepare stage runs on the build machine's own architecture and cross-compiles the image's pocketone, so a
 # multi-arch build (linux/amd64 and linux/arm64) never compiles Go under emulation. vendor/ is the same for every

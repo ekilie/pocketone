@@ -112,8 +112,8 @@ It applies to instances created with the extension on. Files already on an insta
 
 ## Example
 
-There's no `example/main.go` yet. [`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go) shows it on the `pocketone` binary, as a single app
-and on a multisite host; [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show it in Go.
+There's no `example/main.go` yet. [`modes_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/modes_test.go) shows it on the `pocketone` binary, as a single app
+and on a multisite host; [`storage_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show it in Go.
 
 ## How it works
 
@@ -125,7 +125,7 @@ and on a multisite host; [`storage_test.go`](https://github.com/pockethost/pocke
 
 ### Status
 
-Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go)); not yet deployed.
+Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/modes_test.go)); not yet deployed.
 
 ## License
 

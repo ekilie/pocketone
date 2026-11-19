@@ -12,7 +12,7 @@ The `pocketone` command tree. Every operation of every wire contract linked into
 remote. An extension replaces one of those commands by providing the same path, or adds commands of its own. One
 provider per path; when two extensions provide the same path, `pocketone.yaml` picks one.
 
-A keyed contract (by command path), in the developer's `pocketone` process ([commands.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cli/commands/v1/commands.go)).
+A keyed contract (by command path), in the developer's `pocketone` process ([commands.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cli/commands/v1/commands.go)).
 
 ## Use
 

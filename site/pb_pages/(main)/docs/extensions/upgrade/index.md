@@ -102,7 +102,7 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/upgrade/example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/upgrade/example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
 
 ```go
 // Command example is a PocketOne app with just the upgrade command. A local build has no release version, so it is

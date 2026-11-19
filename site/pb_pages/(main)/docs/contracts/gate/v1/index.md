@@ -11,7 +11,7 @@ What admits requests on a multisite host before an instance is served here or fo
 allow list, the real client IP behind a proxy, rate limits. Gates run in order and every one must admit; a gate may
 answer the request itself (429, 403).
 
-A host-scope service contract, many providers in order ([gate.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/gate/v1/gate.go)).
+A host-scope service contract, many providers in order ([gate.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/gate/v1/gate.go)).
 
 ## Use
 

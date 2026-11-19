@@ -17,7 +17,7 @@ The module stays a pure function, `(state, input) → new state`, which also mak
 
 ## The module
 
-[`example/stats-tinygo`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/stats-tinygo/main.go) keeps running statistics of a series of readings: count, mean, standard deviation, min and max. It uses [Welford's method](https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm), so the state is five numbers however many readings it has seen. It has two functions:
+[`example/stats-tinygo`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/stats-tinygo/main.go) keeps running statistics of a series of readings: count, mean, standard deviation, min and max. It uses [Welford's method](https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm), so the state is five numbers however many readings it has seen. It has two functions:
 
 - `add`: `{"state": <state or null>, "values": [...]}` → the new state
 - `report`: a state → `{count, mean, stddev, min, max}`

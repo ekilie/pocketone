@@ -40,6 +40,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 ### Changed
 
 - PocketOne's Go modules are now `pocketone.dev/ext/<name>`, `pocketone.dev/examples/pocketone` and `pocketone.dev` (core, for the `replace`), so the import path no longer names where the repo lives.
+- The repo moved to [github.com/pocketonehq/pocketone](https://github.com/pocketonehq/pocketone) (old `pockethost/pocketone` links redirect), and its PocketBase mirror to `github.com/pocketonehq/pocketbase`. In an existing clone: `git remote set-url origin https://github.com/pocketonehq/pocketone.git`.
 
 ## v0.0.1-alpha.8 (2026-11-18)
 

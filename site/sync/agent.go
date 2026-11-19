@@ -49,7 +49,7 @@ var docsSites = []docsSite{
 		URL:     "https://pocketone.dev",
 		Summary: "PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and PocketPages server-rendered sites.",
 		Intro: "PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. " +
-			"Agent Skills for PocketOne and PocketPages: https://github.com/pockethost/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pockethost/pocketone`).",
+			"Agent Skills for PocketOne and PocketPages: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).",
 		Pages:    "site/pb_pages",
 		Toc:      "site/pb_pages/(main)/_private/toc.md",
 		SkillRef: "agent/skills/pocketone/reference",

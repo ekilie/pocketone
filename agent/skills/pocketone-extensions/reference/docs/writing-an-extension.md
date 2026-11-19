@@ -14,7 +14,7 @@ How a multisite host runs its instances (as isolates in its own process with [po
 
 ## App extensions: `extkit`
 
-Write an extension once, against [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) (its own module,
+Write an extension once, against [`extkit`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) (its own module,
 `pocketone.dev/ext/extkit`; core has no part in it), and the same value runs on every app:
 
 ```go
@@ -43,7 +43,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
 - **Every app has the [standard set](https://pocketone.dev/docs/extensions/standard)** (tokens, mcp, pitr, deploy and the rest). Add yours
   to it: `set.Add(myextension.New(...))`. On a standalone app, build the app with `set.NewApp(...)`, or build it
   yourself and call `set.Register(app, jsvm.Config{...})`. The stock binary does the second: `pocketbase.NewWithConfig`,
-  then `set.Register` ([`examples/pocketone`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go)). Without the set:
+  then `set.Register` ([`examples/pocketone`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)). Without the set:
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
@@ -64,8 +64,8 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
   (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X pocketone.dev/ext/extkit.Command=pockethost"`.
-- [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
-  [`ext/standard/example`](https://github.com/pockethost/pocketone/blob/main/ext/standard/example/main.go) a complete program.
+- [bulkmail](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
+  [`ext/standard/example`](https://github.com/pocketonehq/pocketone/blob/main/ext/standard/example/main.go) a complete program.
 
 ## Your schema: migrations and table names
 
@@ -279,7 +279,7 @@ document.addEventListener("mount:pageBackupsSettings", (e) => {
 ```
 
 - **More hooks:** `app.store.settingsNavGroups` adds entries to the Settings sidebar. Search `pbEvent:` in
-  [`ui/src`](https://github.com/pockethost/pocketone/tree/main/ui/src) for every screen you can add to (Backups exposes `pageBackupsSettings`, `backupsList`,
+  [`ui/src`](https://github.com/pocketonehq/pocketone/tree/main/ui/src) for every screen you can add to (Backups exposes `pageBackupsSettings`, `backupsList`,
   `backupsSettingsForm`, `backupCreateModal` and `backupRestoreModal`).
 - **No build step:** plain JS works. Bundle with Vite if you prefer.
 - **Experimental upstream:** this UI extension API is undocumented and can change between PocketBase releases
@@ -391,14 +391,14 @@ ext/<name>/
 
 - **`example/main.go` is required.** Keep it as small as possible: just enough to build a binary that shows the
   feature working, with no extra harness. `go build ./example` and `go vet ./...` must pass with no warnings.
-  [`ext/standard/example`](https://github.com/pockethost/pocketone/tree/main/ext/standard/example) and [`ext/sandbox/example`](https://github.com/pockethost/pocketone/tree/main/ext/sandbox/example) are the size to aim for.
+  [`ext/standard/example`](https://github.com/pocketonehq/pocketone/tree/main/ext/standard/example) and [`ext/sandbox/example`](https://github.com/pocketonehq/pocketone/tree/main/ext/sandbox/example) are the size to aim for.
 - **Examples come with two logins:** superuser `admin@example.com` and user `user@example.com` (verified, in
   `users`), both with password `password`. Every `example/main.go` calls
   `devusers.Register(app)` right after the app is created (on a multisite host, `devusers.Ensure(app)` in the
-  host's per-instance setup), from [`ext/devusers`](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go). A fresh data dir is then ready to log
+  host's per-instance setup), from [`ext/devusers`](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go). A fresh data dir is then ready to log
   in to, with no installer page and no CLI step. Never register it in a production build.
 - **`conformance_test.go` is required.** It runs the shared extension test from
-  [`ext/extkit/conformance`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go) once:
+  [`ext/extkit/conformance`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/conformance/conformance.go) once:
 
   ```go
   func TestConformance(t *testing.T) {
@@ -415,7 +415,7 @@ ext/<name>/
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every extension passes; your own tests cover the
   feature.
 - **`modes_test.go` tests the feature in every mode it runs in**, on the real `pocketone` binary, with
-  [`ext/extkit/modetest`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/modetest/modetest.go). Declare the instances the test needs, each configured
+  [`ext/extkit/modetest`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/modetest/modetest.go). Declare the instances the test needs, each configured
   in full (files, extension settings, secrets), and the harness lays them out once per mode: `Single` (each its own
   `pocketone serve`), `Host` (one multisite host serving them all) and `Fleet` (several hosts that forward to each
   other). An app extension runs `modetest.AllApp` (Single and Host); a host extension picks Host and/or Fleet.
@@ -436,7 +436,7 @@ ext/<name>/
   why in a comment. `-short` skips mode tests.
 - **The README starts with front matter**: who owns the extension and its version (see [Ownership](#ownership)), and
   its entry in the [catalogue on pocketone.dev](https://pocketone.dev/docs/extensions): its `title`, its `group` (one
-  of the ids in [`site/extensions.json`](https://github.com/pockethost/pocketone/blob/main/site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and
+  of the ids in [`site/extensions.json`](https://github.com/pocketonehq/pocketone/blob/main/site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and
   a one-line `summary`. Nothing outside your folder lists your extension: the site finds it there.
 
   ```markdown
@@ -510,14 +510,14 @@ ext/<name>/
   [`ext/pitr/README.md`](https://pocketone.dev/docs/extensions/pitr) is the example to follow.
 - **Your pull request touches only your folder** (and, for a new contract, its folder in `ext/contracts`). Don't commit
   generated files: the site pages, nav, search index, `llms.txt` and contract indexes are rebuilt on `main` after your
-  change merges ([`.github/regenerate.sh`](https://github.com/pockethost/pocketone/blob/main/.github/regenerate.sh)). To preview your page, run
+  change merges ([`.github/regenerate.sh`](https://github.com/pocketonehq/pocketone/blob/main/.github/regenerate.sh)). To preview your page, run
   `cd site/sync && go run .` and don't commit what it writes outside your folder.
-- **CI enforces all of this.** [`.github/workflows/extensions.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/extensions.yml) fails when an extension
+- **CI enforces all of this.** [`.github/workflows/extensions.yml`](https://github.com/pocketonehq/pocketone/blob/main/.github/workflows/extensions.yml) fails when an extension
   README is missing its owners, version, title, group or summary, one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, when it has no
   `CHANGELOG.md`, or when a module that implements `extkit.Extension` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
-  for a core change. [`.github/workflows/site.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/site.yml) checks that the site builds from
+  for a core change. [`.github/workflows/site.yml`](https://github.com/pocketonehq/pocketone/blob/main/.github/workflows/site.yml) checks that the site builds from
   your README. Run everything CI runs on your pull request, locally, from the repository root:
 
   ```bash
@@ -536,7 +536,7 @@ ext/<name>/
 ### Changelogs
 
 Each extension keeps its changelog in its own folder, `ext/<name>/CHANGELOG.md`, so a change to it touches nothing
-else. The root [CHANGELOG.md](https://github.com/pockethost/pocketone/blob/main/CHANGELOG.md) is for the rest: core, the `pocketone` binary, the site.
+else. The root [CHANGELOG.md](https://github.com/pocketonehq/pocketone/blob/main/CHANGELOG.md) is for the rest: core, the `pocketone` binary, the site.
 
 - **A user-visible change adds its line under `## Unreleased`** in the same commit, grouped under `### Upgrading`
   (steps for anything breaking), `### Added`, `### Changed` or `### Fixed`. One line per change, written for someone
@@ -590,4 +590,4 @@ go run ./.github/extensions approvers origin/main HEAD   # who may approve each 
 
 ## Planned extensions
 
-Our own extensions live in this repo under [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext), each as its own Go module (`pocketone.dev/ext/<name>`). See [ext/README.md](https://github.com/pockethost/pocketone/blob/main/ext/README.md).
+Our own extensions live in this repo under [`ext/`](https://github.com/pocketonehq/pocketone/tree/main/ext), each as its own Go module (`pocketone.dev/ext/<name>`). See [ext/README.md](https://github.com/pocketonehq/pocketone/blob/main/ext/README.md).

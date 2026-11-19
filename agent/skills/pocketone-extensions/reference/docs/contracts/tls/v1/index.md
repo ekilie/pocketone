@@ -5,7 +5,7 @@ The TLS of a multisite host's main listener. Its provider hands the host a `tls.
 for hostnames an instance serves) and, for HTTP challenges, a wrapper for the plain-HTTP listener. With no provider
 the host uses the certificate files in its `server` section, or plain HTTP.
 
-A host-scope service contract, one provider ([tls.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/tls/v1/tls.go)).
+A host-scope service contract, one provider ([tls.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/tls/v1/tls.go)).
 
 ## Use
 

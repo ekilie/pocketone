@@ -76,7 +76,7 @@ catches mail and prints each message in the terminal.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailtrap/example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/mailtrap/example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
 this folder, request a password reset for `user@example.com` (password `password`) from the dashboard (log in as
 `admin@example.com` / `password`), and read the mail at http://127.0.0.1:8025.
 

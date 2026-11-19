@@ -107,7 +107,7 @@ instance, and with SMTP off PocketBase then falls back to the host's `sendmail`.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailrelay/example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/mailrelay/example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
 mail lands in one inbox at http://127.0.0.1:8025. Run `go run ./example --dev` from this folder, then trigger a
 password reset on any instance:
 

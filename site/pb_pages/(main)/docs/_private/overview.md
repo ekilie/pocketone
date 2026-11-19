@@ -90,7 +90,7 @@ For those, the [PocketBase docs](/docs/pocketbase) are the reference.
 
 - **A small core.** PocketBase's own code changes only to add hooks. Each change is marked in the source, reviewed by
   someone who didn't write it, and kept minimal so upstream releases merge cleanly. You can review the complete core
-  changes [here](https://github.com/pockethost/pocketone#changes-we-made-to-pocketbase).
+  changes [here](https://github.com/pocketonehq/pocketone#changes-we-made-to-pocketbase).
 - **Everything else is an extension.** Extensions live in `ext/` in the repo. Each is its own Go module, with a README and a
   small example.
 - **Off until you use it.** The extensions in the `pocketone` binary add no work to an app that doesn't use them.
@@ -100,8 +100,8 @@ For those, the [PocketBase docs](/docs/pocketbase) are the reference.
 ## Open to contributions
 
 PocketOne is open to everyone. Ask questions and share ideas in
-[GitHub Discussions](https://github.com/pockethost/pocketone/discussions), report bugs in
-[Issues](https://github.com/pockethost/pocketone/issues), and send extensions as pull requests. Start with
+[GitHub Discussions](https://github.com/pocketonehq/pocketone/discussions), report bugs in
+[Issues](https://github.com/pocketonehq/pocketone/issues), and send extensions as pull requests. Start with
 [Writing an extension](/docs/writing-an-extension).
 
 ## Where to next

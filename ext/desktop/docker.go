@@ -17,7 +17,7 @@ import (
 )
 
 // ImageRepo is where release build images are published, tagged v<version>.
-const ImageRepo = "ghcr.io/pockethost/pocketone-build"
+const ImageRepo = "ghcr.io/pocketonehq/pocketone-build"
 
 // DevImage is the build image a development pocketone uses: built locally from its checkout on first use.
 const DevImage = "pocketone-build:dev"

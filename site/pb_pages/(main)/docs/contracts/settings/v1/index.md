@@ -12,7 +12,7 @@ one API: list them, read one, save one, test one without saving. Each extension 
 registers a section; the provider serves them all. Settings an operator sets for a whole host stay in
 `pocketone.yaml`.
 
-A wire contract ([settings.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/settings/v1/settings.go)).
+A wire contract ([settings.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/settings/v1/settings.go)).
 
 ## Use
 

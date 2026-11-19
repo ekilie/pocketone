@@ -33,7 +33,7 @@ pages.RegisterCommand(app.RootCmd)      // the `pages create` and `pages starter
 app.Start()
 ```
 
-The module is `pocketone.dev/ext/pages`. See [example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) and
+The module is `pocketone.dev/ext/pages`. See [example/main.go](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/example/main.go) and
 [Create your own extension](/docs/writing-an-extension).
 
 ## Configure
@@ -61,7 +61,7 @@ module.exports = {
 
 | Key | Default | What it does |
 |---|---|---|
-| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or custom plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). ETS and Markdown are always on. |
+| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or custom plugins such as the [add-ons](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/README.md). ETS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
 `+config.ts` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
@@ -89,13 +89,13 @@ anything the kit needs beside it, such as `pb_migrations`. Without `--starter` y
 
 | Kit | What it is |
 |---|---|
-| [minimal](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/minimal/README.md) | One page, no layout, no build step (the default). |
-| [mvp](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/mvp/README.md) | One page styled with MVP.css. |
-| [htmx](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/htmx/README.md) | A realtime chat and counter with htmx and the `realtime` plugin. |
-| [daisyui](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/daisyui/README.md) | A navbar and drawer layout with Tailwind CSS and DaisyUI. |
-| [daisyui-docs](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/daisyui-docs/README.md) | A docs site from Markdown pages. |
-| [datastar](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/datastar/README.md) | A realtime chat with rooms, with Datastar. |
-| [auth](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/auth/README.md) | Sign-up, sign-in (password, OTP, OAuth2, anonymous), email flows and a protected account page. |
+| [minimal](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/minimal/README.md) | One page, no layout, no build step (the default). |
+| [mvp](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/mvp/README.md) | One page styled with MVP.css. |
+| [htmx](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/htmx/README.md) | A realtime chat and counter with htmx and the `realtime` plugin. |
+| [daisyui](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/daisyui/README.md) | A navbar and drawer layout with Tailwind CSS and DaisyUI. |
+| [daisyui-docs](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/daisyui-docs/README.md) | A docs site from Markdown pages. |
+| [datastar](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/datastar/README.md) | A realtime chat with rooms, with Datastar. |
+| [auth](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/auth/README.md) | Sign-up, sign-in (password, OTP, OAuth2, anonymous), email flows and a protected account page. |
 
 ### Write pages
 
@@ -134,7 +134,7 @@ page code are logged in full.
 
 ### Try the demo
 
-[`example/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example) is a demo app with ETS, Markdown, TSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
+[`example/`](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/example) is a demo app with ETS, Markdown, TSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
 speed check at `/speed`.
 
 ```bash
@@ -175,7 +175,7 @@ isolate runtime ([Pocker](/docs/extensions/pocker)), where instances are isolate
 - Page code runs in the instance's own sandboxed JS VM ([jsvm](/docs/extensions/jsvm)), under its limits (execution time,
   memory, stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
   `pb_pages`; `$os` file access stays inside the instance folder. Tests:
-  [multiinstance_test.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/multiinstance/multiinstance_test.go).
+  [multiinstance_test.go](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/multiinstance/multiinstance_test.go).
 - An instance turns pages off in its settings with `extensions: { pages: { enabled: false } }`.
 
 Measured on the earlier goja engine (same machine as [Speed](#speed), docs kit; not yet re-measured on jsvm): each
@@ -190,11 +190,11 @@ To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pa
 - **Read the routes.** `pages.For(app)` returns the service: `Dir()` is the folder, `Table()` the current route
   table, `Errors()` the problems from the last build.
 - **Custom plugins.** A factory in `+config.ts` can add to `ctx`, run on each request and transform rendered HTML
-  ([SPEC.md](/docs/extensions/pages/spec), section 9.2). [Add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md) are built this way.
+  ([SPEC.md](/docs/extensions/pages/spec), section 9.2). [Add-ons](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/README.md) are built this way.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example/pb_pages): ETS, Markdown, TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/example/pb_pages): ETS, Markdown, TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
 
 ```go
 // Command example runs one PocketOne app that serves the demo in ./pb_pages (ETS templates and TypeScript, Markdown,
@@ -254,7 +254,7 @@ JS VM once per request.
 How it was measured (2026-11-11): Apple M1 Max, 10 cores, macOS 27, Go 1.27.4, `hey` against `127.0.0.1`. Each server
 was warmed with 500 requests, then `hey -z 10s -c 50` and `hey -n 2000 -c 1`; two rounds, which agreed within 5%.
 Every response was a 200 with the full page. The 0.x docs kit inlines about 6 KB of CSS into each page where v1
-links `app.css`. Rerun it with [`bench/run.sh`](https://github.com/pockethost/pocketone/blob/main/ext/pages/bench/run.sh):
+links `app.css`. Rerun it with [`bench/run.sh`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/bench/run.sh):
 
 ```bash
 cp -R starters/daisyui-docs /tmp/v1-docs
@@ -265,10 +265,10 @@ bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 ## More in this folder
 
 - [SPEC.md](/docs/extensions/pages/spec): the full PocketPages v1 contract.
-- [fixtures/](https://github.com/pockethost/pocketone/blob/main/ext/pages/fixtures/README.md): the request test cases (`go test ./...` runs them all).
-- [starters/](https://github.com/pockethost/pocketone/tree/main/ext/pages/starters): the starter kits. [addons/](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md): JS add-ons such as Datastar.
-- [docs/](https://github.com/pockethost/pocketone/blob/main/ext/pages/docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
-  pocketone.dev under this page. [blog/](https://github.com/pockethost/pocketone/tree/main/ext/pages/blog): the PocketPages blog posts.
+- [fixtures/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/fixtures/README.md): the request test cases (`go test ./...` runs them all).
+- [starters/](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/starters): the starter kits. [addons/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/README.md): JS add-ons such as Datastar.
+- [docs/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
+  pocketone.dev under this page. [blog/](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/blog): the PocketPages blog posts.
 
 ## License
 

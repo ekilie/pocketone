@@ -25,7 +25,7 @@ providers:
 ```
 
 In your own Go build, pass the host extensions you link (runtimes in preference order), build the host from the
-config and run it. [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go) is the stock binary's version:
+config and run it. [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go) is the stock binary's version:
 
 ```go
 h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Choices: providersSection,

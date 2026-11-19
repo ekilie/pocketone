@@ -15,14 +15,14 @@ build with PocketOne and PocketPages v1. This folder is a Claude Code plugin, li
 **Claude Code**
 
 ```
-/plugin marketplace add pockethost/pocketone
+/plugin marketplace add pocketonehq/pocketone
 /plugin install pocketone@pocketone
 ```
 
 **Any Agent Skills tool**
 
 ```bash
-npx skills add pockethost/pocketone
+npx skills add pocketonehq/pocketone
 ```
 
 ## Keeping them current

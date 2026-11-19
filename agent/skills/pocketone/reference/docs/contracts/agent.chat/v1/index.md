@@ -6,7 +6,7 @@ question goes to [agent/v1](https://pocketone.dev/docs/contracts/agent/v1) with 
 both turns are saved. Chats aren't tied to users: an app that has them puts the user's id in the chat's `meta`, lists
 by it, and decides who may read what.
 
-A wire contract at `/api/_c/agent.chat/v1` ([chat.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/agent/chat/v1/chat.go)), one provider. It requires agent/v1. The
+A wire contract at `/api/_c/agent.chat/v1` ([chat.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/agent/chat/v1/chat.go)), one provider. It requires agent/v1. The
 [agent-chat](https://pocketone.dev/docs/extensions/agent-chat) extension provides it.
 
 ## Use

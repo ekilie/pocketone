@@ -3,7 +3,7 @@
 // and reads the go-import meta tag, which maps the prefix pocketone.dev to the repo; each module's go.mod sits in the
 // folder named by the rest of its path. Paths with no page reach here through +404.ejs, so every import path answers.
 // See https://go.dev/ref/mod#vcs-find.
-const REPO = 'https://github.com/pockethost/pocketone'
+const REPO = 'https://github.com/pocketonehq/pocketone'
 
 module.exports = (ctx, next) => {
   if (ctx.req.query('go-get') !== '1') return next()

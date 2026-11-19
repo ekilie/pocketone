@@ -6,7 +6,7 @@
     "url": "https://pocketone.dev"
   },
   "homepage": "https://pocketone.dev/docs/agents",
-  "repository": "https://github.com/pockethost/pocketone",
+  "repository": "https://github.com/pocketonehq/pocketone",
   "license": "MIT",
   "keywords": ["pocketone", "pocketbase", "pocketpages", "pockethost"]
 }

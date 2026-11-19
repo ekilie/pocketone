@@ -6,7 +6,7 @@ provider's collection, created and edited with PocketBase's records API; this co
 addresses never to mail is [mail.suppression/v1](https://pocketone.dev/docs/contracts/mail.suppression/v1); providers' bounce and
 complaint reports are [mail.feedback/v1](https://pocketone.dev/docs/contracts/mail.feedback/v1).
 
-A wire contract ([bulkmail.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/bulkmail/v1/bulkmail.go)).
+A wire contract ([bulkmail.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/bulkmail/v1/bulkmail.go)).
 
 ## Use
 

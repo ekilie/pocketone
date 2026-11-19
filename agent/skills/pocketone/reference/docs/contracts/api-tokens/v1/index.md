@@ -5,7 +5,7 @@ An app's API tokens, as other extensions use them. Tokens are scoped: a token li
 requests those scopes reach. Extensions register their own scopes, read the token a request came with, and limit
 requests they make on someone's behalf, all through this package.
 
-A service with its own API ([tokens.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)), served at `/api/_c/api-tokens/v1`.
+A service with its own API ([tokens.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)), served at `/api/_c/api-tokens/v1`.
 
 ## Use
 

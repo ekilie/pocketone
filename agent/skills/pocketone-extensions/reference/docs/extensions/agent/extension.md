@@ -317,7 +317,7 @@ it matches or beats llama.cpp-based servers on the CPU for short jobs. Other CPU
 times slower. It reads GGUF files (Q4_K, Q6_K, Q8_0, F16) and runs the Qwen3 family. Other models work through your own
 API (Ollama, llama-server).
 
-[examples/chat](https://github.com/pockethost/pocketone/blob/main/ext/agent/examples/chat/README.md) is a PocketPages app (no Go) that arms `$agent` with a preamble and context
+[examples/chat](https://github.com/pocketonehq/pocketone/blob/main/ext/agent/examples/chat/README.md) is a PocketPages app (no Go) that arms `$agent` with a preamble and context
 files read from disk and chats about PocketOne.
 
 ## License

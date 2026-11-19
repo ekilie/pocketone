@@ -72,7 +72,7 @@ format the useful fields as text, and pass them as the context. Only pass what t
 
 ## A complete example
 
-[examples/chat](https://github.com/pockethost/pocketone/blob/main/ext/agent/examples/chat/README.md) is a chat app about PocketOne built this way, as a PocketPages app with no
+[examples/chat](https://github.com/pocketonehq/pocketone/blob/main/ext/agent/examples/chat/README.md) is a chat app about PocketOne built this way, as a PocketPages app with no
 Go: eleven docs pages as context, split into sections and ranked with BM25 (with a few synonyms, since people say
 "apps" where the docs say "instances"), answers streamed as they're written, and three follow-up questions suggested
 with a schema.

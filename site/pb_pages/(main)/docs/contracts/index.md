@@ -54,7 +54,7 @@ The table is generated from each contract's README and every extension's `Contra
 
 <!-- /contracts:catalogue -->
 
-[`internal/example/v1`](https://github.com/pockethost/pocketone/blob/main/ext/contracts/internal/example/v1/example.go) is a test-only wire contract that exercises the generated code.
+[`internal/example/v1`](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/internal/example/v1/example.go) is a test-only wire contract that exercises the generated code.
 
 ## Three kinds
 
@@ -104,7 +104,7 @@ extension that first provides it.
 
 ## Write the interface
 
-A contract is an interface with `//contract:` directives; [`contractgen`](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cmd/contractgen/main.go) writes the rest
+A contract is an interface with `//contract:` directives; [`contractgen`](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cmd/contractgen/main.go) writes the rest
 (`zz_contract.go`) with `go generate ./...`. A test fails when a generated file is stale.
 
 ```go

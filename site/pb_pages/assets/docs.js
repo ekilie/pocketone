@@ -7,7 +7,7 @@
 // changes.
 ;(() => {
   const config = {
-    repo: 'pockethost/pocketone',
+    repo: 'pocketonehq/pocketone',
     'repo-id': 'R_kgDONaSBnA',
     category: 'Q&A',
     'category-id': 'DIC_kwDONaSBnM4DK7Ec',

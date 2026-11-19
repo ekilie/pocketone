@@ -54,13 +54,13 @@
       <%# The current release, written by site/sync from CHANGELOG.md (_private/version.js) %>
       <% let version = ''; try { version = ctx.resolve('version') } catch (e) {} %>
       <% if (version) { %>
-      <a class="version" href="https://github.com/pockethost/pocketone/releases/tag/<%=version%>" target="_blank" title="Release notes"><%=version%></a>
+      <a class="version" href="https://github.com/pocketonehq/pocketone/releases/tag/<%=version%>" target="_blank" title="Release notes"><%=version%></a>
       <% } %>
       <nav aria-label="Site">
         <ul class="nav-links">
           <li><a href="/docs" <%- section === 'docs' ? 'aria-current="page"' : '' %>>Docs</a></li>
           <li><a href="/blog" <%- section === 'blog' ? 'aria-current="page"' : '' %>>Blog</a></li>
-          <li class="nav-narrow-hide"><a href="https://github.com/pockethost/pocketone/discussions" target="_blank">Discussions</a></li>
+          <li class="nav-narrow-hide"><a href="https://github.com/pocketonehq/pocketone/discussions" target="_blank">Discussions</a></li>
         </ul>
       </nav>
       <div class="header-tools">
@@ -70,7 +70,7 @@
           <span class="search-label">Search</span>
           <kbd>/</kbd>
         </button>
-        <a class="icon-link" href="https://github.com/pockethost/pocketone" target="_blank" aria-label="GitHub">
+        <a class="icon-link" href="https://github.com/pocketonehq/pocketone" target="_blank" aria-label="GitHub">
           <span class="icon" style="--icon: url(https://api.iconify.design/simple-icons/github.svg)"></span>
         </a>
         <a class="icon-link" href="https://discord.gg/nVTxCMEcGT" target="_blank" aria-label="Discord">

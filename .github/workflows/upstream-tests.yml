@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       # PocketHost's mirror of PocketBase, without tags (PocketBase's v0.x tags must never land in this repo).
       - name: Fetch upstream master
-        run: git fetch --no-tags https://github.com/pockethost/pocketbase.git +master:refs/remotes/upstream/master
+        run: git fetch --no-tags https://github.com/pocketonehq/pocketbase.git +master:refs/remotes/upstream/master
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -44,7 +44,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Fetch upstream master
-        run: git fetch --no-tags https://github.com/pockethost/pocketbase.git +master:refs/remotes/upstream/master
+        run: git fetch --no-tags https://github.com/pocketonehq/pocketbase.git +master:refs/remotes/upstream/master
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod

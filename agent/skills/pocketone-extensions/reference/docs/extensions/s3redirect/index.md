@@ -138,7 +138,7 @@ instances:
       s3redirect: { enabled: false }   # per instance: enabled, ttl
 ```
 
-It's an [extkit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a standalone app and on every instance
+It's an [extkit](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a standalone app and on every instance
 of a multisite host; it doesn't link a runtime.
 
 ### Building on S3 Redirect
@@ -153,7 +153,7 @@ of a multisite host; it doesn't link a runtime.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3redirect/example/main.go) starts its own in-process S3 bucket, points the app's file storage at it and seeds a record, so every download redirect works with nothing to set up. Run `go run . serve` in `example/` and open the URLs it prints.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3redirect/example/main.go) starts its own in-process S3 bucket, points the app's file storage at it and seeds a record, so every download redirect works with nothing to set up. Run `go run . serve` in `example/` and open the URLs it prints.
 
 ```go
 // Command example runs one PocketOne app whose file downloads redirect to an S3 bucket, with nothing to set up:
@@ -204,7 +204,7 @@ func main() {
 
 - Go module `pocketone.dev/ext/s3redirect`, no dependencies beyond PocketOne.
 - The redirect is an `OnFileDownloadRequest` handler; the hook already exists upstream, so there's no core change.
-- Signing is SigV4 query-string auth in [`sigv4`](https://github.com/pockethost/pocketone/blob/main/ext/s3redirect/sigv4/sigv4.go), checked against AWS's documented example. It needs
+- Signing is SigV4 query-string auth in [`sigv4`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3redirect/sigv4/sigv4.go), checked against AWS's documented example. It needs
   no change to PocketBase's S3 client. The TTL is clamped to between 1 second and 7 days.
 
 ## License

@@ -13,7 +13,7 @@ brew install wabt   # wat2wasm, wasm2wat, and friends
 
 ## The module
 
-[`example/summary/wat`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) takes a text on stdin, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) one, and prints `{"text", "words"}`. It does by hand what libc and a compiler do for the other languages:
+[`example/summary/wat`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) takes a text on stdin, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) one, and prints `{"text", "words"}`. It does by hand what libc and a compiler do for the other languages:
 
 - **It imports WASI directly:** `args_sizes_get` and `args_get` for the function asked for, `fd_read` for stdin, `fd_write` for stdout and stderr, `proc_exit` to fail.
 - **It lays out its own memory:** fixed addresses for its strings, the arguments and the manifest, and the input from 64 KB up, growing memory with `memory.grow` as the input needs it.

@@ -4,7 +4,7 @@
 [cache/v1](https://pocketone.dev/docs/contracts/cache/v1) is for an app's own code. This contract lets the app's admins empty its buckets from
 outside that code, after a change that left stale entries behind: one bucket by name, or every bucket the app has.
 
-A wire contract at `/api/_c/cache.clear/v1` ([clear.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cache/clear/v1/clear.go)), one provider: whoever provides cache/v1 provides
+A wire contract at `/api/_c/cache.clear/v1` ([clear.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cache/clear/v1/clear.go)), one provider: whoever provides cache/v1 provides
 this too.
 
 ## Use

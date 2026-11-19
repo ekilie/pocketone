@@ -11,7 +11,7 @@ An OAuth 2.1 authorization server for the app: authorization code with PKCE, dev
 client registration (dynamic, or by a client metadata document). The CLI's browser login and MCP clients such as
 Claude sign in through it, and get API tokens ([api-tokens/v1](/docs/contracts/api-tokens/v1)).
 
-A routed contract ([oauth.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go)): the OAuth specs fix its API's shape, so its provider serves it as it is.
+A routed contract ([oauth.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go)): the OAuth specs fix its API's shape, so its provider serves it as it is.
 
 ## Use
 

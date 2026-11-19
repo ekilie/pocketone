@@ -35,7 +35,7 @@ then an `<img>` with a [file token](https://pocketbase.io/docs/files-handling/#p
 
 ## The module
 
-The text is stdin; the SVG is stdout ([`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/qrcode/src/main.rs)):
+The text is stdin; the SVG is stdout ([`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/qrcode/src/main.rs)):
 
 ```rust
 let code = QrCode::with_error_correction_level(&input, EcLevel::M)

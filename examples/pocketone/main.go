@@ -299,7 +299,7 @@ func main() {
 		Dir:          migrationsDir,
 	})
 
-	// upgrade command: latest PocketOne release from GitHub (pockethost/pocketone); keeps the old executable as
+	// upgrade command: latest PocketOne release from GitHub (pocketonehq/pocketone); keeps the old executable as
 	// pocketone-<version>. Custom builds that publish their own releases set Owner/Repo/ArchivePrefix here.
 	upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
 

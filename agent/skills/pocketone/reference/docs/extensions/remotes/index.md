@@ -186,7 +186,7 @@ only that instance).
 - **remote/v1 client.** `remotev1.NewClient(url, token, httpClient)` (ext/contracts/remote/v1) calls whoami, status,
   restart and logs.
 - **Go client.** The CLI client lives with the contract, in
-  [`remoteclient`](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient) (ext/contracts/remote/v1/remoteclient), so other extensions'
+  [`remoteclient`](https://github.com/pocketonehq/pocketone/tree/main/ext/contracts/remote/v1/remoteclient) (ext/contracts/remote/v1/remoteclient), so other extensions'
   commands use it without importing this one. `remoteclient.Open(dir, name)` resolves a remote and its credential
   (environment first, then the saved login, renewing a browser login when due) and returns a `*remoteclient.Client`:
   base URL, bearer token, an HTTP client with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`.
@@ -200,7 +200,7 @@ only that instance).
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/remotes/example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/remotes/example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
 
 ```go
 // Command example is a PocketOne app with remotes and API tokens: run two copies, add one as a remote of the other's

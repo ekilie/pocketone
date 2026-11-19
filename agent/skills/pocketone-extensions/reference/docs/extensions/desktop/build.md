@@ -44,7 +44,7 @@ everyone who installed the old one.
 
 ## The build image
 
-Builds run in Docker, in the build image for your `pocketone`'s version: `ghcr.io/pockethost/pocketone-build:v<version>`,
+Builds run in Docker, in the build image for your `pocketone`'s version: `ghcr.io/pocketonehq/pocketone-build:v<version>`,
 pulled the first time. It holds Go, PocketOne's source and every dependency, vendored, so once it's here builds work
 offline, and the same `pocketone` version always builds the same app.
 

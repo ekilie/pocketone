@@ -57,18 +57,18 @@ the script repinned its compare links. Conflicts stop the script with the worktr
 remembered (rerere) for later runs.
 
 The `upstream` remote is PocketHost's maintained mirror of PocketBase,
-[`github.com/pockethost/pocketbase`](https://github.com/pockethost/pocketbase): every PocketBase branch and tag,
+[`github.com/pocketonehq/pocketbase`](https://github.com/pocketonehq/pocketbase): every PocketBase branch and tag,
 fast-forwarded once a day from `https://ganigeorgiev.com/git/pocketbase/pocketbase` by the mirror's own workflow, so
 day-to-day fetches never reach PocketBase's server. Never fetch PocketBase's server from your own machine. Set it up once
 per clone, without tags (PocketBase's `v0.x` tags must never land here, or Go would take them for PocketOne releases):
 
 ```
-git remote add upstream https://github.com/pockethost/pocketbase.git
+git remote add upstream https://github.com/pocketonehq/pocketbase.git
 git config remote.upstream.tagopt --no-tags
 ```
 
 A clone set up before 2026-11-16 (when `upstream` was this repo's own `upstream/*` branches) switches with
-`git remote set-url upstream https://github.com/pockethost/pocketbase.git` and
+`git remote set-url upstream https://github.com/pocketonehq/pocketbase.git` and
 `git config remote.upstream.fetch '+refs/heads/*:refs/remotes/upstream/*'`. To fetch one release without its tag:
 `git fetch upstream refs/tags/vX.Y.Z`.
 

@@ -108,7 +108,7 @@ time) and `lifecycle: policy`.
 
 ### Try it
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints each instance's size:
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints each instance's size:
 
 ```bash
 go run ./example --root ./pb_root --instances instances.yaml
@@ -194,7 +194,7 @@ exclusive criteria.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints their facts, which is what a host's lifecycle does daily.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints their facts, which is what a host's lifecycle does daily.
 
 ```go
 // Measure the instance folders under a root once and print their facts (what a host's lifecycle does daily).
@@ -247,7 +247,7 @@ func main() {
 ## How it works
 
 - Go module `pocketone.dev/ext/stats`. The stock binary wires it in
-  [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go).
+  [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go).
 - `Run` loads recorded facts from a `Loader` sink, then waits for the host's instance list to load (checking every
   second). From then on, once a minute, it asks the policy for decisions on the current facts, measures the instances
   it was asked to (`concurrency` at a time) and reports what it measured to the sink.

@@ -2,7 +2,7 @@
   "description": "Running statistics of a series (count, mean, standard deviation, min, max), with the state kept by the caller",
   "functions": ["add", "report"],
   "language": "TinyGo",
-  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/stats-tinygo",
+  "repository": "https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/stats-tinygo",
   "examples": [
     {
       "function": "add",

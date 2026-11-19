@@ -2,7 +2,7 @@
 
 > PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and PocketPages server-rendered sites.
 
-PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne and PocketPages: https://github.com/pockethost/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pockethost/pocketone`).
+PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne and PocketPages: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).
 
 
 ---
@@ -96,7 +96,7 @@ For those, the [PocketBase docs](https://pocketone.dev/docs/pocketbase) are the 
 
 - **A small core.** PocketBase's own code changes only to add hooks. Each change is marked in the source, reviewed by
   someone who didn't write it, and kept minimal so upstream releases merge cleanly. You can review the complete core
-  changes [here](https://github.com/pockethost/pocketone#changes-we-made-to-pocketbase).
+  changes [here](https://github.com/pocketonehq/pocketone#changes-we-made-to-pocketbase).
 - **Everything else is an extension.** Extensions live in `ext/` in the repo. Each is its own Go module, with a README and a
   small example.
 - **Off until you use it.** The extensions in the `pocketone` binary add no work to an app that doesn't use them.
@@ -106,8 +106,8 @@ For those, the [PocketBase docs](https://pocketone.dev/docs/pocketbase) are the 
 ## Open to contributions
 
 PocketOne is open to everyone. Ask questions and share ideas in
-[GitHub Discussions](https://github.com/pockethost/pocketone/discussions), report bugs in
-[Issues](https://github.com/pockethost/pocketone/issues), and send extensions as pull requests. Start with
+[GitHub Discussions](https://github.com/pocketonehq/pocketone/discussions), report bugs in
+[Issues](https://github.com/pocketonehq/pocketone/issues), and send extensions as pull requests. Start with
 [Writing an extension](https://pocketone.dev/docs/writing-an-extension).
 
 ## Where to next
@@ -135,14 +135,14 @@ The formula lives in [pockethost/homebrew-tap](https://github.com/pockethost/hom
 ## Download a release
 
 Download the zip for your platform from
-[Releases](https://github.com/pockethost/pocketone/releases), unzip it, and put `pocketone` somewhere on your `PATH`.
+[Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and put `pocketone` somewhere on your `PATH`.
 
 ## Build from source
 
 With [Go](https://go.dev) installed:
 
 ```bash
-git clone https://github.com/pockethost/pocketone.git
+git clone https://github.com/pocketonehq/pocketone.git
 cd pocketone/examples/pocketone
 go build -o pocketone .
 ```
@@ -301,7 +301,7 @@ Each skill carries a copy of the docs in its `reference/` folder, so it works of
 **Claude Code**
 
 ```
-/plugin marketplace add pockethost/pocketone
+/plugin marketplace add pocketonehq/pocketone
 /plugin install pocketone@pocketone
 ```
 
@@ -310,10 +310,10 @@ Each skill carries a copy of the docs in its `reference/` folder, so it works of
 **Other agents that read Agent Skills** (Cursor, Codex, Gemini CLI and others)
 
 ```bash
-npx skills add pockethost/pocketone
+npx skills add pocketonehq/pocketone
 ```
 
-Or copy a skill folder into your project yourself. The skills live in [`agent/skills/`](https://github.com/pockethost/pocketone/tree/main/agent/skills).
+Or copy a skill folder into your project yourself. The skills live in [`agent/skills/`](https://github.com/pocketonehq/pocketone/tree/main/agent/skills).
 
 ## llms.txt
 
@@ -2037,7 +2037,7 @@ You don't need a compiler to try it. The Markdown module from the [recipes](http
 
 ```bash
 curl -L -o pb_hooks/markdown.pb.wasm \
-  https://github.com/pockethost/pocketone/raw/main/ext/wasm/example/markdown/markdown.pb.wasm
+  https://github.com/pocketonehq/pocketone/raw/main/ext/wasm/example/markdown/markdown.pb.wasm
 ```
 
 Add an API route that saves a note with its Markdown rendered to HTML:
@@ -2295,7 +2295,7 @@ How a multisite host runs its instances (as isolates in its own process with [po
 
 ## App extensions: `extkit`
 
-Write an extension once, against [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) (its own module,
+Write an extension once, against [`extkit`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) (its own module,
 `pocketone.dev/ext/extkit`; core has no part in it), and the same value runs on every app:
 
 ```go
@@ -2324,7 +2324,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
 - **Every app has the [standard set](https://pocketone.dev/docs/extensions/standard)** (tokens, mcp, pitr, deploy and the rest). Add yours
   to it: `set.Add(myextension.New(...))`. On a standalone app, build the app with `set.NewApp(...)`, or build it
   yourself and call `set.Register(app, jsvm.Config{...})`. The stock binary does the second: `pocketbase.NewWithConfig`,
-  then `set.Register` ([`examples/pocketone`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go)). Without the set:
+  then `set.Register` ([`examples/pocketone`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)). Without the set:
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
@@ -2345,8 +2345,8 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
   (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X pocketone.dev/ext/extkit.Command=pockethost"`.
-- [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
-  [`ext/standard/example`](https://github.com/pockethost/pocketone/blob/main/ext/standard/example/main.go) a complete program.
+- [bulkmail](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
+  [`ext/standard/example`](https://github.com/pocketonehq/pocketone/blob/main/ext/standard/example/main.go) a complete program.
 
 ## Your schema: migrations and table names
 
@@ -2560,7 +2560,7 @@ document.addEventListener("mount:pageBackupsSettings", (e) => {
 ```
 
 - **More hooks:** `app.store.settingsNavGroups` adds entries to the Settings sidebar. Search `pbEvent:` in
-  [`ui/src`](https://github.com/pockethost/pocketone/tree/main/ui/src) for every screen you can add to (Backups exposes `pageBackupsSettings`, `backupsList`,
+  [`ui/src`](https://github.com/pocketonehq/pocketone/tree/main/ui/src) for every screen you can add to (Backups exposes `pageBackupsSettings`, `backupsList`,
   `backupsSettingsForm`, `backupCreateModal` and `backupRestoreModal`).
 - **No build step:** plain JS works. Bundle with Vite if you prefer.
 - **Experimental upstream:** this UI extension API is undocumented and can change between PocketBase releases
@@ -2672,14 +2672,14 @@ ext/<name>/
 
 - **`example/main.go` is required.** Keep it as small as possible: just enough to build a binary that shows the
   feature working, with no extra harness. `go build ./example` and `go vet ./...` must pass with no warnings.
-  [`ext/standard/example`](https://github.com/pockethost/pocketone/tree/main/ext/standard/example) and [`ext/sandbox/example`](https://github.com/pockethost/pocketone/tree/main/ext/sandbox/example) are the size to aim for.
+  [`ext/standard/example`](https://github.com/pocketonehq/pocketone/tree/main/ext/standard/example) and [`ext/sandbox/example`](https://github.com/pocketonehq/pocketone/tree/main/ext/sandbox/example) are the size to aim for.
 - **Examples come with two logins:** superuser `admin@example.com` and user `user@example.com` (verified, in
   `users`), both with password `password`. Every `example/main.go` calls
   `devusers.Register(app)` right after the app is created (on a multisite host, `devusers.Ensure(app)` in the
-  host's per-instance setup), from [`ext/devusers`](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go). A fresh data dir is then ready to log
+  host's per-instance setup), from [`ext/devusers`](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go). A fresh data dir is then ready to log
   in to, with no installer page and no CLI step. Never register it in a production build.
 - **`conformance_test.go` is required.** It runs the shared extension test from
-  [`ext/extkit/conformance`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go) once:
+  [`ext/extkit/conformance`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/conformance/conformance.go) once:
 
   ```go
   func TestConformance(t *testing.T) {
@@ -2696,7 +2696,7 @@ ext/<name>/
   `<name>_<verb>_<noun>`, is described, and has an object input schema (`pb_` is reserved). Run it with `go test -race`. It's the minimum every extension passes; your own tests cover the
   feature.
 - **`modes_test.go` tests the feature in every mode it runs in**, on the real `pocketone` binary, with
-  [`ext/extkit/modetest`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/modetest/modetest.go). Declare the instances the test needs, each configured
+  [`ext/extkit/modetest`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/modetest/modetest.go). Declare the instances the test needs, each configured
   in full (files, extension settings, secrets), and the harness lays them out once per mode: `Single` (each its own
   `pocketone serve`), `Host` (one multisite host serving them all) and `Fleet` (several hosts that forward to each
   other). An app extension runs `modetest.AllApp` (Single and Host); a host extension picks Host and/or Fleet.
@@ -2717,7 +2717,7 @@ ext/<name>/
   why in a comment. `-short` skips mode tests.
 - **The README starts with front matter**: who owns the extension and its version (see [Ownership](#ownership)), and
   its entry in the [catalogue on pocketone.dev](https://pocketone.dev/docs/extensions): its `title`, its `group` (one
-  of the ids in [`site/extensions.json`](https://github.com/pockethost/pocketone/blob/main/site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and
+  of the ids in [`site/extensions.json`](https://github.com/pocketonehq/pocketone/blob/main/site/extensions.json): `binary`, `many`, `services`, `saas`, `authors`) and
   a one-line `summary`. Nothing outside your folder lists your extension: the site finds it there.
 
   ```markdown
@@ -2791,14 +2791,14 @@ ext/<name>/
   [`ext/pitr/README.md`](https://pocketone.dev/docs/extensions/pitr) is the example to follow.
 - **Your pull request touches only your folder** (and, for a new contract, its folder in `ext/contracts`). Don't commit
   generated files: the site pages, nav, search index, `llms.txt` and contract indexes are rebuilt on `main` after your
-  change merges ([`.github/regenerate.sh`](https://github.com/pockethost/pocketone/blob/main/.github/regenerate.sh)). To preview your page, run
+  change merges ([`.github/regenerate.sh`](https://github.com/pocketonehq/pocketone/blob/main/.github/regenerate.sh)). To preview your page, run
   `cd site/sync && go run .` and don't commit what it writes outside your folder.
-- **CI enforces all of this.** [`.github/workflows/extensions.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/extensions.yml) fails when an extension
+- **CI enforces all of this.** [`.github/workflows/extensions.yml`](https://github.com/pocketonehq/pocketone/blob/main/.github/workflows/extensions.yml) fails when an extension
   README is missing its owners, version, title, group or summary, one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, when it has no
   `CHANGELOG.md`, or when a module that implements `extkit.Extension` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
-  for a core change. [`.github/workflows/site.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/site.yml) checks that the site builds from
+  for a core change. [`.github/workflows/site.yml`](https://github.com/pocketonehq/pocketone/blob/main/.github/workflows/site.yml) checks that the site builds from
   your README. Run everything CI runs on your pull request, locally, from the repository root:
 
   ```bash
@@ -2817,7 +2817,7 @@ ext/<name>/
 ### Changelogs
 
 Each extension keeps its changelog in its own folder, `ext/<name>/CHANGELOG.md`, so a change to it touches nothing
-else. The root [CHANGELOG.md](https://github.com/pockethost/pocketone/blob/main/CHANGELOG.md) is for the rest: core, the `pocketone` binary, the site.
+else. The root [CHANGELOG.md](https://github.com/pocketonehq/pocketone/blob/main/CHANGELOG.md) is for the rest: core, the `pocketone` binary, the site.
 
 - **A user-visible change adds its line under `## Unreleased`** in the same commit, grouped under `### Upgrading`
   (steps for anything breaking), `### Added`, `### Changed` or `### Fixed`. One line per change, written for someone
@@ -2871,7 +2871,7 @@ go run ./.github/extensions approvers origin/main HEAD   # who may approve each 
 
 ## Planned extensions
 
-Our own extensions live in this repo under [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext), each as its own Go module (`pocketone.dev/ext/<name>`). See [ext/README.md](https://github.com/pockethost/pocketone/blob/main/ext/README.md).
+Our own extensions live in this repo under [`ext/`](https://github.com/pocketonehq/pocketone/tree/main/ext), each as its own Go module (`pocketone.dev/ext/<name>`). See [ext/README.md](https://github.com/pocketonehq/pocketone/blob/main/ext/README.md).
 
 
 ---
@@ -2927,7 +2927,7 @@ The table is generated from each contract's README and every extension's `Contra
 
 <!-- /contracts:catalogue -->
 
-[`internal/example/v1`](https://github.com/pockethost/pocketone/blob/main/ext/contracts/internal/example/v1/example.go) is a test-only wire contract that exercises the generated code.
+[`internal/example/v1`](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/internal/example/v1/example.go) is a test-only wire contract that exercises the generated code.
 
 ## Three kinds
 
@@ -2977,7 +2977,7 @@ extension that first provides it.
 
 ## Write the interface
 
-A contract is an interface with `//contract:` directives; [`contractgen`](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cmd/contractgen/main.go) writes the rest
+A contract is an interface with `//contract:` directives; [`contractgen`](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cmd/contractgen/main.go) writes the rest
 (`zz_contract.go`) with `go generate ./...`. A test fails when a generated file is stale.
 
 ```go
@@ -3038,7 +3038,7 @@ Source: https://pocketone.dev/docs/extensions
 
 # Extensions
 
-Each extension is a Go module in [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing an extension](https://pocketone.dev/docs/writing-an-extension).
+Each extension is a Go module in [`ext/`](https://github.com/pocketonehq/pocketone/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing an extension](https://pocketone.dev/docs/writing-an-extension).
 
 ## Standard extensions
 
@@ -3112,9 +3112,9 @@ The extension contract and tools for building and testing extensions.
 | Extension | What it does |
 |---|---|
 | [Bundle](https://pocketone.dev/docs/extensions/bundle) | An app's hooks, migrations and public files embedded in the binary. |
-| [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
-| [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
-| [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on every app, standalone or hosted. |
+| [Contracts](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
+| [Dev Users](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
+| [Extension Kit](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on every app, standalone or hosted. |
 | [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
 | [Standard Set](https://pocketone.dev/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |
 
@@ -3256,7 +3256,7 @@ pocketone desktop image
 ```
 
 Builds the image desktop build runs in (Go plus this checkout's source, vendored) and tags it. A release
-publishes it as ghcr.io/pockethost/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
+publishes it as ghcr.io/pocketonehq/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
 
 | Flag | Type | Default | |
 |---|---|---|---|
@@ -6503,7 +6503,7 @@ format the useful fields as text, and pass them as the context. Only pass what t
 
 ## A complete example
 
-[examples/chat](https://github.com/pockethost/pocketone/blob/main/ext/agent/examples/chat/README.md) is a chat app about PocketOne built this way, as a PocketPages app with no
+[examples/chat](https://github.com/pocketonehq/pocketone/blob/main/ext/agent/examples/chat/README.md) is a chat app about PocketOne built this way, as a PocketPages app with no
 Go: eleven docs pages as context, split into sections and ranked with BM25 (with a few synonyms, since people say
 "apps" where the docs say "instances"), answers streamed as they're written, and three follow-up questions suggested
 with a schema.
@@ -6520,7 +6520,7 @@ question goes to [agent/v1](https://pocketone.dev/docs/contracts/agent/v1) with 
 both turns are saved. Chats aren't tied to users: an app that has them puts the user's id in the chat's `meta`, lists
 by it, and decides who may read what.
 
-A wire contract at `/api/_c/agent.chat/v1` ([chat.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/agent/chat/v1/chat.go)), one provider. It requires agent/v1. The
+A wire contract at `/api/_c/agent.chat/v1` ([chat.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/agent/chat/v1/chat.go)), one provider. It requires agent/v1. The
 [agent-chat](https://pocketone.dev/docs/extensions/agent-chat) extension provides it.
 
 ## Use
@@ -6758,7 +6758,7 @@ code calls the same thing wherever the app runs; who answers is the provider's b
 - **its host's model:** a multisite host may provide this contract for its instances, running one model they all share
   unless an instance's admins set their own API.
 
-A wire contract at `/api/_c/agent/v1` ([agent.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/agent/v1/agent.go)), one provider. The [agent](https://pocketone.dev/docs/extensions/agent/extension)
+A wire contract at `/api/_c/agent/v1` ([agent.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/agent/v1/agent.go)), one provider. The [agent](https://pocketone.dev/docs/extensions/agent/extension)
 extension provides it.
 
 ## Use
@@ -6991,7 +6991,7 @@ An app's API tokens, as other extensions use them. Tokens are scoped: a token li
 requests those scopes reach. Extensions register their own scopes, read the token a request came with, and limit
 requests they make on someone's behalf, all through this package.
 
-A service with its own API ([tokens.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)), served at `/api/_c/api-tokens/v1`.
+A service with its own API ([tokens.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)), served at `/api/_c/api-tokens/v1`.
 
 ## Use
 
@@ -7053,7 +7053,7 @@ provider's collection, created and edited with PocketBase's records API; this co
 addresses never to mail is [mail.suppression/v1](https://pocketone.dev/docs/contracts/mail.suppression/v1); providers' bounce and
 complaint reports are [mail.feedback/v1](https://pocketone.dev/docs/contracts/mail.feedback/v1).
 
-A wire contract ([bulkmail.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/bulkmail/v1/bulkmail.go)).
+A wire contract ([bulkmail.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/bulkmail/v1/bulkmail.go)).
 
 ## Use
 
@@ -7209,7 +7209,7 @@ Source: https://pocketone.dev/docs/contracts/cache.clear/v1
 [cache/v1](https://pocketone.dev/docs/contracts/cache/v1) is for an app's own code. This contract lets the app's admins empty its buckets from
 outside that code, after a change that left stale entries behind: one bucket by name, or every bucket the app has.
 
-A wire contract at `/api/_c/cache.clear/v1` ([clear.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cache/clear/v1/clear.go)), one provider: whoever provides cache/v1 provides
+A wire contract at `/api/_c/cache.clear/v1` ([clear.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cache/clear/v1/clear.go)), one provider: whoever provides cache/v1 provides
 this too.
 
 ## Use
@@ -7288,7 +7288,7 @@ The promise is a cache's: a provider may drop any entry at any time, and a `Get`
 that was deleted, cleared or replaced since, nor one past its TTL. Each app has its own buckets, on a multisite host
 too, even when the provider keeps every app's entries in one shared store.
 
-An app service contract, one provider ([cache.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cache/v1/cache.go)).
+An app service contract, one provider ([cache.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cache/v1/cache.go)).
 
 ## Use
 
@@ -7397,7 +7397,7 @@ The `pocketone` command tree. Every operation of every wire contract linked into
 remote. An extension replaces one of those commands by providing the same path, or adds commands of its own. One
 provider per path; when two extensions provide the same path, `pocketone.yaml` picks one.
 
-A keyed contract (by command path), in the developer's `pocketone` process ([commands.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cli/commands/v1/commands.go)).
+A keyed contract (by command path), in the developer's `pocketone` process ([commands.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cli/commands/v1/commands.go)).
 
 ## Use
 
@@ -7475,7 +7475,7 @@ A project's code on an app: its `pb_*` folders except `pb_data` (`pb_hooks`, `pb
 the app lacks, then swap the new set in at once. Restart and logs are [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)'s, which
 it requires.
 
-A routed contract ([deploy.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go)): its provider is an `http.Handler` serving the file API below. A
+A routed contract ([deploy.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go)): its provider is an `http.Handler` serving the file API below. A
 multisite host can provide it for its instances.
 
 ## Use
@@ -7534,7 +7534,7 @@ What admits requests on a multisite host before an instance is served here or fo
 allow list, the real client IP behind a proxy, rate limits. Gates run in order and every one must admit; a gate may
 answer the request itself (429, 403).
 
-A host-scope service contract, many providers in order ([gate.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/gate/v1/gate.go)).
+A host-scope service contract, many providers in order ([gate.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/gate/v1/gate.go)).
 
 ## Use
 
@@ -7578,7 +7578,7 @@ Source: https://pocketone.dev/docs/contracts/http.wrap/v1
 Middleware around everything a multisite host serves: health, every instance, forwarded requests. Wrappers nest in
 provider order, the first outermost (a Server-Timing header first, so it measures everything inside it).
 
-A host-scope service contract, many providers in order ([wrap.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/http/wrap/v1/wrap.go)).
+A host-scope service contract, many providers in order ([wrap.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/http/wrap/v1/wrap.go)).
 
 ## Use
 
@@ -7623,7 +7623,7 @@ The record of one instance on a multisite host: its id, hostnames, PocketBase ve
 superusers, per-extension settings, whether it's blocked or runs elsewhere. Every host contract reads the same record:
 runtimes run it, gates admit requests for it. A source supplies the records and streams changes.
 
-A host-scope service contract ([instance.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/instance.go), [limits.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/limits.go)).
+A host-scope service contract ([instance.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/instance.go), [limits.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/limits.go)).
 
 ## Use
 
@@ -7640,7 +7640,7 @@ deletes) until ctx is done. Provide it on the host's scope in a host extension's
 sourcev1.Contract.ProvideIn(h.Scope, mySource)
 ```
 
-In tests, [sourcetest](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go) provides it: `src, scope := sourcetest.Scope(instances...)` gives a
+In tests, [sourcetest](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go) provides it: `src, scope := sourcetest.Scope(instances...)` gives a
 sealed host scope with a fixed list, and `src.Set(inst)` / `src.Delete(id)` change it the way an edit to the instances
 file would.
 
@@ -7669,7 +7669,7 @@ Source: https://pocketone.dev/docs/contracts/mail.fallback/v1
 Where an app's mail goes when its SMTP is off. Providers form an ordered chain: each sends a message or passes it on;
 when all pass, PocketBase sends it its own way (`sendmail`). An app with SMTP on never reaches the chain.
 
-A service ([fallback.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mail/fallback/v1/fallback.go)), many providers, open to `pb_hooks`.
+A service ([fallback.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mail/fallback/v1/fallback.go)), many providers, open to `pb_hooks`.
 
 ## Use
 
@@ -7730,7 +7730,7 @@ What mail providers report back about mail an app sent: bounces, spam complaints
 contract receives the reports and raises one event per address; any number of extensions act on them through one
 hook. A suppression list adds the address, a CRM marks the contact, `pb_hooks` logs it.
 
-A wire contract ([feedback.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mail/feedback/v1/feedback.go)). Its operations are public: SES messages are checked by their SNS
+A wire contract ([feedback.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mail/feedback/v1/feedback.go)). Its operations are public: SES messages are checked by their SNS
 signature, webhook calls by a shared secret.
 
 ## Use
@@ -7802,7 +7802,7 @@ Source: https://pocketone.dev/docs/contracts/mail.suppression/v1
 The addresses an app must not send bulk mail to (unsubscribed, bounced, complained, added by hand), and the
 unsubscribe link in every bulk message. Anything that mails many people checks it.
 
-A wire contract ([suppression.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mail/suppression/v1/suppression.go)).
+A wire contract ([suppression.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mail/suppression/v1/suppression.go)).
 
 ## Use
 
@@ -7935,7 +7935,7 @@ What every provider serves the same way, the contract owns:
 A provider brings the protocol, sign-in and any tools of its own ([MCP](https://pocketone.dev/docs/extensions/mcp) adds `pb_*` tools over
 the REST API). Replace it and the contract tools stay.
 
-A service ([mcp.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mcp/v1/mcp.go)).
+A service ([mcp.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mcp/v1/mcp.go)).
 
 ## Use
 
@@ -7996,7 +7996,7 @@ An OAuth 2.1 authorization server for the app: authorization code with PKCE, dev
 client registration (dynamic, or by a client metadata document). The CLI's browser login and MCP clients such as
 Claude sign in through it, and get API tokens ([api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1)).
 
-A routed contract ([oauth.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go)): the OAuth specs fix its API's shape, so its provider serves it as it is.
+A routed contract ([oauth.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go)): the OAuth specs fix its API's shape, so its provider serves it as it is.
 
 ## Use
 
@@ -8049,7 +8049,7 @@ Remote control of an app from afar: who your credential is and what the app offe
 log. Every client starts here: `GET /api/_c/remote/v1` is the one fixed path, and its answer lists every other
 contract the app offers. Contracts that add an area (deploy/v1) require this one.
 
-A wire contract ([remote.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/remote/v1/remote.go)); a multisite host can provide it for its instances, so it works for
+A wire contract ([remote.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/remote/v1/remote.go)); a multisite host can provide it for its instances, so it works for
 instances running stock PocketBase images.
 
 ## Use
@@ -8063,7 +8063,7 @@ instances running stock PocketBase images.
 
 - **CLI:** `pocketone remote whoami | status | restart | logs`.
 - **Go:** `remotev1.Contract.Must(app)` in the app, or `remotev1.NewClient(url, token, http)` from outside. The
-  command-line client (linked remotes, saved logins, sign-in) is [remoteclient](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient).
+  command-line client (linked remotes, saved logins, sign-in) is [remoteclient](https://github.com/pocketonehq/pocketone/tree/main/ext/contracts/remote/v1/remoteclient).
 - **Hooks:** `remotev1.OnRestart(app)` in Go, `onRemoteRestart` in `pb_hooks`, for every operation.
 - **MCP:** a tool per operation (`remote_status`, ...).
 
@@ -8165,7 +8165,7 @@ point it has at or before it and tells you which one it used. Providers differ o
 
 The app restarts to apply a restore; its data from before the restore is kept until the next one.
 
-A wire contract ([restore.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/restore/v1/restore.go)); a multisite host may provide it for its instances (from host-level
+A wire contract ([restore.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/restore/v1/restore.go)); a multisite host may provide it for its instances (from host-level
 snapshots).
 
 ## Use
@@ -8180,7 +8180,7 @@ snapshots).
 the `point` it restores from; `422 no_point` when there's nothing at or before the moment, `409 busy` while another
 restore runs. Only superusers may call either.
 
-- **Dashboard:** Settings → Backups gets a "Restore to a moment" section from this contract ([ui/main.js](https://github.com/pockethost/pocketone/blob/main/ext/contracts/restore/v1/ui/main.js)),
+- **Dashboard:** Settings → Backups gets a "Restore to a moment" section from this contract ([ui/main.js](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/restore/v1/ui/main.js)),
   whichever extension provides it: a time picker over pitr's window, or one that says which backup a moment uses.
 - **Go:** `restorev1.Contract.Must(app).RestoreTo(ctx, auth, restorev1.RestoreInput{At: t})`, or
   `restorev1.NewClient(url, token, http)` from outside.
@@ -8250,7 +8250,7 @@ instance runs on the one it names (`runtime: docker` in its record), else the fi
 version, for example). Having a `multisite` section makes the binary a host; the runtimes are this contract's
 providers.
 
-A host-scope service contract, many providers in order ([runtime.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
+A host-scope service contract, many providers in order ([runtime.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
 
 ## Use
 
@@ -8300,7 +8300,7 @@ one API: list them, read one, save one, test one without saving. Each extension 
 registers a section; the provider serves them all. Settings an operator sets for a whole host stay in
 `pocketone.yaml`.
 
-A wire contract ([settings.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/settings/v1/settings.go)).
+A wire contract ([settings.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/settings/v1/settings.go)).
 
 ## Use
 
@@ -8424,7 +8424,7 @@ so the built-in pages and the ejected ones are the same files.
 A set is every `*.tpl` file in an `fs.FS`, at any depth. Each file is one template named by its path without `.tpl`
 (`signin`, `parts/head`), so pages include shared pieces with `{{template "parts/head" .}}`.
 
-An app service contract, one provider ([templates.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/templates/v1/templates.go)).
+An app service contract, one provider ([templates.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/templates/v1/templates.go)).
 
 ## Use
 
@@ -8487,7 +8487,7 @@ The TLS of a multisite host's main listener. Its provider hands the host a `tls.
 for hostnames an instance serves) and, for HTTP challenges, a wrapper for the plain-HTTP listener. With no provider
 the host uses the certificate files in its `server` section, or plain HTTP.
 
-A host-scope service contract, one provider ([tls.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/tls/v1/tls.go)).
+A host-scope service contract, one provider ([tls.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/tls/v1/tls.go)).
 
 ## Use
 
@@ -8526,7 +8526,7 @@ Source: https://pocketone.dev/docs/contracts/vacuum/v1
 SQLite keeps a database file as big as it ever was; compacting it (`VACUUM`) gives the space freed by deleted records
 back to the disk. This contract says who does that for an app, how often, and how the last run went.
 
-A wire contract at `/api/_c/vacuum/v1` ([vacuum.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/vacuum/v1/vacuum.go)), one provider. On a single app the
+A wire contract at `/api/_c/vacuum/v1` ([vacuum.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/vacuum/v1/vacuum.go)), one provider. On a single app the
 [vacuum](https://pocketone.dev/docs/extensions/vacuum) extension provides it, on the schedule the app's admins set. A multisite host may
 provide it for its instances instead: then the host compacts them on its own schedule, the app's vacuum extension steps
 aside (no settings, no schedule of its own), and the app's admins see the host's status.
@@ -8626,7 +8626,7 @@ everyone who installed the old one.
 
 ## The build image
 
-Builds run in Docker, in the build image for your `pocketone`'s version: `ghcr.io/pockethost/pocketone-build:v<version>`,
+Builds run in Docker, in the build image for your `pocketone`'s version: `ghcr.io/pocketonehq/pocketone-build:v<version>`,
 pulled the first time. It holds Go, PocketOne's source and every dependency, vendored, so once it's here builds work
 offline, and the same `pocketone` version always builds the same app.
 
@@ -9245,7 +9245,7 @@ it matches or beats llama.cpp-based servers on the CPU for short jobs. Other CPU
 times slower. It reads GGUF files (Q4_K, Q6_K, Q8_0, F16) and runs the Qwen3 family. Other models work through your own
 API (Ollama, llama-server).
 
-[examples/chat](https://github.com/pockethost/pocketone/blob/main/ext/agent/examples/chat/README.md) is a PocketPages app (no Go) that arms `$agent` with a preamble and context
+[examples/chat](https://github.com/pocketonehq/pocketone/blob/main/ext/agent/examples/chat/README.md) is a PocketPages app (no Go) that arms `$agent` with a preamble and context
 files read from disk and chats about PocketOne.
 
 ## License
@@ -9293,7 +9293,7 @@ extkit.Setup(app, []extkit.Extension{agent.New(), agentchat.New()}, nil, nil)
 ```
 
 The module is `pocketone.dev/ext/agent-chat`. Its two collections come from its own migration,
-`0001_chats` in [schema.go](https://github.com/pockethost/pocketone/blob/main/ext/agent-chat/schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
+`0001_chats` in [schema.go](https://github.com/pocketonehq/pocketone/blob/main/ext/agent-chat/schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
 They stay empty until your app starts a chat.
 
 ## Configure
@@ -9627,7 +9627,7 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
 - **Read the token on a request.** `tokens.FromRequest(e)` returns the token a request used (nil for a PocketBase
   auth token), with its `Owner`, `Scopes` and `Audience`. `tokens.HasScope(e, "x")` is true for PocketBase auth
   tokens and unscoped API tokens.
-- **Without importing this package.** Other extensions use the [api-tokens/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)
+- **Without importing this package.** Other extensions use the [api-tokens/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)
   contract instead: `tokensv1.Contract.Of(app)` registers scopes (`RegisterScope`), lists them and checks `Reaches`;
   `tokensv1.FromRequest(e)` is the request's token (its `Grant`: owner, scopes, audience, client id);
   `tokensv1.WithScopes` limits in-process requests. Deploy and MCP work this way. The `X-Token-Scope-*` headers work
@@ -9653,7 +9653,7 @@ Audience})` returns the secret and record; also `Verify(secret)`, `List(owner)`,
 
 ### REST API (api-tokens/v1)
 
-The [api-tokens/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go) contract, at `/api/_c/api-tokens/v1`. Any signed-in account; superusers
+The [api-tokens/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go) contract, at `/api/_c/api-tokens/v1`. Any signed-in account; superusers
 see and manage everyone's.
 
 | Route | What |
@@ -9668,7 +9668,7 @@ Owners can also list, view and delete their own tokens through the records API o
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/api-tokens/v1`) and the `token` command.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/api-tokens/v1`) and the `token` command.
 
 ```go
 // Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the token API (/api/_c/api-tokens/v1)
@@ -9735,10 +9735,10 @@ The OAuth server can only sign in accounts of those collections.
   audience.
 - The bearer check is a middleware that runs just before PocketBase's own auth middleware; a second one, right after
   it, sets the scope headers. Last use is written at most once a minute per token.
-- [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app where superusers and users may own tokens, with a `hello` scope
+- [`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app where superusers and users may own tokens, with a `hello` scope
   for `GET /api/hello`. Try it with `go run ./example serve` and
   `go run ./example token create --superuser admin@example.com --name ci` (logins from
-  [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password, user@example.com / password).
+  [devusers](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password, user@example.com / password).
 
 ## License
 
@@ -9752,7 +9752,7 @@ Source: https://pocketone.dev/docs/extensions/api-tokens/oauth
 # OAuth
 
 [Tokens](https://pocketone.dev/docs/extensions/api-tokens) includes an OAuth 2.1 authorization server whose access tokens are API tokens: the
-[oauth/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go) contract. `pocketone login` signs in to it in the browser (or with a code on
+[oauth/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go) contract. `pocketone login` signs in to it in the browser (or with a code on
 another device), and MCP clients such as Claude or ChatGPT connectors register themselves and connect. Superusers and
 app users sign in on your app's own pages, through PocketBase's own auth endpoints.
 
@@ -9926,7 +9926,7 @@ deploy token can't drive MCP. Refreshed tokens keep it.
 
 ## Example
 
-The OAuth server is on wherever Tokens is (its [example](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/example/main.go) runs it). To brand it and let MCP connectors
+The OAuth server is on wherever Tokens is (its [example](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/example/main.go) runs it). To brand it and let MCP connectors
 register themselves:
 
 ```go
@@ -10001,7 +10001,7 @@ apitokens.New(apitokens.Config{OAuth: tokens.OAuthConfig{
 
 The templates are Go `html/template` files, and their dot is `PageData` (`{{.AppName}}`, `{{.Action}}`, `{{.Hidden}}`,
 `{{.CSRF}}`, `{{.ClientName}}`, `{{.Scopes}}`, `{{.ScopeChoices}}`, `{{.Superuser}}`, `{{.Providers}}`, `{{.Error}}`, …;
-see `PageData` in [oauth_pages.go](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/oauth_pages.go)). Each page includes the others by name (`{{template "head" .}}`).
+see `PageData` in [oauth_pages.go](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/oauth_pages.go)). Each page includes the others by name (`{{template "head" .}}`).
 - Every POST form must include `{{template "hidden" .}}` and a `step` button.
 - Steps: `password`, `request_otp`, `otp`, `oauth2:<provider>`, `use:<collection>` (switch forms; `use:` is the
   default user form), `allow`, `deny`, `switch`.
@@ -10170,7 +10170,7 @@ autotls:
 
 ## Example
 
-Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go) registers it with the other default extensions.
+Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go) registers it with the other default extensions.
 
 ## How it works
 
@@ -10384,7 +10384,7 @@ them.
    **Test address**.
 
 A view is the easy way to build a dynamic audience: it picks who gets mail and computes the columns the message
-uses. The [example](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/demo.go) creates one called `newsletter_audience`.
+uses. The [example](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/example/demo.go) creates one called `newsletter_audience`.
 
 ### Placeholders
 
@@ -10535,7 +10535,7 @@ them), since the app's mail account can usually send only as identities it has v
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with bulk mail: the Mail page, campaigns to the app's own users and `$bulkmail` in JS hooks. Run it with `go run ./example serve --dev` from this folder; the dev mail trap at http://127.0.0.1:8025 catches every mail.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with bulk mail: the Mail page, campaigns to the app's own users and `$bulkmail` in JS hooks. Run it with `go run ./example serve --dev` from this folder; the dev mail trap at http://127.0.0.1:8025 catches every mail.
 
 ```go
 // Command example runs one PocketOne app with bulk mail: a "Mail" page in the dashboard, campaigns to the app's
@@ -10585,8 +10585,8 @@ func main() {
 
 ## How it works
 
-- Go module `pocketone.dev/ext/bulkmail`, an [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension.
-  [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
+- Go module `pocketone.dev/ext/bulkmail`, an [`extkit`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) extension.
+  [`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
 - The audience is resolved when sending starts and queued into a ledger first (one row per campaign and address,
   unique). A background sender then mails one message at a time through the app's mail client, at the lower of the
   app's rate and the campaign's.
@@ -10603,7 +10603,7 @@ func main() {
 | `_bulkmail_sends` | The ledger: campaign, email, status (`queued`, `sent`, `skipped`, `failed`), reason, attempts. |
 | `_bulkmail_suppressions` | Addresses that never receive campaign mail, with the reason. |
 
-All are superuser-only system collections with fixed collection and field ids ([`schema.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/schema.go)).
+All are superuser-only system collections with fixed collection and field ids ([`schema.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/schema.go)).
 `LegacyJSMigration()` emits a PocketBase JS migration that creates the same collections, for apps that move onto this
 schema before they run this extension.
 
@@ -10887,7 +10887,7 @@ app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
-The module is `pocketone.dev/ext/config`. [`examples/pocketone/main.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go)
+The module is `pocketone.dev/ext/config`. [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)
 shows the full wiring: every `app` key as a flag default, and the `server` keys as the serve command's defaults.
 
 ## Configure
@@ -11098,7 +11098,7 @@ cfg, err := firewall.Section.Require() // fails when the file doesn't have the s
 
 ## Example
 
-Config is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
+Config is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
 
 ## Go API
 
@@ -11332,7 +11332,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 ### Building on Deploy
 
 - **Go client.** `deploy.NewClient(ctx, rc)` takes a remote/v1 client (`remoteclient.Open`, from
-  [ext/contracts/remote/v1/remoteclient](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient)) and finds its deploy API.
+  [ext/contracts/remote/v1/remoteclient](https://github.com/pocketonehq/pocketone/tree/main/ext/contracts/remote/v1/remoteclient)) and finds its deploy API.
   `Deploy`, `Pull`, `Collect`, `Watch` and `NewSyncer` (two-way sync: `Sync`, `RemoteChanged`) are the commands'
   building blocks.
 - **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths})`
@@ -11342,12 +11342,12 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
   instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
 - **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
   does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
-- **Discovery.** Deploy provides the [deploy/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go) contract, which whoami lists, so
+- **Discovery.** Deploy provides the [deploy/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go) contract, which whoami lists, so
   clients find it at `/api/_c/deploy/v1`. A multisite host can provide it for its instances instead.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/deploy/example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
 
 ```go
 // Command example is a PocketOne app that accepts deploys and can deploy: deploy/v1 (/api/_c/deploy/v1), remote/v1
@@ -11409,14 +11409,14 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 
 ## How it works
 
-- Go module `pocketone.dev/ext/deploy`. [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
-  deploys and can deploy (logins from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
+- Go module `pocketone.dev/ext/deploy`. [`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
+  deploys and can deploy (logins from [devusers](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
 - A deploy is a hash diff: the client sends a manifest, uploads only the missing files in bundles, then commits.
 - On a single app the files are swapped in while it runs; a restart (when a client asks) is `app.Restart()`, which
   re-executes the process (`Config.Restart` overrides it; not on Windows).
 - `Config.Dir` and `Config.StoreDir` move the deploy folder and the upload store; `Config.Prefix` moves the API.
 - Logs on a single app come from its own `_logs` table; entries at error level and above are marked as stderr.
-- The `node_modules` collector is [`nodemodules`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/nodemodules/nodemodules.go), a port of the npm CLI's.
+- The `node_modules` collector is [`nodemodules`](https://github.com/pocketonehq/pocketone/blob/main/ext/deploy/nodemodules/nodemodules.go), a port of the npm CLI's.
 
 ## License
 
@@ -11445,7 +11445,7 @@ which Wails marks experimental on macOS and Linux.
 ## Install
 
 Desktop is built into `pocketone`. Builds run in [Docker](https://docs.docker.com/get-docker/), in the build image
-for your `pocketone`'s version (`ghcr.io/pockethost/pocketone-build:v<version>`), pulled on first use. It holds Go
+for your `pocketone`'s version (`ghcr.io/pocketonehq/pocketone-build:v<version>`), pulled on first use. It holds Go
 and PocketOne's source with every dependency vendored, so once it's here builds work offline. A named volume
 (`pocketone-build-cache`) keeps Go's build cache, so rebuilds take seconds.
 
@@ -11562,12 +11562,12 @@ desktop.Run(desktop.App{Name: "Notes", ID: "dev.example.notes", Hooks: hooks, Mi
 ```
 
 Build it with `CGO_ENABLED=0 go build -tags purego` for macOS and Linux (Wails' cgo-free backends); Windows needs no
-tag. The build image is [image/Dockerfile](https://github.com/pockethost/pocketone/blob/main/ext/desktop/image/Dockerfile): a `pocketone` and the vendored module `pocketone desktop
+tag. The build image is [image/Dockerfile](https://github.com/pocketonehq/pocketone/blob/main/ext/desktop/image/Dockerfile): a `pocketone` and the vendored module `pocketone desktop
 prepare` writes.
 
 ## Example
 
-[example/hello](https://github.com/pockethost/pocketone/tree/main/ext/desktop/example/hello) is a hello-world app: a hook (`GET /api/hello`), a migration (a `greetings`
+[example/hello](https://github.com/pocketonehq/pocketone/tree/main/ext/desktop/example/hello) is a hello-world app: a hook (`GET /api/hello`), a migration (a `greetings`
 collection with one row) and a page that lists and adds greetings.
 
 ```sh
@@ -11577,7 +11577,7 @@ pocketone serve                 # http://127.0.0.1:8090
 pocketone desktop build         # dist/darwin-arm64/Hello.app on an Apple Silicon Mac
 ```
 
-[example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/desktop/example/main.go) is a PocketBase app with only this extension, to show the command.
+[example/main.go](https://github.com/pocketonehq/pocketone/blob/main/ext/desktop/example/main.go) is a PocketBase app with only this extension, to show the command.
 
 ```go
 // Command example is a PocketBase app with only the desktop extension: `go run . desktop build` in an app folder
@@ -11763,7 +11763,7 @@ When the app starts, `types.d.ts` in the project root (the folder holding `pb_ho
 `pocketone.yaml`) gets the declarations of the whole JS API, for your editor and `tsc`:
 
 - PocketBase's API generated from PocketOne's core (its extra hooks included), by PocketBase's own generator.
-- What this engine adds ([`pocketone.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
+- What this engine adds ([`pocketone.d.ts`](https://github.com/pocketonehq/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
   (`await $app.findRecordById.async(...)` is a `Promise<core.Record>`), `require`, `process`, `Buffer`, `console`,
   `import.meta`.
 - Each extension's own API, for the extensions on in that app (`$mcp`, `$apiTokens`, `$bulkmail`, `onContracts` and
@@ -11800,7 +11800,7 @@ do).
 ## Integrations
 
 Extensions plug in through `Config.Extensions` with the engine-neutral types in
-[`ext/extkit/js`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/js/js.go). A value implements any of:
+[`ext/extkit/js`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/js/js.go). A value implements any of:
 
 - `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API. `TypeScript()`: declare it for editors and
   `tsc` (appended to `types.d.ts`). `FilterTypes(decl)`: change the finished declarations (the sandbox
@@ -12153,17 +12153,17 @@ overrides the authorization server listed in the metadata.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mcp/example/main.go) runs one app with an MCP endpoint at `/mcp`: the built-in `pb_*` tools, a tool over a Go route and one over a JS route.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/mcp/example/main.go) runs one app with an MCP endpoint at `/mcp`: the built-in `pb_*` tools, a tool over a Go route and one over a JS route.
 
 ```bash
 cd example
 go run . serve
 ```
 
-The example registers [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go), so the logins are `admin@example.com` / `password`
+The example registers [devusers](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go), so the logins are `admin@example.com` / `password`
 (superuser) and `user@example.com` / `password` (user). It also registers Tokens (with its OAuth server) for OAuth sign-in,
 and adds a tool over a Go route (`example_get_whoami`) and one over a JS route (`example_list_recent_users`, in
-[`pb_hooks/mcp.pb.js`](https://github.com/pockethost/pocketone/blob/main/ext/mcp/example/pb_hooks/mcp.pb.js)). Then:
+[`pb_hooks/mcp.pb.js`](https://github.com/pocketonehq/pocketone/blob/main/ext/mcp/example/pb_hooks/mcp.pb.js)). Then:
 
 ```bash
 claude mcp add --transport http pb-example http://127.0.0.1:8090/mcp
@@ -12293,7 +12293,7 @@ pages.RegisterCommand(app.RootCmd)      // the `pages create` and `pages starter
 app.Start()
 ```
 
-The module is `pocketone.dev/ext/pages`. See [example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) and
+The module is `pocketone.dev/ext/pages`. See [example/main.go](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/example/main.go) and
 [Create your own extension](https://pocketone.dev/docs/writing-an-extension).
 
 ## Configure
@@ -12321,7 +12321,7 @@ module.exports = {
 
 | Key | Default | What it does |
 |---|---|---|
-| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or custom plugins such as the [add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md). ETS and Markdown are always on. |
+| `plugins` | `[]` | Module names (a `_private/` file, a `node_modules` package or a path, loaded with `require`), built-in plugins by name (`auth`, `realtime`, used when no module by that name is found), or custom plugins such as the [add-ons](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/README.md). ETS and Markdown are always on. |
 | `debug` | `false` | Detailed error pages and `ctx.log.debug` output even outside dev mode. |
 
 `+config.ts` runs on each page request. Unknown keys, names that are neither a module nor a built-in, or a plugin listed twice make every page
@@ -12349,13 +12349,13 @@ anything the kit needs beside it, such as `pb_migrations`. Without `--starter` y
 
 | Kit | What it is |
 |---|---|
-| [minimal](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/minimal/README.md) | One page, no layout, no build step (the default). |
-| [mvp](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/mvp/README.md) | One page styled with MVP.css. |
-| [htmx](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/htmx/README.md) | A realtime chat and counter with htmx and the `realtime` plugin. |
-| [daisyui](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/daisyui/README.md) | A navbar and drawer layout with Tailwind CSS and DaisyUI. |
-| [daisyui-docs](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/daisyui-docs/README.md) | A docs site from Markdown pages. |
-| [datastar](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/datastar/README.md) | A realtime chat with rooms, with Datastar. |
-| [auth](https://github.com/pockethost/pocketone/blob/main/ext/pages/starters/auth/README.md) | Sign-up, sign-in (password, OTP, OAuth2, anonymous), email flows and a protected account page. |
+| [minimal](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/minimal/README.md) | One page, no layout, no build step (the default). |
+| [mvp](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/mvp/README.md) | One page styled with MVP.css. |
+| [htmx](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/htmx/README.md) | A realtime chat and counter with htmx and the `realtime` plugin. |
+| [daisyui](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/daisyui/README.md) | A navbar and drawer layout with Tailwind CSS and DaisyUI. |
+| [daisyui-docs](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/daisyui-docs/README.md) | A docs site from Markdown pages. |
+| [datastar](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/datastar/README.md) | A realtime chat with rooms, with Datastar. |
+| [auth](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/auth/README.md) | Sign-up, sign-in (password, OTP, OAuth2, anonymous), email flows and a protected account page. |
 
 ### Write pages
 
@@ -12394,7 +12394,7 @@ page code are logged in full.
 
 ### Try the demo
 
-[`example/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example) is a demo app with ETS, Markdown, TSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
+[`example/`](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/example) is a demo app with ETS, Markdown, TSX, auth, `ctx.pb()`, SSE and a JSON route. It has a live
 speed check at `/speed`.
 
 ```bash
@@ -12435,7 +12435,7 @@ isolate runtime ([Pocker](https://pocketone.dev/docs/extensions/pocker)), where 
 - Page code runs in the instance's own sandboxed JS VM ([jsvm](https://pocketone.dev/docs/extensions/jsvm)), under its limits (execution time,
   memory, stack). `include`, `require`, `ctx.resolve`, `ctx.res.file` and `asset` never reach outside the instance's
   `pb_pages`; `$os` file access stays inside the instance folder. Tests:
-  [multiinstance_test.go](https://github.com/pockethost/pocketone/blob/main/ext/pages/multiinstance/multiinstance_test.go).
+  [multiinstance_test.go](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/multiinstance/multiinstance_test.go).
 - An instance turns pages off in its settings with `extensions: { pages: { enabled: false } }`.
 
 Measured on the earlier goja engine (same machine as [Speed](#speed), docs kit; not yet re-measured on jsvm): each
@@ -12450,11 +12450,11 @@ To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pa
 - **Read the routes.** `pages.For(app)` returns the service: `Dir()` is the folder, `Table()` the current route
   table, `Errors()` the problems from the last build.
 - **Custom plugins.** A factory in `+config.ts` can add to `ctx`, run on each request and transform rendered HTML
-  ([SPEC.md](https://pocketone.dev/docs/extensions/pages/spec), section 9.2). [Add-ons](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md) are built this way.
+  ([SPEC.md](https://pocketone.dev/docs/extensions/pages/spec), section 9.2). [Add-ons](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/README.md) are built this way.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pockethost/pocketone/tree/main/ext/pages/example/pb_pages): ETS, Markdown, TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/example/main.go) serves the demo in [`example/pb_pages`](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/example/pb_pages): ETS, Markdown, TSX, auth, SSE and a JSON route. Run `go run . serve --dir=./pb_data` in `example/` and open http://127.0.0.1:8090.
 
 ```go
 // Command example runs one PocketOne app that serves the demo in ./pb_pages (ETS templates and TypeScript, Markdown,
@@ -12514,7 +12514,7 @@ JS VM once per request.
 How it was measured (2026-11-11): Apple M1 Max, 10 cores, macOS 27, Go 1.27.4, `hey` against `127.0.0.1`. Each server
 was warmed with 500 requests, then `hey -z 10s -c 50` and `hey -n 2000 -c 1`; two rounds, which agreed within 5%.
 Every response was a 200 with the full page. The 0.x docs kit inlines about 6 KB of CSS into each page where v1
-links `app.css`. Rerun it with [`bench/run.sh`](https://github.com/pockethost/pocketone/blob/main/ext/pages/bench/run.sh):
+links `app.css`. Rerun it with [`bench/run.sh`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/bench/run.sh):
 
 ```bash
 cp -R starters/daisyui-docs /tmp/v1-docs
@@ -12525,10 +12525,10 @@ bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 ## More in this folder
 
 - [SPEC.md](https://pocketone.dev/docs/extensions/pages/spec): the full PocketPages v1 contract.
-- [fixtures/](https://github.com/pockethost/pocketone/blob/main/ext/pages/fixtures/README.md): the request test cases (`go test ./...` runs them all).
-- [starters/](https://github.com/pockethost/pocketone/tree/main/ext/pages/starters): the starter kits. [addons/](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/README.md): JS add-ons such as Datastar.
-- [docs/](https://github.com/pockethost/pocketone/blob/main/ext/pages/docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
-  pocketone.dev under this page. [blog/](https://github.com/pockethost/pocketone/tree/main/ext/pages/blog): the PocketPages blog posts.
+- [fixtures/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/fixtures/README.md): the request test cases (`go test ./...` runs them all).
+- [starters/](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/starters): the starter kits. [addons/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/README.md): JS add-ons such as Datastar.
+- [docs/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
+  pocketone.dev under this page. [blog/](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/blog): the PocketPages blog posts.
 
 ## License
 
@@ -12542,7 +12542,7 @@ Source: https://pocketone.dev/docs/extensions/pages/spec
 # PocketPages v1 specification
 
 The contract for `ext/pages`, PocketOne's server-rendered multi-page app extension. The test fixtures
-([`fixtures/`](https://github.com/pockethost/pocketone/tree/main/ext/pages/fixtures)), the starter kits and the PocketPages site are written against this document. Where the
+([`fixtures/`](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/fixtures)), the starter kits and the PocketPages site are written against this document. Where the
 implementation and this document disagree, one of them is a bug.
 
 v1 is a clean API. It keeps PocketPages' ideas (a folder of files that become routes, EJS, layouts, middleware,
@@ -13358,7 +13358,7 @@ A bucket in an instance's settings is refused, so credentials never sit in insta
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pitr/example/main.go) runs one app with point-in-time restore on, keeping three days. Run it with `go run ./example serve` from this folder.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pitr/example/main.go) runs one app with point-in-time restore on, keeping three days. Run it with `go run ./example serve` from this folder.
 
 ```go
 // Command example runs one PocketOne app with point-in-time restore: Litestream copies data.db continuously into
@@ -13398,7 +13398,7 @@ func main() {
 ## How it works
 
 - Go module `pocketone.dev/ext/pitr`, Litestream v0.5.18 (pinned).
-  [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/pitr/example/main.go) runs one app with local history.
+  [`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pitr/example/main.go) runs one app with local history.
 - Litestream continuously copies `data.db` to its destination: the app's own bucket (its PITR settings), else a
   filesystem of kind `litestream` (an `OnFilesystemCreate` handler, such as S3 Fallback), else `pb_data/litestream/`.
   Buckets go through PocketBase's own S3 client, not the AWS SDK. Each LTX file's timestamp is kept in object
@@ -13606,7 +13606,7 @@ only that instance).
 - **remote/v1 client.** `remotev1.NewClient(url, token, httpClient)` (ext/contracts/remote/v1) calls whoami, status,
   restart and logs.
 - **Go client.** The CLI client lives with the contract, in
-  [`remoteclient`](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient) (ext/contracts/remote/v1/remoteclient), so other extensions'
+  [`remoteclient`](https://github.com/pocketonehq/pocketone/tree/main/ext/contracts/remote/v1/remoteclient) (ext/contracts/remote/v1/remoteclient), so other extensions'
   commands use it without importing this one. `remoteclient.Open(dir, name)` resolves a remote and its credential
   (environment first, then the saved login, renewing a browser login when due) and returns a `*remoteclient.Client`:
   base URL, bearer token, an HTTP client with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`.
@@ -13620,7 +13620,7 @@ only that instance).
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/remotes/example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/remotes/example/main.go) is an app with remotes and API tokens. Run two copies and add one as a remote of the other; its comment has the commands.
 
 ```go
 // Command example is a PocketOne app with remotes and API tokens: run two copies, add one as a remote of the other's
@@ -13783,8 +13783,8 @@ It applies to instances created with the extension on. Files already on an insta
 
 ## Example
 
-There's no `example/main.go` yet. [`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go) shows it on the `pocketone` binary, as a single app
-and on a multisite host; [`storage_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show it in Go.
+There's no `example/main.go` yet. [`modes_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/modes_test.go) shows it on the `pocketone` binary, as a single app
+and on a multisite host; [`storage_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/storage_test.go) and [`mounts_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/mounts_test.go) show it in Go.
 
 ## How it works
 
@@ -13796,7 +13796,7 @@ and on a multisite host; [`storage_test.go`](https://github.com/pockethost/pocke
 
 ### Status
 
-Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3-fallback/modes_test.go)); not yet deployed.
+Works and is tested, in-process and on the `pocketone` binary as a single app and on a multisite host, against an in-memory bucket that checks signed downloads ([`modes_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3-fallback/modes_test.go)); not yet deployed.
 
 ## License
 
@@ -13946,7 +13946,7 @@ instances:
       s3redirect: { enabled: false }   # per instance: enabled, ttl
 ```
 
-It's an [extkit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a standalone app and on every instance
+It's an [extkit](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) extension, so the same value works on a standalone app and on every instance
 of a multisite host; it doesn't link a runtime.
 
 ### Building on S3 Redirect
@@ -13961,7 +13961,7 @@ of a multisite host; it doesn't link a runtime.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/s3redirect/example/main.go) starts its own in-process S3 bucket, points the app's file storage at it and seeds a record, so every download redirect works with nothing to set up. Run `go run . serve` in `example/` and open the URLs it prints.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3redirect/example/main.go) starts its own in-process S3 bucket, points the app's file storage at it and seeds a record, so every download redirect works with nothing to set up. Run `go run . serve` in `example/` and open the URLs it prints.
 
 ```go
 // Command example runs one PocketOne app whose file downloads redirect to an S3 bucket, with nothing to set up:
@@ -14012,7 +14012,7 @@ func main() {
 
 - Go module `pocketone.dev/ext/s3redirect`, no dependencies beyond PocketOne.
 - The redirect is an `OnFileDownloadRequest` handler; the hook already exists upstream, so there's no core change.
-- Signing is SigV4 query-string auth in [`sigv4`](https://github.com/pockethost/pocketone/blob/main/ext/s3redirect/sigv4/sigv4.go), checked against AWS's documented example. It needs
+- Signing is SigV4 query-string auth in [`sigv4`](https://github.com/pocketonehq/pocketone/blob/main/ext/s3redirect/sigv4/sigv4.go), checked against AWS's documented example. It needs
   no change to PocketBase's S3 client. The TTL is clamped to between 1 second and 7 days.
 
 ## License
@@ -14445,7 +14445,7 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/upgrade/example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/upgrade/example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
 
 ```go
 // Command example is a PocketOne app with just the upgrade command. A local build has no release version, so it is
@@ -14803,7 +14803,7 @@ and running took. It's for pages that let a superuser try a module out; other co
 
 The time limit covers the run; compiling comes before it (below).
 
-`$wasm` is declared in each app's `types.d.ts` ([`wasm.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/wasm.d.ts)), for code completion and `tsc`.
+`$wasm` is declared in each app's `types.d.ts` ([`wasm.d.ts`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/wasm.d.ts)), for code completion and `tsc`.
 
 ### Writing a module
 
@@ -14814,7 +14814,7 @@ stderr is a JSON object `{"code", "message", "retryable"}`, your code gets it as
 `message` of a `module_error`. Anything it writes to stderr on success goes to the app's log (Logs in the
 dashboard), so stderr is its log.
 
-**Go** ([`example/summary/go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/go/main.go)):
+**Go** ([`example/summary/go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/go/main.go)):
 
 ```go
 //go:embed manifest.json
@@ -14838,7 +14838,7 @@ func main() {
 GOOS=wasip1 GOARCH=wasm go build -o pb_hooks/summary.pb.wasm .
 ```
 
-**Rust** ([`example/summary/rust`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs)): a binary crate, serde for JSON.
+**Rust** ([`example/summary/rust`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs)): a binary crate, serde for JSON.
 
 ```sh
 rustup target add wasm32-wasip1   # once
@@ -14846,7 +14846,7 @@ cargo build --release --target wasm32-wasip1
 cp target/wasm32-wasip1/release/summary.wasm pb_hooks/summary.pb.wasm
 ```
 
-**Zig** ([`example/summary/zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig)): an executable for `wasm32-wasi` (Zig 0.17). Set
+**Zig** ([`example/summary/zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig)): an executable for `wasm32-wasi` (Zig 0.17). Set
 `stack_size = 1 << 20` in `build.zig`: Zig's default stack is 16 MB, and every call would start with it.
 
 Any language that builds a WASI program works the same way: [Languages](https://pocketone.dev/docs/extensions/wasm/languages) has a page for C
@@ -14929,7 +14929,7 @@ reaches a module went through the app's own code.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/main.go) runs one app with a `posts` collection and a hook that fills each new post's summary; its folder is laid
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/main.go) runs one app with a `posts` collection and a hook that fills each new post's summary; its folder is laid
 out like an instance (`pb_data/`, `pb_hooks/`). Build the module into `example/pb_hooks/`, then
 `cd example && go run . serve --dev` and create a post.
 
@@ -15000,16 +15000,16 @@ so `/wasm`-style pages and the wazero CLI can try it), built with the command in
 
 | Module | Language | What it shows |
 |---|---|---|
-| [`summary/go`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/go), [`summary/tinygo`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/tinygo), [`summary/rust`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/rust), [`summary/zig`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/zig), [`summary/c`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/c), [`summary/assemblyscript`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/assemblyscript) | Go, TinyGo, Rust, Zig, C, AssemblyScript | The same module in six languages: the summary above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; TinyGo ~280 KB and ~65 ms; Rust, Zig, C and AssemblyScript under 100 KB and 10–25 ms). |
-| [`summary/wat`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/wat), [`summary/llvm`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/llvm) | WAT, LLVM IR | The C summary written by hand in two assembly languages, for fun: WebAssembly text calling WASI directly (1.8 KB), and LLVM IR built by clang with wasi-libc (3.8 KB). See [WAT](https://pocketone.dev/docs/extensions/wasm/languages/wat) and [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm). |
-| [`stats-tinygo`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the app stores in a record and passes in with each call ([Keeping state in JS](https://pocketone.dev/docs/extensions/wasm/guides/state)). |
-| [`markdown`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/markdown), [`sanitize-html`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/sanitize-html), [`diff`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/diff), [`thumbnail`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/thumbnail), [`qrcode`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/qrcode), [`csv`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with page code in the [recipes](https://pocketone.dev/docs/extensions/wasm/recipes). |
-| [`crypto`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/crypto) | Go | What an app used to run with `$os.exec`: AES-256-GCM. The key comes in with each call; the module can't keep it or send it anywhere. |
-| [`waflows`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/waflows) | Rust | What JS can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. Your code keeps the JSON and HTTP; the module does only those two. |
-| [`edifact-orders-rust`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/edifact-orders-rust) | Rust | A real format with a real library (edifact-rs): an EDIFACT ORDERS message, as raw text, read into an order. |
-| [`order-xml`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/order-xml) | Rust | The same order from XML (roxmltree), so one route takes either format and stores one shape. |
-| [`devil`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/devil) | Rust | Is it safe? It tries, in plain sight, to read the app's database and `/etc/passwd`, list folders, write a file, read the environment, run `sh -c id` and send to `attacker.example`. Every try says `refused`. |
-| [`memhog`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/memhog) | Rust | What does it cost? It asks for more memory than `MaxCallMemoryMB`: that call fails as `crashed`, saying which limit it hit, and the app goes on. `probe` shows the limit from inside. |
+| [`summary/go`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/go), [`summary/tinygo`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/tinygo), [`summary/rust`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/rust), [`summary/zig`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/zig), [`summary/c`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/c), [`summary/assemblyscript`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/assemblyscript) | Go, TinyGo, Rust, Zig, C, AssemblyScript | The same module in six languages: the summary above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; TinyGo ~280 KB and ~65 ms; Rust, Zig, C and AssemblyScript under 100 KB and 10–25 ms). |
+| [`summary/wat`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/wat), [`summary/llvm`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/llvm) | WAT, LLVM IR | The C summary written by hand in two assembly languages, for fun: WebAssembly text calling WASI directly (1.8 KB), and LLVM IR built by clang with wasi-libc (3.8 KB). See [WAT](https://pocketone.dev/docs/extensions/wasm/languages/wat) and [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm). |
+| [`stats-tinygo`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the app stores in a record and passes in with each call ([Keeping state in JS](https://pocketone.dev/docs/extensions/wasm/guides/state)). |
+| [`markdown`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/markdown), [`sanitize-html`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/sanitize-html), [`diff`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/diff), [`thumbnail`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/thumbnail), [`qrcode`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/qrcode), [`csv`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with page code in the [recipes](https://pocketone.dev/docs/extensions/wasm/recipes). |
+| [`crypto`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/crypto) | Go | What an app used to run with `$os.exec`: AES-256-GCM. The key comes in with each call; the module can't keep it or send it anywhere. |
+| [`waflows`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/waflows) | Rust | What JS can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. Your code keeps the JSON and HTTP; the module does only those two. |
+| [`edifact-orders-rust`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/edifact-orders-rust) | Rust | A real format with a real library (edifact-rs): an EDIFACT ORDERS message, as raw text, read into an order. |
+| [`order-xml`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/order-xml) | Rust | The same order from XML (roxmltree), so one route takes either format and stores one shape. |
+| [`devil`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/devil) | Rust | Is it safe? It tries, in plain sight, to read the app's database and `/etc/passwd`, list folders, write a file, read the environment, run `sh -c id` and send to `attacker.example`. Every try says `refused`. |
+| [`memhog`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/memhog) | Rust | What does it cost? It asks for more memory than `MaxCallMemoryMB`: that call fails as `crashed`, saying which limit it hit, and the app goes on. `probe` shows the limit from inside. |
 
 Every one of them is also kept built, beside its source (`example/<folder>/<name>.pb.wasm`: the Go ones about 4.5 MB,
 the rest under 1 MB), so they double as the extension's tests: every run of `go test` loads each one, checks that its
@@ -15017,7 +15017,7 @@ the rest under 1 MB), so they double as the extension's tests: every run of `go 
 `ext/wasm` that breaks a real module shows there.
 
 They're built in Docker, never with the compilers on your machine:
-[`example/toolchains/Dockerfile`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/toolchains/Dockerfile) is the build environment of every example language,
+[`example/toolchains/Dockerfile`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/toolchains/Dockerfile) is the build environment of every example language,
 one stage each: Go 1.27.4, TinyGo 0.41.1, Rust 1.100.0 and Zig 0.17.0 (Zig, and C through `zig cc`), each image
 pinned by digest and Zig's download by checksum, so a rebuild on any machine gives the same bytes. After changing a
 module's source: `go test -run 'TestPrebuiltExamples/<folder>' -update`. To check every kept file is what its source
@@ -15219,7 +15219,7 @@ Instance folders are ordinary folders under `root`. To work on one while nothing
 ### Remote control
 
 Containers run stock images, and a PocketBase image has no PocketOne extensions, so the host answers
-[remote/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
+[remote/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
 `pocketone remote` commands work the same as against a Pocker instance or a single app. It answers after the host's
 gates (firewall, rate limits) and blocked check, so a blocked instance's remote/v1 gets the blocked answer and the
 container stays stopped.
@@ -15485,7 +15485,7 @@ runs its instance:
 ## Example
 
 Edge has no example program of its own. The stock binary wires it up in
-[`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go), together with the mothership's edge list.
+[`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), together with the mothership's edge list.
 
 ## License
 
@@ -15650,8 +15650,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"pocketone.dev/ext/multisite"
 	"pocketone.dev/ext/firewall"
+	"pocketone.dev/ext/multisite"
 )
 
 type okRuntime struct{}
@@ -15721,7 +15721,7 @@ if err := mothership.EnsureCollections(app); err != nil {
 
 The module is `pocketone.dev/ext/mothership`. In your own edge build, `mirror.FromSection(log)`
 returns the mirror for the config (nil without a `mothership` section); use it as the host's instance source and the
-router's edge source, as [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go) does.
+router's edge source, as [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go) does.
 
 ## Configure
 
@@ -15801,7 +15801,7 @@ instance with no `edge` isn't served anywhere.
 ## Example
 
 There's no `example/main.go` yet. The stock binary's multi-instance mode,
-[`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go), follows a mothership when the config has the
+[`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), follows a mothership when the config has the
 section.
 
 ## How it works
@@ -15861,7 +15861,7 @@ providers:
 ```
 
 In your own Go build, pass the host extensions you link (runtimes in preference order), build the host from the
-config and run it. [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go) is the stock binary's version:
+config and run it. [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go) is the stock binary's version:
 
 ```go
 h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Choices: providersSection,
@@ -16095,7 +16095,7 @@ instances instead of one app, with pocker as the runtime (docker too, when it ha
 multisite: {}
 ```
 
-In your own Go build, add it to the host's extensions ([`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go)
+In your own Go build, add it to the host's extensions ([`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go)
 is the stock binary's version), or run a `pocker.Server` on its own as [the example](#example) does:
 
 ```go
@@ -16414,7 +16414,7 @@ Pocker runs whatever instances the host's [instance.source/v1](https://pocketone
 supplies, and nothing else: the file by default. Hosting platforms provide that contract themselves instead (for
 example a control plane streaming the hostname -> id map over SSE); a community mothership is one (the `mothership`
 section, [ext/mothership](https://pocketone.dev/docs/extensions/mothership)). Tests provide it with
-[sourcetest](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go).
+[sourcetest](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go).
 
 pocketone.yaml for a production host (each extension owns its section; every field has a default):
 
@@ -16507,7 +16507,7 @@ any of:
 | `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [mailtrap](https://pocketone.dev/docs/extensions/mailtrap), [mailrelay](https://pocketone.dev/docs/extensions/mailrelay), [storage](https://pocketone.dev/docs/extensions/s3-fallback). Members of the standard set ([pitr](https://pocketone.dev/docs/extensions/pitr), [tokens](https://pocketone.dev/docs/extensions/api-tokens), [s3redirect](https://pocketone.dev/docs/extensions/s3redirect), [bulkmail](https://pocketone.dev/docs/extensions/bulkmail), ...) come from `Standard`; listing one here is an error. `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a standalone app. |
 | `multisite.Extension` | a host extension (`RegisterHost`): it provides host contracts (gate/v1, tls/v1, http.wrap/v1, ...) as on any runtime ([docs/extensions.md](https://pocketone.dev/docs/writing-an-extension#host-extensions)) |
 | `Starter` | background work that needs pocker's Manager |
-| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a standalone app too and pass the [conformance test](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go). |
+| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a standalone app too and pass the [conformance test](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/conformance/conformance.go). |
 
 Per-instance settings for an extension go under the instance's `extensions.<name>` (read them with `pocker.DecodeExtensionConfig`).
 `app.Restart()` (a backup restore, pitr) restarts only that instance, not the process.
@@ -16557,8 +16557,8 @@ private network, and `Manager.Firewall()` lets host routes in front of the Manag
 ## Sandbox
 
 Every instance's JS hooks and migrations run in a sandbox (the [sandbox](https://pocketone.dev/docs/extensions/sandbox) extension), and its SQL runs behind
-SQLite's authorizer ([`sandbox/sqlguard.go`](https://github.com/pockethost/pocketone/blob/main/ext/sandbox/sqlguard.go)). The sandbox extension also owns the egress policy
-([`sandbox/egress.go`](https://github.com/pockethost/pocketone/blob/main/ext/sandbox/egress.go)); pocker turns it on for its instances. [`sandbox_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/pocker/sandbox_test.go) runs one attack per
+SQLite's authorizer ([`sandbox/sqlguard.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/sandbox/sqlguard.go)). The sandbox extension also owns the egress policy
+([`sandbox/egress.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/sandbox/egress.go)); pocker turns it on for its instances. [`sandbox_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pocker/sandbox_test.go) runs one attack per
 route from one instance against another instance and the host; all of these are refused:
 
 | Area | What the sandbox does |
@@ -16688,7 +16688,7 @@ Under Pocker, `console.*` output and hook errors go to the instance's own `logs/
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/pocker/sandbox_test.go). |
+| [Pocker](https://pocketone.dev/docs/extensions/pocker) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pocker/sandbox_test.go). |
 | [Multisite](https://pocketone.dev/docs/extensions/multisite) | Carries the per-instance `limits` from `instances.yaml` or a mothership. |
 | [Firewall](https://pocketone.dev/docs/extensions/firewall) | Rate and concurrency limits in front of every request. |
 | [Docker](https://pocketone.dev/docs/extensions/docker) | The alternative for untrusted apps: a container per instance instead of checks inside one process. Docker doesn't use the sandbox. |
@@ -16758,7 +16758,7 @@ func main() {
 With [pocker](https://pocketone.dev/docs/extensions/pocker), PocketOne can serve hundreds of instances from one Go process, each with its own owner, hooks and data.
 This section explains why that's safe enough to run code from people you don't know, and where it isn't.
 
-Configuration and the engine API are in [POCKER.md](https://pocketone.dev/docs/extensions/pocker/pocker). The attack tests are in [`sandbox_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/pocker/sandbox_test.go).
+Configuration and the engine API are in [POCKER.md](https://pocketone.dev/docs/extensions/pocker/pocker). The attack tests are in [`sandbox_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pocker/sandbox_test.go).
 
 ### Why one process
 
@@ -17044,7 +17044,7 @@ time) and `lifecycle: policy`.
 
 ### Try it
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints each instance's size:
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints each instance's size:
 
 ```bash
 go run ./example --root ./pb_root --instances instances.yaml
@@ -17130,7 +17130,7 @@ exclusive criteria.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints their facts, which is what a host's lifecycle does daily.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/stats/example/main.go) measures the instance folders under a root once and prints their facts, which is what a host's lifecycle does daily.
 
 ```go
 // Measure the instance folders under a root once and print their facts (what a host's lifecycle does daily).
@@ -17183,7 +17183,7 @@ func main() {
 ## How it works
 
 - Go module `pocketone.dev/ext/stats`. The stock binary wires it in
-  [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go).
+  [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go).
 - `Run` loads recorded facts from a `Loader` sink, then waits for the host's instance list to load (checking every
   second). From then on, once a minute, it asks the policy for decisions on the current facts, measures the instances
   it was asked to (`concurrency` at a time) and reports what it measured to the sink.
@@ -17309,7 +17309,7 @@ instance, and with SMTP off PocketBase then falls back to the host's `sendmail`.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailrelay/example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/mailrelay/example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
 mail lands in one inbox at http://127.0.0.1:8025. Run `go run ./example --dev` from this folder, then trigger a
 password reset on any instance:
 
@@ -17479,7 +17479,7 @@ first; values a server in front already sent are kept, and this host's entries a
 
 ## Example
 
-There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go), which
+There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), which
 lists it first in the `pocketone` binary's host extensions.
 
 ## How it works
@@ -17828,7 +17828,7 @@ catches mail and prints each message in the terminal.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailtrap/example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/mailtrap/example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
 this folder, request a password reset for `user@example.com` (password `password`) from the dashboard (log in as
 `admin@example.com` / `password`), and read the mail at http://127.0.0.1:8025.
 
@@ -18307,7 +18307,7 @@ Coding agents tend to write PocketPages as if it were a Node framework, or as if
 **Claude Code**
 
 ```
-/plugin marketplace add pockethost/pocketone
+/plugin marketplace add pocketonehq/pocketone
 /plugin install pocketone@pocketone
 ```
 
@@ -18316,10 +18316,10 @@ The plugin also has the `pocketone` skill, for the binary, `pocketone.yaml` and 
 **Other agents that read Agent Skills** (Cursor, Codex, Gemini CLI and others)
 
 ```bash
-npx skills add pockethost/pocketone
+npx skills add pocketonehq/pocketone
 ```
 
-Or copy [`agent/skills/pocketpages`](https://github.com/pockethost/pocketone/tree/main/agent/skills/pocketpages) into your project.
+Or copy [`agent/skills/pocketpages`](https://github.com/pocketonehq/pocketone/tree/main/agent/skills/pocketpages) into your project.
 
 ## llms.txt
 
@@ -20084,7 +20084,7 @@ See [Plugin Authoring](https://pocketone.dev/docs/extensions/pages/plugins/autho
 
 | Add-on | Adds |
 |---|---|
-| [Datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar) | `ctx.datastar.*` helpers for [Datastar](https://data-star.dev). Copy [`addons/datastar.js`](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/datastar.js) into `pb_pages/_private/`; the `datastar` starter kit already has it. |
+| [Datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar) | `ctx.datastar.*` helpers for [Datastar](https://data-star.dev). Copy [`addons/datastar.js`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/datastar.js) into `pb_pages/_private/`; the `datastar` starter kit already has it. |
 
 ## Order
 
@@ -20188,7 +20188,7 @@ Source: https://pocketone.dev/docs/extensions/pages/plugins/datastar
 # Datastar Add-on
 
 The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a custom plugin that ships with PocketPages
-rather than a built-in: copy [`addons/datastar.js`](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/datastar.js)
+rather than a built-in: copy [`addons/datastar.js`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/datastar.js)
 into `pb_pages/_private/` (the `datastar` starter kit already has it) and list it in `+config.ts` by name:
 
 ```ts
@@ -22094,14 +22094,14 @@ A module's first call compiles it, which takes time in step with its size, and k
 
 | Language | Example | Module | First call | Later calls |
 |---|---|---|---|---|
-| [C](https://pocketone.dev/docs/extensions/wasm/languages/c) | [`summary/c`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/c/main.c) | 25 KB | 17 ms | 0.5 ms |
-| [AssemblyScript](https://pocketone.dev/docs/extensions/wasm/languages/assemblyscript) | [`summary/assemblyscript`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) | 10 KB | 13 ms | 0.5 ms |
-| [Rust](https://pocketone.dev/docs/extensions/wasm/languages/rust) | [`summary/rust`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) | 98 KB | 33 ms | 1.3 ms |
-| [Zig](https://pocketone.dev/docs/extensions/wasm/languages/zig) | [`summary/zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig) | 95 KB | 30 ms | 1.2 ms |
-| [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo) | [`summary/tinygo`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) | 284 KB | 74 ms | 3 ms |
-| [Go](https://pocketone.dev/docs/extensions/wasm/languages/go) | [`summary/go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/go/main.go) | 4.3 MB | 1.05 s | 38 ms |
-| [WAT](https://pocketone.dev/docs/extensions/wasm/languages/wat), by hand | [`summary/wat`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) | 1.8 KB | 9 ms | 0.4 ms |
-| [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm), by hand | [`summary/llvm`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/llvm/summary.ll) | 3.8 KB | 7.5 ms | 0.5 ms |
+| [C](https://pocketone.dev/docs/extensions/wasm/languages/c) | [`summary/c`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/c/main.c) | 25 KB | 17 ms | 0.5 ms |
+| [AssemblyScript](https://pocketone.dev/docs/extensions/wasm/languages/assemblyscript) | [`summary/assemblyscript`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) | 10 KB | 13 ms | 0.5 ms |
+| [Rust](https://pocketone.dev/docs/extensions/wasm/languages/rust) | [`summary/rust`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) | 98 KB | 33 ms | 1.3 ms |
+| [Zig](https://pocketone.dev/docs/extensions/wasm/languages/zig) | [`summary/zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig) | 95 KB | 30 ms | 1.2 ms |
+| [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo) | [`summary/tinygo`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) | 284 KB | 74 ms | 3 ms |
+| [Go](https://pocketone.dev/docs/extensions/wasm/languages/go) | [`summary/go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/go/main.go) | 4.3 MB | 1.05 s | 38 ms |
+| [WAT](https://pocketone.dev/docs/extensions/wasm/languages/wat), by hand | [`summary/wat`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) | 1.8 KB | 9 ms | 0.4 ms |
+| [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm), by hand | [`summary/llvm`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/llvm/summary.ll) | 3.8 KB | 7.5 ms | 0.5 ms |
 
 The last two are written by hand in assembly languages, for fun: they show how small a module can get when nothing comes along that the program doesn't use. Running the summary itself takes under a millisecond in every language; the rest is compiling or loading. A bigger program (a library that parses XML, a crate that resizes images) takes longer in every language, about in step with its size. A call also holds its module's machine code in memory while it runs: under 1 MB for C, Rust, Zig or TinyGo, 18 MB for Go.
 
@@ -22154,7 +22154,7 @@ Clang with [wasi-sdk](https://github.com/WebAssembly/wasi-sdk) works too: replac
 
 ## The module
 
-[`example/summary/c`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/c/main.c) counts the words of a text and returns the first twelve. C has no JSON in its standard library, so it takes the text as it is (your code can pass a string) and prints JSON:
+[`example/summary/c`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/c/main.c) counts the words of a text and returns the first twelve. C has no JSON in its standard library, so it takes the text as it is (your code can pass a string) and prints JSON:
 
 ```c
 // what `summary --describe` prints: manifest.json, built in (C23 #embed)
@@ -22239,7 +22239,7 @@ Go builds a module with nothing extra to install: `GOOS=wasip1` is a target of t
 
 ## The module
 
-[`example/summary/go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/go/main.go) is a plain command-line program:
+[`example/summary/go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/go/main.go) is a plain command-line program:
 
 ```go
 //go:embed manifest.json
@@ -22329,7 +22329,7 @@ tinygo version
 
 ## The module
 
-[`example/summary/tinygo`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) is the Go summary, unchanged: `encoding/json`, `os.Args`, stdin and stdout work as they do in Go. Its manifest says `"language": "TinyGo"`, since a TinyGo module doesn't say it itself.
+[`example/summary/tinygo`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) is the Go summary, unchanged: `encoding/json`, `os.Args`, stdin and stdout work as they do in Go. Its manifest says `"language": "TinyGo"`, since a TinyGo module doesn't say it itself.
 
 ## Build
 
@@ -22375,7 +22375,7 @@ rustup target add wasm32-wasip1
 
 ## The module
 
-[`example/summary/rust`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) is a binary crate with serde for JSON:
+[`example/summary/rust`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) is a binary crate with serde for JSON:
 
 ```rust
 fn fail(code: &str, message: &str) -> ! {
@@ -22450,7 +22450,7 @@ Zig's standard library changes between versions. The example is written for Zig 
 
 ## The module
 
-[`example/summary/zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig):
+[`example/summary/zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig):
 
 ```zig
 pub fn main(init: std.process.Init) !void {
@@ -22483,7 +22483,7 @@ Flush the writer before returning: output still in its buffer is lost when the p
 
 ## Build
 
-In [`build.zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/build.zig), target WASI, make the manifest importable, and set the stack:
+In [`build.zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/build.zig), target WASI, make the manifest importable, and set the stack:
 
 ```zig
 const target = b.standardTargetOptions(.{
@@ -22554,7 +22554,7 @@ npm install --save-dev --save-exact assemblyscript @assemblyscript/wasi-shim
 
 ## The module
 
-[`example/summary/assemblyscript`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) counts the words of a text and returns the first twelve. AssemblyScript's standard library has no JSON, so, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) example, it takes the text as it is (your code can pass a string) and prints JSON:
+[`example/summary/assemblyscript`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) counts the words of a text and returns the first twelve. AssemblyScript's standard library has no JSON, so, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) example, it takes the text as it is (your code can pass a string) and prints JSON:
 
 ```ts
 // what `summary --describe` prints: AssemblyScript can't embed a file, so the manifest is a string here
@@ -22623,7 +22623,7 @@ brew install wabt   # wat2wasm, wasm2wat, and friends
 
 ## The module
 
-[`example/summary/wat`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) takes a text on stdin, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) one, and prints `{"text", "words"}`. It does by hand what libc and a compiler do for the other languages:
+[`example/summary/wat`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) takes a text on stdin, like the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) one, and prints `{"text", "words"}`. It does by hand what libc and a compiler do for the other languages:
 
 - **It imports WASI directly:** `args_sizes_get` and `args_get` for the function asked for, `fd_read` for stdin, `fd_write` for stdout and stderr, `proc_exit` to fail.
 - **It lays out its own memory:** fixed addresses for its strings, the arguments and the manifest, and the input from 64 KB up, growing memory with `memory.grow` as the input needs it.
@@ -22698,7 +22698,7 @@ brew install zig
 
 ## The module
 
-[`example/summary/llvm`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/llvm/summary.ll) does what the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) summary does, in IR, and calls wasi-libc's `read`, `write`, `malloc` and `exit` like C would:
+[`example/summary/llvm`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/llvm/summary.ll) does what the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) summary does, in IR, and calls wasi-libc's `read`, `write`, `malloc` and `exit` like C would:
 
 ```llvm
 target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-ni:1:10:20"
@@ -22792,7 +22792,7 @@ The module stays a pure function, `(state, input) → new state`, which also mak
 
 ## The module
 
-[`example/stats-tinygo`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/stats-tinygo/main.go) keeps running statistics of a series of readings: count, mean, standard deviation, min and max. It uses [Welford's method](https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm), so the state is five numbers however many readings it has seen. It has two functions:
+[`example/stats-tinygo`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/stats-tinygo/main.go) keeps running statistics of a series of readings: count, mean, standard deviation, min and max. It uses [Welford's method](https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm), so the state is five numbers however many readings it has seen. It has two functions:
 
 - `add`: `{"state": <state or null>, "values": [...]}` → the new state
 - `report`: a state → `{count, mean, stddev, min, max}`
@@ -22926,11 +22926,11 @@ All of them are Rust: it has the most libraries that build for WASI as they are 
 
 ## From the extension's examples
 
-These came with the extension, to answer real questions. Each is kept built beside its source, in [`example/`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/main.go)'s folders.
+These came with the extension, to answer real questions. Each is kept built beside its source, in [`example/`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/main.go)'s folders.
 
 ### Orders from EDIFACT and XML
 
-[`edifact-orders-rust`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/edifact-orders-rust/src/main.rs) reads an EDIFACT ORDERS message (raw text, as trading partners send it) into an order: parties, lines, prices and allowances, with the message's own counts checked. [`order-xml`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/order-xml/src/main.rs) reads the same order from XML into the same JSON. So one route takes either format and stores one shape:
+[`edifact-orders-rust`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/edifact-orders-rust/src/main.rs) reads an EDIFACT ORDERS message (raw text, as trading partners send it) into an order: parties, lines, prices and allowances, with the message's own counts checked. [`order-xml`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/order-xml/src/main.rs) reads the same order from XML into the same JSON. So one route takes either format and stores one shape:
 
 ```ts
 // pb_pages/orders/+api.ts: the raw message is the request body, as text: a string goes in as it is
@@ -22947,7 +22947,7 @@ export async function post(ctx: any) {
 
 ### Crypto JS doesn't have
 
-[`waflows`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/waflows/src/main.rs) does what a WhatsApp Flows endpoint needs and the JS runtime can't: RSA-OAEP to unwrap the request's key, and AES-GCM with WhatsApp's key and IV. Your page code keeps the JSON, the base64 and the HTTP; the module does only those three steps, with bytes as base64:
+[`waflows`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/waflows/src/main.rs) does what a WhatsApp Flows endpoint needs and the JS runtime can't: RSA-OAEP to unwrap the request's key, and AES-GCM with WhatsApp's key and IV. Your page code keeps the JSON, the base64 and the HTTP; the module does only those three steps, with bytes as base64:
 
 ```ts
 type Data = { data: string } // what each waflows function gives: bytes as base64
@@ -22959,7 +22959,7 @@ const flipped = Buffer.from(body.initial_vector, "base64").map((b) => ~b).toStri
 const { data } = await $wasm.call.async<Data>("waflows", "gcm-seal", { key, iv: flipped, data: Buffer.from(JSON.stringify(answer)).toString("base64") })
 ```
 
-[`crypto`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/crypto/main.go) (Go) is AES-256-GCM with a key your code passes in: `encrypt` takes `{key, text}`, `decrypt` takes `{key, data}`. The module can't keep the key or send it anywhere. Built with Go it's 4 MB: its first call compiles for about a second, and later calls load it in about 40 ms. The same source built with [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo) is 348 KB: about 75 ms the first time, a few ms after.
+[`crypto`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/crypto/main.go) (Go) is AES-256-GCM with a key your code passes in: `encrypt` takes `{key, text}`, `decrypt` takes `{key, data}`. The module can't keep the key or send it anywhere. Built with Go it's 4 MB: its first call compiles for about a second, and later calls load it in about 40 ms. The same source built with [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo) is 348 KB: about 75 ms the first time, a few ms after.
 
 ## Write your own
 
@@ -23011,7 +23011,7 @@ through [sanitize-html](https://pocketone.dev/docs/extensions/wasm/recipes/sanit
 ## The module
 
 The Markdown is the module's stdin, as text, and the HTML is its stdout
-([`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/markdown/src/main.rs)):
+([`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/markdown/src/main.rs)):
 
 ```rust
 let mut input = String::new();
@@ -23092,7 +23092,7 @@ What it does to a hostile comment:
 
 ## The module
 
-The whole program is one call to ammonia's defaults ([`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/sanitize-html/src/main.rs)):
+The whole program is one call to ammonia's defaults ([`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/sanitize-html/src/main.rs)):
 
 ```rust
 let mut input = String::new();
@@ -23183,7 +23183,7 @@ What an edit gives:
 
 ## The module
 
-[`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/diff/src/main.rs):
+[`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/diff/src/main.rs):
 
 ```rust
 let diff = TextDiff::from_lines(&input.old, &input.new);
@@ -23261,7 +23261,7 @@ takes the bytes as a plain array, hence `Array.from`.
 
 ## The module
 
-[`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/thumbnail/src/main.rs) reads the image, scales it to fit, and writes a PNG:
+[`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/thumbnail/src/main.rs) reads the image, scales it to fit, and writes a PNG:
 
 ```rust
 let size = match std::env::args().nth(1).as_deref() {
@@ -23333,7 +23333,7 @@ then an `<img>` with a [file token](https://pocketbase.io/docs/files-handling/#p
 
 ## The module
 
-The text is stdin; the SVG is stdout ([`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/qrcode/src/main.rs)):
+The text is stdin; the SVG is stdout ([`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/qrcode/src/main.rs)):
 
 ```rust
 let code = QrCode::with_error_correction_level(&input, EcLevel::M)
@@ -23417,7 +23417,7 @@ number of fields doesn't stop it; it's skipped and listed with its line number:
 
 ## The module
 
-[`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/csv/src/main.rs):
+[`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/csv/src/main.rs):
 
 ```rust
 let mut reader = csv::ReaderBuilder::new().delimiter(delimiter).from_reader(data);
@@ -23476,7 +23476,7 @@ Tests skipped because PocketOne changes what they check on purpose. Everything e
 On a scratch checkout (the script rewrites test files):
 
 ```bash
-git remote add upstream https://github.com/pockethost/pocketbase.git
+git remote add upstream https://github.com/pocketonehq/pocketbase.git
 git config remote.upstream.tagopt --no-tags
 git fetch upstream master
 .github/upstream-tests/run.sh
@@ -23484,7 +23484,7 @@ git fetch upstream master
 
 | Source | |
 |---|---|
-| Workflow | [`upstream-tests.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/upstream-tests.yml) |
-| Script | [`run.sh`](https://github.com/pockethost/pocketone/blob/main/.github/upstream-tests/run.sh) |
-| Exceptions | [`known-deviations.txt`](https://github.com/pockethost/pocketone/blob/main/.github/upstream-tests/known-deviations.txt) |
-| Every core change | [Changes we made to PocketBase](https://github.com/pockethost/pocketone#changes-we-made-to-pocketbase) |
+| Workflow | [`upstream-tests.yml`](https://github.com/pocketonehq/pocketone/blob/main/.github/workflows/upstream-tests.yml) |
+| Script | [`run.sh`](https://github.com/pocketonehq/pocketone/blob/main/.github/upstream-tests/run.sh) |
+| Exceptions | [`known-deviations.txt`](https://github.com/pocketonehq/pocketone/blob/main/.github/upstream-tests/known-deviations.txt) |
+| Every core change | [Changes we made to PocketBase](https://github.com/pocketonehq/pocketone#changes-we-made-to-pocketbase) |

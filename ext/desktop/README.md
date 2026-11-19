@@ -20,7 +20,7 @@ which Wails marks experimental on macOS and Linux.
 ## Install
 
 Desktop is built into `pocketone`. Builds run in [Docker](https://docs.docker.com/get-docker/), in the build image
-for your `pocketone`'s version (`ghcr.io/pockethost/pocketone-build:v<version>`), pulled on first use. It holds Go
+for your `pocketone`'s version (`ghcr.io/pocketonehq/pocketone-build:v<version>`), pulled on first use. It holds Go
 and PocketOne's source with every dependency vendored, so once it's here builds work offline. A named volume
 (`pocketone-build-cache`) keeps Go's build cache, so rebuilds take seconds.
 

@@ -41,7 +41,7 @@ extkit.Setup(app, []extkit.Extension{agent.New(), agentchat.New()}, nil, nil)
 ```
 
 The module is `pocketone.dev/ext/agent-chat`. Its two collections come from its own migration,
-`0001_chats` in [schema.go](https://github.com/pockethost/pocketone/blob/main/ext/agent-chat/schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
+`0001_chats` in [schema.go](https://github.com/pocketonehq/pocketone/blob/main/ext/agent-chat/schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
 They stay empty until your app starts a chat.
 
 ## Configure
