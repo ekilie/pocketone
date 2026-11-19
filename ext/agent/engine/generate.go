@@ -27,6 +27,13 @@ type GenerateOptions struct {
 	// CacheScope separates prompt cache entries: a prompt only reuses the cached start of prompts with the same scope.
 	// A host serving several apps passes each app's id, so one app's timing can't tell it what another app sent.
 	CacheScope string
+	// Thread keeps this conversation's state (every token read and written) after the call, and continues from it
+	// when the next call's prompt starts the same way (threads.go). "" for none.
+	Thread string
+	// ThreadDir, when set with Thread, also keeps the state on disk there (half precision), within ThreadDisk bytes
+	// for the folder (<= 0: no limit), least recently used first.
+	ThreadDir  string
+	ThreadDisk int64
 }
 
 // Fit is how a Constraint judges the output so far.
@@ -64,6 +71,11 @@ func ChatPrompt(messages []Message) string {
 		b.WriteString("<|im_start|>")
 		b.WriteString(m.Role)
 		b.WriteString("\n")
+		if m.Role == "assistant" {
+			// the empty thinking block every answer starts with (below), so an earlier answer reads exactly as the model
+			// wrote it and a thread's state covers it
+			b.WriteString("<think>\n\n</think>\n\n")
+		}
 		b.WriteString(m.Content)
 		b.WriteString("<|im_end|>\n")
 	}
@@ -85,8 +97,8 @@ func (m *Model) Generate(ctx context.Context, prompt string, o GenerateOptions, 
 }
 
 // GenerateTokens is Generate on pre-tokenized input.
-func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions, onToken func(piece string) bool) (Result, error) {
-	res := Result{PromptTokens: len(ids)}
+func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions, onToken func(piece string) bool) (res Result, err error) {
+	res = Result{PromptTokens: len(ids)}
 	if len(ids) == 0 {
 		return res, errors.New("engine: empty prompt")
 	}
@@ -103,9 +115,17 @@ func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions
 
 	start := time.Now()
 	from := 0
-	if e, n := m.lookupPrefix(o.CacheScope, ids); e != nil { // the start of this prompt was read before: reuse it
-		m.restorePrefix(s, e, n)
-		from, res.CachedTokens = n, n
+	var te *prefixEntry
+	tn := 0
+	if o.Thread != "" { // this conversation's own state: covers the earlier answers too
+		te, tn = m.lookupThread(o.CacheScope, o.Thread, o.ThreadDir, ids)
+	}
+	if e, n := m.lookupPrefix(o.CacheScope, ids); e != nil && n > tn { // the start of this prompt was read before
+		te, tn = e, n
+	}
+	if te != nil {
+		m.restorePrefix(s, te, tn)
+		from, res.CachedTokens = tn, tn
 	}
 	for pos := from; pos < len(ids); pos += prefillBatch {
 		if err := ctx.Err(); err != nil {
@@ -114,7 +134,13 @@ func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions
 		}
 		m.forward(s, ids[pos:min(pos+prefillBatch, len(ids))], pos)
 	}
-	m.storePrefix(o.CacheScope, s, ids)
+	m.storePrefix(o.CacheScope, s, ids, "")
+	fed := 0 // generated tokens whose keys and values are in s
+	if o.Thread != "" {
+		defer func() { // runs before the state goes back (deferred earlier)
+			m.storeThread(o, s, append(append([]int(nil), ids...), res.Tokens[:fed]...))
+		}()
+	}
 
 	var text strings.Builder
 	var pending []byte // bytes not yet forming complete UTF-8
@@ -225,6 +251,7 @@ func (m *Model) GenerateTokens(ctx context.Context, ids []int, o GenerateOptions
 		}
 		m.forward(s, []int{tok}, pos)
 		pos++
+		fed++
 	}
 	if onToken != nil {
 		full := text.String()
@@ -375,3 +402,43 @@ func (m *Model) sampleConstrained(logits []float32, o GenerateOptions, rng *rand
 	}
 	return 0, false, false
 }
+
+// WarmResult says what Warm kept.
+type WarmResult struct {
+	Tokens int   // the prompt's tokens
+	Kept   int   // how many of them the prompt cache holds (0: no room, or the cache is off)
+	Bytes  int64 // the memory they take
+}
+
+// Warm reads prompt (raw text, like Generate's) into the prompt cache ahead of the calls that start with it, and pins
+// the entry under pin so it isn't evicted until Unpin(pin). Calls with the same scope whose prompts start the same way
+// then skip reading that part.
+func (m *Model) Warm(ctx context.Context, prompt, scope, pin string) (WarmResult, error) {
+	ids := m.Tokenize(prompt)
+	res := WarmResult{Tokens: len(ids)}
+	if m.prefix.budget <= 0 || len(ids) < prefixMin {
+		return res, nil
+	}
+	if len(ids) >= m.hp.ctx {
+		return res, errors.New("engine: the prompt is longer than the model's context")
+	}
+	s := m.getState(len(ids)+1, min(len(ids), prefillBatch))
+	defer m.putState(s)
+	from := 0
+	if e, n := m.lookupPrefix(scope, append(ids, 0)); e != nil { // all of ids may come from the cache
+		m.restorePrefix(s, e, n)
+		from = n
+	}
+	for pos := from; pos < len(ids); pos += prefillBatch {
+		if err := ctx.Err(); err != nil {
+			return res, err
+		}
+		m.forward(s, ids[pos:min(pos+prefillBatch, len(ids))], pos)
+	}
+	res.Kept = m.storePrefix(scope, s, ids, pin)
+	res.Bytes = int64(res.Kept) * m.tokenBytes()
+	return res, nil
+}
+
+// CountTokens is how many tokens text is for this model.
+func (m *Model) CountTokens(text string) int { return len(m.Tokenize(text)) }

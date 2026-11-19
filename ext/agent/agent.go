@@ -28,7 +28,6 @@ import (
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
 )
 
 // Name is the extension's key.
@@ -41,21 +40,25 @@ const Name = "agent"
 //	  model: qwen3-1.7b
 //	  threads: 4
 type Config struct {
-	Enabled     *bool       `yaml:"enabled" json:"enabled,omitempty" doc:"false turns the extension off on this app ($agent and agent/v1 are gone)."`
-	Model       string      `yaml:"model" json:"model" doc:"The model to run: qwen3-0.6b, qwen3-1.7b or qwen3-4b (downloaded once), hf:<org>/<repo>/<file>.gguf, or a path to a .gguf file. Empty: none."`
-	Threads     int         `yaml:"threads" json:"threads" doc:"CPU threads for the model (default: half the cores)."`
-	Parallel    int         `yaml:"parallel" json:"parallel" doc:"Answers written at once; the rest wait their turn (default 1)."`
-	PromptCache int         `yaml:"prompt_cache_mb" json:"prompt_cache_mb" doc:"Memory in MB for keeping the start of recent prompts, so one that begins the same way (a preamble, a chat so far) isn't read again (default 256, about 1,100 tokens of a Qwen3 model; -1 turns it off)."`
-	MaxTokens   int         `yaml:"max_tokens" json:"max_tokens" doc:"Longest answer, in tokens, when a call doesn't say (default 512)."`
-	Timeout     string      `yaml:"timeout" json:"timeout" doc:"Longest a call may take, waiting included (default 2m)."`
-	CacheDir    string      `yaml:"cache_dir" json:"cache_dir" doc:"Where downloaded models are kept (default: the user cache folder's pocketone/models)."`
-	PerInstance PerInstance `yaml:"per_instance" json:"per_instance" doc:"On a multisite host: each instance's share of the model."`
+	Enabled      *bool       `yaml:"enabled" json:"enabled,omitempty" doc:"false turns the extension off on this app ($agent and agent/v1 are gone)."`
+	Model        string      `yaml:"model" json:"model" doc:"The model to run: qwen3-0.6b, qwen3-1.7b or qwen3-4b (downloaded once), hf:<org>/<repo>/<file>.gguf, or a path to a .gguf file. Empty: none."`
+	Threads      int         `yaml:"threads" json:"threads" doc:"CPU threads for the model (default: half the cores)."`
+	Parallel     int         `yaml:"parallel" json:"parallel" doc:"Answers written at once; the rest wait their turn (default 1)."`
+	PromptCache  int         `yaml:"prompt_cache_mb" json:"prompt_cache_mb" doc:"Memory in MB for keeping the start of recent prompts, so one that begins the same way (a preamble, a chat so far) isn't read again (default 256, about 1,100 tokens of a Qwen3 model; -1 turns it off)."`
+	MaxTokens    int         `yaml:"max_tokens" json:"max_tokens" doc:"Longest answer, in tokens, when a call doesn't say (default 512)."`
+	Timeout      string      `yaml:"timeout" json:"timeout" doc:"Longest a call may take, waiting included (default 2m)."`
+	CacheDir     string      `yaml:"cache_dir" json:"cache_dir" doc:"Where downloaded models are kept (default: the user cache folder's pocketone/models)."`
+	ThreadMemory int         `yaml:"thread_memory_mb" json:"thread_memory_mb" doc:"Memory in MB for conversations' model state between calls ($agent's thread option), least recently used first (default 512; -1 keeps them on disk only)."`
+	ThreadCache  float64     `yaml:"thread_cache_gb" json:"thread_cache_gb" doc:"Disk in GB for conversations' model state, in pb_cache/agent/threads (default 2; -1 turns it off)."`
+	PerInstance  PerInstance `yaml:"per_instance" json:"per_instance" doc:"On a multisite host: each instance's share of the model."`
 }
 
 // PerInstance is each instance's share of a host's model.
 type PerInstance struct {
-	MaxTokens   int `yaml:"max_tokens" json:"max_tokens" doc:"Longest answer per call, in tokens (0: max_tokens)."`
-	Concurrency int `yaml:"concurrency" json:"concurrency" doc:"Calls an instance may have waiting or running at once (default 2)."`
+	MaxTokens   int     `yaml:"max_tokens" json:"max_tokens" doc:"Longest answer per call, in tokens (0: max_tokens)."`
+	Concurrency int     `yaml:"concurrency" json:"concurrency" doc:"Calls an instance may have waiting or running at once (default 2)."`
+	PinnedMB    int     `yaml:"pinned_mb" json:"pinned_mb" doc:"Memory in MB an instance's warmed prompts may hold in the prompt cache (default 64)."`
+	ThreadCache float64 `yaml:"thread_cache_gb" json:"thread_cache_gb" doc:"Disk in GB for an instance's conversation state, in its own pb_cache (default 2.5, a quarter of a 10 GB instance)."`
 }
 
 func (c Config) withDefaults() Config {
@@ -79,7 +82,27 @@ func (c Config) withDefaults() Config {
 	if c.PerInstance.Concurrency <= 0 {
 		c.PerInstance.Concurrency = 2
 	}
+	if c.PerInstance.PinnedMB == 0 {
+		c.PerInstance.PinnedMB = 64
+	}
+	if c.ThreadCache == 0 {
+		c.ThreadCache = 2
+	}
+	if c.PerInstance.ThreadCache == 0 {
+		c.PerInstance.ThreadCache = 2.5
+	}
 	return c
+}
+
+// threadMemoryBytes is thread_memory_mb (default 512), 0 when turned off.
+func (c Config) threadMemoryBytes() int64 {
+	switch {
+	case c.ThreadMemory < 0:
+		return 0
+	case c.ThreadMemory == 0:
+		return 512 << 20
+	}
+	return int64(c.ThreadMemory) << 20
 }
 
 // promptCacheBytes is the built-in model's prompt cache budget: prompt_cache_mb (default 256), 0 when turned off.
@@ -132,6 +155,7 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 		instanceApps.Store(id, app)
 		app.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
 			instanceApps.CompareAndDelete(id, app)
+			hostShares.Range(func(k, _ any) bool { k.(*hostShare).releaseInstance(id); return true })
 			return e.Next()
 		})
 		return nil
@@ -179,7 +203,8 @@ type appAgent struct {
 	serving atomic.Bool // models start only once the app serves
 
 	mu     sync.Mutex
-	runner *runner // the built-in model in use, if any
+	runner *runner                      // the built-in model in use, if any
+	warms  map[string]agentv1.WarmInput // what the app warmed, by id: warmed again on the next model
 }
 
 // current is what answers now, with the built-in model's runner started (once the app serves) when that's the choice.
@@ -214,10 +239,84 @@ func (a *appAgent) use(spec string) (*runner, error) {
 		next = r
 	}
 	if a.runner != nil {
+		for id := range a.warms {
+			a.runner.unwarm(pinOf("", id))
+		}
 		a.runner.release()
 	}
 	a.runner = next
+	if next != nil {
+		for id, in := range a.warms { // the app's warms carry over to the new model
+			in.Wait = ""
+			go warmOn(context.Background(), next, "", id, in)
+		}
+	}
 	return next, nil
+}
+
+// scope is the app's thread folder and budget (the prompt cache scope is "" on a single app).
+func (a *appAgent) scope() scopeOpts {
+	if a.cfg.ThreadCache < 0 {
+		return scopeOpts{}
+	}
+	return scopeOpts{ThreadDir: threadDir(a.app), ThreadDisk: gb(a.cfg.ThreadCache)}
+}
+
+// Warm implements agent/v1: the app's built-in model reads in's text ahead of the calls that start with it.
+func (a *appAgent) Warm(ctx context.Context, _ extkit.Auth, in agentv1.WarmInput) (agentv1.WarmResult, error) {
+	id := warmID(extkit.AppID(a.app), in)
+	a.mu.Lock()
+	if a.warms == nil {
+		a.warms = map[string]agentv1.WarmInput{}
+	}
+	a.warms[id] = in
+	a.mu.Unlock()
+	c, r, err := a.current()
+	switch {
+	case err != nil:
+		return agentv1.WarmResult{ID: id, Message: err.Error()}, nil
+	case c.Mode == ModeAPI:
+		return agentv1.WarmResult{ID: id, Message: "answered by the app's own API, which caches prompts itself"}, nil
+	case c.Mode != ModeBuiltin:
+		return agentv1.WarmResult{ID: id, Message: errOff(c).Error()}, nil
+	case r == nil:
+		return agentv1.WarmResult{ID: id, Message: "the model starts when the app serves; it warms then"}, nil
+	}
+	return warmOn(ctx, r, "", id, in), nil
+}
+
+// Forget implements agent/v1: releases a warm.
+func (a *appAgent) Forget(_ context.Context, _ extkit.Auth, in agentv1.ForgetInput) (agentv1.Done, error) {
+	a.mu.Lock()
+	delete(a.warms, in.ID)
+	r := a.runner
+	a.mu.Unlock()
+	if r != nil {
+		r.unwarm(pinOf("", in.ID))
+	}
+	return agentv1.Done{OK: true}, nil
+}
+
+// Count implements agent/v1.
+func (a *appAgent) Count(_ context.Context, _ extkit.Auth, in agentv1.CountInput) (agentv1.CountResult, error) {
+	_, r, _ := a.current()
+	return countOf(r, in), nil
+}
+
+// Threads implements agent/v1.
+func (a *appAgent) Threads(context.Context, extkit.Auth) (agentv1.ThreadList, error) {
+	_, r, _ := a.current()
+	return threadsOf(r, a.scope()), nil
+}
+
+// ForgetThread implements agent/v1.
+func (a *appAgent) ForgetThread(_ context.Context, _ extkit.Auth, in agentv1.ForgetInput) (agentv1.Done, error) {
+	_, r, _ := a.current()
+	if r != nil && r.phase.Load().(string) == "ready" {
+		sc := a.scope()
+		r.model.forgetThread("", in.ID, sc.ThreadDir)
+	}
+	return agentv1.Done{OK: true}, nil
 }
 
 func (a *appAgent) Complete(ctx context.Context, _ extkit.Auth, in agentv1.CompleteInput) (agentv1.CompleteResult, error) {
@@ -267,7 +366,7 @@ func (a *appAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText 
 		if maxTokens <= 0 {
 			maxTokens = a.cfg.MaxTokens
 		}
-		return r.complete(ctx, in, maxTokens, "runner", onText, "")
+		return r.complete(ctx, in, maxTokens, "runner", onText, a.scope())
 	}
 	return agentv1.CompleteResult{}, errOff(c)
 }
@@ -295,100 +394,6 @@ func checkInput(in agentv1.CompleteInput) error {
 		return &extkit.Error{Code: "bad_request", Message: "schema must be a JSON schema", Status: 400}
 	}
 	return nil
-}
-
-// BindJS exposes agent/v1 to the app's JS hooks as $agent.
-func (*Extension) BindJS(app core.App, rt js.Runtime) {
-	call := func() (agentv1.Agent, error) {
-		a, ok := agentv1.Contract.Of(app)
-		if !ok {
-			return nil, agentv1.ErrNotConfigured
-		}
-		return a, nil
-	}
-	_ = rt.Set("$agent", map[string]any{
-		"complete": func(opts map[string]any) (map[string]any, error) {
-			in, err := inputFromJS(opts)
-			if err != nil {
-				return nil, errors.New("$agent.complete: " + err.Error())
-			}
-			a, err := call()
-			if err != nil {
-				return nil, err
-			}
-			res, err := a.Complete(context.Background(), extkit.Internal, in)
-			if err != nil {
-				return nil, err
-			}
-			return toJS(res)
-		},
-		// $agent.stream(opts, onText): like complete, calling onText(piece) as the answer is written; onText returning
-		// false stops it. It runs on the calling VM, so onText can write to the response (ctx.res.sse()) as it goes.
-		"stream": js.NativeFunc(func(c js.Call) (any, error) {
-			opts, _ := c.Arg(0).Export().(map[string]any)
-			if opts == nil {
-				return nil, errors.New("$agent.stream: the first argument must be an options object")
-			}
-			in, err := inputFromJS(opts)
-			if err != nil {
-				return nil, errors.New("$agent.stream: " + err.Error())
-			}
-			a, err := call()
-			if err != nil {
-				return nil, err
-			}
-			s, err := a.Stream(context.Background(), extkit.Internal, in)
-			if err != nil {
-				return nil, err
-			}
-			if s.Close != nil {
-				defer s.Close()
-			}
-			fn := c.Arg(1).Func()
-			var res *agentv1.CompleteResult
-			var cbErr error
-			err = s.Run(context.Background(), func(e any) error {
-				ch, _ := e.(agentv1.Chunk)
-				if ch.Done {
-					res = ch.Result
-					return nil
-				}
-				if fn == nil || ch.Text == "" {
-					return nil
-				}
-				v, err := fn.Call(ch.Text)
-				if err != nil {
-					cbErr = errors.New(js.Message(err))
-					return cbErr
-				}
-				if v == false {
-					return errStopped
-				}
-				return nil
-			})
-			if cbErr != nil {
-				app.Logger().Warn("$agent.stream: onText threw; the answer stopped", "error", cbErr)
-			}
-			if err != nil {
-				return nil, err
-			}
-			if res == nil {
-				return nil, errors.New("$agent.stream: the answer ended without a result")
-			}
-			return toJS(res)
-		}),
-		"status": func() (map[string]any, error) {
-			a, err := call()
-			if err != nil {
-				return map[string]any{"backend": "", "ready": false, "message": err.Error()}, nil
-			}
-			st, err := a.Status(context.Background(), extkit.Internal)
-			if err != nil {
-				return nil, err
-			}
-			return toJS(st)
-		},
-	})
 }
 
 // errStopped: $agent.stream's onText returned false.
@@ -421,41 +426,67 @@ func toJS(v any) (map[string]any, error) {
 }
 
 // TypeScript implements the jsvm types hook: $agent's declarations.
-func (*Extension) TypeScript() string {
-	return `/** The app's language model (agent/v1): its own API, a model PocketOne runs, or its host's. */
+func (*Extension) TypeScript() string { return typeScript }
+
+const typeScript = `/** A turn of a conversation. */
+type AgentMessage = { role: "system" | "user" | "assistant"; content: string }
+
+/** What a call sends: a prompt, or a conversation. */
+type AgentInput = {
+  system?: string
+  prompt?: string
+  messages?: AgentMessage[]
+  /** A JSON schema the answer must match; the parsed answer is then in data. */
+  schema?: object | string
+  maxTokens?: number
+  temperature?: number
+  stop?: string[]
+  model?: string
+  /** Keep this conversation's model state between calls, so the next turn reads only what's new (the built-in model). */
+  thread?: string
+  /** How long to wait for the model to be ready, as a duration ("30s"). .async waits agent.timeout by default. */
+  wait?: string
+}
+
+type AgentAnswer = {
+  text: string
+  data?: any
+  model: string
+  backend: "app" | "runner" | "host"
+  stopReason?: string
+  usage: { inputTokens: number; outputTokens: number; cachedTokens?: number }
+}
+
+type AgentStatus = { backend: "" | "app" | "runner" | "host"; model?: string; ready: boolean; progress?: number; message?: string }
+
+type AgentWarm = { id: string; warmed: boolean; tokens?: number; message?: string; forget(): void }
+
+/** The app's language model (agent/v1): its own API, a model PocketOne runs, or its host's. */
 declare var $agent: {
-  /** Answers a prompt. Blocks until the answer is written; throws "not_configured", "not_ready" or "busy". */
-  complete(opts: {
-    system?: string
-    prompt?: string
-    messages?: { role: "system" | "user" | "assistant"; content: string }[]
-    /** A JSON schema the answer must match; the parsed answer is then in data. */
-    schema?: object | string
-    maxTokens?: number
-    temperature?: number
-    stop?: string[]
-    model?: string
-  }): {
-    text: string
-    data?: any
-    model: string
-    backend: "app" | "runner" | "host"
-    stopReason?: string
-    usage: { inputTokens: number; outputTokens: number }
-  }
+  /** Answers. Fails at once with "not_ready" while the model loads; complete.async waits for it (opts.wait). */
+  complete: ((opts: AgentInput) => AgentAnswer) & { async(opts: AgentInput): Promise<AgentAnswer> }
   /**
    * Like complete, calling onText with each piece of the answer as it's written (forward it with ctx.res.sse() in a
-   * page, for instance). Returning false from onText stops the answer. Returns the whole answer, like complete.
+   * page, for instance); false stops it. With opts.wait, waits for a loading model first, calling onWait(status).
    */
-  stream(opts: Parameters<typeof $agent.complete>[0], onText?: (text: string) => boolean | void): ReturnType<typeof $agent.complete>
+  stream(opts: AgentInput, onText?: (text: string) => boolean | void, w?: { onWait?: (status: AgentStatus) => void }): AgentAnswer
   /** Which model answers, and whether it's ready. */
-  status(): {
-    backend: "" | "app" | "runner" | "host"
-    model?: string
-    ready: boolean
-    progress?: number
-    message?: string
+  status(): AgentStatus
+  /**
+   * Reads the start of later prompts ahead of them (a preamble), so they skip reading it. Returns at once and warms in
+   * the background; warm.async resolves once it's warm. The id is the same for the same text.
+   */
+  warm: ((opts: { system?: string; messages?: AgentMessage[]; prompt?: string }) => AgentWarm) & {
+    async(opts: { system?: string; messages?: AgentMessage[]; prompt?: string; wait?: string }): Promise<AgentWarm>
+  }
+  /** Releases a warm by id. */
+  forget(id: string): void
+  /** Tokens in a text or a conversation (exact with the built-in model, else about four characters each). */
+  count(textOrMessages: string | AgentMessage[] | { text?: string; system?: string; messages?: AgentMessage[] }): number
+  /** The conversations whose model state is kept (the thread option). */
+  threads: {
+    list(): { id: string; tokens: number; bytes: number; where: "memory" | "disk"; usedAt: string }[]
+    forget(id: string): void
   }
 }
 `
-}

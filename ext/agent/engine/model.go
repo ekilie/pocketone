@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -17,6 +19,11 @@ type LoadOptions struct {
 	// PromptCache is the memory, in bytes, for keeping the start of recent prompts so a prompt that begins the same
 	// way skips reading that part again (see prefixcache.go); 0 turns it off.
 	PromptCache int64
+	// ThreadMemory is the memory, in bytes, for conversations' state between calls (threads.go); 0 keeps them only
+	// on disk, when a call names a folder.
+	ThreadMemory int64
+	// ID names the model in thread files, so one model never reads another's (default: the file's name and size).
+	ID string
 }
 
 // Info describes a loaded model.
@@ -73,7 +80,9 @@ type Model struct {
 	stateMu sync.Mutex
 	states  []*state // idle generation states (KV caches), reused to avoid GC churn
 
-	prefix prefixCache // the start of recent prompts (keys and values), for reuse
+	prefix  prefixCache // the start of recent prompts (keys and values), for reuse
+	threads threadStore // conversations' state between calls
+	id      string      // in thread files
 }
 
 // getState returns an idle state with room for maxCtx positions and batches of maxN.
@@ -113,6 +122,11 @@ func Load(path string, opts LoadOptions) (*Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	if opts.ID == "" {
+		if st, err := os.Stat(path); err == nil {
+			opts.ID = fmt.Sprintf("%s:%d", filepath.Base(path), st.Size())
+		}
+	}
 	m, err := newModel(g, opts)
 	if err != nil {
 		g.close()
@@ -128,6 +142,8 @@ func newModel(g *ggufFile, opts LoadOptions) (*Model, error) {
 	}
 	m := &Model{g: g}
 	m.prefix.budget = opts.PromptCache
+	m.threads.budget = opts.ThreadMemory
+	m.id = opts.ID
 	req := func(k string) (int, error) {
 		v, ok := g.getInt(arch + "." + k)
 		if !ok {
@@ -301,6 +317,7 @@ func newModel(g *ggufFile, opts LoadOptions) (*Model, error) {
 
 // Close releases the worker pool and unmaps the file. No Generate call may be running.
 func (m *Model) Close() error {
+	m.FlushThreads() // a thread file being written reads the state it copied, not the model, but finish it
 	if m.pool != nil {
 		m.pool.close()
 		m.pool = nil

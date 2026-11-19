@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
+	"github.com/pockethost/pocketone/ext/agent/engine"
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
 	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
@@ -69,6 +71,11 @@ type fakeModel struct {
 	lastMax atomic.Int32 // the MaxTokens of the last call
 	prompt  atomic.Value
 	delay   time.Duration
+
+	mu        sync.Mutex
+	pins      map[string]string   // pin → warmed text
+	threadIDs map[string][]string // scope → thread ids, in order of use
+	dirs      map[string]string   // thread id → the folder its call named
 }
 
 func (f *fakeModel) chatPrompt(msgs []agentv1.Message) string {
@@ -81,6 +88,15 @@ func (f *fakeModel) chatPrompt(msgs []agentv1.Message) string {
 
 func (f *fakeModel) generate(ctx context.Context, prompt string, o genOptions) (genResult, error) {
 	f.calls.Add(1)
+	if o.Thread != "" {
+		f.mu.Lock()
+		if f.threadIDs == nil {
+			f.threadIDs, f.dirs = map[string][]string{}, map[string]string{}
+		}
+		f.threadIDs[o.CacheScope] = append(f.threadIDs[o.CacheScope], o.Thread)
+		f.dirs[o.Thread] = o.ThreadDir
+		f.mu.Unlock()
+	}
 	f.lastMax.Store(int32(o.MaxTokens))
 	f.prompt.Store(prompt)
 	if f.delay > 0 {
@@ -101,8 +117,50 @@ func (f *fakeModel) generate(ctx context.Context, prompt string, o genOptions) (
 	}
 	return genResult{Text: f.reply, InputTokens: len(prompt) / 4, OutputTokens: 7, StopReason: "stop"}, nil
 }
-func (f *fakeModel) name() string { return "fake" }
-func (f *fakeModel) close() error { return nil }
+func (f *fakeModel) name() string                             { return "fake" }
+func (f *fakeModel) close() error                             { return nil }
+func (f *fakeModel) warmPrompt(msgs []agentv1.Message) string { return f.chatPrompt(msgs) }
+func (f *fakeModel) warm(_ context.Context, prompt, _ string, pin string) (engine.WarmResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.pins == nil {
+		f.pins = map[string]string{}
+	}
+	f.pins[pin] = prompt
+	n := len(prompt) / 4
+	return engine.WarmResult{Tokens: n, Kept: n, Bytes: int64(n) * 1000}, nil
+}
+func (f *fakeModel) unpin(pin string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.pins, pin)
+}
+func (f *fakeModel) pinned() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.pins)
+}
+func (f *fakeModel) count(text string) int { return len(strings.Fields(text)) }
+func (f *fakeModel) threads(scope, _ string) []engine.ThreadInfo {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []engine.ThreadInfo
+	for _, id := range f.threadIDs[scope] {
+		out = append(out, engine.ThreadInfo{ID: id, Where: "memory"})
+	}
+	return out
+}
+func (f *fakeModel) forgetThread(scope, id, _ string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var keep []string
+	for _, t := range f.threadIDs[scope] {
+		if t != id {
+			keep = append(keep, t)
+		}
+	}
+	f.threadIDs[scope] = keep
+}
 
 // useFake makes the runner load fake for any model file, and gives each test its own runner cache.
 func useFake(t *testing.T, fake *fakeModel) string {

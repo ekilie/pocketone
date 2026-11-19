@@ -19,8 +19,9 @@ const prefixMin = 32
 type prefixEntry struct {
 	scope  string // whose prompt it was (GenerateOptions.CacheScope): entries are only reused in the same scope
 	tokens []int
-	k, v   [][]float32 // per layer: k [kvd][n] (each channel's positions in a row), v [n*kvd]
-	seq    uint64      // last use, for eviction
+	k, v   [][]float32     // per layer: k [kvd][n] (each channel's positions in a row), v [n*kvd]
+	seq    uint64          // last use, for eviction
+	pins   map[string]bool // Warm's pins: a pinned entry is never evicted
 }
 
 type prefixCache struct {
@@ -80,8 +81,9 @@ func (m *Model) restorePrefix(s *state, e *prefixEntry, n int) {
 	}
 }
 
-// storePrefix keeps the first tokens of ids, whose keys and values are in s, unless the cache already has them.
-func (m *Model) storePrefix(scope string, s *state, ids []int) {
+// storePrefix keeps the first tokens of ids, whose keys and values are in s, unless the cache already has them. A pin
+// (Warm's) keeps the entry from being evicted until Unpin. It returns how many tokens the entry holds (0: not kept).
+func (m *Model) storePrefix(scope string, s *state, ids []int, pin string) int {
 	c := &m.prefix
 	per := m.tokenBytes()
 	c.mu.Lock()
@@ -93,14 +95,20 @@ func (m *Model) storePrefix(scope string, s *state, ids []int) {
 	n := min(len(ids), limit)
 	if n < prefixMin {
 		c.mu.Unlock()
-		return
+		return 0
 	}
 	for _, cand := range c.entries { // already cached (as far as an entry would keep)?
 		if cand.scope == scope && len(cand.tokens) >= n && equalInts(cand.tokens[:n], ids[:n]) {
 			c.seq++
 			cand.seq = c.seq
+			if pin != "" {
+				if cand.pins == nil {
+					cand.pins = map[string]bool{}
+				}
+				cand.pins[pin] = true
+			}
 			c.mu.Unlock()
-			return
+			return len(cand.tokens)
 		}
 	}
 	c.mu.Unlock()
@@ -118,14 +126,21 @@ func (m *Model) storePrefix(scope string, s *state, ids []int) {
 	}
 	size := int64(n) * per
 
+	if pin != "" {
+		e.pins = map[string]bool{pin: true}
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for c.used+size > c.budget && len(c.entries) > 0 { // evict the least recently used
-		old := 0
+	for c.used+size > c.budget { // evict the least recently used entry that isn't pinned
+		old := -1
 		for i, cand := range c.entries {
-			if cand.seq < c.entries[old].seq {
+			if len(cand.pins) == 0 && (old < 0 || cand.seq < c.entries[old].seq) {
 				old = i
 			}
+		}
+		if old < 0 {
+			return 0 // everything left is pinned: no room
 		}
 		c.used -= int64(len(c.entries[old].tokens)) * per
 		c.entries = append(c.entries[:old], c.entries[old+1:]...)
@@ -134,6 +149,17 @@ func (m *Model) storePrefix(scope string, s *state, ids []int) {
 	e.seq = c.seq
 	c.entries = append(c.entries, e)
 	c.used += size
+	return n
+}
+
+// Unpin releases pin (Warm's) from every entry; unpinned entries are evicted like the rest.
+func (m *Model) Unpin(pin string) {
+	c := &m.prefix
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, e := range c.entries {
+		delete(e.pins, pin)
+	}
 }
 
 func equalInts(a, b []int) bool {
@@ -153,6 +179,7 @@ func equalInts(a, b []int) bool {
 type PromptCacheStats struct {
 	Entries int
 	Bytes   int64
+	Pinned  int64 // bytes of entries a Warm pinned
 	Hits    uint64
 }
 
@@ -161,5 +188,11 @@ func (m *Model) PromptCache() PromptCacheStats {
 	c := &m.prefix
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return PromptCacheStats{Entries: len(c.entries), Bytes: c.used, Hits: c.hits}
+	st := PromptCacheStats{Entries: len(c.entries), Bytes: c.used, Hits: c.hits}
+	for _, e := range c.entries {
+		if len(e.pins) > 0 {
+			st.Pinned += int64(len(e.tokens)) * m.tokenBytes()
+		}
+	}
+	return st
 }

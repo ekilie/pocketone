@@ -21,6 +21,13 @@ type localModel interface {
 	generate(ctx context.Context, prompt string, o genOptions) (genResult, error)
 	name() string
 	close() error
+	// warmPrompt is msgs as the start of a prompt (no answer header), for warm.
+	warmPrompt(msgs []agentv1.Message) string
+	warm(ctx context.Context, prompt, scope, pin string) (engine.WarmResult, error)
+	unpin(pin string)
+	count(text string) int
+	threads(scope, dir string) []engine.ThreadInfo
+	forgetThread(scope, id, dir string)
 }
 
 type genOptions struct {
@@ -30,6 +37,17 @@ type genOptions struct {
 	Constraint  func(text string) engine.Fit // nil: unconstrained
 	OnText      func(text string) bool       // each piece as it's written; false stops (nil: none)
 	CacheScope  string                       // whose prompt cache entries it may reuse ("" on a single app)
+	Thread      string                       // keep and continue this conversation's state ("" for none)
+	ThreadDir   string                       // the app's folder for thread state on disk ("" keeps it in memory only)
+	ThreadDisk  int64                        // bytes that folder may take
+}
+
+// scopeOpts is whose call it is: the prompt cache scope (an instance's id on a host, "" on a single app) and the
+// app's folder and budget for thread state on disk.
+type scopeOpts struct {
+	Scope      string
+	ThreadDir  string
+	ThreadDisk int64
 }
 
 type genResult struct {
@@ -55,7 +73,11 @@ type runner struct {
 	err      error
 	model    localModel
 
-	slots chan struct{} // generations at once
+	slots   chan struct{} // generations at once
+	waiting atomic.Int32  // calls waiting for a slot: warms yield to them
+
+	warmMu sync.Mutex
+	warms  map[string]*warmJob // by pin
 
 	key   string // in runners
 	users int    // apps using it (under runnersMu); at 0 it's unloaded
@@ -84,7 +106,7 @@ func sharedRunner(cfg Config, log *slog.Logger) (*runner, error) {
 		log = slog.Default()
 	}
 	r := &runner{cfg: cfg, src: src, log: log, ready: make(chan struct{}), slots: make(chan struct{}, cfg.Parallel),
-		key: key, users: 1}
+		key: key, users: 1, warms: map[string]*warmJob{}}
 	r.phase.Store("loading")
 	r.progress.Store(0.0)
 	runners[key] = r
@@ -166,7 +188,10 @@ func (r *runner) status(backend string) agentv1.Status {
 
 // complete answers in with the local model, after waiting for a free slot. maxTokens caps the answer (the caller's
 // limit, after any host cap).
-func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxTokens int, backend string, onText func(string) bool, scope string) (agentv1.CompleteResult, error) {
+func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxTokens int, backend string, onText func(string) bool, sc scopeOpts) (agentv1.CompleteResult, error) {
+	if err := r.waitReady(ctx, in.Wait); err != nil {
+		return agentv1.CompleteResult{}, err
+	}
 	// phase is stored after model (and err), so reading it first makes them visible here
 	switch r.phase.Load().(string) {
 	case "ready":
@@ -178,12 +203,6 @@ func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxToke
 	}
 	ctx, cancel := context.WithTimeout(ctx, r.cfg.timeout())
 	defer cancel()
-	select {
-	case r.slots <- struct{}{}:
-		defer func() { <-r.slots }()
-	case <-ctx.Done():
-		return agentv1.CompleteResult{}, &extkit.Error{Code: "busy", Status: 503, Message: "the model is busy; try again shortly"}
-	}
 	msgs := []agentv1.Message{}
 	if sys := systemPrompt(in); sys != "" {
 		msgs = append(msgs, agentv1.Message{Role: "system", Content: sys})
@@ -199,7 +218,21 @@ func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxToke
 	if len(in.Schema) > 0 && in.Temperature == nil {
 		temp = 0 // structured answers: the most likely one
 	}
-	o := genOptions{MaxTokens: maxTokens, Temperature: temp, Stop: in.Stop, OnText: onText, CacheScope: scope}
+	prompt := r.model.chatPrompt(msgs)
+	r.joinWarm(ctx, sc.Scope, prompt) // a warm of this prompt's start is running: let it finish rather than race it
+	r.waiting.Add(1)
+	select {
+	case r.slots <- struct{}{}:
+		r.waiting.Add(-1)
+		defer func() { <-r.slots }()
+	case <-ctx.Done():
+		r.waiting.Add(-1)
+		return agentv1.CompleteResult{}, &extkit.Error{Code: "busy", Status: 503, Message: "the model is busy; try again shortly"}
+	}
+	o := genOptions{MaxTokens: maxTokens, Temperature: temp, Stop: in.Stop, OnText: onText, CacheScope: sc.Scope}
+	if in.Thread != "" {
+		o.Thread, o.ThreadDir, o.ThreadDisk = in.Thread, sc.ThreadDir, sc.ThreadDisk
+	}
 	if len(in.Schema) > 0 {
 		sn, err := compileSchema(in.Schema)
 		if err != nil {
@@ -207,7 +240,7 @@ func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxToke
 		}
 		o.Constraint = sn.fit // the answer can only be JSON matching the schema
 	}
-	g, err := r.model.generate(ctx, r.model.chatPrompt(msgs), o)
+	g, err := r.model.generate(ctx, prompt, o)
 	if err != nil && g.OutputTokens == 0 {
 		return agentv1.CompleteResult{}, err
 	}

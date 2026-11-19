@@ -88,3 +88,49 @@ func TestRealModelExtract(t *testing.T) {
 		t.Fatalf("extracted: %+v", out)
 	}
 }
+
+// A conversation on a thread through agent/v1 with the real engine: the second turn reads only the new question, and
+// a warmed preamble is reused by the first. AGENT_GGUF=<a Qwen3 .gguf> go test -run TestRealModelThread -v
+func TestRealModelThread(t *testing.T) {
+	path := os.Getenv("AGENT_GGUF")
+	if path == "" {
+		t.Skip("set AGENT_GGUF to a Qwen3 GGUF file")
+	}
+	runnersMu.Lock()
+	runners = map[string]*runner{}
+	runnersMu.Unlock()
+	withSection(t, `{"model": "`+path+`", "threads": 4}`)
+	app := testApp(t)
+	if err := New().Register(app, nil); err != nil {
+		t.Fatal(err)
+	}
+	serve(t, app)
+	a := agentv1.Contract.Must(app)
+	waitReady(t, a)
+	ctx := context.Background()
+	system := "You are the help assistant for Acme Notes, a note-taking app for teams. Notes sync across devices within a few seconds of saving, and work offline. Answer in one short sentence, from these facts only."
+	if w, err := a.Warm(ctx, extkit.Internal, agentv1.WarmInput{System: system, Wait: "30s"}); err != nil || !w.Warmed {
+		t.Fatalf("warm: %+v %v", w, err)
+	}
+	q1 := agentv1.Message{Role: "user", Content: "How fast do notes sync?"}
+	r1, err := a.Complete(ctx, extkit.Internal, agentv1.CompleteInput{System: system, Messages: []agentv1.Message{q1}, Thread: "c1", MaxTokens: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("turn 1: %q usage %+v", r1.Text, r1.Usage)
+	if r1.Usage.CachedTokens == 0 {
+		t.Fatal("turn 1 didn't reuse the warmed preamble")
+	}
+	msgs := []agentv1.Message{q1, {Role: "assistant", Content: r1.Text}, {Role: "user", Content: "Does it work offline?"}}
+	r2, err := a.Complete(ctx, extkit.Internal, agentv1.CompleteInput{System: system, Messages: msgs, Thread: "c1", MaxTokens: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("turn 2: %q usage %+v", r2.Text, r2.Usage)
+	if new := r2.Usage.InputTokens - r2.Usage.CachedTokens; new > 25 {
+		t.Fatalf("turn 2 read %d tokens again; want only the new question", new)
+	}
+	if l, _ := a.Threads(ctx, extkit.Internal); len(l.Threads) != 1 {
+		t.Fatalf("threads: %+v", l)
+	}
+}

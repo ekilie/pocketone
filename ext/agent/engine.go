@@ -16,7 +16,7 @@ type engineModel struct {
 }
 
 func loadEngine(path string, cfg Config) (localModel, error) {
-	m, err := engine.Load(path, engine.LoadOptions{Threads: cfg.Threads, PromptCache: cfg.promptCacheBytes()})
+	m, err := engine.Load(path, engine.LoadOptions{Threads: cfg.Threads, PromptCache: cfg.promptCacheBytes(), ThreadMemory: cfg.threadMemoryBytes()})
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +37,7 @@ func (e *engineModel) chatPrompt(msgs []agentv1.Message) string {
 func (e *engineModel) generate(ctx context.Context, prompt string, o genOptions) (genResult, error) {
 	res, err := e.m.Generate(ctx, prompt, engine.GenerateOptions{
 		MaxTokens: o.MaxTokens, Temperature: o.Temperature, TopP: 0.9, TopK: 40, Stop: o.Stop, Constraint: o.Constraint, CacheScope: o.CacheScope,
+		Thread: o.Thread, ThreadDir: o.ThreadDir, ThreadDisk: o.ThreadDisk,
 	}, o.OnText)
 	g := genResult{Text: res.Text, InputTokens: res.PromptTokens, OutputTokens: res.OutputTokens, CachedTokens: res.CachedTokens,
 		StopReason: stopReason(res.StopReason), Prefill: res.Prefill, Decode: res.Decode}
@@ -60,3 +61,21 @@ func stopReason(r string) string {
 	}
 	return r
 }
+
+// answerHeader is what ChatPrompt ends with: the start of the model's turn.
+const answerHeader = "<|im_start|>assistant\n<think>\n\n</think>\n\n"
+
+func (e *engineModel) warmPrompt(msgs []agentv1.Message) string {
+	return strings.TrimSuffix(e.chatPrompt(msgs), answerHeader)
+}
+
+func (e *engineModel) warm(ctx context.Context, prompt, scope, pin string) (engine.WarmResult, error) {
+	return e.m.Warm(ctx, prompt, scope, pin)
+}
+
+func (e *engineModel) unpin(pin string)      { e.m.Unpin(pin) }
+func (e *engineModel) count(text string) int { return e.m.CountTokens(text) }
+func (e *engineModel) threads(scope, dir string) []engine.ThreadInfo {
+	return e.m.Threads(scope, dir)
+}
+func (e *engineModel) forgetThread(scope, id, dir string) { e.m.ForgetThread(scope, id, dir) }

@@ -23,6 +23,14 @@ routerAdd("GET", "/probe/stream", (e) => {
     return e.json(200, { pieces, text: r.text, backend: r.backend })
   } catch (err) { return e.json(503, { error: String(err) }) }
 })
+routerAdd("GET", "/probe/prims", async (e) => {
+  const w = $agent.warm({ system: "You help." })
+  const w2 = await $agent.warm.async({ system: "You help.", wait: "1s" })
+  let text = "", error = ""
+  try { text = (await $agent.complete.async({ prompt: "hi", wait: "1s" })).text } catch (err) { error = String(err) }
+  return e.json(200, { id: w.id, same: w.id === w2.id, warmed: w.warmed, message: w.message, forget: typeof w.forget,
+    count: $agent.count("one two three four"), threads: $agent.threads.list(), text, error })
+})
 `
 
 // fakeOpenAI is an OpenAI-compatible chat completions API, streaming or not.
@@ -95,6 +103,21 @@ func TestModesLLMSettings(t *testing.T) {
 		}
 		if b := s.Get("/probe/stream"); !strings.Contains(b, `"pieces":["from ","the ","API"]`) {
 			t.Fatalf("stream with the app's API: %s", b)
+		}
+		// the primitives from JS: warm (same id for the same text; not warmed: the API caches prompts itself), count
+		// (estimated), threads, and complete.async
+		var prims struct {
+			ID, Message, Forget, Text, Error string
+			Same, Warmed                     bool
+			Count                            int
+			Threads                          []any
+		}
+		if err := json.Unmarshal([]byte(s.Get("/probe/prims")), &prims); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.HasPrefix(prims.ID, "w_") || !prims.Same || prims.Warmed || !strings.Contains(prims.Message, "own API") ||
+			prims.Forget != "function" || prims.Count <= 0 || prims.Threads == nil || prims.Text != "from the API" {
+			t.Fatalf("primitives from JS: %+v", prims)
 		}
 		code, b := s.Raw(http.MethodPost, "/api/_c/agent/v1/stream", s.Token("agent"), map[string]any{"prompt": "hi"})
 		if code != 200 || strings.Count(string(b), "event: stream") != 4 || !strings.Contains(string(b), `"done":true`) {
