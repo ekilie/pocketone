@@ -26,6 +26,7 @@
 - [Templates](/docs/extensions/templates)
 - [Tokens](/docs/extensions/tokens)
 - [Tokens: OAuth](/docs/extensions/tokens/oauth)
+- [UI Cache](/docs/extensions/uicache)
 - [Upgrade](/docs/extensions/upgrade)
 - [Vacuum](/docs/extensions/vacuum)
 - [WASM](/docs/extensions/wasm/extension)

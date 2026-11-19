@@ -95,6 +95,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Templates](https://pocketone.dev/docs/extensions/templates): Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them.
 - [Tokens](https://pocketone.dev/docs/extensions/tokens): Long-lived API tokens with scopes.
 - [Tokens: OAuth](https://pocketone.dev/docs/extensions/tokens/oauth): Tokens: OAuth
+- [UI Cache](https://pocketone.dev/docs/extensions/uicache): Dashboard cache headers that let updates through browsers and CDNs. On by default.
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
 - [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk.
 - [WASM](https://pocketone.dev/docs/extensions/wasm/extension): Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box.

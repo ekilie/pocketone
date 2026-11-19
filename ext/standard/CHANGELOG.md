@@ -11,6 +11,7 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 - `standard.AppFromConfig(cfg)`: pocketone.yaml's `app` section (dir, dev, encryption_env, query_timeout, jsvm, hooks_dir, migrations_dir, hooks_pool, env_allow, js_limits) as the `pocketbase.Config` and `jsvm.Config` an app is built from, so a custom Go build gets every `app` key without copying the mapping. The `pocketone` binary uses it.
 
 - New member `S3Fallback` (ext/s3-fallback, config section `storage`): a default bucket for apps without S3 of their own, so every PocketOne app and every isolate on a multisite host has it. It does nothing until the `storage` section mounts a backend. Reconfigure it with `set.S3Fallback = s3fallback.New(s3fallback.Config{...})`; a host that added it with `set.Add(s3fallback.New(...))` must drop that line (two extensions named `storage` stop startup).
+- New member `UICache` (ext/uicache): dashboard files that keep their name (`/_/extensions.js`, `libs/`, fonts, images, extension files) are sent with `no-cache` or a five-minute lifetime instead of PocketBase's 14 days, so CDNs pick up updated extension screens. Turn it off on a single app with `uicache: {enabled: false}`.
 - New member `WASM` (ext/wasm): WASI modules in `pb_hooks`, called with `$wasm`. Reconfigure it with `set.WASM = wasm.New(wasm.Config{...})`. Turn it off on a single app with `wasm: {enabled: false}`.
 
 ### Fixed
