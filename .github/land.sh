@@ -50,7 +50,7 @@ fi
 ref="land/$name"
 
 echo "$(date +%T) land: $(git rev-list --count "$main..$head") commit(s) on top of origin/main -> $ref"
-git log --oneline "$main..$head" | head -20 | sed 's/^/  /'
+git log --oneline -20 "$main..$head" | sed 's/^/  /'
 t 900 git push --force origin "HEAD:refs/heads/$ref"
 echo "$(date +%T) land: pushed; CI lands it on main if the checks pass"
 
