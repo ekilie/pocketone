@@ -57,7 +57,7 @@
       rel="stylesheet"
     />
 
-    <%- slot('head') %> <%- ctx.datastar.scripts({ realtime: true }) %> <%- include('from.ejs') %>
+    <%- slot('head') %> <%- ctx.datastar.scripts({ realtime: true }) %> <%- include('from.ets') %>
   </head>
 
   <body
@@ -79,7 +79,7 @@
                 with PocketPages.
               </p>
             </div>
-            <%- slot() %> <%- include('count.ejs') %>
+            <%- slot() %> <%- include('count.ets') %>
           </div>
         </div>
       </main>

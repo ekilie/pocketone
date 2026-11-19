@@ -8,4 +8,4 @@ module.exports = {
     s.send('done', 'bye')
     s.close()
   },
-}
+} satisfies pages.Handlers

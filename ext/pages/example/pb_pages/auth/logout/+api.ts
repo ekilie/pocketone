@@ -3,4 +3,4 @@ module.exports = {
     ctx.session.signOut()
     return ctx.res.redirect('/', { flash: 'Signed out.' })
   },
-}
+} satisfies pages.Handlers

@@ -29,5 +29,5 @@
 
 
 <div>
-  Counter <button hx-get="/fragments/count"><%- include('count.ejs') %></button>
+  Counter <button hx-get="/fragments/count"><%- include('count.ets') %></button>
 </div>

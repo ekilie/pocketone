@@ -30,7 +30,7 @@
 
       <div class="space-y-3">
         <div class="min-h-[200px] max-h-[300px] overflow-y-auto bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <%- include('chat-messages.ejs', { messages }) %>
+          <%- include('chat-messages.ets', { messages }) %>
         </div>
       </div>
     </aside>

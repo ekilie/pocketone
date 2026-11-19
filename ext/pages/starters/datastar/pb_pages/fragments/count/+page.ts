@@ -1,4 +1,4 @@
-// POST /fragments/count (Datastar @post): bump the counter. index.ejs renders the
+// POST /fragments/count (Datastar @post): bump the counter. index.ets renders the
 // #count card, and the Datastar add-on sends it back as a patchElements event
 // because the request carries `Datastar-Request: true`.
 module.exports = {

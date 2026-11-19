@@ -1,4 +1,4 @@
-// GET /fragments/count: bump the counter, then index.ejs renders the new value.
+// GET /fragments/count: bump the counter, then index.ets renders the new value.
 // fragments/ sits outside the (site) group, so no layout wraps the response:
 // htmx gets the bare <b>n</b> to swap into the button.
 module.exports = {

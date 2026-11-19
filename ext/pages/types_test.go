@@ -29,7 +29,7 @@ func TestTypesInAppTypesFile(t *testing.T) {
 // a TSX page and a partial with typed locals, an augmented ctx.data. Skipped when tsc isn't installed.
 func TestTypesCheckWithTSC(t *testing.T) {
 	files := map[string]string{
-		"pb_pages/types.d.ts": `
+		"pb_pages/_private/types.d.ts": `
 			declare namespace pages {
 				interface Data { section?: string; product?: core.Record }
 				interface Context { hello(): string }
@@ -184,4 +184,33 @@ func runTSC(t *testing.T, files map[string]string) (string, error) {
 	cmd := exec.CommandContext(ctx, tsc, "-p", dir)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
+}
+
+// The tsx starter kit's and the example app's TypeScript (.ts, .tsx) type-checks under the docs' tsconfig.
+func TestTypesKitsAndExample(t *testing.T) {
+	for _, src := range []string{"starters/tsx/pb_pages", "example/pb_pages"} {
+		t.Run(src, func(t *testing.T) {
+			files := map[string]string{}
+			err := filepath.WalkDir(src, func(p string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				if ext := filepath.Ext(p); ext == ".ts" || ext == ".tsx" {
+					b, err := os.ReadFile(p)
+					if err != nil {
+						return err
+					}
+					rel, _ := filepath.Rel(src, p)
+					files[filepath.ToSlash(filepath.Join("pb_pages", rel))] = string(b)
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if out, err := runTSC(t, files); err != nil {
+				t.Fatalf("tsc: %v\n%s", err, out)
+			}
+		})
+	}
 }

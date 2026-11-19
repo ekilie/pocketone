@@ -4,7 +4,7 @@ module.exports = {
   post(ctx) {
     const { clientId, roomName, from, message } = ctx.datastar.signals()
 
-    // Save the message in the room's ephemeral store. No HTML sanitizing needed: chat-messages.ejs prints it with
+    // Save the message in the room's ephemeral store. No HTML sanitizing needed: chat-messages.ets prints it with
     // <%= %>, which escapes it.
     let messages = []
     ctx.app.runInTransaction(() => {
@@ -17,7 +17,7 @@ module.exports = {
     })
     ctx.log.debug(`${clientId} sent a message to ${roomName}`)
 
-    const html = ctx.include('chat-messages.ejs', { messages })
+    const html = ctx.include('chat-messages.ets', { messages })
 
     // Broadcast the chat box to every realtime client in this room. A client joins a room by sending a message
     // there: the sender is tagged as it passes through the filter.

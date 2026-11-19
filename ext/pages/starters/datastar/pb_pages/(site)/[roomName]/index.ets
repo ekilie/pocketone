@@ -3,4 +3,4 @@
   const messages = ctx.store(`room_${roomName}`) || []
 </script>
 
-<%- include('chat.ejs', { roomName, messages }) %>
+<%- include('chat.ets', { roomName, messages }) %>

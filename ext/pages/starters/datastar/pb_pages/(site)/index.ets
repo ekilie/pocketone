@@ -2,4 +2,4 @@
   const messages = ctx.store(`room_general`) || []
 </script>
 
-<%- include('chat.ejs', { roomName: 'general', messages }) %>
+<%- include('chat.ets', { roomName: 'general', messages }) %>

@@ -12,9 +12,9 @@ module.exports = {
       }
       ctx.session.signInWithPassword(email, password)
       return ctx.res.redirect('/notes', { flash: 'Signed in.' })
-    } catch (e) {
+    } catch (e: any) {
       ctx.res.status(400)
       return { error: String(e.message || e).replace(/^GoError: /, ''), email }
     }
   },
-}
+} satisfies pages.Handlers
