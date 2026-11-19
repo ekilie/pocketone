@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"sync"
-	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
@@ -16,7 +15,7 @@ import (
 func init() { multisite.Link(HostExtension{}) }
 
 // HostExtension runs one model for every instance of a multisite host and provides agent/v1 for them. Each instance
-// gets PerInstance's share: a few calls at once and a daily allowance of answer tokens. An instance whose admins set
+// gets PerInstance's share: a few calls at once, each answer at most max_tokens long. An instance whose admins set
 // their own API (or off) in Settings → LLM is answered that way instead, within the same endpoint.
 //
 // Instances that run in this process (Pocker isolates) call it through $agent and their own /api/_c/agent/v1; the
@@ -50,26 +49,19 @@ func (HostExtension) RegisterHost(h *multisite.Host) error {
 type hostShare struct {
 	r   *runner
 	cfg Config
-	now func() time.Time
 
 	mu       sync.Mutex
-	inFlight map[string]int
-	day      string
-	used     map[string]int // answer tokens today, per instance
+	inFlight map[string]int // calls waiting or running, per instance
 }
 
 func newHostShare(r *runner, cfg Config) *hostShare {
-	return &hostShare{r: r, cfg: cfg, now: time.Now, inFlight: map[string]int{}, used: map[string]int{}}
+	return &hostShare{r: r, cfg: cfg, inFlight: map[string]int{}}
 }
 
-// admit takes one of the instance's call slots and checks its allowance; release gives the slot back.
+// admit takes one of the instance's call slots; release gives it back.
 func (s *hostShare) admit(id string) (release func(), err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.rollDay()
-	if lim := s.cfg.PerInstance.TokensPerDay; lim > 0 && s.used[id] >= lim {
-		return nil, agentv1.ErrQuota
-	}
 	if s.inFlight[id] >= s.cfg.PerInstance.Concurrency {
 		return nil, &extkit.Error{Code: "busy", Status: 429, Message: "too many calls to the shared model at once from this app; wait for one to finish"}
 	}
@@ -82,30 +74,6 @@ func (s *hostShare) admit(id string) (release func(), err error) {
 		}
 		s.mu.Unlock()
 	}, nil
-}
-
-func (s *hostShare) charge(id string, tokens int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.rollDay()
-	s.used[id] += tokens
-}
-
-// rollDay starts a new day's allowances (UTC). Caller holds mu.
-func (s *hostShare) rollDay() {
-	if d := s.now().UTC().Format("2006-01-02"); d != s.day {
-		s.day, s.used = d, map[string]int{}
-	}
-}
-
-func (s *hostShare) quota(id string) *agentv1.Quota {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.rollDay()
-	if s.cfg.PerInstance.TokensPerDay <= 0 {
-		return nil
-	}
-	return &agentv1.Quota{TokensPerDay: s.cfg.PerInstance.TokensPerDay, UsedToday: s.used[id], MaxTokens: s.maxTokens()}
 }
 
 // maxTokens is the longest answer a call may get on the shared model.
@@ -166,7 +134,6 @@ func (a *hostAgent) answer(ctx context.Context, in agentv1.CompleteInput, onText
 		maxTokens = limit
 	}
 	res, err := a.share.r.complete(ctx, in, maxTokens, "host", onText)
-	a.share.charge(a.id, res.Usage.OutputTokens)
 	return res, err
 }
 
@@ -177,9 +144,7 @@ func (a *hostAgent) Status(context.Context, extkit.Auth) (agentv1.Status, error)
 	case ModeAPI:
 		return agentv1.Status{Backend: "app", Model: c.API.Model, Ready: true}, nil
 	}
-	st := a.share.r.status("host")
-	st.Quota = a.share.quota(a.id)
-	return st, nil
+	return a.share.r.status("host"), nil
 }
 
 // choice is what the instance's admins chose in Settings → LLM: off, their own API, or (by default) the host's model.

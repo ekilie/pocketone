@@ -12,7 +12,7 @@ code calls the same thing wherever the app runs; who answers is the provider's b
   local Ollama or llama-server);
 - **a model PocketOne runs itself,** named in `pocketone.yaml`, downloaded once and cached;
 - **its host's model:** a multisite host may provide this contract for its instances, running one model they all share
-  (with a daily allowance each), unless an instance's admins set their own API.
+  unless an instance's admins set their own API.
 
 A wire contract at `/api/_c/agent/v1` ([agent.go](agent.go)), one provider. The [agent](../../../agent/README.md)
 extension provides it.
@@ -45,16 +45,15 @@ Over HTTP (a superuser, or a token with the `agent` scope):
 `complete` takes `prompt` or `messages` (`[{"role": "user", "content": "..."}]`), and optionally `system`, `schema` (a
 JSON schema the answer must match; its parsed value comes back as `data`), `maxTokens`, `temperature`, `stop` and `model` (a hint a
 single-model provider ignores). It answers `text`, `data`, `model`, `backend` (`app`, `runner` or `host`),
-`stopReason` and `usage`. Errors: `not_configured` (503), `not_ready` (503, still downloading or loading), `quota`
-(429, the app's daily allowance on a shared model is used up).
+`stopReason` and `usage`. Errors: `not_configured` (503), `not_ready` (503, still downloading or loading), `busy`
+(429, the app already has as many calls going as its host allows).
 
 `stream` sends the same answer as it's written: one `event: stream` per piece, `{"text": "..."}`, then
 `{"done": true, "result": {...}}` with what `complete` returns. An error before the answer starts is a JSON error
 response; one during it ends the stream with `event: error`. In the same process, `$agent.stream(opts, onText)` runs it
 with a callback (from Go, call the returned `extkit.Stream`'s `Run`).
 
-`status` says which backend and model answer, whether the model is ready (with download progress), and the app's
-quota on a shared model.
+`status` says which backend and model answer, and whether the model is ready (with download progress).
 
 From Go: `agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.CompleteInput{...})`.
 

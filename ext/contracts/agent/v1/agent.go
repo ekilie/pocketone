@@ -32,7 +32,7 @@ type Agent interface {
 	//
 	//op: POST stream
 	Stream(ctx context.Context, a extkit.Auth, in CompleteInput) (extkit.Stream, error)
-	// Status says which model answers the app's prompts, whether it's ready, and how much of the app's quota is left.
+	// Status says which model answers the app's prompts and whether it's ready.
 	//
 	//op: GET / scope=agent:read
 	Status(ctx context.Context, a extkit.Auth) (Status, error)
@@ -83,7 +83,7 @@ type Usage struct {
 	OutputTokens int `json:"outputTokens"`
 }
 
-// Status is the app's model and quota.
+// Status is the app's model.
 type Status struct {
 	Backend string `json:"backend"` // "app", "runner", "host" or "" (none configured)
 	Model   string `json:"model,omitempty"`
@@ -91,14 +91,6 @@ type Status struct {
 	Ready    bool    `json:"ready"`
 	Progress float64 `json:"progress,omitempty"`
 	Message  string  `json:"message,omitempty"`
-	Quota    *Quota  `json:"quota,omitempty"` // nil: no limit
-}
-
-// Quota is the app's daily allowance on a shared model.
-type Quota struct {
-	TokensPerDay int `json:"tokensPerDay"`
-	UsedToday    int `json:"usedToday"`
-	MaxTokens    int `json:"maxTokens"` // per call
 }
 
 // ErrNotConfigured: nothing answers the app's prompts yet.
@@ -107,7 +99,3 @@ var ErrNotConfigured = &extkit.Error{Code: "not_configured", Status: 503,
 
 // ErrNotReady: the model is still downloading or loading.
 var ErrNotReady = &extkit.Error{Code: "not_ready", Status: 503, Message: "the model is still loading; try again shortly"}
-
-// ErrQuota: the app used its daily allowance on its host's shared model.
-var ErrQuota = &extkit.Error{Code: "quota", Status: 429,
-	Message: "the app's daily allowance on the shared model is used up; choose your own API in Settings → LLM"}

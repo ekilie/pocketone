@@ -64,10 +64,11 @@ func withSection(t *testing.T, raw string) {
 
 // fakeModel answers every prompt with its reply, counting calls.
 type fakeModel struct {
-	reply  string
-	calls  atomic.Int32
-	prompt atomic.Value
-	delay  time.Duration
+	reply   string
+	calls   atomic.Int32
+	lastMax atomic.Int32 // the MaxTokens of the last call
+	prompt  atomic.Value
+	delay   time.Duration
 }
 
 func (f *fakeModel) chatPrompt(msgs []agentv1.Message) string {
@@ -80,6 +81,7 @@ func (f *fakeModel) chatPrompt(msgs []agentv1.Message) string {
 
 func (f *fakeModel) generate(ctx context.Context, prompt string, o genOptions) (genResult, error) {
 	f.calls.Add(1)
+	f.lastMax.Store(int32(o.MaxTokens))
 	f.prompt.Store(prompt)
 	if f.delay > 0 {
 		select {
@@ -278,43 +280,34 @@ func TestAppAPIWins(t *testing.T) {
 	}
 }
 
-// The host's share: each instance has a few calls at once and a daily allowance, which rolls over at midnight UTC.
+// The host's share: answers are capped at max_tokens, each instance has a few calls at once, and nothing is counted:
+// an instance can call as often as it likes.
 func TestHostShare(t *testing.T) {
 	fake := &fakeModel{reply: "ok"}
 	path := useFake(t, fake)
-	cfg := Config{Model: path, PerInstance: PerInstance{TokensPerDay: 10, Concurrency: 1, MaxTokens: 5}}
+	cfg := Config{Model: path, PerInstance: PerInstance{Concurrency: 1, MaxTokens: 5}}
 	r, err := sharedRunner(cfg, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	<-r.ready
 	hs := newHostShare(r, cfg.withDefaults())
-	day := time.Date(2026, 11, 18, 23, 0, 0, 0, time.UTC)
-	hs.now = func() time.Time { return day }
 	a := &hostAgent{share: hs, id: "a"}
 	b := &hostAgent{share: hs, id: "b"}
 	in := agentv1.CompleteInput{Prompt: "hi", MaxTokens: 500}
-	for i := 0; i < 2; i++ { // 7 + 7 tokens: the second call is allowed (under 10 before it), the third isn't
+	for i := 0; i < 20; i++ {
 		if res, err := a.Complete(context.Background(), extkit.Internal, in); err != nil || res.Backend != "host" {
 			t.Fatalf("call %d: %+v %v", i, res, err)
 		}
 	}
-	if _, err := a.Complete(context.Background(), extkit.Internal, in); extErr(err) == nil || extErr(err).Code != "quota" {
-		t.Fatalf("over the allowance: %v", err)
+	if got := fake.lastMax.Load(); got != 5 {
+		t.Fatalf("max_tokens cap: the model got %d, want 5", got)
 	}
-	if _, err := b.Complete(context.Background(), extkit.Internal, in); err != nil {
-		t.Fatalf("another instance has its own allowance: %v", err)
-	}
-	st, _ := a.Status(context.Background(), extkit.Internal)
-	if st.Quota == nil || st.Quota.UsedToday != 14 || st.Quota.MaxTokens != 5 {
-		t.Fatalf("status: %+v", st.Quota)
-	}
-	day = day.Add(2 * time.Hour)
-	if _, err := a.Complete(context.Background(), extkit.Internal, in); err != nil {
-		t.Fatalf("a new day: %v", err)
+	if st, _ := a.Status(context.Background(), extkit.Internal); st.Backend != "host" || !st.Ready {
+		t.Fatalf("status: %+v", st)
 	}
 
-	// one call at a time per instance: a second one while the first runs is refused at once
+	// one call at a time per instance: a second one while the first runs is refused at once; another instance isn't
 	fake.delay = 300 * time.Millisecond
 	done := make(chan error, 1)
 	go func() { _, err := b.Complete(context.Background(), extkit.Internal, in); done <- err }()

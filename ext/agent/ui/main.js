@@ -137,8 +137,7 @@
             const s = data.status;
             if (!s || !s.backend) return null;
             if (s.ready) {
-                const q = s.quota ? ` · ${s.quota.usedToday.toLocaleString()} of ${s.quota.tokensPerDay.toLocaleString()} tokens used today` : "";
-                return t.p({ className: "txt-hint" }, t.i({ className: "ri-checkbox-circle-line txt-success" }), ` Ready${s.model ? `: ${s.model}` : ""}${q}`);
+                return t.p({ className: "txt-hint" }, t.i({ className: "ri-checkbox-circle-line txt-success" }), ` Ready${s.model ? `: ${s.model}` : ""}`);
             }
             return t.div({ className: "m-b-sm" },
                 t.p({ className: "txt-hint" }, t.span({ className: "loader sm" }), " ", s.message || "Loading the model…"),
@@ -176,7 +175,7 @@
                             choice("off", "Off", "$agent answers with an error"),
                             () => data.view?.hosted
                                 ? choice("host", "Your host's model", data.view.yamlModel
-                                    ? `${data.view.yamlModel}, run by your host and shared with its other apps, with a daily allowance`
+                                    ? `${data.view.yamlModel}, run by your host and shared with its other apps`
                                     : "your host runs no model right now")
                                 : choice("builtin", "Built-in", "a model PocketOne downloads once and runs on this server's CPU"),
                             () => data.form.mode === "builtin" && !data.view?.hosted

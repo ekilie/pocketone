@@ -56,7 +56,7 @@ var W = extkit.NewWire(Contract, "agent", func(inner Agent, g *extkit.Guard[Agen
 	},
 	extkit.Op[Agent]{
 		Name:   "status",
-		Desc:   "Says which model answers the app's prompts, whether it's ready, and how much of the app's quota is left.",
+		Desc:   "Says which model answers the app's prompts and whether it's ready.",
 		Method: "GET",
 		Path:   "",
 		Scope:  "agent:read",

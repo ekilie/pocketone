@@ -96,7 +96,7 @@ an MCP tool.
 | Extension | How they fit |
 |---|---|
 | [Settings](../settings/README.md) | Your own API is a settings/v1 section, in the dashboard, the CLI and for agents. |
-| [Multisite](../multisite/README.md) | A host whose `agent` section names a model runs it once for every instance and provides [agent/v1](../contracts/agent/v1/README.md) for them; `$agent` in each instance uses it. Each instance gets a share, set by `per_instance` (below). Each instance's Settings → LLM offers Off, the host's model (shown with the instance's daily use) or its own API; which model runs built in is the host's call. Today only instances that run as isolates ([Pocker](../pocker/README.md)) reach the host's model. |
+| [Multisite](../multisite/README.md) | A host whose `agent` section names a model runs it once for every instance and provides [agent/v1](../contracts/agent/v1/README.md) for them; `$agent` in each instance uses it. Each instance gets a share, set by `per_instance` (below). Each instance's Settings → LLM offers Off, the host's model or its own API; which model runs built in is the host's call. Today only instances that run as isolates ([Pocker](../pocker/README.md)) reach the host's model. |
 
 On a host:
 
@@ -107,7 +107,6 @@ agent:
   parallel: 1             # answers written at once; the rest wait their turn
   per_instance:
     concurrency: 2        # calls an instance may have waiting or running at once
-    tokens_per_day: 50000 # answer tokens a day (0: no limit)
     max_tokens: 512       # longest answer per call
 ```
 

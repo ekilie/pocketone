@@ -5,7 +5,7 @@
 //  2. else a model PocketOne runs in this process, when pocketone.yaml's agent section names one (downloaded once and
 //     cached);
 //  3. else, on a multisite host whose agent section names a model, the host's model, shared by every instance with a
-//     daily allowance each ([HostExtension]). Step 1 still wins: an instance's admins leave the shared model by
+//     few calls at once each ([HostExtension]). Step 1 still wins: an instance's admins leave the shared model by
 //     setting their own API.
 package agent
 
@@ -53,9 +53,8 @@ type Config struct {
 
 // PerInstance is each instance's share of a host's model.
 type PerInstance struct {
-	TokensPerDay int `yaml:"tokens_per_day" json:"tokens_per_day" doc:"Answer tokens an instance may use a day (0: no limit)."`
-	MaxTokens    int `yaml:"max_tokens" json:"max_tokens" doc:"Longest answer per call, in tokens (0: max_tokens)."`
-	Concurrency  int `yaml:"concurrency" json:"concurrency" doc:"Calls an instance may have waiting or running at once (default 2)."`
+	MaxTokens   int `yaml:"max_tokens" json:"max_tokens" doc:"Longest answer per call, in tokens (0: max_tokens)."`
+	Concurrency int `yaml:"concurrency" json:"concurrency" doc:"Calls an instance may have waiting or running at once (default 2)."`
 }
 
 func (c Config) withDefaults() Config {
@@ -413,7 +412,7 @@ func toJS(v any) (map[string]any, error) {
 func (*Extension) TypeScript() string {
 	return `/** The app's language model (agent/v1): its own API, a model PocketOne runs, or its host's. */
 declare var $agent: {
-  /** Answers a prompt. Blocks until the answer is written; throws "not_configured", "not_ready" or "quota". */
+  /** Answers a prompt. Blocks until the answer is written; throws "not_configured", "not_ready" or "busy". */
   complete(opts: {
     system?: string
     prompt?: string
@@ -437,14 +436,13 @@ declare var $agent: {
    * page, for instance). Returning false from onText stops the answer. Returns the whole answer, like complete.
    */
   stream(opts: Parameters<typeof $agent.complete>[0], onText?: (text: string) => boolean | void): ReturnType<typeof $agent.complete>
-  /** Which model answers, whether it's ready, and the app's quota on a shared model. */
+  /** Which model answers, and whether it's ready. */
   status(): {
     backend: "" | "app" | "runner" | "host"
     model?: string
     ready: boolean
     progress?: number
     message?: string
-    quota?: { tokensPerDay: number; usedToday: number; maxTokens: number }
   }
 }
 `
