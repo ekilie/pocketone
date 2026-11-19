@@ -101,6 +101,9 @@ func testSummary(t *testing.T, lang string) {
 		t.Errorf("--describe: %+v", i)
 	}
 
+	if raceEnabled {
+		return // under -race the timings below mean nothing, and the 100 calls of the Go module alone take ~45 s
+	}
 	start = time.Now()
 	for range 100 {
 		if _, err := call(t, e, "summary", "run", map[string]string{"title": "t", "body": "a b c"}); err != nil {
@@ -109,9 +112,6 @@ func testSummary(t *testing.T, lang string) {
 	}
 	t.Logf("%s: %s per call, run only (the test cache skips compiling)", lang, (time.Since(start) / 100).Round(10*time.Microsecond))
 
-	if raceEnabled {
-		return // under -race, compiling takes ten times as long and the timing means nothing
-	}
 	cold := newApp(t, wasm.Config{CacheDir: "off"}, func(_ core.App, dir string) { install(t, dir, "summary", code) })
 	start = time.Now()
 	for range 3 { // as with CacheDir "off": each call compiles
@@ -265,6 +265,7 @@ func TestHostileModule(t *testing.T) {
 // TestSummaryText: the summary modules that take plain text (C, LLVM IR, WebAssembly text, AssemblyScript) give the same answers:
 // the first 12 words with one space between them, a JSON string however odd the text, and the same errors.
 func TestSummaryText(t *testing.T) {
+	t.Parallel()
 	for _, dir := range []string{"example/summary/c", "example/summary/llvm", "example/summary/wat", "example/summary/assemblyscript"} {
 		t.Run(strings.TrimPrefix(dir, "example/"), func(t *testing.T) {
 			code := prebuiltModule(t, dir)

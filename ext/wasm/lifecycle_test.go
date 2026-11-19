@@ -21,6 +21,7 @@ func runs(t *testing.T, e env, name string) bool {
 // TestLifecycle: every call reads the folder as it is then, with no restart: added, replaced, broken, fixed, renamed,
 // removed.
 func TestLifecycle(t *testing.T) {
+	t.Parallel()
 	code := module(t, basic)
 	e := newApp(t, wasm.Config{}, nil)
 
@@ -89,6 +90,7 @@ func TestNoFolder(t *testing.T) {
 // replaced or removed while the app serves is what the next call gets, and Modules says so too; nothing stays in
 // memory between calls, so a removed module can't be called any more.
 func TestCallReadsTheFiles(t *testing.T) {
+	// not parallel: it sleeps to let a call start
 	code := module(t, basic)
 	dir := filepath.Join(t.TempDir(), "pb_hooks") // not there yet when the app starts
 	e := newApp(t, wasm.Config{Dir: dir, Timeout: time.Second}, nil)

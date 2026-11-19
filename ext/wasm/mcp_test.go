@@ -16,6 +16,7 @@ import (
 // TestMCPListModules: the app's MCP server (mcp/v1, whoever provides it) gets wasm_list_modules, which gives a
 // superuser every module by name with its manifest, and tells agents how to call a module.
 func TestMCPListModules(t *testing.T) {
+	t.Parallel()
 	code := module(t, basic)
 	e := newApp(t, wasm.Config{}, func(app core.App, dir string) {
 		install(t, dir, "basic", code)

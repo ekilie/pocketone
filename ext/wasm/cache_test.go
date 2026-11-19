@@ -65,8 +65,11 @@ func TestCompilationCache(t *testing.T) {
 		t.Fatalf("%d files in the cache after a second module, want 2", n)
 	}
 
-	off := withBasic(t, wasm.Config{CacheDir: "off"})
-	timed(off, "basic", map[string]string{"text": "x"})
+	// a Zig module: compiles in milliseconds (a Go one takes ~20 s under -race), and this only checks where it writes
+	off := newApp(t, wasm.Config{CacheDir: "off"}, func(_ core.App, d string) {
+		install(t, d, "summary", prebuiltModule(t, "example/summary/zig"))
+	})
+	timed(off, "summary", map[string]string{"title": "t", "body": "a b"})
 	if n := cacheFiles(t, dir); n != 2 {
 		t.Fatalf("a call with CacheDir off wrote to another cache (%d files)", n)
 	}

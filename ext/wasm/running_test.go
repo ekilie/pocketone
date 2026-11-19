@@ -39,6 +39,7 @@ func TestLimits(t *testing.T) {
 // TestMaxModulesMB: the modules of the calls running at once add up to at most MaxModulesMB, so fewer calls of a
 // bigger module run at once, and a busy error gives the numbers; small calls go in while a big one waits for room.
 func TestMaxModulesMB(t *testing.T) {
+	// not parallel: it times calls and sleeps to let them start
 	e := newApp(t, wasm.Config{MaxModulesMB: 4, Timeout: time.Second}, func(_ core.App, dir string) {
 		install(t, dir, "small", tiny(false, 0))
 		install(t, dir, "big", tiny(false, 2<<20))  // 2 MB

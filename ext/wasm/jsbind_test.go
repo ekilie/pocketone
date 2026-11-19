@@ -142,6 +142,7 @@ func create(t *testing.T, app core.App, coll string, data map[string]any) (*core
 // $wasm.call.async and $wasm.modules(), every error as a WasmError rejection with its code, how inputs (string,
 // bytes, buffer, null, object) and outputs (JSON, text, empty) cross over, and an uncaught error failing the save.
 func TestJSHooks(t *testing.T) {
+	t.Parallel()
 	for _, sandboxed := range []bool{false, true} {
 		name := "plain"
 		if sandboxed {
@@ -248,6 +249,7 @@ func TestJSHooks(t *testing.T) {
 
 // TestAsyncOnly: run, call and inspect are async only; called without .async, each throws and says how to call it.
 func TestAsyncOnly(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{})
 	for _, tc := range []struct{ src, want string }{
 		{`$wasm.run("basic", {})`, "$wasm.run is async only: use await $wasm.run.async(name, input) in an async hook"},
@@ -267,6 +269,7 @@ func TestAsyncOnly(t *testing.T) {
 // TestBindBeforeRegister: when the JS engine (and so BindJS) starts before the extension is registered, $wasm is
 // still there and works.
 func TestBindBeforeRegister(t *testing.T) {
+	t.Parallel()
 	code := module(t, basic)
 	app, err := tests.NewTestApp(t.TempDir())
 	if err != nil {
@@ -312,6 +315,7 @@ onRecordCreate(async (e) => { e.record.set("summary", (await $wasm.run.async("ba
 // TestInspect: $wasm.inspect.async never rejects for the call: it returns the output, what the module wrote to stderr, the
 // error as plain fields, and how long compiling and running took.
 func TestInspect(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{})
 	text, err := jsEval(t, e.app, `Promise.all([
 		$wasm.inspect.async("basic", "logs", ""),

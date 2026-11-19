@@ -119,6 +119,7 @@ func wantCode(t *testing.T, err *wasm.Error, code string) {
 
 // TestInputOutput: the input goes to the module's stdin as JSON, and what it writes to stdout comes back.
 func TestInputOutput(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{})
 	out, err := call(t, e, "basic", "run", map[string]string{"text": "hello wasm world"})
 	if err != nil {
@@ -163,6 +164,7 @@ func TestTruncate(t *testing.T) {
 // no_such_function from a module that doesn't have the function, not_found for a missing module. The module still
 // works after all of them.
 func TestErrors(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{})
 
 	_, err := call(t, e, "basic", "fail", nil)
@@ -207,6 +209,7 @@ func TestErrors(t *testing.T) {
 // TestStdio: the input reaches stdin byte for byte, the output is stdout as is, the function is the first argument
 // after the module's name, and stderr of a call that works is its log, not an error.
 func TestStdio(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{})
 	raw := []byte("UNB+UNOA:2+sender+receiver'\x00\xff\n")
 	out, err := e.h.Call(context.Background(), "basic", "echo", raw)
@@ -226,6 +229,7 @@ func TestStdio(t *testing.T) {
 // TestTimeout: a module that never ends is stopped at Timeout (well before the test's own limit), as a retryable
 // timeout; a shorter deadline from the caller stops it too.
 func TestTimeout(t *testing.T) {
+	// not parallel: it times calls
 	e := withBasic(t, wasm.Config{Timeout: 300 * time.Millisecond})
 	start := time.Now()
 	_, err := call(t, e, "basic", "loop", nil)
@@ -250,6 +254,7 @@ func TestTimeout(t *testing.T) {
 // TestMemoryLimit: a module can't use more memory than MaxCallMemoryMB (32 MB by default): a call that tries fails as
 // crashed.
 func TestMemoryLimit(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{}) // the default cap, 32 MB
 	_, err := call(t, e, "basic", "grab", nil)
 	wantCode(t, err, wasm.CodeCrashed)
@@ -260,6 +265,7 @@ func TestMemoryLimit(t *testing.T) {
 
 // TestPayloadLimit: an input or an output over MaxPayload fails as too_large.
 func TestPayloadLimit(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{MaxPayload: 512 << 10})
 	_, err := call(t, e, "basic", "big", nil) // 1 MB out
 	wantCode(t, err, wasm.CodeTooLarge)
@@ -270,6 +276,7 @@ func TestPayloadLimit(t *testing.T) {
 // TestIsolation: every call gets a fresh instance, so a module can't keep one caller's input and hand it to the next.
 // (The program starts over each time: a global set by one call isn't there for the next.)
 func TestIsolation(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{})
 	for i := range 3 {
 		out, err := call(t, e, "basic", "counter", nil)
@@ -286,6 +293,7 @@ func TestIsolation(t *testing.T) {
 // (each counts its own words). MaxConcurrent and MaxModulesMB let all 20 calls of the Go module (4.3 MB) run at once:
 // with the default 8, the rest wait for a slot only up to Timeout, which a slow CI runner overran.
 func TestConcurrentCalls(t *testing.T) {
+	t.Parallel()
 	e := withBasic(t, wasm.Config{MaxConcurrent: 20, MaxModulesMB: 200})
 	var wg sync.WaitGroup
 	errs := make(chan error, 20)
@@ -480,6 +488,7 @@ func TestLanguage(t *testing.T) {
 // TestMaxConcurrent: no more than MaxConcurrent calls run at once; the next one waits, and gives up as busy.
 // MaxModulesMB is raised so only MaxConcurrent limits (TestMaxModulesMB checks the other).
 func TestMaxConcurrent(t *testing.T) {
+	// not parallel: it times calls (the serial tests run before the parallel ones start, on an idle machine)
 	e := withBasic(t, wasm.Config{MaxConcurrent: 2, MaxModulesMB: 200, Timeout: 2 * time.Second})
 	if _, err := call(t, e, "basic", "run", map[string]string{"text": "x"}); err != nil { // into the test cache
 		t.Fatal(err)
