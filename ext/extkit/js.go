@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"unicode"
@@ -98,7 +99,8 @@ func jsError(err error) error {
 type jsAdapter struct {
 	policy  JSPolicy
 	provide func(app core.App, s *Scope, o *JSObject)
-	host    bool // host-providable: closed to JS when the host provides it
+	host    bool   // host-providable: closed to JS when the host provides it
+	types   string // the contract's TypeScript declarations (contractgen's zz_contract.d.ts), "" when it has none
 }
 
 var (
@@ -114,6 +116,7 @@ func (c *Contract[T]) JS(policy JSPolicy, adapt func(o *JSObject) T) *Contract[T
 	defer jsMu.Unlock()
 	jsAdapters[c.id] = jsAdapter{
 		policy: policy,
+		types:  jsAdapters[c.id].types,
 		host:   c.hostProvidable,
 		provide: func(app core.App, s *Scope, o *JSObject) {
 			s.mu.Lock()
@@ -123,6 +126,21 @@ func (c *Contract[T]) JS(policy JSPolicy, adapt func(o *JSObject) T) *Contract[T
 			sl.provisions = append(sl.provisions, provision{ext: "pb_hooks", value: adapt(o)})
 		},
 	}
+	return c
+}
+
+// JSTypes sets the contract's TypeScript declarations for pb_hooks: its types, its action hooks typed per operation,
+// and (for JSOpen) its entry in contracts.Providers, which types e.provide. contractgen generates them from the Go
+// interface (zz_contract.d.ts). They reach pb_data/types.d.ts only while the contract is open to JS. Call it after JS.
+func (c *Contract[T]) JSTypes(ts string) *Contract[T] {
+	jsMu.Lock()
+	defer jsMu.Unlock()
+	a, ok := jsAdapters[c.id]
+	if !ok {
+		panic(fmt.Sprintf("extkit: %s: JSTypes before JS", c.id))
+	}
+	a.types = ts
+	jsAdapters[c.id] = a
 	return c
 }
 
@@ -180,22 +198,35 @@ type jsHookOp struct {
 	op string
 }
 
-// TypeScript implements the jsvm extension method (extkit/js Typer): onContracts, ContractError, and the action hook
-// of every wire contract pb_hooks may hook.
+// TypeScript implements the jsvm extension method (extkit/js Typer): onContracts, ContractError, and every contract
+// pb_hooks may touch: its own declarations (JSTypes) when it has them, else its action hooks with an untyped input.
 func (j jsContracts) TypeScript() string {
 	var b strings.Builder
 	b.WriteString(jsContractsTypes)
 	jsMu.Lock()
 	ops := append([]jsHookOp{}, jsHookOps...)
-	adapters := map[ContractID]bool{}
+	open := map[ContractID]bool{}
+	typed := map[ContractID]string{}
 	for id, a := range jsAdapters {
-		adapters[id] = a.policy != JSClosed
+		open[id] = a.policy != JSClosed
+		if open[id] && a.types != "" {
+			typed[id] = a.types
+		}
 	}
 	jsMu.Unlock()
+	ids := make([]string, 0, len(typed))
+	for id := range typed {
+		ids = append(ids, string(id))
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		b.WriteString("\n")
+		b.WriteString(typed[ContractID(id)])
+	}
 	seen := map[string]bool{}
 	for _, o := range ops {
 		name := jsHookName(o.id, o.op)
-		if !adapters[o.id] || seen[name] {
+		if !open[o.id] || typed[o.id] != "" || seen[name] {
 			continue
 		}
 		seen[name] = true
@@ -219,18 +250,27 @@ declare namespace contracts {
     recordId: string;
     email: string;
   }
-  /** One call to a wire contract's operation. */
-  interface CallEvent {
+  /** One call to a wire contract's operation; In is the operation's input type (its contract's namespace has it). */
+  interface CallEvent<In = any> {
     contract: string;
     op: string;
     auth: Auth;
     /** The operation's input; a hook may change it. */
-    input: any;
+    input: In;
     next(): void;
   }
+  /**
+   * What e.provide takes for each contract pb_hooks can provide, by id ("mail.fallback/v1": its interface). Each
+   * contract's declarations add their entry.
+   */
+  interface Providers {}
+  /** A JS implementation of a contract with no declarations here: an object with its methods. */
+  interface AnyProvider {
+    [method: string]: (...args: any[]) => any;
+  }
   interface DeclareEvent {
-    /** Provides a contract from JS: an object with its methods. */
-    provide(id: string, impl: { [method: string]: (...args: any[]) => any }): void;
+    /** Provides a contract from JS: an object with its methods (typed by contracts.Providers for known ids). */
+    provide<Id extends string>(id: Id, impl: Id extends keyof Providers ? Providers[Id] : AnyProvider): void;
     /** The app needs this contract: the start fails (dev mode: warns) when nothing provides it. */
     require(...ids: string[]): void;
     /** Works with this contract when present (shown in the startup lines). */

@@ -4,6 +4,7 @@ package remotev1
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -18,7 +19,12 @@ var (
 )
 
 // Contract is remote/v1.
-var Contract = extkit.NewContract[Remote]("remote/v1", extkit.One).HostProvidable().JS(extkit.JSHooks, nil)
+var Contract = extkit.NewContract[Remote]("remote/v1", extkit.One).HostProvidable().JS(extkit.JSHooks, nil).JSTypes(jsTypes)
+
+// jsTypes is remote/v1's TypeScript declarations for pb_hooks (zz_contract.d.ts), added to pb_data/types.d.ts.
+//
+//go:embed zz_contract.d.ts
+var jsTypes string
 
 // W is remote/v1's wire side: routes at /api/_c/remote/v1/<op>, action hooks, MCP tools and the client.
 var W = extkit.NewWire(Contract, "remote", func(inner Remote, g *extkit.Guard[Remote]) Remote {

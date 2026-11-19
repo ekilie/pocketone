@@ -210,7 +210,8 @@ standard: bulkmail off: needs mail.fallback/v1, which nothing provides
   The startup lines show it (`pb_hooks: provides mail.fallback/v1; requires restore/v1`). Methods run on pooled
   runtimes like any hook handler, so they can't use the file's local variables. A Go extension that *requires* a
   contract only JS provides is resolved before the JS runs: name `pb_hooks` under `providers:` for it in
-  `pocketone.yaml`.
+  `pocketone.yaml`. `pb_data/types.d.ts` types both sides from the contract's Go interface: `e.provide` checks the object
+  against the contract (`contracts.Providers`), and each action hook's `e.input` has its operation's input type.
 - **CLI:** every operation of a wire contract is a `pocketone remote ...` command with no code (`remote restore to
   --at -2h`), flags from its input. Provide [cli.commands/v1](../ext/contracts/cli/commands/v1/README.md) to replace
   one with your own, or to add one (`remote rehash`).

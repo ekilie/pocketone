@@ -118,6 +118,11 @@ type Deployer interface {
 ```
 
 Methods take `ctx`, then (wire) `extkit.Auth`, then at most one input; they return `error` or one value and `error`.
+A contract `pb_hooks` can touch (`//contract:js hooks` or `open`) also gets `zz_contract.d.ts`, its TypeScript for
+`pb_data/types.d.ts`: each action hook typed with its operation's input (`onExampleUpload(handler: (e:
+contracts.CallEvent<contracts.example.v1.UploadInput>) => void)`), and for `open` the interface `e.provide` checks
+(`contracts.Providers["mail.fallback/v1"]`). Hooks see the Go value, so fields carry Go names with the first letter
+lowered (`maxTokens`); a JS provider gets JSON, so fields carry their json names, `omitempty` ones optional.
 The doc comment of a wire method is its MCP tool's description. Contracts are reviewed like PocketOne's core: a
 contract is a promise every implementation keeps.
 

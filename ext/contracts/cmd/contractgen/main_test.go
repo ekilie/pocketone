@@ -36,6 +36,15 @@ func TestGeneratedFilesAreCurrent(t *testing.T) {
 		if string(got) != string(want) {
 			t.Errorf("%s/zz_contract.go is stale: run go generate ./... in ext/contracts", dir)
 		}
+		wantTS, err := renderTS(dir, c)
+		if err != nil {
+			t.Errorf("%s: %v", dir, err)
+			continue
+		}
+		gotTS, _ := os.ReadFile(filepath.Join(dir, "zz_contract.d.ts"))
+		if string(gotTS) != wantTS {
+			t.Errorf("%s/zz_contract.d.ts is stale: run go generate ./... in ext/contracts", dir)
+		}
 	}
 }
 
