@@ -21,7 +21,7 @@ type Extension struct{ cfg Config }
 
 func New(cfg Config) *Extension { return &Extension{cfg: cfg} }
 
-func (p *Extension) Name() string { return "hello" } // config key, `_hello_` collections, logs
+func (p *Extension) Name() string { return "hello" } // config key, `_hello_<table>` collections, pb_cache/hello, logs
 
 func (p *Extension) Register(app core.App, cfg extkit.Config) error {
     c := p.cfg
@@ -56,12 +56,84 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   conformance test fails any other route unless `conformance.Options.AllowRoutes` lists it with a reason.
 - **Process-wide settings** come from a `pocketone.yaml` section your extension owns (`extkit.NewSection`).
 - **State per app:** keep it in `app.Store()`. Something shared across apps (a pool, a client) closes through
-  `extkit.Closer`.
+  `extkit.Closer`. Data that must survive a restart goes in your own collections
+  ([Your schema](#your-schema-migrations-and-table-names)); files you can rebuild go in `pb_cache`
+  ([Disposable files](#disposable-files-pb_cache)). Never write into `pb_data` yourself, and never into the app's
+  `pb_migrations`.
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
   (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/extkit.Command=pockethost"`.
 - [bulkmail](../ext/bulkmail/extension.go) is the reference implementation, and
   [`ext/standard/example`](../ext/standard/example/main.go) a complete program.
+
+## Your schema: migrations and table names
+
+An extension that stores records owns its collections and creates them with its own migrations, in Go, shipped in
+its module. Never copy its schema into an app's `pb_migrations`.
+
+```go
+func (p *Extension) Migrations() []extkit.Migration {
+    return []extkit.Migration{
+        {Name: "0001_chats", Up: createChats, Down: dropChats},
+        {Name: "0002_chats_title_index", Up: addTitleIndex, Down: dropTitleIndex},
+    }
+}
+
+func createChats(txApp core.App) error {
+    c := core.NewBaseCollection("_hello_chats")
+    c.Fields.Add(&core.TextField{Name: "title"})
+    return txApp.Save(c)
+}
+```
+
+- **An extension with a `Migrations()` method is an `extkit.Migrator`.** extkit applies its pending migrations on every
+  app it runs on (each isolate has its own database): at bootstrap, right after PocketBase's own system migrations,
+  so its collections exist for every command, before the app's `pb_migrations` run at serve, and an app migration may
+  refer to them.
+- **Order:** within an extension, by `Name` (zero-pad the numbers: `0001_chats`); across extensions, in the order they
+  register, which puts a contract's provider before the extensions that require it.
+- **Each migration runs in a transaction**, like PocketBase's: one that fails leaves nothing behind and stops the ones
+  after it, and the app doesn't start.
+- **History** is in `_extension_migrations` (extension, name, applied), apart from the app's `_migrations`, so the
+  app's `migrate down` and `migrate history-sync` never touch your tables, and turning your extension off keeps its
+  history. `pocketone extensions migrations` lists every extension's migrations; `pocketone extensions migrate down
+  <extension> [n]` reverts the last n (`0`: all). A migration with no `Down` can't be reverted.
+- **Never edit a migration that has shipped.** Change the schema with a new one.
+- **They build into the binary**, so there are no files to copy into the app. A migration that needs a file (a SQL
+  script, a JSON schema) embeds it with `//go:embed` and reads it in `Up`.
+
+**Table names:** every collection your extension creates is named **`_<name>_<table>`**: your extension's name with
+hyphens as underscores, then the table: `_bulkmail_campaigns`, `_tokens_oauth_clients`, `_agent_chat_messages` (for
+agent-chat). The leading underscore keeps them apart from the app's own collections, and the name says which extension
+owns a table. The conformance test fails any other name unless `conformance.Options.AllowCollections` lists it with a
+reason (a collection the app's users are meant to see and edit, say). When one extension's prefix starts with
+another's (`agent`'s `_agent_` and `agent-chat`'s `_agent_chat_`), the shorter one never names a table under the longer
+one's prefix; `go run ./.github/extensions check` refuses it.
+
+The conformance test checks a Migrator's migrations too: they apply on a fresh app, applying again does nothing,
+reverting all of them leaves none of its collections behind, and they apply again after that.
+
+## Disposable files: `pb_cache`
+
+Files your extension can rebuild (a download, a computed index, a model's saved state) go in **`pb_cache/<name>/`**,
+next to `pb_data`. Get the folder from extkit, never build the path:
+
+```go
+dir, err := extkit.CacheDir(app, p.Name())       // this app's pb_cache/hello, created
+shared, err := extkit.HostCacheDir(app, p.Name()) // one folder for every app of the process (a shared store)
+```
+
+- **Anything in it may be deleted at any time** (`pocketone cache clear`, an admin, a cleanup), and your extension
+  carries on: it rebuilds, re-downloads or re-reads what it needs. If losing a file loses data, it doesn't belong
+  here: put it in a collection.
+- **Never backed up, deployed or synced:** it's outside `pb_data`, so backups skip it, and `deploy` and `dev` leave it
+  out like `pb_data`. Apps add `pb_cache/` to their `.gitignore`.
+- **Per app:** on a multisite host each instance has its own `pb_cache/` in its folder, so it counts against that
+  instance's disk, and one instance never sees another's. `HostCacheDir` is for caches that serve every instance at
+  once; it is the host's own `pb_cache/<name>/` (a single app is its own host). Never put one instance's data there.
+- **Keep it bounded.** Give your cache a size budget (a setting with a sensible default) and evict past it; on a host,
+  disk is the instance's quota.
+- `pocketone cache` shows each folder and its size; say in your README what yours holds and whether it may grow large.
 
 ## Working together: contracts
 

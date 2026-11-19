@@ -8,6 +8,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ### Added
 
+- `pocketone extensions migrations`, `pocketone extensions migrate up [extension]` and `pocketone extensions migrate down <extension> [n]`: list, apply and revert the migrations of the extensions running on the app.
+- `pocketone cache` shows each extension's folder in `pb_cache` and its size; `pocketone cache clear [extension...]` empties them.
 - `standard.AppFromConfig(cfg)`: pocketone.yaml's `app` section (dir, dev, encryption_env, query_timeout, jsvm, hooks_dir, migrations_dir, hooks_pool, env_allow, js_limits) as the `pocketbase.Config` and `jsvm.Config` an app is built from, so a custom Go build gets every `app` key without copying the mapping. The `pocketone` binary uses it.
 
 - New member `S3Fallback` (ext/s3-fallback, config section `storage`): a default bucket for apps without S3 of their own, so every PocketOne app and every isolate on a multisite host has it. It does nothing until the `storage` section mounts a backend. Reconfigure it with `set.S3Fallback = s3fallback.New(s3fallback.Config{...})`; a host that added it with `set.Add(s3fallback.New(...))` must drop that line (two extensions named `storage` stop startup).

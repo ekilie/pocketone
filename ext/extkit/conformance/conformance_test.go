@@ -230,3 +230,61 @@ func TestToolCheckNeedsAnMCPServer(t *testing.T) {
 		t.Fatalf("missing MCP server not reported: %v", r.errors)
 	}
 }
+
+// The bare `_<name>` no longer passes; a hyphenated name's prefix uses underscores.
+func TestTableNames(t *testing.T) {
+	r := check(t, func(tb conformance.TB) {
+		conformance.CheckCollections(tb, &extension{name: "bare", collection: "_bare"}, conformance.Options{})
+	})
+	if !r.has(`collection "_bare"`) {
+		t.Fatalf("bare _<name> not reported: %v", r.errors)
+	}
+	r = check(t, func(tb conformance.TB) {
+		conformance.CheckCollections(tb, &extension{name: "my-ext", collection: "_my_ext_items"}, conformance.Options{})
+	})
+	if r.Failed() {
+		t.Fatalf("_my_ext_items reported for my-ext: %v", r.errors)
+	}
+}
+
+// migrating is a well-behaved extension with migrations.
+type migrating struct{ down bool }
+
+func (migrating) Name() string                                 { return "mig" }
+func (migrating) Register(app core.App, _ extkit.Config) error { return nil }
+func (m migrating) Migrations() []extkit.Migration {
+	mg := extkit.Migration{Name: "0001_items", Up: func(tx core.App) error {
+		return tx.Save(core.NewBaseCollection("_mig_items"))
+	}}
+	if m.down {
+		mg.Down = func(tx core.App) error {
+			c, err := tx.FindCollectionByNameOrId("_mig_items")
+			if err != nil {
+				return err
+			}
+			return tx.Delete(c)
+		}
+	}
+	return []extkit.Migration{mg}
+}
+
+func TestMigratorPasses(t *testing.T) {
+	conformance.Run(t, func() extkit.Extension { return migrating{down: true} })
+	conformance.Run(t, func() extkit.Extension { return migrating{} }) // irreversible: revert steps skipped
+}
+
+// leaky's Down forgets to drop its collection.
+type leaky struct{ migrating }
+
+func (leaky) Migrations() []extkit.Migration {
+	return []extkit.Migration{{Name: "0001_items",
+		Up:   func(tx core.App) error { return tx.Save(core.NewBaseCollection("_mig_items")) },
+		Down: func(core.App) error { return nil }}}
+}
+
+func TestMigrationLeftoversFail(t *testing.T) {
+	r := check(t, func(tb conformance.TB) { conformance.CheckMigrations(tb, leaky{}, conformance.Options{}) })
+	if !r.has(`"_mig_items" is still there`) {
+		t.Fatalf("leftover collection not reported: %v", r.errors)
+	}
+}

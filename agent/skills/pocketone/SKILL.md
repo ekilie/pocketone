@@ -55,7 +55,8 @@ cd myapp && pocketone serve --dev --dir ./pb_data
 ```
 
 PocketOne reads the same `pb_data`, `pb_hooks`, `pb_migrations` and `pb_public` folders as PocketBase. To move an
-existing app, back up `pb_data`, then point `--dir` at it.
+existing app, back up `pb_data`, then point `--dir` at it. It adds `pb_cache` next to them: extensions' files they can
+rebuild, never backed up or deployed, safe to delete (`pocketone cache clear`); gitignore it.
 
 ## How it differs from stock PocketBase
 

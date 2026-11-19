@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Changed
+
+- `deploy`, `dev` and the deploy set never include `pb_cache` (extensions' disposable files), like `pb_data`.
+
 ## 0.0.2 (2026-11-17)
 
 ### Changed

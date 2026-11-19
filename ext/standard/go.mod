@@ -27,6 +27,7 @@ require (
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000
+	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -67,7 +68,6 @@ require (
 	github.com/psanford/sqlite3vfs v0.0.0-20260519004904-f9180fa2acc9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/superfly/ltx v0.5.2 // indirect
 	github.com/tetratelabs/wazero v1.12.0 // indirect

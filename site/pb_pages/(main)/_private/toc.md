@@ -34,4 +34,5 @@
 - [REST](/docs/reference/rest)
 - [MCP](/docs/reference/mcp)
 - [pocketone.yaml](/docs/config-reference)
+- [Folders](/docs/folders)
 - [PocketPages](/docs/extensions/pages)

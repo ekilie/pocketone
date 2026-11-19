@@ -9,5 +9,9 @@ import (
 )
 
 func TestConformance(t *testing.T) {
-	conformance.Run(t, func() extkit.Extension { return tokens.New(tokens.Config{}) })
+	conformance.Run(t, func() extkit.Extension { return tokens.New(tokens.Config{}) }, conformance.Options{
+		AllowCollections: map[string]string{
+			"_tokens": "API tokens, named before the _<name>_<table> rule; renamed to _tokens_tokens by a migration later",
+		},
+	})
 }

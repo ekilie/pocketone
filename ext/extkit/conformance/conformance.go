@@ -1,6 +1,6 @@
 // Package conformance is the shared test every PocketOne extension runs. It checks what any [extkit.Extension] must get
 // right whatever it does: it registers and runs on a fresh app and shuts down cleanly, it leaves PocketBase's own
-// collections alone and names its own `_<name>` or `_<name>_…`, one extension value can serve many apps at once (as under an isolate runtime)
+// collections alone and names its own `_<name>_<table>` (hyphens in the name as underscores), applies, re-applies and reverts its migrations cleanly, one extension value can serve many apps at once (as under an isolate runtime)
 // without one app's registration reaching another, and any MCP tools it adds are named `<name>_<verb>_<noun>` and
 // described.
 //
@@ -49,7 +49,8 @@ type Options struct {
 	// Layers are the settings layers passed to Register (default: none, the extension's own defaults).
 	Layers extkit.Config
 
-	// AllowCollections lists collections the extension may create without the `_<name>_` prefix, each with a reason
+	// AllowCollections lists collections the extension may create without the `_<name>_` prefix (hyphens in the name as
+	// underscores), each with a reason
 	// a reviewer can check (e.g. a collection the app's own users are meant to see).
 	AllowCollections map[string]string
 
@@ -101,6 +102,12 @@ func Run(t *testing.T, newExtension func() extkit.Extension, opts ...Options) {
 
 	t.Run("Lifecycle", func(t *testing.T) { CheckLifecycle(t, newExtension(), o) })
 	t.Run("Collections", func(t *testing.T) { CheckCollections(t, newExtension(), o) })
+	t.Run("Migrations", func(t *testing.T) {
+		if _, ok := newExtension().(extkit.Migrator); !ok {
+			t.Skip("not an extkit.Migrator: the extension has no migrations")
+		}
+		CheckMigrations(t, newExtension(), o)
+	})
 	t.Run("ManyApps", func(t *testing.T) { CheckManyApps(t, newExtension(), withApps(o)) })
 	t.Run("Routes", func(t *testing.T) { CheckRoutes(t, newExtension(), o) })
 	t.Run("MCPTools", func(t *testing.T) {
@@ -143,8 +150,12 @@ func CheckLifecycle(t TB, p extkit.Extension, o Options) {
 	}
 }
 
+// TablePrefix is the prefix every collection an extension adds starts with: `_<name>_`, with hyphens in the name as
+// underscores (agent-chat: `_agent_chat_`).
+func TablePrefix(name string) string { return "_" + strings.ReplaceAll(name, "-", "_") + "_" }
+
 // CheckCollections: PocketBase's own collections are unchanged, and every collection the extension adds is named
-// `_<name>` or `_<name>_…` (or allowed with a reason).
+// `_<name>_<table>` (see [TablePrefix]; or allowed with a reason).
 func CheckCollections(t TB, p extkit.Extension, o Options) {
 	base := newApp(t, o)
 	if err := start(base, nil, nil); err != nil {
@@ -167,7 +178,7 @@ func CheckCollections(t TB, p extkit.Extension, o Options) {
 			t.Errorf("collection %q was changed; extensions must not alter PocketBase's own collections", name)
 		}
 	}
-	prefix := "_" + p.Name() + "_"
+	prefix := TablePrefix(p.Name())
 	var added []string
 	for name := range got {
 		if _, ok := want[name]; !ok {
@@ -176,14 +187,65 @@ func CheckCollections(t TB, p extkit.Extension, o Options) {
 	}
 	sort.Strings(added)
 	for _, name := range added {
-		if name == "_"+p.Name() || strings.HasPrefix(name, prefix) {
+		if strings.HasPrefix(name, prefix) && len(name) > len(prefix) {
 			continue
 		}
 		if reason, ok := o.AllowCollections[name]; ok && reason != "" {
 			continue
 		}
-		t.Errorf("collection %q: extension collections must be named _%s or %s… (or listed in AllowCollections with a reason)",
-			name, p.Name(), prefix)
+		t.Errorf("collection %q: extension collections must be named %s<table> (or listed in AllowCollections with a reason)",
+			name, prefix)
+	}
+}
+
+// CheckMigrations, for an [extkit.Migrator]: its migrations apply on a fresh app (Run's lifecycle check has already
+// applied them through bootstrap), applying again does nothing, reverting all of them leaves none of the collections
+// they added, and they apply again after that. A list with an irreversible migration (no Down) skips the revert steps.
+func CheckMigrations(t TB, p extkit.Extension, o Options) {
+	m, ok := p.(extkit.Migrator)
+	if !ok {
+		return
+	}
+	list := m.Migrations()
+	base := newApp(t, o)
+	if err := start(base, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	before := snapshot(t, base)
+	_ = stop(base)
+
+	app := newApp(t, o)
+	if err := start(app, p, o.Layers); err != nil {
+		t.Fatal(err)
+	}
+	defer stop(app)
+	st, err := extkit.MigrationStatus(app, p.Name(), list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range st {
+		if s.Applied == nil {
+			t.Errorf("migration %s wasn't applied at bootstrap", s.Name)
+		}
+	}
+	if again, err := extkit.MigrateUp(app, p.Name(), list); err != nil || len(again) > 0 {
+		t.Errorf("applying again: applied %v, err %v; want nothing", again, err)
+	}
+	for _, mg := range list {
+		if mg.Down == nil {
+			return // can't revert: nothing more to check
+		}
+	}
+	if _, err := extkit.MigrateDown(app, p.Name(), list, 0); err != nil {
+		t.Fatalf("reverting all: %v", err)
+	}
+	for name := range snapshot(t, app) {
+		if _, ok := before[name]; !ok && strings.HasPrefix(name, TablePrefix(p.Name())) {
+			t.Errorf("collection %q is still there after reverting every migration", name)
+		}
+	}
+	if applied, err := extkit.MigrateUp(app, p.Name(), list); err != nil || len(applied) != len(list) {
+		t.Errorf("applying after reverting: applied %v, err %v; want all %d", applied, err, len(list))
 	}
 }
 

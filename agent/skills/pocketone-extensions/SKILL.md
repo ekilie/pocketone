@@ -75,8 +75,12 @@ go run ./.github/extensions check
   `Requires`, `WorksWith`.
 - **Provide in `Register`** (`Provide` / `ProvideDefault`); **look contracts up only later** (`Of`, `Must`, in hooks
   or at serve time). A lookup inside `Register` panics.
-- **Collections you add** are named `_<name>` or `_<name>_…`; never change PocketBase's own collections.
-- **Your schema ships as your own migrations**, never copied into an app's `pb_migrations`.
+- **Collections you add** are named `_<name>_<table>`, hyphens in the name as underscores (`_agent_chat_messages`);
+  never change PocketBase's own collections.
+- **Your schema ships as your own migrations** (a `Migrations() []extkit.Migration` method; extkit applies them at
+  bootstrap and records them in `_extension_migrations`), never copied into an app's `pb_migrations`.
+- **Files you can rebuild** go in `extkit.CacheDir(app, name)` (`pb_cache/<name>/`): never backed up or deployed, and
+  deletable at any time.
 - **Dependencies stay in your `go.mod`**, never core's. A module that reaches another `ext/` module (a contract
   package, `extkit`) adds a `replace` for it.
 - **Environment variables** your extension reads are `P1_<NAME>` (`extkit.EnvVar("TOKEN")` is `P1_TOKEN`). `PB_` is

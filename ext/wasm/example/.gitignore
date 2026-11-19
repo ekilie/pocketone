@@ -1,2 +1,3 @@
 pb_data/
+pb_cache/
 pb_hooks/*.pb.wasm

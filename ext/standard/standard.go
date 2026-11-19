@@ -305,6 +305,7 @@ func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error 
 	// (cli.commands/v1)
 	if pb, ok := app.(*pocketbase.PocketBase); ok {
 		clicmdv1.Mount(app, pb.RootCmd)
+		pb.RootCmd.AddCommand(setCommands(app, plan)...) // extension migrations and pb_cache
 	}
 	// a single app owns the process: close shared resources (pitr's stores) after its own terminate has run
 	app.OnTerminate().Bind(&hook.Handler[*core.TerminateEvent]{
