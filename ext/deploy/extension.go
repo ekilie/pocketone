@@ -39,6 +39,6 @@ func (p *Extension) Contracts() extkit.Contracts {
 		Implements: extkit.IDs("deploy/v1"),
 		Defaults:   extkit.IDs("deploy/v1"), // a multisite host provides it for its instances instead
 		Requires:   extkit.IDs("remote/v1"), // restart and logs
-		WorksWith:  extkit.IDs("tokens/v1"),
+		WorksWith:  extkit.IDs("api-tokens/v1"),
 	}
 }

@@ -2,15 +2,15 @@ package mcp
 
 import (
 	"fmt"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	oauthv1 "github.com/pockethost/pocketone/ext/contracts/oauth/v1"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/url"
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
 
-// OAuth signs MCP requests in with access tokens from the OAuth server in ext/tokens (API tokens from ext/tokens), the way Claude
+// OAuth signs MCP requests in with access tokens from the OAuth server in ext/api-tokens (API tokens from ext/api-tokens), the way Claude
 // connectors and Claude Code expect: the client follows the 401 to the protected resource metadata, registers itself
 // (CIMD or dynamic registration), signs the user in in a browser with PKCE, and gets a token bound to this endpoint
 // (RFC 8707 audience). The token carries the account's rights, like a PocketBase auth token, or only the scopes the
@@ -32,7 +32,7 @@ func (a OAuth) Authenticate(e *core.RequestEvent, resource string) (*Grant, erro
 		}
 		return nil, ErrInvalidToken
 	}
-	info := tokensv1.FromRequest(e)
+	info := apitokensv1.FromRequest(e)
 	if info == nil || info.Audience == "" {
 		// a PocketBase auth token, or an API token not bound to a resource: tool calls forward it unchanged, so
 		// whatever limits it has on the REST API still apply
@@ -44,7 +44,7 @@ func (a OAuth) Authenticate(e *core.RequestEvent, resource string) (*Grant, erro
 	// a token limited to some scopes limits the connection: tool calls are checked against them
 	var scopes []string
 	for _, sc := range info.Scopes {
-		if sc != tokensv1.OfflineAccess {
+		if sc != apitokensv1.OfflineAccess {
 			scopes = append(scopes, sc)
 		}
 	}
@@ -80,13 +80,13 @@ func sameResource(a, b string) bool {
 // client registration when OAuth signs MCP in.
 func (s *Server) setupAuth() {
 	osrv, hasOAuth := oauthv1.Contract.Of(s.app)
-	_, hasTokens := tokensv1.Contract.Of(s.app)
+	_, hasTokens := apitokensv1.Contract.Of(s.app)
 	if s.cfg.Auth == nil {
 		if hasOAuth && hasTokens {
 			s.cfg.Auth = OAuth{}
 		} else {
 			s.cfg.Auth = PocketBaseTokenAuth{}
-			s.app.Logger().Warn("mcp: the OAuth server (ext/tokens) is off; /mcp accepts pasted PocketBase auth tokens only, and clients can't sign in by themselves")
+			s.app.Logger().Warn("mcp: the OAuth server (ext/api-tokens) is off; /mcp accepts pasted PocketBase auth tokens only, and clients can't sign in by themselves")
 		}
 	}
 	if _, ok := s.cfg.Auth.(OAuth); ok && hasOAuth {

@@ -7,7 +7,7 @@ summary: "The app's OAuth 2.1 authorization server, so the CLI and MCP clients c
 
 An OAuth 2.1 authorization server for the app: authorization code with PKCE, device code, refresh, revocation, and
 client registration (dynamic, or by a client metadata document). The CLI's browser login and MCP clients such as
-Claude sign in through it, and get API tokens ([tokens/v1](../../tokens/v1/README.md)).
+Claude sign in through it, and get API tokens ([api-tokens/v1](../../api-tokens/v1/README.md)).
 
 A routed contract ([oauth.go](oauth.go)): the OAuth specs fix its API's shape, so its provider serves it as it is.
 
@@ -30,7 +30,7 @@ In Go, another extension (MCP) turns on dynamic registration and sets token life
 ## Provide
 
 Implement `oauthv1.Server` and serve the routes above (`extkit.EventServer` or `extkit.RouteBinder`); issue access
-tokens through tokens/v1.
+tokens through api-tokens/v1.
 
 ## Extensions
 
@@ -38,7 +38,7 @@ tokens through tokens/v1.
 
 | Extension | |
 |---|---|
-| [tokens](../../../../ext/tokens/README.md) | provides |
+| [tokens](../../../../ext/api-tokens/README.md) | provides |
 | [mcp](../../../../ext/mcp/README.md) | works with |
 
 <!-- /contracts:index -->

@@ -13,7 +13,7 @@ import (
 
 // The JS engine switch (`app: jsvm:` / --jsvm):
 //
-//   - quickjs (default): ext/jsvm, one QuickJS VM per app, with every PocketOne JS feature ($mcp, $tokens, $bulkmail,
+//   - quickjs (default): ext/jsvm, one QuickJS VM per app, with every PocketOne JS feature ($mcp, $apiTokens, $bulkmail,
 //     pages, JS contracts).
 //   - goja: PocketBase's own plugins/jsvm, for pure PocketBase compatibility. The PocketOne JS features are off and
 //     the startup lines say so.
@@ -23,7 +23,7 @@ const (
 )
 
 // gojaOff is what an app gives up in goja mode.
-const gojaOff = "pages, $mcp, $tokens, $bulkmail, JS contracts, real globals and async handlers"
+const gojaOff = "pages, $mcp, $apiTokens, $bulkmail, JS contracts, real globals and async handlers"
 
 func registerSet(app core.App, set *standard.Set, engine string, cfg jsvm.Config) error {
 	switch engine {

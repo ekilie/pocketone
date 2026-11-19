@@ -393,7 +393,7 @@ func ProvidedScopes(app core.App) []WireScope {
 }
 
 // WireScopes lists the token scopes of every wire contract linked into the binary (not ScopePublic or ScopeAny), so
-// a token service (ext/tokens) can offer and enforce them.
+// a token service (ext/api-tokens) can offer and enforce them.
 func WireScopes() []WireScope {
 	wiresMu.Lock()
 	ws := append([]mounter(nil), wires...)
@@ -647,7 +647,7 @@ func opPath(id ContractID, op string) string {
 
 // Mount serves the contract inside app at /api/_c/<id>/, calling whoever provides it after the seal. Finish mounts
 // every wire contract the seal gave a provider; call it yourself only on a router you build. Auth comes from the
-// request: PocketBase's own auth, and ext/tokens' API tokens (their scopes).
+// request: PocketBase's own auth, and ext/api-tokens' API tokens (their scopes).
 func (w *Wire[T]) Mount(app core.App, se *core.ServeEvent) {
 	for _, op := range w.Ops {
 		op := op
@@ -689,7 +689,7 @@ func readOpRequest(r *http.Request, rawIn bool) (OpRequest, error) {
 	return req, nil
 }
 
-// authOf reads who the request acts as: a PocketBase auth record, and when ext/tokens authenticated it, the token's
+// authOf reads who the request acts as: a PocketBase auth record, and when ext/api-tokens authenticated it, the token's
 // id and scopes.
 func authOf(e *core.RequestEvent) Auth {
 	if e.Auth == nil {
@@ -700,9 +700,9 @@ func authOf(e *core.RequestEvent) Auth {
 	if e.Auth.IsSuperuser() {
 		a.Kind = "superuser"
 	}
-	if id, _ := e.Get("tokens.id").(string); id != "" {
+	if id, _ := e.Get("api-tokens.id").(string); id != "" {
 		a.Kind, a.ID = "token", id
-		a.Scopes, _ = e.Get("tokens.scopes").([]string)
+		a.Scopes, _ = e.Get("api-tokens.scopes").([]string)
 		if a.Scopes != nil && len(a.Scopes) == 0 {
 			a.Scopes = nil // an unscoped token has the owner's full rights
 		}
@@ -713,7 +713,7 @@ func authOf(e *core.RequestEvent) Auth {
 // HostHandler answers the contract for a host's instances, in front of the runtime (on a multisite host: one of its
 // InstanceRoutes, after the gates, with multisite.InstanceID as instance): requests under /api/_c/<id>/ on
 // an instance's hostname are served by the host's provider for that instance; everything else goes to next. instance
-// maps a request to its instance id; auth authenticates it at the host (stock images have no ext/tokens).
+// maps a request to its instance id; auth authenticates it at the host (stock images have no ext/api-tokens).
 func (w *Wire[T]) HostHandler(host *Scope, instance func(*http.Request) (string, bool), auth func(*http.Request) Auth, next http.Handler) http.Handler {
 	root := opPath(w.C.id, "")
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {

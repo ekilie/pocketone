@@ -53,7 +53,7 @@ header stay until they expire.
 | Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | Every instance gets it with the standard set; turn it off for one with `extensions.uicache.enabled: false`. |
-| Extensions with dashboard screens ([Tokens](../tokens/README.md), [PITR](../pitr/README.md), [Bulk Mail](../bulkmail/README.md), ...) | Their `main.js` reaches the browser through `/_/extensions.js`, so an updated screen shows on the next load. |
+| Extensions with dashboard screens ([Tokens](../api-tokens/README.md), [PITR](../pitr/README.md), [Bulk Mail](../bulkmail/README.md), ...) | Their `main.js` reaches the browser through `/_/extensions.js`, so an updated screen shows on the next load. |
 
 An extension that serves other files from `/_/extensions/<name>/` gets the five-minute policy. To cache one longer,
 put a content hash in its name and set its own `Cache-Control` in a middleware that runs before UI Cache's

@@ -40,7 +40,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`settings/v1`](settings/v1/README.md) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr, vacuum | @benallfree |
 | [`templates/v1`](templates/v1/README.md) | An extension's own pages as Go templates a project can eject and edit. | templates |  | tokens | @benallfree |
 | [`tls/v1`](tls/v1/README.md) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |
-| [`tokens/v1`](tokens/v1/README.md) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | tokens |  | deploy, mcp, remotes | @benallfree |
+| [`api-tokens/v1`](api-tokens/v1/README.md) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | tokens |  | deploy, mcp, remotes | @benallfree |
 | [`vacuum/v1`](vacuum/v1/README.md) | Compacting an app's databases so freed space goes back to the disk, and when it last happened. | vacuum |  |  | @benallfree |
 
 <!-- /contracts:catalogue -->

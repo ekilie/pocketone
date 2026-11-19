@@ -116,7 +116,7 @@ func wantBody(t *testing.T, s *modetest.Site, path, want string) {
 // pb_migrations, as a single app and as an instance on a host, in each format the engine reads: a CommonJS script
 // (.js), an ES module that imports a helper (.mjs) and TypeScript (.ts). The first serve applies them in order; a
 // restart applies nothing again; `migrate down` in the app's folder reverts the newest and the next serve applies them
-// once more. The extensions' own tables (tokens' _tokens_tokens) are there without leaving a file in pb_migrations, while a
+// once more. The extensions' own tables (tokens' _api_tokens_tokens) are there without leaving a file in pb_migrations, while a
 // collection made over the API writes one (automigrate, in both modes, as on a PocketHost docker instance) without
 // restarting the app, so the empty result means something.
 func TestModesMigrations(t *testing.T) {
@@ -129,8 +129,8 @@ func TestModesMigrations(t *testing.T) {
 		if got := books(t, s); got != "Dune:412" {
 			t.Fatalf("books after the first serve: %q", got)
 		}
-		if code, b := s.Raw(http.MethodGet, "/api/collections/_tokens_tokens", s.JWT(), nil); code != 200 {
-			t.Fatalf("tokens' _tokens_tokens collection: %d %s", code, b)
+		if code, b := s.Raw(http.MethodGet, "/api/collections/_api_tokens_tokens", s.JWT(), nil); code != 200 {
+			t.Fatalf("tokens' _api_tokens_tokens collection: %d %s", code, b)
 		}
 		if got := migrationFiles(t, s.Dir); strings.Join(got, ",") != strings.Join(ours, ",") {
 			t.Fatalf("pb_migrations after the first serve: %v, want only ours %v", got, ours)

@@ -22,7 +22,7 @@ type AppSet interface {
 	Prepare(app core.App, layers func(name string) Config) (*Plan, error)
 	// JSExtensions are the jsvm extensions the set needs on app (pb_hooks providing contracts).
 	JSExtensions(app core.App) []any
-	// BindJS binds the JS APIs of the extensions that run on app ($mcp, $tokens, ...) on rt.
+	// BindJS binds the JS APIs of the extensions that run on app ($mcp, $apiTokens, ...) on rt.
 	BindJS(app core.App, rt js.Runtime)
 	// Finish seals app's contracts and returns its startup lines.
 	Finish(app core.App, plan *Plan) ([]string, error)

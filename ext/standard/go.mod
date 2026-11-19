@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000
@@ -24,7 +25,6 @@ require (
 	github.com/pockethost/pocketone/ext/sandbox v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
@@ -141,7 +141,7 @@ replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
 
 replace github.com/pockethost/pocketone/ext/stats => ../stats
 
-replace github.com/pockethost/pocketone/ext/tokens => ../tokens
+replace github.com/pockethost/pocketone/ext/api-tokens => ../api-tokens
 
 replace github.com/pockethost/pocketone/ext/upgrade => ../upgrade
 

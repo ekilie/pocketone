@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"github.com/pockethost/pocketone/ext/extkit"
 	"log/slog"
 	"net/http"
@@ -95,7 +95,7 @@ func Register(app core.App, cfg Config) (*API, error) {
 	deployv1.Contract.ProvideDefault(app, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var auth requestAuth
 		if e := extkit.RequestEvent(r); e != nil {
-			auth = requestAuth{record: e.Auth, token: tokensv1.FromRequest(e)}
+			auth = requestAuth{record: e.Auth, token: apitokensv1.FromRequest(e)}
 		}
 		api.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestAuthKey{}, auth)))
 	}))
@@ -112,10 +112,10 @@ func Register(app core.App, cfg Config) (*API, error) {
 		}
 		api.opts.PBRoot = cfg.Dir
 		api.opts.DataRoot = cfg.StoreDir
-		if t, ok := tokensv1.Contract.Of(e.App); ok {
-			t.RegisterScope(tokensv1.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages) and read files",
+		if t, ok := apitokensv1.Contract.Of(e.App); ok {
+			t.RegisterScope(apitokensv1.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages) and read files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
-			t.RegisterScope(tokensv1.Scope{Name: ScopeRead, Description: "Read deployed files",
+			t.RegisterScope(apitokensv1.Scope{Name: ScopeRead, Description: "Read deployed files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
 		}
 		return EnsureSchema(e.App)
@@ -128,7 +128,7 @@ type requestAuthKey struct{}
 
 type requestAuth struct {
 	record *core.Record
-	token  *tokensv1.Grant
+	token  *apitokensv1.Grant
 }
 
 // AppBackend is the default backend on a single app: one instance (the app), superusers only. A superuser JWT

@@ -128,7 +128,7 @@ func (e *Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
 		Implements: extkit.IDs("deploy/v1"),
 		Defaults:   extkit.IDs("deploy/v1"), // steps aside if another extension provides it
-		WorksWith:  extkit.IDs("tokens/v1"),
+		WorksWith:  extkit.IDs("api-tokens/v1"),
 	}
 }
 

@@ -105,7 +105,7 @@ func createChats(txApp core.App) error {
   script, a JSON schema) embeds it with `//go:embed` and reads it in `Up`.
 
 **Table names:** every collection your extension creates is named **`_<name>_<table>`**: your extension's name with
-hyphens as underscores, then the table: `_bulkmail_campaigns`, `_tokens_oauth_clients`, `_agent_chat_messages` (for
+hyphens as underscores, then the table: `_bulkmail_campaigns`, `_api_tokens_oauth_clients`, `_agent_chat_messages` (for
 agent-chat). The leading underscore keeps them apart from the app's own collections, and the name says which extension
 owns a table. The conformance test fails any other name unless `conformance.Options.AllowCollections` lists it with a
 reason (a collection the app's users are meant to see and edit, say). When one extension's prefix starts with
@@ -171,7 +171,7 @@ func (e *Extension) Contracts() extkit.Contracts {
     return extkit.Contracts{
         Implements: extkit.IDs("deploy/v1"),
         Defaults:   extkit.IDs("deploy/v1"), // steps aside if another extension provides it
-        WorksWith:  extkit.IDs("tokens/v1"), // used when present
+        WorksWith:  extkit.IDs("api-tokens/v1"), // used when present
     }
 }
 
@@ -202,7 +202,7 @@ standard: bulkmail off: needs mail.fallback/v1, which nothing provides
   onContracts((e) => {
     e.provide("mail.fallback/v1", { send(m) { /* ... */ } }) // a contract open to JS
     e.require("restore/v1")   // the start fails (dev mode: warns) when nothing provides it
-    e.worksWith("tokens/v1")  // shown in the startup lines
+    e.worksWith("api-tokens/v1")  // shown in the startup lines
     e.next()
   })
   ```
@@ -215,7 +215,7 @@ standard: bulkmail off: needs mail.fallback/v1, which nothing provides
   --at -2h`), flags from its input. Provide [cli.commands/v1](../ext/contracts/cli/commands/v1/README.md) to replace
   one with your own, or to add one (`remote rehash`).
 - **No imports between extensions.** An extension imports `extkit` and contract packages, never another extension's
-  module (tests and examples may). What it needs from another goes in the contract package: tokens/v1 has
+  module (tests and examples may). What it needs from another goes in the contract package: api-tokens/v1 has
   `RegisterScope`, `FromRequest` and `WithScopes`; remote/v1 has its CLI client (`remoteclient`), which deploy's
   commands use.
 

@@ -54,7 +54,7 @@ and `{{range .Providers}}…{{end}}` branch and loop, and `{{template "head" .}}
 
 | Extension | How they fit |
 |---|---|
-| [Tokens](../tokens/README.md) | Its OAuth pages are the `oauth` set: sign-in, MFA, one-time code, consent, device code, done and error, with a shared `head` and `foot`. Without Templates it serves them built in. |
+| [Tokens](../api-tokens/README.md) | Its OAuth pages are the `oauth` set: sign-in, MFA, one-time code, consent, device code, done and error, with a shared `head` and `foot`. Without Templates it serves them built in. |
 
 ### Building on Templates
 

@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Upgrading
+
+1. The member `Tokens` is now `APITokens` (ext/api-tokens, was ext/tokens): `set.APITokens = apitokens.New(apitokens.Config{...})`. Its pocketone.yaml section is `api-tokens:`.
+
 ### Added
 
 - `pocketone extensions migrations`, `pocketone extensions migrate up [extension]` and `pocketone extensions migrate down <extension> [n]`: list, apply and revert the migrations of the extensions running on the app.

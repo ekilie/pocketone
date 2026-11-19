@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
-	tokensv1 "github.com/pockethost/pocketone/ext/contracts/tokens/v1"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,8 +16,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 // serve runs app's router (OnServe included) on a local test server.
@@ -51,12 +51,12 @@ func newApp(t *testing.T) (*tests.TestApp, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
-	exts := []extkit.Extension{New(Config{}), tokens.New(tokens.Config{})}
+	exts := []extkit.Extension{New(Config{}), apitokens.New(apitokens.Config{})}
 	// registered and sealed the way every app is (the standard set does this), so remote/v1's routes mount
 	if _, err := extkit.Setup(app, exts, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := tokens.EnsureSchema(app); err != nil {
+	if err := apitokens.EnsureSchema(app); err != nil {
 		t.Fatal(err)
 	}
 	// the test app's superuser test@example.com has password 1234567890
@@ -175,7 +175,7 @@ func apiToken(t *testing.T, cl *remoteclient.Client) (token, id string) {
 			Id string `json:"id"`
 		} `json:"record"`
 	}
-	if err := session.JSON(ctx, http.MethodPost, tokensv1.Prefix, map[string]any{"name": "test cli"}, &created); err != nil {
+	if err := session.JSON(ctx, http.MethodPost, apitokensv1.Prefix, map[string]any{"name": "test cli"}, &created); err != nil {
 		t.Fatal(err)
 	}
 	return created.Token, created.Record.Id
@@ -188,7 +188,7 @@ func TestWhoamiAndTokenLogin(t *testing.T) {
 	ctx := context.Background()
 
 	w, err := cl.Whoami(ctx)
-	if err != nil || w.Auth != nil || !w.Offers("remote/v1") || !w.Offers("tokens/v1") {
+	if err != nil || w.Auth != nil || !w.Offers("remote/v1") || !w.Offers("api-tokens/v1") {
 		t.Fatalf("anon whoami %+v %v", w, err)
 	}
 	token, tokenId := apiToken(t, cl)

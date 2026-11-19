@@ -32,16 +32,16 @@ func serveOne(t *testing.T, in modetest.Inst, body func(t *testing.T, s *modetes
 // asked for over remote/v1.
 func TestSingleSite(t *testing.T) {
 	serveOne(t, modetest.Inst{Files: map[string]string{
-		"pb_hooks/probe.pb.js":    `routerAdd("GET", "/probe", (e) => e.json(200, {mcp: typeof $mcp, tokens: typeof $tokens, bulkmail: typeof $bulkmail}))`,
+		"pb_hooks/probe.pb.js":    `routerAdd("GET", "/probe", (e) => e.json(200, {mcp: typeof $mcp, tokens: typeof $apiTokens, bulkmail: typeof $bulkmail}))`,
 		"pb_pages/hello-page.ejs": `<p>pages <%= 1 + 1 %></p>`,
 		"pb_public/static.txt":    "static file",
 	}}, func(t *testing.T, s *modetest.Site) {
 		t.Run("startup lines", func(t *testing.T) {
 			log := s.Proc.Log.String()
 			for _, want := range []string{
-				"standard: on: settings, templates, cache, tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache",
+				"standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache",
 				"dev mail trap is active", s.TrapURL(),
-				"restore/v1 ← pitr", "oauth/v1 ← tokens", "deploy/v1 ← deploy",
+				"restore/v1 ← pitr", "oauth/v1 ← api-tokens", "deploy/v1 ← deploy",
 			} {
 				if !strings.Contains(log, want) {
 					t.Errorf("startup log lacks %q", want)
@@ -112,7 +112,7 @@ func TestSingleSite(t *testing.T) {
 				t.Fatalf("whoami via %q", w.Via)
 			}
 			got := strings.Join(w.Contracts, " ")
-			for _, c := range []string{"bulkmail/v1", "deploy/v1", "oauth/v1", "remote/v1", "restore/v1", "settings/v1", "tokens/v1", "mail.suppression/v1"} {
+			for _, c := range []string{"bulkmail/v1", "deploy/v1", "oauth/v1", "remote/v1", "restore/v1", "settings/v1", "api-tokens/v1", "mail.suppression/v1"} {
 				if !strings.Contains(got, c) {
 					t.Errorf("whoami contracts lack %s: %s", c, got)
 				}

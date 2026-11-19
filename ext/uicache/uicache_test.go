@@ -22,7 +22,7 @@ func TestPolicy(t *testing.T) {
 		"/_/libs/uplot/uplot.iife.js":        Short,
 		"/_/fonts/remixicon/remixicon.woff2": Short,
 		"/_/images/favicon.png":              Short,
-		"/_/extensions/tokens/main.js":       Short,
+		"/_/extensions/api-tokens/main.js":   Short,
 		"/api/health":                        "",
 		"/extensions.js":                     "",
 	}

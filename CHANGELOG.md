@@ -33,6 +33,10 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+### Upgrading
+
+1. The tokens extension is now `api-tokens`: rename `tokens:` to `api-tokens:` in `pocketone.yaml`, use `$apiTokens` in JS hooks (was `$tokens`), and upgrade the `pocketone` CLI with your apps (the token API moved to `/api/_c/api-tokens/v1`). Its collections are renamed on the first start ([ext/api-tokens changelog](ext/api-tokens/CHANGELOG.md)).
+
 ### Added
 
 - `pocketone` runs WASM modules: put a `<name>.pb.wasm` in `pb_hooks` and call it from your hooks with `await $wasm.run.async(name, input)` ([ext/wasm](ext/wasm/README.md)).

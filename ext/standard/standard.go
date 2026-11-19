@@ -21,6 +21,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/backups"
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/cache"
@@ -36,7 +37,6 @@ import (
 	"github.com/pockethost/pocketone/ext/s3redirect"
 	"github.com/pockethost/pocketone/ext/settings"
 	"github.com/pockethost/pocketone/ext/templates"
-	"github.com/pockethost/pocketone/ext/tokens"
 	"github.com/pockethost/pocketone/ext/uicache"
 	"github.com/pockethost/pocketone/ext/wasm"
 )
@@ -47,7 +47,7 @@ type Set struct {
 	Settings   *settings.Extension
 	Templates  *templates.Extension
 	Cache      *cache.Extension
-	Tokens     *tokens.Extension
+	APITokens  *apitokens.Extension
 	Remotes    *remotes.Extension
 	MCP        *mcp.Extension
 	Pages      *pages.Extension
@@ -74,7 +74,7 @@ func New() *Set {
 		Settings:   settings.New(),
 		Templates:  templates.New(templates.Config{}),
 		Cache:      cache.New(cache.Config{}),
-		Tokens:     tokens.New(tokens.Config{}),
+		APITokens:  apitokens.New(apitokens.Config{}),
 		Remotes:    remotes.New(remotes.Config{}),
 		MCP:        mcp.New(mcp.Config{}),
 		Pages:      pages.New(pages.Config{}),
@@ -113,7 +113,7 @@ type member struct {
 
 func (s *Set) members() []member {
 	m := []member{
-		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
+		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"APITokens", s.APITokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
 		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
@@ -132,7 +132,7 @@ func isNil(e extkit.Extension) bool {
 		return v == nil
 	case *cache.Extension:
 		return v == nil
-	case *tokens.Extension:
+	case *apitokens.Extension:
 		return v == nil
 	case *remotes.Extension:
 		return v == nil
@@ -278,7 +278,7 @@ func (s *Set) Register(app core.App, jsCfg jsvm.Config) error {
 
 // RegisterWith is Register with another JS engine: loadJS registers it on app between the extensions and the seal.
 // The pocketone binary passes PocketBase's own plugins/jsvm here in its goja compatibility mode; then the set's JS
-// APIs ($mcp, $tokens, $wasm, pages, JS contracts) aren't bound.
+// APIs ($mcp, $apiTokens, $wasm, pages, JS contracts) aren't bound.
 func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error {
 	plan, err := s.Prepare(app, ConfiguredSwitches) // pocketone.yaml's `<member>: {enabled: false}`
 	if err != nil {
