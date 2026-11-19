@@ -4,7 +4,7 @@
     "run"
   ],
   "language": "Rust",
-  "repository": "https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/sanitize-html",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/sanitize-html",
   "examples": [
     {
       "function": "run",

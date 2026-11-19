@@ -2,7 +2,7 @@
   "description": "Summarizes a text: its first words, and a word count. Written by hand in WebAssembly text",
   "functions": ["run"],
   "language": "WAT",
-  "repository": "https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/wat",
+  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/wat",
   "examples": [
     {
       "function": "run",
