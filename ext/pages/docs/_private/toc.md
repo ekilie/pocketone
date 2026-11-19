@@ -70,6 +70,7 @@
 # Going Further
 
 - [JavaScript Runtime](../jsvm.md)
+- [TypeScript](../typescript.md)
 - [Plugin Authoring](../plugins/authoring.md)
 
 # Guides

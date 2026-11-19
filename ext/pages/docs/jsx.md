@@ -5,13 +5,13 @@ description: Write pages, layouts, partials and error pages as .jsx or .tsx comp
 
 # JSX and TSX
 
-A `.jsx` or `.tsx` file is a template, just like an `.ejs` file. It can be a page, a layout (`+layout.tsx`), an error page (`+error.tsx`, `+404.tsx`) or a partial in `_private/`. PocketOne compiles it the first time it's used, with esbuild built into the binary: no Node, no `npm install`, no build step. TypeScript types are stripped, not checked.
+A `.jsx` or `.tsx` file is a template, just like an `.ejs` file. It can be a page, a layout (`+layout.tsx`), an error page (`+error.tsx`, `+404.tsx`) or a partial in `_private/`. PocketOne compiles it the first time it's used, with esbuild built into the binary: no Node, no `npm install`, no build step. TypeScript types are stripped, not checked; to check them, see [TypeScript](typescript.md).
 
 ```tsx
 // pb_pages/products/[id].tsx
 import Price from './_private/Price'
 
-export default function Product({ data, slot }: any) {
+export default function Product({ data, slot }: pages.Props) {
   slot('title', data.product.getString('name'))
   return (
     <article class="product">
@@ -41,6 +41,8 @@ The file's default export is a component: a function from props to markup. It ge
 
 A partial also gets the locals it was included with, as props. EJS can include a `.jsx` or `.tsx` partial the same way: its locals become props.
 
+In TypeScript, these props are `pages.Props` (a partial's locals: `pages.Props<{ label: string }>`). A component you import and use as `<Price />` gets only the props you pass it. See [TypeScript](typescript.md).
+
 ## Server-rendered HTML only
 
 JSX renders straight to HTML on the server. There's no virtual DOM, no hydration and no client-side React.
@@ -64,7 +66,7 @@ async function Count({ collection }: { collection: string }) {
   return <b>{n}</b>
 }
 
-export default async function Dashboard({ ctx }: any) {
+export default async function Dashboard({ ctx }: pages.Props) {
   const user = ctx.auth ? await ctx.app.findRecordById.async('users', ctx.auth.id) : null
   return (
     <main>
@@ -83,7 +85,7 @@ export default async function Dashboard({ ctx }: any) {
 
 ```tsx
 // pb_pages/+layout.tsx
-export default function Layout({ children, slot }: any) {
+export default function Layout({ children, slot }: pages.Props) {
   return (
     <html>
       <head>

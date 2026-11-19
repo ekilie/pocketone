@@ -340,6 +340,10 @@ export default function Product({ data, slot }: any) {
 `require`/`import` work like their `.js` versions. A module whose only export is `export default` behaves like
 `module.exports = ...`.
 
+**Types.** The extension adds its declarations to the app's `types.d.ts` (the JS engine's `TypeScript()` hook): a
+`pages` namespace (`Context`, `Handlers`, `Middleware`, `Config`, `PluginFactory`, `Props`) and a permissive `JSX`
+namespace. They add no globals. `pages.Data` and `pages.Context` are interfaces an app may extend.
+
 ## 5. Responses
 
 | Situation | Response |
