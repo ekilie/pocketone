@@ -167,5 +167,5 @@ func (c *Client) Restart(ctx context.Context, _ extkit.Auth) (RestartResult, err
 }
 
 func (c *Client) Logs(ctx context.Context, _ extkit.Auth, in LogsInput) (extkit.Stream, error) {
-	return c.c.CallStream(ctx, "logs", in)
+	return c.c.CallStreamMethod(ctx, "GET", "logs", in)
 }

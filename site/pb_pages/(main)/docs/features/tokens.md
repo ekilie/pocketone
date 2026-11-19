@@ -84,11 +84,11 @@ Add your own scopes, and they show up in the dashboard and on the consent page:
 
 ```js
 // pb_hooks/scopes.pb.js
-$tokens.registerScope({ name: 'notes:read', description: 'Read notes',
+$apiTokens.registerScope({ name: 'notes:read', description: 'Read notes',
   paths: ['/api/collections/notes/records'], methods: ['GET'] })
 
 routerAdd('GET', '/api/notes/summary', (e) => { /* ... */ },
-  $apis.requireAuth(), $tokens.requireScope('notes:read'))
+  $apis.requireAuth(), $apiTokens.requireScope('notes:read'))
 ```
 
 A collection rule can check a scope too: `@request.headers.x_token_scope_notes_read = "1"`.
@@ -107,7 +107,7 @@ A collection rule can check a scope too: `@request.headers.x_token_scope_notes_r
   access.
 
 Only superusers see **Settings → API tokens**. Other signed-in users manage their own tokens through the
-[token API](/docs/contracts/tokens/v1). A token with scopes can only create tokens within those scopes.
+[token API](/docs/contracts/api-tokens/v1). A token with scopes can only create tokens within those scopes.
 
 ## Change it or turn it off
 
@@ -119,9 +119,9 @@ To restyle the sign-in pages, copy them into your app with `pocketone template e
 
 ## How it works
 
-- [Tokens](/docs/extensions/tokens) stores the tokens (only a hash of each secret), checks them on every request and
+- [API Tokens](/docs/extensions/api-tokens) stores the tokens (only a hash of each secret), checks them on every request and
   adds the dashboard screen.
-- [OAuth server](/docs/extensions/tokens/oauth) runs the sign-in and consent pages and issues tokens for what you
+- [OAuth server](/docs/extensions/api-tokens/oauth) runs the sign-in and consent pages and issues tokens for what you
   approved.
-- They answer the [tokens/v1](/docs/contracts/tokens/v1) and [oauth/v1](/docs/contracts/oauth/v1) contracts.
+- They answer the [api-tokens/v1](/docs/contracts/api-tokens/v1) and [oauth/v1](/docs/contracts/oauth/v1) contracts.
 - [Templates](/docs/extensions/templates) lets you restyle the sign-in pages.

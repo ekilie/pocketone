@@ -3,10 +3,45 @@
 
 Every contract API a PocketOne app with its [standard extensions](https://pocketone.dev/docs/extensions/standard) answers, under `/api/_c/<contract>/`. PocketBase's own API (records, collections, auth, files, settings…) is unchanged; see the [PocketBase docs](https://pocketone.dev/docs/pocketbase).
 
-- **Auth:** an `Authorization` header with a superuser's auth token or an [API token](https://pocketone.dev/docs/extensions/tokens). Each operation needs its token scope; a superuser's own auth token passes every scope.
+- **Auth:** an `Authorization` header with a superuser's auth token or an [API token](https://pocketone.dev/docs/extensions/api-tokens). Each operation needs its token scope; a superuser's own auth token passes every scope.
 - **Discovery:** `GET /api/_c/remote/v1` says who you are and lists every contract the app offers ([remote/v1](https://pocketone.dev/docs/contracts/remote/v1)).
 - **Input:** a JSON body for `POST`, query parameters for `GET`. **Answers** are JSON; streams are server-sent events.
 - **Same as the CLI and MCP:** every operation here is also a `pocketone` command and an MCP tool, behind the same checks ([how](https://pocketone.dev/docs/features/remote)).
+
+## agent.chat/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/agent.chat/v1). Answered by [Agent Chat](https://pocketone.dev/docs/extensions/agent-chat) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `POST /api/_c/agent.chat/v1/new` | Starts a chat and returns it; its id is how the app finds it again. | `chat` | `title` (string), `meta` (json) |
+| `POST /api/_c/agent.chat/v1/send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to agent/v1, saves both turns, and folds older messages into the summary when it's due. | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `wait` (string) |
+| `POST /api/_c/agent.chat/v1/send-stream` | Is Send with the answer as it's written: agent/v1 chunks, the last one with done and the result. (stream) | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `wait` (string) |
+| `POST /api/_c/agent.chat/v1/get` | Returns a chat. | `chat:read` | `id` (string) |
+| `POST /api/_c/agent.chat/v1/history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). | `chat:read` | `id` (string), `limit` (int), `before` (string) |
+| `POST /api/_c/agent.chat/v1/update` | Sets a chat's title or meta (fields left out stay). | `chat` | `id` (string), `title` (json), `meta` (json) |
+| `POST /api/_c/agent.chat/v1/list` | Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value. | `chat:read` | `meta` (json), `limit` (int), `offset` (int) |
+| `POST /api/_c/agent.chat/v1/forget` | Deletes a chat, its messages and the model's state for it. | `chat` | `id` (string) |
+| `POST /api/_c/agent.chat/v1/forget-where` | Deletes every chat whose meta matches (as in List), e.g. | `chat` | `meta` (json), `limit` (int), `offset` (int) |
+
+## agent/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/agent/v1). Answered by [Agent](https://pocketone.dev/docs/extensions/agent/extension) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `POST /api/_c/agent/v1/complete` | Answers a prompt or a conversation with the app's language model. | `agent` | `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `model` (string), `thread` (string), `wait` (string) |
+| `POST /api/_c/agent/v1/stream` | Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result. (stream) | `agent` | `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `model` (string), `thread` (string), `wait` (string) |
+| `GET /api/_c/agent/v1` | Says which model answers the app's prompts and whether it's ready. | `agent:read` |  |
+| `POST /api/_c/agent/v1/warm` | Reads the start of prompts ahead of the calls that use it (a preamble, say), so they skip reading it. | `agent` | `system` (string), `messages` (json), `prompt` (string), `wait` (string) |
+| `POST /api/_c/agent/v1/forget` | Releases a warm: its text may leave the cache like any other. | `agent` | `id` (string) |
+| `POST /api/_c/agent/v1/count` | Says how many tokens a text or a conversation is for the app's model, for budgeting what to send. | `agent:read` | `text` (string), `system` (string), `messages` (json) |
+| `GET /api/_c/agent/v1/threads` | Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread). | `agent:read` |  |
+| `POST /api/_c/agent/v1/threads/forget` | Drops a thread's kept state, in memory and on disk. | `agent` | `id` (string) |
+
+## api-tokens/v1
+
+Its own API under `/api/_c/api-tokens/v1/`: see [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1). Answered by [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) in the standard set.
 
 ## bulkmail/v1
 
@@ -57,7 +92,7 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 
 ## oauth/v1
 
-Its own API under `/api/_c/oauth/v1/`: see [oauth/v1](https://pocketone.dev/docs/contracts/oauth/v1). Answered by [Tokens](https://pocketone.dev/docs/extensions/tokens) in the standard set.
+Its own API under `/api/_c/oauth/v1/`: see [oauth/v1](https://pocketone.dev/docs/contracts/oauth/v1). Answered by [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) in the standard set.
 
 ## remote/v1
 
@@ -89,10 +124,6 @@ Its own API under `/api/_c/oauth/v1/`: see [oauth/v1](https://pocketone.dev/docs
 | `GET /api/_c/settings/v1/get` | Returns one extension's settings. | `settings:read` | `extension` (string) |
 | `POST /api/_c/settings/v1/save` | Replaces one extension's settings and applies them. | `settings` | `extension` (string), `values` (json) |
 | `POST /api/_c/settings/v1/test` | Checks one extension's settings without saving them (a test write to a bucket, a test message). | `settings` | `extension` (string), `values` (json) |
-
-## tokens/v1
-
-Its own API under `/api/_c/tokens/v1/`: see [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1). Answered by [Tokens](https://pocketone.dev/docs/extensions/tokens) in the standard set.
 
 ## vacuum/v1
 

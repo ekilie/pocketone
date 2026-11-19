@@ -59,7 +59,7 @@ templatesv1.Contract.Provide(app, myTemplates)
 | Extension | |
 |---|---|
 | [templates](/docs/extensions/templates) | provides |
-| [tokens](/docs/extensions/tokens) | works with |
+| [api-tokens](/docs/extensions/api-tokens) | works with |
 
 <!-- /contracts:index -->
 

@@ -3,7 +3,7 @@
 
 An OAuth 2.1 authorization server for the app: authorization code with PKCE, device code, refresh, revocation, and
 client registration (dynamic, or by a client metadata document). The CLI's browser login and MCP clients such as
-Claude sign in through it, and get API tokens ([tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1)).
+Claude sign in through it, and get API tokens ([api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1)).
 
 A routed contract ([oauth.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go)): the OAuth specs fix its API's shape, so its provider serves it as it is.
 
@@ -26,7 +26,7 @@ In Go, another extension (MCP) turns on dynamic registration and sets token life
 ## Provide
 
 Implement `oauthv1.Server` and serve the routes above (`extkit.EventServer` or `extkit.RouteBinder`); issue access
-tokens through tokens/v1.
+tokens through api-tokens/v1.
 
 ## Commands and APIs
 
@@ -38,7 +38,7 @@ Its own HTTP API under `/api/_c/oauth/v1/`, described above. It has no generated
 
 | Extension | |
 |---|---|
-| [tokens](https://pocketone.dev/docs/extensions/tokens) | provides |
+| [api-tokens](https://pocketone.dev/docs/extensions/api-tokens) | provides |
 | [mcp](https://pocketone.dev/docs/extensions/mcp) | works with |
 
 <!-- /contracts:index -->

@@ -13,24 +13,24 @@ Event tickets, check-in links, a table's ordering page, a Wi-Fi login: a QR code
 paper. The module draws one as an SVG image from any text, with the
 [qrcode](https://crates.io/crates/qrcode) crate. SVG stays sharp at any size and prints well.
 
-## The hook
+## The route
 
-A route that gives a ticket's owner their ticket's QR code. `tickets` has a `code` text field and an `owner` relation
-to `users`:
+An API route that gives a ticket's owner their ticket's QR code. `tickets` has a `code` text field and an `owner`
+relation to `users`:
 
-```js
-// pb_hooks/qrcode.pb.js: a ticket's QR code, for its owner, as an image
-routerAdd("GET", "/tickets/{id}/qr.svg", async (e) => {
-  const ticket = e.app.findRecordById("tickets", e.request.pathValue("id"))
-  if (ticket.get("owner") !== e.auth?.id) throw new ForbiddenError()
-  const svg = await $wasm.run.async("qrcode", `https://example.com/check-in/${ticket.get("code")}`)
-  e.response.header().set("Content-Type", "image/svg+xml")
-  return e.string(200, svg)
-}, $apis.requireAuth())
+```ts
+// pb_pages/tickets/[id]/qr/+api.ts: a ticket's QR code, for its owner, as SVG
+export async function get(ctx: any) {
+  if (!ctx.auth) throw ctx.httpError(401, "Sign in first")
+  const ticket = ctx.app.findRecordById("tickets", ctx.params.id)
+  if (ticket.get("owner") !== ctx.auth.id) throw ctx.httpError(403, "Not your ticket")
+  const svg = await $wasm.run.async<string>("qrcode", `https://example.com/check-in/${ticket.get("code")}`)
+  return ctx.res.json({ svg })
+}
 ```
 
-A plain `<img src>` doesn't send the user's PocketBase token, so fetch the image with it (the JS SDK's `pb.send`)
-and show it from a blob URL. Or draw it once, when the ticket is created, and save it in a protected file field:
+A plain `<img src>` doesn't send the user's PocketBase token, so fetch the SVG with it (the JS SDK's `pb.send`)
+and show it from a blob URL (`new Blob([svg], { type: "image/svg+xml" })`). Or draw it once, when the ticket is created, and save it in a protected file field:
 then an `<img>` with a [file token](https://pocketbase.io/docs/files-handling/#protected-files) shows it.
 
 ## The module

@@ -1,6 +1,6 @@
 ---
 title: LLVM IR
-description: Write a WASM module for pb_hooks in LLVM IR, the assembly language compilers hand to LLVM, and let clang build it.
+description: Write a WASM module for your app in LLVM IR, the assembly language compilers hand to LLVM, and let clang build it.
 ---
 
 # LLVM IR
@@ -62,6 +62,7 @@ The flags are the [C](c.md) ones: smallest code, no symbols, a 1 MB stack instea
 
 ## Call it
 
-```js
-const out = await $wasm.run.async("summary", e.record.get("body")) // a string goes in as it is
+```ts
+const { body } = ctx.req.body()
+const out = await $wasm.run.async<{ text: string; words: number }>("summary", String(body ?? "")) // a string goes in as it is
 ```

@@ -21,7 +21,7 @@ PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS AP
 
 Every PocketOne app runs on it: a standalone app or an instance on a multisite host, whatever the runtime. PocketBase's
 own `plugins/jsvm` (goja) is for pure PocketBase compatibility only: `jsvm: goja` under `app:` in `pocketone.yaml` (or
-`--jsvm goja`) runs a standalone app on it, with pages, `$mcp`, `$tokens`, `$bulkmail` and JS contracts off.
+`--jsvm goja`) runs a standalone app on it, with pages, `$mcp`, `$apiTokens`, `$bulkmail` and JS contracts off.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -148,7 +148,7 @@ When the app starts, `pb_data/types.d.ts` gets the declarations of the whole JS 
 - What this engine adds ([`pocketone.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
   (`await $app.findRecordById.async(...)` is a `Promise<core.Record>`), `require`, `process`, `Buffer`, `console`,
   `import.meta`.
-- Each extension's own API, for the extensions on in that app (`$mcp`, `$tokens`, `$bulkmail`, `onContracts` and
+- Each extension's own API, for the extensions on in that app (`$mcp`, `$apiTokens`, `$bulkmail`, `onContracts` and
   the contracts' action hooks).
 
 To type-check, point a `tsconfig.json` at it:

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/netip"
+	"path/filepath"
 	"strings"
 
 	"github.com/pockethost/pocketone/ext/multisite"
@@ -57,7 +58,7 @@ type Server struct {
 
 	// Host is the host's contract scope: what it provides for its instances (extkit.ProvideForInstances, e.g.
 	// remote/v1 with [Remote]); those contracts step aside inside each instance, and the host answers them in
-	// InstanceRoutes.
+	// InstanceRoutes. Nil: the multisite host's own scope (multisite.Host.Scope), where host extensions provide them.
 	Host *extkit.Scope
 
 	// InstanceRoutes answer requests for the instances after the gates and before the app (see
@@ -201,6 +202,15 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 	if h.Directory == nil {
 		h.Directory = multisite.NewDirectory(log)
 	}
+	host := s.Host
+	if host == nil {
+		host = h.Scope // where the host's extensions provide contracts for its instances (multisite.Host.Scope)
+	}
+	if host != nil {
+		// caches shared by every instance (ext/cache's store) go in the host's own pb_cache, next to the instances'
+		// folders (instance IDs have no underscore, so none is named pb_cache)
+		host.SetCacheRoot(filepath.Join(h.DataRoot, extkit.CacheFolder))
+	}
 	s.Manager = NewManager(h.Scope, ManagerOptions{
 		PBRoot:        s.Config.PBRoot,
 		Dev:           s.Config.Dev,
@@ -214,7 +224,7 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 		Setup:         s.SetupApp,
 		Standard:      s.Standard,
 		IsolateConfig: s.Config.IsolateConfig,
-		Host:          s.Host,
+		Host:          host,
 		Forward:       h.Forward,
 		Directory:     h.Directory,
 	})

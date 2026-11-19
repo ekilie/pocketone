@@ -1,6 +1,6 @@
 ---
 title: Go
-description: Build a WASM module for pb_hooks with Go's own compiler (GOOS=wasip1), and when its size matters.
+description: Build a WASM module for your app with Go's own compiler (GOOS=wasip1), and when its size matters.
 ---
 
 # Go
@@ -35,7 +35,7 @@ func main() {
 	json.NewEncoder(os.Stdout).Encode(map[string]any{"text": text, "words": len(words)})
 }
 
-// fail ends the program with an error pb_hooks can read (err.code / err.message).
+// fail ends the program with an error your code can read (err.code / err.message).
 func fail(code, message string) {
 	b, _ := json.Marshal(map[string]string{"code": code, "message": message})
 	fmt.Fprint(os.Stderr, string(b))
@@ -53,13 +53,18 @@ GOOS=wasip1 GOARCH=wasm go build -o pb_hooks/summary.pb.wasm .
 
 ## Call it
 
-```js
-// pb_hooks/main.pb.js
-onRecordCreate(async (e) => {
-  const out = await $wasm.run.async("summary", { title: e.record.get("title"), body: e.record.get("body") })
-  e.record.set("summary", out.text)
-  return e.next()
-}, "posts")
+An API route that saves a post with its summary:
+
+```ts
+// pb_pages/posts/+api.ts
+export async function post(ctx: any) {
+  const { title, body } = ctx.req.body()
+  const out = await $wasm.run.async<{ text: string }>("summary", { title, body })
+  const record = new Record(ctx.app.findCollectionByNameOrId("posts"))
+  record.load({ title, body, summary: out.text })
+  ctx.app.save(record)
+  return ctx.res.json(201, { id: record.id, summary: out.text })
+}
 ```
 
 ## Size

@@ -7,6 +7,10 @@
 
 # Standard extensions
 
+- [Agent](/docs/extensions/agent/extension)
+- [Agent Chat](/docs/extensions/agent-chat)
+- [API Tokens](/docs/extensions/api-tokens)
+- [API Tokens: OAuth](/docs/extensions/api-tokens/oauth)
 - [Auto TLS](/docs/extensions/autotls)
 - [Backups](/docs/extensions/backups)
 - [Bulk Mail](/docs/extensions/bulkmail)
@@ -24,8 +28,6 @@
 - [S3 Redirect](/docs/extensions/s3redirect)
 - [Settings](/docs/extensions/settings)
 - [Templates](/docs/extensions/templates)
-- [Tokens](/docs/extensions/tokens)
-- [Tokens: OAuth](/docs/extensions/tokens/oauth)
 - [UI Cache](/docs/extensions/uicache)
 - [Upgrade](/docs/extensions/upgrade)
 - [Vacuum](/docs/extensions/vacuum)

@@ -58,6 +58,7 @@ The flags are the [C](https://pocketone.dev/docs/extensions/wasm/languages/c) on
 
 ## Call it
 
-```js
-const out = await $wasm.run.async("summary", e.record.get("body")) // a string goes in as it is
+```ts
+const { body } = ctx.req.body()
+const out = await $wasm.run.async<{ text: string; words: number }>("summary", String(body ?? "")) // a string goes in as it is
 ```

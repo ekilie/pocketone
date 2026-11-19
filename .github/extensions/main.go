@@ -66,6 +66,7 @@ func main() {
 		problems = append(problems, checkContracts()...)
 		problems = append(problems, checkOwnership()...)
 		problems = append(problems, checkChangelogs()...)
+		problems = append(problems, checkTablePrefixes()...)
 		if len(problems) > 0 {
 			for _, p := range problems {
 				fmt.Println("::error::" + p)

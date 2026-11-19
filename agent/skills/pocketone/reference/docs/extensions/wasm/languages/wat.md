@@ -28,7 +28,7 @@ brew install wabt   # wat2wasm, wasm2wat, and friends
   (memory (export "memory") 2)
   (data (i32.const 160) "{\22code\22:\22no_such_function\22,\22message\22:\22only run\22}")
 
-  ;; end the program with an error pb_hooks can read (err.code / err.message)
+  ;; end the program with an error your code can read (err.code / err.message)
   (func $fail (param $ptr i32) (param $len i32)
     (call $write (i32.const 2) (local.get $ptr) (local.get $len))
     (call $proc_exit (i32.const 1)))
@@ -56,8 +56,9 @@ wat2wasm summary.wat -o pb_hooks/summary.pb.wasm
 
 ## Call it
 
-```js
-const out = await $wasm.run.async("summary", e.record.get("body")) // a string goes in as it is
+```ts
+const { body } = ctx.req.body()
+const out = await $wasm.run.async<{ text: string; words: number }>("summary", String(body ?? "")) // a string goes in as it is
 ```
 
 ## What to know

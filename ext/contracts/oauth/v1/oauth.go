@@ -1,6 +1,6 @@
 // Package oauthv1 is the oauth/v1 contract: an OAuth 2.1 authorization server for the app (authorization code with
 // PKCE, device code, refresh, revocation, dynamic and metadata-document client registration), so the CLI and MCP
-// clients like Claude can sign in. ext/tokens provides it.
+// clients like Claude can sign in. ext/api-tokens provides it.
 //
 // A routed contract: the OAuth specs fix its shape, so its provider serves its own routes under /api/_c/oauth/v1/:
 //

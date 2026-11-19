@@ -14,19 +14,23 @@ any HTML a user controls can carry a `<script>`, an `onerror=` or a `javascript:
 user run code in another's browser. [ammonia](https://crates.io/crates/ammonia) parses the HTML the way a browser
 does (html5ever) and keeps only an allow list of tags and attributes. Links get `rel="noopener noreferrer"`.
 
-## The hook
+## The route
 
 A `comments` collection with an `html` text field, cleaned before it's saved:
 
-```js
-// pb_hooks/comments.pb.js: comments arrive as HTML from a rich text editor
-onRecordCreate(async (e) => {
-  e.record.set("html", String((await $wasm.run.async("sanitize-html", e.record.get("html") || "")) ?? ""))
-  return e.next()
-}, "comments")
+```ts
+// pb_pages/comments/+api.ts: comments arrive as HTML from a rich text editor
+export async function post(ctx: any) {
+  if (!ctx.auth) throw ctx.httpError(401, "Sign in to comment")
+  const { html } = ctx.req.body()
+  const comment = new Record(ctx.app.findCollectionByNameOrId("comments"))
+  comment.set("html", String((await $wasm.run.async<string | null>("sanitize-html", html || "")) ?? ""))
+  ctx.app.save(comment)
+  return ctx.res.json(201, { id: comment.id })
+}
 ```
 
-Clean on update too if comments can be edited (the same handler on `onRecordUpdate`).
+Clean edits too if comments can be edited: the route that saves an edit makes the same call.
 
 `String(...)` is there because a module's output comes back parsed when it's JSON: a comment that's just `42` comes
 back as the number 42.

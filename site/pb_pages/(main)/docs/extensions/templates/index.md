@@ -70,7 +70,7 @@ What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
 
 | Extension | How they fit |
 |---|---|
-| [Tokens](/docs/extensions/tokens) | Its OAuth pages are the `oauth` set: sign-in, MFA, one-time code, consent, device code, done and error, with a shared `head` and `foot`. Without Templates it serves them built in. |
+| [Tokens](/docs/extensions/api-tokens) | Its OAuth pages are the `oauth` set: sign-in, MFA, one-time code, consent, device code, done and error, with a shared `head` and `foot`. Without Templates it serves them built in. |
 
 ### Building on Templates
 

@@ -1,6 +1,7 @@
 // Docs pages swap #content and #page-footer without a reload (Datastar; see
-// _private/docs-footer.js). This keeps up with each swap: it highlights the
-// new page's code blocks (Prism only runs once, on page load), sets the tab
+// _private/docs-footer.js). This keeps up with each swap: it turns runs of
+// TS, Go and ETS code blocks into tabs, highlights the new page's code blocks
+// (Prism only runs once, on page load), sets the tab
 // title from #page-footer's data-title, and loads giscus into the footer's
 // <section data-giscus-term> slot whenever it comes back empty or its term
 // changes.
@@ -59,8 +60,83 @@
     }
   }
 
+  // Code tabs: a TS, Go or ETS code block directly followed by another of those is one example written several ways
+  // (ETS when the example needs a page template). Each run becomes a tabbed block. The reader's choice is one of two:
+  // TypeScript (the TS or ETS tab: the same preference, so a group has one or the other, never both) or Go. Picking a
+  // tab picks that side in every group on the page, and it's remembered. The Markdown needs nothing special: on
+  // GitHub and in llms.txt the blocks just follow each other.
+  const tabLangs = { ts: 'TS', typescript: 'TS', go: 'Go', ets: 'ETS' }
+  const side = (lang) => (lang === 'Go' ? 'go' : 'ts') // TS and ETS are one preference
+  const langOf = (el) => {
+    const pre = el?.matches?.('pre') ? el : el?.matches?.('div.code-toolbar') ? el.querySelector('pre') : null
+    const m = pre?.querySelector('code')?.className.match(/language-(\w+)/)
+    return m && tabLangs[m[1]] ? tabLangs[m[1]] : null
+  }
+  let preferred = 'ts' // 'ts' or 'go'
+  try {
+    if (localStorage.getItem('code-lang') === 'go') preferred = 'go'
+  } catch (e) {}
+  const pick = (group, pref) => {
+    const tabs = [...group.querySelectorAll(':scope > .code-tabs-bar > button')]
+    const on = (tabs.find((b) => side(b.dataset.lang) === pref) || tabs[0]).dataset.lang
+    for (const b of tabs) b.setAttribute('aria-selected', String(b.dataset.lang === on))
+    for (const p of group.querySelectorAll(':scope > .code-tabs-panel')) p.hidden = p.dataset.lang !== on
+  }
+  const groupCode = () => {
+    const blocks = [...document.querySelectorAll('#content pre, #content div.code-toolbar')].filter(
+      (el) => !el.closest('.code-tabs') && !(el.matches('pre') && el.parentElement.matches('div.code-toolbar')),
+    )
+    const seen = new Set()
+    for (const first of blocks) {
+      if (seen.has(first) || !langOf(first)) continue
+      const run = [first]
+      for (let next = first.nextElementSibling; next && langOf(next); next = next.nextElementSibling) {
+        // the same side twice (TS twice, or TS and ETS): separate examples
+        if (run.some((el) => side(langOf(el)) === side(langOf(next)))) break
+        run.push(next)
+      }
+      run.forEach((el) => seen.add(el))
+      if (run.length < 2) continue
+      const group = document.createElement('div')
+      group.className = 'code-tabs'
+      const bar = document.createElement('div')
+      bar.className = 'code-tabs-bar'
+      bar.setAttribute('role', 'tablist')
+      first.before(group)
+      group.append(bar)
+      for (const el of run) {
+        const lang = langOf(el)
+        const b = document.createElement('button')
+        b.type = 'button'
+        b.setAttribute('role', 'tab')
+        b.dataset.lang = lang
+        b.textContent = lang
+        bar.append(b)
+        const panel = document.createElement('div')
+        panel.className = 'code-tabs-panel'
+        panel.setAttribute('role', 'tabpanel')
+        panel.dataset.lang = lang
+        panel.append(el)
+        group.append(panel)
+      }
+      pick(group, preferred)
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest?.('.code-tabs-bar > button')
+    if (!b) return
+    preferred = side(b.dataset.lang)
+    try {
+      localStorage.setItem('code-lang', preferred)
+    } catch (err) {}
+    const before = b.getBoundingClientRect().top // keep the clicked tab still while other groups change height
+    document.querySelectorAll('.code-tabs').forEach((g) => pick(g, preferred))
+    window.scrollBy(0, b.getBoundingClientRect().top - before)
+  })
+
   const load = () => {
     markCurrent()
+    groupCode()
     highlight()
     const title = document.getElementById('page-footer')?.dataset.title
     if (title && document.title !== title) document.title = title

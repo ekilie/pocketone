@@ -32,7 +32,7 @@ var UploadBatchBytes int64 = 32 << 20
 // DefaultIncludes and DefaultExcludes are the npm CLI's deploy set.
 var (
 	DefaultIncludes = []string{"pb_*", "pb_*/**/*", "package.json", "bun.lockb", "bun.lock", "patches", "patches/**/*"}
-	DefaultExcludes = []string{"pb_data", "pb_data/**/*"}
+	DefaultExcludes = []string{"pb_data", "pb_data/**/*", "pb_cache", "pb_cache/**/*"}
 )
 
 // LocalFile is one file of a deploy set.
@@ -100,7 +100,7 @@ func (c *HashCache) hash(p string) (string, int64, error) {
 }
 
 // Collect lists and hashes the deploy set: files matching the include patterns and not the exclude patterns,
-// within the code set (pb_* except pb_data, package.json, bun.lock(b), patches/), plus the production node_modules
+// within the code set (pb_* except pb_data and pb_cache, package.json, bun.lock(b), patches/), plus the production node_modules
 // tree. Dotfiles ship (pb_public/.well-known); .git* files and symlinks don't.
 func Collect(opts CollectOptions) (*DeploySet, error) {
 	dir := opts.Dir
@@ -442,7 +442,7 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 		return nil, err
 	}
 	if len(set.Skipped) > 0 {
-		msg := fmt.Sprintf("Skipping %d file(s) outside the deployable set (pb_* except pb_data, package.json, bun.lock(b), patches/)", len(set.Skipped))
+		msg := fmt.Sprintf("Skipping %d file(s) outside the deployable set (pb_* except pb_data and pb_cache, package.json, bun.lock(b), patches/)", len(set.Skipped))
 		if opts.Verbose {
 			msg += ": " + strings.Join(set.Skipped, ", ")
 		}

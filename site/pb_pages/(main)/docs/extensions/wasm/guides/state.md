@@ -9,9 +9,9 @@ source: "ext/wasm/docs/guides/state.md"
 
 Every call gets a fresh module: nothing a call leaves in memory reaches the next one. That's what makes a module safe to share, and it means a module that works on a series (running totals, a rate, a game, a parser that resumes) can't keep its own state. The app keeps it instead:
 
-1. The hook loads the state: from a record, or from memory.
+1. Your page code loads the state: from a record, or from memory.
 2. It passes the state in with the call.
-3. The module returns the new state, and the hook saves it.
+3. The module returns the new state, and your code saves it.
 
 The module stays a pure function, `(state, input) → new state`, which also makes it easy to test: each example in its manifest is one step.
 
@@ -68,31 +68,35 @@ It's 283 KB. Its first call compiles it (about 80 ms); later calls load it from 
 
 ## State in a record
 
-Give the collection a JSON field for the state: here, a `sensors` collection with `name` (text) and `stats` (JSON). A route takes new readings, runs them through the module with the sensor's state, and saves the new state on the record:
+Give the collection a JSON field for the state: here, a `sensors` collection with `name` (text) and `stats` (JSON). An API route takes new readings, runs them through the module with the sensor's state, and saves the new state on the record:
 
-```js
-// pb_hooks/sensors.pb.js
-// POST /api/sensors/{id}/readings {"values": [21.5, 22]}: adds readings to the sensor's running statistics
-routerAdd("POST", "/api/sensors/{id}/readings", async (e) => {
-  const sensor = $app.findRecordById("sensors", e.request.pathValue("id"))
-  const { values } = e.requestInfo().body
+```ts
+// pb_pages/sensors/[id]/readings/+api.ts
+// POST /sensors/{id}/readings {"values": [21.5, 22]}: adds readings to the sensor's running statistics
+type Stats = { count: number; mean: number; m2: number; min: number; max: number } // the module's state
+type Report = { count: number; mean: number; stddev: number; min: number; max: number }
+
+export async function post(ctx: any) {
+  const sensor = ctx.app.findRecordById("sensors", ctx.params.id)
+  const { values } = ctx.req.body() as { values: number[] }
 
   try {
-    const state = JSON.parse(sensor.getString("stats")) // null until the first readings
-    const next = await $wasm.call.async("stats", "add", { state, values })
+    const state: Stats | null = JSON.parse(sensor.getString("stats")) // null until the first readings
+    const next = await $wasm.call.async<Stats>("stats", "add", { state, values })
 
     sensor.set("stats", next)
-    $app.save(sensor)
-    return e.json(200, await $wasm.call.async("stats", "report", next))
+    ctx.app.save(sensor)
+    return ctx.res.json(await $wasm.call.async<Report>("stats", "report", next))
   } catch (err) {
-    if (err.name !== "WasmError" || err.retryable) throw err
-    return e.json(400, { code: err.code, message: err.message }) // bad_input, bad_value: the caller's mistake
+    const w = err as WasmError
+    if (w.name !== "WasmError" || w.retryable) throw err
+    return ctx.res.json(400, { code: w.code, message: w.message }) // bad_input, bad_value: the caller's mistake
   }
-})
+}
 ```
 
 ```bash
-curl -X POST localhost:8090/api/sensors/<id>/readings -d '{"values":[21.5,22]}'
+curl -X POST localhost:8090/sensors/<id>/readings -H "Content-Type: application/json" -d '{"values":[21.5,22]}'
 # {"count":2,"max":22,"mean":21.75,"min":21.5,"stddev":0.25}
 ```
 
@@ -104,11 +108,11 @@ The record now holds the state, `{"count":2,"m2":0.125,"max":22,"mean":21.75,"mi
 
 ## State in memory
 
-State the app can lose on a restart (a cache, a count since start) can stay in memory instead, in `$app.store()`. It's the app's own key-value store, shared by all its hooks, and it holds the module's output as it is:
+State the app can lose on a restart (a cache, a count since start) can stay in memory instead, in `$app.store()`. It's the app's own key-value store, shared by all its code, and it holds the module's output as it is:
 
-```js
-const store = $app.store()
-const next = await $wasm.call.async("stats", "add", { state: store.get("load") || null, values: [1] })
+```ts
+const store = ctx.app.store()
+const next = await $wasm.call.async<Stats>("stats", "add", { state: store.get("load") || null, values: [1] })
 store.set("load", next)
 ```
 

@@ -49,6 +49,7 @@ func checkRules() error {
 	problems := append(check(mods), checkContracts()...)
 	problems = append(problems, checkOwnership()...)
 	problems = append(problems, checkChangelogs()...)
+	problems = append(problems, checkTablePrefixes()...)
 	for _, p := range problems {
 		fmt.Println("  problem:", p)
 	}

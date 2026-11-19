@@ -20,7 +20,7 @@ func TestTypesFileHasTheSetsJSAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"declare var $mcp:", "declare var $tokens:", "declare var $bulkmail:",
+		"declare var $mcp:", "declare var $apiTokens:", "declare var $bulkmail:",
 		"declare function onContracts(", "declare class ContractError", "interface Function {",
 	} {
 		if !strings.Contains(string(types), want) {
@@ -45,14 +45,14 @@ func TestTypesFileHasTheSetsJSAPI(t *testing.T) {
 				response: ({ status, json }) => (status === 200 ? { archived: json.id } : json),
 			})
 			const tools: string[] = $mcp.tools()
-			$tokens.registerScope({ name: "notes:write", description: "Change notes", paths: ["/api/notes"] })
+			$apiTokens.registerScope({ name: "notes:write", description: "Change notes", paths: ["/api/notes"] })
 			routerAdd("POST", "/api/notes/{id}/archive", (e) => {
-				const ok: boolean = $tokens.hasScope(e, "notes:write")
+				const ok: boolean = $apiTokens.hasScope(e, "notes:write")
 				return e.json(200, { ok, tools })
-			}, $tokens.requireScope("notes:write"))
+			}, $apiTokens.requireScope("notes:write"))
 			const { rate, daily } = $bulkmail.limits()
 			onContracts((e) => {
-				e.worksWith("tokens/v1")
+				e.worksWith("api-tokens/v1")
 				e.next()
 			})
 			throw new ContractError("nope", "not allowed", 403)

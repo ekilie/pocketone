@@ -48,6 +48,7 @@ func TestCollect(t *testing.T) {
 	put("pb_public/.gitignore", "i")
 	put("pb_public/app.js.map", "m")
 	put("pb_data/data.db", "secret")
+	put("pb_cache/agent/threads/t.bin", "disposable")
 	put("pb_schema.json", "{}")
 	put("README.md", "no")
 	put("src/index.ts", "no")

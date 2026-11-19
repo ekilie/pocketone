@@ -14,29 +14,40 @@ Storing a diff of each edit shows exactly the lines that changed, the way `git d
 texts line by line with [similar](https://crates.io/crates/similar) and returns a unified diff and how many lines were
 added and removed.
 
-## The hook
+## The route
 
 A `pages` collection with a `body` text field, and a `revisions` collection with `page` (text or a relation), `diff`
 (text), `added` and `removed` (numbers):
 
-```js
-// pb_hooks/diff.pb.js: every edit of a page's body is kept as a diff in revisions
-onRecordUpdate(async (e) => {
-  const d = await $wasm.run.async("diff", {
-    old: e.record.original().get("body"),
-    new: e.record.get("body"),
-  })
-  e.next()
+An API route saves an edit of a page's body (`PUT` with `{"body": "..."}`) and keeps it as a diff:
+
+```ts
+// pb_pages/wiki/[id]/+api.ts: every edit of a page's body is kept as a diff in revisions
+interface Diff {
+  changed: boolean
+  unified: string
+  added: number
+  removed: number
+}
+
+export async function put(ctx: any) {
+  if (!ctx.auth) throw ctx.httpError(401, "Sign in to edit")
+  const page = ctx.app.findRecordById("pages", ctx.params.id)
+  const { body } = ctx.req.body()
+  const d = await $wasm.run.async<Diff>("diff", { old: page.getString("body"), new: body })
+  page.set("body", body)
+  ctx.app.save(page)
   if (d.changed) {
-    const rev = new Record(e.app.findCollectionByNameOrId("revisions"))
-    rev.load({ page: e.record.id, diff: d.unified, added: d.added, removed: d.removed })
-    e.app.save(rev)
+    const rev = new Record(ctx.app.findCollectionByNameOrId("revisions"))
+    rev.load({ page: page.id, diff: d.unified, added: d.added, removed: d.removed })
+    ctx.app.save(rev)
   }
-}, "pages")
+  return ctx.res.json({ changed: d.changed, added: d.added, removed: d.removed })
+}
 ```
 
-`e.record.original()` is the record as it was before this update. The revision is saved after `e.next()`, so only
-once the page itself is saved.
+The old body is read before the page changes. The revision is saved after the page, so only once the page itself is
+saved.
 
 What an edit gives:
 

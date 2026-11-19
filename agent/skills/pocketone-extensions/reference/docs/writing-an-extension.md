@@ -22,7 +22,7 @@ type Extension struct{ cfg Config }
 
 func New(cfg Config) *Extension { return &Extension{cfg: cfg} }
 
-func (p *Extension) Name() string { return "hello" } // config key, `_hello_` collections, logs
+func (p *Extension) Name() string { return "hello" } // config key, `_hello_<table>` collections, pb_cache/hello, logs
 
 func (p *Extension) Register(app core.App, cfg extkit.Config) error {
     c := p.cfg
@@ -57,12 +57,86 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
   conformance test fails any other route unless `conformance.Options.AllowRoutes` lists it with a reason.
 - **Process-wide settings** come from a `pocketone.yaml` section your extension owns (`extkit.NewSection`).
 - **State per app:** keep it in `app.Store()`. Something shared across apps (a pool, a client) closes through
-  `extkit.Closer`.
+  `extkit.Closer`. Data that must survive a restart goes in your own collections
+  ([Your schema](#your-schema-migrations-and-table-names)); files you can rebuild go in `pb_cache`
+  ([Disposable files](#disposable-files-pb_cache)). Never write into `pb_data` yourself, and never into the app's
+  `pb_migrations`.
 - **Name the command with `extkit.Command`:** when a message tells people what to run ("run 'pocketone login
   prod'"), build it from `extkit.Command` (default `pocketone`), never a literal. A build shipped under another name
   (PocketHost's, say) sets it once in `main`, or with `-ldflags "-X github.com/pockethost/pocketone/ext/extkit.Command=pockethost"`.
 - [bulkmail](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/extension.go) is the reference implementation, and
   [`ext/standard/example`](https://github.com/pockethost/pocketone/blob/main/ext/standard/example/main.go) a complete program.
+
+## Your schema: migrations and table names
+
+An extension that stores records owns its collections and creates them with its own migrations, in Go, shipped in
+its module. Never copy its schema into an app's `pb_migrations`.
+
+```go
+func (p *Extension) Migrations() []extkit.Migration {
+    return []extkit.Migration{
+        {Name: "0001_chats", Up: createChats, Down: dropChats},
+        {Name: "0002_chats_title_index", Up: addTitleIndex, Down: dropTitleIndex},
+    }
+}
+
+func createChats(txApp core.App) error {
+    c := core.NewBaseCollection("_hello_chats")
+    c.Fields.Add(&core.TextField{Name: "title"})
+    return txApp.Save(c)
+}
+```
+
+- **An extension with a `Migrations()` method is an `extkit.Migrator`.** extkit applies its pending migrations on every
+  app it runs on (each isolate has its own database): at bootstrap, right after PocketBase's own system migrations,
+  so its collections exist for every command, before the app's `pb_migrations` run at serve, and an app migration may
+  refer to them.
+- **Order:** within an extension, by `Name` (zero-pad the numbers: `0001_chats`); across extensions, in the order they
+  register, which puts a contract's provider before the extensions that require it.
+- **Each migration runs in a transaction**, like PocketBase's: one that fails leaves nothing behind and stops the ones
+  after it, and the app doesn't start.
+- **History** is in `_extension_migrations` (extension, name, applied), apart from the app's `_migrations`, so the
+  app's `migrate down` and `migrate history-sync` never touch your tables, and turning your extension off keeps its
+  history. `pocketone extensions migrations` lists every extension's migrations; `pocketone extensions migrate down
+  <extension> [n]` reverts the last n (`0`: all). A migration with no `Down` can't be reverted.
+- **Never edit a migration that has shipped.** Change the schema with a new one. To rename a collection, use
+  `extkit.RenameCollection(name, id, from, to)`: it renames by id (keep the id, so code that finds it by id keeps
+  working), works on system collections, and reverts.
+- **They build into the binary**, so there are no files to copy into the app. A migration that needs a file (a SQL
+  script, a JSON schema) embeds it with `//go:embed` and reads it in `Up`.
+
+**Table names:** every collection your extension creates is named **`_<name>_<table>`**: your extension's name with
+hyphens as underscores, then the table: `_bulkmail_campaigns`, `_api_tokens_oauth_clients`, `_agent_chat_messages` (for
+agent-chat). The leading underscore keeps them apart from the app's own collections, and the name says which extension
+owns a table. The conformance test fails any other name unless `conformance.Options.AllowCollections` lists it with a
+reason (a collection the app's users are meant to see and edit, say). When one extension's prefix starts with
+another's (`agent`'s `_agent_` and `agent-chat`'s `_agent_chat_`), the shorter one never names a table under the longer
+one's prefix; `go run ./.github/extensions check` refuses it.
+
+The conformance test checks a Migrator's migrations too: they apply at bootstrap, applying again does nothing,
+reverting all of them changes the schema, and applying them again brings back exactly what they made.
+
+## Disposable files: `pb_cache`
+
+Files your extension can rebuild (a download, a computed index, a model's saved state) go in **`pb_cache/<name>/`**,
+next to `pb_data`. Get the folder from extkit, never build the path:
+
+```go
+dir, err := extkit.CacheDir(app, p.Name())       // this app's pb_cache/hello, created
+shared, err := extkit.HostCacheDir(app, p.Name()) // one folder for every app of the process (a shared store)
+```
+
+- **Anything in it may be deleted at any time** (`pocketone cache clear`, an admin, a cleanup), and your extension
+  carries on: it rebuilds, re-downloads or re-reads what it needs. If losing a file loses data, it doesn't belong
+  here: put it in a collection.
+- **Never backed up, deployed or synced:** it's outside `pb_data`, so backups skip it, and `deploy` and `dev` leave it
+  out like `pb_data`. Apps add `pb_cache/` to their `.gitignore`.
+- **Per app:** on a multisite host each instance has its own `pb_cache/` in its folder, so it counts against that
+  instance's disk, and one instance never sees another's. `HostCacheDir` is for caches that serve every instance at
+  once; it is the host's own `pb_cache/<name>/` (a single app is its own host). Never put one instance's data there.
+- **Keep it bounded.** Give your cache a size budget (a setting with a sensible default) and evict past it; on a host,
+  disk is the instance's quota.
+- `pocketone cache` shows each folder and its size; say in your README what yours holds and whether it may grow large.
 
 ## Working together: contracts
 
@@ -98,7 +172,7 @@ func (e *Extension) Contracts() extkit.Contracts {
     return extkit.Contracts{
         Implements: extkit.IDs("deploy/v1"),
         Defaults:   extkit.IDs("deploy/v1"), // steps aside if another extension provides it
-        WorksWith:  extkit.IDs("tokens/v1"), // used when present
+        WorksWith:  extkit.IDs("api-tokens/v1"), // used when present
     }
 }
 
@@ -129,7 +203,7 @@ standard: bulkmail off: needs mail.fallback/v1, which nothing provides
   onContracts((e) => {
     e.provide("mail.fallback/v1", { send(m) { /* ... */ } }) // a contract open to JS
     e.require("restore/v1")   // the start fails (dev mode: warns) when nothing provides it
-    e.worksWith("tokens/v1")  // shown in the startup lines
+    e.worksWith("api-tokens/v1")  // shown in the startup lines
     e.next()
   })
   ```
@@ -142,7 +216,7 @@ standard: bulkmail off: needs mail.fallback/v1, which nothing provides
   --at -2h`), flags from its input. Provide [cli.commands/v1](../ext/contracts/cli/commands/v1/README.md) to replace
   one with your own, or to add one (`remote rehash`).
 - **No imports between extensions.** An extension imports `extkit` and contract packages, never another extension's
-  module (tests and examples may). What it needs from another goes in the contract package: tokens/v1 has
+  module (tests and examples may). What it needs from another goes in the contract package: api-tokens/v1 has
   `RegisterScope`, `FromRequest` and `WithScopes`; remote/v1 has its CLI client (`remoteclient`), which deploy's
   commands use.
 
@@ -419,19 +493,30 @@ ext/<name>/
   - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
+- **Examples are TypeScript page code and Go.** Show server code as [PocketPages](https://pocketone.dev/docs/extensions/pages) page code in
+  TypeScript (`+api.ts`, `+page.ts`, modules in `_private/`, and an `.ets` template when the example needs a page), and the
+  same thing in Go when an app's Go code can do it. Not `pb_hooks`, and not JavaScript: pages give routes a file
+  structure people can read, and TypeScript carries the types.
+  - **In `docs/`**, put the versions of one example in consecutive fenced blocks (```` ```ts ````, ```` ```go ````, and
+    ```` ```ets ```` when it needs a template), nothing between. pocketone.dev shows them as tabs (TS | Go | ETS), one at
+    a time. TS and ETS are the same choice, TypeScript, against Go: a group has one or the other, never both (a
+    `+page.ts` next to the `.ets` template it feeds shows both blocks), and picking any tab switches every group on every
+    page to that side and remembers it. On GitHub they're just consecutive blocks.
+  - **In the README**, keep samples inline: when you show the Go version too, put a line of text before it ("In Go:")
+    so the two don't become tabs and the README reads as plain Markdown.
 - **Extensions here are MIT.** The README ends with `## License` and the single line `MIT`. An extension under another
   license lives in its author's own repository, not here.
-  [`ext/pitr/README.md`](../ext/pitr/README.md) is the example to follow.
+  [`ext/pitr/README.md`](https://pocketone.dev/docs/extensions/pitr) is the example to follow.
 - **Your pull request touches only your folder** (and, for a new contract, its folder in `ext/contracts`). Don't commit
   generated files: the site pages, nav, search index, `llms.txt` and contract indexes are rebuilt on `main` after your
-  change merges ([`.github/regenerate.sh`](../.github/regenerate.sh)). To preview your page, run
+  change merges ([`.github/regenerate.sh`](https://github.com/pockethost/pocketone/blob/main/.github/regenerate.sh)). To preview your page, run
   `cd site/sync && go run .` and don't commit what it writes outside your folder.
-- **CI enforces all of this.** [`.github/workflows/extensions.yml`](../.github/workflows/extensions.yml) fails when an extension
+- **CI enforces all of this.** [`.github/workflows/extensions.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/extensions.yml) fails when an extension
   README is missing its owners, version, title, group or summary, one of the five sections or its MIT `## License`, or its Example doesn't match `example/main.go`, when it has no
   `CHANGELOG.md`, or when a module that implements `extkit.Extension` has no conformance
   test, then builds, vets and runs `go test -race` on every module the
   change affects: the modules it touches, every module that reaches one of them through a `replace`, or all of them
-  for a core change. [`.github/workflows/site.yml`](../.github/workflows/site.yml) checks that the site builds from
+  for a core change. [`.github/workflows/site.yml`](https://github.com/pockethost/pocketone/blob/main/.github/workflows/site.yml) checks that the site builds from
   your README. Run everything CI runs on your pull request, locally, from the repository root:
 
   ```bash
@@ -450,7 +535,7 @@ ext/<name>/
 ### Changelogs
 
 Each extension keeps its changelog in its own folder, `ext/<name>/CHANGELOG.md`, so a change to it touches nothing
-else. The root [CHANGELOG.md](../CHANGELOG.md) is for the rest: core, the `pocketone` binary, the site.
+else. The root [CHANGELOG.md](https://github.com/pockethost/pocketone/blob/main/CHANGELOG.md) is for the rest: core, the `pocketone` binary, the site.
 
 - **A user-visible change adds its line under `## Unreleased`** in the same commit, grouped under `### Upgrading`
   (steps for anything breaking), `### Added`, `### Changed` or `### Fixed`. One line per change, written for someone
@@ -504,4 +589,4 @@ go run ./.github/extensions approvers origin/main HEAD   # who may approve each 
 
 ## Planned extensions
 
-Our own extensions live in this repo under [`ext/`](../ext), each as its own Go module (`github.com/pockethost/pocketone/ext/<name>`). See [ext/README.md](../ext/README.md).
+Our own extensions live in this repo under [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext), each as its own Go module (`github.com/pockethost/pocketone/ext/<name>`). See [ext/README.md](https://github.com/pockethost/pocketone/blob/main/ext/README.md).

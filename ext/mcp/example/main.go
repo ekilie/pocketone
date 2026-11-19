@@ -5,7 +5,7 @@
 //
 // Logins (ext/devusers, local testing only): dashboard admin@example.com / password, app user user@example.com / password.
 //
-// Sign-in is OAuth (the OAuth server in ext/tokens): add the endpoint to Claude Code and sign in in the browser when it
+// Sign-in is OAuth (the OAuth server in ext/api-tokens): add the endpoint to Claude Code and sign in in the browser when it
 // asks. Tool calls run as whoever signed in.
 //
 //	claude mcp add --transport http pb-example http://127.0.0.1:8090/mcp
@@ -19,11 +19,11 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/devusers"
 	"github.com/pockethost/pocketone/ext/extkit/js"
 	"github.com/pockethost/pocketone/ext/jsvm"
 	"github.com/pockethost/pocketone/ext/mcp"
-	"github.com/pockethost/pocketone/ext/tokens"
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 
 	// OAuth sign-in: API tokens + the authorization server. ext/mcp picks it up on serve and turns on dynamic client
 	// registration.
-	tokens.MustRegister(app, tokens.Config{}) // its OAuth server comes with it
+	apitokens.MustRegister(app, apitokens.Config{}) // its OAuth server comes with it
 
 	server := mcp.MustRegister(app, mcp.Config{
 		Name:        "pb-example",

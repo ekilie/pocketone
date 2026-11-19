@@ -36,7 +36,7 @@ func (p *Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
 		Implements: extkit.IDs("mcp/v1"),
 		Defaults:   extkit.IDs("mcp/v1"), // another MCP server can replace it; the contract tools stay
-		WorksWith:  extkit.IDs("tokens/v1", "oauth/v1"),
+		WorksWith:  extkit.IDs("api-tokens/v1", "oauth/v1"),
 	}
 }
 

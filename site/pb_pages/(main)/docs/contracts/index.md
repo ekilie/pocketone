@@ -28,6 +28,9 @@ The table is generated from each contract's README and every extension's `Contra
 
 | Contract | What it promises | Provided by | Required by | Works with | Owners |
 |---|---|---|---|---|---|
+| [`agent.chat/v1`](/docs/contracts/agent.chat/v1) | Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | agent-chat |  |  | @benallfree |
+| [`agent/v1`](/docs/contracts/agent/v1) | Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model. | agent | agent-chat |  | @benallfree |
+| [`api-tokens/v1`](/docs/contracts/api-tokens/v1) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | api-tokens |  | deploy, mcp, remotes | @benallfree |
 | [`bulkmail/v1`](/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](/docs/contracts/cache.clear/v1) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
 | [`cache/v1`](/docs/contracts/cache/v1) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
@@ -40,14 +43,13 @@ The table is generated from each contract's README and every extension's `Contra
 | [`mail.feedback/v1`](/docs/contracts/mail.feedback/v1) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](/docs/contracts/mail.suppression/v1) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |
 | [`mcp/v1`](/docs/contracts/mcp/v1) | The app's MCP endpoint at /mcp, with every provided contract's operations as tools. | mcp (default) |  | wasm | @benallfree |
-| [`oauth/v1`](/docs/contracts/oauth/v1) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | tokens |  | mcp | @benallfree |
+| [`oauth/v1`](/docs/contracts/oauth/v1) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | api-tokens |  | mcp | @benallfree |
 | [`remote/v1`](/docs/contracts/remote/v1) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](/docs/contracts/restore/v1) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
 | [`runtime/v1`](/docs/contracts/runtime/v1) | What runs a multisite host's instances (as isolates, in containers), in preference order. | docker, pocker |  |  | @benallfree |
-| [`settings/v1`](/docs/contracts/settings/v1) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, mailrelay, pitr, vacuum | @benallfree |
-| [`templates/v1`](/docs/contracts/templates/v1) | An extension's own pages as Go templates a project can eject and edit. | templates |  | tokens | @benallfree |
+| [`settings/v1`](/docs/contracts/settings/v1) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | agent, bulkmail, mailrelay, pitr, vacuum | @benallfree |
+| [`templates/v1`](/docs/contracts/templates/v1) | An extension's own pages as Go templates a project can eject and edit. | templates |  | api-tokens | @benallfree |
 | [`tls/v1`](/docs/contracts/tls/v1) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |
-| [`tokens/v1`](/docs/contracts/tokens/v1) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | tokens |  | deploy, mcp, remotes | @benallfree |
 | [`vacuum/v1`](/docs/contracts/vacuum/v1) | Compacting an app's databases so freed space goes back to the disk, and when it last happened. | vacuum |  |  | @benallfree |
 
 <!-- /contracts:catalogue -->
@@ -59,8 +61,8 @@ The table is generated from each contract's README and every extension's `Contra
 - **Service:** a Go interface, looked up in the same process (`fallbackv1.Contract.Of(app)`).
 - **Wire:** a service with an HTTP API under `/api/_c/<id>/`, generated from its interface: each method is an
   operation with its own HTTP method, path and token scope (`//op: POST restart scope=remote`); inputs and results are
-  JSON, uploads (`extkit.RawIn`), downloads (`extkit.RawOut`) or streams (`extkit.Stream`, sent as server-sent
-  events). It gets action hooks (`remotev1.OnRestart`, `onRemoteRestart` in `pb_hooks`), an MCP tool per JSON
+  JSON, uploads (`extkit.RawIn`), downloads (`extkit.RawOut`) or streams (`extkit.Stream`, sent as server-sent events:
+  a GET or a POST, pushed as they happen with `Run` or polled with `Poll`). It gets action hooks (`remotev1.OnRestart`, `onRemoteRestart` in `pb_hooks`), an MCP tool per JSON
   operation and a client. Every caller (HTTP, MCP, Go) passes the same scope check and hooks.
 - **Routed:** a contract whose provider is an `http.Handler` serving everything under `/api/_c/<id>/` as it is, for an
   API a protocol shapes (OAuth) or an existing API moved under a contract (deploy/v1).

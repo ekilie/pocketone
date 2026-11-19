@@ -282,6 +282,8 @@ type Scope struct {
 	// host and instance: set when the app is an instance of a host (AttachHost).
 	host     *Scope
 	instance string
+	// cacheRoot: a host's own pb_cache folder (SetCacheRoot), for its instances' process-wide caches.
+	cacheRoot string
 	// forInstances: contracts this scope (a host) provides for its instances.
 	forInstances map[ContractID]instanceProvision
 	// Lines: what the seal decided, one per contract; the startup line is built from them.

@@ -13,7 +13,7 @@ Clang with [wasi-sdk](https://github.com/WebAssembly/wasi-sdk) works too: replac
 
 ## The module
 
-[`example/summary/c`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/c/main.c) counts the words of a text and returns the first twelve. C has no JSON in its standard library, so it takes the text as it is (a hook can pass a string) and prints JSON:
+[`example/summary/c`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/c/main.c) counts the words of a text and returns the first twelve. C has no JSON in its standard library, so it takes the text as it is (your code can pass a string) and prints JSON:
 
 ```c
 // what `summary --describe` prints: manifest.json, built in (C23 #embed)
@@ -58,14 +58,18 @@ zig cc -target wasm32-wasi -std=c23 -Os -s -Wl,-z,stack-size=1048576 \
 
 ## Call it
 
-```js
-// pb_hooks/main.pb.js
-onRecordCreate(async (e) => {
-  const out = await $wasm.run.async("summary", e.record.get("body")) // a string goes in as it is
-  e.record.set("summary", out.text)
-  e.record.set("words", out.words)
-  return e.next()
-}, "posts")
+An API route that saves a post with its summary and word count:
+
+```ts
+// pb_pages/posts/+api.ts
+export async function post(ctx: any) {
+  const { body } = ctx.req.body()
+  const out = await $wasm.run.async<{ text: string; words: number }>("summary", String(body ?? "")) // a string goes in as it is
+  const record = new Record(ctx.app.findCollectionByNameOrId("posts"))
+  record.load({ body, summary: out.text, words: out.words })
+  ctx.app.save(record)
+  return ctx.res.json(201, { id: record.id, summary: out.text, words: out.words })
+}
 ```
 
 ## C++

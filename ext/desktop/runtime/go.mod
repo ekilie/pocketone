@@ -9,9 +9,9 @@ replace (
 )
 
 replace (
+	github.com/pockethost/pocketone/ext/api-tokens => ../../../ext/api-tokens
 	github.com/pockethost/pocketone/ext/deploy => ../../../ext/deploy
 	github.com/pockethost/pocketone/ext/remotes => ../../../ext/remotes
-	github.com/pockethost/pocketone/ext/tokens => ../../../ext/tokens
 )
 
 replace (
@@ -115,6 +115,9 @@ require (
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
+	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/agent-chat v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/cache v0.0.0-00010101000000-000000000000 // indirect
@@ -123,6 +126,7 @@ require (
 	github.com/pockethost/pocketone/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/pages v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/pitr v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000 // indirect
@@ -130,7 +134,6 @@ require (
 	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
@@ -165,4 +168,8 @@ require (
 
 replace github.com/pockethost/pocketone/ext/wasm => ../../../ext/wasm
 
+replace github.com/pockethost/pocketone/ext/agent => ../../agent
+
 replace github.com/pockethost/pocketone/ext/uicache => ../../../ext/uicache
+
+replace github.com/pockethost/pocketone/ext/agent-chat => ../../agent-chat

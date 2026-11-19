@@ -21,6 +21,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
+	"github.com/pockethost/pocketone/ext/agent"
+	agentchat "github.com/pockethost/pocketone/ext/agent-chat"
+	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/backups"
 	"github.com/pockethost/pocketone/ext/bulkmail"
 	"github.com/pockethost/pocketone/ext/cache"
@@ -36,7 +39,6 @@ import (
 	"github.com/pockethost/pocketone/ext/s3redirect"
 	"github.com/pockethost/pocketone/ext/settings"
 	"github.com/pockethost/pocketone/ext/templates"
-	"github.com/pockethost/pocketone/ext/tokens"
 	"github.com/pockethost/pocketone/ext/uicache"
 	"github.com/pockethost/pocketone/ext/wasm"
 )
@@ -47,7 +49,7 @@ type Set struct {
 	Settings   *settings.Extension
 	Templates  *templates.Extension
 	Cache      *cache.Extension
-	Tokens     *tokens.Extension
+	APITokens  *apitokens.Extension
 	Remotes    *remotes.Extension
 	MCP        *mcp.Extension
 	Pages      *pages.Extension
@@ -58,6 +60,8 @@ type Set struct {
 	BulkMail   *bulkmail.Extension
 	Deploy     *deploy.Extension
 	WASM       *wasm.Extension
+	Agent      *agent.Extension
+	AgentChat  *agentchat.Extension
 	UICache    *uicache.Extension
 
 	// Providers is the `providers:` section of pocketone.yaml: which extension provides a contract when several do.
@@ -74,7 +78,7 @@ func New() *Set {
 		Settings:   settings.New(),
 		Templates:  templates.New(templates.Config{}),
 		Cache:      cache.New(cache.Config{}),
-		Tokens:     tokens.New(tokens.Config{}),
+		APITokens:  apitokens.New(apitokens.Config{}),
 		Remotes:    remotes.New(remotes.Config{}),
 		MCP:        mcp.New(mcp.Config{}),
 		Pages:      pages.New(pages.Config{}),
@@ -85,6 +89,8 @@ func New() *Set {
 		BulkMail:   bulkmail.New(bulkmail.Config{}),
 		Deploy:     deploy.NewExtension(deploy.Config{}),
 		WASM:       wasm.New(wasm.Config{}),
+		Agent:      agent.New(),
+		AgentChat:  agentchat.New(),
 		UICache:    uicache.New(),
 	}
 }
@@ -113,8 +119,8 @@ type member struct {
 
 func (s *Set) members() []member {
 	m := []member{
-		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"Tokens", s.Tokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
-		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache},
+		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"APITokens", s.APITokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
+		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache}, {"Agent", s.Agent}, {"AgentChat", s.AgentChat},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
 		if isNil(m[i].ext) {
@@ -132,7 +138,7 @@ func isNil(e extkit.Extension) bool {
 		return v == nil
 	case *cache.Extension:
 		return v == nil
-	case *tokens.Extension:
+	case *apitokens.Extension:
 		return v == nil
 	case *remotes.Extension:
 		return v == nil
@@ -153,6 +159,10 @@ func isNil(e extkit.Extension) bool {
 	case *deploy.Extension:
 		return v == nil
 	case *wasm.Extension:
+		return v == nil
+	case *agent.Extension:
+		return v == nil
+	case *agentchat.Extension:
 		return v == nil
 	case *uicache.Extension:
 		return v == nil
@@ -278,7 +288,7 @@ func (s *Set) Register(app core.App, jsCfg jsvm.Config) error {
 
 // RegisterWith is Register with another JS engine: loadJS registers it on app between the extensions and the seal.
 // The pocketone binary passes PocketBase's own plugins/jsvm here in its goja compatibility mode; then the set's JS
-// APIs ($mcp, $tokens, $wasm, pages, JS contracts) aren't bound.
+// APIs ($mcp, $apiTokens, $wasm, pages, JS contracts) aren't bound.
 func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error {
 	plan, err := s.Prepare(app, ConfiguredSwitches) // pocketone.yaml's `<member>: {enabled: false}`
 	if err != nil {
@@ -305,6 +315,7 @@ func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error 
 	// (cli.commands/v1)
 	if pb, ok := app.(*pocketbase.PocketBase); ok {
 		clicmdv1.Mount(app, pb.RootCmd)
+		pb.RootCmd.AddCommand(setCommands(app, plan)...) // extension migrations and pb_cache
 	}
 	// a single app owns the process: close shared resources (pitr's stores) after its own terminate has run
 	app.OnTerminate().Bind(&hook.Handler[*core.TerminateEvent]{

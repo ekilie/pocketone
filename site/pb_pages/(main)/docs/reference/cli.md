@@ -17,6 +17,28 @@ Every command takes these.
 | `--config` | string | – | the config file (default ./pocketone.yaml, else next to the executable) |
 | `--env-file` | string | – | secrets for $VAR references in the config file (default .env beside it); never passed to the app |
 
+## pocketone cache
+
+Shows each extension's folder in pb\_cache and its size
+
+```
+pocketone cache
+```
+
+pb\_cache, next to pb\_data, holds files extensions can rebuild (one folder each). It's never backed up or deployed, and emptying it is always safe.
+
+From [Standard Set](/docs/extensions/standard).
+
+### pocketone cache clear
+
+Empties pb\_cache (every extension's folder, or the ones named)
+
+```
+pocketone cache clear [extension...]
+```
+
+From [Standard Set](/docs/extensions/standard).
+
 ## pocketone config
 
 Lists the pocketone.yaml sections this binary understands, with their defaults
@@ -49,13 +71,13 @@ Deploys pb\_hooks, pb\_migrations, pb\_pages, pb\_public and packages to a remot
 pocketone deploy [remote]
 ```
 
-Deploys the project's code set (pb\_\* folders except pb\_data, package.json, bun.lock(b), patches/, and the production node\_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. Hooks, pages and public files take effect by themselves; migrations and packages apply when the app restarts: pass --restart, or run 'pocketone restart' later.
+Deploys the project's code set (pb\_\* folders except pb\_data and pb\_cache, package.json, bun.lock(b), patches/, and the production node\_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. Hooks, pages and public files take effect by themselves; migrations and packages apply when the app restarts: pass --restart, or run 'pocketone restart' later.
 
 | Flag | Type | Default | |
 |---|---|---|---|
 | `--commit` | string | – | commit SHA to record (default: $GITHUB\_SHA, $CI\_COMMIT\_SHA, or git HEAD) |
 | `--dry-run` | bool | – | list what would be deployed, deploy nothing |
-| `-e`, `--exclude` | stringSlice | – | exclude patterns (pb\_data is always excluded) |
+| `-e`, `--exclude` | stringSlice | – | exclude patterns (pb\_data and pb\_cache are always excluded) |
 | `-i`, `--include` | stringSlice | – | add include patterns (default set: pb\_\*,pb\_\*/\*\*/\*,package.json,bun.lockb,bun.lock,patches,patches/\*\*/\*) |
 | `-m`, `--message` | string | – | note to record with this deploy |
 | `--no-node-modules` | bool | – | don't ship node\_modules; leave the remote's alone |
@@ -152,7 +174,7 @@ Syncs pb\_hooks, pb\_migrations, pb\_pages, pb\_public and the other pb\_\* fold
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `-e`, `--exclude` | stringSlice | – | exclude patterns (pb\_data is always excluded) |
+| `-e`, `--exclude` | stringSlice | – | exclude patterns (pb\_data and pb\_cache are always excluded) |
 | `-i`, `--include` | stringSlice | – | add include patterns (default set: pb\_\*,pb\_\*/\*\*/\*,package.json,bun.lockb,bun.lock,patches,patches/\*\*/\*) |
 | `--no-logs` | bool | – | don't stream the remote's logs |
 | `--no-node-modules` | bool | – | don't ship node\_modules; leave the remote's alone |
@@ -189,6 +211,52 @@ pocketone docker update
 ```
 
 From [Docker](/docs/extensions/docker).
+
+## pocketone extensions
+
+Manages the extensions' own schema (their migrations)
+
+From [Standard Set](/docs/extensions/standard).
+
+### pocketone extensions migrate
+
+Applies or reverts an extension's migrations
+
+From [Standard Set](/docs/extensions/standard).
+
+### pocketone extensions migrate down
+
+Reverts an extension's last n migrations (default 1; 0: all of them)
+
+```
+pocketone extensions migrate down <extension> [n]
+```
+
+Reverting drops what the migrations created, data included. The next start applies them again, unless the extension is turned off (`&lt;extension&gt;: {enabled: false}` in pocketone.yaml).
+
+From [Standard Set](/docs/extensions/standard).
+
+### pocketone extensions migrate up
+
+Applies pending extension migrations (startup does this too)
+
+```
+pocketone extensions migrate up [extension]
+```
+
+From [Standard Set](/docs/extensions/standard).
+
+### pocketone extensions migrations
+
+Lists each extension's migrations and whether they're applied
+
+```
+pocketone extensions migrations
+```
+
+Extensions apply their migrations at startup, after PocketBase's own and before the app's pb\_migrations, and record them in \_extension\_migrations (apart from the app's \_migrations).
+
+From [Standard Set](/docs/extensions/standard).
 
 ## pocketone link
 
@@ -284,7 +352,7 @@ From PocketBase.
 
 Manage the OAuth server
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 Every `pocketone oauth` command takes these.
 
@@ -303,7 +371,7 @@ Every `pocketone oauth` command takes these.
 
 Manage registered OAuth clients
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ### pocketone oauth clients add
 
@@ -319,7 +387,7 @@ pocketone oauth clients add
 | `--public` | bool | – | public client (no secret; PKCE only), e.g. a desktop or mobile app |
 | `--redirect` | stringSlice | – | allowed redirect URI (repeatable; loopback URIs match any port) |
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ### pocketone oauth clients list
 
@@ -329,7 +397,7 @@ Lists registered clients
 pocketone oauth clients list
 ```
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ### pocketone oauth clients rm
 
@@ -339,7 +407,7 @@ Removes a client
 pocketone oauth clients rm <client_id>
 ```
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ## pocketone pages
 
@@ -448,6 +516,400 @@ pocketone remote add <name> <url>
 | `--default` | bool | – | make it the default remote |
 
 From [Remotes](/docs/extensions/remotes).
+
+### pocketone remote agent
+
+Calls agent/v1 on a remote
+
+### pocketone remote agent chat
+
+Calls agent.chat/v1 on a remote
+
+### pocketone remote agent chat forget
+
+Deletes a chat, its messages and the model's state for it (agent.chat/v1)
+
+```
+pocketone remote agent chat forget
+```
+
+Deletes a chat, its messages and the model's state for it.
+
+Calls POST /api/\_c/agent.chat/v1/forget on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat forget-where
+
+Deletes every chat whose meta matches (as in List), e.g (agent.chat/v1)
+
+```
+pocketone remote agent chat forget-where
+```
+
+Deletes every chat whose meta matches (as in List), e.g. all of a user the app deleted.
+
+Calls POST /api/\_c/agent.chat/v1/forget-where on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--limit` | int64 | `0` |  |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `--offset` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat get
+
+Returns a chat (agent.chat/v1)
+
+```
+pocketone remote agent chat get
+```
+
+Returns a chat.
+
+Calls POST /api/\_c/agent.chat/v1/get on the remote (token scope: chat:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat history
+
+Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and "") (agent.chat/v1)
+
+```
+pocketone remote agent chat history
+```
+
+Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and "").
+
+Calls POST /api/\_c/agent.chat/v1/history on the remote (token scope: chat:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--before` | string | – |  |
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--limit` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat list
+
+Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value (agent.chat/v1)
+
+```
+pocketone remote agent chat list
+```
+
+Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value.
+
+Calls POST /api/\_c/agent.chat/v1/list on the remote (token scope: chat:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--limit` | int64 | `0` |  |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `--offset` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat new
+
+Starts a chat and returns it; its id is how the app finds it again (agent.chat/v1)
+
+```
+pocketone remote agent chat new
+```
+
+Starts a chat and returns it; its id is how the app finds it again.
+
+Calls POST /api/\_c/agent.chat/v1/new on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – |  |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat send
+
+Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to agent/v1, saves both turns, and folds older messages into the summary when it's due (agent.chat/v1)
+
+```
+pocketone remote agent chat send
+```
+
+Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to agent/v1, saves both turns, and folds older messages into the summary when it's due.
+
+Calls POST /api/\_c/agent.chat/v1/send on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--context` | string | – |  |
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--summarizeevery` | int64 | `0` |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+| `--text` | string | – |  |
+| `--wait` | string | – |  |
+| `--window` | int64 | `0` |  |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat send-stream
+
+Is Send with the answer as it's written: agent/v1 chunks, the last one with done and the result (agent.chat/v1)
+
+```
+pocketone remote agent chat send-stream
+```
+
+Is Send with the answer as it's written: agent/v1 chunks, the last one with done and the result.
+
+Calls POST /api/\_c/agent.chat/v1/send-stream on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--context` | string | – |  |
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--summarizeevery` | int64 | `0` |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+| `--text` | string | – |  |
+| `--wait` | string | – |  |
+| `--window` | int64 | `0` |  |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent chat update
+
+Sets a chat's title or meta (fields left out stay) (agent.chat/v1)
+
+```
+pocketone remote agent chat update
+```
+
+Sets a chat's title or meta (fields left out stay).
+
+Calls POST /api/\_c/agent.chat/v1/update on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – | a JSON value (@file reads a file) |
+
+From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
+
+### pocketone remote agent complete
+
+Answers a prompt or a conversation with the app's language model (agent/v1)
+
+```
+pocketone remote agent complete
+```
+
+Answers a prompt or a conversation with the app's language model.
+
+Calls POST /api/\_c/agent/v1/complete on the remote (token scope: agent).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `--messages` | string | – | a JSON value (@file reads a file) |
+| `--model` | string | – |  |
+| `--prompt` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--stop` | stringSlice | – |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+| `--thread` | string | – |  |
+| `--wait` | string | – |  |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
+
+### pocketone remote agent count
+
+Says how many tokens a text or a conversation is for the app's model, for budgeting what to send (agent/v1)
+
+```
+pocketone remote agent count
+```
+
+Says how many tokens a text or a conversation is for the app's model, for budgeting what to send.
+
+Calls POST /api/\_c/agent/v1/count on the remote (token scope: agent:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--messages` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--system` | string | – |  |
+| `--text` | string | – |  |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
+
+### pocketone remote agent forget
+
+Releases a warm: its text may leave the cache like any other (agent/v1)
+
+```
+pocketone remote agent forget
+```
+
+Releases a warm: its text may leave the cache like any other.
+
+Calls POST /api/\_c/agent/v1/forget on the remote (token scope: agent).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
+
+### pocketone remote agent forget-thread
+
+Drops a thread's kept state, in memory and on disk (agent/v1)
+
+```
+pocketone remote agent forget-thread
+```
+
+Drops a thread's kept state, in memory and on disk.
+
+Calls POST /api/\_c/agent/v1/threads/forget on the remote (token scope: agent).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
+
+### pocketone remote agent status
+
+Says which model answers the app's prompts and whether it's ready (agent/v1)
+
+```
+pocketone remote agent status
+```
+
+Says which model answers the app's prompts and whether it's ready.
+
+Calls GET /api/\_c/agent/v1/ on the remote (token scope: agent:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
+
+### pocketone remote agent stream
+
+Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result (agent/v1)
+
+```
+pocketone remote agent stream
+```
+
+Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result.
+
+Calls POST /api/\_c/agent/v1/stream on the remote (token scope: agent).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `--messages` | string | – | a JSON value (@file reads a file) |
+| `--model` | string | – |  |
+| `--prompt` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--stop` | stringSlice | – |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+| `--thread` | string | – |  |
+| `--wait` | string | – |  |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
+
+### pocketone remote agent threads
+
+Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread) (agent/v1)
+
+```
+pocketone remote agent threads
+```
+
+Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread).
+
+Calls GET /api/\_c/agent/v1/threads on the remote (token scope: agent:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
+
+### pocketone remote agent warm
+
+Reads the start of prompts ahead of the calls that use it (a preamble, say), so they skip reading it (agent/v1)
+
+```
+pocketone remote agent warm
+```
+
+Reads the start of prompts ahead of the calls that use it (a preamble, say), so they skip reading it. It returns at once with the warm's id and warms in the background, unless Wait says how long to wait for it. The id is the same for the same text on the same app, so warming again is cheap. A provider without a prompt cache returns Warmed false.
+
+Calls POST /api/\_c/agent/v1/warm on the remote (token scope: agent).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--messages` | string | – | a JSON value (@file reads a file) |
+| `--prompt` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--system` | string | – |  |
+| `--wait` | string | – |  |
+
+From [agent/v1](/docs/contracts/agent/v1) (generated).
 
 ### pocketone remote bulkmail
 
@@ -1116,7 +1578,7 @@ From [Templates](/docs/extensions/templates).
 
 Manage API tokens (pbt\_...)
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 Every `pocketone token` command takes these.
 
@@ -1148,7 +1610,7 @@ pocketone token create
 | `--superuser` | string | – | owner: a superuser's email |
 | `--ttl` | duration | `0s` | lifetime, e.g. 720h (default: never expires) |
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ### pocketone token list
 
@@ -1164,7 +1626,7 @@ pocketone token list
 | `--record` | string | – | owner: record id or email in `--collection` |
 | `--superuser` | string | – | owner: a superuser's email |
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ### pocketone token revoke
 
@@ -1181,7 +1643,7 @@ pocketone token revoke [id...]
 | `--record` | string | – | owner: record id or email in `--collection` |
 | `--superuser` | string | – | owner: a superuser's email |
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ### pocketone token scopes
 
@@ -1191,7 +1653,7 @@ Lists the scopes extensions registered
 pocketone token scopes
 ```
 
-From [Tokens](/docs/extensions/tokens).
+From [API Tokens](/docs/extensions/api-tokens).
 
 ## pocketone upgrade
 

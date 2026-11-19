@@ -27,7 +27,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$tokens`, `$bulkmail`, `$wasm`) and resolves
+`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$apiTokens`, `$bulkmail`, `$wasm`, `$agent`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
 To build the app from `pocketone.yaml`'s `app` section (data folder, dev mode, hooks and migrations folders, JS engine
@@ -52,7 +52,7 @@ fields they cover.
 
 - **Reconfigure a member:** replace it, e.g. `set.PITR = pitr.New(pitr.Config{Retention: 7 * 24 * time.Hour})`. A
   member set to nil is an error.
-- **Turn one off:** on a single app, `enabled: false` in its `pocketone.yaml` section (`tokens: {enabled: false}`);
+- **Turn one off:** on a single app, `enabled: false` in its `pocketone.yaml` section (`api-tokens: {enabled: false}`);
   for every instance under Pocker, in its `pocker: isolate_config:` section, and for one instance, in its
   `extensions.<name>`. Extensions that require it turn off too, and
   say why. cache, storage (s3-fallback), s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
@@ -61,6 +61,22 @@ fields they cover.
   extension provides.
 
 ### pocketone.yaml reference
+
+#### `agent-chat:`
+
+Turns the agent-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.agent-chat`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `api-tokens:`
+
+Turns the api-tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.api-tokens`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
 #### `backups:`
 
@@ -130,14 +146,6 @@ Turns the templates extension off on a single app (`enabled: false`). On a multi
 |---|---|---|---|
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
-#### `tokens:`
-
-Turns the tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.tokens`.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
-
 #### `uicache:`
 
 Turns the uicache extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.uicache`.
@@ -159,8 +167,8 @@ Turns the wasm extension off on a single app (`enabled: false`). On a multisite 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache
-standard: tokens/v1 ← tokens
+standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, agent, agent-chat
+standard: api-tokens/v1 ← api-tokens
 ```
 
 With remotes off (deploy requires its remote/v1):
@@ -170,12 +178,28 @@ standard: remotes off: enabled: false
 standard: deploy off: needs remote/v1, which nothing provides
 ```
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### Commands
+
+What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
+
+| Command | |
+|---|---|
+| [`pocketone cache`](/docs/reference/cli#pocketone-cache) | Shows each extension's folder in pb\_cache and its size |
+| [`pocketone cache clear [extension...]`](/docs/reference/cli#pocketone-cache-clear) | Empties pb\_cache (every extension's folder, or the ones named) |
+| [`pocketone extensions migrate down <extension> [n]`](/docs/reference/cli#pocketone-extensions-migrate-down) | Reverts an extension's last n migrations (default 1; 0: all of them) |
+| [`pocketone extensions migrate up [extension]`](/docs/reference/cli#pocketone-extensions-migrate-up) | Applies pending extension migrations (startup does this too) |
+| [`pocketone extensions migrations`](/docs/reference/cli#pocketone-extensions-migrations) | Lists each extension's migrations and whether they're applied |
+
 ## Integrations
 
 | With | What happens |
 |---|---|
 | [Multisite](/docs/extensions/multisite) | Every instance that runs PocketOne gets the set. Pocker gives it to each instance (`Server.Standard`) with the instance's own `extensions.<name>` settings and the host's extras. A Docker instance on a PocketOne image runs the stock `pocketone` binary: the set with its defaults, no extras. One on a PocketBase image has none. |
-| [Contracts](/docs/contracts) | Members find each other through contracts (`tokens/v1`), resolved per app; the startup lines show who provides what. |
+| [Contracts](/docs/contracts) | Members find each other through contracts (`api-tokens/v1`), resolved per app; the startup lines show who provides what. |
 
 ## Example
 

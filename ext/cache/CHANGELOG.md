@@ -6,6 +6,14 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Upgrading
+
+1. The disk tier moved to `pb_cache/cache`, next to `pb_data`. Replace `disk_path: <folder>` with `disk: true` to use it, or keep `disk_path` to choose another place (the tier now goes in a `cache` folder there, relative to the app's folder rather than `pb_data`). Delete the old `p1cache` folder (`pb_data/<disk_path>/p1cache` for a relative path).
+
+### Changed
+
+- The disk tier lives in `pb_cache/cache` (the host's own `pb_cache` on a multisite host), so it's never in your backups. `disk: true` turns it on.
+
 ## 0.0.2 (2026-11-17)
 
 ### Added

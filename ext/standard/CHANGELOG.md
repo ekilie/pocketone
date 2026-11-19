@@ -6,8 +6,17 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Upgrading
+
+1. The member `Tokens` is now `APITokens` (ext/api-tokens, was ext/tokens): `set.APITokens = apitokens.New(apitokens.Config{...})`. Its pocketone.yaml section is `api-tokens:`.
+
 ### Added
 
+- New member `AgentChat` (ext/agent-chat): stored conversations with the app's language model, `$agent.newChat()` and `$agent.chat(id).send(text)`. Its two collections (`_agent_chat_chats`, `_agent_chat_messages`) are created by its migration and stay empty until the app starts a chat. Turn it off on a single app with `agent-chat: {enabled: false}`.
+- New member `Agent` (ext/agent): a language model for `pb_hooks`, called with `$agent.complete()`, from the app's own API or a model PocketOne runs itself; on a host, the host's shared model. Turn it off on a single app with `agent: {enabled: false}`.
+
+- `pocketone extensions migrations`, `pocketone extensions migrate up [extension]` and `pocketone extensions migrate down <extension> [n]`: list, apply and revert the migrations of the extensions running on the app.
+- `pocketone cache` shows each extension's folder in `pb_cache` and its size; `pocketone cache clear [extension...]` empties them.
 - `standard.AppFromConfig(cfg)`: pocketone.yaml's `app` section (dir, dev, encryption_env, query_timeout, jsvm, hooks_dir, migrations_dir, hooks_pool, env_allow, js_limits) as the `pocketbase.Config` and `jsvm.Config` an app is built from, so a custom Go build gets every `app` key without copying the mapping. The `pocketone` binary uses it.
 
 - New member `S3Fallback` (ext/s3-fallback, config section `storage`): a default bucket for apps without S3 of their own, so every PocketOne app and every isolate on a multisite host has it. It does nothing until the `storage` section mounts a backend. Reconfigure it with `set.S3Fallback = s3fallback.New(s3fallback.Config{...})`; a host that added it with `set.Add(s3fallback.New(...))` must drop that line (two extensions named `storage` stop startup).

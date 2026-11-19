@@ -8,6 +8,49 @@ description: "Every section of the pocketone.yaml config file, generated from th
 
 Every section the `pocketone` binary understands, from `pocketone config --json`. Each extension owns its own section. `pocketone config check` checks a file. How the file works (where it's found, `.env` secrets) is on the [Config](/docs/extensions/config) page.
 
+#### `agent:`
+
+The language model PocketOne runs itself for agent/v1 ($agent.complete); on a multisite host, the model every instance shares.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | false turns the extension off on this app ($agent and agent/v1 are gone). |
+| `model` | string |  | The model to run: qwen3-0.6b, qwen3-1.7b or qwen3-4b (downloaded once), hf:<org>/<repo>/<file>.gguf, or a path to a .gguf file. Empty: none. |
+| `threads` | int |  | CPU threads for the model (default: half the cores). |
+| `parallel` | int |  | Answers written at once; the rest wait their turn (default 1). |
+| `prompt_cache_mb` | int |  | Memory in MB for keeping the start of recent prompts, so one that begins the same way (a preamble, a chat so far) isn't read again (default 256, about 1,100 tokens of a Qwen3 model; -1 turns it off). |
+| `max_tokens` | int |  | Longest answer, in tokens, when a call doesn't say (default 512). |
+| `timeout` | string |  | Longest a call may take, waiting included (default 2m). |
+| `cache_dir` | string |  | Where downloaded models are kept (default: the user cache folder's pocketone/models). |
+| `thread_memory_mb` | int |  | Memory in MB for conversations' model state between calls ($agent's thread option), least recently used first (default 512; -1 keeps them on disk only). |
+| `thread_cache_gb` | number |  | Disk in GB for conversations' model state, in pb_cache/agent/threads (default 2; -1 turns it off). |
+| `per_instance.max_tokens` | int |  | Longest answer per call, in tokens (0: max_tokens). |
+| `per_instance.concurrency` | int |  | Calls an instance may have waiting or running at once (default 2). |
+| `per_instance.pinned_mb` | int |  | Memory in MB an instance's warmed prompts may hold in the prompt cache (default 64). |
+| `per_instance.thread_cache_gb` | number |  | Disk in GB for an instance's conversation state, in its own pb_cache (default 2.5, a quarter of a 10 GB instance). |
+
+Owned by [Agent](/docs/extensions/agent).
+
+#### `agent-chat:`
+
+Turns the agent-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.agent-chat`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
+#### `api-tokens:`
+
+Turns the api-tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.api-tokens`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
 #### `app:`
 
 The single app, for every command that opens it: data dir, dev mode, encryption, JS engine, hooks, migrations, and the .env names it may read (env_allow). Not used on a multisite host.
@@ -19,7 +62,7 @@ The single app, for every command that opens it: data dir, dev mode, encryption,
 | `encryption_env` | string |  | Name of the environment variable holding a 32-character key that encrypts the app settings. The --encryptionEnv flag wins. |
 | `query_timeout` | duration |  | Default timeout for SELECT queries, such as 30s. The --queryTimeout flag wins. |
 | `hooks_dir` | string |  | The JS hooks folder. Default: pb_hooks next to pb_data. The --hooksDir flag wins. |
-| `jsvm` | string |  | The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $tokens and JS contracts are off). The --jsvm flag wins. |
+| `jsvm` | string |  | The JS engine for pb_hooks and pb_migrations: quickjs (PocketOne's, the default) or goja (PocketBase's own, for pure PocketBase compatibility: pages, $mcp, $apiTokens and JS contracts are off). The --jsvm flag wins. |
 | `hooks_pool` | int |  | Only with jsvm: goja: how many JS runtimes are kept ready for hooks. Default 15. The --hooksPool flag wins. |
 | `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
 | `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |
@@ -73,7 +116,8 @@ The cache (cache/v1): one store for every app in the process (memory, disk tier)
 | `enabled` | bool |  | Turns the cache off when false; extensions then run uncached. |
 | `eviction` | string |  | Which values leave memory (or disk) first when the store reaches its ceiling: lru, mru, fifo or lifo. |
 | `max_memory` | int |  | Memory for every bucket together, such as 512MiB. Default 128MiB. |
-| `disk_path` | string |  | Turns on a disk tier there (in a p1cache folder). Relative: under pb_data when the app has the process to itself, the working directory when several apps share it (Pocker). |
+| `disk` | bool |  | Turns on a disk tier in pb_cache/cache, next to pb_data (on a multisite host, the host's own pb_cache). |
+| `disk_path` | string |  | Puts the disk tier in a cache folder there instead of pb_cache, and turns it on. Relative: to the app's folder (the one holding pb_data) when the app has the process to itself, the working directory when several apps share it (Pocker). |
 | `max_disk` | int |  | Size of the disk tier for every bucket together, such as 10GiB. Default 1GiB. |
 | `defaults.eviction` | string |  | Which of the bucket's entries go first when it's full: lru, mru, fifo or lifo. |
 | `defaults.max_items` | int |  | Most entries the bucket holds. |
@@ -260,7 +304,7 @@ Runtime provider pocker: instances run as isolates in this process (root folder,
 | `http_send_max_body` | int | `10485760` | Largest response body a JS $http.send call may read, such as 10MiB. |
 | `max_concurrent_js` | int | `16` | JS calls an instance runs at once; more wait up to max_js_execution, then fail. |
 | `egress_allow` | list of string |  | Private networks (CIDRs) instances may still connect to. Default none: public addresses only. |
-| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
+| `isolate_config` | map of map of interface |  | Every instance's config, in pocketone.yaml's shape: one section per extension the instances run, such as api-tokens: {enabled: false}. Each takes what an instance's extensions.<name> takes, and an instance's own extensions.<name> overrides it. |
 
 Owned by [Pocker](/docs/extensions/pocker).
 
@@ -363,16 +407,6 @@ Owned by [S3 Fallback](/docs/extensions/s3-fallback).
 #### `templates:`
 
 Turns the templates extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.templates`.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
-
-Owned by [Standard Set](/docs/extensions/standard).
-
-#### `tokens:`
-
-Turns the tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.tokens`.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

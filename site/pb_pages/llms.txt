@@ -26,8 +26,9 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [MCP for AI agents](https://pocketone.dev/docs/features/mcp): Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
 - [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
 - [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
+- [AI in your app](https://pocketone.dev/docs/extensions/agent): $agent gives your pages and Go code a language model: label records, pull JSON out of text, summarize, answer questions. Built in, on your own CPU, or through any OpenAI-compatible API.
 - [Desktop apps](https://pocketone.dev/docs/extensions/desktop): Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker.
-- [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your pb_hooks, for libraries JavaScript doesn't have and work JavaScript does too slowly.
+- [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your page code, for libraries JavaScript doesn't have and work JavaScript does too slowly.
 
 ## Extend PocketOne
 
@@ -42,10 +43,29 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [REST](https://pocketone.dev/docs/reference/rest): Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input.
 - [MCP](https://pocketone.dev/docs/reference/mcp): Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments.
 - [pocketone.yaml](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
+- [Folders](https://pocketone.dev/docs/folders): What each pb_* folder next to your app holds, which ones are backed up, deployed or safe to delete, and where extensions keep their tables and files.
 - [PocketPages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
+
+## Agent: Using it
+
+- [Choosing a model](https://pocketone.dev/docs/extensions/agent/choosing): Off, a built-in model PocketOne runs on your CPU, or your own OpenAI-compatible API: what each is good for, and how fast the built-in models are.
+- [On a multisite host](https://pocketone.dev/docs/extensions/agent/hosting): One model for every app on a server: each app gets a few calls at once and can switch to its own API.
+- [Prompt caching](https://pocketone.dev/docs/extensions/agent/prompt-caching): The model keeps the start of recent prompts, so a repeated preamble or a chat's earlier turns aren't read again. How to order your prompts to get the most from it, and how to check it's working.
+
+## Agent: Guides
+
+- [Writing a preamble](https://pocketone.dev/docs/extensions/agent/guides/preamble): The system prompt that sets who the assistant is and how it answers: what to put in it, in what order, and how to keep it short enough for a small model.
+- [Remembering conversations](https://pocketone.dev/docs/extensions/agent/guides/conversations): A model remembers nothing between calls: use Agent Chat, or keep chats in collections yourself, send the recent turns, summarize the older ones, and recall what matters from past chats.
+- [Structured answers](https://pocketone.dev/docs/extensions/agent/guides/structured): Give $agent a JSON schema and get back data you can store: the built-in model can only write JSON that matches it.
+- [Streaming answers](https://pocketone.dev/docs/extensions/agent/guides/streaming): Show an answer as the model writes it: $agent.stream in a page, forwarded to the browser with ctx.res.sse().
+- [When the model is loading](https://pocketone.dev/docs/extensions/agent/guides/waiting): The built-in model downloads and loads after the app starts. Fail fast, wait, or show progress: what each $agent call does meanwhile.
+- [Your own knowledge](https://pocketone.dev/docs/extensions/agent/guides/context): Answer questions about your docs or data: arm $agent with a preamble and the passages that match each question, read from files or records.
 
 ## Contracts: By name
 
+- [agent.chat/v1](https://pocketone.dev/docs/contracts/agent.chat/v1): Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta.
+- [agent/v1](https://pocketone.dev/docs/contracts/agent/v1): Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model.
+- [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
 - [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1): Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign.
 - [cache.clear/v1](https://pocketone.dev/docs/contracts/cache.clear/v1): Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent.
 - [cache/v1](https://pocketone.dev/docs/contracts/cache/v1): Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it.
@@ -65,7 +85,6 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [settings/v1](https://pocketone.dev/docs/contracts/settings/v1): The settings an app's admins change for its extensions, one API for all of them.
 - [templates/v1](https://pocketone.dev/docs/contracts/templates/v1): An extension's own pages as Go templates a project can eject and edit.
 - [tls/v1](https://pocketone.dev/docs/contracts/tls/v1): The TLS of a multisite host's listener: automatic certificates instead of certificate files.
-- [tokens/v1](https://pocketone.dev/docs/contracts/tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
 - [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1): Compacting an app's databases so freed space goes back to the disk, and when it last happened.
 
 ## Desktop: Guides
@@ -76,6 +95,10 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Extensions: Standard extensions
 
+- [Agent](https://pocketone.dev/docs/extensions/agent/extension): A language model for your app: your own API, or a small model PocketOne runs itself in the same binary.
+- [Agent Chat](https://pocketone.dev/docs/extensions/agent-chat): Stored conversations with your app's language model: $agent.chat(id).send(text), with history and summaries.
+- [API Tokens](https://pocketone.dev/docs/extensions/api-tokens): Long-lived API tokens with scopes.
+- [API Tokens: OAuth](https://pocketone.dev/docs/extensions/api-tokens/oauth): API Tokens: OAuth
 - [Auto TLS](https://pocketone.dev/docs/extensions/autotls): Certificates on demand and wildcards through ACME.
 - [Backups](https://pocketone.dev/docs/extensions/backups): Restore an app to a moment from its own backups: the latest one before it. On by default.
 - [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail): Campaigns to your app's own users, with audiences from a collection, a view or SQL.
@@ -93,12 +116,10 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect): File downloads as short-lived signed S3 redirects.
 - [Settings](https://pocketone.dev/docs/extensions/settings): One API for the settings an app's admins change for its extensions. On by default.
 - [Templates](https://pocketone.dev/docs/extensions/templates): Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them.
-- [Tokens](https://pocketone.dev/docs/extensions/tokens): Long-lived API tokens with scopes.
-- [Tokens: OAuth](https://pocketone.dev/docs/extensions/tokens/oauth): Tokens: OAuth
 - [UI Cache](https://pocketone.dev/docs/extensions/uicache): Dashboard cache headers that let updates through browsers and CDNs. On by default.
 - [Upgrade](https://pocketone.dev/docs/extensions/upgrade): pocketone upgrade to the latest release, keeping the old executable.
 - [Vacuum](https://pocketone.dev/docs/extensions/vacuum): Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk.
-- [WASM](https://pocketone.dev/docs/extensions/wasm/extension): Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box.
+- [WASM](https://pocketone.dev/docs/extensions/wasm/extension): Bring your own WASM: Go, Rust or Zig modules called from page code, each a closed box.
 
 ## Extensions: Run many instances
 
@@ -218,16 +239,16 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## WASM: Languages
 
-- [Choosing a language](https://pocketone.dev/docs/extensions/wasm/languages): Which languages build WASM modules for pb_hooks, what each one costs per call, and how to pick.
-- [C and C++](https://pocketone.dev/docs/extensions/wasm/languages/c): Build a WASM module for pb_hooks from C or C++ with zig cc, which brings its own WASI libc.
-- [Go](https://pocketone.dev/docs/extensions/wasm/languages/go): Build a WASM module for pb_hooks with Go's own compiler (GOOS=wasip1), and when its size matters.
-- [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo): Build Go code into small, fast WASM modules for pb_hooks with TinyGo.
-- [Rust](https://pocketone.dev/docs/extensions/wasm/languages/rust): Build WASM modules for pb_hooks from Rust, and use crates from crates.io in them.
-- [Zig](https://pocketone.dev/docs/extensions/wasm/languages/zig): Build small WASM modules for pb_hooks with Zig.
-- [AssemblyScript](https://pocketone.dev/docs/extensions/wasm/languages/assemblyscript): Build a WASM module for pb_hooks in AssemblyScript, a TypeScript-like language, with the WASI shim.
-- [WebAssembly text (WAT)](https://pocketone.dev/docs/extensions/wasm/languages/wat): Write a WASM module for pb_hooks by hand in WebAssembly's own text format, calling WASI directly, with no compiler and no libc.
-- [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm): Write a WASM module for pb_hooks in LLVM IR, the assembly language compilers hand to LLVM, and let clang build it.
-- [Other languages](https://pocketone.dev/docs/extensions/wasm/languages/others): What another language needs to build a WASM module pb_hooks can run, and how the usual candidates fit.
+- [Choosing a language](https://pocketone.dev/docs/extensions/wasm/languages): Which languages build WASM modules for your app, what each one costs per call, and how to pick.
+- [C and C++](https://pocketone.dev/docs/extensions/wasm/languages/c): Build a WASM module for your app from C or C++ with zig cc, which brings its own WASI libc.
+- [Go](https://pocketone.dev/docs/extensions/wasm/languages/go): Build a WASM module for your app with Go's own compiler (GOOS=wasip1), and when its size matters.
+- [TinyGo](https://pocketone.dev/docs/extensions/wasm/languages/tinygo): Build Go code into small, fast WASM modules for your app with TinyGo.
+- [Rust](https://pocketone.dev/docs/extensions/wasm/languages/rust): Build WASM modules for your app from Rust, and use crates from crates.io in them.
+- [Zig](https://pocketone.dev/docs/extensions/wasm/languages/zig): Build small WASM modules for your app with Zig.
+- [AssemblyScript](https://pocketone.dev/docs/extensions/wasm/languages/assemblyscript): Build a WASM module for your app in AssemblyScript, a TypeScript-like language, with the WASI shim.
+- [WebAssembly text (WAT)](https://pocketone.dev/docs/extensions/wasm/languages/wat): Write a WASM module for your app by hand in WebAssembly's own text format, calling WASI directly, with no compiler and no libc.
+- [LLVM IR](https://pocketone.dev/docs/extensions/wasm/languages/llvm): Write a WASM module for your app in LLVM IR, the assembly language compilers hand to LLVM, and let clang build it.
+- [Other languages](https://pocketone.dev/docs/extensions/wasm/languages/others): What another language needs to build a WASM module your app can run, and how the usual candidates fit.
 
 ## WASM: Guides
 
@@ -235,11 +256,11 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## WASM: Recipes
 
-- [Overview](https://pocketone.dev/docs/extensions/wasm/recipes): WASM modules built on real libraries, each with a tested hook: Markdown, HTML sanitizing, QR codes, thumbnails, diffs, CSV, EDIFACT and XML orders, and crypto pb_hooks lacks.
-- [Markdown to HTML](https://pocketone.dev/docs/extensions/wasm/recipes/markdown): Render Markdown posts to HTML in a hook with pulldown-cmark, then clean them with sanitize-html.
+- [Overview](https://pocketone.dev/docs/extensions/wasm/recipes): WASM modules built on real libraries, each with page code that calls it: Markdown, HTML sanitizing, QR codes, thumbnails, diffs, CSV, EDIFACT and XML orders, and crypto JS lacks.
+- [Markdown to HTML](https://pocketone.dev/docs/extensions/wasm/recipes/markdown): Render Markdown posts to HTML in page code with pulldown-cmark, then clean them with sanitize-html.
 - [Sanitize HTML](https://pocketone.dev/docs/extensions/wasm/recipes/sanitize-html): Clean untrusted HTML from users with ammonia, so it's safe to show on your pages.
 - [Text diffs](https://pocketone.dev/docs/extensions/wasm/recipes/diff): Keep a revision history of a text field as unified diffs, with the similar crate.
-- [Image thumbnails](https://pocketone.dev/docs/extensions/wasm/recipes/thumbnail): Make a PNG thumbnail of every uploaded photo in a hook, with the image crate.
+- [Image thumbnails](https://pocketone.dev/docs/extensions/wasm/recipes/thumbnail): Make a PNG thumbnail of an uploaded photo in page code, with the image crate.
 - [QR codes](https://pocketone.dev/docs/extensions/wasm/recipes/qrcode): Draw a QR code as SVG for a ticket, a check-in link or a Wi-Fi login, with the qrcode crate.
 - [CSV import](https://pocketone.dev/docs/extensions/wasm/recipes/csv): Import records from a CSV file, quoted fields and all, with the csv crate.
 

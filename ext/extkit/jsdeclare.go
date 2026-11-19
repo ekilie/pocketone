@@ -16,7 +16,7 @@ import (
 //	onContracts((e) => {
 //	  e.provide("mail.fallback/v1", { send(m) { ... } })
 //	  e.require("restore/v1")   // the app needs it: the start fails (dev mode: warns) when nothing provides it
-//	  e.worksWith("tokens/v1")  // shown in the startup lines
+//	  e.worksWith("api-tokens/v1")  // shown in the startup lines
 //	  e.next()
 //	})
 //

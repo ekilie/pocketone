@@ -56,7 +56,7 @@ header stay until they expire.
 | Extension | How they fit |
 |---|---|
 | [Multisite](/docs/extensions/multisite) | Every instance gets it with the standard set; turn it off for one with `extensions.uicache.enabled: false`. |
-| Extensions with dashboard screens ([Tokens](/docs/extensions/tokens), [PITR](/docs/extensions/pitr), [Bulk Mail](/docs/extensions/bulkmail), ...) | Their `main.js` reaches the browser through `/_/extensions.js`, so an updated screen shows on the next load. |
+| Extensions with dashboard screens ([Tokens](/docs/extensions/api-tokens), [PITR](/docs/extensions/pitr), [Bulk Mail](/docs/extensions/bulkmail), ...) | Their `main.js` reaches the browser through `/_/extensions.js`, so an updated screen shows on the next load. |
 
 An extension that serves other files from `/_/extensions/<name>/` gets the five-minute policy. To cache one longer,
 put a content hash in its name and set its own `Cache-Control` in a middleware that runs before UI Cache's

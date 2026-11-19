@@ -9,6 +9,9 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 
 | Extension | What it does |
 |---|---|
+| [Agent](https://pocketone.dev/docs/extensions/agent/extension) | A language model for your app: your own API, or a small model PocketOne runs itself in the same binary. |
+| [Agent Chat](https://pocketone.dev/docs/extensions/agent-chat) | Stored conversations with your app's language model: $agent.chat(id).send(text), with history and summaries. |
+| [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) | Long-lived API tokens with scopes. |
 | [Auto TLS](https://pocketone.dev/docs/extensions/autotls) | Certificates on demand and wildcards through ACME. |
 | [Backups](https://pocketone.dev/docs/extensions/backups) | Restore an app to a moment from its own backups: the latest one before it. On by default. |
 | [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) | Campaigns to your app's own users, with audiences from a collection, a view or SQL. |
@@ -25,11 +28,10 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) | File downloads as short-lived signed S3 redirects. |
 | [Settings](https://pocketone.dev/docs/extensions/settings) | One API for the settings an app's admins change for its extensions. On by default. |
 | [Templates](https://pocketone.dev/docs/extensions/templates) | Theme an extension's own pages (the OAuth sign-in screens): eject its templates to pb_templates and edit them. |
-| [Tokens](https://pocketone.dev/docs/extensions/tokens) | Long-lived API tokens with scopes. |
 | [UI Cache](https://pocketone.dev/docs/extensions/uicache) | Dashboard cache headers that let updates through browsers and CDNs. On by default. |
 | [Upgrade](https://pocketone.dev/docs/extensions/upgrade) | pocketone upgrade to the latest release, keeping the old executable. |
 | [Vacuum](https://pocketone.dev/docs/extensions/vacuum) | Compact your app's SQLite databases on a schedule, so space freed by deleted records goes back to the disk. |
-| [WASM](https://pocketone.dev/docs/extensions/wasm/extension) | Bring your own WASM: Go, Rust or Zig modules called from pb_hooks, each a closed box. |
+| [WASM](https://pocketone.dev/docs/extensions/wasm/extension) | Bring your own WASM: Go, Rust or Zig modules called from page code, each a closed box. |
 
 ## Run many instances
 

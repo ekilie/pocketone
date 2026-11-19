@@ -35,7 +35,7 @@ import (
 // Extension is a PocketOne extension.
 type Extension interface {
 	// Name is the extension's key: its pocketone.yaml section, an instance's `extensions.<name>` block on a multisite
-	// host, the prefix of its collections (`_<name>_`) and its name in logs.
+	// host, the prefix of its collections (`_<name>_`, hyphens as underscores), its pb_cache folder and its name in logs.
 	Name() string
 
 	// Register installs the extension on app before it bootstraps: hooks, routes, collections, dashboard screens.

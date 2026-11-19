@@ -5,13 +5,13 @@ go 1.27
 require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/pocker v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/remotes v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -63,7 +63,7 @@ replace github.com/pockethost/pocketone/ext/pocker => ../pocker
 
 replace github.com/pockethost/pocketone/ext/sandbox => ../sandbox
 
-replace github.com/pockethost/pocketone/ext/tokens => ../tokens
+replace github.com/pockethost/pocketone/ext/api-tokens => ../api-tokens
 
 replace github.com/pockethost/pocketone/ext/remotes => ../remotes
 

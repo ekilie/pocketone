@@ -45,6 +45,7 @@ and declares `WorksWith: extkit.IDs("settings/v1")`.
 | Extension | |
 |---|---|
 | [settings](../../../../ext/settings/README.md) | provides (default) |
+| [agent](../../../../ext/agent/README.md) | works with |
 | [bulkmail](../../../../ext/bulkmail/README.md) | works with |
 | [mailrelay](../../../../ext/mailrelay/README.md) | works with |
 | [pitr](../../../../ext/pitr/README.md) | works with |
