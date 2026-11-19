@@ -42,6 +42,16 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+## v0.0.1-alpha.9 (2026-11-19)
+
+### Highlights
+
+- **A fix for multisite hosts running Pocker.** On alpha.8, every Pocker instance that had API tokens failed to start: the API Tokens rename hit a bug in the sandbox's database driver, which also broke renaming any collection on a Pocker instance. Both work again. A single app (`pocketone serve`) never had the bug ([Sandbox](ext/sandbox/CHANGELOG.md)).
+
+### Extensions
+
+- [Sandbox](ext/sandbox/CHANGELOG.md#003-2026-11-19) 0.0.2 → 0.0.3
+
 ## v0.0.1-alpha.8 (2026-11-18)
 
 ### Highlights
