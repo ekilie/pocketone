@@ -55,7 +55,7 @@ What an edit gives:
 
 ## The module
 
-[`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/diff/src/main.rs):
+[`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/diff/src/main.rs):
 
 ```rust
 let diff = TextDiff::from_lines(&input.old, &input.new);

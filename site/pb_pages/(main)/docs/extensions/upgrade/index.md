@@ -21,7 +21,7 @@ Upgrade is built into `pocketone`: the `upgrade` command is always there. There'
 In your own Go build, register the command before the app starts:
 
 ```go
-import "github.com/pockethost/pocketone/ext/upgrade"
+import "pocketone.dev/ext/upgrade"
 
 app := pocketbase.New()
 upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
@@ -102,7 +102,7 @@ Nothing integrates with it yet. Other tools can reuse its release code:
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/upgrade/example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/upgrade/example/main.go) is a PocketOne app with just the `upgrade` command. Try it with `go run ./example upgrade`.
 
 ```go
 // Command example is a PocketOne app with just the upgrade command. A local build has no release version, so it is
@@ -115,7 +115,7 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/upgrade"
+	"pocketone.dev/ext/upgrade"
 )
 
 func main() {

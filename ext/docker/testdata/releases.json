@@ -33,11 +33,11 @@
   "base": "0.41.1",
   "assets": {
    "linux_amd64": {
-    "url": "https://github.com/pockethost/pocketone/releases/download/v0.0.1-alpha.4/pocketone_0.0.1-alpha.4_linux_amd64.zip",
+    "url": "https://github.com/pocketonehq/pocketone/releases/download/v0.0.1-alpha.4/pocketone_0.0.1-alpha.4_linux_amd64.zip",
     "sha256": "eecc20ef8189928f75940166d7808a6057a84edba051627c709983cb7fe9abe9"
    },
    "linux_arm64": {
-    "url": "https://github.com/pockethost/pocketone/releases/download/v0.0.1-alpha.4/pocketone_0.0.1-alpha.4_linux_arm64.zip",
+    "url": "https://github.com/pocketonehq/pocketone/releases/download/v0.0.1-alpha.4/pocketone_0.0.1-alpha.4_linux_arm64.zip",
     "sha256": "786e99bcb0c49419b503d8c31db20c93b4c23af8d3e6bfedfe280901d731268e"
    }
   }

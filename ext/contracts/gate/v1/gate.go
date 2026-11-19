@@ -5,11 +5,11 @@
 package gatev1
 
 import (
-	"github.com/pockethost/pocketone/ext/extkit"
 	"net/http"
 	"net/netip"
+	"pocketone.dev/ext/extkit"
 
-	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
+	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
 )
 
 // Gate admits requests. AllowPeer runs before routing and refuses with 403; Admit runs before an instance's request

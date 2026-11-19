@@ -15,12 +15,12 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/agent"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/agent"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 type sectionJSON map[string]string

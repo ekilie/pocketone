@@ -1,6 +1,6 @@
 # ext: PocketOne extensions
 
-Every extension is its own Go module (`github.com/pockethost/pocketone/ext/<name>`) with a README, so heavy
+Every extension is its own Go module (`pocketone.dev/ext/<name>`) with a README, so heavy
 dependencies (Litestream, CertMagic) never reach core or other extensions. This folder is ours, separate from upstream's
 `plugins/`, so upstream merges never touch it.
 

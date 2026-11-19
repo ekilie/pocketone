@@ -2,7 +2,7 @@
 
 > PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and PocketPages server-rendered sites.
 
-PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne and PocketPages: https://github.com/pockethost/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pockethost/pocketone`).
+PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne and PocketPages: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).
 
 Every page below in one file: https://pocketone.dev/llms-full.txt
 
@@ -148,9 +148,9 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Extensions: For extension authors
 
 - [Bundle](https://pocketone.dev/docs/extensions/bundle): An app's hooks, migrations and public files embedded in the binary.
-- [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
-- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
-- [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
+- [Contracts](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/README.md)
+- [Dev Users](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go)
+- [Extension Kit](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go)
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 

@@ -42,7 +42,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-Tools that `pb_hooks` declare before MCP registers wait for it. The module is `github.com/pockethost/pocketone/ext/mcp`.
+Tools that `pb_hooks` declare before MCP registers wait for it. The module is `pocketone.dev/ext/mcp`.
 
 ## Configure
 
@@ -328,11 +328,11 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/mcp"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/mcp"
 )
 
 func main() {

@@ -4,7 +4,7 @@
     "run"
   ],
   "language": "Rust",
-  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/diff",
+  "repository": "https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/diff",
   "examples": [
     {
       "function": "run",

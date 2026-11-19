@@ -10,7 +10,7 @@ source: "ext/contracts/mail/fallback/v1/README.md"
 Where an app's mail goes when its SMTP is off. Providers form an ordered chain: each sends a message or passes it on;
 when all pass, PocketBase sends it its own way (`sendmail`). An app with SMTP on never reaches the chain.
 
-A service ([fallback.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mail/fallback/v1/fallback.go)), many providers, open to `pb_hooks`.
+A service ([fallback.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mail/fallback/v1/fallback.go)), many providers, open to `pb_hooks`.
 
 ## Use
 

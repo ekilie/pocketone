@@ -6,8 +6,8 @@ import (
 	"text/tabwriter"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
+	"pocketone.dev/ext/extkit"
 )
 
 // setCommands are the set's own commands: extension migrations and pb_cache. They work on whatever extensions run on

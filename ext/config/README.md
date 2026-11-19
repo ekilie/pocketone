@@ -31,7 +31,7 @@ app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/config`. [`examples/pocketone/main.go`](../../examples/pocketone/main.go)
+The module is `pocketone.dev/ext/config`. [`examples/pocketone/main.go`](../../examples/pocketone/main.go)
 shows the full wiring: every `app` key as a flag default, and the `server` keys as the serve command's defaults.
 
 ## Configure

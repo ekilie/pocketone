@@ -3,10 +3,10 @@ package pocker
 import (
 	"context"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // Extension extends a Pocker server (see [Server.Extensions]). An extension implements Name and any of the optional

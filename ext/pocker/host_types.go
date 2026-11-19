@@ -3,7 +3,7 @@ package pocker
 import (
 	"context"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // The instance model and the host live in ext/multisite (shared by every runtime provider); these aliases keep pocker's

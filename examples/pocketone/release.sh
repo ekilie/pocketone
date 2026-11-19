@@ -8,13 +8,13 @@
 #   examples/pocketone/release.sh --status           # how that check is doing
 #   examples/pocketone/release.sh vX.Y.Z             # once it passed: tag, push the tag, goreleaser (draft release)
 #
-# Pushing the tag also publishes the desktop build image, ghcr.io/pockethost/pocketone-build:vX.Y.Z
+# Pushing the tag also publishes the desktop build image, ghcr.io/pocketonehq/pocketone-build:vX.Y.Z
 # (.github/workflows/build-image.yml); it can be published again from that workflow's Run workflow button.
 #
 # Needs gh (signed in) and goreleaser.
 set -euo pipefail
 
-repo=pockethost/pocketone
+repo=pocketonehq/pocketone
 workflow=release-check.yml
 cd "$(dirname "$0")/../.."
 
@@ -84,7 +84,7 @@ step "checking the version is unused"
 if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
   [ "$(git rev-parse "$version^{commit}")" = "$sha" ] || die "tag $version already exists on another commit"
 fi
-code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' "https://proxy.golang.org/github.com/pockethost/pocketone/@v/$version.info" || true)
+code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' "https://proxy.golang.org/pocketone.dev/@v/$version.info" || true)
 [ "$code" != 200 ] || [ "$(git rev-parse -q --verify "refs/tags/$version^{commit}" || true)" = "$sha" ] ||
   die "the Go proxy already knows $version; pick the next version"
 

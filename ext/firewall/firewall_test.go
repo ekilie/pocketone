@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 func fwRequest(remote, path string, hdr map[string]string) *http.Request {

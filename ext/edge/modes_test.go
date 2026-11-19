@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // whoami answers GET /whoami with the instance's own secret and the edge that forwarded the request ("-" when none).

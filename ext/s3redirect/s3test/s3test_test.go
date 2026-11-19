@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/pockethost/pocketone/ext/s3redirect/s3test"
-	"github.com/pockethost/pocketone/ext/s3redirect/sigv4"
+	"pocketone.dev/ext/s3redirect/s3test"
+	"pocketone.dev/ext/s3redirect/sigv4"
 )
 
 // The fake bucket serves PocketBase's own S3 client, and serves a presigned GET only when it's signed for exactly

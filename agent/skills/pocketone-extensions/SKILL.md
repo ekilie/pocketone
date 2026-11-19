@@ -1,7 +1,7 @@
 ---
 name: pocketone-extensions
 description: >-
-  Write or change a PocketOne extension and contribute it to github.com/pockethost/pocketone as a pull request that
+  Write or change a PocketOne extension and contribute it to github.com/pocketonehq/pocketone as a pull request that
   adds or edits ext/<name>/. Use when working in a pocketone checkout on an ext/<name> folder, when code uses extkit
   (Extension, Contracts(), Register, NewSection, conformance, modetest), when designing or providing a contract in
   ext/contracts (restore/v1, mail.fallback/v1, ... served at /api/_c/<id>/), when an extension's README front matter,
@@ -13,7 +13,7 @@ description: >-
 # Writing a PocketOne extension
 
 PocketOne is PocketBase plus extensions. Every feature is an **extension**: its own Go module in `ext/<name>/` of
-[github.com/pockethost/pocketone](https://github.com/pockethost/pocketone), compiled into the binary. An outside
+[github.com/pocketonehq/pocketone](https://github.com/pocketonehq/pocketone), compiled into the binary. An outside
 extension arrives as a **pull request that adds `ext/<name>/`**. Whoever submits it owns it: later pull requests to
 it need your approval (or a maintainer's).
 
@@ -105,7 +105,7 @@ reviews and audits every core change. Ask the user before making one; never chan
 
 ```
 ext/<name>/
-  go.mod               module github.com/pockethost/pocketone/ext/<name>
+  go.mod               module pocketone.dev/ext/<name>
   README.md            its docs and its page on pocketone.dev
   CHANGELOG.md         required
   TODO.md              optional: work that waits on something else existing first

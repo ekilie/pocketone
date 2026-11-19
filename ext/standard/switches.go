@@ -1,6 +1,6 @@
 package standard
 
-import "github.com/pockethost/pocketone/ext/extkit"
+import "pocketone.dev/ext/extkit"
 
 // Switch is the pocketone.yaml section of a standard member that has no section of its own: `api-tokens: {enabled: false}`
 // turns api-tokens off on a single app, and extensions that require it turn off too.

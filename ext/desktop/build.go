@@ -23,7 +23,7 @@ var AllTargets = []string{"darwin/arm64", "darwin/amd64", "windows/amd64", "wind
 var AppFolders = []string{"pb_hooks", "pb_migrations", "pb_public"}
 
 // runtimeModule is the module the generated main package calls.
-const runtimeModule = "github.com/pockethost/pocketone/ext/desktop/runtime"
+const runtimeModule = "pocketone.dev/ext/desktop/runtime"
 
 // TemplateEnv names the build image's prepared module (`desktop prepare`): set, a build runs inside the image,
 // offline, against that module's vendored source.

@@ -10,8 +10,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/contracts/instance/source/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Source is a sourcev1.Source whose instances a test sets. Changes made with Set and Delete reach every Watch.

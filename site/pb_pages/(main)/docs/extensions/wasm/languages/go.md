@@ -11,7 +11,7 @@ Go builds a module with nothing extra to install: `GOOS=wasip1` is a target of t
 
 ## The module
 
-[`example/summary/go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/go/main.go) is a plain command-line program:
+[`example/summary/go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/go/main.go) is a plain command-line program:
 
 ```go
 //go:embed manifest.json

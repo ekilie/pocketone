@@ -14,12 +14,12 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/deploy"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/deploy"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/remotes"
 )
 
 func main() {

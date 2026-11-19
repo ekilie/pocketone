@@ -2,17 +2,17 @@ package deploy
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/pocker"
+	"pocketone.dev/ext/pocker"
 )
 
 // TestWithPockerManager deploys to a real PocketBase app run by Pocker: hooks change after a restart, a broken hook is

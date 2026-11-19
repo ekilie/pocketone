@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // A pb_hooks change restarts an instance twice in a row (PocketBase in place, then the runtime's new container), so a

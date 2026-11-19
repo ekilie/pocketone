@@ -88,7 +88,7 @@ brews:
       owner: pockethost
       name: homebrew-tap
     directory: Formula
-    homepage: https://github.com/pockethost/pocketone
+    homepage: https://github.com/pocketonehq/pocketone
     description: PocketOne, a community fork of PocketBase with extensions (pages, pocker and more)
     license: MIT
     commit_author:

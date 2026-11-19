@@ -2,9 +2,9 @@ package mcp
 
 import (
 	"fmt"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
-	oauthv1 "github.com/pockethost/pocketone/ext/contracts/oauth/v1"
 	"net/url"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+	oauthv1 "pocketone.dev/ext/contracts/oauth/v1"
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"

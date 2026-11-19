@@ -26,7 +26,7 @@ h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath,
 	Extensions: []multisite.Extension{&docker.Provider{Resolve: cfg.ResolvePath}}})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/docker`. Add `docker.NewCommand(...)` to your root command for the
+The module is `pocketone.dev/ext/docker`. Add `docker.NewCommand(...)` to your root command for the
 `docker seed` and `docker update` commands.
 
 ## Configure
@@ -136,7 +136,7 @@ Instance folders are ordinary folders under `root`. To work on one while nothing
 ### Remote control
 
 Containers run stock images, and a PocketBase image has no PocketOne extensions, so the host answers
-[remote/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
+[remote/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/remote/v1/remote.go) for them at `/api/_c/remote/v1/` on each instance's hostname: the
 `pocketone remote` commands work the same as against a Pocker instance or a single app. It answers after the host's
 gates (firewall, rate limits) and blocked check, so a blocked instance's remote/v1 gets the blocked answer and the
 container stays stopped.
@@ -237,8 +237,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/docker"
+	"pocketone.dev/ext/multisite"
 )
 
 func main() {

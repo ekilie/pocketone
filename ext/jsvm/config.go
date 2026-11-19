@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // Config is the engine's configuration. The hook and migration fields mean what they mean in PocketBase's

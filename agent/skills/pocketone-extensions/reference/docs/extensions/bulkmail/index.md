@@ -27,7 +27,7 @@ jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { extkit.BindJS(a
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/bulkmail`.
+The module is `pocketone.dev/ext/bulkmail`.
 
 ## Configure
 
@@ -84,7 +84,7 @@ them.
    **Test address**.
 
 A view is the easy way to build a dynamic audience: it picks who gets mail and computes the columns the message
-uses. The [example](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/demo.go) creates one called `newsletter_audience`.
+uses. The [example](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/example/demo.go) creates one called `newsletter_audience`.
 
 ### Placeholders
 
@@ -235,7 +235,7 @@ them), since the app's mail account can usually send only as identities it has v
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with bulk mail: the Mail page, campaigns to the app's own users and `$bulkmail` in JS hooks. Run it with `go run ./example serve --dev` from this folder; the dev mail trap at http://127.0.0.1:8025 catches every mail.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with bulk mail: the Mail page, campaigns to the app's own users and `$bulkmail` in JS hooks. Run it with `go run ./example serve --dev` from this folder; the dev mail trap at http://127.0.0.1:8025 catches every mail.
 
 ```go
 // Command example runs one PocketOne app with bulk mail: a "Mail" page in the dashboard, campaigns to the app's
@@ -253,11 +253,11 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/bulkmail"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/bulkmail"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
 )
 
 func main() {
@@ -285,8 +285,8 @@ func main() {
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/bulkmail`, an [`extkit`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) extension.
-  [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
+- Go module `pocketone.dev/ext/bulkmail`, an [`extkit`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) extension.
+  [`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/example/main.go) runs one app with Bulk Mail (`go run ./example serve --dev`).
 - The audience is resolved when sending starts and queued into a ledger first (one row per campaign and address,
   unique). A background sender then mails one message at a time through the app's mail client, at the lower of the
   app's rate and the campaign's.
@@ -303,7 +303,7 @@ func main() {
 | `_bulkmail_sends` | The ledger: campaign, email, status (`queued`, `sent`, `skipped`, `failed`), reason, attempts. |
 | `_bulkmail_suppressions` | Addresses that never receive campaign mail, with the reason. |
 
-All are superuser-only system collections with fixed collection and field ids ([`schema.go`](https://github.com/pockethost/pocketone/blob/main/ext/bulkmail/schema.go)).
+All are superuser-only system collections with fixed collection and field ids ([`schema.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/bulkmail/schema.go)).
 `LegacyJSMigration()` emits a PocketBase JS migration that creates the same collections, for apps that move onto this
 schema before they run this extension.
 

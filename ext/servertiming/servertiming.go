@@ -7,15 +7,15 @@ package servertiming
 import (
 	"bufio"
 	"fmt"
-	wrapv1 "github.com/pockethost/pocketone/ext/contracts/http/wrap/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"net"
 	"net/http"
+	wrapv1 "pocketone.dev/ext/contracts/http/wrap/v1"
+	"pocketone.dev/ext/extkit"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // Header carries per-hop timing in the standard Server-Timing response header. Each hop measures from

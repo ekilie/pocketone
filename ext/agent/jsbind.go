@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // BindJS exposes agent/v1 to the app's JS hooks as $agent (and, when a provider of agent.chat/v1 runs, the chat

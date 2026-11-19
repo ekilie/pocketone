@@ -6,7 +6,7 @@ A project's code on an app: its `pb_*` folders except `pb_data` (`pb_hooks`, `pb
 the app lacks, then swap the new set in at once. Restart and logs are [remote/v1](https://pocketone.dev/docs/contracts/remote/v1)'s, which
 it requires.
 
-A routed contract ([deploy.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go)): its provider is an `http.Handler` serving the file API below. A
+A routed contract ([deploy.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go)): its provider is an `http.Handler` serving the file API below. A
 multisite host can provide it for its instances.
 
 ## Use

@@ -41,7 +41,7 @@ stock PocketBase. In your own Go build, register it where you'd register `plugin
 jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", MigrationsDir: "pb_migrations"})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/jsvm`.
+The module is `pocketone.dev/ext/jsvm`.
 
 ## Configure
 
@@ -152,7 +152,7 @@ When the app starts, `types.d.ts` in the project root (the folder holding `pb_ho
 `pocketone.yaml`) gets the declarations of the whole JS API, for your editor and `tsc`:
 
 - PocketBase's API generated from PocketOne's core (its extra hooks included), by PocketBase's own generator.
-- What this engine adds ([`pocketone.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
+- What this engine adds ([`pocketone.d.ts`](https://github.com/pocketonehq/pocketone/blob/main/ext/jsvm/pocketone.d.ts)): `.async` on every Go function, fully typed
   (`await $app.findRecordById.async(...)` is a `Promise<core.Record>`), `require`, `process`, `Buffer`, `console`,
   `import.meta`.
 - Each extension's own API, for the extensions on in that app (`$mcp`, `$apiTokens`, `$bulkmail`, `onContracts` and
@@ -189,7 +189,7 @@ do).
 ## Integrations
 
 Extensions plug in through `Config.Extensions` with the engine-neutral types in
-[`ext/extkit/js`](https://github.com/pockethost/pocketone/blob/main/ext/extkit/js/js.go). A value implements any of:
+[`ext/extkit/js`](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/js/js.go). A value implements any of:
 
 - `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API. `TypeScript()`: declare it for editors and
   `tsc` (appended to `types.d.ts`). `FilterTypes(decl)`: change the finished declarations (the sandbox
@@ -217,8 +217,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
 )
 
 func main() {

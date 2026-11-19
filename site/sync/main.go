@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	repoURL       = "https://github.com/pockethost/pocketone"
+	repoURL       = "https://github.com/pocketonehq/pocketone"
 	extensionsOut = "site/pb_pages/(main)/docs/extensions"
 	contractsOut  = "site/pb_pages/(main)/docs/contracts"
 	// docs/contracts.md, a tutorial: the main nav lists it under Tutorials, so it isn't under /docs/contracts
@@ -548,7 +548,7 @@ func (r *rewriter) target(src, t string, image bool) string {
 		return url + frag
 	}
 	if image {
-		return "https://raw.githubusercontent.com/pockethost/pocketone/main/" + p
+		return "https://raw.githubusercontent.com/pocketonehq/pocketone/main/" + p
 	}
 	kind := "blob"
 	if st, err := os.Stat(filepath.Join(r.root, p)); err == nil && st.IsDir() {

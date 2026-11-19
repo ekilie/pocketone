@@ -57,7 +57,7 @@ Pocker runs whatever instances the host's [instance.source/v1](https://pocketone
 supplies, and nothing else: the file by default. Hosting platforms provide that contract themselves instead (for
 example a control plane streaming the hostname -> id map over SSE); a community mothership is one (the `mothership`
 section, [ext/mothership](https://pocketone.dev/docs/extensions/mothership)). Tests provide it with
-[sourcetest](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go).
+[sourcetest](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go).
 
 pocketone.yaml for a production host (each extension owns its section; every field has a default):
 
@@ -150,7 +150,7 @@ any of:
 | `extkit.Extension` | a PocketOne extension, registered on every instance's app before it bootstraps (`Register(app, cfg)`) with the instance's `extensions.<name>` settings, its id in `extkit.AppID(app)`; e.g. [mailtrap](https://pocketone.dev/docs/extensions/mailtrap), [mailrelay](https://pocketone.dev/docs/extensions/mailrelay), [storage](https://pocketone.dev/docs/extensions/s3-fallback). Members of the standard set ([pitr](https://pocketone.dev/docs/extensions/pitr), [tokens](https://pocketone.dev/docs/extensions/api-tokens), [s3redirect](https://pocketone.dev/docs/extensions/s3redirect), [bulkmail](https://pocketone.dev/docs/extensions/bulkmail), ...) come from `Standard`; listing one here is an error. `enabled: false` skips it for that instance. A change to an instance's `extensions:` settings restarts its app on its next request. The same value works on a standalone app. |
 | `multisite.Extension` | a host extension (`RegisterHost`): it provides host contracts (gate/v1, tls/v1, http.wrap/v1, ...) as on any runtime ([docs/extensions.md](https://pocketone.dev/docs/writing-an-extension#host-extensions)) |
 | `Starter` | background work that needs pocker's Manager |
-| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a standalone app too and pass the [conformance test](https://github.com/pockethost/pocketone/blob/main/ext/extkit/conformance/conformance.go). |
+| `AppIniter` | host code that needs the whole `Instance` when setting up its app (`InitApp(inst, app)`); runs on every start, including restarts. Extensions use `extkit.Extension` instead, so they run on a standalone app too and pass the [conformance test](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/conformance/conformance.go). |
 
 Per-instance settings for an extension go under the instance's `extensions.<name>` (read them with `pocker.DecodeExtensionConfig`).
 `app.Restart()` (a backup restore, pitr) restarts only that instance, not the process.
@@ -200,8 +200,8 @@ private network, and `Manager.Firewall()` lets host routes in front of the Manag
 ## Sandbox
 
 Every instance's JS hooks and migrations run in a sandbox (the [sandbox](https://pocketone.dev/docs/extensions/sandbox) extension), and its SQL runs behind
-SQLite's authorizer ([`sandbox/sqlguard.go`](https://github.com/pockethost/pocketone/blob/main/ext/sandbox/sqlguard.go)). The sandbox extension also owns the egress policy
-([`sandbox/egress.go`](https://github.com/pockethost/pocketone/blob/main/ext/sandbox/egress.go)); pocker turns it on for its instances. [`sandbox_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/pocker/sandbox_test.go) runs one attack per
+SQLite's authorizer ([`sandbox/sqlguard.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/sandbox/sqlguard.go)). The sandbox extension also owns the egress policy
+([`sandbox/egress.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/sandbox/egress.go)); pocker turns it on for its instances. [`sandbox_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pocker/sandbox_test.go) runs one attack per
 route from one instance against another instance and the host; all of these are refused:
 
 | Area | What the sandbox does |
@@ -246,5 +246,5 @@ The module path stays `ganigeorgiev.com/pocketbase/pocketbase`, so a build pins 
 `replace` line:
 
 ```
-replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone v0.0.1
+replace ganigeorgiev.com/pocketbase/pocketbase => pocketone.dev v0.0.1
 ```

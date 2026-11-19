@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // Extension is a PocketOne extension.

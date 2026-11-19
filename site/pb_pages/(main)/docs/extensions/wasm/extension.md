@@ -72,7 +72,7 @@ app.Start()
 
 `$wasm` needs PocketOne's JS engine; with PocketBase's own (`--jsvm goja`) extensions bind nothing.
 
-The module is `github.com/pockethost/pocketone/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`; nothing else
+The module is `pocketone.dev/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`; nothing else
 needs setting up.
 
 ## Configure
@@ -204,7 +204,7 @@ and running took. It's for pages that let a superuser try a module out; other co
 
 The time limit covers the run; compiling comes before it (below).
 
-`$wasm` is declared in each app's `types.d.ts` ([`wasm.d.ts`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/wasm.d.ts)), for code completion and `tsc`.
+`$wasm` is declared in each app's `types.d.ts` ([`wasm.d.ts`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/wasm.d.ts)), for code completion and `tsc`.
 
 ### Writing a module
 
@@ -215,7 +215,7 @@ stderr is a JSON object `{"code", "message", "retryable"}`, your code gets it as
 `message` of a `module_error`. Anything it writes to stderr on success goes to the app's log (Logs in the
 dashboard), so stderr is its log.
 
-**Go** ([`example/summary/go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/go/main.go)):
+**Go** ([`example/summary/go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/go/main.go)):
 
 ```go
 //go:embed manifest.json
@@ -239,7 +239,7 @@ func main() {
 GOOS=wasip1 GOARCH=wasm go build -o pb_hooks/summary.pb.wasm .
 ```
 
-**Rust** ([`example/summary/rust`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs)): a binary crate, serde for JSON.
+**Rust** ([`example/summary/rust`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs)): a binary crate, serde for JSON.
 
 ```sh
 rustup target add wasm32-wasip1   # once
@@ -247,7 +247,7 @@ cargo build --release --target wasm32-wasip1
 cp target/wasm32-wasip1/release/summary.wasm pb_hooks/summary.pb.wasm
 ```
 
-**Zig** ([`example/summary/zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig)): an executable for `wasm32-wasi` (Zig 0.17). Set
+**Zig** ([`example/summary/zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig)): an executable for `wasm32-wasi` (Zig 0.17). Set
 `stack_size = 1 << 20` in `build.zig`: Zig's default stack is 16 MB, and every call would start with it.
 
 Any language that builds a WASI program works the same way: [Languages](/docs/extensions/wasm/languages) has a page for C
@@ -330,7 +330,7 @@ reaches a module went through the app's own code.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/main.go) runs one app with a `posts` collection and a hook that fills each new post's summary; its folder is laid
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/main.go) runs one app with a `posts` collection and a hook that fills each new post's summary; its folder is laid
 out like an instance (`pb_data/`, `pb_hooks/`). Build the module into `example/pb_hooks/`, then
 `cd example && go run . serve --dev` and create a post.
 
@@ -355,11 +355,11 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/wasm"
 )
 
 func main() {
@@ -401,16 +401,16 @@ so `/wasm`-style pages and the wazero CLI can try it), built with the command in
 
 | Module | Language | What it shows |
 |---|---|---|
-| [`summary/go`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/go), [`summary/tinygo`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/tinygo), [`summary/rust`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/rust), [`summary/zig`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/zig), [`summary/c`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/c), [`summary/assemblyscript`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/assemblyscript) | Go, TinyGo, Rust, Zig, C, AssemblyScript | The same module in six languages: the summary above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; TinyGo ~280 KB and ~65 ms; Rust, Zig, C and AssemblyScript under 100 KB and 10–25 ms). |
-| [`summary/wat`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/wat), [`summary/llvm`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/llvm) | WAT, LLVM IR | The C summary written by hand in two assembly languages, for fun: WebAssembly text calling WASI directly (1.8 KB), and LLVM IR built by clang with wasi-libc (3.8 KB). See [WAT](/docs/extensions/wasm/languages/wat) and [LLVM IR](/docs/extensions/wasm/languages/llvm). |
-| [`stats-tinygo`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the app stores in a record and passes in with each call ([Keeping state in JS](/docs/extensions/wasm/guides/state)). |
-| [`markdown`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/markdown), [`sanitize-html`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/sanitize-html), [`diff`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/diff), [`thumbnail`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/thumbnail), [`qrcode`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/qrcode), [`csv`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with page code in the [recipes](/docs/extensions/wasm/recipes). |
-| [`crypto`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/crypto) | Go | What an app used to run with `$os.exec`: AES-256-GCM. The key comes in with each call; the module can't keep it or send it anywhere. |
-| [`waflows`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/waflows) | Rust | What JS can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. Your code keeps the JSON and HTTP; the module does only those two. |
-| [`edifact-orders-rust`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/edifact-orders-rust) | Rust | A real format with a real library (edifact-rs): an EDIFACT ORDERS message, as raw text, read into an order. |
-| [`order-xml`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/order-xml) | Rust | The same order from XML (roxmltree), so one route takes either format and stores one shape. |
-| [`devil`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/devil) | Rust | Is it safe? It tries, in plain sight, to read the app's database and `/etc/passwd`, list folders, write a file, read the environment, run `sh -c id` and send to `attacker.example`. Every try says `refused`. |
-| [`memhog`](https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/memhog) | Rust | What does it cost? It asks for more memory than `MaxCallMemoryMB`: that call fails as `crashed`, saying which limit it hit, and the app goes on. `probe` shows the limit from inside. |
+| [`summary/go`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/go), [`summary/tinygo`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/tinygo), [`summary/rust`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/rust), [`summary/zig`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/zig), [`summary/c`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/c), [`summary/assemblyscript`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/assemblyscript) | Go, TinyGo, Rust, Zig, C, AssemblyScript | The same module in six languages: the summary above, and how much the language matters (a Go module is ~4 MB and compiles for over a second; TinyGo ~280 KB and ~65 ms; Rust, Zig, C and AssemblyScript under 100 KB and 10–25 ms). |
+| [`summary/wat`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/wat), [`summary/llvm`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/llvm) | WAT, LLVM IR | The C summary written by hand in two assembly languages, for fun: WebAssembly text calling WASI directly (1.8 KB), and LLVM IR built by clang with wasi-libc (3.8 KB). See [WAT](/docs/extensions/wasm/languages/wat) and [LLVM IR](/docs/extensions/wasm/languages/llvm). |
+| [`stats-tinygo`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the app stores in a record and passes in with each call ([Keeping state in JS](/docs/extensions/wasm/guides/state)). |
+| [`markdown`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/markdown), [`sanitize-html`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/sanitize-html), [`diff`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/diff), [`thumbnail`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/thumbnail), [`qrcode`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/qrcode), [`csv`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with page code in the [recipes](/docs/extensions/wasm/recipes). |
+| [`crypto`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/crypto) | Go | What an app used to run with `$os.exec`: AES-256-GCM. The key comes in with each call; the module can't keep it or send it anywhere. |
+| [`waflows`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/waflows) | Rust | What JS can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. Your code keeps the JSON and HTTP; the module does only those two. |
+| [`edifact-orders-rust`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/edifact-orders-rust) | Rust | A real format with a real library (edifact-rs): an EDIFACT ORDERS message, as raw text, read into an order. |
+| [`order-xml`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/order-xml) | Rust | The same order from XML (roxmltree), so one route takes either format and stores one shape. |
+| [`devil`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/devil) | Rust | Is it safe? It tries, in plain sight, to read the app's database and `/etc/passwd`, list folders, write a file, read the environment, run `sh -c id` and send to `attacker.example`. Every try says `refused`. |
+| [`memhog`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/memhog) | Rust | What does it cost? It asks for more memory than `MaxCallMemoryMB`: that call fails as `crashed`, saying which limit it hit, and the app goes on. `probe` shows the limit from inside. |
 
 Every one of them is also kept built, beside its source (`example/<folder>/<name>.pb.wasm`: the Go ones about 4.5 MB,
 the rest under 1 MB), so they double as the extension's tests: every run of `go test` loads each one, checks that its
@@ -418,7 +418,7 @@ the rest under 1 MB), so they double as the extension's tests: every run of `go 
 `ext/wasm` that breaks a real module shows there.
 
 They're built in Docker, never with the compilers on your machine:
-[`example/toolchains/Dockerfile`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/toolchains/Dockerfile) is the build environment of every example language,
+[`example/toolchains/Dockerfile`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/toolchains/Dockerfile) is the build environment of every example language,
 one stage each: Go 1.27.4, TinyGo 0.41.1, Rust 1.100.0 and Zig 0.17.0 (Zig, and C through `zig cc`), each image
 pinned by digest and Zig's download by checksum, so a rebuild on any machine gives the same bytes. After changing a
 module's source: `go test -run 'TestPrebuiltExamples/<folder>' -update`. To check every kept file is what its source

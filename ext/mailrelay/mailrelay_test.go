@@ -12,8 +12,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/mailer"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/pocker"
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/pocker"
 )
 
 type sent struct {

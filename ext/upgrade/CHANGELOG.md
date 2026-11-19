@@ -5,3 +5,8 @@ commit. Each PocketOne release raises this extension's `version:` when there's s
 renames the section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 
 ## Unreleased
+
+### Changed
+
+- Releases come from `pocketonehq/pocketone` by default (the repo moved there from `pockethost/pocketone`, which redirects).
+

@@ -7,15 +7,15 @@
 // A wire contract at /api/_c/agent.chat/v1. In pb_hooks it's $agent.newChat, $agent.chat(id) and $agent.chats.
 package chatv1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import (
 	"context"
 	"encoding/json"
 	"time"
 
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Chats stores an app's conversations with its language model.

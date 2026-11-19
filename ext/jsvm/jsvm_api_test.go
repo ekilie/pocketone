@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // A js.Value passes to Func.Call as itself, and a dropped Func frees its reference.

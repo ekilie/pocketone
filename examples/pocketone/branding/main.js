@@ -24,7 +24,7 @@ app.store.creditLinks = app.store.creditLinks.map((link) => {
     }
     return {
         ...link,
-        href: "https://github.com/pockethost/pocketone/releases",
+        href: "https://github.com/pocketonehq/pocketone/releases",
         label: version ? `PocketOne ${version}` : "PocketOne",
     };
 });

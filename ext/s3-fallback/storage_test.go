@@ -3,7 +3,6 @@ package s3fallback
 import (
 	"bytes"
 	"context"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"image"
 	"image/color"
 	"image/png"
@@ -13,14 +12,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"sync"
 	"testing"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/s3redirect/s3test"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/s3redirect/s3test"
 )
 
 var quiet = slog.New(slog.NewTextHandler(io.Discard, nil))

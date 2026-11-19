@@ -7,12 +7,12 @@ import (
 	"net/netip"
 	"sync"
 
-	gatev1 "github.com/pockethost/pocketone/ext/contracts/gate/v1"
-	wrapv1 "github.com/pockethost/pocketone/ext/contracts/http/wrap/v1"
-	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
-	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
-	tlsv1 "github.com/pockethost/pocketone/ext/contracts/tls/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	gatev1 "pocketone.dev/ext/contracts/gate/v1"
+	wrapv1 "pocketone.dev/ext/contracts/http/wrap/v1"
+	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
+	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
+	tlsv1 "pocketone.dev/ext/contracts/tls/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Extension is a host extension: it works on the multisite process, whatever runs its instances. RegisterHost

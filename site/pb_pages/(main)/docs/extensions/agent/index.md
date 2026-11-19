@@ -24,7 +24,7 @@ r, err := agentv1.Contract.Must(app).Complete(ctx, extkit.Internal, agentv1.Comp
 
 The examples show each thing in TypeScript, as [PocketPages](/docs/extensions/pages/overview) page code (`+api.ts`,
 `+page.ts`), and in Go: pick one above any example and the pages remember it. The Go examples call the contract package
-(`agentv1`, from `github.com/pockethost/pocketone/ext/contracts/agent/v1`) with a `context.Context` named `ctx`;
+(`agentv1`, from `pocketone.dev/ext/contracts/agent/v1`) with a `context.Context` named `ctx`;
 `agent` stands for `agentv1.Contract.Must(app)`.
 
 Use it for the small jobs that come up around your data: label a support ticket, pull an address out of an email,

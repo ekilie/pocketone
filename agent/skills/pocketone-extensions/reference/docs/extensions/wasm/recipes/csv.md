@@ -49,7 +49,7 @@ number of fields doesn't stop it; it's skipped and listed with its line number:
 
 ## The module
 
-[`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/csv/src/main.rs):
+[`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/csv/src/main.rs):
 
 ```rust
 let mut reader = csv::ReaderBuilder::new().delimiter(delimiter).from_reader(data);

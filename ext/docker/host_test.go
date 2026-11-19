@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/multisite"
 )
 
 // tagGate stands in for a host gate (e.g. ext/firewall): it admits everything and tags the response, so the test can

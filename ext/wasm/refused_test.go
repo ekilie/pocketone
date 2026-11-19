@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/wasm"
 )
 
 // TestBadManifests: when what a module prints for --describe isn't a manifest, or asks for more than a pure function

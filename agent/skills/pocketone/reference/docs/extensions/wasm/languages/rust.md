@@ -11,7 +11,7 @@ rustup target add wasm32-wasip1
 
 ## The module
 
-[`example/summary/rust`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) is a binary crate with serde for JSON:
+[`example/summary/rust`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) is a binary crate with serde for JSON:
 
 ```rust
 fn fail(code: &str, message: &str) -> ! {

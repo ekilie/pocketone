@@ -6,6 +6,11 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Changed
+
+- The build image is now `ghcr.io/pocketonehq/pocketone-build:v<version>` (the repo moved to the `pocketonehq` org); earlier versions keep pulling their image from `ghcr.io/pockethost/pocketone-build`.
+
+
 ## 0.0.2 (2026-11-18)
 
 ### Added

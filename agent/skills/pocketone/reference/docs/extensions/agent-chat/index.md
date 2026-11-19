@@ -15,7 +15,7 @@ const answer: AgentAnswer = $agent.chat(id, { system: preamble }).send("How do I
 In Go:
 
 ```go
-chats := chatv1.Contract.Must(app) // agent.chat/v1, from github.com/pockethost/pocketone/ext/contracts/agent/chat/v1
+chats := chatv1.Contract.Must(app) // agent.chat/v1, from pocketone.dev/ext/contracts/agent/chat/v1
 c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: json.RawMessage(`{"user":"` + e.Auth.Id + `"}`)})
 res, err := chats.Send(ctx, extkit.Internal, chatv1.SendInput{ID: c.ID, System: preamble, Text: "How do I export my notes?"})
 ```
@@ -34,8 +34,8 @@ member). In your own Go build, next to Agent:
 extkit.Setup(app, []extkit.Extension{agent.New(), agentchat.New()}, nil, nil)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/agent-chat`. Its two collections come from its own migration,
-`0001_chats` in [schema.go](https://github.com/pockethost/pocketone/blob/main/ext/agent-chat/schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
+The module is `pocketone.dev/ext/agent-chat`. Its two collections come from its own migration,
+`0001_chats` in [schema.go](https://github.com/pocketonehq/pocketone/blob/main/ext/agent-chat/schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
 They stay empty until your app starts a chat.
 
 ## Configure
@@ -130,10 +130,10 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 
-	"github.com/pockethost/pocketone/ext/agent"
-	agentchat "github.com/pockethost/pocketone/ext/agent-chat"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/agent"
+	agentchat "pocketone.dev/ext/agent-chat"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {

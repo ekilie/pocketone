@@ -47,7 +47,7 @@ takes the bytes as a plain array, hence `Array.from`.
 
 ## The module
 
-[`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/thumbnail/src/main.rs) reads the image, scales it to fit, and writes a PNG:
+[`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/thumbnail/src/main.rs) reads the image, scales it to fit, and writes a PNG:
 
 ```rust
 let size = match std::env::args().nth(1).as_deref() {

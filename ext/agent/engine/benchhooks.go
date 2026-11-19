@@ -3,7 +3,7 @@ package engine
 import (
 	"math"
 
-	"github.com/pockethost/pocketone/ext/agent/engine/internal/benchhooks"
+	"pocketone.dev/ext/agent/engine/internal/benchhooks"
 )
 
 func init() {

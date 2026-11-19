@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Action is what a decision asks this host to do with an instance's data.

@@ -23,9 +23,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"gopkg.in/yaml.v3"
 
-	clearv1 "github.com/pockethost/pocketone/ext/contracts/cache/clear/v1"
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	clearv1 "pocketone.dev/ext/contracts/cache/clear/v1"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's key: its pocketone.yaml section and an instance's `extensions.<name>`.

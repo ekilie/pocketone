@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // helloHook answers GET /hello with its version, the instance's GREETING secret and the host's own variable (which

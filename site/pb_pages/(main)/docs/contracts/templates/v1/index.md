@@ -15,7 +15,7 @@ so the built-in pages and the ejected ones are the same files.
 A set is every `*.tpl` file in an `fs.FS`, at any depth. Each file is one template named by its path without `.tpl`
 (`signin`, `parts/head`), so pages include shared pieces with `{{template "parts/head" .}}`.
 
-An app service contract, one provider ([templates.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/templates/v1/templates.go)).
+An app service contract, one provider ([templates.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/templates/v1/templates.go)).
 
 ## Use
 

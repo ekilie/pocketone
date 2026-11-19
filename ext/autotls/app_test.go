@@ -10,8 +10,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"golang.org/x/crypto/acme/autocert"
+	"pocketone.dev/ext/extkit"
 )
 
 // serveEvent runs the app's OnServe hooks the way apis.Serve does, with PocketBase's own TLS config and host list.

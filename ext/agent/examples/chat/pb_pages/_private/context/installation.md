@@ -15,14 +15,14 @@ The formula lives in [pockethost/homebrew-tap](https://github.com/pockethost/hom
 ## Download a release
 
 Download the zip for your platform from
-[Releases](https://github.com/pockethost/pocketone/releases), unzip it, and put `pocketone` somewhere on your `PATH`.
+[Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and put `pocketone` somewhere on your `PATH`.
 
 ## Build from source
 
 With [Go](https://go.dev) installed:
 
 ```bash
-git clone https://github.com/pockethost/pocketone.git
+git clone https://github.com/pocketonehq/pocketone.git
 cd pocketone/examples/pocketone
 go build -o pocketone .
 ```

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 type noRuntime struct{}

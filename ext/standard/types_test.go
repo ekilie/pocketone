@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/standard"
 )
 
 // An app with the standard set gets its extensions' JS API in types.d.ts (in the project root, beside pb_hooks), and

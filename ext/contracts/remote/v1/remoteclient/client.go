@@ -9,10 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"net"
 	"net/http"
+	"pocketone.dev/ext/extkit"
 	"strings"
 	"time"
 )

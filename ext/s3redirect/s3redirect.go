@@ -34,7 +34,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/pockethost/pocketone/ext/s3redirect/sigv4"
+	"pocketone.dev/ext/s3redirect/sigv4"
 )
 
 // Name is the extension's name: its config key (extensions.s3redirect).

@@ -1,11 +1,11 @@
 package multisite
 
 import (
-	gatev1 "github.com/pockethost/pocketone/ext/contracts/gate/v1"
-	wrapv1 "github.com/pockethost/pocketone/ext/contracts/http/wrap/v1"
-	sourcev1 "github.com/pockethost/pocketone/ext/contracts/instance/source/v1"
-	runtimev1 "github.com/pockethost/pocketone/ext/contracts/runtime/v1"
-	tlsv1 "github.com/pockethost/pocketone/ext/contracts/tls/v1"
+	gatev1 "pocketone.dev/ext/contracts/gate/v1"
+	wrapv1 "pocketone.dev/ext/contracts/http/wrap/v1"
+	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
+	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
+	tlsv1 "pocketone.dev/ext/contracts/tls/v1"
 )
 
 // The instance record and the host's extension points are contracts (ext/contracts); these are their names here.

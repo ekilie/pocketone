@@ -8,7 +8,7 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/upgrade"
+	"pocketone.dev/ext/upgrade"
 )
 
 func main() {

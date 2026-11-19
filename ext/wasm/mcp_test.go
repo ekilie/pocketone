@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/wasm"
+	mcpv1 "pocketone.dev/ext/contracts/mcp/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/wasm"
 )
 
 // TestMCPListModules: the app's MCP server (mcp/v1, whoever provides it) gets wasm_list_modules, which gives a

@@ -1,13 +1,13 @@
-module github.com/pockethost/pocketone/ext/firewall
+module pocketone.dev/ext/firewall
 
 go 1.27
 
-replace github.com/pockethost/pocketone/ext/multisite => ../multisite
+replace pocketone.dev/ext/multisite => ../multisite
 
 require (
-	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/multisite v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/multisite v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -28,7 +28,6 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
-	github.com/pockethost/pocketone/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
@@ -45,14 +44,15 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.62.0 // indirect
+	pocketone.dev/ext/config v0.0.0-00010101000000-000000000000 // indirect
 )
 
 replace (
 	ganigeorgiev.com/pocketbase/pocketbase => ../..
-	github.com/pockethost/pocketone/ext/config => ../config
-	github.com/pockethost/pocketone/ext/extkit => ../extkit
+	pocketone.dev/ext/config => ../config
+	pocketone.dev/ext/extkit => ../extkit
 )
 
-replace github.com/pockethost/pocketone/ext/contracts => ../contracts
+replace pocketone.dev/ext/contracts => ../contracts
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+replace pocketone.dev/ext/jsvm => ../jsvm

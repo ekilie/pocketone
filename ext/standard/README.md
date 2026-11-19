@@ -91,10 +91,10 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/pitr"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/pitr"
+	"pocketone.dev/ext/standard"
 )
 
 func main() {

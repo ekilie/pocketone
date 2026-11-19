@@ -7,7 +7,7 @@ package wrapv1
 import (
 	"net/http"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Wrapper wraps the host's handler.

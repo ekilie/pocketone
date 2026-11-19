@@ -2,12 +2,12 @@ package edge
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/multisite"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"pocketone.dev/ext/multisite"
 	"strings"
 	"sync/atomic"
 	"testing"

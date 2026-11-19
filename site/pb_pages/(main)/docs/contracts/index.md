@@ -17,7 +17,7 @@ extension that implements a contract can stand in for another. PocketOne answers
 app?" at startup and prints the answer.
 
 Every contract lives here, standard or community; extensions live in `ext/<name>`. Each contract is a package named
-for its id and major version: `deploy/v1` is `github.com/pockethost/pocketone/ext/contracts/deploy/v1`,
+for its id and major version: `deploy/v1` is `pocketone.dev/ext/contracts/deploy/v1`,
 `mail.fallback/v1` is `.../mail/fallback/v1`. A change to what a contract promises is a new major version (`v2`) next
 to the old one.
 
@@ -54,7 +54,7 @@ The table is generated from each contract's README and every extension's `Contra
 
 <!-- /contracts:catalogue -->
 
-[`internal/example/v1`](https://github.com/pockethost/pocketone/blob/main/ext/contracts/internal/example/v1/example.go) is a test-only wire contract that exercises the generated code.
+[`internal/example/v1`](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/internal/example/v1/example.go) is a test-only wire contract that exercises the generated code.
 
 ## Three kinds
 
@@ -104,11 +104,11 @@ extension that first provides it.
 
 ## Write the interface
 
-A contract is an interface with `//contract:` directives; [`contractgen`](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cmd/contractgen/main.go) writes the rest
+A contract is an interface with `//contract:` directives; [`contractgen`](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cmd/contractgen/main.go) writes the rest
 (`zz_contract.go`) with `go generate ./...`. A test fails when a generated file is stale.
 
 ```go
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 // Deployer sends a project's code to an app.
 //

@@ -72,7 +72,7 @@ func fakeReleases(t *testing.T, body string, badSum bool) *httptest.Server {
 
 	mux := http.NewServeMux()
 	var srv *httptest.Server
-	mux.HandleFunc("/repos/pockethost/pocketone/releases", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/repos/pocketonehq/pocketone/releases", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode([]Release{{Tag: "v0.0.4", Body: "notes", Assets: []Asset{
 			{Name: name, DownloadURL: srv.URL + "/dl/" + name},
 			{Name: "checksums.txt", DownloadURL: srv.URL + "/dl/checksums.txt"},
@@ -202,7 +202,7 @@ func TestUpgradeAsksBeforeAPrerelease(t *testing.T) {
 	const name = "pocketone_0.0.4-alpha.1_darwin_arm64.zip"
 	mux := http.NewServeMux()
 	var srv *httptest.Server
-	mux.HandleFunc("/repos/pockethost/pocketone/releases", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/repos/pocketonehq/pocketone/releases", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode([]Release{{Tag: "v0.0.4-alpha.1", Prerelease: true, Assets: []Asset{
 			{Name: name, DownloadURL: srv.URL + "/dl/" + name},
 			{Name: "checksums.txt", DownloadURL: srv.URL + "/dl/checksums.txt"},

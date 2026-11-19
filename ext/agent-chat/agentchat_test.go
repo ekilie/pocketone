@@ -11,13 +11,13 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/agent"
-	agentchat "github.com/pockethost/pocketone/ext/agent-chat"
-	chatv1 "github.com/pockethost/pocketone/ext/contracts/agent/chat/v1"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/agent"
+	agentchat "pocketone.dev/ext/agent-chat"
+	chatv1 "pocketone.dev/ext/contracts/agent/chat/v1"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
 )
 
 // fakeAgent answers "answer N" (or "SUMMARY" when asked to summarize) and remembers every input.

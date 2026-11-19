@@ -27,7 +27,7 @@ set.Add(mailrelay.New(mailrelay.Config{
 }))
 ```
 
-The module is `github.com/pockethost/pocketone/ext/mailrelay`. It also registers on a standalone app, but a standalone
+The module is `pocketone.dev/ext/mailrelay`. It also registers on a standalone app, but a standalone
 app can set up its own SMTP and doesn't need a relay.
 
 ## Configure
@@ -107,7 +107,7 @@ instance, and with SMTP off PocketBase then falls back to the host's `sendmail`.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailrelay/example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/mailrelay/example/main.go) runs a Pocker host whose relay sends to the dev mail trap, so every instance's
 mail lands in one inbox at http://127.0.0.1:8025. Run `go run ./example --dev` from this folder, then trigger a
 password reset on any instance:
 
@@ -143,11 +143,11 @@ import (
 	"os/signal"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailrelay"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/mailrelay"
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 func main() {

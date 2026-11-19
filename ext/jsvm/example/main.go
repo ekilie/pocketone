@@ -9,8 +9,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
 )
 
 func main() {

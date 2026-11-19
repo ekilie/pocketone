@@ -17,7 +17,7 @@ which Wails marks experimental on macOS and Linux.
 ## Install
 
 Desktop is built into `pocketone`. Builds run in [Docker](https://docs.docker.com/get-docker/), in the build image
-for your `pocketone`'s version (`ghcr.io/pockethost/pocketone-build:v<version>`), pulled on first use. It holds Go
+for your `pocketone`'s version (`ghcr.io/pocketonehq/pocketone-build:v<version>`), pulled on first use. It holds Go
 and PocketOne's source with every dependency vendored, so once it's here builds work offline. A named volume
 (`pocketone-build-cache`) keeps Go's build cache, so rebuilds take seconds.
 
@@ -134,12 +134,12 @@ desktop.Run(desktop.App{Name: "Notes", ID: "dev.example.notes", Hooks: hooks, Mi
 ```
 
 Build it with `CGO_ENABLED=0 go build -tags purego` for macOS and Linux (Wails' cgo-free backends); Windows needs no
-tag. The build image is [image/Dockerfile](https://github.com/pockethost/pocketone/blob/main/ext/desktop/image/Dockerfile): a `pocketone` and the vendored module `pocketone desktop
+tag. The build image is [image/Dockerfile](https://github.com/pocketonehq/pocketone/blob/main/ext/desktop/image/Dockerfile): a `pocketone` and the vendored module `pocketone desktop
 prepare` writes.
 
 ## Example
 
-[example/hello](https://github.com/pockethost/pocketone/tree/main/ext/desktop/example/hello) is a hello-world app: a hook (`GET /api/hello`), a migration (a `greetings`
+[example/hello](https://github.com/pocketonehq/pocketone/tree/main/ext/desktop/example/hello) is a hello-world app: a hook (`GET /api/hello`), a migration (a `greetings`
 collection with one row) and a page that lists and adds greetings.
 
 ```sh
@@ -149,7 +149,7 @@ pocketone serve                 # http://127.0.0.1:8090
 pocketone desktop build         # dist/darwin-arm64/Hello.app on an Apple Silicon Mac
 ```
 
-[example/main.go](https://github.com/pockethost/pocketone/blob/main/ext/desktop/example/main.go) is a PocketBase app with only this extension, to show the command.
+[example/main.go](https://github.com/pocketonehq/pocketone/blob/main/ext/desktop/example/main.go) is a PocketBase app with only this extension, to show the command.
 
 ```go
 // Command example is a PocketBase app with only the desktop extension: `go run . desktop build` in an app folder
@@ -162,9 +162,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 
-	clicmdv1 "github.com/pockethost/pocketone/ext/contracts/cli/commands/v1"
-	"github.com/pockethost/pocketone/ext/desktop"
-	"github.com/pockethost/pocketone/ext/extkit"
+	clicmdv1 "pocketone.dev/ext/contracts/cli/commands/v1"
+	"pocketone.dev/ext/desktop"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {

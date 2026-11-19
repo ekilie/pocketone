@@ -8,10 +8,10 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/pitr"
-	"github.com/pockethost/pocketone/ext/settings"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/pitr"
+	"pocketone.dev/ext/settings"
 )
 
 func main() {

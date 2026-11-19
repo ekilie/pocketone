@@ -10,7 +10,7 @@ source: "ext/contracts/http/wrap/v1/README.md"
 Middleware around everything a multisite host serves: health, every instance, forwarded requests. Wrappers nest in
 provider order, the first outermost (a Server-Timing header first, so it measures everything inside it).
 
-A host-scope service contract, many providers in order ([wrap.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/http/wrap/v1/wrap.go)).
+A host-scope service contract, many providers in order ([wrap.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/http/wrap/v1/wrap.go)).
 
 ## Use
 

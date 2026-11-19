@@ -31,7 +31,7 @@ type HTTPClient interface {
 
 // Config configures the extension. Zero values pick PocketOne's own releases.
 type Config struct {
-	// Owner and Repo of the GitHub repository with the releases (default pockethost/pocketone).
+	// Owner and Repo of the GitHub repository with the releases (default pocketonehq/pocketone).
 	Owner, Repo string
 	// ArchivePrefix is the release archive's name prefix, "<prefix>_<version>_<os>_<arch>.zip" (default "pocketone").
 	ArchivePrefix string
@@ -47,7 +47,7 @@ type Config struct {
 
 func (c *Config) defaults() {
 	if c.Owner == "" {
-		c.Owner = "pockethost"
+		c.Owner = "pocketonehq"
 	}
 	if c.Repo == "" {
 		c.Repo = "pocketone"

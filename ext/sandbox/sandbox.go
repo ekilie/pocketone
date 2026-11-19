@@ -26,7 +26,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/template"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // Sandbox confines an app's JS hooks and migrations so several apps can share one process:

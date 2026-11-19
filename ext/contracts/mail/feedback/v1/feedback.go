@@ -7,14 +7,14 @@
 // signature, webhook calls by a shared secret.
 package feedbackv1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import (
 	"context"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Receiver takes mail providers' reports.

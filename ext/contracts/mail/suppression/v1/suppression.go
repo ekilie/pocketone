@@ -6,13 +6,13 @@
 // signed by the provider, and mail providers POST to it for one-click unsubscribes (RFC 8058).
 package suppressionv1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import (
 	"context"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // List is an app's suppression list.

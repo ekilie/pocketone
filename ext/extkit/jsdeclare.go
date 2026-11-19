@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // An app's JS declares and provides its contracts in onContracts, the way a Go extension does in Contracts() and

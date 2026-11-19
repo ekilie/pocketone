@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
 	"gopkg.in/yaml.v3"
+	"pocketone.dev/ext/extkit"
 )
 
 // SectionDoc describes one config section for docs (`pocketone config --json`, used by pocketone.dev).

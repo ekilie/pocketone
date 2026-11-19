@@ -35,7 +35,7 @@ To use `$apiTokens` in `pb_hooks`, bind it in jsvm's `OnInit` (the stock binary 
 jsvm.MustRegister(app, jsvm.Config{OnInit: func(rt js.Runtime) { tokens.BindJS(app, rt) }})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/api-tokens`.
+The module is `pocketone.dev/ext/api-tokens`.
 
 ## Configure
 
@@ -217,7 +217,7 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
 - **Read the token on a request.** `tokens.FromRequest(e)` returns the token a request used (nil for a PocketBase
   auth token), with its `Owner`, `Scopes` and `Audience`. `tokens.HasScope(e, "x")` is true for PocketBase auth
   tokens and unscoped API tokens.
-- **Without importing this package.** Other extensions use the [api-tokens/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)
+- **Without importing this package.** Other extensions use the [api-tokens/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go)
   contract instead: `tokensv1.Contract.Of(app)` registers scopes (`RegisterScope`), lists them and checks `Reaches`;
   `tokensv1.FromRequest(e)` is the request's token (its `Grant`: owner, scopes, audience, client id);
   `tokensv1.WithScopes` limits in-process requests. Deploy and MCP work this way. The `X-Token-Scope-*` headers work
@@ -243,7 +243,7 @@ Audience})` returns the secret and record; also `Verify(secret)`, `List(owner)`,
 
 ### REST API (api-tokens/v1)
 
-The [api-tokens/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go) contract, at `/api/_c/api-tokens/v1`. Any signed-in account; superusers
+The [api-tokens/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/api-tokens/v1/tokens.go) contract, at `/api/_c/api-tokens/v1`. Any signed-in account; superusers
 see and manage everyone's.
 
 | Route | What |
@@ -258,7 +258,7 @@ Owners can also list, view and delete their own tokens through the records API o
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/api-tokens/v1`) and the `token` command.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/api-tokens/v1`) and the `token` command.
 
 ```go
 // Command example runs one PocketOne app with API tokens: Settings → API tokens in the dashboard, the token API (/api/_c/api-tokens/v1)
@@ -278,8 +278,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/devusers"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/devusers"
 )
 
 func main() {
@@ -325,10 +325,10 @@ The OAuth server can only sign in accounts of those collections.
   audience.
 - The bearer check is a middleware that runs just before PocketBase's own auth middleware; a second one, right after
   it, sets the scope headers. Last use is written at most once a minute per token.
-- [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app where superusers and users may own tokens, with a `hello` scope
+- [`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/example/main.go) runs one app where superusers and users may own tokens, with a `hello` scope
   for `GET /api/hello`. Try it with `go run ./example serve` and
   `go run ./example token create --superuser admin@example.com --name ci` (logins from
-  [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password, user@example.com / password).
+  [devusers](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password, user@example.com / password).
 
 ## License
 

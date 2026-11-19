@@ -7,8 +7,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	pbjsvm "ganigeorgiev.com/pocketbase/pocketbase/plugins/jsvm"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/standard"
 )
 
 // The JS engine switch (`app: jsvm:` / --jsvm):

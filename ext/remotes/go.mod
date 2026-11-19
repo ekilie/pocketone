@@ -1,16 +1,16 @@
-module github.com/pockethost/pocketone/ext/remotes
+module pocketone.dev/ext/remotes
 
 go 1.27
 
 require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/contracts v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.48.0
+	pocketone.dev/ext/api-tokens v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -47,58 +47,58 @@ require (
 
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
-replace github.com/pockethost/pocketone/ext/devusers => ../devusers
+replace pocketone.dev/ext/devusers => ../devusers
 
-replace github.com/pockethost/pocketone/ext/pocker => ../pocker
+replace pocketone.dev/ext/pocker => ../pocker
 
-replace github.com/pockethost/pocketone/ext/sandbox => ../sandbox
+replace pocketone.dev/ext/sandbox => ../sandbox
 
-replace github.com/pockethost/pocketone/ext/api-tokens => ../api-tokens
+replace pocketone.dev/ext/api-tokens => ../api-tokens
 
-replace github.com/pockethost/pocketone/ext/edge => ../edge
+replace pocketone.dev/ext/edge => ../edge
 
-replace github.com/pockethost/pocketone/ext/multisite => ../multisite
+replace pocketone.dev/ext/multisite => ../multisite
 
-replace github.com/pockethost/pocketone/ext/extkit => ../extkit
+replace pocketone.dev/ext/extkit => ../extkit
 
-replace github.com/pockethost/pocketone/ext/config => ../config
+replace pocketone.dev/ext/config => ../config
 
-replace github.com/pockethost/pocketone/ext/contracts => ../contracts
+replace pocketone.dev/ext/contracts => ../contracts
 
-replace github.com/pockethost/pocketone/ext/mailtrap => ../mailtrap
+replace pocketone.dev/ext/mailtrap => ../mailtrap
 
-replace github.com/pockethost/pocketone/ext/autotls => ../autotls
+replace pocketone.dev/ext/autotls => ../autotls
 
-replace github.com/pockethost/pocketone/ext/upgrade => ../upgrade
+replace pocketone.dev/ext/upgrade => ../upgrade
 
-replace github.com/pockethost/pocketone/ext/docker => ../docker
+replace pocketone.dev/ext/docker => ../docker
 
-replace github.com/pockethost/pocketone/ext/deploy => ../deploy
+replace pocketone.dev/ext/deploy => ../deploy
 
-replace github.com/pockethost/pocketone/ext/mcp => ../mcp
+replace pocketone.dev/ext/mcp => ../mcp
 
-replace github.com/pockethost/pocketone/ext/firewall => ../firewall
+replace pocketone.dev/ext/firewall => ../firewall
 
-replace github.com/pockethost/pocketone/ext/servertiming => ../servertiming
+replace pocketone.dev/ext/servertiming => ../servertiming
 
-replace github.com/pockethost/pocketone/ext/bundle => ../bundle
+replace pocketone.dev/ext/bundle => ../bundle
 
-replace github.com/pockethost/pocketone/ext/bulkmail => ../bulkmail
+replace pocketone.dev/ext/bulkmail => ../bulkmail
 
-replace github.com/pockethost/pocketone/ext/mailrelay => ../mailrelay
+replace pocketone.dev/ext/mailrelay => ../mailrelay
 
-replace github.com/pockethost/pocketone/ext/s3-fallback => ../s3-fallback
+replace pocketone.dev/ext/s3-fallback => ../s3-fallback
 
-replace github.com/pockethost/pocketone/ext/pitr => ../pitr
+replace pocketone.dev/ext/pitr => ../pitr
 
-replace github.com/pockethost/pocketone/ext/pages => ../pages
+replace pocketone.dev/ext/pages => ../pages
 
-replace github.com/pockethost/pocketone/ext/stats => ../stats
+replace pocketone.dev/ext/stats => ../stats
 
-replace github.com/pockethost/pocketone/ext/s3redirect => ../s3redirect
+replace pocketone.dev/ext/s3redirect => ../s3redirect
 
-replace github.com/pockethost/pocketone/ext/mothership => ../mothership
+replace pocketone.dev/ext/mothership => ../mothership
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+replace pocketone.dev/ext/jsvm => ../jsvm
 
-replace github.com/pockethost/pocketone/ext/templates => ../templates
+replace pocketone.dev/ext/templates => ../templates

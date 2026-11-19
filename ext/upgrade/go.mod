@@ -1,4 +1,4 @@
-module github.com/pockethost/pocketone/ext/upgrade
+module pocketone.dev/ext/upgrade
 
 go 1.27
 

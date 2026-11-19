@@ -20,9 +20,9 @@ package mcp
 
 import (
 	"fmt"
-	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
 	"net/http"
 	"net/url"
+	mcpv1 "pocketone.dev/ext/contracts/mcp/v1"
 	"regexp"
 	"sort"
 	"strings"
@@ -30,7 +30,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 const (

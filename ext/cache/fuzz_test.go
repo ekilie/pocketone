@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
 )
 
 // checkIndex verifies every structure the lock guards. It holds at any moment the lock is free, IO in flight or not.

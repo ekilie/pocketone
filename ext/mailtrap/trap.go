@@ -32,7 +32,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"github.com/domodwyer/mailyak/v3"
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Where the dev mail trap listens. Set them before the first app bootstraps, or with the environment variables

@@ -18,7 +18,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/search"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/subscriptions"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // ---- ctx.res.sse() ----

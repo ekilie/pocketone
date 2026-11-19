@@ -10,9 +10,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
-	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
-	"github.com/pockethost/pocketone/ext/remotes"
-	"github.com/pockethost/pocketone/ext/templates"
+	templatesv1 "pocketone.dev/ext/contracts/templates/v1"
+	"pocketone.dev/ext/remotes"
+	"pocketone.dev/ext/templates"
 )
 
 // The OAuth pages are the "oauth" template set: ejected through templates/v1 into pb_templates/oauth, the project's

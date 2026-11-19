@@ -10,7 +10,7 @@ source: "ext/contracts/vacuum/v1/README.md"
 SQLite keeps a database file as big as it ever was; compacting it (`VACUUM`) gives the space freed by deleted records
 back to the disk. This contract says who does that for an app, how often, and how the last run went.
 
-A wire contract at `/api/_c/vacuum/v1` ([vacuum.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/vacuum/v1/vacuum.go)), one provider. On a single app the
+A wire contract at `/api/_c/vacuum/v1` ([vacuum.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/vacuum/v1/vacuum.go)), one provider. On a single app the
 [vacuum](/docs/extensions/vacuum) extension provides it, on the schedule the app's admins set. A multisite host may
 provide it for its instances instead: then the host compacts them on its own schedule, the app's vacuum extension steps
 aside (no settings, no schedule of its own), and the app's admins see the host's status.

@@ -6,14 +6,14 @@
 // A wire contract at /api/_c/agent/v1. A multisite host may provide it for its instances.
 package agentv1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import (
 	"context"
 	"encoding/json"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Agent answers prompts with a language model.

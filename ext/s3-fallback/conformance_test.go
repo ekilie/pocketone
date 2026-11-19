@@ -3,9 +3,9 @@ package s3fallback_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
-	"github.com/pockethost/pocketone/ext/s3-fallback"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
+	"pocketone.dev/ext/s3-fallback"
 )
 
 func TestConformance(t *testing.T) {

@@ -2,9 +2,9 @@ package pocker
 
 import (
 	"context"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"log/slog"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"testing"
 	"time"
 

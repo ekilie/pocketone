@@ -26,7 +26,7 @@
   (data (i32.const 320) " \e2\80\a6")                                                        ;; 4: " …"
   (data (i32.const 336) "0123456789abcdef")
   ;; what `summary --describe` prints: manifest.json, compacted (the tests check they match)
-  (data (i32.const 4096) "{\22description\22:\22Summarizes a text: its first words, and a word count. Written by hand in WebAssembly text\22,\22functions\22:[\22run\22],\22language\22:\22WAT\22,\22repository\22:\22https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/wat\22,\22examples\22:[{\22function\22:\22run\22,\22input\22:\22one two three\22,\22output\22:{\22text\22:\22one two three\22,\22words\22:3}}]}")
+  (data (i32.const 4096) "{\22description\22:\22Summarizes a text: its first words, and a word count. Written by hand in WebAssembly text\22,\22functions\22:[\22run\22],\22language\22:\22WAT\22,\22repository\22:\22https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/wat\22,\22examples\22:[{\22function\22:\22run\22,\22input\22:\22one two three\22,\22output\22:{\22text\22:\22one two three\22,\22words\22:3}}]}")
 
   ;; write all of [ptr, ptr+len) to fd
   (func $write (param $fd i32) (param $ptr i32) (param $len i32)

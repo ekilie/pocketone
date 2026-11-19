@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // Facts are what this host knows about one of its instances.

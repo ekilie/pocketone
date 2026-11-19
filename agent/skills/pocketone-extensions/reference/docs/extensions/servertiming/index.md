@@ -25,7 +25,7 @@ In your own host build, list it first among the host extensions, so its header c
 h, err := multisite.FromConfig(multisite.Options{Extensions: []multisite.Extension{servertiming.New() /*, other host extensions */}})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/servertiming`.
+The module is `pocketone.dev/ext/servertiming`.
 
 ## Configure
 
@@ -58,7 +58,7 @@ first; values a server in front already sent are kept, and this host's entries a
 
 ## Example
 
-There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go), which
+There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), which
 lists it first in the `pocketone` binary's host extensions.
 
 ## How it works

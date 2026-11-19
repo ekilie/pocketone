@@ -69,7 +69,7 @@ app.Start()
 
 `$wasm` needs PocketOne's JS engine; with PocketBase's own (`--jsvm goja`) extensions bind nothing.
 
-The module is `github.com/pockethost/pocketone/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`; nothing else
+The module is `pocketone.dev/ext/wasm`. Modules are `pb_hooks/<name>.pb.wasm`; nothing else
 needs setting up.
 
 ## Configure
@@ -352,11 +352,11 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/wasm"
 )
 
 func main() {

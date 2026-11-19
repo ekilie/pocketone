@@ -15,7 +15,7 @@ What every provider serves the same way, the contract owns:
 A provider brings the protocol, sign-in and any tools of its own ([MCP](https://pocketone.dev/docs/extensions/mcp) adds `pb_*` tools over
 the REST API). Replace it and the contract tools stay.
 
-A service ([mcp.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mcp/v1/mcp.go)).
+A service ([mcp.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mcp/v1/mcp.go)).
 
 ## Use
 

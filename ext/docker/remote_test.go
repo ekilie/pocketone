@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
 )
 
 func TestLogRing(t *testing.T) {

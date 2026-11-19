@@ -25,9 +25,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's key.

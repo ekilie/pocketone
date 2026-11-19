@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
-	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
-	"github.com/pockethost/pocketone/ext/extkit"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
+	"pocketone.dev/ext/deploy/internal/glob"
+	"pocketone.dev/ext/extkit"
 )
 
 // Two-way sync for `dev`: the project's code set (pb_* folders except pb_data and pb_cache, package.json, bun.lock(b), patches/)

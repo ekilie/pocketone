@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // PITR, as a single app and as an instance on a host: replicate, restore to a moment between two writes over

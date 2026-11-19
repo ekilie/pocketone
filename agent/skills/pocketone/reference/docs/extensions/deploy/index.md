@@ -39,7 +39,7 @@ app.Start()
 
 The [standard set](https://pocketone.dev/docs/extensions/standard) does this for you.
 
-The module is `github.com/pockethost/pocketone/ext/deploy`. `deploy.Config{DisableServer: true}` keeps only the
+The module is `pocketone.dev/ext/deploy`. `deploy.Config{DisableServer: true}` keeps only the
 commands, for a binary that deploys elsewhere but must not accept deploys.
 
 ## Configure
@@ -212,7 +212,7 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
 ### Building on Deploy
 
 - **Go client.** `deploy.NewClient(ctx, rc)` takes a remote/v1 client (`remoteclient.Open`, from
-  [ext/contracts/remote/v1/remoteclient](https://github.com/pockethost/pocketone/tree/main/ext/contracts/remote/v1/remoteclient)) and finds its deploy API.
+  [ext/contracts/remote/v1/remoteclient](https://github.com/pocketonehq/pocketone/tree/main/ext/contracts/remote/v1/remoteclient)) and finds its deploy API.
   `Deploy`, `Pull`, `Collect`, `Watch` and `NewSyncer` (two-way sync: `Sync`, `RemoteChanged`) are the commands'
   building blocks.
 - **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths})`
@@ -222,12 +222,12 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
   instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
 - **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
   does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
-- **Discovery.** Deploy provides the [deploy/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go) contract, which whoami lists, so
+- **Discovery.** Deploy provides the [deploy/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go) contract, which whoami lists, so
   clients find it at `/api/_c/deploy/v1`. A multisite host can provide it for its instances instead.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/deploy/example/main.go) is an app that both accepts deploys and makes them: the deploy API, API tokens, remotes and the deploy commands. Its comment walks through a first deploy against itself.
 
 ```go
 // Command example is a PocketOne app that accepts deploys and can deploy: deploy/v1 (/api/_c/deploy/v1), remote/v1
@@ -246,12 +246,12 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/deploy"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/deploy"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/remotes"
 )
 
 func main() {
@@ -289,14 +289,14 @@ The protocol is the pockethost npm CLI's, so the same client deploys to PocketOn
 
 ## How it works
 
-- Go module `github.com/pockethost/pocketone/ext/deploy`. [`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
-  deploys and can deploy (logins from [devusers](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
+- Go module `pocketone.dev/ext/deploy`. [`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/deploy/example/main.go) is an app that accepts
+  deploys and can deploy (logins from [devusers](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go): admin@example.com / password).
 - A deploy is a hash diff: the client sends a manifest, uploads only the missing files in bundles, then commits.
 - On a single app the files are swapped in while it runs; a restart (when a client asks) is `app.Restart()`, which
   re-executes the process (`Config.Restart` overrides it; not on Windows).
 - `Config.Dir` and `Config.StoreDir` move the deploy folder and the upload store; `Config.Prefix` moves the API.
 - Logs on a single app come from its own `_logs` table; entries at error level and above are marked as stderr.
-- The `node_modules` collector is [`nodemodules`](https://github.com/pockethost/pocketone/blob/main/ext/deploy/nodemodules/nodemodules.go), a port of the npm CLI's.
+- The `node_modules` collector is [`nodemodules`](https://github.com/pocketonehq/pocketone/blob/main/ext/deploy/nodemodules/nodemodules.go), a port of the npm CLI's.
 
 ## License
 

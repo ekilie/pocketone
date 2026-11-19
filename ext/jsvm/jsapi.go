@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"runtime"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // The extkit/js types over this engine: what extensions see.

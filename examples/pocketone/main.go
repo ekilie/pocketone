@@ -4,12 +4,12 @@
 package main
 
 import (
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/vacuum"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/vacuum"
 	"strings"
 	"time"
 
@@ -20,19 +20,19 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/plugins/migratecmd"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/osutils"
-	"github.com/pockethost/pocketone/ext/autotls"
-	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/desktop"
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/mailtrap"
-	"github.com/pockethost/pocketone/ext/pages"
-	"github.com/pockethost/pocketone/ext/pitr"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/s3redirect"
-	"github.com/pockethost/pocketone/ext/standard"
-	"github.com/pockethost/pocketone/ext/upgrade"
 	"github.com/spf13/pflag"
+	"pocketone.dev/ext/autotls"
+	"pocketone.dev/ext/config"
+	"pocketone.dev/ext/desktop"
+	"pocketone.dev/ext/docker"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/pages"
+	"pocketone.dev/ext/pitr"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/s3redirect"
+	"pocketone.dev/ext/standard"
+	"pocketone.dev/ext/upgrade"
 )
 
 // PoweredBy is the X-Powered-By this binary sends on every response: "PocketOne 0.0.2" (see pocker.Version).
@@ -299,7 +299,7 @@ func main() {
 		Dir:          migrationsDir,
 	})
 
-	// upgrade command: latest PocketOne release from GitHub (pockethost/pocketone); keeps the old executable as
+	// upgrade command: latest PocketOne release from GitHub (pocketonehq/pocketone); keeps the old executable as
 	// pocketone-<version>. Custom builds that publish their own releases set Owner/Repo/ArchivePrefix here.
 	upgrade.MustRegister(app, app.RootCmd, upgrade.Config{})
 

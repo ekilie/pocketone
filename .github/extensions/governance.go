@@ -128,7 +128,7 @@ func gitShow(rev, path string) string {
 func standardMembers(rev string) map[string]bool {
 	src := gitShow(rev, "ext/standard/standard.go")
 	out := map[string]bool{"standard": true, "extkit": true} // the set itself and the extension kit are core-like
-	for _, m := range regexp.MustCompile(`"github\.com/pockethost/pocketone/ext/([a-z0-9-]+)"`).FindAllStringSubmatch(src, -1) {
+	for _, m := range regexp.MustCompile(`"pocketone\.dev/ext/([a-z0-9-]+)"`).FindAllStringSubmatch(src, -1) {
 		out[m[1]] = true
 	}
 	return out

@@ -14,8 +14,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
 )
 
 // recorder collects values passed to the JS global record(v) from every runtime.

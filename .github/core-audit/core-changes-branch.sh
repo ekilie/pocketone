@@ -47,7 +47,7 @@ MSG
     sed -E -i.bak "s#compare/[0-9a-f]{40}\.\.\.core-#compare/${up_sha}...core-#g" "$root/README.md" && rm -f "$root/README.md.bak"
     if ! git -C "$root" diff --quiet -- README.md; then echo "README.md: compare links now pin ${up_sha:0:10}; commit it on main"; fi
   fi
-  echo "review: https://github.com/pockethost/pocketone/compare/${up_sha}...$branch"
+  echo "review: https://github.com/pocketonehq/pocketone/compare/${up_sha}...$branch"
   echo "push:   git push --force origin $branch 'refs/heads/core-hook/*' 'refs/heads/core-bugfix/*'"
 }
 

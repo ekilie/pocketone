@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // ServerConfig is the `server` section: the serve command's settings, such as how the binary listens.

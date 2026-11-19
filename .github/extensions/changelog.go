@@ -20,7 +20,7 @@ import (
 
 const (
 	rootChangelog = "CHANGELOG.md"
-	repoBlob      = "https://github.com/pockethost/pocketone/blob/"
+	repoBlob      = "https://github.com/pocketonehq/pocketone/blob/"
 )
 
 // checkChangelogs: every extension with a catalogue entry has a CHANGELOG.md with a `## Unreleased` section.

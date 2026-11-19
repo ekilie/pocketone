@@ -38,7 +38,7 @@ stock PocketBase. In your own Go build, register it where you'd register `plugin
 jsvm.MustRegister(app, jsvm.Config{HooksDir: "pb_hooks", MigrationsDir: "pb_migrations"})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/jsvm`.
+The module is `pocketone.dev/ext/jsvm`.
 
 ## Configure
 
@@ -214,8 +214,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
 )
 
 func main() {

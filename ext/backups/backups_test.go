@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	restorev1 "github.com/pockethost/pocketone/ext/contracts/restore/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	restorev1 "pocketone.dev/ext/contracts/restore/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 func TestRestoreToPicksLatestBackupBefore(t *testing.T) {

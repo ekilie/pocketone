@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/pockethost/pocketone/ext/config"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/config"
+	"pocketone.dev/ext/extkit"
 )
 
 // Config is the `multisite` section (pocketone.yaml): having it makes the binary a multi-instance host instead of a

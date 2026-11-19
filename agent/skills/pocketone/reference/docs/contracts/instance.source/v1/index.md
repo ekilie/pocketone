@@ -5,7 +5,7 @@ The record of one instance on a multisite host: its id, hostnames, PocketBase ve
 superusers, per-extension settings, whether it's blocked or runs elsewhere. Every host contract reads the same record:
 runtimes run it, gates admit requests for it. A source supplies the records and streams changes.
 
-A host-scope service contract ([instance.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/instance.go), [limits.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/limits.go)).
+A host-scope service contract ([instance.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/instance.go), [limits.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/limits.go)).
 
 ## Use
 
@@ -22,7 +22,7 @@ deletes) until ctx is done. Provide it on the host's scope in a host extension's
 sourcev1.Contract.ProvideIn(h.Scope, mySource)
 ```
 
-In tests, [sourcetest](https://github.com/pockethost/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go) provides it: `src, scope := sourcetest.Scope(instances...)` gives a
+In tests, [sourcetest](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/source/v1/sourcetest/sourcetest.go) provides it: `src, scope := sourcetest.Scope(instances...)` gives a
 sealed host scope with a fixed list, and `src.Set(inst)` / `src.Delete(id)` change it the way an edit to the instances
 file would.
 

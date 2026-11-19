@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/api-tokens/apitokenstest"
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/api-tokens/apitokenstest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // A local project links to a running app ("prod", a single app or an instance on a host) through the browser sign-in

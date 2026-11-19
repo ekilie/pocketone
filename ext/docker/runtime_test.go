@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // dockerSocket finds a reachable Docker daemon, or skips the test.

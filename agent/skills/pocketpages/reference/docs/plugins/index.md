@@ -48,7 +48,7 @@ See [Plugin Authoring](https://pocketone.dev/docs/extensions/pages/plugins/autho
 
 | Add-on | Adds |
 |---|---|
-| [Datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar) | `ctx.datastar.*` helpers for [Datastar](https://data-star.dev). Copy [`addons/datastar.js`](https://github.com/pockethost/pocketone/blob/main/ext/pages/addons/datastar.js) into `pb_pages/_private/`; the `datastar` starter kit already has it. |
+| [Datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar) | `ctx.datastar.*` helpers for [Datastar](https://data-star.dev). Copy [`addons/datastar.js`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/datastar.js) into `pb_pages/_private/`; the `datastar` starter kit already has it. |
 
 ## Order
 

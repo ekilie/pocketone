@@ -13,7 +13,7 @@ Scheduled webhooks per instance, called in-process even while the instance sleep
 **Runs on:** [pocker](../pocker/README.md) (multitenant).
 
 > **Planned.** Nothing is published here yet. This folder will hold the extension's Go module
-> (`github.com/pockethost/pocketone/ext/schedules`), its tests and a minimal `example/main.go` that builds and shows the
+> (`pocketone.dev/ext/schedules`), its tests and a minimal `example/main.go` that builds and shows the
 > feature. See [Create your own extension](../../docs/extensions.md).
 
 ## Install

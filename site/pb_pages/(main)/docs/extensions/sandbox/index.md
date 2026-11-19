@@ -33,7 +33,7 @@ jsvm.MustRegister(app, jsvm.Config{
 })
 ```
 
-The module is `github.com/pockethost/pocketone/ext/sandbox`. The SQL guard and the outbound network rules are
+The module is `pocketone.dev/ext/sandbox`. The SQL guard and the outbound network rules are
 separate calls (see Integrations).
 
 ## Configure
@@ -82,7 +82,7 @@ Under Pocker, `console.*` output and hook errors go to the instance's own `logs/
 
 | Extension | How they fit |
 |---|---|
-| [Pocker](/docs/extensions/pocker) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/pocker/sandbox_test.go). |
+| [Pocker](/docs/extensions/pocker) | Runs every instance through the sandbox, the SQL guard and the outbound network rules, with limits from the `pocker` section and each instance's `limits`. Its attack tests are in [`sandbox_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pocker/sandbox_test.go). |
 | [Multisite](/docs/extensions/multisite) | Carries the per-instance `limits` from `instances.yaml` or a mothership. |
 | [Firewall](/docs/extensions/firewall) | Rate and concurrency limits in front of every request. |
 | [Docker](/docs/extensions/docker) | The alternative for untrusted apps: a container per instance instead of checks inside one process. Docker doesn't use the sandbox. |
@@ -120,9 +120,9 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/sandbox"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/sandbox"
 )
 
 func main() {
@@ -152,7 +152,7 @@ func main() {
 With [pocker](/docs/extensions/pocker), PocketOne can serve hundreds of instances from one Go process, each with its own owner, hooks and data.
 This section explains why that's safe enough to run code from people you don't know, and where it isn't.
 
-Configuration and the engine API are in [POCKER.md](/docs/extensions/pocker/pocker). The attack tests are in [`sandbox_test.go`](https://github.com/pockethost/pocketone/blob/main/ext/pocker/sandbox_test.go).
+Configuration and the engine API are in [POCKER.md](/docs/extensions/pocker/pocker). The attack tests are in [`sandbox_test.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/pocker/sandbox_test.go).
 
 ### Why one process
 

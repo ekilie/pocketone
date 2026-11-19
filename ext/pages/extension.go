@@ -5,7 +5,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's key: its pocketone.yaml switch and an instance's `extensions.<name>`.

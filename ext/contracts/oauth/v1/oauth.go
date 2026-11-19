@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Server is the app's authorization server, as other extensions (ext/mcp) use it. Its provider serves the routes

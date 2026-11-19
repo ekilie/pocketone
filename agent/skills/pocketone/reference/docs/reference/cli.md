@@ -132,7 +132,7 @@ pocketone desktop image
 ```
 
 Builds the image desktop build runs in (Go plus this checkout's source, vendored) and tags it. A release
-publishes it as ghcr.io/pockethost/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
+publishes it as ghcr.io/pocketonehq/pocketone-build:v&lt;version&gt;; a development pocketone builds pocketone-build:dev on first use.
 
 | Flag | Type | Default | |
 |---|---|---|---|

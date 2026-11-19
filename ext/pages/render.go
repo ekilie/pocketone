@@ -22,8 +22,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"gopkg.in/yaml.v3"
 
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
+	"pocketone.dev/ext/extkit/js"
 )
 
 //go:embed driver.js

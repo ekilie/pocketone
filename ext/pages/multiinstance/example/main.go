@@ -19,9 +19,9 @@ import (
 	"os/signal"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 func main() {

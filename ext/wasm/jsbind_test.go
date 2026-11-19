@@ -14,11 +14,11 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/sandbox"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/sandbox"
+	"pocketone.dev/ext/wasm"
 )
 
 // hooks is what a programmer writes in pb_hooks: the module gets what the hook gives it, the hook decides what to

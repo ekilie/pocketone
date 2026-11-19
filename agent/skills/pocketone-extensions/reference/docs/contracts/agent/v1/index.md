@@ -10,7 +10,7 @@ code calls the same thing wherever the app runs; who answers is the provider's b
 - **its host's model:** a multisite host may provide this contract for its instances, running one model they all share
   unless an instance's admins set their own API.
 
-A wire contract at `/api/_c/agent/v1` ([agent.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/agent/v1/agent.go)), one provider. The [agent](https://pocketone.dev/docs/extensions/agent/extension)
+A wire contract at `/api/_c/agent/v1` ([agent.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/agent/v1/agent.go)), one provider. The [agent](https://pocketone.dev/docs/extensions/agent/extension)
 extension provides it.
 
 ## Use

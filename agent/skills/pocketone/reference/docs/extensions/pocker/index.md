@@ -20,7 +20,7 @@ instances instead of one app, with pocker as the runtime (docker too, when it ha
 multisite: {}
 ```
 
-In your own Go build, add it to the host's extensions ([`examples/pocketone/multi.go`](https://github.com/pockethost/pocketone/blob/main/examples/pocketone/multi.go)
+In your own Go build, add it to the host's extensions ([`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go)
 is the stock binary's version), or run a `pocker.Server` on its own as [the example](#example) does:
 
 ```go
@@ -35,7 +35,7 @@ h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Exten
 }})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/pocker`.
+The module is `pocketone.dev/ext/pocker`.
 
 ## Configure
 
@@ -215,9 +215,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 //go:embed ui

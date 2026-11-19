@@ -5,7 +5,7 @@ package sourcev1
 import (
 	"context"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 var (

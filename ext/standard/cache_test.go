@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/cache"
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/cache"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/standard"
 )
 
 // template is a compiled value an instance caches: large in memory, small once marshaled.

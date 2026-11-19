@@ -2,7 +2,7 @@ package agentchat
 
 import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // The collections, named `_<extension>_<table>`. Both are system collections with no API rules: only superusers and

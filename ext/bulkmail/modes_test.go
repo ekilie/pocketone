@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // Bulk mail on the real binary, as a single app and as an instance on a host, caught by the dev mail trap: a campaign

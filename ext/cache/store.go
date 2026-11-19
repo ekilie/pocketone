@@ -39,7 +39,7 @@ import (
 	"sync"
 	"time"
 
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
 )
 
 // keyOverhead is what a key costs in memory beyond its name: map slot, list elements, struct.

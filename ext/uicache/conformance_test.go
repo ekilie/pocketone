@@ -3,9 +3,9 @@ package uicache_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
-	"github.com/pockethost/pocketone/ext/uicache"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
+	"pocketone.dev/ext/uicache"
 )
 
 func TestConformance(t *testing.T) {

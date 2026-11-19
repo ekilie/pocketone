@@ -60,8 +60,8 @@
 # For extension authors
 
 - [Bundle](/docs/extensions/bundle)
-- [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md)
-- [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go)
-- [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go)
+- [Contracts](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/README.md)
+- [Dev Users](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go)
+- [Extension Kit](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go)
 - [Mail Trap](/docs/extensions/mailtrap)
 - [Standard Set](/docs/extensions/standard)

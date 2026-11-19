@@ -26,7 +26,7 @@ set := standard.New()
 set.S3Fallback = s3fallback.New(s3fallback.Config{Backends: backends, Mounts: mounts})
 ```
 
-The module is `github.com/pockethost/pocketone/ext/s3-fallback`.
+The module is `pocketone.dev/ext/s3-fallback`.
 
 ## Configure
 

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/wasm"
 )
 
 // cacheFiles counts the compiled modules in a cache folder.

@@ -2,7 +2,7 @@
 // API, and the latest finished run's counts per job (run.sh publishes them as a "pocketone-test-counts" annotation).
 // Kept in the app store for 10 minutes: about 4 API calls per refresh, well under GitHub's 60 an hour without a token.
 // When GitHub can't be reached, the last good result is shown with its age.
-const REPO = 'pockethost/pocketone'
+const REPO = 'pocketonehq/pocketone'
 const WORKFLOW = 'upstream-tests.yml'
 const TTL = 10 * 60 * 1000
 const KEY = 'docs-compatibility'

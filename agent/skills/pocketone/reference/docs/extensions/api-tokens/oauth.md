@@ -2,7 +2,7 @@
 # OAuth
 
 [Tokens](https://pocketone.dev/docs/extensions/api-tokens) includes an OAuth 2.1 authorization server whose access tokens are API tokens: the
-[oauth/v1](https://github.com/pockethost/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go) contract. `pocketone login` signs in to it in the browser (or with a code on
+[oauth/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/oauth/v1/oauth.go) contract. `pocketone login` signs in to it in the browser (or with a code on
 another device), and MCP clients such as Claude or ChatGPT connectors register themselves and connect. Superusers and
 app users sign in on your app's own pages, through PocketBase's own auth endpoints.
 
@@ -176,7 +176,7 @@ deploy token can't drive MCP. Refreshed tokens keep it.
 
 ## Example
 
-The OAuth server is on wherever Tokens is (its [example](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/example/main.go) runs it). To brand it and let MCP connectors
+The OAuth server is on wherever Tokens is (its [example](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/example/main.go) runs it). To brand it and let MCP connectors
 register themselves:
 
 ```go
@@ -251,7 +251,7 @@ apitokens.New(apitokens.Config{OAuth: tokens.OAuthConfig{
 
 The templates are Go `html/template` files, and their dot is `PageData` (`{{.AppName}}`, `{{.Action}}`, `{{.Hidden}}`,
 `{{.CSRF}}`, `{{.ClientName}}`, `{{.Scopes}}`, `{{.ScopeChoices}}`, `{{.Superuser}}`, `{{.Providers}}`, `{{.Error}}`, …;
-see `PageData` in [oauth_pages.go](https://github.com/pockethost/pocketone/blob/main/ext/api-tokens/oauth_pages.go)). Each page includes the others by name (`{{template "head" .}}`).
+see `PageData` in [oauth_pages.go](https://github.com/pocketonehq/pocketone/blob/main/ext/api-tokens/oauth_pages.go)). Each page includes the others by name (`{{template "head" .}}`).
 - Every POST form must include `{{template "hidden" .}}` and a `step` button.
 - Steps: `password`, `request_otp`, `otp`, `oauth2:<provider>`, `use:<collection>` (switch forms; `use:` is the
   default user form), `allow`, `deny`, `switch`.

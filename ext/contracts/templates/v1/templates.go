@@ -18,7 +18,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Templates renders and ejects the sets added with [Add].

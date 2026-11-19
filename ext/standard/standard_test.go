@@ -13,9 +13,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	_ "ganigeorgiev.com/pocketbase/pocketbase/migrations"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jsvm"
-	"github.com/pockethost/pocketone/ext/standard"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/standard"
 )
 
 // newApp is a fresh single app the way the stock binary builds one: the set, then pb_hooks, then the seal, then

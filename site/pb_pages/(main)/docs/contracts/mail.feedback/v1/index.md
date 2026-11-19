@@ -11,7 +11,7 @@ What mail providers report back about mail an app sent: bounces, spam complaints
 contract receives the reports and raises one event per address; any number of extensions act on them through one
 hook. A suppression list adds the address, a CRM marks the contact, `pb_hooks` logs it.
 
-A wire contract ([feedback.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/mail/feedback/v1/feedback.go)). Its operations are public: SES messages are checked by their SNS
+A wire contract ([feedback.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/mail/feedback/v1/feedback.go)). Its operations are public: SES messages are checked by their SNS
 signature, webhook calls by a shared secret.
 
 ## Use

@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // BindJS exposes the app's modules to its JS hooks as the $wasm global, on one of its JS runtimes. [Extension] binds

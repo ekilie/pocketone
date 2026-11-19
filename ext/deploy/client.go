@@ -9,21 +9,21 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
 	"io"
 	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	deployv1 "pocketone.dev/ext/contracts/deploy/v1"
+	"pocketone.dev/ext/extkit"
 	"slices"
 	"strings"
 	"sync"
 
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
-	"github.com/pockethost/pocketone/ext/deploy/internal/glob"
-	"github.com/pockethost/pocketone/ext/deploy/nodemodules"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
+	"pocketone.dev/ext/deploy/internal/glob"
+	"pocketone.dev/ext/deploy/nodemodules"
 )
 
 // UploadBatchBytes is the raw size of one upload request (gzip shrinks it; Cloudflare allows 100 MB).

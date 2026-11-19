@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/wasm"
 )
 
 // TestLimits: Modules and $wasm.modules() give each module's size, $wasm.limits() what every call runs within.

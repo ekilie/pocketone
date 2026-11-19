@@ -19,8 +19,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/mailer"
-	fallbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/fallback/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	fallbackv1 "pocketone.dev/ext/contracts/mail/fallback/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's name (its extkit key).

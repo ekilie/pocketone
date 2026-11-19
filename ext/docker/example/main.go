@@ -19,8 +19,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/docker"
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/docker"
+	"pocketone.dev/ext/multisite"
 )
 
 func main() {

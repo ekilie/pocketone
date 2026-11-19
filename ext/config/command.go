@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/extkit"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"pocketone.dev/ext/extkit"
 )
 
 // NewCommand returns `config`: it lists every section this binary knows (owner's docs and defaults) and checks a

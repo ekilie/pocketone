@@ -1,11 +1,11 @@
 package remotes
 
 import (
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
 )
 
 // WhoamiPath is the discovery route: remote/v1's root.

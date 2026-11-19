@@ -18,7 +18,7 @@ const manifest = `{
   "description": "Summarizes a text: its first words, and a word count",
   "functions": ["run"],
   "language": "AssemblyScript",
-  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/assemblyscript",
+  "repository": "https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/assemblyscript",
   "examples": [
     {
       "function": "run",

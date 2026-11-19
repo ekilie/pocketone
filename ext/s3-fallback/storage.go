@@ -35,8 +35,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/s3redirect/sigv4"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/s3redirect/sigv4"
 )
 
 // Name is the extension's name and config key.

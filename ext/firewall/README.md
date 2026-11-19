@@ -20,7 +20,7 @@ a `firewall` or `rate_limits` section; there's nothing else to install.
 In your own Go build, importing the package registers it with the host, with the same rule:
 
 ```go
-import _ "github.com/pockethost/pocketone/ext/firewall"
+import _ "pocketone.dev/ext/firewall"
 ```
 
 Or build one in Go and add it to the host's gates, as [the example](#example) does.
@@ -124,8 +124,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/firewall"
+	"pocketone.dev/ext/firewall"
+	"pocketone.dev/ext/multisite"
 )
 
 type okRuntime struct{}

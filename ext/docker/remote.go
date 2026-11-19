@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/multisite"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/multisite"
 )
 
 // Docker runs stock PocketBase images, which have no PocketOne extensions, so the host answers remote/v1 for them

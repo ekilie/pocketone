@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
-	"github.com/pockethost/pocketone/ext/s3redirect/s3test"
+	"pocketone.dev/ext/extkit/modetest"
+	"pocketone.dev/ext/s3redirect/s3test"
 )
 
 // The stock pocketone binary as a multisite host (Pocker) whose `storage` section mounts uploads on a shared bucket:

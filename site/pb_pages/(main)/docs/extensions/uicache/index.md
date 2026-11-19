@@ -24,7 +24,7 @@ UI Cache is built into `pocketone` and **on by default**; there's nothing to ins
 extkit.Setup(app, []extkit.Extension{uicache.New()}, nil, nil)
 ```
 
-The module is `github.com/pockethost/pocketone/ext/uicache`.
+The module is `pocketone.dev/ext/uicache`.
 
 ## Configure
 
@@ -77,9 +77,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/uicache"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/uicache"
 )
 
 func main() {

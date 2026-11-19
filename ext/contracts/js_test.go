@@ -14,10 +14,10 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	examplev1 "github.com/pockethost/pocketone/ext/contracts/internal/example/v1"
-	fallbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/fallback/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	examplev1 "pocketone.dev/ext/contracts/internal/example/v1"
+	fallbackv1 "pocketone.dev/ext/contracts/mail/fallback/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/jsvm"
 )
 
 // jsSetup registers the Go extensions, loads pb_hooks (files) through jsvm, then seals: the order the standard Set

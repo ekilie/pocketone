@@ -15,14 +15,14 @@ A module's first call compiles it, which takes time in step with its size, and k
 
 | Language | Example | Module | First call | Later calls |
 |---|---|---|---|---|
-| [C](/docs/extensions/wasm/languages/c) | [`summary/c`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/c/main.c) | 25 KB | 17 ms | 0.5 ms |
-| [AssemblyScript](/docs/extensions/wasm/languages/assemblyscript) | [`summary/assemblyscript`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) | 10 KB | 13 ms | 0.5 ms |
-| [Rust](/docs/extensions/wasm/languages/rust) | [`summary/rust`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) | 98 KB | 33 ms | 1.3 ms |
-| [Zig](/docs/extensions/wasm/languages/zig) | [`summary/zig`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig) | 95 KB | 30 ms | 1.2 ms |
-| [TinyGo](/docs/extensions/wasm/languages/tinygo) | [`summary/tinygo`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) | 284 KB | 74 ms | 3 ms |
-| [Go](/docs/extensions/wasm/languages/go) | [`summary/go`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/go/main.go) | 4.3 MB | 1.05 s | 38 ms |
-| [WAT](/docs/extensions/wasm/languages/wat), by hand | [`summary/wat`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) | 1.8 KB | 9 ms | 0.4 ms |
-| [LLVM IR](/docs/extensions/wasm/languages/llvm), by hand | [`summary/llvm`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/llvm/summary.ll) | 3.8 KB | 7.5 ms | 0.5 ms |
+| [C](/docs/extensions/wasm/languages/c) | [`summary/c`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/c/main.c) | 25 KB | 17 ms | 0.5 ms |
+| [AssemblyScript](/docs/extensions/wasm/languages/assemblyscript) | [`summary/assemblyscript`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/assemblyscript/assembly/index.ts) | 10 KB | 13 ms | 0.5 ms |
+| [Rust](/docs/extensions/wasm/languages/rust) | [`summary/rust`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/rust/src/main.rs) | 98 KB | 33 ms | 1.3 ms |
+| [Zig](/docs/extensions/wasm/languages/zig) | [`summary/zig`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/zig/src/main.zig) | 95 KB | 30 ms | 1.2 ms |
+| [TinyGo](/docs/extensions/wasm/languages/tinygo) | [`summary/tinygo`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) | 284 KB | 74 ms | 3 ms |
+| [Go](/docs/extensions/wasm/languages/go) | [`summary/go`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/go/main.go) | 4.3 MB | 1.05 s | 38 ms |
+| [WAT](/docs/extensions/wasm/languages/wat), by hand | [`summary/wat`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/wat/summary.wat) | 1.8 KB | 9 ms | 0.4 ms |
+| [LLVM IR](/docs/extensions/wasm/languages/llvm), by hand | [`summary/llvm`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/llvm/summary.ll) | 3.8 KB | 7.5 ms | 0.5 ms |
 
 The last two are written by hand in assembly languages, for fun: they show how small a module can get when nothing comes along that the program doesn't use. Running the summary itself takes under a millisecond in every language; the rest is compiling or loading. A bigger program (a library that parses XML, a crate that resizes images) takes longer in every language, about in step with its size. A call also holds its module's machine code in memory while it runs: under 1 MB for C, Rust, Zig or TinyGo, 18 MB for Go.
 

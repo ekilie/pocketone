@@ -26,7 +26,7 @@ You don't need a compiler to try it. The Markdown module from the [recipes](http
 
 ```bash
 curl -L -o pb_hooks/markdown.pb.wasm \
-  https://github.com/pockethost/pocketone/raw/main/ext/wasm/example/markdown/markdown.pb.wasm
+  https://github.com/pocketonehq/pocketone/raw/main/ext/wasm/example/markdown/markdown.pb.wasm
 ```
 
 Add an API route that saves a note with its Markdown rendered to HTML:

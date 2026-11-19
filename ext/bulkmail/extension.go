@@ -3,8 +3,8 @@ package bulkmail
 import (
 	_ "embed"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // Extension is bulk mail as a PocketOne extension ([extkit.Extension]): the same value works on a standalone app and

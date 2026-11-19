@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Warming returns the same id for the same text, pins it in the model's cache (with wait, once it's done), and Forget

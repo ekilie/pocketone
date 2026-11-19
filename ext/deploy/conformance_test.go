@@ -3,9 +3,9 @@ package deploy_test
 import (
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/deploy"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
+	"pocketone.dev/ext/deploy"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
 )
 
 func TestConformance(t *testing.T) {

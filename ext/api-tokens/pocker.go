@@ -5,8 +5,8 @@ import (
 	_ "embed"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's key under an instance's `extensions:`.

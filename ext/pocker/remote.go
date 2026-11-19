@@ -11,8 +11,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // InstanceApp returns an instance's running app and when it started; ok is false when it isn't running.

@@ -6,7 +6,7 @@ description: "Every extension in PocketOne, grouped by what it's for."
 
 # Extensions
 
-Each extension is a Go module in [`ext/`](https://github.com/pockethost/pocketone/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing an extension](/docs/writing-an-extension).
+Each extension is a Go module in [`ext/`](https://github.com/pocketonehq/pocketone/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing an extension](/docs/writing-an-extension).
 
 ## Standard extensions
 
@@ -80,8 +80,8 @@ The extension contract and tools for building and testing extensions.
 | Extension | What it does |
 |---|---|
 | [Bundle](/docs/extensions/bundle) | An app's hooks, migrations and public files embedded in the binary. |
-| [Contracts](https://github.com/pockethost/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
-| [Dev Users](https://github.com/pockethost/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
-| [Extension Kit](https://github.com/pockethost/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on every app, standalone or hosted. |
+| [Contracts](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/README.md) | The versioned interfaces extensions use to work together, and the generator that writes their plumbing. |
+| [Dev Users](https://github.com/pocketonehq/pocketone/blob/main/ext/devusers/devusers.go) | Local testing only: a superuser and a user with password "password". |
+| [Extension Kit](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go) | The extension contract: one extension works on every app, standalone or hosted. |
 | [Mail Trap](/docs/extensions/mailtrap) | Dev mode: mail from an app without SMTP lands in a built-in inbox. |
 | [Standard Set](/docs/extensions/standard) | The extensions every PocketOne app has, as one set a host configures. |

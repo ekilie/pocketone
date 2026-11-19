@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // serveOne runs body on one single app configured by in.

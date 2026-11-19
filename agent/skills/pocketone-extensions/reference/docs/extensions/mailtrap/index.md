@@ -22,7 +22,7 @@ app.Start()
 ```
 
 With ext/standard's set, add it as an extra, as the stock binary does: `set.Add(mailtrap.New())`. The module is
-`github.com/pockethost/pocketone/ext/mailtrap`.
+`pocketone.dev/ext/mailtrap`.
 
 ## Configure
 
@@ -76,7 +76,7 @@ catches mail and prints each message in the terminal.
 
 ## Example
 
-[`example/main.go`](https://github.com/pockethost/pocketone/blob/main/ext/mailtrap/example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
+[`example/main.go`](https://github.com/pocketonehq/pocketone/blob/main/ext/mailtrap/example/main.go) runs one app in dev mode with the trap. Run `go run ./example serve --dev` from
 this folder, request a password reset for `user@example.com` (password `password`) from the dashboard (log in as
 `admin@example.com` / `password`), and read the mail at http://127.0.0.1:8025.
 
@@ -91,8 +91,8 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/mailtrap"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/mailtrap"
 )
 
 func main() {

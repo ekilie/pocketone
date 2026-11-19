@@ -22,9 +22,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
-	settingsv1 "github.com/pockethost/pocketone/ext/contracts/settings/v1"
-	vacuumv1 "github.com/pockethost/pocketone/ext/contracts/vacuum/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
+	vacuumv1 "pocketone.dev/ext/contracts/vacuum/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's key.

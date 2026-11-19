@@ -11,8 +11,8 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/pockethost/pocketone/ext/multisite"
-	"github.com/pockethost/pocketone/ext/stats"
+	"pocketone.dev/ext/multisite"
+	"pocketone.dev/ext/stats"
 )
 
 func main() {

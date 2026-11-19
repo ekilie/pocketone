@@ -33,7 +33,7 @@ extkit.Setup(app, []extkit.Extension{remotes.New(remotes.Config{})}, nil, nil) /
 app.Start()
 ```
 
-The module is `github.com/pockethost/pocketone/ext/remotes`. Add [Tokens](../api-tokens/README.md) for API tokens and
+The module is `pocketone.dev/ext/remotes`. Add [Tokens](../api-tokens/README.md) for API tokens and
 [the OAuth server](../api-tokens/OAUTH.md) for browser login.
 
 ## Configure
@@ -193,10 +193,10 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/remotes"
 )
 
 func main() {

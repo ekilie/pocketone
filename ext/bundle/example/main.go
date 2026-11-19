@@ -12,9 +12,9 @@ import (
 	"log"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
-	"github.com/pockethost/pocketone/ext/bundle"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/jsvm"
+	"pocketone.dev/ext/bundle"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/jsvm"
 )
 
 //go:embed hooks public

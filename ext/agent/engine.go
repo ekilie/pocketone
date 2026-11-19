@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/agent/engine"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
+	"pocketone.dev/ext/agent/engine"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
 )
 
 // engineModel is a model loaded by the built-in engine (pure Go, no cgo).

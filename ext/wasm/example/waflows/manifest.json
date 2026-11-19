@@ -7,7 +7,7 @@
     "gcm-seal"
   ],
   "language": "Rust",
-  "repository": "https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/waflows",
+  "repository": "https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/waflows",
   "examples": [
     {
       "function": "rsa-decrypt",

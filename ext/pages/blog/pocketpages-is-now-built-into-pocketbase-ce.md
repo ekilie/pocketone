@@ -7,7 +7,7 @@ tags: release, v1, PocketOne
 ---
 
 PocketPages used to be an npm package you installed next to PocketBase and booted from a hook file. As of today it's
-part of [PocketOne](https://github.com/pockethost/pocketone), a community fork of PocketBase that
+part of [PocketOne](https://github.com/pocketonehq/pocketone), a community fork of PocketBase that
 PocketHost maintains. Put a `pb_pages` folder next to `pb_data` and it's served.
 
 ```bash

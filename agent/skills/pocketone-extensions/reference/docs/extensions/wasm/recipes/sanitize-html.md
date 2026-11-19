@@ -41,7 +41,7 @@ What it does to a hostile comment:
 
 ## The module
 
-The whole program is one call to ammonia's defaults ([`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/sanitize-html/src/main.rs)):
+The whole program is one call to ammonia's defaults ([`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/sanitize-html/src/main.rs)):
 
 ```rust
 let mut input = String::new();

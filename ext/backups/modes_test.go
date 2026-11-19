@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // With PITR off (its `enabled: false` setting), as a single app and as an instance on a host, restore/v1 falls back to

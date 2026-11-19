@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	restorev1 "github.com/pockethost/pocketone/ext/contracts/restore/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	restorev1 "pocketone.dev/ext/contracts/restore/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // restorer is restore/v1 over one app's history: any moment inside the window.

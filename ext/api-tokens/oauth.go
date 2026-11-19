@@ -16,10 +16,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
-	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
 	"net/http"
 	"net/url"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+	templatesv1 "pocketone.dev/ext/contracts/templates/v1"
 	"slices"
 	"strings"
 	"sync"
@@ -31,7 +31,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
-	oauthv1 "github.com/pockethost/pocketone/ext/contracts/oauth/v1"
+	oauthv1 "pocketone.dev/ext/contracts/oauth/v1"
 )
 
 const (

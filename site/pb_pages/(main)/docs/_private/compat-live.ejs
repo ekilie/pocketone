@@ -20,7 +20,7 @@
     '<table><thead><tr>' + head.map(([h, num]) => `<th${num ? ' class="compat-num"' : ''}>${h}</th>`).join('') + '</tr></thead><tbody>' +
     rows.map((cells) => '<tr>' + cells.map((c, i) => `<td${head[i][1] ? ' class="compat-num"' : ''}>${c}</td>`).join('') + '</tr>').join('') +
     '</tbody></table>'
-  const runsUrl = 'https://github.com/pockethost/pocketone/actions/workflows/upstream-tests.yml?query=branch%3Amain'
+  const runsUrl = 'https://github.com/pocketonehq/pocketone/actions/workflows/upstream-tests.yml?query=branch%3Amain'
 
   let latest = '<p>No finished run on <code>main</code> yet.</p>'
   if (d.latest) {

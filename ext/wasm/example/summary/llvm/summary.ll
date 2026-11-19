@@ -13,7 +13,7 @@ target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-S128-n
 target triple = "wasm32-unknown-wasip1-unknown"
 
 ; what `summary --describe` prints: manifest.json, compacted (the tests check they match)
-@manifest = private constant [334 x i8] c"{\22description\22:\22Summarizes a text: its first words, and a word count. Written by hand in LLVM IR\22,\22functions\22:[\22run\22],\22language\22:\22LLVM IR\22,\22repository\22:\22https://github.com/pockethost/pocketone/tree/main/ext/wasm/example/summary/llvm\22,\22examples\22:[{\22function\22:\22run\22,\22input\22:\22one two three\22,\22output\22:{\22text\22:\22one two three\22,\22words\22:3}}]}"
+@manifest = private constant [334 x i8] c"{\22description\22:\22Summarizes a text: its first words, and a word count. Written by hand in LLVM IR\22,\22functions\22:[\22run\22],\22language\22:\22LLVM IR\22,\22repository\22:\22https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/llvm\22,\22examples\22:[{\22function\22:\22run\22,\22input\22:\22one two three\22,\22output\22:{\22text\22:\22one two three\22,\22words\22:3}}]}"
 @describe = private constant [11 x i8] c"--describe\00"
 @run = private constant [4 x i8] c"run\00"
 @err_nsf = private constant [48 x i8] c"{\22code\22:\22no_such_function\22,\22message\22:\22only run\22}"

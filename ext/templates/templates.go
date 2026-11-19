@@ -19,8 +19,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	templatesv1 "github.com/pockethost/pocketone/ext/contracts/templates/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	templatesv1 "pocketone.dev/ext/contracts/templates/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's key: its pocketone.yaml switch and an instance's `extensions.<name>`.

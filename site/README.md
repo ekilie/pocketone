@@ -63,7 +63,7 @@ cd site/sync && go run .
 - **Search** (`pb_pages/assets/search.js`): the header button, `/` or Cmd/Ctrl-K opens a dialog that loads
   [MiniSearch](https://lucaong.github.io/minisearch/) and the index the first time it's used. No external service.
 - **Comments** (`pb_pages/_private/docs-footer.js`, `pb_pages/assets/docs.js`): each docs page ends with a
-  [giscus](https://giscus.app) box backed by GitHub Discussions (the Q&A category of pockethost/pocketone). A page's
+  [giscus](https://giscus.app) box backed by GitHub Discussions (the Q&A category of pocketonehq/pocketone). A page's
   thread is found by an exact term, not its URL: `pocketone.dev/docs/plugins/<name>` (the pre-rename URL, so old threads follow) for an extension and its guides,
   `pocketone.dev/<path>` for other pages. Front matter `discussion: <term>` picks another term (keep it when a page
   moves, so its thread follows); `discussion: false` turns comments off. The docs home and the extension index have none.

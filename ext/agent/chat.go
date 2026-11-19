@@ -7,10 +7,10 @@ import (
 	"fmt"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	chatv1 "github.com/pockethost/pocketone/ext/contracts/agent/chat/v1"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	chatv1 "pocketone.dev/ext/contracts/agent/chat/v1"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // errNoChat: no extension provides agent.chat/v1 on the app.

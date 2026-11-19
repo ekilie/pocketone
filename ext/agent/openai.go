@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // apiBackend answers through an OpenAI-compatible chat completions API: OpenAI, OpenRouter, Groq, Ollama, llama-server,

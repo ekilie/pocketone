@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Issuer is an app's API tokens. Its provider also serves the token API (extkit.RouteBinder) and authenticates

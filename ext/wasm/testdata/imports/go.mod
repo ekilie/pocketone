@@ -1,4 +1,4 @@
-module github.com/pockethost/pocketone/ext/wasm/testdata/imports
+module pocketone.dev/ext/wasm/testdata/imports
 
 go 1.24
 

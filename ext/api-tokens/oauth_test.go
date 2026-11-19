@@ -6,13 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
 	"regexp"
 	"strings"
 	"testing"
@@ -21,7 +21,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/remotes"
+	"pocketone.dev/ext/remotes"
 )
 
 func serveApp(t *testing.T, app *tests.TestApp) string {

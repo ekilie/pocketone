@@ -2,11 +2,11 @@ package deploy
 
 import (
 	"context"
-	deployv1 "github.com/pockethost/pocketone/ext/contracts/deploy/v1"
-	"github.com/pockethost/pocketone/ext/remotes"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	deployv1 "pocketone.dev/ext/contracts/deploy/v1"
+	"pocketone.dev/ext/remotes"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -16,9 +16,9 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/api-tokens"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
+	"pocketone.dev/ext/extkit"
 )
 
 // serveApp runs app's router (OnServe included) on a local test server.

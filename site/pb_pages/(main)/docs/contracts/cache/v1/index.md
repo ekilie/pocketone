@@ -28,7 +28,7 @@ The promise is a cache's: a provider may drop any entry at any time, and a `Get`
 that was deleted, cleared or replaced since, nor one past its TTL. Each app has its own buckets, on a multisite host
 too, even when the provider keeps every app's entries in one shared store.
 
-An app service contract, one provider ([cache.go](https://github.com/pockethost/pocketone/blob/main/ext/contracts/cache/v1/cache.go)).
+An app service contract, one provider ([cache.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/cache/v1/cache.go)).
 
 ## Use
 

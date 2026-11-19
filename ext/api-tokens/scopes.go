@@ -2,8 +2,8 @@ package apitokens
 
 import (
 	"fmt"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	"net/http"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
 	"regexp"
 	"slices"
 	"sort"

@@ -12,7 +12,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/pockethost/pocketone/ext/extkit/js"
+	"pocketone.dev/ext/extkit/js"
 )
 
 // ---- reflection cache: JS names for a Go type's fields and methods ----

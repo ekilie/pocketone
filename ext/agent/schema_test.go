@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/agent/engine"
+	"pocketone.dev/ext/agent/engine"
 )
 
 func TestSchemaFit(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/multisite"
+	"pocketone.dev/ext/multisite"
 )
 
 // A host can lower the upstream floor (releases it keeps in its own cache) and adjust a release's command and

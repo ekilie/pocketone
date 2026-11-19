@@ -17,9 +17,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	fallbackv1 "github.com/pockethost/pocketone/ext/contracts/mail/fallback/v1"
 	"html"
 	"net/mail"
+	fallbackv1 "pocketone.dev/ext/contracts/mail/fallback/v1"
 	"regexp"
 	"strings"
 	"sync"
@@ -30,7 +30,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
 	"github.com/domodwyer/mailyak/v3"
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Name is the extension's section in pocketone.yaml and its key under an instance's `extensions:`.

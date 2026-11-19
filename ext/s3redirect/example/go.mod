@@ -1,4 +1,4 @@
-module github.com/pockethost/pocketone/ext/s3redirect/example
+module pocketone.dev/ext/s3redirect/example
 
 go 1.27
 
@@ -6,8 +6,8 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/johannesboyne/gofakes3 v1.2.0
-	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/s3redirect v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/s3redirect v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -29,7 +29,6 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
@@ -50,23 +49,24 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.62.0 // indirect
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000 // indirect
 )
 
 replace ganigeorgiev.com/pocketbase/pocketbase => ../../..
 
 replace (
-	github.com/pockethost/pocketone/ext/devusers => ../../devusers
-	github.com/pockethost/pocketone/ext/pocker => ../../pocker
-	github.com/pockethost/pocketone/ext/s3redirect => ..
-	github.com/pockethost/pocketone/ext/sandbox => ../../sandbox
+	pocketone.dev/ext/devusers => ../../devusers
+	pocketone.dev/ext/pocker => ../../pocker
+	pocketone.dev/ext/s3redirect => ..
+	pocketone.dev/ext/sandbox => ../../sandbox
 )
 
-replace github.com/pockethost/pocketone/ext/multisite => ../../multisite
+replace pocketone.dev/ext/multisite => ../../multisite
 
-replace github.com/pockethost/pocketone/ext/extkit => ../../extkit
+replace pocketone.dev/ext/extkit => ../../extkit
 
-replace github.com/pockethost/pocketone/ext/config => ../../config
+replace pocketone.dev/ext/config => ../../config
 
-replace github.com/pockethost/pocketone/ext/contracts => ../../contracts
+replace pocketone.dev/ext/contracts => ../../contracts
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../../jsvm
+replace pocketone.dev/ext/jsvm => ../../jsvm

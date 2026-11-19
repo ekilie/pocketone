@@ -24,7 +24,7 @@ tinygo version
 
 ## The module
 
-[`example/summary/tinygo`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) is the Go summary, unchanged: `encoding/json`, `os.Args`, stdin and stdout work as they do in Go. Its manifest says `"language": "TinyGo"`, since a TinyGo module doesn't say it itself.
+[`example/summary/tinygo`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/summary/tinygo/main.go) is the Go summary, unchanged: `encoding/json`, `os.Args`, stdin and stdout work as they do in Go. Its manifest says `"language": "TinyGo"`, since a TinyGo module doesn't say it itself.
 
 ## Build
 

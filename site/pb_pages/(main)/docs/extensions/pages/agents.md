@@ -12,7 +12,7 @@ Coding agents tend to write PocketPages as if it were a Node framework, or as if
 **Claude Code**
 
 ```
-/plugin marketplace add pockethost/pocketone
+/plugin marketplace add pocketonehq/pocketone
 /plugin install pocketone@pocketone
 ```
 
@@ -21,10 +21,10 @@ The plugin also has the `pocketone` skill, for the binary, `pocketone.yaml` and 
 **Other agents that read Agent Skills** (Cursor, Codex, Gemini CLI and others)
 
 ```bash
-npx skills add pockethost/pocketone
+npx skills add pocketonehq/pocketone
 ```
 
-Or copy [`agent/skills/pocketpages`](https://github.com/pockethost/pocketone/tree/main/agent/skills/pocketpages) into your project.
+Or copy [`agent/skills/pocketpages`](https://github.com/pocketonehq/pocketone/tree/main/agent/skills/pocketpages) into your project.
 
 ## llms.txt
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // Theming the OAuth sign-in pages, as a single app and as an instance on a host: `template list` in the app's folder

@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/extkit/conformance"
-	"github.com/pockethost/pocketone/ext/mcp"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/extkit/conformance"
+	"pocketone.dev/ext/mcp"
 )
 
 // notes is an extension that adds an MCP tool, the way a contributed extension would.

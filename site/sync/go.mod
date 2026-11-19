@@ -1,3 +1,3 @@
-module github.com/pockethost/pocketone/site/sync
+module pocketone.dev/site/sync
 
 go 1.27

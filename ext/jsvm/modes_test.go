@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit/modetest"
+	"pocketone.dev/ext/extkit/modetest"
 )
 
 // pb_hooks, live, as a single app and as an instance on a host: a script (.pb.js), an ES module (.pb.mjs) and

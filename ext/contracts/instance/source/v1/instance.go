@@ -4,7 +4,7 @@
 // gates and the host itself read the same record.
 package sourcev1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import "context"
 

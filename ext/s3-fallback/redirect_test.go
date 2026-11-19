@@ -3,19 +3,19 @@ package s3fallback
 import (
 	"bytes"
 	"context"
-	"github.com/pockethost/pocketone/ext/contracts/instance/source/v1/sourcetest"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"strings"
 	"testing"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
-	"github.com/pockethost/pocketone/ext/pocker"
-	"github.com/pockethost/pocketone/ext/s3redirect"
+	"pocketone.dev/ext/pocker"
+	"pocketone.dev/ext/s3redirect"
 )
 
 // With ext/s3redirect on the same server, downloads of default-bucket files become signed redirects to the

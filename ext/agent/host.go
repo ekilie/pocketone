@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	agentv1 "github.com/pockethost/pocketone/ext/contracts/agent/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/multisite"
+	agentv1 "pocketone.dev/ext/contracts/agent/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/multisite"
 )
 
 // Linking this package makes the shared model part of every host built from config: the host provides agent/v1 for its

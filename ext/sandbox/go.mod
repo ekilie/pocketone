@@ -1,4 +1,4 @@
-module github.com/pockethost/pocketone/ext/sandbox
+module pocketone.dev/ext/sandbox
 
 go 1.27
 
@@ -7,11 +7,11 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/domodwyer/mailyak/v3 v3.6.2
 	github.com/gabriel-vasile/mimetype v1.4.16
-	github.com/pockethost/pocketone/ext/devusers v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/extkit v0.0.0-00010101000000-000000000000
-	github.com/pockethost/pocketone/ext/jsvm v0.0.0-00010101000000-000000000000
 	modernc.org/libc v1.80.1
 	modernc.org/sqlite v1.62.0
+	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/jsvm v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -47,8 +47,8 @@ require (
 
 replace ganigeorgiev.com/pocketbase/pocketbase => ../..
 
-replace github.com/pockethost/pocketone/ext/devusers => ../devusers
+replace pocketone.dev/ext/devusers => ../devusers
 
-replace github.com/pockethost/pocketone/ext/jsvm => ../jsvm
+replace pocketone.dev/ext/jsvm => ../jsvm
 
-replace github.com/pockethost/pocketone/ext/extkit => ../extkit
+replace pocketone.dev/ext/extkit => ../extkit

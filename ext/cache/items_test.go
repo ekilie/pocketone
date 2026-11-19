@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
 )
 
 // thing is a test item that can marshal: it counts how often it's marshaled, and can refuse.

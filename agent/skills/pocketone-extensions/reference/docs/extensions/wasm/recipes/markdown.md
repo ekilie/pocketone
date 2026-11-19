@@ -40,7 +40,7 @@ through [sanitize-html](https://pocketone.dev/docs/extensions/wasm/recipes/sanit
 ## The module
 
 The Markdown is the module's stdin, as text, and the HTML is its stdout
-([`src/main.rs`](https://github.com/pockethost/pocketone/blob/main/ext/wasm/example/markdown/src/main.rs)):
+([`src/main.rs`](https://github.com/pocketonehq/pocketone/blob/main/ext/wasm/example/markdown/src/main.rs)):
 
 ```rust
 let mut input = String::new();

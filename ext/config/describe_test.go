@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 type describeTestCfg struct {
@@ -29,7 +29,7 @@ func TestDescribe(t *testing.T) {
 	if got == nil {
 		t.Fatal("section not described")
 	}
-	if got.Owner != "github.com/pockethost/pocketone/ext/config" || got.Extension != "config" {
+	if got.Owner != "pocketone.dev/ext/config" || got.Extension != "config" {
 		t.Errorf("owner %q extension %q", got.Owner, got.Extension)
 	}
 	want := []KeyDoc{
@@ -50,9 +50,9 @@ func TestDescribe(t *testing.T) {
 
 func TestExtensionOf(t *testing.T) {
 	for in, want := range map[string]string{
-		"github.com/pockethost/pocketone/ext/mothership/mirror": "mothership",
-		"github.com/pockethost/pocketone/ext/pitr":                        "pitr",
-		"main": "",
+		"pocketone.dev/ext/mothership/mirror": "mothership",
+		"pocketone.dev/ext/pitr":              "pitr",
+		"main":                                "",
 	} {
 		if got := extensionOf(in); got != want {
 			t.Errorf("extensionOf(%q) = %q, want %q", in, got, want)

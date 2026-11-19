@@ -17,8 +17,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/wasm"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/wasm"
 )
 
 const basic = "testdata/basic"
@@ -449,7 +449,7 @@ func TestLanguage(t *testing.T) {
 	if i.Language != "Go" {
 		t.Errorf("language %q, want the module's Go", i.Language)
 	}
-	if i.Repository != "https://github.com/pockethost/pocketone/tree/main/ext/wasm/testdata/basic" {
+	if i.Repository != "https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/testdata/basic" {
 		t.Errorf("repository %q", i.Repository)
 	}
 	if len(i.Examples) != 3 || i.Examples[0].Function != "run" || string(i.Examples[1].Stdin()) != "hi" ||

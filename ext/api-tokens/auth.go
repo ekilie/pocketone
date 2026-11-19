@@ -2,9 +2,9 @@ package apitokens
 
 import (
 	"context"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
 	"net/http"
 	"net/url"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
 	"slices"
 	"strings"
 

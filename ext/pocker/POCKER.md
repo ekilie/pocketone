@@ -245,5 +245,5 @@ The module path stays `ganigeorgiev.com/pocketbase/pocketbase`, so a build pins 
 `replace` line:
 
 ```
-replace ganigeorgiev.com/pocketbase/pocketbase => github.com/pockethost/pocketone v0.0.1
+replace ganigeorgiev.com/pocketbase/pocketbase => pocketone.dev v0.0.1
 ```

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // The schema is a contract: the collection and field ids never change, so other code (a legacy migration, the

@@ -5,12 +5,12 @@
 // A wire contract at /api/_c/cache.clear/v1, beside cache/v1: whoever provides cache/v1 provides this too.
 package clearv1
 
-//go:generate go run github.com/pockethost/pocketone/ext/contracts/cmd/contractgen
+//go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
 
 import (
 	"context"
 
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/extkit"
 )
 
 // Clearer empties an app's cache buckets.

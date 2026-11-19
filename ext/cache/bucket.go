@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	cachev1 "github.com/pockethost/pocketone/ext/contracts/cache/v1"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
 )
 
 // bucket is one app's cachev1.Bucket: its space in the store.

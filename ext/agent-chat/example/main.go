@@ -13,10 +13,10 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 
-	"github.com/pockethost/pocketone/ext/agent"
-	agentchat "github.com/pockethost/pocketone/ext/agent-chat"
-	"github.com/pockethost/pocketone/ext/devusers"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/agent"
+	agentchat "pocketone.dev/ext/agent-chat"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
 )
 
 func main() {

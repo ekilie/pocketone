@@ -4,20 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
-	remoteclient "github.com/pockethost/pocketone/ext/contracts/remote/v1/remoteclient"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+	remoteclient "pocketone.dev/ext/contracts/remote/v1/remoteclient"
 	"strings"
 	"testing"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/api-tokens"
+	"pocketone.dev/ext/extkit"
 )
 
 // serve runs app's router (OnServe included) on a local test server.

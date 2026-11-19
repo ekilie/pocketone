@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pockethost/pocketone/ext/agent/engine"
+	"pocketone.dev/ext/agent/engine"
 )
 
 // schemaNode is the part of a JSON schema the built-in runner enforces while it writes: type (one or a list), enum,

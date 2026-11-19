@@ -10,9 +10,9 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
-	"github.com/pockethost/pocketone/ext/api-tokens"
-	remotev1 "github.com/pockethost/pocketone/ext/contracts/remote/v1"
-	"github.com/pockethost/pocketone/ext/extkit"
+	"pocketone.dev/ext/api-tokens"
+	remotev1 "pocketone.dev/ext/contracts/remote/v1"
+	"pocketone.dev/ext/extkit"
 )
 
 // remoteApp is a test app with remotes and tokens, sealed, served; restart is counted instead of done.

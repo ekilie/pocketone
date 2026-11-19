@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pockethost/pocketone/ext/extkit"
-	"github.com/pockethost/pocketone/ext/standard"
 	"gopkg.in/yaml.v3"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/standard"
 )
 
 // yamlSource is a pocketone.yaml with the given sections.

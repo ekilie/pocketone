@@ -3,9 +3,9 @@ package mcp
 import (
 	"errors"
 	"fmt"
-	apitokensv1 "github.com/pockethost/pocketone/ext/contracts/api-tokens/v1"
-	mcpv1 "github.com/pockethost/pocketone/ext/contracts/mcp/v1"
 	"net/http"
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+	mcpv1 "pocketone.dev/ext/contracts/mcp/v1"
 	"slices"
 	"strings"
 
