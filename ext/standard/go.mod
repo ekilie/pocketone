@@ -25,6 +25,7 @@ require (
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000
+	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000
 	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -155,3 +156,5 @@ replace github.com/pockethost/pocketone/ext/templates => ../templates
 replace github.com/pockethost/pocketone/ext/cache => ../cache
 
 replace github.com/pockethost/pocketone/ext/wasm => ../wasm
+
+replace github.com/pockethost/pocketone/ext/uicache => ../uicache

@@ -10,7 +10,7 @@ type Switch struct {
 
 // switchMembers are the standard members without a section of their own. Members with one (cache, storage, s3redirect, pitr)
 // read `enabled` there themselves.
-var switchMembers = []string{"settings", "templates", "tokens", "remotes", "mcp", "pages", "backups", "bulkmail", "deploy", "wasm"}
+var switchMembers = []string{"settings", "templates", "tokens", "remotes", "mcp", "pages", "backups", "bulkmail", "deploy", "wasm", "uicache"}
 
 // switches are their sections, registered at init so the config file's check knows them before the set is built.
 var switches = map[string]*extkit.Section[Switch]{}

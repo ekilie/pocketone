@@ -84,6 +84,7 @@ require (
 	github.com/pockethost/pocketone/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/templates v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/tokens v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/uicache v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/wasm v0.0.0-00010101000000-000000000000 // indirect
 	github.com/prometheus/client_golang v1.17.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -192,3 +193,5 @@ replace github.com/pockethost/pocketone/ext/vacuum => ../../ext/vacuum
 replace github.com/pockethost/pocketone/ext/desktop => ../../ext/desktop
 
 replace github.com/pockethost/pocketone/ext/wasm => ../../ext/wasm
+
+replace github.com/pockethost/pocketone/ext/uicache => ../../ext/uicache
