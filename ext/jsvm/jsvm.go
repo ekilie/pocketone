@@ -502,7 +502,8 @@ func (p *plugin) refreshTypesFile() error {
 	return os.WriteFile(full, content, 0644)
 }
 
-// typesContent is types.d.ts for this app: the engine's declarations, then each extension's.
+// typesContent is types.d.ts for this app: the engine's declarations, then each extension's, then passed through
+// each extension's filter (js.TypesFilter).
 func (p *plugin) typesContent() []byte {
 	out := append([]byte{}, typesFile...)
 	for _, e := range p.config.Extensions {
@@ -512,6 +513,11 @@ func (p *plugin) typesContent() []byte {
 				out = append(out, d...)
 				out = append(out, '\n')
 			}
+		}
+	}
+	for _, e := range p.config.Extensions {
+		if f, ok := e.(js.TypesFilter); ok {
+			out = []byte(f.FilterTypes(string(out)))
 		}
 	}
 	return out

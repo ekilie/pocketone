@@ -174,7 +174,8 @@ Extensions plug in through `Config.Extensions` with the engine-neutral types in
 [`ext/extkit/js`](../extkit/js/js.go). A value implements any of:
 
 - `OnInit(rt)`: set up the VM. `BindJS(app, rt)`: expose a Go API. `TypeScript()`: declare it for editors and
-  `tsc` (appended to `pb_data/types.d.ts`).
+  `tsc` (appended to `pb_data/types.d.ts`). `FilterTypes(decl)`: change the finished declarations (the sandbox
+  declares what it hides `never`).
 - `OnCall(rt)`: wrap every handler call; an error refuses it.
 - `HTTPClient(rt)`: the client `$http.send` uses.
 - `HookFiles`, `MigrationFiles`, `Modules`: hooks, migrations and `require()` modules from somewhere other than disk.

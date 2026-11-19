@@ -7,6 +7,9 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- The app's `types.d.ts` matches what the sandbox allows: `$os.cmd`, `$os.exec`, `$os.exit`, `$filesystem.local` and
+  the Go members it hides (`$app.restart`, `bootstrap`, `unsafeWithoutHooks`, a hook's `bindFunc`, `*sql.DB` handles,
+  ...) are declared `never`, so `tsc` and editors refuse a call to them instead of offering it.
 - `UninstallEgressPolicy()` undoes `InstallEgressPolicy`, giving Go's default HTTP transport back its own dialer and proxy (for tests that start a Pocker host in-process).
 
 ## PocketOne v0.0.1-alpha.6 (2026-11-16)

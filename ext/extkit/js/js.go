@@ -172,6 +172,12 @@ type (
 	Typer interface {
 		TypeScript() string
 	}
+	// TypesFilter changes the app's finished types.d.ts (the engine's declarations plus every Typer's), for an
+	// extension that takes away what JS could otherwise reach, so editors and tsc stop offering it. The engine runs
+	// every TypesFilter in order and writes what the last one returns.
+	TypesFilter interface {
+		FilterTypes(decl string) string
+	}
 )
 
 // ErrNoModule is what a [Moduler]'s load returns for a module it doesn't have.
