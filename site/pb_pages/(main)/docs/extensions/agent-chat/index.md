@@ -7,7 +7,7 @@ source: "ext/agent-chat/README.md"
 
 # Agent Chat
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Agent Chat keeps conversations with your app's language model. Start a chat, keep its id, and send it questions:
 it stores every turn, sends the model the recent ones with each new question, folds older ones into a summary so long

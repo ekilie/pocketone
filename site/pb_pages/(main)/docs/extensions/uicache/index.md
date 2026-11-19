@@ -7,7 +7,7 @@ source: "ext/uicache/README.md"
 
 # UI Cache
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketBase tells browsers and CDNs to keep every dashboard file for 14 days, including files whose name never changes.
 Behind a CDN such as Cloudflare, that means a new or updated dashboard screen from an extension, or the dashboard's own

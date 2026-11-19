@@ -7,7 +7,7 @@ source: "ext/desktop/README.md"
 
 # Desktop
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The same app folder you run with `pocketone serve` becomes a desktop app: `pocketone desktop build` compiles your
 `pb_hooks`, `pb_migrations` and `pb_public` into one executable that runs the app's server on a private `127.0.0.1`

@@ -8929,7 +8929,7 @@ Source: https://pocketone.dev/docs/extensions/agent/extension
 
 # Agent
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Agent gives your app a language model to call: `$agent.complete()` from your pages' code, or the agent/v1
 contract from Go (`agentv1.Contract.Must(app).Complete(...)`). Use it for the small jobs that
@@ -9259,7 +9259,7 @@ Source: https://pocketone.dev/docs/extensions/agent-chat
 
 # Agent Chat
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Agent Chat keeps conversations with your app's language model. Start a chat, keep its id, and send it questions:
 it stores every turn, sends the model the recent ones with each new question, folds older ones into a summary so long
@@ -9417,7 +9417,7 @@ Source: https://pocketone.dev/docs/extensions/api-tokens
 
 # API Tokens
 
-Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.2.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [API tokens](https://pocketone.dev/docs/features/tokens). This page is the technical reference.
 
@@ -10618,7 +10618,7 @@ Source: https://pocketone.dev/docs/extensions/cache
 
 # Cache
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 Extensions and apps often compute the same thing many times: a rendered page, an answer from another API, a compiled
 module. Cache gives them named buckets to keep those results in, as bytes or as the Go values themselves, from one
@@ -11121,7 +11121,7 @@ Source: https://pocketone.dev/docs/extensions/deploy
 
 # Deploy
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [Deploy and live sync](https://pocketone.dev/docs/features/deploy). This page is the technical reference.
 
@@ -11429,7 +11429,7 @@ Source: https://pocketone.dev/docs/extensions/desktop/extension
 
 # Desktop
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The same app folder you run with `pocketone serve` becomes a desktop app: `pocketone desktop build` compiles your
 `pb_hooks`, `pb_migrations` and `pb_public` into one executable that runs the app's server on a private `127.0.0.1`
@@ -11618,7 +11618,7 @@ Source: https://pocketone.dev/docs/extensions/jsvm
 
 # JSVM
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS API as PocketBase (`$app`, `onX`,
 `routerAdd`, `cronAdd`, `$http`, `$security`, ...) on QuickJS, with one VM per app:
@@ -12267,7 +12267,7 @@ Source: https://pocketone.dev/docs/extensions/pages/extension
 
 # Pages
 
-Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [PocketPages sites](https://pocketone.dev/docs/features/sites). This page is the technical reference.
 
@@ -13672,7 +13672,7 @@ Source: https://pocketone.dev/docs/extensions/s3-fallback
 
 # S3 Fallback
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount
 each kind of file on one: record uploads, backup zips, PITR history, or any extension's own kind. Every instance gets
@@ -13809,7 +13809,7 @@ Source: https://pocketone.dev/docs/extensions/s3redirect
 
 # S3 Redirect
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 File downloads as short-lived signed redirects to your bucket, after PocketBase's own access check.
 
@@ -14246,7 +14246,7 @@ Source: https://pocketone.dev/docs/extensions/uicache
 
 # UI Cache
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketBase tells browsers and CDNs to keep every dashboard file for 14 days, including files whose name never changes.
 Behind a CDN such as Cloudflare, that means a new or updated dashboard screen from an extension, or the dashboard's own
@@ -14606,7 +14606,7 @@ Source: https://pocketone.dev/docs/extensions/wasm/extension
 
 # WASM
 
-Version 0.0.1 · Owners: [@octavonu](https://github.com/octavonu)
+Version 0.0.2 · Owners: [@octavonu](https://github.com/octavonu)
 
 **Bring your own WASM (BYOW).** Call code written in Go, Rust, Zig or anything else that builds for WASI from
 your page code, when you need a library from another language or more speed than JS gives you. A module is a small program
@@ -15084,7 +15084,7 @@ Source: https://pocketone.dev/docs/extensions/docker
 
 # Docker
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 Run every instance on a host in its own container, with the official PocketBase or PocketOne binary of the version
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
@@ -16076,7 +16076,7 @@ Source: https://pocketone.dev/docs/extensions/pocker
 
 # Pocker
 
-Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
 
@@ -16613,7 +16613,7 @@ Source: https://pocketone.dev/docs/extensions/sandbox
 
 # Sandbox
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Confines one PocketOne app's JS hooks and migrations, so apps from people you don't know can share one process.
 File access stays inside the app's folder, host primitives are gone, every JS call has a time limit, raw SQL can't
@@ -17874,7 +17874,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 
 # Standard Set
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every

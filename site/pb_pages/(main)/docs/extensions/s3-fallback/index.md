@@ -7,7 +7,7 @@ source: "ext/s3-fallback/README.md"
 
 # S3 Fallback
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 A default bucket for instances that have no S3 of their own. You name your S3-compatible backends once, then mount
 each kind of file on one: record uploads, backup zips, PITR history, or any extension's own kind. Every instance gets

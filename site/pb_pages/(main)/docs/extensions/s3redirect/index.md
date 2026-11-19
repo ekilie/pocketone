@@ -7,7 +7,7 @@ source: "ext/s3redirect/README.md"
 
 # S3 Redirect
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 File downloads as short-lived signed redirects to your bucket, after PocketBase's own access check.
 
