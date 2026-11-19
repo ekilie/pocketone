@@ -12,8 +12,9 @@ description: >-
 
 # PocketOne
 
-PocketOne is a community fork of PocketBase, based on upstream v0.41.1, maintained by PocketHost. It is not affiliated
-with or endorsed by the PocketBase project. Its changes to PocketBase's own code ("core") are kept to hooks and a few
+PocketOne is a community fork of PocketBase, based on upstream v0.41.1, maintained by Ben Allfree and contributors
+(Ben also created PocketHost, which runs it in production). It is not affiliated with or endorsed by the PocketBase
+project. Its changes to PocketBase's own code ("core") are kept to hooks and a few
 bug fixes; every feature is an **extension** in `ext/<name>/`, each its own Go module. The stock binary is
 `pocketone` (built from `examples/pocketone`).
 
