@@ -181,7 +181,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Markdown](https://pocketone.dev/docs/extensions/pages/markdown): .md pages and partials run their tags as plain JavaScript, then Markdown, with YAML front matter passed to meta().
 - [Partials](https://pocketone.dev/docs/extensions/pages/partials): Include reusable templates from _private folders with include(name, locals).
 - [Layouts and Slots](https://pocketone.dev/docs/extensions/pages/layouts): Wrap pages with +layout.ets files, and pass content between pages and layouts with named slots.
-- [Components with TSX](https://pocketone.dev/docs/extensions/pages/jsx): The component style: pages, layouts and partials as .tsx functions that return markup, rendered to HTML on the server with no build step.
+- [Components with TSX](https://pocketone.dev/docs/extensions/pages/jsx): The component style, with pages, layouts and partials as .tsx functions that return markup, rendered to HTML on the server with no build step.
 
 ## Pages: Security and Content
 

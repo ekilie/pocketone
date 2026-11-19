@@ -9,7 +9,7 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ### Added
 
-- TypeScript types for page code, in the app's `pb_data/types.d.ts`: `pages.Context` (`ctx`), `pages.Handlers`
+- TypeScript types for page code, in the app's `types.d.ts`: `pages.Context` (`ctx`), `pages.Handlers`
   (`+page`/`+api`), `pages.Middleware`, `pages.Config`, `pages.PluginFactory` and `pages.Props` for TSX, plus JSX
   element types. Use them with `satisfies` or as annotations and check with `tsc` or your editor; add your own
   `ctx.data` keys by extending `pages.Data`. See the new TypeScript docs page.

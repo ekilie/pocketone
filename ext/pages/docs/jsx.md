@@ -1,6 +1,6 @@
 ---
 title: Components with TSX
-description: The component style: pages, layouts and partials as .tsx functions that return markup, rendered to HTML on the server with no build step.
+description: The component style, with pages, layouts and partials as .tsx functions that return markup, rendered to HTML on the server with no build step.
 ---
 
 # Components with TSX
