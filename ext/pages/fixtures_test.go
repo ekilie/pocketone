@@ -50,6 +50,7 @@ func newServer(t *testing.T, dir string) (http.Handler, *Pages) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
+	fastPasswords(t, app)
 	jsvm.MustRegister(app, jsvm.Config{HooksDir: filepath.Join(t.TempDir(), "pb_hooks"), MigrationsDir: t.TempDir(), TypesDir: t.TempDir()})
 	p, err := Register(app, Config{Dir: dir})
 	if err != nil {

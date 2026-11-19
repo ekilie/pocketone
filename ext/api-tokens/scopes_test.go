@@ -313,6 +313,7 @@ func TestBindJSBeforeRegister(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(app.Cleanup)
+	fastPasswords(t, app)
 	vm := jsVM(t, app)
 	if _, err := vm.RunString(`$apiTokens.registerScope({ name: "talks:read", description: "See talks", paths: ["/api/collections/talks/records"], methods: ["GET"] })`); err != nil {
 		t.Fatal(err)

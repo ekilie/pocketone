@@ -24,6 +24,7 @@ func TestOAuthPagesThemedThroughTemplates(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer app.Cleanup()
+	fastPasswords(t, app)
 	dir := t.TempDir()
 	if err := templates.New(templates.Config{Dir: dir}).Register(app, nil); err != nil {
 		t.Fatal(err)

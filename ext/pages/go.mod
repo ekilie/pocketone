@@ -9,6 +9,7 @@ require (
 	github.com/evanw/esbuild v0.28.2
 	github.com/spf13/cobra v1.10.2
 	github.com/yuin/goldmark v1.8.7
+	golang.org/x/crypto v0.59.0
 	golang.org/x/oauth2 v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
@@ -57,7 +58,6 @@ require (
 	github.com/superfly/ltx v0.5.2 // indirect
 	github.com/tetratelabs/wazero v1.12.0 // indirect
 	github.com/wasilibs/go-re2 v1.3.0 // indirect
-	golang.org/x/crypto v0.59.0 // indirect
 	golang.org/x/image v0.48.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
