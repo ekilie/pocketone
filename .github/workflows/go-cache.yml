@@ -8,10 +8,11 @@
 #
 # For each extension module it runs exactly what a test job compiles: `go build`, `go vet` and the -race test binaries
 # (`go test -race -run '^$'`, which builds and links every test binary but runs no test), with the same build tags.
+# It also fills ext/wasm's test compilation cache (see its step).
 # Each run restores the previous cache, so it compiles only what main changed, and saves under a new key (cache keys
 # are immutable); restores pick the newest by prefix. Go trims cache entries unused for 5 days by itself.
 #
-# Bump the `v1` in both keys (here and in extensions.yml) to start a fresh cache.
+# Bump the `v2` in both keys (here and in extensions.yml) to start a fresh cache.
 name: go cache
 
 on:
@@ -43,8 +44,9 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: go-race-v1-${{ runner.os }}-${{ github.sha }}
-          restore-keys: go-race-v1-${{ runner.os }}-
+            ~/.cache/pocketone-wasm-test
+          key: go-race-v2-${{ runner.os }}-${{ github.sha }}
+          restore-keys: go-race-v2-${{ runner.os }}-
       - name: Compile every module
         run: |
           set -uo pipefail
@@ -63,6 +65,18 @@ jobs:
           # A module that doesn't compile on main still leaves the rest of the cache worth saving; report it, don't fail.
           if [ ${#failed[@]} -gt 0 ]; then echo "::warning::didn't compile on main: ${failed[*]}"; fi
           echo "$(date +%T) done"
+      # ext/wasm's tests compile Go modules with wazero, about ten times slower under -race (~4 min a run instead of
+      # ~30 s). wazero's machine code doesn't depend on -race, so one run without it fills the folder its tests share
+      # (P1_WASM_TEST_CACHE, ext/wasm/export_test.go) and the -race runs load the modules from it. It also leaves the
+      # wasip1 builds of its test modules in the build cache.
+      - name: Fill ext/wasm's test compilation cache
+        working-directory: ext/wasm
+        run: |
+          echo "$(date +%T) go test (no -race)"
+          P1_WASM_TEST_CACHE=$HOME/.cache/pocketone-wasm-test go test -count=1 . \
+            || echo "::warning::ext/wasm's tests failed on main; its test cache may be partial"
+          du -sh ~/.cache/pocketone-wasm-test
+          echo "$(date +%T) done"
       - name: Save the cache
         if: ${{ !cancelled() }}
         uses: actions/cache/save@v4
@@ -70,4 +84,5 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: go-race-v1-${{ runner.os }}-${{ github.sha }}
+            ~/.cache/pocketone-wasm-test
+          key: go-race-v2-${{ runner.os }}-${{ github.sha }}

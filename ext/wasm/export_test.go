@@ -11,14 +11,26 @@ import (
 
 // Apps in the tests that don't set CacheDir share one compilation cache for the whole run, in a temporary folder
 // removed at the end, so the suite never touches the user's cache folder and compiles each module once.
+//
+// P1_WASM_TEST_CACHE names a folder to use instead, kept after the run, so later runs load the modules instead of
+// compiling them. CI sets it: under -race, wazero compiles a Go module about ten times slower (the whole suite takes
+// ~4 min instead of ~30 s), and its machine code doesn't depend on -race, so go-cache.yml fills the folder with a run
+// without -race and the -race runs load from it. Tests about compiling (TestCold, TestCompilationCache) use their own
+// cache or none, so they still compile.
 func TestMain(m *testing.M) {
-	dir, err := os.MkdirTemp("", "ext-wasm-cache-")
-	if err != nil {
-		panic(err)
+	dir, keep := os.Getenv("P1_WASM_TEST_CACHE"), true
+	if dir == "" {
+		var err error
+		if dir, err = os.MkdirTemp("", "ext-wasm-cache-"); err != nil {
+			panic(err)
+		}
+		keep = false
 	}
 	defaultCacheDir = func() (string, error) { return dir, nil }
 	code := m.Run()
-	os.RemoveAll(dir)
+	if !keep {
+		os.RemoveAll(dir)
+	}
 	os.Exit(code)
 }
 

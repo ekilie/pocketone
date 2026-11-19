@@ -16,6 +16,7 @@ import (
 // TestBadManifests: when what a module prints for --describe isn't a manifest, or asks for more than a pure function
 // gets, Modules says why, and the module runs with the defaults (calls don't read the manifest).
 func TestBadManifests(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name  string
 		value string
@@ -56,6 +57,7 @@ func TestBadManifests(t *testing.T) {
 // TestBrokenModule: a module that isn't valid WebAssembly doesn't load and says why, and the other modules load as
 // usual.
 func TestBrokenModule(t *testing.T) {
+	t.Parallel()
 	code := module(t, basic)
 	e := newApp(t, wasm.Config{}, func(_ core.App, dir string) {
 		install(t, dir, "broken", code[:1000])
