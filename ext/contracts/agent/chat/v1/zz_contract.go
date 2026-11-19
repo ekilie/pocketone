@@ -21,7 +21,7 @@ var (
 var Contract = extkit.NewContract[Chats]("agent.chat/v1", extkit.One).JS(extkit.JSHooks, nil)
 
 // W is agent.chat/v1's wire side: routes at /api/_c/agent.chat/v1/<op>, action hooks, MCP tools and the client.
-var W = extkit.NewWire(Contract, "agent.chat", func(inner Chats, g *extkit.Guard[Chats]) Chats {
+var W = extkit.NewWire(Contract, "chat", func(inner Chats, g *extkit.Guard[Chats]) Chats {
 	return &guardChats{inner, g}
 },
 	extkit.Op[Chats]{
@@ -74,7 +74,7 @@ var W = extkit.NewWire(Contract, "agent.chat", func(inner Chats, g *extkit.Guard
 		Desc:   "Returns a chat.",
 		Method: "POST",
 		Path:   "get",
-		Scope:  "agent.chat:read",
+		Scope:  "chat:read",
 		In:     reflect.TypeOf(Ref{}),
 		Out:    extkit.OutJSON,
 		Invoke: func(ctx context.Context, impl Chats, a extkit.Auth, req extkit.OpRequest) (any, error) {
@@ -90,7 +90,7 @@ var W = extkit.NewWire(Contract, "agent.chat", func(inner Chats, g *extkit.Guard
 		Desc:   "Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and \"\").",
 		Method: "POST",
 		Path:   "history",
-		Scope:  "agent.chat:read",
+		Scope:  "chat:read",
 		In:     reflect.TypeOf(HistoryInput{}),
 		Out:    extkit.OutJSON,
 		Invoke: func(ctx context.Context, impl Chats, a extkit.Auth, req extkit.OpRequest) (any, error) {
@@ -121,7 +121,7 @@ var W = extkit.NewWire(Contract, "agent.chat", func(inner Chats, g *extkit.Guard
 		Desc:   "Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value.",
 		Method: "POST",
 		Path:   "list",
-		Scope:  "agent.chat:read",
+		Scope:  "chat:read",
 		In:     reflect.TypeOf(ListInput{}),
 		Out:    extkit.OutJSON,
 		Invoke: func(ctx context.Context, impl Chats, a extkit.Auth, req extkit.OpRequest) (any, error) {

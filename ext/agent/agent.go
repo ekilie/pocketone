@@ -502,7 +502,7 @@ declare var $agent: {
 
 type AgentChatOptions = {
   system?: string
-  /** Sent after the question, not saved: text, or a function of the question. */
+  /** Sent after the question (history shows the question alone): text, or a function of the question. */
   context?: string | ((question: string) => string)
   /** Messages sent before the summary takes over (default 12). */
   window?: number

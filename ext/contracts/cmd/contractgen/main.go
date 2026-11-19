@@ -245,6 +245,9 @@ func build(pkg, iface string, d map[string]string, it *ast.InterfaceType) (*cont
 		if c.Scope == "" {
 			return nil, fmt.Errorf("wire contracts name the token scope their calls need: //contract:scope <name>")
 		}
+		if !validScope(c.Scope) {
+			return nil, fmt.Errorf("contract:scope %q: API token scopes are lower-case letters, digits, \":\" and \"_\" (no dots)", c.Scope)
+		}
 	} else if c.Host {
 		return nil, fmt.Errorf("only wire contracts can be host-provided (the host answers them over HTTP)")
 	}
@@ -312,6 +315,9 @@ func wireOp(m *method, op string) error {
 		m.Path = ""
 		for _, x := range f[1:] {
 			if v, ok := strings.CutPrefix(x, "scope="); ok {
+				if !validScope(v) {
+					return fmt.Errorf("//op: %q: scope %q: API token scopes are lower-case letters, digits, \":\" and \"_\" (no dots)", op, v)
+				}
 				m.Scope = v
 			} else if m.Path == "" {
 				m.Path = strings.Trim(x, "/")
@@ -597,3 +603,18 @@ func (j js{{$.Iface}}) {{.Name}}(ctx context.Context{{if $.Wire}}, a extkit.Auth
 {{end}}
 {{- end}}
 `))
+
+// validScope reports whether s may name an API token scope (ext/api-tokens' rule): lower-case letters, digits, ":"
+// and "_", starting with a letter or digit; "public" means no scope.
+func validScope(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i, r := range s {
+		ok := r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || i > 0 && (r == ':' || r == '_')
+		if !ok {
+			return false
+		}
+	}
+	return true
+}

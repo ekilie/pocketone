@@ -22,6 +22,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pockethost/pocketone/ext/agent"
+	agentchat "github.com/pockethost/pocketone/ext/agent-chat"
 	"github.com/pockethost/pocketone/ext/api-tokens"
 	"github.com/pockethost/pocketone/ext/backups"
 	"github.com/pockethost/pocketone/ext/bulkmail"
@@ -60,6 +61,7 @@ type Set struct {
 	Deploy     *deploy.Extension
 	WASM       *wasm.Extension
 	Agent      *agent.Extension
+	AgentChat  *agentchat.Extension
 	UICache    *uicache.Extension
 
 	// Providers is the `providers:` section of pocketone.yaml: which extension provides a contract when several do.
@@ -88,6 +90,7 @@ func New() *Set {
 		Deploy:     deploy.NewExtension(deploy.Config{}),
 		WASM:       wasm.New(wasm.Config{}),
 		Agent:      agent.New(),
+		AgentChat:  agentchat.New(),
 		UICache:    uicache.New(),
 	}
 }
@@ -117,7 +120,7 @@ type member struct {
 func (s *Set) members() []member {
 	m := []member{
 		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"APITokens", s.APITokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
-		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache}, {"Agent", s.Agent},
+		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache}, {"Agent", s.Agent}, {"AgentChat", s.AgentChat},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
 		if isNil(m[i].ext) {
@@ -158,6 +161,8 @@ func isNil(e extkit.Extension) bool {
 	case *wasm.Extension:
 		return v == nil
 	case *agent.Extension:
+		return v == nil
+	case *agentchat.Extension:
 		return v == nil
 	case *uicache.Extension:
 		return v == nil

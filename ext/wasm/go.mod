@@ -45,6 +45,7 @@ require (
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
 	github.com/pockethost/pocketone/ext/agent v0.0.0-00010101000000-000000000000 // indirect
+	github.com/pockethost/pocketone/ext/agent-chat v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/api-tokens v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	github.com/pockethost/pocketone/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
@@ -133,3 +134,5 @@ replace github.com/pockethost/pocketone/ext/templates => ../templates
 replace github.com/pockethost/pocketone/ext/agent => ../agent
 
 replace github.com/pockethost/pocketone/ext/uicache => ../uicache
+
+replace github.com/pockethost/pocketone/ext/agent-chat => ../agent-chat

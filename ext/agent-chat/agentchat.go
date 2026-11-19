@@ -143,6 +143,7 @@ type prepared struct {
 	window  int
 	every   int
 	pending []*core.Record // the messages since the last fold
+	sent    string         // the question as sent, with its context
 }
 
 func (c *chats) prepare(in chatv1.SendInput) (*prepared, error) {
@@ -173,13 +174,18 @@ func (c *chats) prepare(in chatv1.SendInput) (*prepared, error) {
 		msgs = append(msgs, agentv1.Message{Role: "system", Content: "Summary of the conversation so far: " + s})
 	}
 	for _, m := range p.pending {
-		msgs = append(msgs, agentv1.Message{Role: m.GetString("role"), Content: m.GetString("content")})
+		content := m.GetString("content")
+		if sent := m.GetString("sent"); sent != "" {
+			content = sent // exactly as sent last time: the chat's thread continues past it
+		}
+		msgs = append(msgs, agentv1.Message{Role: m.GetString("role"), Content: content})
 	}
 	question := in.Text
 	if strings.TrimSpace(in.Context) != "" {
 		question += "\n\n" + in.Context // after the question: the cached start stays the same
 	}
 	msgs = append(msgs, agentv1.Message{Role: "user", Content: question})
+	p.sent = question
 	p.input = agentv1.CompleteInput{System: in.System, Messages: msgs, Schema: in.Schema, MaxTokens: in.MaxTokens,
 		Temperature: in.Temperature, Thread: chat.Id, Wait: in.Wait}
 	return p, nil
@@ -192,11 +198,14 @@ func (c *chats) save(ctx context.Context, p *prepared, question, answer string) 
 		return false, err
 	}
 	err = c.app.RunInTransaction(func(tx core.App) error {
-		for i, t := range []struct{ role, content string }{{"user", question}, {"assistant", answer}} {
+		for i, t := range []struct{ role, content, sent string }{{"user", question, p.sent}, {"assistant", answer, ""}} {
 			m := core.NewRecord(col)
 			m.Set("chat", p.chat.Id)
 			m.Set("role", t.role)
 			m.Set("content", t.content)
+			if t.sent != t.content {
+				m.Set("sent", t.sent)
+			}
 			m.Set("seq", p.next+i)
 			if err := tx.Save(m); err != nil {
 				return err

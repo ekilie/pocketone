@@ -26,23 +26,24 @@ $agent.chats.list({ meta: { user: e.auth.id } })
 $agent.chats.forget({ meta: { user: deletedUserId } })
 ```
 
-Over HTTP (a superuser, or a token with the `agent.chat` scope):
+Over HTTP (a superuser, or a token with the `chat` scope):
 
 | Operation | HTTP (`POST`) | Body | Token scope |
 |---|---|---|---|
-| New | `/api/_c/agent.chat/v1/new` | `{"title": "", "meta": {}}` | `agent.chat` |
-| Send | `/api/_c/agent.chat/v1/send` | `{"id": "...", "text": "...", "system": "", "window": 12, "summarizeEvery": 6, "context": ""}` | `agent.chat` |
-| Send, streamed | `/api/_c/agent.chat/v1/send-stream` | as Send; server-sent events of agent/v1 chunks | `agent.chat` |
-| Get | `/api/_c/agent.chat/v1/get` | `{"id": "..."}` | `agent.chat:read` |
-| History | `/api/_c/agent.chat/v1/history` | `{"id": "...", "limit": 0, "before": ""}` | `agent.chat:read` |
-| Update | `/api/_c/agent.chat/v1/update` | `{"id": "...", "title": "...", "meta": {}}` | `agent.chat` |
-| List | `/api/_c/agent.chat/v1/list` | `{"meta": {"user": "..."}, "limit": 50, "offset": 0}` | `agent.chat:read` |
-| Forget | `/api/_c/agent.chat/v1/forget` | `{"id": "..."}` | `agent.chat` |
-| Forget by meta | `/api/_c/agent.chat/v1/forget-where` | `{"meta": {"user": "..."}}` | `agent.chat` |
+| New | `/api/_c/agent.chat/v1/new` | `{"title": "", "meta": {}}` | `chat` |
+| Send | `/api/_c/agent.chat/v1/send` | `{"id": "...", "text": "...", "system": "", "window": 12, "summarizeEvery": 6, "context": ""}` | `chat` |
+| Send, streamed | `/api/_c/agent.chat/v1/send-stream` | as Send; server-sent events of agent/v1 chunks | `chat` |
+| Get | `/api/_c/agent.chat/v1/get` | `{"id": "..."}` | `chat:read` |
+| History | `/api/_c/agent.chat/v1/history` | `{"id": "...", "limit": 0, "before": ""}` | `chat:read` |
+| Update | `/api/_c/agent.chat/v1/update` | `{"id": "...", "title": "...", "meta": {}}` | `chat` |
+| List | `/api/_c/agent.chat/v1/list` | `{"meta": {"user": "..."}, "limit": 50, "offset": 0}` | `chat:read` |
+| Forget | `/api/_c/agent.chat/v1/forget` | `{"id": "..."}` | `chat` |
+| Forget by meta | `/api/_c/agent.chat/v1/forget-where` | `{"meta": {"user": "..."}}` | `chat` |
 
 `send` answers `{"answer": <agent/v1's result>, "summarized": bool}`. A chat is `{id, title, summary, meta, messages,
 created, updated}`. `meta` filters match each top-level key exactly (strings, numbers, true/false, null). `context` is
-sent after the question and not saved, so the start of the prompt stays the same from turn to turn (the prompt cache).
+sent after the question; `history` shows the question alone, and later turns send it with its context again, so each
+prompt starts exactly like the last one did (the prompt cache and the chat's thread).
 Errors: `not_found` (404) for an unknown chat, and agent/v1's.
 
 ## Provide

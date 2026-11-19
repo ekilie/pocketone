@@ -110,46 +110,26 @@ function search(kb, query, n) {
     .map((x) => x.s)
 }
 
-// How much conversation to send. Past it, the next question starts a new stretch from the last turn (read once),
-// rather than dropping one turn per question, which would change the start of every prompt.
-const BUDGET = 1800
-
 /**
- * Answers the conversation's last question, armed with the preamble and the best-matching context.
- *
- * messages are the conversation as the browser keeps it: each earlier question as it was sent (with its excerpts) and
- * each answer, then the new question. Sending the earlier turns exactly as before lets the model continue from its
- * state for this conversation (`thread`), so a turn reads only the new question and its excerpts. onText, if given,
- * gets the answer as it's written ($agent.stream); onWait gets the model's status while it loads.
+ * Answers a question in a stored chat ($agent.chat, the agent-chat extension), armed with the preamble and the
+ * best-matching context. The chat keeps the conversation: the page only holds its id. A new chat starts when chatId is
+ * empty. onText gets the answer as it's written; onWait gets the model's status while it loads.
  */
-function answer(ctx, messages, { conversation, onText, onWait } = {}) {
+function answer(ctx, { chatId, question, onText, onWait }) {
   const kb = knowledge(ctx)
-  let recent = messages.map((m) => ({ role: m.role, content: m.content }))
-  let keep = recent.length - 1 // the earlier messages the browser keeps for next time (it adds this turn's two)
-  if (recent.length > 1 && $agent.count({ system: kb.preamble, messages: recent }) > BUDGET) {
-    recent = recent.slice(-1) // a new stretch: just the question
-    keep = 0
-  }
+  const id = chatId || $agent.newChat({ title: question.slice(0, 80) })
   // the question, plus the one before it, so a follow-up ("and how do I undo that?") still finds its topic
-  const query = messages
-    .filter((m) => m.role === 'user')
-    .slice(-2)
-    .map((m) => m.question || m.content)
-    .join(' ')
-  const context = search(kb, query, 3)
-  // The preamble and the conversation so far never change between turns, so they go first, and the excerpts (which
-  // change with every question) ride along with the new question.
+  const before = chatId ? $agent.chat(id).history({ limit: 2 }).filter((m) => m.role === 'user').map((m) => m.content) : []
+  const context = search(kb, [...before, question].join(' '), 3)
   const excerpts = context.map((s, i) => `[${i + 1}] ${s.title}\n${s.text}`).join('\n\n')
-  const last = recent[recent.length - 1]
-  const sent = `${last.content}\n\nDocumentation excerpts to answer from:\n\n${excerpts}`
-  const turns = [...recent.slice(0, -1), { role: 'user', content: sent }]
+  // The chat sends the preamble, a summary of older turns, the turns since, then this question with its excerpts after
+  // it, and keeps the question as sent, so each turn's prompt starts exactly like the last one did: the model reads
+  // only the new question (the chat's thread, and the preamble warmed at load).
+  const chat = $agent.chat(id, { system: kb.preamble, maxTokens: 350, temperature: 0.3, wait: '10m' })
   const started = Date.now()
-  const opts = { system: kb.preamble, messages: turns, maxTokens: 350, temperature: 0.3, wait: '10m' }
-  if (conversation) opts.thread = String(conversation).slice(0, 64)
-  const res = onText ? $agent.stream(opts, onText, { onWait }) : $agent.complete(opts)
+  const res = chat.send(question, { context: `Documentation excerpts to answer from:\n\n${excerpts}`, onText, onWait })
   return {
-    sent, // the question as sent: the browser keeps it this way
-    keep,
+    chat: id,
     answer: res.text.trim(),
     model: res.model,
     backend: res.backend,

@@ -12,6 +12,7 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ### Added
 
+- New member `AgentChat` (ext/agent-chat): stored conversations with the app's language model, `$agent.newChat()` and `$agent.chat(id).send(text)`. Its two collections (`_agent_chat_chats`, `_agent_chat_messages`) are created by its migration and stay empty until the app starts a chat. Turn it off on a single app with `agent-chat: {enabled: false}`.
 - New member `Agent` (ext/agent): a language model for `pb_hooks`, called with `$agent.complete()`, from the app's own API or a model PocketOne runs itself; on a host, the host's shared model. Turn it off on a single app with `agent: {enabled: false}`.
 
 - `pocketone extensions migrations`, `pocketone extensions migrate up [extension]` and `pocketone extensions migrate down <extension> [n]`: list, apply and revert the migrations of the extensions running on the app.

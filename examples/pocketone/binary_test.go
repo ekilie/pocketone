@@ -39,7 +39,7 @@ func TestSingleSite(t *testing.T) {
 		t.Run("startup lines", func(t *testing.T) {
 			log := s.Proc.Log.String()
 			for _, want := range []string{
-				"standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, agent",
+				"standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, agent, agent-chat",
 				"dev mail trap is active", s.TrapURL(),
 				"restore/v1 ← pitr", "oauth/v1 ← api-tokens", "deploy/v1 ← deploy",
 			} {

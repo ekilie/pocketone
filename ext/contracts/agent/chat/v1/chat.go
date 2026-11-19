@@ -22,7 +22,7 @@ import (
 //
 //contract:id agent.chat/v1
 //contract:kind wire
-//contract:scope agent.chat
+//contract:scope chat
 //contract:js hooks
 type Chats interface {
 	// New starts a chat and returns it; its id is how the app finds it again.
@@ -41,11 +41,11 @@ type Chats interface {
 	SendStream(ctx context.Context, a extkit.Auth, in SendInput) (extkit.Stream, error)
 	// Get returns a chat.
 	//
-	//op: POST get scope=agent.chat:read
+	//op: POST get scope=chat:read
 	Get(ctx context.Context, a extkit.Auth, in Ref) (Chat, error)
 	// History returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and "").
 	//
-	//op: POST history scope=agent.chat:read
+	//op: POST history scope=chat:read
 	History(ctx context.Context, a extkit.Auth, in HistoryInput) (History, error)
 	// Update sets a chat's title or meta (fields left out stay).
 	//
@@ -54,7 +54,7 @@ type Chats interface {
 	// List returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys
 	// with that value.
 	//
-	//op: POST list scope=agent.chat:read
+	//op: POST list scope=chat:read
 	List(ctx context.Context, a extkit.Auth, in ListInput) (ChatList, error)
 	// Forget deletes a chat, its messages and the model's state for it.
 	//
@@ -98,7 +98,7 @@ type SendInput struct {
 	Window int `json:"window,omitempty"`
 	// SummarizeEvery folds the messages that left the window into the summary once that many have (default 6).
 	SummarizeEvery int `json:"summarizeEvery,omitempty"`
-	// Context is text sent after the question (the passages that answer it, say), not saved with the chat.
+	// Context is text sent after the question (the passages that answer it, say). The chat keeps the question as sent, to send it the same way next turn; history shows the question alone.
 	Context     string          `json:"context,omitempty"`
 	Schema      json.RawMessage `json:"schema,omitempty"`
 	MaxTokens   int             `json:"maxTokens,omitempty"`

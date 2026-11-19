@@ -143,7 +143,7 @@ func TestSendAndFold(t *testing.T) {
 	}
 	send("q3")
 	in = fa.last()
-	if len(in.Messages) != 4 || !strings.Contains(in.Messages[0].Content, "SUMMARY") || in.Messages[1].Content != "q2" ||
+	if len(in.Messages) != 4 || !strings.Contains(in.Messages[0].Content, "SUMMARY") || in.Messages[1].Content != "q2\n\nCTX for q2" ||
 		in.Messages[3].Content != "q3\n\nCTX for q3" {
 		t.Fatalf("after the fold, the prompt is the summary, the turns since, and the question: %+v", in.Messages)
 	}

@@ -40,6 +40,7 @@ func createChats(tx core.App) error {
 		&core.RelationField{Id: "acm_chat", Name: "chat", CollectionId: ChatsCollectionID, MaxSelect: 1, Required: true, CascadeDelete: true},
 		&core.SelectField{Id: "acm_role", Name: "role", MaxSelect: 1, Required: true, Values: []string{"user", "assistant"}},
 		&core.TextField{Id: "acm_content", Name: "content", Max: 1 << 20},
+		&core.TextField{Id: "acm_sent", Name: "sent", Max: 1 << 20, Help: "A question as it was sent, with its context; later turns send it again this way so the model's state for the chat still matches."},
 		&core.NumberField{Id: "acm_seq", Name: "seq", OnlyInt: true, Help: "Its place in the chat (0, 1, 2, ...)."},
 		&core.AutodateField{Id: "acm_created", Name: "created", OnCreate: true, System: true},
 	)

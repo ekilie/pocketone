@@ -7,26 +7,25 @@ shows `$agent` from page code:
   ([`preamble.md`](pb_pages/_private/preamble.md)) and context files ([`_private/context/`](pb_pages/_private/context),
   eleven pages of pocketone.dev) with `$os.readDir` / `$os.readFile`, splits them into sections, and for each question
   picks the three that match best (BM25, plus a few synonyms: people say "apps", the docs say "instances");
-- **answering, as it's written:** `$agent.stream({ system, messages }, onText)` with the preamble as the system prompt,
-  the last few turns, and the excerpts after the new question, so each turn's prompt starts like the last one and the
-  model's prompt cache skips re-reading it; [`chat/+api.js`](pb_pages/chat/+api.js) forwards each piece to the browser
-  with `ctx.res.sse()`;
+- **a stored chat, answered as it's written:** `$agent.newChat()` once, then
+  `$agent.chat(id, { system }).send(question, { context, onText })` each turn (the agent-chat extension): the chat
+  keeps the conversation (the page holds only its id), sends the preamble, the turns so far and the question with its
+  excerpts after it, and keeps the question as sent, so each turn's prompt starts like the last one and the model
+  reads only the new question; [`chat/+api.js`](pb_pages/chat/+api.js) forwards each piece to the browser with
+  `ctx.res.sse()`;
 - **structured output:** a second call, `$agent.complete({ schema: { type: 'array', ... } })`, suggests three follow-up
   questions; the model can only answer with an array of three strings;
 - **status:** `$agent.status()` for the model's download progress, and `wait` with `onWait` so a question asked while
   the model loads waits for it and the page shows the progress;
-- **warming and threads:** the preamble is warmed when the app first loads it (`$agent.warm`), and each browser
-  conversation is a `thread`: the page keeps each question as it was sent, excerpts included, so the next turn starts
-  exactly the same and the model reads only the new question. When the conversation passes a token budget
-  (`$agent.count`), the next question starts a new stretch instead of dropping one turn at a time. The answer's footer
-  shows how many prompt tokens were cached.
+- **warming:** the preamble is warmed when the app first loads it (`$agent.warm`), so the first question doesn't
+  wait for it. The answer's footer shows how many prompt tokens were cached.
 
 ```
 pb_pages/
   index.ejs              the chat page
-  chat/+api.js           POST /chat: the answer as server-sent events; GET /chat: status and what the app knows
+  chat/+api.js           POST /chat {chat?, question}: the answer as server-sent events; GET /chat: status and what the app knows
   chat/suggest/+api.js   POST /chat/suggest: three follow-up questions (JSON schema)
-  _private/agent.js      loads preamble + context, searches, calls $agent
+  _private/agent.js      loads preamble + context, searches, asks the chat ($agent.chat)
   _private/preamble.md   who the assistant is and how it answers
   _private/context/*.md  what it knows
 ```

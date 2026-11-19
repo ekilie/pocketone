@@ -22,21 +22,22 @@ keeps the id (on its own records, or in its frontend) and may put anything in a 
 
 ## Install
 
-Agent Chat isn't part of the stock `pocketone` binary yet. Add it to your own Go build, next to Agent:
+Agent Chat is built into `pocketone` and on by default, in every app and every instance of a host (a standard
+member). In your own Go build, next to Agent:
 
 ```go
 extkit.Setup(app, []extkit.Extension{agent.New(), agentchat.New()}, nil, nil)
 ```
 
-On a build from the standard set: `set.Add(agentchat.New())`. The module is
-`github.com/pockethost/pocketone/ext/agent-chat`. It creates its two collections on the first start, with its own
-migrations (`pocketone extensions migrations` lists them).
+The module is `github.com/pockethost/pocketone/ext/agent-chat`. Its two collections come from its own migration,
+`0001_chats` in [schema.go](schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
+They stay empty until your app starts a chat.
 
 ## Configure
 
-There's nothing to configure. Each send can say how much of the chat to send (below). Without the extension, its
-collections and their data stay; `pocketone extensions migrate down agent-chat` removes them (data included) while
-it's still in the build.
+There's nothing to configure. Each send can say how much of the chat to send (below). Turn it off on a single app with
+`agent-chat: {enabled: false}` in pocketone.yaml (on a host, an instance's `extensions.agent-chat`); its collections
+and their data stay. `pocketone extensions migrate down agent-chat` removes them, data included.
 
 ## Use
 
@@ -56,7 +57,7 @@ Options for `$agent.chat(id, ...)`, used by every send:
 | Option | Default | What it does |
 |---|---|---|
 | `system` | | The preamble, first on every turn ([Writing a preamble](../agent/docs/guides/preamble.md)). |
-| `context` | | Text, or a function of the question returning text, sent after the question and not saved: the passages that answer it. |
+| `context` | | Text, or a function of the question returning text, sent after the question: the passages that answer it. `history()` shows the question alone; later turns send it with its context again, so the model's state for the chat still matches. |
 | `window` | 12 | Messages sent before the summary takes over. |
 | `summarizeEvery` | 6 | Once that many messages have piled up past the window, the oldest are folded into the summary (a second, short call). |
 | `maxTokens`, `temperature`, `wait` | agent's | As in `$agent.complete`. |
