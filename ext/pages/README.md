@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.1.1
+version: 0.1.2
 title: "Pages"
 group: binary
 summary: "Server-rendered pages from a pb_pages folder (formerly PocketPages)."
