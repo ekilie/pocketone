@@ -134,7 +134,14 @@ func (vm *VM) setGo(name string, v any) {
 }
 
 func (vm *VM) setFunc(name string, fn nativeGo) { vm.setGlobal(name, vm.nativeValue(fn, false)) }
-func (vm *VM) setCtor(name string, fn nativeGo) { vm.setGlobal(name, vm.nativeValue(fn, true)) }
+
+// setCtor sets a global Go constructor with a real `prototype` (inheriting the Go objects' prototype), so
+// `x instanceof Name` works and `new Name()` instances are instances of it, as in goja.
+func (vm *VM) setCtor(name string, fn nativeGo) {
+	f := vm.nativeValue(fn, true)
+	C.avm_ctor_proto(vm.ctx, f, vm.objProto)
+	vm.setGlobal(name, f)
+}
 
 // setHidden sets a non-enumerable global (engine internals, not counted as binds).
 func (vm *VM) setHidden(name string, v JSValue) {
