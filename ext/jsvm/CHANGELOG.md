@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.1 (2026-11-20)
+
 ### Fixed
 
 - Go constructors (`FormData`, `Record`, `Collection`, `DateTime`, the field types, ...) work with `instanceof`, as in

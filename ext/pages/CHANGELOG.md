@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.2 (2026-11-20)
+
 ### Fixed
 
 - `ctx.pb()` writes work: `create`, `update` and the other calls with a body threw a `TypeError` from the SDK's

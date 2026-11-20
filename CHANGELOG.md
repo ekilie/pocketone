@@ -42,6 +42,18 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+## v0.0.1-alpha.10 (2026-11-20)
+
+### Highlights
+
+- **`ctx.pb()` writes work in PocketPages.** `create`, `update` and every other call with a body threw `TypeError: operand 'prototype' property is not an object`, because `instanceof` failed on Go constructors such as `FormData`. They work now, and validation and rule failures come back as `ClientResponseError` ([JSVM](ext/jsvm/CHANGELOG.md), [Pages](ext/pages/CHANGELOG.md)).
+- **`require()` works on every request.** A `require()` inside a handler or any function that runs at request time failed with `require("x"): not found` from the second request on. It now resolves and loads files on its own ([Pages](ext/pages/CHANGELOG.md)).
+
+### Extensions
+
+- [JSVM](ext/jsvm/CHANGELOG.md#011-2026-11-20) 0.1.0 → 0.1.1
+- [Pages](ext/pages/CHANGELOG.md#012-2026-11-20) 0.1.1 → 0.1.2
+
 ## v0.0.1-alpha.9 (2026-11-19)
 
 ### Highlights
