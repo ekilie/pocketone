@@ -530,6 +530,45 @@ func (cshim) avm_new_func(a *AVM, h uint32, ctor int32) JSValue {
 	return o
 }
 
+// avm_ctor_proto gives a Go constructor its own `prototype` object (inheriting proto, the Go objects' prototype) with
+// `constructor` pointing back, as a JS constructor has. Without it `x instanceof Ctor` throws ("operand 'prototype'
+// property is not an object"), which the PocketBase JS SDK does with FormData on every request with a body.
+func (cshim) avm_ctor_proto(ctx *JSContext, f, proto JSValue) {
+	p := lib.XJS_NewObjectProto(ctx.tls, ctx.p, proto)
+	if valTag(p) == lib.EJS_TAG_EXCEPTION {
+		lib.XFreeValue(ctx.tls, ctx.p, lib.XJS_GetException(ctx.tls, ctx.p))
+		return
+	}
+	lib.XJS_SetConstructor(ctx.tls, ctx.p, f, p) // dups both
+	lib.XFreeValue(ctx.tls, ctx.p, p)
+}
+
+// adoptNewTargetProto makes a Go object returned by `new Ctor()` an instance of Ctor (goja sets the instance's
+// prototype to new.target.prototype the same way). Only a freshly wrapped object is changed: one whose prototype is
+// still the shared Go-object prototype, so slices and objects with a prototype of their own keep theirs.
+var cPrototype = mustCString("prototype") // C memory for good, like the class names
+
+func adoptNewTargetProto(tls *libc.TLS, ctx uintptr, vm *VM, ret, newTarget JSValue) {
+	if valTag(ret) != lib.EJS_TAG_OBJECT || lib.XJS_GetClassID(tls, ret) != classes.obj || valTag(vm.objProto) != lib.EJS_TAG_OBJECT {
+		return
+	}
+	cur := lib.XJS_GetPrototype(tls, ctx, ret)
+	fresh := valTag(cur) == lib.EJS_TAG_OBJECT && valPtr(cur) == valPtr(vm.objProto)
+	lib.XFreeValue(tls, ctx, cur)
+	if !fresh || valTag(newTarget) != lib.EJS_TAG_OBJECT {
+		return
+	}
+	np := lib.XJS_GetPropertyStr(tls, ctx, newTarget, cPrototype)
+	if valTag(np) == lib.EJS_TAG_OBJECT {
+		lib.XJS_SetPrototype(tls, ctx, ret, np)
+	}
+	if valTag(np) == lib.EJS_TAG_EXCEPTION {
+		lib.XFreeValue(tls, ctx, lib.XJS_GetException(tls, ctx))
+	} else {
+		lib.XFreeValue(tls, ctx, np)
+	}
+}
+
 // avm_handle_of is the handle of a GoObject/GoFunc, 0 for anything else.
 func (cshim) avm_handle_of(a *AVM, v JSValue) uint32 {
 	if valTag(v) != lib.EJS_TAG_OBJECT {
@@ -793,7 +832,12 @@ func fnCall(tls *libc.TLS, ctx uintptr, funcObj, this JSValue, argc int32, argv 
 	if argc > 0 {
 		args = unsafe.Slice((*JSValue)(ptr(argv)), int(argc))
 	}
-	return avmGoCall(vm.ctx, h, this, args, flags&lib.MJS_CALL_FLAG_CONSTRUCTOR != 0)
+	ctor := flags&lib.MJS_CALL_FLAG_CONSTRUCTOR != 0
+	ret := avmGoCall(vm.ctx, h, this, args, ctor)
+	if ctor { // for a constructor call QuickJS passes new.target as this
+		adoptNewTargetProto(tls, ctx, vm, ret, this)
+	}
+	return ret
 }
 
 // ptr is a C address as an unsafe.Pointer (C memory never moves).

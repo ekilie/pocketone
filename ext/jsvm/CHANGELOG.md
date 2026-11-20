@@ -7,6 +7,13 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Fixed
+
+- Go constructors (`FormData`, `Record`, `Collection`, `DateTime`, the field types, ...) work with `instanceof`, as in
+  goja: each has a `prototype` (with `constructor` pointing back), and `new X()` is an instance of `X`. Before,
+  `value instanceof FormData` threw `TypeError: operand 'prototype' property is not an object`, which broke every
+  `ctx.pb()` create and update in PocketPages (the JS SDK makes that check on every request with a body).
+
 ## 0.1.0 (2026-11-18)
 
 ### Upgrading

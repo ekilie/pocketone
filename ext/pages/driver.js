@@ -55,13 +55,16 @@
     }
 
     // ---- modules (CommonJS, cached per VM by content) ----
-    function load(file) {
-      var key = rt.moduleKey(file)
+    // L is what loads files: this request's rt, or (for a module's own require) the per-VM cache.loader, since the
+    // module and its require() outlive the request that first loaded it.
+    function load(file, L) {
+      L = L || rt
+      var key = L.moduleKey(file)
       if (key in cache) return cache[key]
       // A require cycle (a -> b -> a) gets a's exports as they are so far, as in Node and 0.x.
       var loading = cache['l:' + key]
       if (loading) return loading.exports
-      var m = rt.module(file)
+      var m = L.module(file)
       if (m.json !== undefined) {
         var v
         try {
@@ -77,11 +80,11 @@
       try {
         var h, frag
         if (m.ts) {
-          h = jsx().h
-          frag = jsx().Fragment
+          h = jsx(L).h
+          frag = jsx(L).Fragment
         }
         var req = function (name) {
-          return requireFrom(file, String(name))
+          return requireFrom(file, String(name), cache.loader)
         }
         m.fn(module, module.exports, req, m.filename, m.dirname, h, frag)
       } finally {
@@ -98,9 +101,10 @@
     }
 
     // requireFrom resolves name for the pb_pages file from (require.go), then loads it here or with the app's loader.
-    function requireFrom(from, name) {
-      var res = rt.resolveRequire(from, name)
-      if (res.file !== undefined) return load(res.file)
+    function requireFrom(from, name, L) {
+      L = L || rt
+      var res = L.resolveRequire(from, name)
+      if (res.file !== undefined) return load(res.file, L)
       var global = globalThis.require
       if (typeof global !== 'function') throw new Error('require(' + JSON.stringify(name) + '): no module loader')
       if (res.notFound === undefined) return global(res.global)
@@ -114,8 +118,8 @@
       }
     }
 
-    function jsx() {
-      if (!cache.jsx) cache.jsx = rt.program('jsx')(esc)
+    function jsx(L) {
+      if (!cache.jsx) cache.jsx = (L || rt).program('jsx')(esc)
       return cache.jsx
     }
 

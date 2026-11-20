@@ -215,10 +215,58 @@ func (r *request) vmCache() (js.Object, *vmState, error) {
 	}
 	o := r.rt.NewObject()
 	st := &vmState{call: call.Func(), frontMatter: map[string]map[string]any{}}
-	if err := errors.Join(o.Set("driver", driver), o.Set("go", st), r.rt.Set("__ppCache", o)); err != nil {
+	if err := errors.Join(o.Set("driver", driver), o.Set("go", st), o.Set("loader", r.p.loader(r.rt)), r.rt.Set("__ppCache", o)); err != nil {
 		return nil, nil, err
 	}
 	return o, st, nil
+}
+
+// loader is the module loader the driver gives each module's require(), one per VM. Modules are cached per VM, so a
+// require() inside one runs on later requests too (in a handler, or a function called at request time); it can't use
+// the request that first loaded the module, whose pb_pages root is closed and whose cache is released when it ends.
+// Each call opens its own root and works outside any request.
+func (p *Pages) loader(rt js.Runtime) js.Object {
+	o := rt.NewObject()
+	with := func(fn func(r *request) (any, error)) (any, error) {
+		root, err := os.OpenRoot(p.dir)
+		if err != nil {
+			return nil, err
+		}
+		defer root.Close()
+		cache := rt.Get("__ppCache").Object()
+		if cache == nil {
+			return nil, errors.New("ext/pages: module loader used before the page driver")
+		}
+		defer js.Release(cache)
+		return fn(&request{p: p, rt: rt, root: root, cache: cache})
+	}
+	_ = errors.Join(
+		o.Set("resolveRequire", js.NativeFunc(func(c js.Call) (any, error) {
+			from, name := c.Arg(0).String(), c.Arg(1).String()
+			return with(func(r *request) (any, error) { return r.resolveRequire(from, name) })
+		})),
+		o.Set("module", js.NativeFunc(func(c js.Call) (any, error) {
+			file := c.Arg(0).String()
+			return with(func(r *request) (any, error) { return r.module(file) })
+		})),
+		o.Set("moduleKey", js.NativeFunc(func(c js.Call) (any, error) {
+			file := c.Arg(0).String()
+			return with(func(r *request) (any, error) { return r.moduleKey(file) })
+		})),
+		o.Set("program", js.NativeFunc(func(c js.Call) (any, error) {
+			name := c.Arg(0).String()
+			return with(func(r *request) (any, error) { return r.builtinProgram(name) })
+		})),
+	)
+	return o
+}
+
+// context is the request's context, or a background one outside a request (the module loader).
+func (r *request) context() context.Context {
+	if r.e == nil {
+		return context.Background()
+	}
+	return r.e.Request.Context()
 }
 
 // callJS calls the method name of the JS object o with Go args, and returns its result exported.
@@ -278,7 +326,7 @@ func (r *request) template(file string) (js.Value, error) {
 		}
 		return v, nil
 	}
-	c, err := r.p.compiled(r.e.Request.Context(), key, func() (*compiledFile, error) {
+	c, err := r.p.compiled(r.context(), key, func() (*compiledFile, error) {
 		src, err := r.readFile(file)
 		if err != nil {
 			return nil, err
@@ -432,7 +480,7 @@ func (r *request) module(file string) (js.Object, error) {
 	key := "m:" + hash
 	fn := r.cache.Get(key) // this VM's, when it has met the file
 	if fn.Nullish() {
-		c, err := r.p.compiled(r.e.Request.Context(), key, func() (*compiledFile, error) {
+		c, err := r.p.compiled(r.context(), key, func() (*compiledFile, error) {
 			src, err := r.readFile(file)
 			if err != nil {
 				return nil, err

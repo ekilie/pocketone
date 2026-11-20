@@ -7,6 +7,14 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Fixed
+
+- `ctx.pb()` writes work: `create`, `update` and the other calls with a body threw a `TypeError` from the SDK's
+  `FormData` check (fixed in ext/jsvm). Validation and rule failures come back as `ClientResponseError`.
+- `require()` inside a handler or any function that runs at request time works on every request, not just the
+  first. A module's `require()` used the request that first loaded the module, so from the next request on it
+  failed with `require("x"): not found`. It now resolves and loads files on its own.
+
 ## 0.1.1 (2026-11-18)
 
 ### Added

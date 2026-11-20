@@ -89,6 +89,7 @@ type VM struct {
 	Hider js.Hider
 
 	sliceProto JSValue               // prototype of Go slices: Array methods
+	objProto   JSValue               // prototype of Go objects (toJSON, toString, ...); constructors' prototypes inherit it
 	mods       *moduleState          // require() and import resolution (set by bindNode)
 	srcMaps    map[string]*sourceMap // TypeScript files by the name in stack traces
 
@@ -165,6 +166,7 @@ func (vm *VM) loop(setup func(*VM) error, ready chan error) {
 
 func (vm *VM) teardown() {
 	vm.free_(vm.sliceProto)
+	vm.free_(vm.objProto)
 	for r := range vm.refs {
 		vm.free_(r.v)
 	}

@@ -179,7 +179,8 @@ func (vm *VM) installPrelude() error {
 	fnP := C.avm_array_get(vm.ctx, arr, 1)
 	vm.sliceProto = C.avm_array_get(vm.ctx, arr, 2)
 	vm.free_(arr)
-	C.avm_set_protos(vm.a, objP, fnP) // takes ownership
+	vm.objProto = C.avm_dup(vm.ctx, objP) // kept for setCtor: each constructor's prototype inherits it
+	C.avm_set_protos(vm.a, objP, fnP)     // takes ownership
 	return nil
 }
 
