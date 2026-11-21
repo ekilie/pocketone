@@ -49,7 +49,6 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 - **New installation tools.** Windows installs with Scoop, macOS and Linux with `curl -fsSL https://pocketone.dev/install.sh | sh`, and every release has `.deb`, `.rpm` and `.apk` packages that set PocketOne up as a systemd service ([Installation](https://pocketone.dev/docs/installation)). The Homebrew formula moved to `pocketonehq/tap` (see Upgrading).
 - **`pocketone clone`.** Start a local project from a running app: `pocketone clone <url>` signs you in as a superuser, pulls its code, and you're ready for `pocketone dev` ([Deploy](ext/deploy/CHANGELOG.md)).
 - **Deploys don't clobber the server.** `pocketone deploy` stops when files changed on the remote since your last deploy, pull or dev, and lists them; `--force` overwrites. Pull and clone download in bundles, and 429s are retried ([Deploy](ext/deploy/CHANGELOG.md)).
-- **One runtime per multisite host.** A host runs docker or pocker, never both, and instances no longer name a runtime. Hosts that mixed them have upgrade steps below ([Multisite](ext/multisite/CHANGELOG.md)).
 
 ### Upgrading
 

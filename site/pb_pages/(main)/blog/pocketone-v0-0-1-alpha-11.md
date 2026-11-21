@@ -1,6 +1,6 @@
 ---
 title: "PocketOne alpha.11: install anywhere, clone any app"
-description: PocketOne v0.0.1-alpha.11 adds Scoop, an install script and Linux packages, pocketone clone, safer deploys and one runtime per multisite host.
+description: PocketOne v0.0.1-alpha.11 adds Scoop, an install script and Linux packages, pocketone clone and safer deploys.
 date: 2026-11-21
 author: Ben Allfree
 tags: release
@@ -14,12 +14,10 @@ Alpha.11 is about getting PocketOne onto your machine and getting your app back 
 
 **Deploys don't clobber the server.** If someone edited a file on the server, or the dashboard wrote a migration, since your last deploy, pull or dev, `pocketone deploy` lists those files and stops. `--force` overwrites them. Deploys are no longer recorded, so `--commit` and `-m` are gone. Pull and clone now download in bundles, and the CLI waits and retries when a server rate limits it.
 
-**One runtime per multisite host.** A host runs docker or pocker, never both. A `docker` section in `pocketone.yaml` means docker, otherwise pocker, and instances no longer carry a `runtime` field. Each instance's `pb_cache` also moves out of its folder, so copies and archives stop dragging caches around.
-
 ## Upgrading
 
 - Homebrew moved taps: `brew uninstall pocketone`, then `brew install pocketonehq/tap/pocketone`.
 - Everyone else: `pocketone upgrade`.
-- Running a multisite host? Check the upgrade steps in the [release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11) for the runtime change and the deploy extension.
+- Running a multisite host? Check the upgrade steps in the [release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11) for the deploy extension and multisite hosts.
 
 [Release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11)
