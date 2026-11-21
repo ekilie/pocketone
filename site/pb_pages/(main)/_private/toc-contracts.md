@@ -18,6 +18,7 @@
 - [deploy/v1](/docs/contracts/deploy/v1)
 - [gate/v1](/docs/contracts/gate/v1)
 - [http.wrap/v1](/docs/contracts/http.wrap/v1)
+- [instance.fs/v1](/docs/contracts/instance.fs/v1)
 - [instance.source/v1](/docs/contracts/instance.source/v1)
 - [mail.fallback/v1](/docs/contracts/mail.fallback/v1)
 - [mail.feedback/v1](/docs/contracts/mail.feedback/v1)

@@ -83,8 +83,8 @@ type PullOptions struct {
 	Log    func(string)
 }
 
-// Pull downloads remote files into the project, keeping their paths. pb_data is only pulled when asked for (and
-// the remote refuses while the app runs).
+// Pull downloads remote files into the project, keeping their paths. pb_data is never pulled (the remote doesn't
+// reach it).
 func Pull(ctx context.Context, c *Client, opts PullOptions) (int, error) {
 	log := opts.Log
 	if log == nil {
@@ -112,7 +112,7 @@ func Pull(ctx context.Context, c *Client, opts PullOptions) (int, error) {
 			if e.IsDirectory {
 				continue
 			}
-			if !explicit && (e.Path == "pb_data" || strings.HasPrefix(e.Path, "pb_data/")) {
+			if e.Path == "pb_data" || strings.HasPrefix(e.Path, "pb_data/") { // an older remote still lists it
 				continue
 			}
 			dest := filepath.Join(opts.Dir, filepath.FromSlash(e.Path))

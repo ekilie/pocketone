@@ -137,6 +137,9 @@ it's safe to repeat (GET, HEAD or OPTIONS without a body). Migrations run when a
 
 Instance folders are ordinary folders under `root`. To work on one while nothing has it open, a host's Go code calls
 `WithInstanceStopped` (below); requests for that instance wait up to 30 s, then get a 503 with `Retry-After`.
+The host provides [instance.fs/v1](/docs/contracts/instance.fs/v1) on its scope from the same methods
+(`Runtime.Files(dir)`), so host-side code (a host's deploy or file drive) gets an instance's folder, writers' lock
+and restart from the contract.
 
 ### Remote control
 

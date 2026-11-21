@@ -162,8 +162,8 @@ pocketone pull prod pb_hooks pb_public/index.html
 pocketone pull prod --dry-run
 ```
 
-Downloads files from a remote into the project. `pb_data` is only reachable on an instance that's powered off, so a
-single app (always running while it answers) refuses it.
+Downloads files from a remote into the project: its code, never `pb_data` (the deploy API doesn't reach it; data goes
+through the PocketBase API and backups).
 
 ### `logs`
 
@@ -264,11 +264,15 @@ and logs are remote/v1's (`/api/_c/remote/v1`), which deploy requires.
 | `POST /check` | Takes a manifest, returns the hashes the server is missing. |
 | `POST /blobs` | Gzipped `PHB1` bundles: `[sha256][uint32 length][bytes]`…, every hash verified, 64 MB per request. |
 | `POST /commit` | Stage, swap in, record. `"restartNeeded": true` in the answer when migrations or packages wait for a restart; `"restart": true` in the request restarts after the swap. With `"partial": true` only the listed files (and `"delete"`) change. |
-| `GET`/`DELETE /files` | List or delete files. |
-| `GET`/`PUT /files/raw` | Download or upload one file. |
+| `GET`/`DELETE /files` | List or delete files (the code set, `node_modules`, `patches/`; never `pb_data` or `.git*`). |
+| `GET`/`PUT /files/raw` | Download or upload one file (same reach). |
 | `GET /tree` | One folder of the code set (`?path=`, default the root) with a hash over everything below it; `hashOnly=1` for just the hash. |
 
 The protocol is the pockethost npm CLI's, so the same client deploys to PocketOne apps and PocketHost.
+
+The instance's folder, the lock that keeps commits and file writes apart, and its restart come from
+[instance.fs/v1](../contracts/instance/fs/v1/README.md), which deploy requires. On a single app deploy provides it as
+the default (the app's own folder); a host that provides it for its instances replaces that.
 
 ## How it works
 

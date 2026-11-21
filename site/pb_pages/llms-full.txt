@@ -2930,6 +2930,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`deploy/v1`](https://pocketone.dev/docs/contracts/deploy/v1) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](https://pocketone.dev/docs/contracts/gate/v1) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](https://pocketone.dev/docs/contracts/http.wrap/v1) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |
+| [`instance.fs/v1`](https://pocketone.dev/docs/contracts/instance.fs/v1) | An instance's code files on disk: its folder, a state folder, one writers' lock and a restart around a change. | deploy (default), docker, pocker | deploy |  | @benallfree |
 | [`instance.source/v1`](https://pocketone.dev/docs/contracts/instance.source/v1) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
 | [`mail.fallback/v1`](https://pocketone.dev/docs/contracts/mail.fallback/v1) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](https://pocketone.dev/docs/contracts/mail.feedback/v1) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
@@ -7770,6 +7771,78 @@ MIT
 
 ---
 
+Source: https://pocketone.dev/docs/contracts/instance.fs/v1
+
+# instance.fs/v1
+
+An instance's code files, for extensions that read and write them: deploy today, a live file drive next. It answers
+where the instance's folder is, where an extension may keep its own state about it, the one lock every writer takes,
+whether the instance runs, and how to restart it around a change that mustn't happen under a running app.
+
+The code is the `pb_*` folders except `pb_data`, `package.json` and the bun lockfiles at the top, `patches/`, and the
+production `node_modules` tree at the top. **`pb_data` is never reachable through this contract.**
+
+A service contract ([fs.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/fs/v1/fs.go)), one provider. It holds no request lookup and no auth: callers say which instance
+by id, and decide for themselves who may call them.
+
+## Use
+
+```go
+files := fsv1.Contract.Must(app)               // after registration: in a hook or at serve time
+f, err := files.Instance(ctx, fsv1.Self)       // a single app's own files; a host passes the instance's id
+dir, _ := f.Dir(ctx)                           // the instance folder
+rel, path, err := fsv1.Resolve(dir, "pb_hooks/main.pb.js") // a client path, checked
+unlock, _ := f.Lock(ctx)                       // every write holds it
+defer unlock()
+startErr, err := f.Restart(ctx, func(ctx context.Context) error { /* swap files in */ return nil })
+```
+
+The package also holds the code-path rules every user shares:
+
+- `IsCodePath(p)`: what a deploy may write or delete.
+- `IsReachable(p)`: what a file API may read or write (the code, `node_modules`, `patches/`; never `pb_data` or
+  `.git*`).
+- `Resolve(dir, p)`: a client path to a file inside `dir`, refusing unreachable paths, symlink crossings and anything
+  that lands outside the folder (`*PathError`).
+
+`StateDir(ctx, name)` is outside the code (a `.pb_<name>` dot-folder in the instance folder by default) and on the same
+filesystem as `Dir`, so an extension can stage files there and rename them in atomically.
+
+## Provide
+
+Implement `fsv1.Files`: `Instance(ctx, id)` returns an `fsv1.FS` for each instance (`fsv1.Self` on a single app), or
+`fsv1.ErrNoInstance`. Return the same `FS` for the same instance every time: its `Lock` must be shared by every
+caller. `fsv1.Local` is an `FS` over a local folder to build on: give it the folder, and optionally a state folder,
+whether it runs, how to stop it and how to start it again.
+
+- **Single app:** [deploy](https://pocketone.dev/docs/extensions/deploy) provides it as the default: the app's own folder. The app can't
+  stop itself, so `Restart` applies the change while it runs (each rename is atomic) and then restarts the app.
+- **Host:** the host's runtime provides it on the host scope (`fsv1.Contract.ProvideIn`), one per host since a host runs
+  one runtime: [pocker](https://pocketone.dev/docs/extensions/pocker) (`Manager.Files()`: stops the instance's app, starts it again)
+  and [docker](https://pocketone.dev/docs/extensions/docker) (`Runtime.Files(dir)`: stops the container; the next request starts a
+  fresh one). `fsv1.Instances` is the `Files` they build on: one `Local` per known instance, kept so its lock is
+  shared. instance.fs/v1 isn't host-providable, so code inside an instance never reaches the host's provider.
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [docker](https://pocketone.dev/docs/extensions/docker) | provides |
+| [pocker](https://pocketone.dev/docs/extensions/pocker) | provides |
+| [deploy](https://pocketone.dev/docs/extensions/deploy) | provides (default) |
+| [deploy](https://pocketone.dev/docs/extensions/deploy) | requires |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
 Source: https://pocketone.dev/docs/contracts/instance.source/v1
 
 # instance.source/v1
@@ -11488,8 +11561,8 @@ pocketone pull prod pb_hooks pb_public/index.html
 pocketone pull prod --dry-run
 ```
 
-Downloads files from a remote into the project. `pb_data` is only reachable on an instance that's powered off, so a
-single app (always running while it answers) refuses it.
+Downloads files from a remote into the project: its code, never `pb_data` (the deploy API doesn't reach it; data goes
+through the PocketBase API and backups).
 
 ### `logs`
 
@@ -11610,11 +11683,15 @@ and logs are remote/v1's (`/api/_c/remote/v1`), which deploy requires.
 | `POST /check` | Takes a manifest, returns the hashes the server is missing. |
 | `POST /blobs` | Gzipped `PHB1` bundles: `[sha256][uint32 length][bytes]`…, every hash verified, 64 MB per request. |
 | `POST /commit` | Stage, swap in, record. `"restartNeeded": true` in the answer when migrations or packages wait for a restart; `"restart": true` in the request restarts after the swap. With `"partial": true` only the listed files (and `"delete"`) change. |
-| `GET`/`DELETE /files` | List or delete files. |
-| `GET`/`PUT /files/raw` | Download or upload one file. |
+| `GET`/`DELETE /files` | List or delete files (the code set, `node_modules`, `patches/`; never `pb_data` or `.git*`). |
+| `GET`/`PUT /files/raw` | Download or upload one file (same reach). |
 | `GET /tree` | One folder of the code set (`?path=`, default the root) with a hash over everything below it; `hashOnly=1` for just the hash. |
 
 The protocol is the pockethost npm CLI's, so the same client deploys to PocketOne apps and PocketHost.
+
+The instance's folder, the lock that keeps commits and file writes apart, and its restart come from
+[instance.fs/v1](https://pocketone.dev/docs/contracts/instance.fs/v1), which deploy requires. On a single app deploy provides it as
+the default (the app's own folder); a host that provides it for its instances replaces that.
 
 ## How it works
 
@@ -15423,6 +15500,9 @@ it's safe to repeat (GET, HEAD or OPTIONS without a body). Migrations run when a
 
 Instance folders are ordinary folders under `root`. To work on one while nothing has it open, a host's Go code calls
 `WithInstanceStopped` (below); requests for that instance wait up to 30 s, then get a 503 with `Retry-After`.
+The host provides [instance.fs/v1](https://pocketone.dev/docs/contracts/instance.fs/v1) on its scope from the same methods
+(`Runtime.Files(dir)`), so host-side code (a host's deploy or file drive) gets an instance's folder, writers' lock
+and restart from the contract.
 
 ### Remote control
 
@@ -16445,6 +16525,10 @@ failure is written there too.
   [ext/standard](https://pocketone.dev/docs/extensions/standard)'s set, and Pocker won't start an instance without it: a server without one
   refuses to run, so no host can make an instance that lacks the standard extensions. Every instance gets its members, each turned off per instance with `extensions.<name>.enabled: false`, and its
   startup lines (`standard: on: ...`) are in the instance's own log. Listing a member in `Extensions` too is an error.
+- **Instance files.** The host provides [instance.fs/v1](https://pocketone.dev/docs/contracts/instance.fs/v1) on its scope
+  (`Manager.Files()`): host-side code asks it for an instance's folder, takes its writers' lock, and restarts it around
+  a change (`WithInstanceStopped`, then `StartInstance`). It isn't host-provided to the instances: inside an instance,
+  its own app's provider answers.
 - **Contracts the host provides.** `Server.Host` (or `Provider.Host`) is the host's contract scope. A contract the
   host provides for its instances steps aside inside each instance's app, and the host answers it on the instance's
   hostname in `Server.InstanceRoutes` (or `Provider.InstanceRoutes`, `ManagerOptions.InstanceRoutes`): after the

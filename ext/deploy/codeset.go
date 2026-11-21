@@ -2,79 +2,23 @@ package deploy
 
 import (
 	"fmt"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"regexp"
 	"slices"
 	"strings"
 )
 
-// The deploy "code set": the only files a deploy may write or delete inside an instance folder. It mirrors the CLI's
-// DEFAULT_INCLUDES / DEFAULT_EXCLUDES. pb_data is never part of it. The root node_modules tree is (the CLI ships the
-// production dependency tree); node_modules anywhere else stays out.
+// The deploy "code set": the only files a deploy may write or delete inside an instance folder, instance.fs/v1's code
+// paths (fsv1.IsCodePath). pb_data is never part of it. The root node_modules tree is (the CLI ships the production
+// dependency tree); node_modules anywhere else stays out.
 
-var rootCodeFiles = []string{"package.json", "bun.lock", "bun.lockb"}
-
-const (
-	patchesDir       = "patches"
-	dataDir          = "pb_data"
-	nodeModulesDir   = "node_modules"
-	maxManifestFiles = 20_000
-	maxPathLength    = 1024
-)
+const maxManifestFiles = 20_000
 
 var hashRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 func isSha256Hex(v string) bool { return hashRE.MatchString(v) }
 
-// isSafeRelativePath: relative POSIX path with no empty, "." or ".." segments.
-func isSafeRelativePath(p string) bool {
-	if p == "" || len(p) > maxPathLength {
-		return false
-	}
-	if strings.HasPrefix(p, "/") || strings.ContainsAny(p, "\\\x00") {
-		return false
-	}
-	for _, seg := range strings.Split(p, "/") {
-		if seg == "" || seg == "." || seg == ".." {
-			return false
-		}
-	}
-	return true
-}
-
-func isGitSegment(seg string) bool { return strings.HasPrefix(seg, ".git") }
-
-// isCodeRoot: a top-level name the code-set walk starts from.
-func isCodeRoot(name string) bool {
-	return (strings.HasPrefix(name, "pb_") && name != dataDir) || name == patchesDir || slices.Contains(rootCodeFiles, name)
-}
-
-// isCodePath reports whether p (relative to the instance folder) belongs to the code set.
-func isCodePath(p string) bool {
-	if !isSafeRelativePath(p) {
-		return false
-	}
-	segs := strings.Split(p, "/")
-	if slices.ContainsFunc(segs, isGitSegment) {
-		return false
-	}
-	first := segs[0]
-	// root node_modules, any depth; never node_modules elsewhere
-	if first == nodeModulesDir {
-		return len(segs) > 1
-	}
-	if slices.Contains(segs, nodeModulesDir) {
-		return false
-	}
-	if len(segs) == 1 {
-		return slices.Contains(rootCodeFiles, first) || (strings.HasPrefix(first, "pb_") && first != dataDir)
-	}
-	if first == dataDir {
-		return false
-	}
-	return strings.HasPrefix(first, "pb_") || first == patchesDir
-}
-
-func isNodeModulesPath(p string) bool { return strings.SplitN(p, "/", 2)[0] == nodeModulesDir }
+func isNodeModulesPath(p string) bool { return strings.SplitN(p, "/", 2)[0] == fsv1.NodeModulesDir }
 
 // Manifest maps a code-set path to its sha256 (lowercase hex).
 type Manifest map[string]string
@@ -112,7 +56,7 @@ func validateManifest(raw any) (Manifest, error) {
 	}
 	slices.Sort(paths)
 	for _, p := range paths {
-		if !isCodePath(p) {
+		if !fsv1.IsCodePath(p) {
 			return nil, &ManifestError{p + " is outside the deployable set (pb_* except pb_data, package.json, bun.lock(b), patches/, " +
 				"node_modules/ at the project root; no .git* files, no node_modules inside other folders)"}
 		}

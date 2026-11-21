@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"path"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"sort"
 	"strings"
 )
@@ -105,7 +106,7 @@ func (a *API) tree(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	p := strings.Trim(r.URL.Query().Get("path"), "/")
-	if p != "" && !isSafeRelativePath(p) {
+	if p != "" && !fsv1.IsSafeRelativePath(p) {
 		return errf(400, "Bad path")
 	}
 	files, _, err := c.store.scan(false)

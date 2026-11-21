@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	deployv1 "pocketone.dev/ext/contracts/deploy/v1"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"slices"
 	"strings"
 	"sync"
@@ -132,6 +133,50 @@ func (f *fakeInstances) StartInstance(_ context.Context, id string) error {
 	return nil
 }
 
+// instanceManager is what a multisite host's manager offers (pocker's Manager, fakeInstances); managerFiles adapts
+// it to instance.fs/v1 for these tests, as a host's provider would.
+type instanceManager interface {
+	Running(id string) bool
+	InstanceDir(id string) (string, bool)
+	WithInstanceStopped(ctx context.Context, id string, fn func(dir string) error) error
+	StartInstance(ctx context.Context, id string) error
+}
+
+type managerFiles struct {
+	m                instanceManager
+	pbRoot, stateDir string
+	mu               sync.Mutex
+	fs               map[string]*fsv1.Local
+}
+
+func newManagerFiles(m instanceManager, pbRoot, stateDir string) *managerFiles {
+	return &managerFiles{m: m, pbRoot: pbRoot, stateDir: stateDir, fs: map[string]*fsv1.Local{}}
+}
+
+func (f *managerFiles) Instance(_ context.Context, id string) (fsv1.FS, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if l, ok := f.fs[id]; ok {
+		return l, nil
+	}
+	l := &fsv1.Local{
+		Folder: func() string {
+			if d, ok := f.m.InstanceDir(id); ok {
+				return d
+			}
+			return filepath.Join(f.pbRoot, id)
+		},
+		State:     func(string) string { return filepath.Join(f.stateDir, id) },
+		IsRunning: func() bool { return f.m.Running(id) },
+		Stopped: func(ctx context.Context, fn func(context.Context) error) error {
+			return f.m.WithInstanceStopped(ctx, id, func(string) error { return fn(ctx) })
+		},
+		Start: func(ctx context.Context) error { return f.m.StartInstance(ctx, id) },
+	}
+	f.fs[id] = l
+	return l, nil
+}
+
 type apiFixture struct {
 	t    *testing.T
 	root string
@@ -149,8 +194,9 @@ func newAPIFixture(t *testing.T) *apiFixture {
 		pats:  map[string]fakeTok{testPAT: {UserID: "user1", Label: "CI", Scopes: []string{"read", "write"}}},
 	}
 	mgr := &fakeInstances{dirs: map[string]string{"inst1": filepath.Join(root, "instances", "inst1")}, running: map[string]bool{"inst1": true}}
-	api := New(Options{Prefix: Prefix, Backend: be, Instances: func() Instances { return mgr }, PBRoot: filepath.Join(root, "instances"),
-		DataRoot: filepath.Join(root, "deploys"), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	files := newManagerFiles(mgr, filepath.Join(root, "instances"), filepath.Join(root, "deploys"))
+	api := New(Options{Prefix: Prefix, Backend: be, Files: func() fsv1.Files { return files },
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(299) })
 	srv := httptest.NewServer(api.Wrap(next))
 	t.Cleanup(srv.Close)
@@ -481,15 +527,15 @@ func TestAPIFiles(t *testing.T) {
 	for _, e := range r.body["entries"].([]any) {
 		paths = append(paths, e.(map[string]any)["path"].(string))
 	}
-	if strings.Join(paths, ",") != "pb_data,pb_hooks,pb_hooks/main.pb.js,pb_public" {
+	if strings.Join(paths, ",") != "pb_hooks,pb_hooks/main.pb.js,pb_public" {
 		t.Fatalf("list: %v", paths)
 	}
 	r = f.do("GET", Prefix+"/files/raw?path=pb_hooks/main.pb.js", nil)
 	if r.status != 200 || string(r.raw) != "hook" || r.header.Get("X-File-Mtime") == "" {
 		t.Fatalf("raw: %d %s", r.status, r.raw)
 	}
-	if r = f.do("GET", Prefix+"/files/raw?path=pb_data/data.db", nil); r.status != 409 {
-		t.Fatalf("pb_data while on: %d", r.status)
+	if r = f.do("GET", Prefix+"/files/raw?path=pb_data/data.db", nil); r.status != 400 {
+		t.Fatalf("pb_data: %d", r.status)
 	}
 	if r = f.do("GET", Prefix+"/files/raw?path=notes.txt", nil); r.status != 400 {
 		t.Fatalf("outside: %d", r.status)
@@ -510,12 +556,12 @@ func TestAPIFiles(t *testing.T) {
 		t.Fatal(r.status)
 	}
 
-	// pb_data when powered off
+	// pb_data is out of reach (instance.fs/v1), powered off too
 	inst := f.be.insts["myapp.example.com"]
 	inst.Power = false
 	f.be.insts["myapp.example.com"] = inst
-	if r = put("path=pb_data/data.db&final=1", "new db"); r.status != 200 || f.read("pb_data/data.db") != "new db" {
-		t.Fatalf("%s", r.raw)
+	if r = put("path=pb_data/data.db&final=1", "new db"); r.status != 400 || f.read("pb_data/data.db") != "db" {
+		t.Fatalf("%d %s", r.status, r.raw)
 	}
 
 	// deletes

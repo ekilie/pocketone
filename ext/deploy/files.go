@@ -8,13 +8,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"sort"
 	"strconv"
 	"strings"
 )
 
 // File access over HTTPS, the replacement for SFTP: list, download, upload (chunked) and delete files in an instance
-// folder. Reach: the code set, node_modules, and pb_data (which needs the instance powered off, read or write).
+// folder. Reach: instance.fs/v1's (the code set, node_modules, patches/); never pb_data.
 
 const (
 	maxFileChunkBytes = 64 << 20
@@ -22,74 +23,15 @@ const (
 	uploadSuffix      = ".ph-upload"
 )
 
-// isFileAPIPath: the code set, pb_data, and node_modules (at the root or inside a code folder); never .git*.
-func isFileAPIPath(p string) bool {
-	if !isSafeRelativePath(p) {
-		return false
-	}
-	segs := strings.Split(p, "/")
-	first := segs[0]
-	if first == dataDir {
-		return true
-	}
-	for _, s := range segs {
-		if isGitSegment(s) {
-			return false
-		}
-	}
-	if first == nodeModulesDir || first == patchesDir {
-		return true
-	}
-	if isCodePath(p) {
-		return true
-	}
-	if len(segs) > 1 && strings.HasPrefix(first, "pb_") {
-		for _, s := range segs {
-			if s == nodeModulesDir {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func isDataPath(p string) bool { return strings.SplitN(p, "/", 2)[0] == dataDir }
-
-// resolveFilePath maps a client path to a filesystem path, refusing anything that escapes the instance folder or
-// crosses a symlink.
+// resolveFilePath maps a client path to a filesystem path through instance.fs/v1's rules: never pb_data or .git*,
+// never across a symlink or out of the instance folder.
 func resolveFilePath(c *reqCtx, raw string) (rel, fsPath string, err error) {
-	p := strings.Trim(raw, "/")
-	if p == "" {
-		return "", c.dir, nil
+	rel, fsPath, err = fsv1.Resolve(c.dir, raw)
+	var pe *fsv1.PathError
+	if errors.As(err, &pe) {
+		return "", "", errf(400, "%s is %s", pe.Path, pe.Reason)
 	}
-	if !isFileAPIPath(p) {
-		return "", "", errf(400, "%s is outside the files you can reach (pb_data, pb_hooks, pb_migrations, pb_public and other pb_* folders, node_modules, package.json, bun.lock(b), patches/)", p)
-	}
-	if isDataPath(p) && c.inst.Power {
-		return "", "", errf(409, "Power off the instance before reading or writing pb_data.")
-	}
-	fsPath = filepath.Join(c.dir, filepath.FromSlash(p))
-	cur := c.dir
-	for _, seg := range strings.Split(p, "/") {
-		cur = filepath.Join(cur, seg)
-		st, err := os.Lstat(cur)
-		if err != nil {
-			break
-		}
-		if st.Mode()&fs.ModeSymlink != 0 {
-			return "", "", errf(400, "%s crosses a symbolic link", p)
-		}
-	}
-	realRoot, err := filepath.EvalSymlinks(c.dir)
-	if err != nil {
-		realRoot = c.dir
-	}
-	if realParent, err := filepath.EvalSymlinks(filepath.Dir(fsPath)); err == nil {
-		if r, err := filepath.Rel(realRoot, realParent); err != nil || r == ".." || strings.HasPrefix(r, "../") {
-			return "", "", errf(400, "Bad path")
-		}
-	}
-	return p, fsPath, nil
+	return rel, fsPath, err
 }
 
 type fileEntry struct {
@@ -145,7 +87,7 @@ func (a *API) listFiles(w http.ResponseWriter, r *http.Request) error {
 				child := filepath.Join(dir, name)
 				childRel, _ := filepath.Rel(c.dir, child)
 				childRel = filepath.ToSlash(childRel)
-				if !isFileAPIPath(childRel) || strings.HasSuffix(name, uploadSuffix) {
+				if !fsv1.IsReachable(childRel) || strings.HasSuffix(name, uploadSuffix) {
 					continue
 				}
 				fi, err := os.Lstat(child)
@@ -157,8 +99,7 @@ func (a *API) listFiles(w http.ResponseWriter, r *http.Request) error {
 					size = 0
 				}
 				out = append(out, fileEntry{childRel, fi.IsDir(), size, mtimeMs(fi)})
-				// a powered-on instance still lists pb_data but can't open it
-				if fi.IsDir() && recursive && !(isDataPath(childRel) && c.inst.Power) {
+				if fi.IsDir() && recursive {
 					walk(child)
 				}
 			}
@@ -233,7 +174,10 @@ func (a *API) writeFile(w http.ResponseWriter, r *http.Request) error {
 	}
 	tmp := fsPath + uploadSuffix
 
-	unlock := a.lock(c.inst.ID)
+	unlock, err := c.lock(r.Context())
+	if err != nil {
+		return err
+	}
 	defer unlock()
 	if st, err := os.Stat(fsPath); err == nil && st.IsDir() {
 		return errf(400, "%s is a folder", rel)
@@ -292,7 +236,10 @@ func (a *API) deleteFile(w http.ResponseWriter, r *http.Request) error {
 		return errf(400, "Refusing to delete %s; delete files inside it instead", name)
 	}
 	recursive := flag(r, "recursive")
-	unlock := a.lock(c.inst.ID)
+	unlock, err := c.lock(r.Context())
+	if err != nil {
+		return err
+	}
 	defer unlock()
 	st, err := os.Lstat(fsPath)
 	if errors.Is(err, fs.ErrNotExist) {

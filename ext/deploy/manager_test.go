@@ -30,7 +30,8 @@ func TestWithPockerManager(t *testing.T) {
 	inst := Instance{ID: "inst1", Subdomain: "myapp", OwnerID: "user1", Power: true}
 	be := &fakeBackend{insts: map[string]Instance{"myapp.example.com": inst},
 		pats: map[string]fakeTok{testPAT: {UserID: "user1", Scopes: []string{"read", "write"}}}}
-	api := New(Options{Prefix: Prefix, Backend: be, Instances: func() Instances { return mgr }, PBRoot: pbRoot, DataRoot: filepath.Join(root, "deploys"), Logger: quiet})
+	// Pocker's own instance.fs/v1 provider, as a Pocker host provides it
+	api := New(Options{Prefix: Prefix, Backend: be, Files: mgr.Files, Logger: quiet})
 	srv := httptest.NewServer(api.Wrap(mgr))
 	defer srv.Close()
 	f := &apiFixture{t: t, root: root, be: be, api: api, srv: srv}

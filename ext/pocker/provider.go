@@ -57,7 +57,7 @@ func (p *Provider) Name() string { return "pocker" }
 // Contracts implements extkit.Declarer: pocker is runtime/v1 (and remote/v1 for its instances, with [Remote]), and
 // runs the instances instance.source/v1 supplies.
 func (p *Provider) Contracts() extkit.Contracts {
-	return extkit.Contracts{Implements: extkit.IDs("runtime/v1"), Requires: extkit.IDs("instance.source/v1")}
+	return extkit.Contracts{Implements: extkit.IDs("runtime/v1", "instance.fs/v1"), Requires: extkit.IDs("instance.source/v1")}
 }
 
 // RegisterHost implements multisite.Extension: it reads the `pocker` section and makes h run instances as isolates.

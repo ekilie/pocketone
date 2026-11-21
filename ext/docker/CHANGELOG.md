@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Added
+
+- The Docker host provides [instance.fs/v1](../contracts/instance/fs/v1/README.md) on its scope (`Runtime.Files(dir)`): each instance's folder on the host, a writers' lock and a restart that stops its container (the next request starts a fresh one).
+
 ### Changed
 
 - Serves every instance by default (`Config.Serves` can still narrow it); instances no longer name a runtime, and a host runs docker or pocker, never both.

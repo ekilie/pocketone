@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"sort"
 	"strings"
 	"sync"
@@ -171,7 +172,7 @@ func (s *Syncer) synced(p string) bool {
 		include = DefaultIncludes
 	}
 	exclude := append(append(append([]string{}, DefaultExcludes...), s.opts.Exclude...), s.ignore...)
-	return isCodePath(p) && !isNodeModulesPath(p) && glob.Any(include, p) && !glob.Any(exclude, p)
+	return fsv1.IsCodePath(p) && !isNodeModulesPath(p) && glob.Any(include, p) && !glob.Any(exclude, p)
 }
 
 // local lists the project's synced files (never node_modules).
