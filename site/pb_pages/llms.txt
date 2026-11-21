@@ -65,6 +65,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 - [agent.chat/v1](https://pocketone.dev/docs/contracts/agent.chat/v1): Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta.
 - [agent/v1](https://pocketone.dev/docs/contracts/agent/v1): Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model.
+- [api-tokens.verify/v1](https://pocketone.dev/docs/contracts/api-tokens.verify/v1): Another server checks an app's API token: who it acts as and what it may do.
 - [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
 - [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1): Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign.
 - [cache.clear/v1](https://pocketone.dev/docs/contracts/cache.clear/v1): Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent.

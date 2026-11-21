@@ -2921,6 +2921,7 @@ The table is generated from each contract's README and every extension's `Contra
 |---|---|---|---|---|---|
 | [`agent.chat/v1`](https://pocketone.dev/docs/contracts/agent.chat/v1) | Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | agent-chat |  |  | @benallfree |
 | [`agent/v1`](https://pocketone.dev/docs/contracts/agent/v1) | Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model. | agent | agent-chat |  | @benallfree |
+| [`api-tokens.verify/v1`](https://pocketone.dev/docs/contracts/api-tokens.verify/v1) | Another server checks an app's API token: who it acts as and what it may do. | api-tokens |  |  | @benallfree |
 | [`api-tokens/v1`](https://pocketone.dev/docs/contracts/api-tokens/v1) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | api-tokens |  | deploy, mcp, remotes | @benallfree |
 | [`bulkmail/v1`](https://pocketone.dev/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](https://pocketone.dev/docs/contracts/cache.clear/v1) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
@@ -4048,6 +4049,31 @@ Calls POST /api/\_c/agent/v1/warm on the remote (token scope: agent).
 
 From [agent/v1](https://pocketone.dev/docs/contracts/agent/v1) (generated).
 
+### pocketone remote api-tokens
+
+Commands under remote api-tokens
+
+### pocketone remote api-tokens verify
+
+Checks an API token and says who it acts as and what it may do (its scopes, with their values) (api-tokens.verify/v1)
+
+```
+pocketone remote api-tokens verify
+```
+
+Checks an API token and says who it acts as and what it may do (its scopes, with their values). A token that isn't valid is an answer (Valid false), not an error, so callers can tell a refused token from an outage.
+
+Calls POST /api/\_c/api-tokens.verify/v1/ on the remote (token scope: api\_tokens\_verify).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--ip` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--token` | string | – |  |
+
+From [api-tokens.verify/v1](https://pocketone.dev/docs/contracts/api-tokens.verify/v1) (generated).
+
 ### pocketone remote bulkmail
 
 Calls bulkmail/v1 on a remote
@@ -4857,6 +4883,14 @@ Every contract API a PocketOne app with its [standard extensions](https://pocket
 | `GET /api/_c/agent/v1/threads` | Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread). | `agent:read` |  |
 | `POST /api/_c/agent/v1/threads/forget` | Drops a thread's kept state, in memory and on disk. | `agent` | `id` (string) |
 
+## api-tokens.verify/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/api-tokens.verify/v1). Answered by [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `POST /api/_c/api-tokens.verify/v1` | Checks an API token and says who it acts as and what it may do (its scopes, with their values). | `api_tokens_verify` | `token` (string), `ip` (string) |
+
 ## api-tokens/v1
 
 Its own API under `/api/_c/api-tokens/v1/`: see [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1). Answered by [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) in the standard set.
@@ -4990,6 +5024,14 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | `agent_count` | Says how many tokens a text or a conversation is for the app's model, for budgeting what to send. |  | `agent:read` | `text` (string), `system` (string), `messages` (json) |
 | `agent_threads` | Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread). | yes | `agent:read` |  |
 | `agent_forget_thread` | Drops a thread's kept state, in memory and on disk. |  | `agent` | `id` (string) |
+
+## api-tokens.verify/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/api-tokens.verify/v1). Answered by [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `api-tokens_verify_verify` | Checks an API token and says who it acts as and what it may do (its scopes, with their values). |  | `api_tokens_verify` | `token` (string), `ip` (string) |
 
 ## bulkmail/v1
 
@@ -6991,6 +7033,90 @@ Drops a thread's kept state, in memory and on disk.
 |---|---|
 | [agent](https://pocketone.dev/docs/extensions/agent/extension) | provides |
 | [agent-chat](https://pocketone.dev/docs/extensions/agent-chat) | requires |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/contracts/api-tokens.verify/v1
+
+# api-tokens.verify/v1
+
+Another server checks one of an app's API tokens. A host in front of an app's accounts (a PocketHost edge in front of
+the mothership) is handed a token by a client and asks the app that issued it who the token acts as and what it may
+do. Companion to [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1): whatever provides that provides this.
+
+A wire contract ([verify.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/api-tokens/verify/v1/verify.go)).
+
+## Use
+
+| Operation | HTTP | Who |
+|---|---|---|
+| Verify | `POST /api/_c/api-tokens.verify/v1` `{"token", "ip"}` | superusers (`api_tokens_verify`) |
+
+`ip` is the client's address, recorded as the token's last use; leave it out to leave the last use alone.
+
+A valid token:
+
+```json
+{"valid": true, "grant": {"tokenId": "...", "name": "ci", "ownerCollection": "users", "ownerId": "...",
+  "scopes": ["instances=abc123"]}}
+```
+
+`scopes` empty means the owner's full rights; a scope with a value (`instances=abc123`) holds it for that value only
+(see [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1)). A token that isn't valid is an answer, not an error, so a caller can tell a
+refused token from an outage: `{"valid": false, "reason": "invalid"}` (unknown, malformed or revoked) or
+`"expired"`.
+
+In Go, from the other server:
+
+```go
+c := verifyv1.NewClient("https://app.example.com", superuserToken, nil)
+res, err := c.Verify(ctx, extkit.Auth{}, verifyv1.Input{Token: token, IP: ip})
+if err != nil { /* the app is unreachable: don't treat the token as refused */ }
+if !res.Valid { /* 401: res.Reason */ }
+if !res.Grant.HasScopeFor("instances", id) { /* 403 */ }
+```
+
+Cache answers briefly if you verify on every request: a revoked token then stops working once its entry expires.
+
+## Provide
+
+Implement `verifyv1.Verifier` over the same tokens as your `api-tokens/v1` provider. Never return an error for a
+token that isn't valid: return `Valid: false` and a reason.
+
+## Commands and APIs
+
+Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](https://pocketone.dev/docs/features/remote), or the full [CLI](https://pocketone.dev/docs/reference/cli), [REST](https://pocketone.dev/docs/reference/rest) and [MCP](https://pocketone.dev/docs/reference/mcp) references.
+
+### verify
+
+Checks an API token and says who it acts as and what it may do (its scopes, with their values). A token that isn't valid is an answer (Valid false), not an error, so callers can tell a refused token from an outage.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/api-tokens.verify/v1` |
+| CLI | `pocketone remote api-tokens verify --token <value> --ip <value>` |
+| MCP | `api-tokens_verify_verify` |
+| Token scope | `api_tokens_verify` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `token` | `--token` | string |
+| `ip` | `--ip` | string |
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [api-tokens](https://pocketone.dev/docs/extensions/api-tokens) | provides |
 
 <!-- /contracts:index -->
 
@@ -9648,6 +9774,12 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 | [`pocketone token revoke [id...]`](https://pocketone.dev/docs/reference/cli#pocketone-token-revoke) | Revokes API tokens by id, or all of one owner's (--all) |
 | [`pocketone token scopes`](https://pocketone.dev/docs/reference/cli#pocketone-token-scopes) | Lists the scopes extensions registered |
 
+### [api-tokens.verify/v1](https://pocketone.dev/docs/contracts/api-tokens.verify/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [verify](https://pocketone.dev/docs/contracts/api-tokens.verify/v1#verify) | `pocketone remote api-tokens verify --token <value> --ip <value>` | `POST /api/_c/api-tokens.verify/v1` | `api-tokens_verify_verify` |
+
 ### [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1)
 
 Its HTTP API under `/api/_c/api-tokens/v1/`, as the contract describes.
@@ -9734,6 +9866,14 @@ see and manage everyone's.
 | `GET /api/_c/api-tokens/v1/scopes` | The registered scopes, who may own tokens, and whether you can. |
 
 Owners can also list, view and delete their own tokens through the records API of `_api_tokens_tokens`.
+
+### Checking a token from another server (api-tokens.verify/v1)
+
+A server that a client hands one of this app's tokens to (a host in front of the app's accounts) asks the app what
+the token allows with the [api-tokens.verify/v1](https://pocketone.dev/docs/contracts/api-tokens.verify/v1) contract:
+`POST /api/_c/api-tokens.verify/v1` with `{"token": "pbt_...", "ip": "<client address>"}`, as a superuser (scope
+`api_tokens_verify`). The answer is `{"valid": true, "grant": {...}}` with the owner and the scopes (values included),
+or `{"valid": false, "reason": "invalid" | "expired"}`. In Go, `verifyv1.NewClient(appURL, superuserToken, nil)`.
 
 ## Example
 

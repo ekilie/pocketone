@@ -39,6 +39,14 @@ Every contract API a PocketOne app with its [standard extensions](https://pocket
 | `GET /api/_c/agent/v1/threads` | Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread). | `agent:read` |  |
 | `POST /api/_c/agent/v1/threads/forget` | Drops a thread's kept state, in memory and on disk. | `agent` | `id` (string) |
 
+## api-tokens.verify/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/api-tokens.verify/v1). Answered by [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `POST /api/_c/api-tokens.verify/v1` | Checks an API token and says who it acts as and what it may do (its scopes, with their values). | `api_tokens_verify` | `token` (string), `ip` (string) |
+
 ## api-tokens/v1
 
 Its own API under `/api/_c/api-tokens/v1/`: see [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1). Answered by [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) in the standard set.

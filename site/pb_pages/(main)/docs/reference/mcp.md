@@ -39,6 +39,14 @@ A PocketOne app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)): PocketBase's
 | `agent_threads` | Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread). | yes | `agent:read` |  |
 | `agent_forget_thread` | Drops a thread's kept state, in memory and on disk. |  | `agent` | `id` (string) |
 
+## api-tokens.verify/v1
+
+[Contract page](/docs/contracts/api-tokens.verify/v1). Answered by [API Tokens](/docs/extensions/api-tokens) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `api-tokens_verify_verify` | Checks an API token and says who it acts as and what it may do (its scopes, with their values). |  | `api_tokens_verify` | `token` (string), `ip` (string) |
+
 ## bulkmail/v1
 
 [Contract page](/docs/contracts/bulkmail/v1). Answered by [Bulk Mail](/docs/extensions/bulkmail) in the standard set.

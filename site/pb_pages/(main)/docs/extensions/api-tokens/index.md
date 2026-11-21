@@ -209,6 +209,12 @@ What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
 | [`pocketone token revoke [id...]`](/docs/reference/cli#pocketone-token-revoke) | Revokes API tokens by id, or all of one owner's (--all) |
 | [`pocketone token scopes`](/docs/reference/cli#pocketone-token-scopes) | Lists the scopes extensions registered |
 
+### [api-tokens.verify/v1](/docs/contracts/api-tokens.verify/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [verify](/docs/contracts/api-tokens.verify/v1#verify) | `pocketone remote api-tokens verify --token <value> --ip <value>` | `POST /api/_c/api-tokens.verify/v1` | `api-tokens_verify_verify` |
+
 ### [api-tokens/v1](/docs/contracts/api-tokens/v1)
 
 Its HTTP API under `/api/_c/api-tokens/v1/`, as the contract describes.
@@ -295,6 +301,14 @@ see and manage everyone's.
 | `GET /api/_c/api-tokens/v1/scopes` | The registered scopes, who may own tokens, and whether you can. |
 
 Owners can also list, view and delete their own tokens through the records API of `_api_tokens_tokens`.
+
+### Checking a token from another server (api-tokens.verify/v1)
+
+A server that a client hands one of this app's tokens to (a host in front of the app's accounts) asks the app what
+the token allows with the [api-tokens.verify/v1](/docs/contracts/api-tokens.verify/v1) contract:
+`POST /api/_c/api-tokens.verify/v1` with `{"token": "pbt_...", "ip": "<client address>"}`, as a superuser (scope
+`api_tokens_verify`). The answer is `{"valid": true, "grant": {...}}` with the owner and the scopes (values included),
+or `{"valid": false, "reason": "invalid" | "expired"}`. In Go, `verifyv1.NewClient(appURL, superuserToken, nil)`.
 
 ## Example
 

@@ -30,6 +30,7 @@ The table is generated from each contract's README and every extension's `Contra
 |---|---|---|---|---|---|
 | [`agent.chat/v1`](/docs/contracts/agent.chat/v1) | Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | agent-chat |  |  | @benallfree |
 | [`agent/v1`](/docs/contracts/agent/v1) | Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model. | agent | agent-chat |  | @benallfree |
+| [`api-tokens.verify/v1`](/docs/contracts/api-tokens.verify/v1) | Another server checks an app's API token: who it acts as and what it may do. | api-tokens |  |  | @benallfree |
 | [`api-tokens/v1`](/docs/contracts/api-tokens/v1) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | api-tokens |  | deploy, mcp, remotes | @benallfree |
 | [`bulkmail/v1`](/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](/docs/contracts/cache.clear/v1) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |

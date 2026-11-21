@@ -906,6 +906,31 @@ Calls POST /api/\_c/agent/v1/warm on the remote (token scope: agent).
 
 From [agent/v1](https://pocketone.dev/docs/contracts/agent/v1) (generated).
 
+### pocketone remote api-tokens
+
+Commands under remote api-tokens
+
+### pocketone remote api-tokens verify
+
+Checks an API token and says who it acts as and what it may do (its scopes, with their values) (api-tokens.verify/v1)
+
+```
+pocketone remote api-tokens verify
+```
+
+Checks an API token and says who it acts as and what it may do (its scopes, with their values). A token that isn't valid is an answer (Valid false), not an error, so callers can tell a refused token from an outage.
+
+Calls POST /api/\_c/api-tokens.verify/v1/ on the remote (token scope: api\_tokens\_verify).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--ip` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--token` | string | – |  |
+
+From [api-tokens.verify/v1](https://pocketone.dev/docs/contracts/api-tokens.verify/v1) (generated).
+
 ### pocketone remote bulkmail
 
 Calls bulkmail/v1 on a remote

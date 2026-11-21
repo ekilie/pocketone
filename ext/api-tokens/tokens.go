@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/fs"
 	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+	verifyv1 "pocketone.dev/ext/contracts/api-tokens/verify/v1"
 	"pocketone.dev/ext/extkit"
 	"slices"
 	"strings"
@@ -102,6 +103,7 @@ func Register(app core.App, cfg Config) (*Tokens, error) {
 	app.Store().Set(storeKey, t)
 	// api-tokens/v1: Verify in Go, and the token API under /api/_c/api-tokens/v1 (the contracts' seal mounts it)
 	apitokensv1.Contract.Provide(app, issuer{t})
+	verifyv1.Contract.Provide(app, verifier{t}) // api-tokens.verify/v1: other servers check a token (superusers)
 	if !cfg.OAuth.Disabled {
 		if _, err := registerOAuth(app, cfg.OAuth); err != nil {
 			return nil, err

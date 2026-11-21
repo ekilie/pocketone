@@ -9,6 +9,7 @@
 
 - [agent.chat/v1](/docs/contracts/agent.chat/v1)
 - [agent/v1](/docs/contracts/agent/v1)
+- [api-tokens.verify/v1](/docs/contracts/api-tokens.verify/v1)
 - [api-tokens/v1](/docs/contracts/api-tokens/v1)
 - [bulkmail/v1](/docs/contracts/bulkmail/v1)
 - [cache.clear/v1](/docs/contracts/cache.clear/v1)
