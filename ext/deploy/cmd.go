@@ -97,6 +97,7 @@ func deployCommand() *cobra.Command {
 		out     string
 		dryRun  bool
 		restart bool
+		force   bool
 	)
 	c := &cobra.Command{
 		Use:   "deploy [remote]",
@@ -104,7 +105,10 @@ func deployCommand() *cobra.Command {
 		Long: "Deploys the project's code set (pb_* folders except pb_data and pb_cache, package.json, bun.lock(b), patches/, and the " +
 			"production node_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. " +
 			"Hooks, pages and public files take effect by themselves; migrations and packages apply when the app " +
-			"restarts: pass --restart, or run '" + extkit.Command + " restart' later.",
+			"restarts: pass --restart, or run '" + extkit.Command + " restart' later. A deploy stops when files changed on the " +
+			"remote since your last deploy, pull or dev (an edit through the file drive, a migration the dashboard wrote) " +
+			"and lists them; --force overwrites them. A project with no record of the remote yet (a fresh checkout, CI) " +
+			"deploys without that check.",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := printer(cmd.OutOrStdout())
@@ -143,7 +147,7 @@ func deployCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, err = Deploy(ctx, c, DeployOptions{CollectOptions: opts, Verbose: f.verbose, Log: log, Restart: restart})
+			_, err = Deploy(ctx, c, DeployOptions{CollectOptions: opts, Verbose: f.verbose, Log: log, Restart: restart, Force: force})
 			return err
 		},
 	}
@@ -151,6 +155,7 @@ func deployCommand() *cobra.Command {
 	c.Flags().StringVar(&out, "out", "", "write the deploy set to a local folder instead of deploying")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "list what would be deployed, deploy nothing")
 	c.Flags().BoolVar(&restart, "restart", false, "restart the app after deploying when migrations or packages changed")
+	c.Flags().BoolVar(&force, "force", false, "deploy even when files changed on the remote since your last deploy, pull or dev, overwriting them")
 	return c
 }
 
@@ -225,7 +230,7 @@ func devCommand() *cobra.Command {
 			if pushOnly {
 				go restartKey(ctx, c, log)
 				return Watch(ctx, opts, 500*time.Millisecond, log, func() {
-					if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Verbose: f.verbose, Log: log, RestartHint: hint}); err != nil && ctx.Err() == nil {
+					if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Verbose: f.verbose, Log: log, RestartHint: hint, Force: true}); err != nil && ctx.Err() == nil { // one-way by choice: overwrite
 						log("Deploy failed: " + err.Error())
 					}
 				})

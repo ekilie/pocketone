@@ -95,7 +95,7 @@ Run `pocketone <command> --help` for the full list.
 | `login [remote]`, `logout [remote]` | Sign in (browser OAuth, `--device`, `--token`, `--token-stdin`; never a password); forget the login. |
 | `remote add <name> <url> [--default]`, `list`, `default`, `rm`, `whoami`, `status`, `logs`, `restart` | Manage remotes; inspect an app. |
 | `remote <contract> <op>` | Every contract operation an app offers, e.g. `remote restore points`, `remote restore to --at -2h`, `remote settings`, `remote bulkmail`, `remote mail suppression`. |
-| `deploy [remote]` | Upload changed `pb_*` files (not `pb_data`), `package.json`, `bun.lock(b)`, `patches/` and production `node_modules`. `--restart`, `--dry-run`, `--out <dir>`, `-i`/`-e`, `--no-node-modules`. |
+| `deploy [remote]` | Upload changed `pb_*` files (not `pb_data`), `package.json`, `bun.lock(b)`, `patches/` and production `node_modules`. `--restart`, `--dry-run`, `--out <dir>`, `-i`/`-e`, `--no-node-modules`. Stops and lists files that changed on the remote since the last deploy, pull or dev; `--force` overwrites them. |
 | `dev [remote]` | Two-way sync with a remote and stream its logs. `--prefer local\|remote`, `--push-only`, `--poll`, `--no-logs`. Type `r` and Enter to restart. |
 | `pull [remote] [paths...]` | Download files from a remote (`--dry-run`). |
 | `logs [remote] [-n lines]` | Stream a remote's app logs. |

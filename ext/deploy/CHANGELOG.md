@@ -13,6 +13,10 @@ Sections named after a PocketOne release are from before extensions had versions
 2. Deploys are no longer recorded. The `_deploy_deploys` collection and its rows are deleted on the first start, by the extension's migration; export them first if you want to keep them.
 3. `pocketone deploy` no longer takes `--commit` or `-m`/`--message` (they only fed the deploy record): remove them from scripts and CI.
 
+### Added
+
+- `pocketone deploy` stops when files changed on the remote since your last deploy, pull or dev (an edit made on the server, a migration the dashboard wrote), lists them, and deploys nothing; `--force` overwrites them. Deploy and pull now keep the same record `dev` does (`.pocketone/sync.json`). A project with no record of the remote yet (a fresh checkout, CI) deploys as before.
+
 ### Changed
 
 - The deploy API gets the instance's folder, writers' lock and restart from the new instance.fs/v1 contract, and provides it on a single app (the app's own folder). Its code-path rules moved there too.

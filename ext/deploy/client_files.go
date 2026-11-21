@@ -96,6 +96,16 @@ func Pull(ctx context.Context, c *Client, opts PullOptions) (int, error) {
 		paths = DefaultPullPaths
 	}
 	n := 0
+	var pulled []string
+	defer func() {
+		if len(pulled) > 0 {
+			// the pulled files now match the remote: record them as the base, so a later deploy doesn't take them
+			// for changes made on the server
+			if err := recordBase(ctx, c, CollectOptions{Dir: opts.Dir}, pulled); err != nil {
+				log("Couldn't save the deploy base (.pocketone/sync.json): " + err.Error())
+			}
+		}
+	}()
 	for _, p := range paths {
 		p = strings.Trim(p, "/")
 		entries, truncated, err := c.ListFiles(ctx, p, true)
@@ -127,6 +137,7 @@ func Pull(ctx context.Context, c *Client, opts PullOptions) (int, error) {
 			if err := c.Download(ctx, e.Path, dest); err != nil {
 				return n, fmt.Errorf("%s: %w", e.Path, err)
 			}
+			pulled = append(pulled, e.Path)
 			if e.Mtime > 0 {
 				t := time.UnixMilli(e.Mtime)
 				_ = os.Chtimes(dest, t, t)

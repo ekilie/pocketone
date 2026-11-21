@@ -418,6 +418,9 @@ type DeployOptions struct {
 	// RestartHint is printed when migrations or packages changed and the app wasn't restarted (default: how to
 	// restart it).
 	RestartHint string
+	// Force deploys even when files changed on the remote since the base (the last deploy, pull or dev), overwriting
+	// them. Without it such a deploy fails with a [ServerChangesError].
+	Force bool
 }
 
 // Deploy sends the manifest, uploads only what the remote lacks, then commits. The remote swaps the files in; the app
@@ -451,6 +454,16 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	}
 	log(fmt.Sprintf("Deploying %d files to %s (%s)", len(set.Files), c.Remote.URL, orStr(c.TokenSource, "no login")))
 
+	if !opts.Force {
+		changes, _, err := serverChanges(ctx, c, opts.CollectOptions, manifest)
+		if err != nil {
+			return nil, err
+		}
+		if len(changes) > 0 {
+			return nil, &ServerChangesError{Remote: c.Remote.URL, Changes: changes}
+		}
+	}
+
 	up := &uploader{c: c, byHash: byHash, verbose: opts.Verbose, log: log}
 	managesNM := set.NodeModules != nil
 	missing, err := c.Check(ctx, manifest, managesNM)
@@ -464,6 +477,9 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	res, err := up.commit(ctx, body)
 	if err != nil {
 		return nil, err
+	}
+	if err := recordBase(ctx, c, opts.CollectOptions, nil); err != nil {
+		log("Couldn't save the deploy base (.pocketone/sync.json): " + err.Error())
 	}
 	if opts.Verbose {
 		for _, p := range res.Written {
