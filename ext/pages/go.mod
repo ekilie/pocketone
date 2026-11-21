@@ -23,6 +23,7 @@ require (
 require (
 	ganigeorgiev.com/fexpr v0.7.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
+	github.com/benallfree/nollama v0.0.1-alpha.1 // indirect
 	github.com/benbjohnson/litestream v0.5.18 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

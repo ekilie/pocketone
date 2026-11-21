@@ -10,7 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"pocketone.dev/ext/agent/engine"
+	"github.com/benallfree/nollama/engine"
+	"github.com/benallfree/nollama/schema"
 	agentv1 "pocketone.dev/ext/contracts/agent/v1"
 	"pocketone.dev/ext/extkit"
 )
@@ -234,11 +235,11 @@ func (r *runner) complete(ctx context.Context, in agentv1.CompleteInput, maxToke
 		o.Thread, o.ThreadDir, o.ThreadDisk = in.Thread, sc.ThreadDir, sc.ThreadDisk
 	}
 	if len(in.Schema) > 0 {
-		sn, err := compileSchema(in.Schema)
+		sc, err := schema.Compile(in.Schema)
 		if err != nil {
 			return agentv1.CompleteResult{}, &extkit.Error{Code: "bad_request", Message: err.Error(), Status: 400}
 		}
-		o.Constraint = sn.fit // the answer can only be JSON matching the schema
+		o.Constraint = sc.Fit // the answer can only be JSON matching the schema
 	}
 	g, err := r.model.generate(ctx, prompt, o)
 	if err != nil && g.OutputTokens == 0 {

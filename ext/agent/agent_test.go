@@ -19,7 +19,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
-	"pocketone.dev/ext/agent/engine"
+	"github.com/benallfree/nollama/engine"
 	agentv1 "pocketone.dev/ext/contracts/agent/v1"
 	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
 	"pocketone.dev/ext/extkit"

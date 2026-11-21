@@ -27,6 +27,7 @@ replace pocketone.dev/ext/jsvm => ../jsvm
 require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
+	github.com/benallfree/nollama v0.0.1-alpha.1
 	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000

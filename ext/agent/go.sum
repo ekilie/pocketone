@@ -7,6 +7,8 @@ ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1/go.mod h1:oV1SPPkS3PlKYYj+
 github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496/go.mod h1:oGkLhpf+kjZl6xBf758TQhh5XrAeiJv/7FRz/2spLIg=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
+github.com/benallfree/nollama v0.0.1-alpha.1 h1:YEQ4nY0uyJ336CZi01eMSfYYu45Gg2HVUCedz220Ghw=
+github.com/benallfree/nollama v0.0.1-alpha.1/go.mod h1:Ph3osizh7+Tr78Z15aY+JrX+sqa4Q7/LfQD8W8IpXhM=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
