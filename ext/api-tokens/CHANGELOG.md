@@ -7,6 +7,9 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- OAuth Server: an `account` parameter on authorize and device requests names the account type the client needs
+  (`account=_superusers`). The sign-in page shows only that form, a browser signed in as another type gets that form
+  instead of consent (saying who's signed in), and no other type is issued a token.
 - Tokens from another system keep working: `RegisterPrefix` lets secrets start with another prefix (e.g. `ph_pat_`)
   besides `pbt_`, and `Import` stores a secret with a registered prefix (its hash) with an owner, scopes and expiry.
   New tokens still start with `pbt_`.

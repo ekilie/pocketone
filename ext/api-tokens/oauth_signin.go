@@ -173,9 +173,9 @@ func (s *OAuthServer) fillMethods(e *core.RequestEvent, d *PageData, col *core.C
 func (s *OAuthServer) signInPage(e *core.RequestEvent, d PageData, col *core.Collection, errMsg, email string) error {
 	d.Page, d.Error, d.Email = PageSignIn, errMsg, email
 	users, super := s.signInCollections()
-	if col == nil {
+	if col == nil || (d.Account != "" && col.Name != d.Account) {
 		var err error
-		if col, err = s.pickCollection(""); err != nil {
+		if col, err = s.pickCollection(d.Account); err != nil {
 			d.Page, d.Error = PageError, err.Error()
 			return s.render(e, http.StatusForbidden, d)
 		}
@@ -188,6 +188,9 @@ func (s *OAuthServer) signInPage(e *core.RequestEvent, d PageData, col *core.Col
 	}
 	d.SuperuserLink = !d.Superuser && super != nil
 	d.UserLink = d.Superuser && len(users) > 0
+	if d.Account != "" { // the client needs this account type: no other forms to switch to
+		d.Collections, d.SuperuserLink, d.UserLink = nil, false, false
+	}
 	status := http.StatusOK
 	if !s.tokens().AllowedCollection(col) {
 		if d.Error == "" {

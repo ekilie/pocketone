@@ -108,7 +108,9 @@ pocketone login prod
 ```
 
 With OAuth Server on the remote, [Remotes](../remotes/README.md) opens your browser on the pages above, or shows a
-device code when there's no browser (`--device` asks for one). The client is the built-in `pocketone-cli`, named
+device code when there's no browser (`--device` asks for one). The CLI's commands (deploy, remote control) need a
+superuser, so it asks for one (`account=_superusers`, below): you land on the superuser form, even if this browser
+is signed in there as an app user. The client is the built-in `pocketone-cli`, named
 **pocketone CLI** on the consent page (the name follows the command, so another build shows its own).
 
 ### See and revoke what's connected
@@ -156,6 +158,15 @@ Redirect URIs must be `https`, `http` on a loopback address, or an app's custom 
 
 On a [multisite](../multisite/README.md) host every instance that runs PocketOne has it, through the standard set.
 
+### Account type
+
+An `account` parameter on `/api/_c/oauth/v1/authorize` or `/api/_c/oauth/v1/device` names the auth collection the
+client needs a token from (`_superusers`, or a user collection). The sign-in page then shows only that form, with no
+links to the others. A browser signed in as another account type isn't taken to consent: it gets that form, with a
+line saying who's signed in and what the client needs. No other account type is issued a token. An account type that
+can't sign in here is an `invalid_request` error (sent back to the client, or the device request's 400). Without
+`account`, the user chooses, as before.
+
 ### Audience (RFC 8707)
 
 A `resource` parameter on `/api/_c/oauth/v1/authorize`, `/api/_c/oauth/v1/device` or `/api/_c/oauth/v1/token` (a URL on this server) binds the
@@ -192,7 +203,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{})
 | Path | What |
 |---|---|
 | `GET /.well-known/oauth-authorization-server` | Metadata (RFC 8414). The issuer is `Config.Issuer`, else the request's own scheme and host. |
-| `GET/POST /api/_c/oauth/v1/authorize` | Sign-in and consent pages. Authorization code with PKCE (S256 only; required). |
+| `GET/POST /api/_c/oauth/v1/authorize` | Sign-in and consent pages. Authorization code with PKCE (S256 only; required). Optional `account` (see [Account type](#account-type)) and `resource`. |
 | `POST /api/_c/oauth/v1/token` | `authorization_code`, `refresh_token` and `urn:ietf:params:oauth:grant-type:device_code`. Refresh rotates without logouts: the old access token lives out its time, and the old refresh token works again for 2 minutes, so two processes refreshing at once both succeed. |
 | `POST /api/_c/oauth/v1/device`, `GET/POST /api/_c/oauth/v1/device/verify` | Device flow (RFC 8628): codes like `WDJB-MJHT`, valid 10 minutes. |
 | `POST /api/_c/oauth/v1/revoke` | Revocation (RFC 7009): an access token or a refresh token (revokes both). |

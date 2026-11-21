@@ -4,6 +4,7 @@
 <p class="warn">A superuser has full control of {{.AppName}}. Only sign in here if you mean to give {{if .ClientName}}{{.ClientName}}{{else}}this app{{end}} that power.</p>
 {{else}}<h1>Sign in to {{.AppName}}</h1>
 <p class="sub">{{if .ClientName}}to continue to {{.ClientName}}{{else}}to continue{{end}}</p>{{end}}
+{{if .Notice}}<p class="warn">{{.Notice}}</p>{{end}}
 {{if .Error}}<p class="err">{{.Error}}</p>{{end}}
 <form method="post" action="{{.Action}}">{{template "hidden" .}}<input type="hidden" name="collection" value="{{.Collection}}">
 {{if gt (len .Collections) 1}}<div class="tabs">{{range .Collections}}<button class="tab{{if eq . $.Collection}} on{{end}}" name="step" value="use:{{.}}" formnovalidate>{{.}}</button>{{end}}</div>{{end}}
