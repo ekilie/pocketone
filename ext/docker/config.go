@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
 	"time"
@@ -133,7 +134,10 @@ func (p *Provider) RegisterHost(h *multisite.Host) error {
 		return err
 	}
 	runtimev1.Contract.ProvideIn(h.Scope, rt)
-	fsv1.Contract.ProvideIn(h.Scope, rt.Files(h.Directory)) // instance.fs/v1: its instances' code files
+	// the host's own pb_cache sits next to the instances' folders (instance IDs have no underscore, so none is named
+	// pb_cache): each instance's cache goes in its instances/ folder, outside the instance folder its container mounts
+	h.Scope.SetCacheRoot(filepath.Join(cfg.DataRoot, extkit.CacheFolder))
+	fsv1.Contract.ProvideIn(h.Scope, rt.Files(h.Directory, h.Scope)) // instance.fs/v1: its instances' code files
 	if h.DataRoot == "" {
 		h.DataRoot = cfg.DataRoot
 	}

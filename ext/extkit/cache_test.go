@@ -33,8 +33,27 @@ func TestCacheDirs(t *testing.T) {
 	if d, _ := HostCacheDir(inst, "cache"); d != filepath.Join(root, "host", "pb_cache", "cache") {
 		t.Fatalf("HostCacheDir (host) = %q", d)
 	}
-	if d, _ := CacheDir(inst, "agent"); d != filepath.Join(root, "i1", "pb_cache", "agent") {
+	// its own cache is hoisted out of its folder, into the host's pb_cache
+	if d, _ := CacheDir(inst, "agent"); d != filepath.Join(root, "host", "pb_cache", "instances", "i1", "agent") {
 		t.Fatalf("CacheDir (instance) = %q", d)
+	}
+	if r := InstanceCacheRoot(host, "i1"); r != filepath.Join(root, "host", "pb_cache", "instances", "i1") {
+		t.Fatalf("InstanceCacheRoot = %q", r)
+	}
+	for _, bad := range []string{"", "..", "a/b"} {
+		if r := InstanceCacheRoot(host, bad); r != "" {
+			t.Fatalf("InstanceCacheRoot(%q) = %q", bad, r)
+		}
+	}
+	if _, err := HostCacheDir(inst, InstancesCacheFolder); err == nil {
+		t.Fatal("instances is reserved in the host's pb_cache")
+	}
+	// a host with no cache root leaves its instances' caches in their folders
+	bare := NewScope("multisite")
+	inst2 := core.NewBaseApp(core.BaseAppConfig{DataDir: filepath.Join(root, "i2", "pb_data")})
+	AttachHost(inst2, bare, "i2")
+	if d, _ := CacheDir(inst2, "agent"); d != filepath.Join(root, "i2", "pb_cache", "agent") {
+		t.Fatalf("CacheDir (host without cache root) = %q", d)
 	}
 }
 

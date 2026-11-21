@@ -42,10 +42,11 @@ type FS interface {
 	Dir(ctx context.Context) (string, error)
 
 	// CacheDir is a folder for files an extension can rebuild about the instance (name: the extension's, e.g.
-	// "deploy"), made if missing: by default pb_cache/<name> in Dir, PocketOne's pb_cache convention. Anything in it
-	// may be deleted at any time (a cache clear, an admin, a cleanup) and the extension carries on. It is never code
-	// and never reachable ([IsCodePath], [IsReachable]), and it is on the same filesystem as Dir, so renames between
-	// them are atomic.
+	// "deploy"), made if missing, following PocketOne's pb_cache convention: pb_cache/<name> in Dir on a single app; a
+	// host keeps it outside Dir (Pocker and Docker: the host's pb_cache/instances/<id>/<name>). Anything in it may be
+	// deleted at any time (a cache clear, an admin, a cleanup) and the extension carries on. It is never code and never
+	// reachable ([IsCodePath], [IsReachable]), and it is on the same filesystem as Dir, so renames between them are
+	// atomic.
 	CacheDir(ctx context.Context, name string) (string, error)
 
 	// Lock takes the instance's writers' lock: every write to the code files (a deploy's commit, a file API write)

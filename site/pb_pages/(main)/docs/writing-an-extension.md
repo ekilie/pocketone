@@ -137,11 +137,13 @@ shared, err := extkit.HostCacheDir(app, p.Name()) // one folder for every app of
   here: put it in a collection.
 - **Never backed up, deployed or synced:** it's outside `pb_data`, so backups skip it, and `deploy` and `dev` leave it
   out like `pb_data`. Apps add `pb_cache/` to their `.gitignore`.
-- **Per app:** on a multisite host each instance has its own `pb_cache/` in its folder, so it counts against that
-  instance's disk, and one instance never sees another's. `HostCacheDir` is for caches that serve every instance at
-  once; it is the host's own `pb_cache/<name>/` (a single app is its own host). Never put one instance's data there.
+- **Per app:** each app has its own, and one instance never sees another's. On a multisite host an instance's
+  `pb_cache` is outside its folder, in the host's `pb_cache/instances/<instance id>/` (`CacheDir` returns it), so
+  copies, archives and moves of the instance folder never carry it. `HostCacheDir` is for caches that serve every
+  instance at once; it is the host's own `pb_cache/<name>/` (a single app is its own host). Never put one instance's
+  data there.
 - **Keep it bounded.** Give your cache a size budget (a setting with a sensible default) and evict past it; on a host,
-  disk is the instance's quota.
+  every instance's cache shares the host's disk.
 - `pocketone cache` shows each folder and its size; say in your README what yours holds and whether it may grow large.
 
 ## Working together: contracts

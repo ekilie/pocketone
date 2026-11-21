@@ -50,6 +50,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ### Changed
 
+- On a multisite host, an instance's `pb_cache` is hoisted out of its folder to the host's `pb_cache/instances/<instance id>/` (`extkit.CacheDir` and `extkit.CacheRoot` return it; hosts use `extkit.InstanceCacheRoot`). `instances` is reserved in a host's `pb_cache`.
 - runtime/v1 has one provider per host: `pocketone serve` with a `multisite` section registers only the runtime it runs (docker with a `docker` section, else pocker), and the instance record's `runtime` field is gone.
 
 ## v0.0.1-alpha.10 (2026-11-20)
