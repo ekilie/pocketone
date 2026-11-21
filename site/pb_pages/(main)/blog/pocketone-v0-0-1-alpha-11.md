@@ -1,23 +1,17 @@
 ---
 title: "PocketOne alpha.11: install anywhere, clone any app"
-description: PocketOne v0.0.1-alpha.11 adds Scoop, an install script and Linux packages, pocketone clone and safer deploys.
+description: PocketOne v0.0.1-alpha.11 adds new installation tools, pocketone clone and safer deploys.
 date: 2026-11-21
 author: Ben Allfree
 tags: release
 ---
 
-Alpha.11 is about getting PocketOne onto your machine and getting your app back off the server.
+Two things this time. It's easier to get PocketOne onto your machine, and easier to get your app back off the server.
 
-**New installation tools.** Windows gets Scoop: `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`, then `scoop install pocketone`. On macOS and Linux without Homebrew, `curl -fsSL https://pocketone.dev/install.sh | sh` installs the newest release and checks its checksum. Run it again to upgrade. Every release also ships `.deb`, `.rpm` and `.apk` packages. The `.deb` and `.rpm` set up a `pocketone` systemd service with its own user, config in `/etc/pocketone` and data in `/var/lib/pocketone`. It's all on one [Installation](/docs/installation) page now.
+**New installation tools.** On Windows, `scoop install pocketone` (after `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`). On macOS or Linux, `curl -fsSL https://pocketone.dev/install.sh | sh`. Running a Linux server? Grab the `.deb` or `.rpm` and you get a systemd service out of the box. It's all on the [Installation](/docs/installation) page.
 
-**`pocketone clone`.** Point it at a running app and you get a local project: `pocketone clone https://myapp.example.com` makes the folder, signs you in as a superuser in the browser, adds the app as the default remote and pulls its code. Then `pocketone dev` and you're editing live.
+**`pocketone clone`.** Got an app running somewhere? `pocketone clone https://myapp.example.com` gives you a local copy, signed in and ready. Then `pocketone dev` and you're editing live.
 
-**Deploys don't clobber the server.** If someone edited a file on the server, or the dashboard wrote a migration, since your last deploy, pull or dev, `pocketone deploy` lists those files and stops. `--force` overwrites them. Deploys are no longer recorded, so `--commit` and `-m` are gone. Pull and clone now download in bundles, and the CLI waits and retries when a server rate limits it.
+**Deploys look before they leap.** If somebody changed files on the server since you last synced, `pocketone deploy` tells you which ones and stops. Add `--force` if you really mean it.
 
-## Upgrading
-
-- Homebrew moved taps: `brew uninstall pocketone`, then `brew install pocketonehq/tap/pocketone`.
-- Everyone else: `pocketone upgrade`.
-- Running a multisite host, or passing `--commit` or `-m` to `pocketone deploy` in scripts? The [release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11) have the steps.
-
-[Release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11)
+To upgrade, run `pocketone upgrade`. On Homebrew, the formula moved: `brew uninstall pocketone`, then `brew install pocketonehq/tap/pocketone`. Multisite hosts and anyone passing `--commit` or `-m` to deploy, check the [release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11) first.
