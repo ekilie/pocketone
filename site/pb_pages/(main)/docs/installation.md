@@ -1,36 +1,11 @@
 ---
 title: Installation
-description: Install PocketOne on macOS, Linux or Windows with the install script, Homebrew, a Linux package, Scoop, a release download or go build, and keep it up to date.
+description: Install PocketOne on macOS, Linux or Windows with Homebrew, Scoop, the install script, a Linux package, a release download or go build, and keep it up to date.
 ---
 
 # Installation
 
 PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and takes the same commands and flags, plus its own.
-
-## Install script (macOS and Linux)
-
-```bash
-curl -fsSL https://pocketone.dev/install.sh | sh
-```
-
-It picks the newest release for your system and checks its checksum. On macOS it puts `pocketone` in
-`/usr/local/bin`. On Linux it installs the release's `.deb`, `.rpm` or `.apk` package, which also sets PocketOne up
-as a systemd service ([Linux](/docs/linux)); on a system with none of those package managers it installs the binary
-like on macOS. It asks for your password through `sudo` when it needs to write there. Run it again to upgrade.
-
-Settings go before `sh`:
-
-```bash
-curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=v0.0.1-alpha.10 sh
-```
-
-| Variable | What it does |
-|---|---|
-| `POCKETONE_VERSION` | Install this release tag instead of the newest one. |
-| `POCKETONE_INSTALL_DIR` | Where the binary goes when no package is used. Default `/usr/local/bin`; a folder you own, such as `$HOME/.local/bin`, needs no `sudo`. |
-| `POCKETONE_NO_PACKAGE=1` | On Linux, install the plain binary, never a package. |
-
-Read the script first if you like: [pocketone.dev/install.sh](/install.sh).
 
 ## Homebrew (macOS and Linux)
 
@@ -49,6 +24,31 @@ scoop install pocketone
 
 That's [Scoop](https://scoop.sh); the manifest lives in [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket).
 To install without Scoop, see [Install on Windows](/docs/windows).
+
+## Install script (macOS and Linux)
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | sh
+```
+
+Without Homebrew, on macOS or Linux. It picks the newest release for your system and checks its checksum. On macOS it puts `pocketone` in
+`/usr/local/bin`. On Linux it installs the release's `.deb`, `.rpm` or `.apk` package, which also sets PocketOne up
+as a systemd service ([Linux](/docs/linux)); on a system with none of those package managers it installs the binary
+like on macOS. It asks for your password through `sudo` when it needs to write there. Run it again to upgrade.
+
+Settings go before `sh`:
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=v0.0.1-alpha.10 sh
+```
+
+| Variable | What it does |
+|---|---|
+| `POCKETONE_VERSION` | Install this release tag instead of the newest one. |
+| `POCKETONE_INSTALL_DIR` | Where the binary goes when no package is used. Default `/usr/local/bin`; a folder you own, such as `$HOME/.local/bin`, needs no `sudo`. |
+| `POCKETONE_NO_PACKAGE=1` | On Linux, install the plain binary, never a package. |
+
+Read the script first if you like: [pocketone.dev/install.sh](/install.sh).
 
 ## Linux packages
 

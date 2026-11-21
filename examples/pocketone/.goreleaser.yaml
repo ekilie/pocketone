@@ -66,21 +66,13 @@ release:
 
     ## Install or upgrade
 
-    **New install on macOS** (or Linux with Homebrew):
+    **New install on macOS or Linux:**
 
     ```bash
     brew install pocketonehq/tap/pocketone
     ```
 
-    That's Homebrew; the formula comes from [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap). Or use the install script below.
-
-    **New install on Linux** (or macOS without Homebrew):
-
-    ```bash
-    curl -fsSL https://pocketone.dev/install.sh | sh
-    ```
-
-    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux](https://pocketone.dev/docs/linux) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
+    That's Homebrew; the formula comes from [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap).
 
     **New install on Windows:**
 
@@ -90,6 +82,14 @@ release:
     ```
 
     That's [Scoop](https://scoop.sh); the manifest comes from [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket). To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
+
+    **Without Homebrew, on macOS or Linux:**
+
+    ```bash
+    curl -fsSL https://pocketone.dev/install.sh | sh
+    ```
+
+    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux](https://pocketone.dev/docs/linux) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
 
     **Upgrade:**
 
