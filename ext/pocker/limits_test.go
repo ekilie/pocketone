@@ -130,9 +130,13 @@ func TestSecretChangeRestartsApp(t *testing.T) {
 
 	inst.Secrets = map[string]string{"API_KEY": "rotated"}
 	src.Set(inst)
-	time.Sleep(50 * time.Millisecond)
-	if got := get(); got != "rotated" {
-		t.Fatalf("after rotation: got %q, want rotated", got)
+	// the restart takes as long as a start (longer on a busy CI runner); until then the app answers 503
+	deadline = time.Now().Add(10 * time.Second)
+	for got := get(); got != "rotated"; got = get() {
+		if time.Now().After(deadline) {
+			t.Fatalf("after rotation: got %q, want rotated", got)
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 	if ev := events(); !containsString(ev, string(EventStarted)) || !containsString(ev, string(EventRestarted)) {
 		t.Fatalf("expected started and restarted events, got %v", ev)
