@@ -1,7 +1,7 @@
 # Every commit that changes PocketBase core (anything outside ext/, site/, examples/pocketone/, docs/, README.md, CONTRIBUTING.md, AGENTS.md, CLAUDE.md,
 # CHANGELOG.md, CHANGELOG.pocketbase.md,
 # .github/, .claude/, .claude-plugin/, agent/) must carry a "Core-Audit:" trailer recording its independent audit. See AGENTS.md.
-# Runs on pull requests and, through workflow_call, on land branches (land.yml); nothing reaches main without it.
+# Runs on pull requests and, through workflow_call, daily on main's new commits (nightly.yml).
 name: core-audit
 
 on:

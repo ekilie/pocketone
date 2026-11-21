@@ -1,0 +1,91 @@
+# The checks main gets, out of band. Pushes to main don't wait on CI (PocketOne is in alpha and iterates fast); this
+# runs once a day on main instead, when main moved in the last day, and on demand. A red run is something to fix on
+# main, not something that blocked a push. The release gate is still release-check.yml, run before every release cut.
+#
+#   extensions   the extension rules; every module's tidy, build, vet and go test -race (extensions.yml)
+#   core-audit   every core commit of the day carries a Core-Audit trailer (core-audit.yml)
+#   generated    .github/regenerate.sh changes nothing: main carries no stale generated files
+#
+# PocketBase's suite on our core (upstream-tests.yml) has its own daily schedule, so it isn't repeated here.
+#
+# Run it now with `gh workflow run nightly.yml --ref main`. A manual run tests even if main didn't move.
+name: nightly
+
+on:
+  schedule:
+    # after go-cache.yml's daily warm-up (09:17 UTC)
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.range.outputs.run }}
+      base: ${{ steps.range.outputs.base }}
+      head: ${{ steps.range.outputs.head }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: What main gained in the last day
+        id: range
+        run: |
+          set -euo pipefail
+          head=$(git rev-parse HEAD)
+          base=$(git rev-list -1 --first-parent --before='24 hours ago' HEAD || true)
+          run=true
+          if [ "$base" = "$head" ] && [ "$GITHUB_EVENT_NAME" = schedule ]; then
+            echo "main hasn't moved in a day; nothing to check"
+            run=false
+          fi
+          {
+            echo "### main, last day"
+            echo
+            if [ -n "$base" ] && [ "$base" != "$head" ]; then git log --first-parent --format='- `%h` %s' "$base..$head"; else echo "(no new commits)"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          { echo "run=$run"; echo "base=$base"; echo "head=$head"; } >> "$GITHUB_OUTPUT"
+
+  extensions:
+    needs: prepare
+    if: needs.prepare.outputs.run == 'true'
+    # no base: every module
+    uses: ./.github/workflows/extensions.yml
+
+  core-audit:
+    needs: prepare
+    if: needs.prepare.outputs.run == 'true' && needs.prepare.outputs.base != '' && needs.prepare.outputs.base != needs.prepare.outputs.head
+    uses: ./.github/workflows/core-audit.yml
+    with:
+      base: ${{ needs.prepare.outputs.base }}
+      head: ${{ needs.prepare.outputs.head }}
+
+  generated:
+    needs: prepare
+    if: needs.prepare.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: site/sync/go.mod
+          cache-dependency-path: "**/go.sum"
+      - name: site/sync tests
+        working-directory: site/sync
+        run: go test .
+      - name: Generated files are current
+        run: |
+          set -euo pipefail
+          .github/regenerate.sh
+          stale=$(git status --porcelain)
+          if [ -n "$stale" ]; then
+            echo "::error::generated files are stale on main; run .github/regenerate.sh and commit what it changes:"
+            echo "$stale" | sed 's/^/  /'
+            exit 1
+          fi

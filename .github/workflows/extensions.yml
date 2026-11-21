@@ -3,9 +3,8 @@
 # Modules are affected by their own files or by any module they reach through a `replace`; a core change affects
 # all of them. See .github/extensions/main.go and docs/extensions.md.
 #
-# Runs on pull requests and, through workflow_call, on land branches (land.yml, with base = origin/main) and in the
-# release check (release-check.yml, no base: every module). Nothing reaches main without passing it, so pushes to main
-# don't run it again.
+# Runs on pull requests and, through workflow_call, daily on main (nightly.yml) and in the release check
+# (release-check.yml); both pass no base, so every module is tested. Pushes to main don't run it.
 #
 # `plan` checks the rules and lists the affected modules; `test` builds, vets and tests each one in its own job, in
 # parallel (a change to core or to .github/extensions tests all ~30); `extensions` is the single overall result.
@@ -16,7 +15,7 @@ name: extensions
 
 on:
   pull_request:
-  # land.yml passes the range it lands (origin/main..the land branch); release-check.yml passes none, so every module
+  # a base/head range tests only the modules it affects; nightly.yml and release-check.yml pass none, so every module
   # is tested
   workflow_call:
     inputs:
@@ -80,7 +79,7 @@ jobs:
           go-version-file: go.mod
           cache: false
       # The build cache go-cache.yml warms on main: compiled -race packages and test binaries' inputs for every module,
-      # plus downloaded modules and ext/wasm's compiled test modules. Restore only; a land branch's cache would be
+      # plus downloaded modules and ext/wasm's compiled test modules. Restore only; a branch's cache would be
       # visible to nobody else.
       - name: Restore the Go cache from main
         uses: actions/cache/restore@v4

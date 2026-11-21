@@ -1,14 +1,14 @@
 package main
 
-// `test` runs locally what CI runs on a pull request or a land branch, so an author knows before pushing that CI will
+// `test` runs locally what CI runs on a pull request, so an author knows before pushing that CI will
 // pass: the extension rules, then tidy, build, vet and `go test -race` for each affected module, then a check that the
 // site can be built from the READMEs. Nothing it checks needs a file outside the author's extension folder: generated
 // files (the site, llms.txt, contract indexes) are regenerated on main.
 //
 // `quick` is the part of it that takes seconds, not minutes: the rules, `go mod tidy -diff` and `go vet` (which compiles
 // every package and its tests) for each affected module. It catches what breaks a module outright, such as a go.mod
-// or go.sum left stale by a change in a module it replaces, and leaves the tests to CI. The pre-push hook
-// (.github/hooks/pre-push) runs it before a push to main or a land/ branch.
+// or go.sum left stale by a change in a module it replaces, and leaves the tests to CI. Run it before a push when you
+// want a fast sanity check; nothing runs it for you.
 
 import (
 	"fmt"
