@@ -41,6 +41,19 @@ func TestHomebrewFormula(t *testing.T) {
 	}
 }
 
+func TestScoopApp(t *testing.T) {
+	for exe, want := range map[string]string{
+		`C:\Users\me\scoop\apps\pocketone\current\pocketone.exe`:     "pocketone",
+		`C:\ProgramData\scoop\apps\pocketone\0.0.3\pocketone.exe`:    "pocketone",
+		`C:\Users\me\AppData\Local\Programs\pocketone\pocketone.exe`: "",
+		"/usr/local/bin/pocketone":                                   "",
+	} {
+		if got := scoopApp(exe); got != want {
+			t.Errorf("scoopApp(%q) = %q, want %q", exe, got, want)
+		}
+	}
+}
+
 func TestCompareVersions(t *testing.T) {
 	if compareVersions("0.0.3", "0.0.4") != 1 || compareVersions("0.1.0", "0.0.9") != -1 || compareVersions("1.0", "1.0.0") != 0 ||
 		compareVersions("0.1.0-alpha.1", "0.1.0-alpha.2") != 1 || compareVersions("0.1.0", "0.1.0-alpha.9") != -1 {

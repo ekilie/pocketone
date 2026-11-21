@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install PocketOne with Homebrew, a release download or go build, and keep it up to date.
+description: Install PocketOne with Homebrew, Scoop, a release download or go build, and keep it up to date.
 ---
 
 # Installation
@@ -14,6 +14,16 @@ brew install pockethost/tap/pocketone
 ```
 
 The formula lives in [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap).
+
+## Scoop (Windows)
+
+```powershell
+scoop bucket add pockethost https://github.com/pockethost/scoop-bucket
+scoop install pocketone
+```
+
+That's [Scoop](https://scoop.sh); the manifest lives in [pockethost/scoop-bucket](https://github.com/pockethost/scoop-bucket).
+To install without Scoop, see [Install on Windows](/docs/windows).
 
 ## Download a release
 
@@ -57,6 +67,8 @@ catches the mail and shows it at `http://127.0.0.1:8025`.
 ```bash
 pocketone upgrade
 ```
+
+Installed with Homebrew or Scoop? Upgrade with `brew upgrade pocketone` or `scoop update pocketone` instead.
 
 This replaces the executable with the latest release. The old one is kept beside it as `pocketone-<version>`, never
 deleted, so you can go back.

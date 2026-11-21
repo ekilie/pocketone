@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Changed
+
+- `pocketone upgrade` on an executable installed with Scoop tells you to run `scoop update pocketone` instead, as it does for Homebrew.
+
 ## 0.0.2 (2026-11-18)
 
 ### Changed

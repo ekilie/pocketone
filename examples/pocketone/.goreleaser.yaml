@@ -66,13 +66,22 @@ release:
 
     ## Install or upgrade
 
-    **New install:**
+    **New install on macOS or Linux:**
 
     ```bash
     brew install pockethost/tap/pocketone
     ```
 
-    Homebrew on macOS or Linux; the formula comes from [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap). Or download the zip for your platform below and run `./pocketone serve`.
+    That's Homebrew; the formula comes from [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap). Or download the zip for your platform below and run `./pocketone serve`.
+
+    **New install on Windows:**
+
+    ```powershell
+    scoop bucket add pockethost https://github.com/pockethost/scoop-bucket
+    scoop install pocketone
+    ```
+
+    That's [Scoop](https://scoop.sh); the manifest comes from [pockethost/scoop-bucket](https://github.com/pockethost/scoop-bucket). To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
 
     **Upgrade:**
 
@@ -80,7 +89,7 @@ release:
     brew upgrade pocketone
     ```
 
-    Or, if you didn't install with Homebrew, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
+    On Windows with Scoop, `scoop update pocketone`. Otherwise, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`, `pocketone-<version>.exe` on Windows) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
 
     ## What's in this release
 
@@ -103,6 +112,22 @@ brews:
       bin.install "pocketone"
     test: |
       system "#{bin}/pocketone", "--version"
+
+# the Scoop manifest in pockethost/scoop-bucket (Windows), updated on every release, prereleases included, the way the
+# formula above is for Homebrew
+scoops:
+  - name: pocketone
+    ids: [archive_noncgo]
+    repository:
+      owner: pockethost
+      name: scoop-bucket
+    directory: bucket
+    homepage: https://github.com/pocketonehq/pocketone
+    description: PocketOne, a community fork of PocketBase with extensions (pages, pocker and more)
+    license: MIT
+    commit_author:
+      name: PocketHost
+      email: noreply@pockethost.io
 
 archives:
   - id: archive_noncgo

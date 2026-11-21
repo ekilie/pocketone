@@ -31,6 +31,9 @@ This skill covers using PocketOne in an app. Two others cover the rest:
 
 ```bash
 brew install pockethost/tap/pocketone     # macOS or Linux (formula in pockethost/homebrew-tap)
+# Windows (PowerShell, Scoop manifest in pockethost/scoop-bucket):
+#   scoop bucket add pockethost https://github.com/pockethost/scoop-bucket
+#   scoop install pocketone
 # or: the zip for your platform from https://github.com/pocketonehq/pocketone/releases, on your PATH
 # or from source:
 git clone https://github.com/pocketonehq/pocketone.git
