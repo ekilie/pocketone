@@ -74,3 +74,26 @@ func TestLocalRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestInstances(t *testing.T) {
+	ctx := context.Background()
+	built := 0
+	files := &Instances{
+		Known: func(id string) bool { return id == "a" },
+		New: func(id string) *Local {
+			built++
+			return &Local{Folder: func() string { return "/srv/" + id }}
+		},
+	}
+	if _, err := files.Instance(ctx, "b"); !errors.Is(err, ErrNoInstance) {
+		t.Fatal(err)
+	}
+	if _, err := files.Instance(ctx, Self); !errors.Is(err, ErrNoInstance) {
+		t.Fatal(err)
+	}
+	x, _ := files.Instance(ctx, "a")
+	y, _ := files.Instance(ctx, "a")
+	if x != y || built != 1 {
+		t.Fatalf("one FS per instance: %v %d", x == y, built)
+	}
+}

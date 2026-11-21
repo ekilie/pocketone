@@ -145,6 +145,10 @@ failure is written there too.
   [ext/standard](../standard/README.md)'s set, and Pocker won't start an instance without it: a server without one
   refuses to run, so no host can make an instance that lacks the standard extensions. Every instance gets its members, each turned off per instance with `extensions.<name>.enabled: false`, and its
   startup lines (`standard: on: ...`) are in the instance's own log. Listing a member in `Extensions` too is an error.
+- **Instance files.** The host provides [instance.fs/v1](../contracts/instance/fs/v1/README.md) on its scope
+  (`Manager.Files()`): host-side code asks it for an instance's folder, takes its writers' lock, and restarts it around
+  a change (`WithInstanceStopped`, then `StartInstance`). It isn't host-provided to the instances: inside an instance,
+  its own app's provider answers.
 - **Contracts the host provides.** `Server.Host` (or `Provider.Host`) is the host's contract scope. A contract the
   host provides for its instances steps aside inside each instance's app, and the host answers it on the instance's
   hostname in `Server.InstanceRoutes` (or `Provider.InstanceRoutes`, `ManagerOptions.InstanceRoutes`): after the

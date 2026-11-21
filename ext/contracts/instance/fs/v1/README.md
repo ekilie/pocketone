@@ -47,8 +47,11 @@ whether it runs, how to stop it and how to start it again.
 
 - **Single app:** [deploy](../../../../deploy/README.md) provides it as the default: the app's own folder. The app can't
   stop itself, so `Restart` applies the change while it runs (each rename is atomic) and then restarts the app.
-- **Host:** a multisite host provides it on its own scope (`fsv1.Contract.ProvideIn`) for each of its instances, with
-  real stops and starts from its runtime.
+- **Host:** the host's runtime provides it on the host scope (`fsv1.Contract.ProvideIn`), one per host since a host runs
+  one runtime: [pocker](../../../../pocker/README.md) (`Manager.Files()`: stops the instance's app, starts it again)
+  and [docker](../../../../docker/README.md) (`Runtime.Files(dir)`: stops the container; the next request starts a
+  fresh one). `fsv1.Instances` is the `Files` they build on: one `Local` per known instance, kept so its lock is
+  shared. instance.fs/v1 isn't host-providable, so code inside an instance never reaches the host's provider.
 
 ## Extensions
 

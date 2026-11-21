@@ -87,3 +87,34 @@ func (l *Local) Restart(ctx context.Context, apply func(context.Context) error) 
 	}
 	return startErr, err
 }
+
+// Instances is a [Files] for a host's instances, for runtimes to provide: it builds each instance's [Local] once and
+// keeps it, so every caller shares its lock.
+type Instances struct {
+	// Known reports whether the host has the instance (else [ErrNoInstance]). Required.
+	Known func(id string) bool
+	// New builds the instance's Local. Required.
+	New func(id string) *Local
+
+	mu sync.Mutex
+	fs map[string]*Local
+}
+
+var _ Files = (*Instances)(nil)
+
+func (i *Instances) Instance(_ context.Context, id string) (FS, error) {
+	if id == Self || !i.Known(id) {
+		return nil, ErrNoInstance
+	}
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if l, ok := i.fs[id]; ok {
+		return l, nil
+	}
+	if i.fs == nil {
+		i.fs = map[string]*Local{}
+	}
+	l := i.New(id)
+	i.fs[id] = l
+	return l, nil
+}
