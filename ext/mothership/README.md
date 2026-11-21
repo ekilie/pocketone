@@ -29,7 +29,7 @@ Both sides are built into `pocketone`; `pocketone.yaml`'s `mothership` section p
 The module is `pocketone.dev/ext/mothership`. In your own build: `extkit` registers `mothership.NewSchema()` and
 `mothership.NewServer()` on the mothership app (a control plane with its own collections registers only the server,
 beside its own instance.resolve/v1); on an edge, `client.FromSection(log)` returns the client for the config (nil
-without a `url`), a multisite host extension, as [`examples/pocketone/multi.go`](../../examples/pocketone/multi.go)
+without a `url`), a multisite host extension, as [`examples/pocketone/binary/multi.go`](../../examples/pocketone/binary/multi.go)
 does. The client keeps its answers in the host's cache/v1, so the host provides one (`cache.Extension.Host(scope)`).
 
 ## Configure
@@ -98,8 +98,8 @@ has answers 404, and the edge hears when one takes it.
 
 ## Example
 
-There's no `example/main.go` yet. The stock binary is both sides: [`examples/pocketone/main.go`](../../examples/pocketone/main.go)
-registers the mothership, and its multi-instance mode, [`examples/pocketone/multi.go`](../../examples/pocketone/multi.go),
+There's no `example/main.go` yet. The stock binary is both sides: [`examples/pocketone/binary/binary.go`](../../examples/pocketone/binary/binary.go)
+registers the mothership, and its multi-instance mode, [`examples/pocketone/binary/multi.go`](../../examples/pocketone/binary/multi.go),
 follows one; `examples/pocketone/mothership_test.go` runs a mothership and two edges.
 
 ## How it works

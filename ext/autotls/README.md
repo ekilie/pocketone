@@ -137,7 +137,7 @@ autotls:
 
 ## Example
 
-Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](../../examples/pocketone/main.go) registers it with the other default extensions.
+Auto TLS is built into `pocketone`: [`examples/pocketone/binary/binary.go`](../../examples/pocketone/binary/binary.go) registers it with the other default extensions.
 
 ## How it works
 
