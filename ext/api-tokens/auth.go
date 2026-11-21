@@ -42,7 +42,7 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 				return e.ForbiddenError("This connection's scopes ("+strings.Join(limit, ", ")+") don't allow this request.", nil)
 			}
 			secret := bearer(e)
-			if !strings.HasPrefix(secret, Prefix) {
+			if t.prefixOf(secret) == "" {
 				return e.Next()
 			}
 			info, err := t.Verify(secret)
