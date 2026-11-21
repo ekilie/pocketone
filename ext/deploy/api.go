@@ -34,32 +34,15 @@ type Instance struct {
 	Elsewhere string
 }
 
-// DeployRecord is a row in the mothership's deploys collection.
-type DeployRecord struct {
-	Instance      string  `json:"instance"`
-	User          string  `json:"user"`
-	Status        string  `json:"status"` // success | failed
-	FileCount     int     `json:"file_count"`
-	UploadedCount float64 `json:"uploaded_count"`
-	UploadedBytes float64 `json:"uploaded_bytes"`
-	TotalBytes    int64   `json:"total_bytes"`
-	Commit        string  `json:"commit"`
-	Message       string  `json:"message"`
-	Source        string  `json:"source"`
-	TokenLabel    string  `json:"token_label"`
-	Error         string  `json:"error"`
-}
-
-// Backend is the control plane: which instance a request is for, who may deploy to it, and deploy history. The
-// default for a single app is [AppBackend] (API tokens with the deploy scope, or a superuser JWT); PocketHost uses
-// its own (PocketHost tokens, instances by hostname, history in the mothership).
+// Backend is the control plane: which instance a request is for and who may deploy to it. The default for a single
+// app is [AppBackend] (API tokens with the deploy scope, or a superuser JWT); a host brings its own (its tokens,
+// instances by hostname).
 type Backend interface {
 	// Lookup finds the instance a request addresses (e.g. by its Host).
 	Lookup(r *http.Request) (Instance, bool)
 	// Authenticate says who the request acts as on inst. Return *AuthError to refuse with its status, or
 	// ErrNoAccess to answer 404 (so tokens can't probe instance names). Any other error is an outage (500).
 	Authenticate(r *http.Request, inst Instance) (Auth, error)
-	RecordDeploy(ctx context.Context, rec DeployRecord) (id string, err error)
 }
 
 // Options configure the API.
@@ -293,32 +276,6 @@ func readJSON(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
 	return body, nil
 }
 
-func clip(v any, max int) string {
-	s, _ := v.(string)
-	if r := []rune(s); len(r) > max {
-		return string(r[:max])
-	}
-	return s
-}
-
-// num follows JavaScript's Number(v) || 0 for the values a client sends.
-func num(v any) float64 {
-	switch x := v.(type) {
-	case float64:
-		return x
-	case string:
-		f, err := strconv.ParseFloat(strings.TrimSpace(x), 64)
-		if err == nil {
-			return f
-		}
-	case bool:
-		if x {
-			return 1
-		}
-	}
-	return 0
-}
-
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, a.opts.Prefix), "/")
 	var err error
@@ -495,7 +452,6 @@ func parsePartial(body map[string]any) (*Partial, error) {
 }
 
 type commitResult struct {
-	DeployID            *string        `json:"deployId"`
 	Instance            map[string]any `json:"instance"`
 	FileCount           int            `json:"fileCount"`
 	Written             []string       `json:"written"`
@@ -540,18 +496,8 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	base := DeployRecord{
-		Instance: c.inst.ID, User: c.auth.UserID, FileCount: len(m), TokenLabel: c.auth.TokenLabel,
-		Commit: clip(body["commit"], 100), Message: clip(body["message"], 500), Source: clip(body["source"], 100),
-		UploadedCount: num(body["uploadedCount"]), UploadedBytes: num(body["uploadedBytes"]),
-	}
-	// history and restarts outlive a client that hangs up
+	// a restart outlives a client that hangs up
 	ctx := context.WithoutCancel(r.Context())
-	record := func(rec DeployRecord) (string, error) {
-		rctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-		defer cancel()
-		return a.opts.Backend.RecordDeploy(rctx, rec)
-	}
 
 	unlock, err := c.lock(ctx)
 	if err != nil {
@@ -596,25 +542,12 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err != nil {
 		_ = os.RemoveAll(st.stagingDir)
-		rec := base
-		rec.Status, rec.Error = "failed", clip(err.Error(), 2000)
-		_, _ = record(rec)
 		return err
 	}
 
-	var deployID *string
 	if !nothingChanged {
-		rec := base
-		rec.Status, rec.TotalBytes = "success", applied.totalBytes
-		id, rerr := record(rec)
-		if rerr != nil || id == "" {
-			if rerr != nil {
-				a.log.Warn("could not record deploy", "instance", c.inst.ID, "error", rerr)
-			}
-			id = fmt.Sprintf("local-%d", time.Now().UnixMilli())
-		}
-		deployID = &id
-		if err := c.store.recordManifest(id, m); err != nil {
+		// the manifest and its blobs make the next deploy's upload smaller; gc keeps the last few
+		if err := c.store.recordManifest(strconv.FormatInt(time.Now().UnixMilli(), 10), m); err != nil {
 			a.log.Warn("recordManifest failed", "instance", c.inst.ID, "error", err)
 		}
 		if _, err := c.store.gc(keepManifests); err != nil {
@@ -625,14 +558,10 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 	// the app only picks up these changes when it next starts; an instance that isn't running will on its own
 	pendingRestart := needsRestart && !restarted && startError == "" && running
 
-	id := "<none>"
-	if deployID != nil {
-		id = *deployID
-	}
-	a.log.Info("deploy", "id", id, "instance", c.inst.ID, "subdomain", c.inst.Subdomain,
+	a.log.Info("deploy", "instance", c.inst.ID, "subdomain", c.inst.Subdomain,
 		"written", len(applied.written), "deleted", len(applied.deleted), "unchanged", applied.unchanged, "restarted", restarted)
 	writeJSON(w, 200, commitResult{
-		DeployID: deployID, Instance: map[string]any{"id": c.inst.ID, "subdomain": c.inst.Subdomain}, FileCount: len(m),
+		Instance: map[string]any{"id": c.inst.ID, "subdomain": c.inst.Subdomain}, FileCount: len(m),
 		Written: first(applied.written, 500), Deleted: first(applied.deleted, 500),
 		WrittenCount: len(applied.written), DeletedCount: len(applied.deleted), Unchanged: applied.unchanged,
 		TotalBytes: applied.totalBytes, ReplacedNodeModules: applied.replacedNodeModule, NothingChanged: nothingChanged,

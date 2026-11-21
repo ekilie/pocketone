@@ -22,7 +22,7 @@ import (
 // Store is one instance's deploy storage, outside the instance folder (so file access never sees it) but on the same
 // filesystem (so staged files can be renamed into place):
 //
-//	<root>/blobs/<aa>/<sha256>   content-addressed file store (kept for history/rollback)
+//	<root>/blobs/<aa>/<sha256>   content-addressed file store (kept so later deploys upload less)
 //	<root>/manifests/<id>.json   manifest of each successful deploy
 //	<root>/tmp/                  staging and backup dirs for an in-flight deploy
 //

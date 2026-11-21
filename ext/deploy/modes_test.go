@@ -35,7 +35,7 @@ func TestModesLinkDeploy(t *testing.T) {
 		modetest.Step(t, "deploy")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
-		out, err := modetest.Command(ctx, t, local, env, "deploy", "--commit", "modetest", "-m", "modetest").CombinedOutput()
+		out, err := modetest.Command(ctx, t, local, env, "deploy").CombinedOutput()
 		if err != nil {
 			t.Fatalf("deploy: %v\n%s", err, out)
 		}

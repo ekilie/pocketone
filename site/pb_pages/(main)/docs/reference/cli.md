@@ -75,11 +75,9 @@ Deploys the project's code set (pb\_\* folders except pb\_data and pb\_cache, pa
 
 | Flag | Type | Default | |
 |---|---|---|---|
-| `--commit` | string | – | commit SHA to record (default: $GITHUB\_SHA, $CI\_COMMIT\_SHA, or git HEAD) |
 | `--dry-run` | bool | – | list what would be deployed, deploy nothing |
 | `-e`, `--exclude` | stringSlice | – | exclude patterns (pb\_data and pb\_cache are always excluded) |
 | `-i`, `--include` | stringSlice | – | add include patterns (default set: pb\_\*,pb\_\*/\*\*/\*,package.json,bun.lockb,bun.lock,patches,patches/\*\*/\*) |
-| `-m`, `--message` | string | – | note to record with this deploy |
 | `--no-node-modules` | bool | – | don't ship node\_modules; leave the remote's alone |
 | `--node-modules` | bool | – | ship the production node\_modules tree (default with a package.json) |
 | `--out` | string | – | write the deploy set to a local folder instead of deploying |

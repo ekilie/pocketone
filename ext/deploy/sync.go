@@ -512,7 +512,6 @@ func (s *Syncer) push(ctx context.Context, paths, deletes []string, localFiles m
 	}
 	res, err := up.commit(ctx, map[string]any{
 		"files": manifest, "partial": true, "delete": deletes, "nodeModules": nodeModules,
-		"message": "dev", "source": "pocketone-dev", "commit": detectCommit(s.dir),
 	})
 	if err != nil {
 		return err

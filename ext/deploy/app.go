@@ -2,8 +2,6 @@ package deploy
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"path/filepath"
@@ -119,7 +117,7 @@ func Register(app core.App, cfg Config) (*API, error) {
 			t.RegisterScope(apitokensv1.Scope{Name: ScopeRead, Description: "Read deployed files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
 		}
-		return EnsureSchema(e.App)
+		return nil
 	})
 
 	return api, nil
@@ -134,7 +132,7 @@ type requestAuth struct {
 
 // AppBackend is the default backend on a single app: one instance (the app), superusers only. A superuser JWT
 // (including an impersonate token) has full access; an API token needs the deploy scope (or none), and
-// deploy:read gives read-only access. History goes to the _deploy_deploys collection.
+// deploy:read gives read-only access.
 type AppBackend struct {
 	App core.App
 }
@@ -166,30 +164,6 @@ func (b *AppBackend) Authenticate(r *http.Request, _ Instance) (Auth, error) {
 		return Auth{}, &AuthError{403, "This API token has no deploy scope."}
 	}
 	return a, nil
-}
-
-// RecordDeploy implements [Backend]: a row in _deploy_deploys.
-func (b *AppBackend) RecordDeploy(_ context.Context, rec DeployRecord) (string, error) {
-	col, err := b.App.FindCachedCollectionByNameOrId(DeploysCollection)
-	if err != nil {
-		return "", err
-	}
-	r := core.NewRecord(col)
-	r.Set("status", rec.Status)
-	r.Set("file_count", rec.FileCount)
-	r.Set("uploaded_count", rec.UploadedCount)
-	r.Set("uploaded_bytes", rec.UploadedBytes)
-	r.Set("total_bytes", rec.TotalBytes)
-	r.Set("commit", rec.Commit)
-	r.Set("message", rec.Message)
-	r.Set("source", rec.Source)
-	r.Set("token_label", rec.TokenLabel)
-	r.Set("user", rec.User)
-	r.Set("error", rec.Error)
-	if err := b.App.Save(r); err != nil {
-		return "", err
-	}
-	return r.Id, nil
 }
 
 // AppFiles is a single app's instance.fs/v1: its own folder (cfg.Dir, set at bootstrap), deploy state in
@@ -230,71 +204,3 @@ func (h slogHandler) WithAttrs(a []slog.Attr) slog.Handler {
 	return h.app.Logger().Handler().WithAttrs(a)
 }
 func (h slogHandler) WithGroup(n string) slog.Handler { return h.app.Logger().Handler().WithGroup(n) }
-
-// ---------------------------------------------------------------------------------------------------------------
-// _deploy_deploys
-
-// Deploy history on a single app.
-const (
-	DeploysCollection   = "_deploy_deploys"
-	DeploysCollectionId = "pbc_deploys"
-)
-
-func deploysCollection() *core.Collection {
-	c := core.NewBaseCollection(DeploysCollection, DeploysCollectionId)
-	c.System = true
-	c.ListRule, c.ViewRule, c.CreateRule, c.UpdateRule, c.DeleteRule = nil, nil, nil, nil, nil
-	c.Fields.Add(
-		&core.SelectField{Id: "dep_status", Name: "status", MaxSelect: 1, Values: []string{"success", "failed"}},
-		&core.NumberField{Id: "dep_file_count", Name: "file_count", OnlyInt: true},
-		&core.NumberField{Id: "dep_uploaded_count", Name: "uploaded_count", OnlyInt: true},
-		&core.NumberField{Id: "dep_uploaded_bytes", Name: "uploaded_bytes", OnlyInt: true},
-		&core.NumberField{Id: "dep_total_bytes", Name: "total_bytes", OnlyInt: true},
-		&core.TextField{Id: "dep_commit", Name: "commit", Max: 100},
-		&core.TextField{Id: "dep_message", Name: "message", Max: 500},
-		&core.TextField{Id: "dep_source", Name: "source", Max: 100},
-		&core.TextField{Id: "dep_token_label", Name: "token_label", Max: 200},
-		&core.TextField{Id: "dep_user", Name: "user", Max: 100, Help: "Superuser id."},
-		&core.TextField{Id: "dep_error", Name: "error", Max: 2000},
-		&core.AutodateField{Id: "dep_created", Name: "created", OnCreate: true, System: true},
-	)
-	c.AddIndex("idx_deploys_created", false, "created", "")
-	return c
-}
-
-// EnsureSchema creates the _deploy_deploys collection if it doesn't exist.
-func EnsureSchema(app core.App) error {
-	want := deploysCollection()
-	have, err := app.FindCollectionByNameOrId(want.Id)
-	if err != nil {
-		if byName, nameErr := app.FindCollectionByNameOrId(want.Name); nameErr == nil {
-			return fmt.Errorf("deploy: collection %q exists with id %q, expected %q", want.Name, byName.Id, want.Id)
-		}
-		if err := app.Save(want); err != nil {
-			return fmt.Errorf("deploy: create %s: %w", want.Name, err)
-		}
-		return nil
-	}
-	var errs []error
-	added := false
-	for _, wf := range want.Fields {
-		hf := have.Fields.GetById(wf.GetId())
-		if hf == nil {
-			have.Fields.Add(wf) // a field a newer version added
-			added = true
-			continue
-		}
-		if hf.Type() != wf.Type() || hf.GetName() != wf.GetName() {
-			errs = append(errs, fmt.Errorf("field %s (%s)", wf.GetName(), wf.GetId()))
-		}
-	}
-	if len(errs) > 0 {
-		return fmt.Errorf("deploy: %s doesn't match the schema: %w", want.Name, errors.Join(errs...))
-	}
-	if added {
-		if err := app.Save(have); err != nil {
-			return fmt.Errorf("deploy: add fields to %s: %w", want.Name, err)
-		}
-	}
-	return nil
-}
