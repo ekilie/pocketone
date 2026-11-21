@@ -72,7 +72,7 @@ release:
     brew install pocketonehq/tap/pocketone
     ```
 
-    That's Homebrew; the formula comes from [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap). Or download the zip for your platform below and run `./pocketone serve`.
+    That's Homebrew; the formula comes from [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap).
 
     **New install on Windows:**
 
@@ -83,13 +83,21 @@ release:
 
     That's [Scoop](https://scoop.sh); the manifest comes from [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket). To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
 
+    **Without Homebrew, on macOS or Linux:**
+
+    ```bash
+    curl -fsSL https://pocketone.dev/install.sh | sh
+    ```
+
+    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux](https://pocketone.dev/docs/linux) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
+
     **Upgrade:**
 
     ```bash
     brew upgrade pocketone
     ```
 
-    On Windows with Scoop, `scoop update pocketone`. Otherwise, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`, `pocketone-<version>.exe` on Windows) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
+    On Windows with Scoop, `scoop update pocketone`. If you used the install script (or a Linux package), run the script again. Otherwise, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`, `pocketone-<version>.exe` on Windows) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
 
     ## What's in this release
 
@@ -106,8 +114,8 @@ brews:
     description: PocketOne, a community fork of PocketBase with extensions (pages, pocker and more)
     license: MIT
     commit_author:
-      name: PocketHost
-      email: noreply@pockethost.io
+      name: PocketOne HQ
+      email: noreply@pocketone.dev
     install: |
       bin.install "pocketone"
     test: |
@@ -126,8 +134,8 @@ scoops:
     description: PocketOne, a community fork of PocketBase with extensions (pages, pocker and more)
     license: MIT
     commit_author:
-      name: PocketHost
-      email: noreply@pockethost.io
+      name: PocketOne HQ
+      email: noreply@pocketone.dev
 
 archives:
   - id: archive_noncgo
@@ -137,6 +145,39 @@ archives:
       - LICENSE.md
       - CHANGELOG.md
       - CHANGELOG.pocketbase.md
+
+# Linux packages: the binary in /usr/bin, a systemd unit (deb, rpm) that runs as the pocketone user with its data in
+# /var/lib/pocketone, and its config in /etc/pocketone (kept on upgrade). Named like the zips
+# (pocketone_<version>_linux_<arch>.deb), which is what site/pb_pages/install.sh downloads.
+nfpms:
+  - id: packages
+    ids: [build_noncgo]
+    package_name: pocketone
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
+    formats: [deb, rpm, apk]
+    vendor: PocketOne HQ
+    maintainer: PocketOne HQ <noreply@pocketone.dev>
+    homepage: https://pocketone.dev
+    description: PocketOne, a community fork of PocketBase with extensions (pages, pocker and more)
+    license: MIT
+    bindir: /usr/bin
+    contents:
+      - src: examples/pocketone/packaging/pocketone.service
+        dst: /usr/lib/systemd/system/pocketone.service
+        packager: deb
+      - src: examples/pocketone/packaging/pocketone.service
+        dst: /usr/lib/systemd/system/pocketone.service
+        packager: rpm
+      - src: examples/pocketone/packaging/pocketone.yaml
+        dst: /etc/pocketone/pocketone.yaml
+        type: config|noreplace
+      - src: examples/pocketone/packaging/service.env
+        dst: /etc/pocketone/service.env
+        type: config|noreplace
+    scripts:
+      postinstall: examples/pocketone/packaging/postinstall.sh
+      preremove: examples/pocketone/packaging/preremove.sh
+      postremove: examples/pocketone/packaging/postremove.sh
 
 checksum:
   name_template: 'checksums.txt'

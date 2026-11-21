@@ -9,7 +9,8 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Get started
 
 - [What is PocketOne?](https://pocketone.dev/docs/overview): PocketOne is a community fork of PocketBase. Its core changes are kept small; everything else is an extension.
-- [Installation](https://pocketone.dev/docs/installation): Install PocketOne with Homebrew, Scoop, a release download or go build, and keep it up to date.
+- [Installation](https://pocketone.dev/docs/installation): Install PocketOne on macOS, Linux or Windows with Homebrew, Scoop, the install script, a Linux package, a release download or go build, and keep it up to date.
+- [Linux](https://pocketone.dev/docs/linux): Install PocketOne on a Linux server with the install script or a .deb, .rpm or .apk package, run it as a systemd service with HTTPS, and upgrade it.
 - [Coming from PocketBase](https://pocketone.dev/docs/pocketbase): PocketOne is PocketBase with more built in. What stays the same, and how each added feature compares.
 - [Teach your coding agent](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and PocketPages with our Agent Skills and llms.txt.
 

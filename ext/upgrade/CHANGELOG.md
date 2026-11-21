@@ -9,6 +9,7 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 ### Changed
 
 - `pocketone upgrade` on an executable installed with Scoop tells you to run `scoop update pocketone` instead, as it does for Homebrew.
+- `pocketone upgrade` on an executable installed from a Linux package (in `/usr/bin`) tells you to run the install script instead, which installs the newer package.
 
 ## 0.0.2 (2026-11-18)
 
