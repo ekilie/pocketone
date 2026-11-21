@@ -815,8 +815,11 @@ func writeStream(w http.ResponseWriter, r *http.Request, event string, s Stream)
 	h.Set("Content-Type", "text/event-stream; charset=UTF-8")
 	h.Set("Cache-Control", "no-store")
 	h.Set("X-Accel-Buffering", "no")
-	w.WriteHeader(http.StatusOK)
 	rc := http.NewResponseController(w)
+	// a stream outlives the server's WriteTimeout (PocketBase: 5 min), which would cut it with an unexpected EOF; clear
+	// the deadline, as PocketBase's realtime does
+	_ = rc.SetWriteDeadline(time.Time{})
+	w.WriteHeader(http.StatusOK)
 	send := func(entries []any) error {
 		for _, e := range entries {
 			b, err := json.Marshal(e)

@@ -40,6 +40,10 @@ every extension that got a new version, with a link to its changes. Upstream Poc
   The release header adds a link to the blog post and the install and upgrade steps on top. Release notes are this file's section for the version,
   with its links pointing at the release on GitHub.
 
+### Fixed
+
+- Contract streams (`instance.watch/v1`'s stream, `remote/v1` logs and the rest) no longer end after 5 minutes: they clear the server's write timeout, as PocketBase's realtime does. Edges following the mothership reconnected (and refetched every hostname) every 5 minutes.
+
 ## Unreleased
 
 ### Upgrading
