@@ -729,6 +729,10 @@
       max-width: 100%;
     }
   }
+  .hero-alt {
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
   .hero-title {
     font-size: clamp(2.25rem, 8vw, 4.5rem);
     font-weight: 900;

@@ -110,8 +110,8 @@ curl -fsSL https://pocketone.dev/install.sh | sh
 ```
 
 Or install the newer package by hand, as above. Either way the package manager restarts the service if it's running,
-and keeps your `/etc/pocketone` files and your data. Don't use `pocketone upgrade` on a package install: it would
-replace `/usr/bin/pocketone` behind the package manager's back.
+and keeps your `/etc/pocketone` files and your data. `pocketone upgrade` leaves a package install alone (the binary
+belongs to the package manager) and points you at the install script instead.
 
 ## Uninstall
 

@@ -66,13 +66,13 @@ release:
 
     ## Install or upgrade
 
-    **New install on macOS:**
+    **New install on macOS** (or Linux with Homebrew):
 
     ```bash
-    brew install pockethost/tap/pocketone
+    brew install pocketonehq/tap/pocketone
     ```
 
-    Or use the install script below. The formula comes from [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap).
+    That's Homebrew; the formula comes from [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap). Or use the install script below.
 
     **New install on Linux** (or macOS without Homebrew):
 
@@ -80,7 +80,16 @@ release:
     curl -fsSL https://pocketone.dev/install.sh | sh
     ```
 
-    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux](https://pocketone.dev/docs/linux) covers setting it up); elsewhere it puts `pocketone` in `/usr/local/bin`. On Windows, download the zip for your platform below and run `pocketone serve`.
+    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux](https://pocketone.dev/docs/linux) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
+
+    **New install on Windows:**
+
+    ```powershell
+    scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket
+    scoop install pocketone
+    ```
+
+    That's [Scoop](https://scoop.sh); the manifest comes from [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket). To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
 
     **Upgrade:**
 
@@ -88,17 +97,17 @@ release:
     brew upgrade pocketone
     ```
 
-    Or run the install script again if you installed with it, or `pocketone upgrade` for a binary you installed from a zip (it keeps the old executable as `pocketone-<version>`). Check the **Upgrading** section below, if this release has one, before you upgrade.
+    On Windows with Scoop, `scoop update pocketone`. If you used the install script (or a Linux package), run the script again. Otherwise, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`, `pocketone-<version>.exe` on Windows) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
 
     ## What's in this release
 
-# the Homebrew formula in pockethost/homebrew-tap, updated on every release, prereleases included. brews is deprecated in favor of
+# the Homebrew formula in pocketonehq/homebrew-tap, updated on every release, prereleases included. brews is deprecated in favor of
 # homebrew_casks, but casks are macOS-only and quarantine unsigned binaries; the formula works on macOS and Linux.
 brews:
   - name: pocketone
     ids: [archive_noncgo]
     repository:
-      owner: pockethost
+      owner: pocketonehq
       name: homebrew-tap
     directory: Formula
     homepage: https://github.com/pocketonehq/pocketone
@@ -111,6 +120,22 @@ brews:
       bin.install "pocketone"
     test: |
       system "#{bin}/pocketone", "--version"
+
+# the Scoop manifest in pocketonehq/scoop-bucket (Windows), updated on every release, prereleases included, the way the
+# formula above is for Homebrew
+scoops:
+  - name: pocketone
+    ids: [archive_noncgo]
+    repository:
+      owner: pocketonehq
+      name: scoop-bucket
+    directory: bucket
+    homepage: https://github.com/pocketonehq/pocketone
+    description: PocketOne, a community fork of PocketBase with extensions (pages, pocker and more)
+    license: MIT
+    commit_author:
+      name: PocketOne HQ
+      email: noreply@pocketone.dev
 
 archives:
   - id: archive_noncgo

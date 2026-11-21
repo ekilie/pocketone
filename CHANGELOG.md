@@ -56,9 +56,11 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 1. A multisite host runs one runtime: docker when `pocketone.yaml` has a `docker` section, else pocker. A host that had a `docker` section and served most instances on pocker now serves them all on docker; remove the `docker` section to stay on pocker.
 2. Remove `runtime:` from instance records (instances file or mothership): it's no longer read, and every instance runs on the host's runtime.
 3. `providers: { runtime/v1: ... }` takes one name (`runtime/v1: docker`), not a list.
+4. Installed with Homebrew? The formula moved to the `pocketonehq/tap` tap: `brew uninstall pocketone`, then `brew install pocketonehq/tap/pocketone`. The `pockethost/tap` formula no longer gets new releases.
 
 ### Added
 
+- Install on Windows with [Scoop](https://scoop.sh): `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`, then `scoop install pocketone`. Every release updates the manifest; manual steps are in [Install on Windows](https://pocketone.dev/docs/windows).
 - Install script for macOS and Linux: `curl -fsSL https://pocketone.dev/install.sh | sh` installs the newest release, checking its checksum; run it again to upgrade ([Installation](https://pocketone.dev/docs/installation)).
 - Linux packages: every release has `.deb`, `.rpm` and `.apk` packages; the `.deb` and `.rpm` add a `pocketone` systemd service running as its own user, configured in `/etc/pocketone`, with data in `/var/lib/pocketone` ([Linux](https://pocketone.dev/docs/linux)).
 

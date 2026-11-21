@@ -127,8 +127,25 @@ func (p *extension) upgrade(backup, yes bool) error {
 		color.HiBlack("Homebrew keeps the previous version until `brew cleanup`.")
 		return nil
 	}
+	if app := scoopApp(exe); app != "" {
+		color.Yellow("This executable was installed with Scoop. Upgrade it with:")
+		fmt.Printf("\n  scoop update %s\n\n", app)
+		color.HiBlack("Scoop keeps the previous version until `scoop cleanup`.")
+		return nil
+	}
 	if _, err := os.Stat("/.dockerenv"); err == nil {
 		return errors.New("this looks like a Docker container: upgrade the image instead")
+	}
+	if linuxPackaged(runtime.GOOS, exe) {
+		color.Yellow("This executable is in /usr/bin, where your system's package manager installed it.")
+		if p.cfg.Owner == "pocketonehq" && p.cfg.Repo == "pocketone" {
+			fmt.Printf("Upgrade it with the install script, which installs the newer package:\n\n")
+			fmt.Printf("  curl -fsSL https://pocketone.dev/install.sh | sh\n\n")
+		} else {
+			fmt.Printf("Upgrade it by installing the newer package from https://github.com/%s/%s/releases\n\n",
+				p.cfg.Owner, p.cfg.Repo)
+		}
+		return nil
 	}
 
 	color.Yellow("Fetching release information...")
@@ -250,7 +267,25 @@ func KeptName(exe, v string) string {
 	return filepath.Join(dir, base+"-"+v+ext)
 }
 
+// linuxPackaged reports whether exe sits in /usr/bin on Linux, where only the system's package manager installs
+// (PocketOne's .deb, .rpm and .apk packages put it there); a binary installed by hand goes in /usr/local/bin.
+func linuxPackaged(goos, exe string) bool {
+	return goos == "linux" && filepath.ToSlash(filepath.Dir(exe)) == "/usr/bin"
+}
+
 // homebrewFormula returns the formula name when exe (symlinks resolved) is inside a Homebrew Cellar, else "".
+// scoopApp is the Scoop app name when exe is inside a Scoop install ("<scoop>/apps/<app>/<version or current>/..."),
+// else "". Scoop's default roots are ~/scoop and C:/ProgramData/scoop.
+func scoopApp(exe string) string {
+	parts := strings.Split(strings.ReplaceAll(exe, `\`, "/"), "/")
+	for i := 1; i+2 < len(parts); i++ {
+		if strings.EqualFold(parts[i-1], "scoop") && strings.EqualFold(parts[i], "apps") {
+			return parts[i+1]
+		}
+	}
+	return ""
+}
+
 func homebrewFormula(exe string) string {
 	parts := strings.Split(filepath.ToSlash(exe), "/")
 	for i, part := range parts {

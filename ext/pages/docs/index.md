@@ -16,8 +16,9 @@ description: No-build, server-rendered multi-page apps for PocketOne. PocketPage
 <div class="hero-brand rise">
 <span class="avatar"><img src="/docs/extensions/pages/pocketpages-logo.png" alt="PocketPages logo" /></span>
 <h1 class="hero-title">PocketPages</h1>
-<pre><code class="language-bash">brew install pockethost/tap/pocketone
+<pre><code class="language-bash">brew install pocketonehq/tap/pocketone
 pocketone pages create myapp</code></pre>
+<a class="hero-alt" href="/docs/installation#scoop-windows">On Windows? Install with Scoop</a>
 </div>
 <p class="hero-tagline rise" style="--delay: 0.2s; --rise: 30px">No-Build Multi-Page Apps for <span>PocketOne</span></p>
 <div class="cta-row rise" style="--delay: 0.4s; --rise: 30px">

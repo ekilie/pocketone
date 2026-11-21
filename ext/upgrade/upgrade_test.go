@@ -41,6 +41,35 @@ func TestHomebrewFormula(t *testing.T) {
 	}
 }
 
+func TestScoopApp(t *testing.T) {
+	for exe, want := range map[string]string{
+		`C:\Users\me\scoop\apps\pocketone\current\pocketone.exe`:     "pocketone",
+		`C:\ProgramData\scoop\apps\pocketone\0.0.3\pocketone.exe`:    "pocketone",
+		`C:\Users\me\AppData\Local\Programs\pocketone\pocketone.exe`: "",
+		"/usr/local/bin/pocketone":                                   "",
+	} {
+		if got := scoopApp(exe); got != want {
+			t.Errorf("scoopApp(%q) = %q, want %q", exe, got, want)
+		}
+	}
+}
+
+func TestLinuxPackaged(t *testing.T) {
+	for _, c := range []struct {
+		goos, exe string
+		want      bool
+	}{
+		{"linux", "/usr/bin/pocketone", true},
+		{"linux", "/usr/local/bin/pocketone", false},
+		{"linux", "/home/me/.local/bin/pocketone", false},
+		{"darwin", "/usr/bin/pocketone", false},
+	} {
+		if got := linuxPackaged(c.goos, c.exe); got != c.want {
+			t.Errorf("linuxPackaged(%q, %q) = %v, want %v", c.goos, c.exe, got, c.want)
+		}
+	}
+}
+
 func TestCompareVersions(t *testing.T) {
 	if compareVersions("0.0.3", "0.0.4") != 1 || compareVersions("0.1.0", "0.0.9") != -1 || compareVersions("1.0", "1.0.0") != 0 ||
 		compareVersions("0.1.0-alpha.1", "0.1.0-alpha.2") != 1 || compareVersions("0.1.0", "0.1.0-alpha.9") != -1 {

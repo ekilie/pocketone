@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install PocketOne on macOS, Linux or Windows with the install script, Homebrew, a Linux package, a release download or go build, and keep it up to date.
+description: Install PocketOne on macOS, Linux or Windows with the install script, Homebrew, a Linux package, Scoop, a release download or go build, and keep it up to date.
 ---
 
 # Installation
@@ -35,10 +35,20 @@ Read the script first if you like: [pocketone.dev/install.sh](/install.sh).
 ## Homebrew (macOS and Linux)
 
 ```bash
-brew install pockethost/tap/pocketone
+brew install pocketonehq/tap/pocketone
 ```
 
-The formula lives in [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap).
+The formula lives in [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap).
+
+## Scoop (Windows)
+
+```powershell
+scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket
+scoop install pocketone
+```
+
+That's [Scoop](https://scoop.sh); the manifest lives in [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket).
+To install without Scoop, see [Install on Windows](/docs/windows).
 
 ## Linux packages
 
@@ -51,7 +61,7 @@ upgrades.
 
 Download the zip for your platform from
 [Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and put `pocketone` somewhere on your `PATH`.
-This is the way on Windows. Each release's `checksums.txt` lists the SHA-256 of every file.
+On Windows without Scoop, see [Install on Windows](/docs/windows). Each release's `checksums.txt` lists the SHA-256 of every file.
 
 ## Build from source
 
@@ -95,13 +105,14 @@ Upgrade the way you installed:
 |---|---|
 | The install script | Run it again. |
 | Homebrew | `brew upgrade pocketone` |
+| Scoop | `scoop update pocketone` |
 | A Linux package | The install script, or install the newer package ([Linux](/docs/linux#upgrade)). |
 | A release zip or `go build` | `pocketone upgrade` |
 
 `pocketone upgrade` replaces the executable with the latest release. The old one is kept beside it as
 `pocketone-<version>`, never deleted, so you can go back. Use it for the binary the install script put in
-`/usr/local/bin` too (with `sudo` if that folder is root's), but not for a Homebrew or package install: those belong
-to their package manager.
+`/usr/local/bin` too (with `sudo` if that folder is root's). For a Homebrew, Scoop or Linux package install it tells
+you the command above instead.
 
 ## Moving from PocketBase
 
