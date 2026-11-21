@@ -61,7 +61,13 @@ page are the same in PowerShell and in Command Prompt.
 
 ## Linux
 
-The install script:
+With [Homebrew](https://brew.sh), as on macOS:
+
+```bash
+brew install pocketonehq/tap/pocketone
+```
+
+Or with the install script, which suits a server:
 
 ```bash
 curl -fsSL https://pocketone.dev/install.sh | sh
@@ -71,8 +77,6 @@ It finds your package manager (apt, dnf, yum, zypper or apk), downloads the newe
 package for your system, checks its checksum and installs it with `sudo`. The package also sets PocketOne up as a
 systemd service, stopped until you start it ([Linux server](#linux-server)). With none of those package managers it
 puts the plain binary in `/usr/local/bin` instead.
-
-[Homebrew](https://brew.sh) works on Linux too, for the binary alone: `brew install pocketonehq/tap/pocketone`.
 
 PocketOne's Linux builds are static binaries for `amd64`, `arm64`, `armv7` (32-bit ARM, such as older Raspberry Pis),
 `ppc64le` and `s390x`, so it runs on any distribution.
