@@ -1,0 +1,13 @@
+# pocketone.yaml for the pocketone service (https://pocketone.dev/docs/linux).
+# Every section and key: https://pocketone.dev/docs/config-reference
+# Secrets go in /etc/pocketone/.env (readable by the pocketone user) and are written here as $NAME.
+#
+# Commands you run yourself read this file too, as the pocketone user:
+#   sudo -u pocketone pocketone superuser upsert <email> <password> --config /etc/pocketone/pocketone.yaml
+
+app:
+  # pb_data; pb_hooks, pb_migrations and pb_pages go beside it
+  dir: /var/lib/pocketone/pb_data
+
+server:
+  public_dir: /var/lib/pocketone/pb_public

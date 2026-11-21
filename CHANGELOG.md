@@ -57,6 +57,11 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 2. Remove `runtime:` from instance records (instances file or mothership): it's no longer read, and every instance runs on the host's runtime.
 3. `providers: { runtime/v1: ... }` takes one name (`runtime/v1: docker`), not a list.
 
+### Added
+
+- Install script for macOS and Linux: `curl -fsSL https://pocketone.dev/install.sh | sh` installs the newest release, checking its checksum; run it again to upgrade ([Installation](https://pocketone.dev/docs/installation)).
+- Linux packages: every release has `.deb`, `.rpm` and `.apk` packages; the `.deb` and `.rpm` add a `pocketone` systemd service running as its own user, configured in `/etc/pocketone`, with data in `/var/lib/pocketone` ([Linux](https://pocketone.dev/docs/linux)).
+
 ### Changed
 
 - On a multisite host, an instance's `pb_cache` is hoisted out of its folder to the host's `pb_cache/instances/<instance id>/` (`extkit.CacheDir` and `extkit.CacheRoot` return it; hosts use `extkit.InstanceCacheRoot`). `instances` is reserved in a host's `pb_cache`.

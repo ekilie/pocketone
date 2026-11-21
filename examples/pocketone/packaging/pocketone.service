@@ -1,0 +1,21 @@
+[Unit]
+Description=PocketOne
+Documentation=https://pocketone.dev/docs/linux
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pocketone
+Group=pocketone
+WorkingDirectory=/var/lib/pocketone
+# SERVE_ARGS: your domain(s), or other serve flags; see the file
+EnvironmentFile=-/etc/pocketone/service.env
+ExecStart=/usr/bin/pocketone serve --config /etc/pocketone/pocketone.yaml $SERVE_ARGS
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=4096
+# lets the pocketone user listen on ports 80 and 443
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
