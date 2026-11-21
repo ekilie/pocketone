@@ -190,7 +190,8 @@ func (t *Tokens) AllowedCollection(c *core.Collection) bool {
 // CreateOptions describe a new token.
 type CreateOptions struct {
 	Name string
-	// Scopes limit the token (registered names). Empty: the owner's full rights.
+	// Scopes limit the token: registered names, or "name=value" for a scope with Values. Empty: the owner's full
+	// rights.
 	Scopes []string
 	// Expires is when the token stops working (zero: never, unless Config.MaxTTL caps it).
 	Expires time.Time
@@ -206,7 +207,7 @@ func (t *Tokens) Create(owner *core.Record, opts CreateOptions) (string, *core.R
 	if owner == nil || !t.AllowedCollection(owner.Collection()) {
 		return "", nil, fmt.Errorf("api-tokens: records of this collection can't own API tokens")
 	}
-	scopes, err := t.normalizeScopes(owner.Collection(), opts.Scopes)
+	scopes, err := t.normalizeScopes(owner, opts.Scopes)
 	if err != nil {
 		return "", nil, err
 	}
@@ -244,22 +245,45 @@ func (t *Tokens) Create(owner *core.Record, opts CreateOptions) (string, *core.R
 	return secret, rec, nil
 }
 
-func (t *Tokens) normalizeScopes(owner *core.Collection, in []string) ([]string, error) {
+// normalizeScopes checks a new token's scopes for owner: registered, allowed for its collection, values only on
+// scopes with Values (and passing their Check). Names are lower-cased, values kept as given; a bare name drops the
+// same scope's values (it already holds every value).
+func (t *Tokens) normalizeScopes(owner *core.Record, in []string) ([]string, error) {
+	col := owner.Collection()
 	out := []string{}
-	for _, s := range in {
-		s = strings.ToLower(strings.TrimSpace(s))
-		if s == "" || slices.Contains(out, s) {
+	for _, raw := range in {
+		name, value := apitokensv1.SplitScope(strings.TrimSpace(raw))
+		name = strings.ToLower(name)
+		s := apitokensv1.JoinScope(name, value)
+		if name == "" || slices.Contains(out, s) {
 			continue
 		}
-		sc, ok := t.registry.get(s)
+		sc, ok := t.registry.get(name)
 		if !ok {
-			return nil, fmt.Errorf("api-tokens: unknown scope %q", s)
+			return nil, fmt.Errorf("api-tokens: unknown scope %q", name)
 		}
-		if len(sc.Collections) > 0 && !slices.Contains(sc.Collections, owner.Name) {
-			return nil, fmt.Errorf("api-tokens: %s records can't hold the %q scope", owner.Name, s)
+		if len(sc.Collections) > 0 && !slices.Contains(sc.Collections, col.Name) {
+			return nil, fmt.Errorf("api-tokens: %s records can't hold the %q scope", col.Name, name)
+		}
+		if strings.Contains(raw, apitokensv1.ScopeValueSep) {
+			if sc.Values == nil {
+				return nil, fmt.Errorf("api-tokens: the %q scope takes no value", name)
+			}
+			if !ValidScopeValue(value) {
+				return nil, fmt.Errorf("api-tokens: invalid value %q for the %q scope", value, name)
+			}
+			if sc.Values.Check != nil {
+				if err := sc.Values.Check(owner, value); err != nil {
+					return nil, fmt.Errorf("api-tokens: %s: %w", s, err)
+				}
+			}
 		}
 		out = append(out, s)
 	}
+	out = slices.DeleteFunc(out, func(s string) bool {
+		name, value := apitokensv1.SplitScope(s)
+		return value != "" && slices.Contains(out, name)
+	})
 	slices.Sort(out)
 	return out, nil
 }
@@ -272,9 +296,13 @@ type Info struct {
 	Audience string   // RFC 8707 resource it's bound to, or ""
 }
 
-// HasScope reports whether the token may act with scope: unscoped tokens have every scope.
-func (i *Info) HasScope(scope string) bool {
-	return len(i.Scopes) == 0 || slices.Contains(i.Scopes, scope)
+// HasScope reports whether the token may act with scope: unscoped tokens have every scope. A bare name is held by
+// the name or any "name=value"; "name=value" by the bare name or that value.
+func (i *Info) HasScope(scope string) bool { return apitokensv1.HoldsScope(i.Scopes, scope) }
+
+// HasScopeFor reports whether the token may act with scope on value (see [HasScopeFor]).
+func (i *Info) HasScopeFor(scope, value string) bool {
+	return apitokensv1.HoldsScope(i.Scopes, apitokensv1.JoinScope(scope, value))
 }
 
 // Verify resolves a secret to its token and owner. It doesn't record the use (the middleware does).

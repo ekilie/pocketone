@@ -272,7 +272,7 @@ func scopeAllows(g *Grant, scope string) bool {
 	if g == nil || len(g.Scopes) == 0 || scope == "" || scope == extkit.ScopePublic || scope == extkit.ScopeAny {
 		return true
 	}
-	return slices.Contains(g.Scopes, scope)
+	return apitokensv1.HoldsScope(g.Scopes, scope)
 }
 
 // grantAuth is who an MCP connection acts as, the way contracts see a caller.

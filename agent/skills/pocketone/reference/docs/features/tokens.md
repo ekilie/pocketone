@@ -89,6 +89,11 @@ routerAdd('GET', '/api/notes/summary', (e) => { /* ... */ },
 
 A collection rule can check a scope too: `@request.headers.x_token_scope_notes_read = "1"`.
 
+A scope can also limit a token to some records. Register it with `values: { description: 'a note id' }`, and a token can
+hold `notes=abc123` instead of all of `notes`. Your route checks the record with
+`$apiTokens.hasScope(e, 'notes', id)`. In the dashboard, a ticked scope that takes values has a box for them; leave it
+empty for every value.
+
 ## What a token can do
 
 - **No scopes:** everything its owner can do.

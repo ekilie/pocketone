@@ -1606,7 +1606,7 @@ pocketone token create
 | `--collection` | string | – | owner: auth collection (with `--record`) |
 | `--name` | string | – | a name to recognize the token by |
 | `--record` | string | – | owner: record id or email in `--collection` |
-| `--scope` | stringSlice | – | limit the token to a scope (repeatable; none: the owner's full rights) |
+| `--scope` | stringSlice | – | limit the token to a scope, name or name=value (repeatable; none: the owner's full rights) |
 | `--superuser` | string | – | owner: a superuser's email |
 | `--ttl` | duration | `0s` | lifetime, e.g. 720h (default: never expires) |
 

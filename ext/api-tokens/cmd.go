@@ -81,7 +81,7 @@ func tokenCreateCommand(t *Tokens) *cobra.Command {
 	}
 	owner.bind(c)
 	c.Flags().StringVar(&name, "name", "", "a name to recognize the token by")
-	c.Flags().StringSliceVar(&scopes, "scope", nil, "limit the token to a scope (repeatable; none: the owner's full rights)")
+	c.Flags().StringSliceVar(&scopes, "scope", nil, "limit the token to a scope, name or name=value (repeatable; none: the owner's full rights)")
 	c.Flags().DurationVar(&ttl, "ttl", 0, "lifetime, e.g. 720h (default: never expires)")
 	return c
 }
@@ -168,7 +168,11 @@ func tokenScopesCommand(t *Tokens) *cobra.Command {
 			w := tabwriter.NewWriter(c.OutOrStdout(), 0, 4, 2, ' ', 0)
 			fmt.Fprintln(w, "SCOPE\tDESCRIPTION\tPATHS")
 			for _, s := range t.Scopes() {
-				fmt.Fprintf(w, "%s\t%s\t%s\n", s.Name, s.Description, strings.Join(s.Paths, " "))
+				name := s.Name
+				if s.Values != nil {
+					name += "[=" + orDash(s.Values.Description, "value") + "]"
+				}
+				fmt.Fprintf(w, "%s\t%s\t%s\n", name, s.Description, strings.Join(s.Paths, " "))
 			}
 			return w.Flush()
 		},

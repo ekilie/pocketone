@@ -106,12 +106,47 @@ holds, and rules read it as `@request.headers.x_token_scope_<name>` (`:` becomes
 `$apiTokens.ruleField('notes:write')` returns the rule field for a name, and `$apiTokens.scopes()` lists every registered
 scope with its header and rule field.
 
+### Scopes with values
+
+A scope can let a token hold it for some values only, such as some record ids. The token's scope list then says
+`name=value`, once per value (`notes=abc123`, `notes=def456`). The bare name still means every value. Declare the
+values when you register the scope:
+
+```js
+$apiTokens.registerScope({
+  name: 'notes',
+  description: 'Your notes',
+  paths: ['/api/notes/'],
+  values: { description: 'a note id' }, // shown in the token screen
+})
+```
+
+Paths and methods don't look at values: a token holding `notes=abc123` authenticates on every path `notes` covers. Your
+route checks the value:
+
+```js
+routerAdd('GET', '/api/notes/{id}', (e) => {
+  if (!$apiTokens.hasScope(e, 'notes', e.request.pathValue('id'))) throw new ForbiddenError('Not this note.')
+  // ...
+}, $apis.requireAuth())
+```
+
+- `$apiTokens.hasScope(e, name, value)` is true for the bare scope, for `name=value`, and for a PocketBase auth token or
+  an unscoped token. Without a value it's true when the request holds the scope for any value.
+- `$apiTokens.scopeValues(e, name)` returns `{ all: true }` for every value, or `{ all: false, values: [...] }`.
+- The scope's header carries the values instead of `1` (`X-Token-Scope-Notes: abc123,def456`), so a rule's `= "1"` still
+  means every value.
+- A value is 1–200 letters, digits and `. _ : @ / + -`. A scope registered without `values` refuses `name=value`.
+- In Go, `Values: &apitokens.ScopeValues{Description: "...", Check: func(owner, value) error}` adds a check when a token
+  is created (for example, that the owner owns that record).
+
 ## Use
 
 ### From the dashboard
 
 1. Open **Settings → API tokens** (under **Access**). Only superusers see this screen.
-2. Fill in a **Name**. Optionally set **Expires in (days)**, and tick any **Scopes** (none means full rights).
+2. Fill in a **Name**. Optionally set **Expires in (days)**, and tick any **Scopes** (none means full rights). A
+   scope that takes values shows a box when ticked: leave it empty for every value, or list some, comma-separated.
 3. By default the token is yours. To make one for another account, fill in **Owner collection** (default
    `_superusers`) and **Owner (id or email)**.
 4. Click **Create token**. Copy the token now: it's shown only once and never stored.
@@ -135,8 +170,8 @@ pocketone token revoke --all --superuser admin@example.com
 pocketone token scopes
 ```
 
-Pick the owner with `--superuser <email>`, or `--collection <name> --record <id or email>`. `--scope` can be repeated;
-without `--ttl` the token never expires.
+Pick the owner with `--superuser <email>`, or `--collection <name> --record <id or email>`. `--scope` can be repeated,
+and takes `name=value` for a scope with values; without `--ttl` the token never expires.
 
 ### Using a token
 
@@ -214,6 +249,11 @@ se.Router.POST("/api/notes/archive", h).Bind(apis.RequireAuth(), tokens.RequireS
   request it returns true for. It runs before the owner is loaded, so it may look only at the request.
 - **Shared scopes.** Registering a name again merges its paths, methods, guards and collections, so several extensions
   can share one scope.
+- **Scope values.** `Values: &tokens.ScopeValues{Description, Check}` lets a token hold a scope for some values only
+  (`notes=abc123`). `Check(owner, value)` runs when a token is created; an error refuses it. Routes check the value
+  with `tokens.HasScopeFor(e, "notes", id)`, or list them with `tokens.ValuesFor(e, "notes")` (`all` is true for every
+  value). Through the contract: `grant.HasScopeFor`, `grant.ScopeValues`, and `apitokensv1.SplitScope` /
+  `JoinScope` for the `name=value` form.
 - **Read the token on a request.** `tokens.FromRequest(e)` returns the token a request used (nil for a PocketBase
   auth token), with its `Owner`, `Scopes` and `Audience`. `tokens.HasScope(e, "x")` is true for PocketBase auth
   tokens and unscoped API tokens.

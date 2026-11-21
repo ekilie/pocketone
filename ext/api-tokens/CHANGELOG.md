@@ -7,6 +7,11 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- Scopes can take values: a token can hold a scope for some values only, written `name=value` (`notes=abc123`), for
+  example to limit it to some records. Register the scope with `values` (JS) or `Values` (Go, with an optional
+  `Check` when a token is created); routes check with `$apiTokens.hasScope(e, name, value)` / `HasScopeFor`. The
+  dashboard's token form, `pocketone token create --scope name=value` and OAuth scope requests accept them.
+
 ## 0.2.0 (2026-11-18)
 
 ### Upgrading
