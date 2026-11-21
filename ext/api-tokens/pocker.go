@@ -49,7 +49,7 @@ func (p *Extension) Register(app core.App, layers extkit.Config) error {
 
 // Contracts implements [extkit.Declarer].
 func (p *Extension) Contracts() extkit.Contracts {
-	c := extkit.Contracts{Implements: extkit.IDs("api-tokens/v1")}
+	c := extkit.Contracts{Implements: extkit.IDs("api-tokens/v1", "api-tokens.verify/v1")}
 	if !p.cfg.OAuth.Disabled {
 		c.Implements = append(c.Implements, "oauth/v1") // the OAuth server comes with tokens
 		c.WorksWith = extkit.IDs("templates/v1")        // its pages are a template set a project can eject

@@ -117,7 +117,7 @@ func TestScopeHeadersRulesAndMethods(t *testing.T) {
 	}
 	recs := "/api/collections/notes/records"
 	body := func() *strings.Reader { return strings.NewReader(`{"title":"x"}`) }
-	allHeld := "deploy,echo,guarded,notes_path_only,notes_read,notes_write"
+	allHeld := "api_tokens_verify,deploy,echo,guarded,notes_path_only,notes_read,notes_write"
 
 	factory := func(testing.TB) *tests.TestApp { return app }
 	scenarios := []tests.ApiScenario{
@@ -254,7 +254,7 @@ func TestWithScopes(t *testing.T) {
 	factory := func(testing.TB) *tests.TestApp { return app }
 	for _, s := range []tests.ApiScenario{
 		{Name: "no limit: a JWT holds every scope", Method: http.MethodGet, URL: "/api/echo/inner?method=GET&path=/api/echo", Headers: jwtH,
-			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"held":"deploy,echo,guarded,notes_path_only,notes_read,notes_write"`}},
+			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"held":"api_tokens_verify,deploy,echo,guarded,notes_path_only,notes_read,notes_write"`}},
 		{Name: "limited JWT sees only the limit", Method: http.MethodGet, URL: inner("echo", "GET", "/api/echo"), Headers: jwtH,
 			ExpectedStatus: 200, ExpectedContent: []string{`200 `, `"held":"echo"`}},
 		{Name: "limited JWT reads notes", Method: http.MethodGet, URL: inner("notes:read", "GET", recs), Headers: jwtH,

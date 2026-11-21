@@ -7,6 +7,9 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- New contract api-tokens.verify/v1: another server checks one of the app's tokens
+  (`POST /api/_c/api-tokens.verify/v1`, superusers, scope `api_tokens_verify`) and gets its owner and scopes, or why
+  it isn't valid. A host in front of an app's accounts uses it instead of a route of its own.
 - Scopes can take values: a token can hold a scope for some values only, written `name=value` (`notes=abc123`), for
   example to limit it to some records. Register the scope with `values` (JS) or `Values` (Go, with an optional
   `Check` when a token is created); routes check with `$apiTokens.hasScope(e, name, value)` / `HasScopeFor`. The

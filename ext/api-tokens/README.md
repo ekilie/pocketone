@@ -267,6 +267,14 @@ see and manage everyone's.
 
 Owners can also list, view and delete their own tokens through the records API of `_api_tokens_tokens`.
 
+### Checking a token from another server (api-tokens.verify/v1)
+
+A server that a client hands one of this app's tokens to (a host in front of the app's accounts) asks the app what
+the token allows with the [api-tokens.verify/v1](../contracts/api-tokens/verify/v1/README.md) contract:
+`POST /api/_c/api-tokens.verify/v1` with `{"token": "pbt_...", "ip": "<client address>"}`, as a superuser (scope
+`api_tokens_verify`). The answer is `{"valid": true, "grant": {...}}` with the owner and the scopes (values included),
+or `{"valid": false, "reason": "invalid" | "expired"}`. In Go, `verifyv1.NewClient(appURL, superuserToken, nil)`.
+
 ## Example
 
 [`example/main.go`](example/main.go) runs one app with API tokens: Settings → API tokens, the token API (`/api/_c/api-tokens/v1`) and the `token` command.
