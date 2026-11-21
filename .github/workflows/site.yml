@@ -9,8 +9,8 @@
 # files, never core; local commits already include them through .github/hooks/pre-commit, so this only finds work after
 # an outside pull request merges), then deploys site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev).
 # Extension sites (ext/<name>/site, such as PocketPages' docs, formerly pocketpages.dev) are part of it.
-# The deploy needs the POCKETHOST_TOKEN repository secret (a PocketHost personal access token that can write to
-# that instance); without it the job says so and skips.
+# The deploy (pocketone deploy, to site/.pocketbase/remotes.json's remote) needs the POCKETHOST_TOKEN repository secret
+# (a PocketHost API token that can deploy to that instance); without it the job says so and skips.
 name: site
 
 on:
@@ -110,16 +110,24 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.regenerate.outputs.sha }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
+      # pocketone deploy, from the newest PocketOne release (the npm pockethost CLI no longer signs in to PocketHost)
+      - name: Install pocketone (newest release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release list -R pocketonehq/pocketone --limit 1 --json tagName -q '.[0].tagName')
+          echo "pocketone $tag"
+          gh release download "$tag" -R pocketonehq/pocketone -p "pocketone_${tag#v}_linux_amd64.zip" -O "$RUNNER_TEMP/pocketone.zip"
+          unzip -q "$RUNNER_TEMP/pocketone.zip" pocketone -d "$RUNNER_TEMP/pocketone"
+          echo "$RUNNER_TEMP/pocketone" >> "$GITHUB_PATH"
+      # Deploys site/pb_pages to the default remote in site/.pocketbase/remotes.json (https://pocketone.dev).
       - name: Deploy site/pb_pages to pocketone.dev
         working-directory: site
         env:
-          POCKETHOST_TOKEN: ${{ secrets.POCKETHOST_TOKEN }}
+          P1_TOKEN: ${{ secrets.POCKETHOST_TOKEN }}
         run: |
-          if [ -z "$POCKETHOST_TOKEN" ]; then
+          if [ -z "$P1_TOKEN" ]; then
             echo "::notice::POCKETHOST_TOKEN is not set; skipping the pocketone.dev deploy"
             exit 0
           fi
-          npx -y pockethost@latest deploy pocketone --no-node-modules -y -m "site.yml ${GITHUB_SHA::8}"
+          pocketone deploy --no-node-modules
