@@ -1,76 +1,49 @@
 ---
 title: Installation
-description: Install PocketOne on macOS, Linux or Windows with Homebrew, Scoop, the install script, a Linux package, a release download or go build; run it as a Linux service; keep it up to date.
+description: Install PocketOne on macOS, Windows or Linux (Homebrew, Scoop, the install script, a Linux package, a release download or go build), run it, set it up as a Linux service, and keep it up to date.
 ---
 
 # Installation
 
 PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and takes the same commands and flags, plus its own.
 
-- [Homebrew (macOS and Linux)](#homebrew-macos-and-linux)
-- [Scoop (Windows)](#scoop-windows)
-- [Install script (macOS and Linux)](#install-script-macos-and-linux)
-- [Download a release](#download-a-release)
-  - [Windows without Scoop](#windows-without-scoop)
-- [Build from source](#build-from-source)
-- [Run it](#run-it)
-- [Linux server](#linux-server): packages, the systemd service, uninstalling
-- [Upgrade](#upgrade)
-- [Moving from PocketBase](#moving-from-pocketbase)
+- **Install:** [macOS](#macos) · [Windows](#windows) · [Linux](#linux) · [Other ways](#other-ways-to-install) · [Install script settings](#install-script-settings)
+- **Use:** [Run it](#run-it) · [Linux server](#linux-server) · [Upgrade](#upgrade) · [Moving from PocketBase](#moving-from-pocketbase)
 
-## Homebrew (macOS and Linux)
+## macOS
+
+With [Homebrew](https://brew.sh):
 
 ```bash
 brew install pocketonehq/tap/pocketone
 ```
 
-The formula lives in [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap).
+The formula lives in [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap). Without Homebrew, use
+the install script:
 
-## Scoop (Windows)
+```bash
+curl -fsSL https://pocketone.dev/install.sh | sh
+```
+
+It picks the newest release for your Mac, checks its checksum and puts `pocketone` in `/usr/local/bin` (asking for your
+password through `sudo` when that folder isn't yours). Read it first if you like: [pocketone.dev/install.sh](/install.sh).
+
+## Windows
+
+With [Scoop](https://scoop.sh), in PowerShell:
 
 ```powershell
 scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket
 scoop install pocketone
 ```
 
-That's [Scoop](https://scoop.sh); the manifest lives in [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket).
-To install without Scoop, see [Windows without Scoop](#windows-without-scoop).
-
-## Install script (macOS and Linux)
-
-```bash
-curl -fsSL https://pocketone.dev/install.sh | sh
-```
-
-Without Homebrew, on macOS or Linux. It picks the newest release for your system and checks its checksum. On macOS it puts `pocketone` in
-`/usr/local/bin`. On Linux it installs the release's `.deb`, `.rpm` or `.apk` package, which also sets PocketOne up
-as a systemd service ([Linux server](#linux-server)); on a system with none of those package managers it installs the
-binary like on macOS. It asks for your password through `sudo` when it needs to write there. Run it again to upgrade.
-
-Settings go before `sh`:
-
-```bash
-curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=v0.0.1-alpha.10 sh
-```
-
-| Variable | What it does |
-|---|---|
-| `POCKETONE_VERSION` | Install this release tag instead of the newest one. |
-| `POCKETONE_INSTALL_DIR` | Where the binary goes when no package is used. Default `/usr/local/bin`; a folder you own, such as `$HOME/.local/bin`, needs no `sudo`. |
-| `POCKETONE_NO_PACKAGE=1` | On Linux, install the plain binary, never a package. |
-
-Read the script first if you like: [pocketone.dev/install.sh](/install.sh).
-
-## Download a release
-
-Download the zip for your platform from
-[Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and put `pocketone` somewhere on your `PATH`.
-Each release's `checksums.txt` lists the SHA-256 of every file.
+The manifest lives in [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket).
 
 ### Windows without Scoop
 
 Releases include 64-bit Windows builds: the zip ending in `_windows_amd64.zip` for most PCs, `_windows_arm64.zip` for
-ARM ones. The executable inside is `pocketone.exe`. In PowerShell, from the folder you downloaded it to:
+ARM ones. The executable inside is `pocketone.exe`. Download one from
+[Releases](https://github.com/pocketonehq/pocketone/releases), then in PowerShell, from the folder you downloaded it to:
 
 ```powershell
 $dir = "$env:LOCALAPPDATA\Programs\pocketone"
@@ -86,7 +59,32 @@ This puts PocketOne in a folder of your own, so it needs no administrator rights
 from File Explorer instead, SmartScreen may stop it: choose **More info**, then **Run anyway**. The commands on this
 page are the same in PowerShell and in Command Prompt.
 
-## Build from source
+## Linux
+
+The install script:
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | sh
+```
+
+It finds your package manager (apt, dnf, yum, zypper or apk), downloads the newest release's `.deb`, `.rpm` or `.apk`
+package for your system, checks its checksum and installs it with `sudo`. The package also sets PocketOne up as a
+systemd service, stopped until you start it ([Linux server](#linux-server)). With none of those package managers it
+puts the plain binary in `/usr/local/bin` instead.
+
+[Homebrew](https://brew.sh) works on Linux too, for the binary alone: `brew install pocketonehq/tap/pocketone`.
+
+PocketOne's Linux builds are static binaries for `amd64`, `arm64`, `armv7` (32-bit ARM, such as older Raspberry Pis),
+`ppc64le` and `s390x`, so it runs on any distribution.
+
+## Other ways to install
+
+### Download a release
+
+Download the zip for your platform from [Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and
+put `pocketone` somewhere on your `PATH`. Each release's `checksums.txt` lists the SHA-256 of every file.
+
+### Build from source
 
 With [Go](https://go.dev) installed:
 
@@ -95,6 +93,20 @@ git clone https://github.com/pocketonehq/pocketone.git
 cd pocketone/examples/pocketone
 go build -o pocketone .
 ```
+
+## Install script settings
+
+The script reads these environment variables. With `curl | sh`, put them before `sh`:
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=v0.0.1-alpha.10 sh
+```
+
+| Variable | What it does |
+|---|---|
+| `POCKETONE_VERSION` | Install this release tag instead of the newest one. |
+| `POCKETONE_INSTALL_DIR` | Where the binary goes when no package is used. Default `/usr/local/bin`; a folder you own, such as `$HOME/.local/bin`, needs no `sudo`. |
+| `POCKETONE_NO_PACKAGE=1` | On Linux, install the plain binary, never a package. |
 
 ## Run it
 
@@ -120,10 +132,8 @@ catches the mail and shows it at `http://127.0.0.1:8025`.
 
 ## Linux server
 
-PocketOne runs on any Linux distribution: its Linux builds are static binaries for `amd64`, `arm64`, `armv7` (32-bit
-ARM, such as older Raspberry Pis), `ppc64le` and `s390x`. On a server, install it as a package with the
-[install script](#install-script-macos-and-linux). That gives you a systemd service running as its own `pocketone`
-user, ready to start once you've set it up.
+On a server, install PocketOne as a package ([Linux](#linux)): you get a systemd service running as its own
+`pocketone` user, ready to start once you've set it up.
 
 ### Install a package by hand
 
@@ -205,15 +215,6 @@ sudo systemctl restart pocketone
 
 Or push it from your machine with `pocketone deploy` ([Deploy and live sync](/docs/features/deploy)).
 
-### Uninstall
-
-```bash
-sudo apt remove pocketone     # or: sudo dnf remove pocketone, sudo zypper remove pocketone, sudo apk del pocketone
-```
-
-This stops the service and removes the binary and the service. Your data in `/var/lib/pocketone` and the `pocketone`
-user stay; delete them yourself if you're sure (`sudo rm -rf /var/lib/pocketone && sudo userdel pocketone`).
-
 ### A service without a package
 
 With the plain binary in `/usr/local/bin` (the install script with `POCKETONE_NO_PACKAGE=1`, or a release zip), set
@@ -255,15 +256,24 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now pocketone
 ```
 
+### Uninstall
+
+```bash
+sudo apt remove pocketone     # or: sudo dnf remove pocketone, sudo zypper remove pocketone, sudo apk del pocketone
+```
+
+This stops the service and removes the binary and the service. Your data in `/var/lib/pocketone` and the `pocketone`
+user stay; delete them yourself if you're sure (`sudo rm -rf /var/lib/pocketone && sudo userdel pocketone`).
+
 ## Upgrade
 
 Upgrade the way you installed:
 
 | Installed with | Upgrade with |
 |---|---|
-| The install script | Run it again. |
 | Homebrew | `brew upgrade pocketone` |
 | Scoop | `scoop update pocketone` |
+| The install script | Run it again. |
 | A Linux package | The install script, or install the newer package by hand. The package manager restarts the service if it's running and keeps your `/etc/pocketone` files and your data. |
 | A release zip or `go build` | `pocketone upgrade` |
 
