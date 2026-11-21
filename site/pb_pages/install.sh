@@ -4,7 +4,7 @@
 #   curl -fsSL https://pocketone.dev/install.sh | sh
 #
 # Linux: installs the release's .deb, .rpm or .apk package when the system has apt, dnf/yum/zypper or apk and you can
-# be root (it uses sudo); the package adds a systemd service (https://pocketone.dev/docs/installation#linux-server). Otherwise, and on
+# be root (it uses sudo); the package adds a systemd service (https://pocketone.dev/docs/installation#run-it-as-a-service). Otherwise, and on
 # macOS, it puts the pocketone binary in /usr/local/bin. Run it again to upgrade.
 #
 # Settings (environment variables; with curl | sh, put them before sh: curl ... | POCKETONE_VERSION=v1.2.3 sh):
@@ -175,7 +175,7 @@ main() {
 
 	say ""
 	if [ -n "$pkg" ]; then
-		say "Done. To run PocketOne as a service, see https://pocketone.dev/docs/installation#linux-server"
+		say "Done. To run PocketOne as a service, see https://pocketone.dev/docs/installation#run-it-as-a-service"
 	else
 		say "Done. Start an app with: pocketone serve"
 		say "Upgrade later with: pocketone upgrade (or run this script again)"

@@ -7,8 +7,8 @@ description: Install PocketOne on macOS, Windows or Linux (Homebrew, Scoop, the 
 
 PocketOne is one executable, `pocketone`. It is built on PocketBase and takes the same commands and flags, plus its own.
 
-- **Install:** [macOS](#macos) · [Windows](#windows) · [Linux](#linux) · [Other ways](#other-ways-to-install) · [Install script settings](#install-script-settings)
-- **Use:** [Run it](#run-it) · [Linux server](#linux-server) · [Upgrade](#upgrade) · [Moving from PocketBase](#moving-from-pocketbase)
+- **Install:** [macOS](#macos) · [Windows](#windows) · [Linux](#linux) ([as a service](#run-it-as-a-service)) · [Other ways](#other-ways-to-install) · [Install script settings](#install-script-settings)
+- **Use:** [Run it](#run-it) · [Upgrade](#upgrade) · [Moving from PocketBase](#moving-from-pocketbase)
 
 ## macOS
 
@@ -75,69 +75,11 @@ curl -fsSL https://pocketone.dev/install.sh | sh
 
 It finds your package manager (apt, dnf, yum, zypper or apk), downloads the newest release's `.deb`, `.rpm` or `.apk`
 package for your system, checks its checksum and installs it with `sudo`. The package also sets PocketOne up as a
-systemd service, stopped until you start it ([Linux server](#linux-server)). With none of those package managers it
+systemd service, stopped until you start it ([Run it as a service](#run-it-as-a-service)). With none of those package managers it
 puts the plain binary in `/usr/local/bin` instead.
 
 PocketOne's Linux builds are static binaries for `amd64`, `arm64`, `armv7` (32-bit ARM, such as older Raspberry Pis),
 `ppc64le` and `s390x`, so it runs on any distribution.
-
-## Other ways to install
-
-### Download a release
-
-Download the zip for your platform from [Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and
-put `pocketone` somewhere on your `PATH`. Each release's `checksums.txt` lists the SHA-256 of every file.
-
-### Build from source
-
-With [Go](https://go.dev) installed:
-
-```bash
-git clone https://github.com/pocketonehq/pocketone.git
-cd pocketone/examples/pocketone
-go build -o pocketone .
-```
-
-## Install script settings
-
-The script reads these environment variables. With `curl | sh`, put them before `sh`:
-
-```bash
-curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=<release tag> sh
-```
-
-| Variable | What it does |
-|---|---|
-| `POCKETONE_VERSION` | Install this release tag instead of the newest one. |
-| `POCKETONE_INSTALL_DIR` | Where the binary goes when no package is used. Default `/usr/local/bin`; a folder you own, such as `$HOME/.local/bin`, needs no `sudo`. |
-| `POCKETONE_NO_PACKAGE=1` | On Linux, install the plain binary, never a package. |
-
-## Run it
-
-Create your first superuser before the first serve:
-
-```bash
-pocketone superuser upsert <email> <password>
-pocketone serve
-```
-
-Opening `http://127.0.0.1:8090/_/` to create it also works, as in PocketBase.
-
-To start a site with server-rendered pages:
-
-```bash
-pocketone pages create myapp
-cd myapp
-pocketone serve --dev --dir ./pb_data
-```
-
-In dev mode (`serve --dev`), an app with no SMTP settings doesn't send mail through the system's `sendmail`. PocketOne
-catches the mail and shows it at `http://127.0.0.1:8025`.
-
-## Linux server
-
-On a server, install PocketOne as a package ([Linux](#linux)): you get a systemd service running as its own
-`pocketone` user, ready to start once you've set it up.
 
 ### Install a package by hand
 
@@ -268,6 +210,59 @@ sudo apt remove pocketone     # or: sudo dnf remove pocketone, sudo zypper remov
 
 This stops the service and removes the binary and the service. Your data in `/var/lib/pocketone` and the `pocketone`
 user stay; delete them yourself if you're sure (`sudo rm -rf /var/lib/pocketone && sudo userdel pocketone`).
+
+## Other ways to install
+
+### Download a release
+
+Download the zip for your platform from [Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and
+put `pocketone` somewhere on your `PATH`. Each release's `checksums.txt` lists the SHA-256 of every file.
+
+### Build from source
+
+With [Go](https://go.dev) installed:
+
+```bash
+git clone https://github.com/pocketonehq/pocketone.git
+cd pocketone/examples/pocketone
+go build -o pocketone .
+```
+
+## Install script settings
+
+The script reads these environment variables. With `curl | sh`, put them before `sh`:
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=<release tag> sh
+```
+
+| Variable | What it does |
+|---|---|
+| `POCKETONE_VERSION` | Install this release tag instead of the newest one. |
+| `POCKETONE_INSTALL_DIR` | Where the binary goes when no package is used. Default `/usr/local/bin`; a folder you own, such as `$HOME/.local/bin`, needs no `sudo`. |
+| `POCKETONE_NO_PACKAGE=1` | On Linux, install the plain binary, never a package. |
+
+## Run it
+
+Create your first superuser before the first serve:
+
+```bash
+pocketone superuser upsert <email> <password>
+pocketone serve
+```
+
+Opening `http://127.0.0.1:8090/_/` to create it also works, as in PocketBase.
+
+To start a site with server-rendered pages:
+
+```bash
+pocketone pages create myapp
+cd myapp
+pocketone serve --dev --dir ./pb_data
+```
+
+In dev mode (`serve --dev`), an app with no SMTP settings doesn't send mail through the system's `sendmail`. PocketOne
+catches the mail and shows it at `http://127.0.0.1:8025`.
 
 ## Upgrade
 

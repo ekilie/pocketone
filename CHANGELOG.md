@@ -63,7 +63,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 - Builds on top of PocketOne can be the whole `pocketone` binary plus their own commands: `pocketone.dev/examples/pocketone/binary.Main` takes the build's `--version` text, where `upgrade` gets releases, and extra commands (one with a PocketOne command's name replaces it). PocketHost's `pockethost` uses it.
 - Install on Windows with [Scoop](https://scoop.sh): `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`, then `scoop install pocketone`. Every release updates the manifest; manual steps are in [Windows without Scoop](https://pocketone.dev/docs/installation#windows-without-scoop).
 - Install script for macOS and Linux: `curl -fsSL https://pocketone.dev/install.sh | sh` installs the newest release, checking its checksum; run it again to upgrade ([Installation](https://pocketone.dev/docs/installation)).
-- Linux packages: every release has `.deb`, `.rpm` and `.apk` packages; the `.deb` and `.rpm` add a `pocketone` systemd service running as its own user, configured in `/etc/pocketone`, with data in `/var/lib/pocketone` ([Linux server](https://pocketone.dev/docs/installation#linux-server)).
+- Linux packages: every release has `.deb`, `.rpm` and `.apk` packages; the `.deb` and `.rpm` add a `pocketone` systemd service running as its own user, configured in `/etc/pocketone`, with data in `/var/lib/pocketone` ([Run it as a service](https://pocketone.dev/docs/installation#run-it-as-a-service)).
 
 ### Changed
 

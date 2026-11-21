@@ -1,4 +1,4 @@
-# pocketone.yaml for the pocketone service (https://pocketone.dev/docs/installation#linux-server).
+# pocketone.yaml for the pocketone service (https://pocketone.dev/docs/installation#run-it-as-a-service).
 # Every section and key: https://pocketone.dev/docs/config-reference
 # Secrets go in /etc/pocketone/.env (readable by the pocketone user) and are written here as $NAME.
 #

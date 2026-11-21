@@ -89,7 +89,7 @@ release:
     curl -fsSL https://pocketone.dev/install.sh | sh
     ```
 
-    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux server](https://pocketone.dev/docs/installation#linux-server) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
+    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Run it as a service](https://pocketone.dev/docs/installation#run-it-as-a-service) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
 
     **Upgrade:**
 

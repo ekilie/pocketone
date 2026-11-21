@@ -1,6 +1,6 @@
 [Unit]
 Description=PocketOne
-Documentation=https://pocketone.dev/docs/installation#linux-server
+Documentation=https://pocketone.dev/docs/installation#run-it-as-a-service
 After=network-online.target
 Wants=network-online.target
 
