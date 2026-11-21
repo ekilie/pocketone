@@ -7,6 +7,17 @@ description: Install PocketOne on macOS, Linux or Windows with Homebrew, Scoop, 
 
 PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and takes the same commands and flags, plus its own.
 
+- [Homebrew (macOS and Linux)](#homebrew-macos-and-linux)
+- [Scoop (Windows)](#scoop-windows)
+- [Install script (macOS and Linux)](#install-script-macos-and-linux)
+- [Download a release](#download-a-release)
+  - [Windows without Scoop](#windows-without-scoop)
+- [Build from source](#build-from-source)
+- [Run it](#run-it)
+- [Linux server](#linux-server): packages, the systemd service, uninstalling
+- [Upgrade](#upgrade)
+- [Moving from PocketBase](#moving-from-pocketbase)
+
 ## Homebrew (macOS and Linux)
 
 ```bash
