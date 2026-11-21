@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	lookupv1 "pocketone.dev/ext/contracts/instance/lookup/v1"
 	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
 	"pocketone.dev/ext/multisite"
 
@@ -41,6 +42,8 @@ type Manager struct {
 
 	dir     *multisite.Directory
 	ownsDir bool
+
+	lookupOnce sync.Once // picks up instance.lookup/v1 for ServeHTTP
 	handler *multisite.Handler
 
 	defaults Limits
@@ -284,7 +287,18 @@ func (m *Manager) slot(inst Instance) *appSlot {
 }
 
 // ServeHTTP serves the edge pipeline (resolve by Host, gates, forwarding) with the Manager as the only runtime.
-func (m *Manager) ServeHTTP(w http.ResponseWriter, r *http.Request) { m.handler.ServeHTTP(w, r) }
+func (m *Manager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m.lookupOnce.Do(func() {
+		// a source that doesn't hold every instance answers hostnames itself (instance.lookup/v1); the scope is
+		// sealed by the first request
+		if m.scope != nil {
+			if l, ok := lookupv1.Contract.In(m.scope); ok {
+				m.handler.Lookup = l
+			}
+		}
+	})
+	m.handler.ServeHTTP(w, r)
+}
 
 // Precheck implements [multisite.Prechecker]: instances under maintenance answer 503 before the gates.
 func (m *Manager) Precheck(w http.ResponseWriter, r *http.Request, inst Instance) bool {

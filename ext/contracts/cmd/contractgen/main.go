@@ -472,8 +472,10 @@ import (
 {{- end}}
 
 	"pocketone.dev/ext/extkit"
+{{- if or .Wire (eq .JS "JSOpen")}}{{/* only generated method code uses the methods' types */}}
 {{- range .Imports}}
 	{{.}}
+{{- end}}
 {{- end}}
 )
 

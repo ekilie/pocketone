@@ -17,7 +17,9 @@ import (
 	"pocketone.dev/ext/edge"
 	_ "pocketone.dev/ext/firewall" // turns on with a firewall / rate_limits section
 	"pocketone.dev/ext/mailtrap"
-	"pocketone.dev/ext/mothership/mirror"
+	cachev1 "pocketone.dev/ext/contracts/cache/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/mothership/client"
 	"pocketone.dev/ext/multisite"
 	"pocketone.dev/ext/pocker"
 	"pocketone.dev/ext/servertiming"
@@ -26,7 +28,7 @@ import (
 )
 
 // serveMany runs the binary as a multi-instance host when pocketone.yaml names a provider: instances from the
-// `instances` section, or mirrored from a community mothership (`mothership` section), routed by hostname, run by
+// `instances` section, or looked up from a community mothership (`mothership` section), routed by hostname, run by
 // pocker (in-process) or docker (containers); other edges from the `edges` section and the mothership. It reports
 // false when no provider is configured, so main serves a single app as stock PocketBase does.
 func serveMany(cfg *config.Config) (handled bool, err error) {
@@ -64,13 +66,19 @@ func serveMany(cfg *config.Config) (handled bool, err error) {
 	if err != nil {
 		return true, err
 	}
-	m, err := mirror.FromSection(log)
+	m, err := client.FromSection(log)
 	if err != nil {
 		return true, err
 	}
 	var background []func(context.Context)
 	if m != nil {
-		opts.Extensions = append(opts.Extensions, m) // instance.source/v1: the instances come from the mothership
+		// the host's own cache/v1 (the store every instance shares): the client keeps its answers there
+		opts.Extensions = append(opts.Extensions, multisite.Provides("cache", func(s *extkit.Scope) {
+			cachev1.Contract.ProvideIn(s, set.Cache.Host(s))
+		}))
+		// instance.source/v1 and instance.lookup/v1: each hostname is asked of the mothership the first time it's
+		// requested, then followed on one stream
+		opts.Extensions = append(opts.Extensions, m)
 		if edges != nil {
 			edges = edge.MultiProvider{edges, m}
 		} else {

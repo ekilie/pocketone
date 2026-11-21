@@ -8,6 +8,7 @@ require (
 	github.com/spf13/pflag v1.1.0
 	pocketone.dev/ext/autotls v0.0.0-20261112000927-b078fd50496e
 	pocketone.dev/ext/config v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/desktop v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/docker v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/edge v0.0.0-00010101000000-000000000000
@@ -109,7 +110,6 @@ require (
 	pocketone.dev/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/cache v0.0.0-00010101000000-000000000000 // indirect
-	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/remotes v0.0.0-00010101000000-000000000000 // indirect

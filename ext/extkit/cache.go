@@ -53,6 +53,13 @@ func HostCacheDir(app core.App, ext string) (string, error) {
 	return CacheDir(app, ext)
 }
 
+// CacheRoot is the pb_cache folder set with [Scope.SetCacheRoot] ("" when none).
+func (s *Scope) CacheRoot() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cacheRoot
+}
+
 // SetCacheRoot sets a host scope's own pb_cache folder, where [HostCacheDir] puts its instances' shared caches.
 func (s *Scope) SetCacheRoot(dir string) {
 	s.mu.Lock()
