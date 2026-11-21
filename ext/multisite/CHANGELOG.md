@@ -11,6 +11,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.1.0 (2026-11-21)
+
 ### Upgrading
 
 1. Go: `Host.Runtimes` and `Handler.Runtimes` are now `Runtime` (one runtime/v1 provider); set `Runtime: rt` instead of `Runtimes: []multisite.Runtime{rt}`.

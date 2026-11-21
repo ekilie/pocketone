@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.2 (2026-11-21)
+
 ### Added
 
 - The Pocker host provides [instance.fs/v1](../contracts/instance/fs/v1/README.md) on its scope (`Manager.Files()`): each instance's code folder, a writers' lock and a restart that stops its app and starts it again. Host-side code (a host's deploy or file drive) gets an instance's files from it; code inside an instance keeps its own.

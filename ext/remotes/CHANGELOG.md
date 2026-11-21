@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.2 (2026-11-21)
+
 ### Added
 
 - `link` and `login` sign in with a superuser's email and password when the remote has no OAuth server (stock PocketBase, such as an app a multisite host runs in Docker): the password isn't echoed, and the session is swapped for a 30-day token (PocketBase's impersonate). A pasted token still works at the same prompt.

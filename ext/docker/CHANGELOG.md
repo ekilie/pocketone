@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.4 (2026-11-21)
+
 ### Added
 
 - The Docker host provides [instance.fs/v1](../contracts/instance/fs/v1/README.md) on its scope (`Runtime.Files(dir)`): each instance's folder on the host, a writers' lock and a restart that stops its container (the next request starts a fresh one).
