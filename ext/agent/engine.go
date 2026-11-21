@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"pocketone.dev/ext/agent/engine"
+	"github.com/benallfree/nollama/engine"
 	agentv1 "pocketone.dev/ext/contracts/agent/v1"
 )
 
