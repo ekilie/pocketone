@@ -1,7 +1,6 @@
 package remoteclient
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -67,14 +66,18 @@ type LoginOptions struct {
 	Browser   func(ctx context.Context, c *Client, w *Whoami, opts BrowserLoginOptions) (*LoginResult, error)
 	Device    bool // device code instead of a browser redirect
 	NoBrowser bool // print the sign-in URL instead of opening a browser
-	// Prompt is where a pasted token is read when nothing else signed in; nil means there's no terminal to ask in.
+	// Prompt is where the sign-in is asked for when nothing else signed in (a superuser's email, or a pasted token);
+	// nil means there's no terminal to ask in.
 	Prompt io.Reader
+	// Password reads a password without echoing it (nil: read a line from Prompt).
+	Password func(prompt string) (string, error)
 	// Out gets the prompts and the result line.
 	Out io.Writer
 }
 
 // Login signs in to the client's remote, saves the login and says who it signed in as: with opts.Token or
-// opts.TokenFrom when given, else in the browser when the remote offers OAuth, else with a token pasted at opts.Prompt.
+// opts.TokenFrom when given, else in the browser when the remote offers OAuth, else at opts.Prompt with a superuser's
+// email and password ([PasswordLogin]) or a pasted token.
 // It's the sign-in behind `login`, `link` and `clone`.
 func Login(ctx context.Context, c *Client, opts LoginOptions) (*LoginResult, error) {
 	out := opts.Out
@@ -86,15 +89,32 @@ func Login(ctx context.Context, c *Client, opts LoginOptions) (*LoginResult, err
 		res *LoginResult
 		err error
 	)
+	// one byte at a time: a buffered read could take the next line too (a password typed ahead, read without echo
+	// from the same terminal afterwards)
 	readLine := func(r io.Reader) (string, error) {
-		line, err := bufio.NewReader(r).ReadString('\n')
-		if err != nil && err != io.EOF {
-			return "", err
+		var line []byte
+		b := make([]byte, 1)
+		for {
+			n, err := r.Read(b)
+			if n == 1 {
+				if b[0] == '\n' {
+					return string(line), nil
+				}
+				line = append(line, b[0])
+			}
+			if err == io.EOF {
+				return string(line), nil
+			}
+			if err != nil {
+				return "", err
+			}
 		}
-		return line, nil
 	}
 	switch {
 	case opts.TokenFrom != nil:
+		if opts.Prompt != nil { // a person at a terminal, not a pipe
+			fmt.Fprint(out, "Paste the token: ")
+		}
 		line, rerr := readLine(opts.TokenFrom)
 		if rerr != nil {
 			return nil, rerr
@@ -122,12 +142,28 @@ func Login(ctx context.Context, c *Client, opts LoginOptions) (*LoginResult, err
 			if opts.Prompt == nil {
 				return nil, errors.New("no terminal to prompt in: pass --token, --token-stdin, or set " + EnvVar("TOKEN"))
 			}
-			fmt.Fprintf(out, "Signing in to %s.\nPaste an API token: ", c.Remote.URL)
+			fmt.Fprintf(out, "Sign in to %s as one of its superusers.\nEmail (or paste an API token): ", c.Remote.URL)
 			line, rerr := readLine(opts.Prompt)
 			if rerr != nil {
 				return nil, rerr
 			}
-			res, err = LoginWithToken(ctx, c, line)
+			line = strings.TrimSpace(line)
+			if looksLikeToken(line) {
+				res, err = LoginWithToken(ctx, c, line)
+				break
+			}
+			var pw string
+			if opts.Password != nil {
+				pw, rerr = opts.Password("Password: ")
+			} else {
+				fmt.Fprint(out, "Password: ")
+				pw, rerr = readLine(opts.Prompt)
+				pw = strings.TrimRight(pw, "\r\n")
+			}
+			if rerr != nil {
+				return nil, rerr
+			}
+			res, err = PasswordLogin(ctx, c, line, pw)
 		}
 	}
 	if err != nil {
@@ -145,4 +181,12 @@ func Login(ctx context.Context, c *Client, opts LoginOptions) (*LoginResult, err
 		fmt.Fprintln(out, "Note: "+res.Warning)
 	}
 	return res, nil
+}
+
+// looksLikeToken tells a pasted token (an API token or a JWT) from an email at the sign-in prompt.
+func looksLikeToken(s string) bool {
+	if strings.Contains(s, "@") {
+		return false
+	}
+	return strings.HasPrefix(s, "pbt_") || strings.HasPrefix(s, "ph_pat_") || strings.Count(s, ".") == 2
 }
