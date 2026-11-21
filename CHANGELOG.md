@@ -60,6 +60,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ### Added
 
+- Builds on top of PocketOne can be the whole `pocketone` binary plus their own commands: `pocketone.dev/examples/pocketone/binary.Main` takes the build's `--version` text, where `upgrade` gets releases, and extra commands (one with a PocketOne command's name replaces it). PocketHost's `pockethost` uses it.
 - Install on Windows with [Scoop](https://scoop.sh): `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`, then `scoop install pocketone`. Every release updates the manifest; manual steps are in [Install on Windows](https://pocketone.dev/docs/windows).
 
 ### Changed
