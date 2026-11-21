@@ -231,3 +231,33 @@ func freeAddrRT(t *testing.T) string {
 	_ = l.Close()
 	return addr
 }
+
+// A far owner (its health check takes longer than the retry interval, as a fresh connection across the world does)
+// that came back after a restart: a held request goes through once it answers, instead of waiting forever because
+// every probe gave up before it could connect (ams-1 holding lax-1, 2026-11-21).
+func TestHoldForAFarOwner(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == multisite.DefaultHealthPath {
+			time.Sleep(120 * time.Millisecond) // the round trips of a fresh connection from far away
+			_, _ = io.WriteString(w, `{"status":"ok"}`)
+			return
+		}
+		_, _ = io.WriteString(w, "far")
+	}))
+	t.Cleanup(srv.Close)
+	edges := sourceFunc{"lax-1": {ID: "lax-1", InternalURL: srv.URL, Status: "online", LastSeen: time.Now()}}
+	rt := NewRouter(RouterConfig{Edges: edges, Logger: quietLog, Retry: 20 * time.Millisecond})
+	rt.suspect["lax-1"] = true // a forward failed while it restarted
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://x.example.com/", nil).WithContext(ctx)
+	rt.Forward(w, req, multisite.Instance{ID: "x", Hosts: []string{"x.example.com"}, Remote: "lax-1"})
+	if w.Code != 200 || w.Body.String() != "far" {
+		t.Fatalf("held for a far owner: %d %q", w.Code, w.Body.String())
+	}
+	if rt.suspect["lax-1"] {
+		t.Fatal("still suspect after it answered")
+	}
+}

@@ -37,7 +37,8 @@ type RouterConfig struct {
 	HealthPath string
 	// HealthyWindow: an edge heard from more recently than this is healthy without a probe (default 30s).
 	HealthyWindow time.Duration
-	// Retry is how often a held request re-checks its owner (default 250ms).
+	// Retry is how long a held request waits between checks of its owner (default 250ms); each check has its own
+	// timeout.
 	Retry time.Duration
 	// UnavailableMessage is the 503 body (default "This instance is temporarily unavailable. Please retry shortly.").
 	UnavailableMessage string
@@ -52,6 +53,7 @@ const (
 	connectTimeout    = 3 * time.Second
 	staleProbeTimeout = 2 * time.Second
 	staleProbeTTL     = 5 * time.Second
+	holdProbeTimeout  = 2 * time.Second // each health check while a request is held
 )
 
 // Router forwards requests to owner edges.
@@ -197,7 +199,9 @@ func (rt *Router) holdFor(r *http.Request, remote string) bool {
 		if !ok || !rt.alive(r.Context(), e) {
 			return false
 		}
-		if rt.probe(r.Context(), e.InternalURL, rt.cfg.Retry) {
+		// the probe gets its own timeout, not Retry: a fresh connection to a far edge takes several round trips,
+		// and a probe cut off before it connects never succeeds, so the request would wait forever
+		if rt.probe(r.Context(), e.InternalURL, holdProbeTimeout) {
 			rt.mu.Lock()
 			delete(rt.suspect, e.ID)
 			rt.mu.Unlock()
