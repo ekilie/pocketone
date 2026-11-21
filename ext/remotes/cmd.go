@@ -203,7 +203,7 @@ func loginCommand() *cobra.Command {
 		Use:   "login [remote]",
 		Short: "Signs in to a remote and saves the login",
 		Long: "Signs in to a remote: in the browser when the remote offers OAuth (--device for a code on another device), " +
-			"else with a pasted API token.",
+			"else with a superuser's email and password (or a pasted API token).",
 		Args: cobra.MaximumNArgs(1), SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
 			cl, err := remoteclient.Open(cwd(), first(args))
@@ -266,6 +266,13 @@ func runLogin(c *cobra.Command, cl *remoteclient.Client, f loginFlags) error {
 	}
 	if isTerminal(c.InOrStdin()) {
 		opts.Prompt = c.InOrStdin()
+		fd := int(c.InOrStdin().(*os.File).Fd())
+		opts.Password = func(prompt string) (string, error) {
+			fmt.Fprint(c.OutOrStdout(), prompt)
+			b, err := term.ReadPassword(fd)
+			fmt.Fprintln(c.OutOrStdout())
+			return string(b), err
+		}
 	}
 	_, err := remoteclient.Login(ctx, cl, opts)
 	return err

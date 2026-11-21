@@ -87,13 +87,17 @@ name: `pocketone deploy https://other.example.com`.
 pocketone login prod
 ```
 
-`login` tries, in order (the command itself never asks for a password):
+`link` signs in the same way when it adds a remote. Either way you sign in as one of the app's superusers (or its
+users, on the browser pages). `login` tries, in order:
 
 1. **The browser**, when the remote runs [the OAuth server](https://pocketone.dev/docs/extensions/api-tokens/oauth). Your browser opens, you sign in
    and approve, and the command finishes. Over SSH or without a display it shows a code to enter on another device
    instead; `--device` asks for that, and `--no-browser` prints the URL without opening it.
-2. **A pasted token** (`pbt_...`, a PocketHost token, or a PocketBase auth token). At the prompt, paste it, or pass
-   `--token <token>` or `--token-stdin`.
+2. **A superuser's email and password**, when the remote has no OAuth server (stock PocketBase, such as an app a
+   multisite host runs in Docker). The password isn't shown as you type. The login lasts 30 days; changing that
+   superuser's password ends it. A superuser with multi-factor authentication on signs in with a token instead.
+3. **A pasted token** (`pbt_...`, a PocketHost token, or a PocketBase auth token): paste it at the email prompt, or
+   pass `--token <token>` or `--token-stdin`.
 
 A browser login keeps a refresh token and renews itself when it's within a day of expiring.
 
@@ -191,7 +195,7 @@ only that instance).
   (environment first, then the saved login, renewing a browser login when due) and returns a `*remoteclient.Client`:
   base URL, bearer token, an HTTP client with short connect timeouts, and `JSON`, `NewRequest`, `Do` and `Whoami`.
   It also holds the linked project (`LoadProject`), saved logins (`LoadCredentials`) and the sign-ins
-  (`LoginWithToken`, `OAuthLogin`). Deploy's commands build on it.
+  (`LoginWithToken`, `OAuthLogin`, `PasswordLogin`). Deploy's commands build on it.
 - **Commands.** `remotes.Commands()` returns the `remote`, `login`, `logout` and `link` commands, for a binary that
   isn't a `*pocketbase.PocketBase`. The rest of `remote` is generated: every operation of every contract the binary
   links is a `remote ...` command ([cli.commands/v1](https://pocketone.dev/docs/contracts/cli.commands/v1)), such as `remote status`,

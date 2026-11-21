@@ -298,7 +298,7 @@ Signs in to a remote and saves the login
 pocketone login [remote]
 ```
 
-Signs in to a remote: in the browser when the remote offers OAuth (--device for a code on another device), else with a pasted API token.
+Signs in to a remote: in the browser when the remote offers OAuth (--device for a code on another device), else with a superuser's email and password (or a pasted API token).
 
 | Flag | Type | Default | |
 |---|---|---|---|
