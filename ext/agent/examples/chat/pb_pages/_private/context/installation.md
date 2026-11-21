@@ -7,10 +7,10 @@ PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and ta
 ## Homebrew (macOS and Linux)
 
 ```bash
-brew install pockethost/tap/pocketone
+brew install pocketonehq/tap/pocketone
 ```
 
-The formula lives in [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap).
+The formula lives in [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap).
 
 ## Download a release
 

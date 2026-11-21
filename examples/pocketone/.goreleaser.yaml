@@ -69,19 +69,19 @@ release:
     **New install on macOS or Linux:**
 
     ```bash
-    brew install pockethost/tap/pocketone
+    brew install pocketonehq/tap/pocketone
     ```
 
-    That's Homebrew; the formula comes from [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap). Or download the zip for your platform below and run `./pocketone serve`.
+    That's Homebrew; the formula comes from [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap). Or download the zip for your platform below and run `./pocketone serve`.
 
     **New install on Windows:**
 
     ```powershell
-    scoop bucket add pockethost https://github.com/pockethost/scoop-bucket
+    scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket
     scoop install pocketone
     ```
 
-    That's [Scoop](https://scoop.sh); the manifest comes from [pockethost/scoop-bucket](https://github.com/pockethost/scoop-bucket). To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
+    That's [Scoop](https://scoop.sh); the manifest comes from [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket). To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
 
     **Upgrade:**
 
@@ -93,13 +93,13 @@ release:
 
     ## What's in this release
 
-# the Homebrew formula in pockethost/homebrew-tap, updated on every release, prereleases included. brews is deprecated in favor of
+# the Homebrew formula in pocketonehq/homebrew-tap, updated on every release, prereleases included. brews is deprecated in favor of
 # homebrew_casks, but casks are macOS-only and quarantine unsigned binaries; the formula works on macOS and Linux.
 brews:
   - name: pocketone
     ids: [archive_noncgo]
     repository:
-      owner: pockethost
+      owner: pocketonehq
       name: homebrew-tap
     directory: Formula
     homepage: https://github.com/pocketonehq/pocketone
@@ -113,13 +113,13 @@ brews:
     test: |
       system "#{bin}/pocketone", "--version"
 
-# the Scoop manifest in pockethost/scoop-bucket (Windows), updated on every release, prereleases included, the way the
+# the Scoop manifest in pocketonehq/scoop-bucket (Windows), updated on every release, prereleases included, the way the
 # formula above is for Homebrew
 scoops:
   - name: pocketone
     ids: [archive_noncgo]
     repository:
-      owner: pockethost
+      owner: pocketonehq
       name: scoop-bucket
     directory: bucket
     homepage: https://github.com/pocketonehq/pocketone

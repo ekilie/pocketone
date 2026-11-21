@@ -76,7 +76,7 @@ myapp/
 ```
 
 ```bash
-brew install pockethost/tap/pocketone        # Windows: scoop bucket add pockethost https://github.com/pockethost/scoop-bucket; scoop install pocketone
+brew install pocketonehq/tap/pocketone        # Windows: scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket; scoop install pocketone
 pocketone pages starters                     # list kits: minimal (default), mvp, htmx, daisyui, daisyui-docs, datastar, auth
 pocketone pages create myapp --starter auth  # folder must not exist yet
 cd myapp

@@ -10,19 +10,19 @@ PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and ta
 ## Homebrew (macOS and Linux)
 
 ```bash
-brew install pockethost/tap/pocketone
+brew install pocketonehq/tap/pocketone
 ```
 
-The formula lives in [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap).
+The formula lives in [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap).
 
 ## Scoop (Windows)
 
 ```powershell
-scoop bucket add pockethost https://github.com/pockethost/scoop-bucket
+scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket
 scoop install pocketone
 ```
 
-That's [Scoop](https://scoop.sh); the manifest lives in [pockethost/scoop-bucket](https://github.com/pockethost/scoop-bucket).
+That's [Scoop](https://scoop.sh); the manifest lives in [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket).
 To install without Scoop, see [Install on Windows](/docs/windows).
 
 ## Download a release
