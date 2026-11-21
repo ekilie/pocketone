@@ -9,8 +9,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Get started
 
 - [What is PocketOne?](https://pocketone.dev/docs/overview): PocketOne is a community fork of PocketBase. Its core changes are kept small; everything else is an extension.
-- [Installation](https://pocketone.dev/docs/installation): Install PocketOne on macOS, Linux or Windows with Homebrew, Scoop, the install script, a Linux package, a release download or go build, and keep it up to date.
-- [Linux](https://pocketone.dev/docs/linux): Install PocketOne on a Linux server with the install script or a .deb, .rpm or .apk package, run it as a systemd service with HTTPS, and upgrade it.
+- [Installation](https://pocketone.dev/docs/installation): Install PocketOne on macOS, Windows or Linux with Homebrew, Scoop or the install script, run it, and keep it up to date.
 - [Coming from PocketBase](https://pocketone.dev/docs/pocketbase): PocketOne is PocketBase with more built in. What stays the same, and how each added feature compares.
 - [Teach your coding agent](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and PocketPages with our Agent Skills and llms.txt.
 
@@ -37,6 +36,11 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Writing an extension](https://pocketone.dev/docs/writing-an-extension): How to write a PocketOne extension.
 - [Contracts](https://pocketone.dev/docs/contracts): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
 - [Extensions](https://pocketone.dev/docs/extensions): Every extension in PocketOne, grouped by what it's for.
+
+## Guides
+
+- [Advanced installation](https://pocketone.dev/docs/guides/advanced-installation): Install PocketOne off the usual path - the install script's settings, Windows without Scoop, a release zip, or building it from source.
+- [Run on a Linux server](https://pocketone.dev/docs/guides/linux-server): Install PocketOne on a Linux server as a .deb, .rpm or .apk package, run it as a systemd service with its own HTTPS or behind a proxy, deploy your app, upgrade and uninstall.
 
 ## Reference
 
@@ -276,4 +280,3 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Optional
 
 - [PocketBase compatibility](https://pocketone.dev/docs/compatibility): Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.
-- [Install on Windows](https://pocketone.dev/docs/windows): Install PocketOne on Windows without Scoop, from a release zip, with no administrator rights.

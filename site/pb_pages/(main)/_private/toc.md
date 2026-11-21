@@ -2,7 +2,6 @@
 
 - [What is PocketOne?](/docs/overview)
 - [Installation](/docs/installation)
-- [Linux](/docs/linux)
 - [Coming from PocketBase](/docs/pocketbase)
 - [Teach your coding agent](/docs/agents)
 
@@ -29,6 +28,11 @@
 - [Writing an extension](/docs/writing-an-extension)
 - [Contracts](/docs/contracts)
 - [Extensions](/docs/extensions)
+
+# Guides
+
+- [Advanced installation](/docs/guides/advanced-installation)
+- [Run on a Linux server](/docs/guides/linux-server)
 
 # Reference
 

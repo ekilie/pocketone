@@ -32,7 +32,7 @@ This skill covers using PocketOne in an app. Two others cover the rest:
 ```bash
 brew install pocketonehq/tap/pocketone     # macOS or Linux (formula in pocketonehq/homebrew-tap)
 # or, macOS or Linux without Homebrew (on Linux: the .deb/.rpm/.apk package with a systemd service,
-# https://pocketone.dev/docs/linux; run it again to upgrade):
+# https://pocketone.dev/docs/guides/linux-server; run it again to upgrade):
 #   curl -fsSL https://pocketone.dev/install.sh | sh
 # Windows (PowerShell, Scoop manifest in pocketonehq/scoop-bucket):
 #   scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket

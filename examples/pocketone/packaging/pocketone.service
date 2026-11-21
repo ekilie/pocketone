@@ -1,6 +1,6 @@
 [Unit]
 Description=PocketOne
-Documentation=https://pocketone.dev/docs/linux
+Documentation=https://pocketone.dev/docs/guides/linux-server
 After=network-online.target
 Wants=network-online.target
 
