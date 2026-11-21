@@ -2,7 +2,6 @@
 
 - [What is PocketOne?](/docs/overview)
 - [Installation](/docs/installation)
-- [Linux](/docs/linux)
 - [Coming from PocketBase](/docs/pocketbase)
 - [Teach your coding agent](/docs/agents)
 

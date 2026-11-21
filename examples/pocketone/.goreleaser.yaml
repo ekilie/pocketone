@@ -81,7 +81,7 @@ release:
     scoop install pocketone
     ```
 
-    That's [Scoop](https://scoop.sh); the manifest comes from [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket). To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
+    That's [Scoop](https://scoop.sh); the manifest comes from [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket). To install without Scoop, see [Windows without Scoop](https://pocketone.dev/docs/installation#windows-without-scoop).
 
     **Without Homebrew, on macOS or Linux:**
 
@@ -89,7 +89,7 @@ release:
     curl -fsSL https://pocketone.dev/install.sh | sh
     ```
 
-    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux](https://pocketone.dev/docs/linux) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
+    On Linux it installs the `.deb`, `.rpm` or `.apk` package below for your system, which adds a systemd service ([Linux server](https://pocketone.dev/docs/installation#linux-server) covers setting it up); on macOS it puts `pocketone` in `/usr/local/bin`.
 
     **Upgrade:**
 

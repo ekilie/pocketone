@@ -36,7 +36,7 @@ That's [Homebrew](https://brew.sh) on macOS or Linux (the formula lives in
 curl -fsSL https://pocketone.dev/install.sh | sh
 ```
 
-On Linux that installs a `.deb`, `.rpm` or `.apk` package with a systemd service ([Linux](https://pocketone.dev/docs/linux)).
+On Linux that installs a `.deb`, `.rpm` or `.apk` package with a systemd service ([Linux server](https://pocketone.dev/docs/installation#linux-server)).
 Or download the zip for your platform from [Releases](https://github.com/pocketonehq/pocketone/releases). Then:
 
 ```bash
