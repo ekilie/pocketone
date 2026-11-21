@@ -84,6 +84,7 @@ You'll see how many files are deployed and how many are uploaded, then a line li
 |---|---|
 | `--restart` | Restart the app after the files are in, when migrations or packages changed. |
 | `--dry-run` | List what would be deployed; deploy nothing. |
+| `--force` | Deploy even when files changed on the remote since your last deploy, pull or dev, overwriting them. |
 | `--out <dir>` | Write the deploy set to a local folder instead of deploying. |
 | `-i`, `--include` | Add include patterns to the default set. |
 | `-e`, `--exclude` | Exclude patterns (`pb_data` is always excluded). |
@@ -104,6 +105,13 @@ own. `pb_pages` and `pb_public` are read from disk on each request, and hooks re
 them says `Migrations or packages changed` and leaves the restart to you: pass `--restart` (the app restarts once,
 after the whole batch is in, and you hear if it fails to start), run `pocketone restart`, or type `r` in `dev`. So
 does the first deploy that creates `pb_hooks`, since a watcher only sees folders that existed when the app started.
+
+**Changes made on the remote:** `deploy`, `pull` and `dev` record each file's hash as of the last time the project and
+the remote agreed on it, in `.pocketone/sync.json`. Before it sends anything, `deploy` compares the remote's files with
+that record. If a file changed there since (an edit made on the server, a migration the dashboard wrote, someone
+else's deploy) and the deploy would overwrite or delete it, it lists those files and deploys nothing: bring them down
+with `pull` or `dev`, or pass `--force` to overwrite them. A change the local copy already has doesn't count. A project
+with no record of the remote (a fresh checkout, CI) deploys without the check.
 
 ### `restart`
 

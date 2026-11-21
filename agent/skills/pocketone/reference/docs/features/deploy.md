@@ -26,6 +26,7 @@ A few more ways to run it:
 pocketone deploy prod                   # to the remote named prod
 pocketone deploy --dry-run              # list what would be sent, send nothing
 pocketone deploy --restart              # restart afterwards if migrations or packages changed
+pocketone deploy --force                # overwrite files that changed on the server since your last deploy
 pocketone restart                       # restart later instead
 ```
 
@@ -41,6 +42,14 @@ Every command takes a remote's name or a URL. Without one, it uses the project's
   restart too.
 
 A deploy never restarts the app on its own.
+
+## When the server changed too
+
+If a file changed on the server since your last deploy, pull or `dev` (someone edited it there, or the dashboard
+wrote a migration) and your deploy would overwrite it, the deploy stops, lists those files and sends nothing. Bring
+them down with `pocketone pull` or `pocketone dev`, then deploy again, or pass `--force` to overwrite them. The record
+of what you last deployed lives in `.pocketone/` in your project, so a fresh checkout or a CI run deploys without the
+check.
 
 ## Work live with `dev`
 

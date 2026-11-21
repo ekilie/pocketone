@@ -66,12 +66,13 @@ Deploys pb\_hooks, pb\_migrations, pb\_pages, pb\_public and packages to a remot
 pocketone deploy [remote]
 ```
 
-Deploys the project's code set (pb\_\* folders except pb\_data and pb\_cache, package.json, bun.lock(b), patches/, and the production node\_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. Hooks, pages and public files take effect by themselves; migrations and packages apply when the app restarts: pass --restart, or run 'pocketone restart' later.
+Deploys the project's code set (pb\_\* folders except pb\_data and pb\_cache, package.json, bun.lock(b), patches/, and the production node\_modules tree) to a remote. Only changed files are uploaded and the remote swaps them in. Hooks, pages and public files take effect by themselves; migrations and packages apply when the app restarts: pass --restart, or run 'pocketone restart' later. A deploy stops when files changed on the remote since your last deploy, pull or dev (an edit through the file drive, a migration the dashboard wrote) and lists them; --force overwrites them. A project with no record of the remote yet (a fresh checkout, CI) deploys without that check.
 
 | Flag | Type | Default | |
 |---|---|---|---|
 | `--dry-run` | bool | – | list what would be deployed, deploy nothing |
 | `-e`, `--exclude` | stringSlice | – | exclude patterns (pb\_data and pb\_cache are always excluded) |
+| `--force` | bool | – | deploy even when files changed on the remote since your last deploy, pull or dev, overwriting them |
 | `-i`, `--include` | stringSlice | – | add include patterns (default set: pb\_\*,pb\_\*/\*\*/\*,package.json,bun.lockb,bun.lock,patches,patches/\*\*/\*) |
 | `--no-node-modules` | bool | – | don't ship node\_modules; leave the remote's alone |
 | `--node-modules` | bool | – | ship the production node\_modules tree (default with a package.json) |
