@@ -2,10 +2,12 @@ package wasm_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -135,7 +137,14 @@ func create(t *testing.T, app core.App, coll string, data map[string]any) (*core
 	}
 	r := core.NewRecord(c)
 	r.Load(data)
-	return r, app.Save(r)
+	err = app.Save(r)
+	// A hook that never settles (seen once in CI, 2026-11-21, not reproduced in 49 runs): print every goroutine, so
+	// the log shows what the call was waiting on.
+	if errors.Is(err, jsvm.ErrTimeout) || (err != nil && strings.Contains(err.Error(), jsvm.ErrTimeout.Error())) {
+		buf := make([]byte, 8<<20)
+		fmt.Fprintf(os.Stderr, "goroutines when the hook timed out:\n%s\n", buf[:runtime.Stack(buf, true)])
+	}
+	return r, err
 }
 
 // TestJSHooks: $wasm from real pb_hooks, plain and under the sandbox: a computed field set before the save,
