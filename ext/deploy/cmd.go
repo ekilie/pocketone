@@ -94,8 +94,6 @@ func firstArg(args []string) string {
 func deployCommand() *cobra.Command {
 	var (
 		f       setFlags
-		commit  string
-		message string
 		out     string
 		dryRun  bool
 		restart bool
@@ -145,13 +143,11 @@ func deployCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, err = Deploy(ctx, c, DeployOptions{CollectOptions: opts, Commit: commit, Message: message, Verbose: f.verbose, Log: log, Restart: restart})
+			_, err = Deploy(ctx, c, DeployOptions{CollectOptions: opts, Verbose: f.verbose, Log: log, Restart: restart})
 			return err
 		},
 	}
 	f.bind(c)
-	c.Flags().StringVar(&commit, "commit", "", "commit SHA to record (default: $GITHUB_SHA, $CI_COMMIT_SHA, or git HEAD)")
-	c.Flags().StringVarP(&message, "message", "m", "", "note to record with this deploy")
 	c.Flags().StringVar(&out, "out", "", "write the deploy set to a local folder instead of deploying")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "list what would be deployed, deploy nothing")
 	c.Flags().BoolVar(&restart, "restart", false, "restart the app after deploying when migrations or packages changed")
@@ -229,7 +225,7 @@ func devCommand() *cobra.Command {
 			if pushOnly {
 				go restartKey(ctx, c, log)
 				return Watch(ctx, opts, 500*time.Millisecond, log, func() {
-					if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Message: "dev", Verbose: f.verbose, Log: log, RestartHint: hint}); err != nil && ctx.Err() == nil {
+					if _, err := Deploy(ctx, c, DeployOptions{CollectOptions: opts, Verbose: f.verbose, Log: log, RestartHint: hint}); err != nil && ctx.Err() == nil {
 						log("Deploy failed: " + err.Error())
 					}
 				})

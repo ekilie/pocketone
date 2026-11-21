@@ -135,7 +135,7 @@ func TestP1ToP1(t *testing.T) {
 	put("pb_data/data.db", "local")
 	deploy := func() *CommitResult {
 		t.Helper()
-		res, err := Deploy(ctx, c, DeployOptions{CollectOptions: CollectOptions{Dir: project}, Commit: "abc", Message: "test"})
+		res, err := Deploy(ctx, c, DeployOptions{CollectOptions: CollectOptions{Dir: project}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -162,9 +162,8 @@ func TestP1ToP1(t *testing.T) {
 	if !deploy().NothingChanged {
 		t.Fatal("no-op")
 	}
-	recs, err := r.app.FindRecordsByFilter(DeploysCollection, "status = 'success'", "-created", 0, 0)
-	if err != nil || len(recs) != 2 || recs[0].GetString("commit") != "abc" || recs[0].GetString("token_label") != "ci" {
-		t.Fatalf("history %d %v", len(recs), err)
+	if _, err := r.app.FindCollectionByNameOrId("_deploy_deploys"); err == nil {
+		t.Fatal("deploy history collection still exists")
 	}
 
 	// read-only token: pull and logs, no deploys
@@ -267,4 +266,41 @@ func (r *p1Remote) waitRestarts(n int32) bool {
 		}
 	}
 	return false
+}
+
+// TestDropDeploysMigration: an app that had deploy history (under its old name, as a system collection with rows)
+// loses the collection when the extension's migrations run.
+func TestDropDeploysMigration(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	c := core.NewBaseCollection("_deploys", deploysCollectionId)
+	c.System = true
+	c.Fields.Add(&core.TextField{Name: "status"})
+	if err := app.Save(c); err != nil {
+		t.Fatal(err)
+	}
+	rec := core.NewRecord(c)
+	rec.Set("status", "success")
+	if err := app.Save(rec); err != nil {
+		t.Fatal(err)
+	}
+	applied, err := extkit.MigrateUp(app, Name, NewExtension(Config{}).Migrations())
+	if err != nil || len(applied) != 2 {
+		t.Fatalf("migrate: %v %v", applied, err)
+	}
+	if _, err := app.FindCollectionByNameOrId(deploysCollectionId); err == nil {
+		t.Fatal("deploy history collection still exists")
+	}
+	// a fresh app (no collection) migrates cleanly too
+	fresh, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fresh.Cleanup()
+	if _, err := extkit.MigrateUp(fresh, Name, NewExtension(Config{}).Migrations()); err != nil {
+		t.Fatal(err)
+	}
 }

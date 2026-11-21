@@ -30,12 +30,10 @@ type fakeTok struct {
 }
 
 type fakeBackend struct {
-	mu        sync.Mutex
-	insts     map[string]Instance // by host
-	pats      map[string]fakeTok
-	records   []DeployRecord
-	recordErr error
-	down      bool
+	mu    sync.Mutex
+	insts map[string]Instance // by host
+	pats  map[string]fakeTok
+	down  bool
 }
 
 func (b *fakeBackend) Lookup(r *http.Request) (Instance, bool) {
@@ -73,22 +71,6 @@ func (b *fakeBackend) Authenticate(r *http.Request, inst Instance) (Auth, error)
 		return Auth{}, ErrNoAccess
 	}
 	return Auth{UserID: p.UserID, Scopes: p.Scopes, Via: "pat", TokenLabel: p.Label}, nil
-}
-
-func (b *fakeBackend) RecordDeploy(_ context.Context, rec DeployRecord) (string, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.records = append(b.records, rec)
-	if b.recordErr != nil {
-		return "", b.recordErr
-	}
-	return fmt.Sprintf("dep%d", len(b.records)), nil
-}
-
-func (b *fakeBackend) last() DeployRecord {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.records[len(b.records)-1]
 }
 
 type fakeInstances struct {
@@ -278,7 +260,7 @@ func files(m map[string]string) (map[string]string, [][]byte) {
 func (f *apiFixture) deploy(content map[string]string, extra map[string]any) resp {
 	f.t.Helper()
 	m, blobs := files(content)
-	body := map[string]any{"files": m, "commit": "deadbeef", "uploadedCount": len(blobs)}
+	body := map[string]any{"files": m}
 	for k, v := range extra {
 		body[k] = v
 	}
@@ -323,7 +305,7 @@ func TestAPIEndToEnd(t *testing.T) {
 	if r.status != 200 {
 		t.Fatalf("commit: %d %s", r.status, r.raw)
 	}
-	if r.body["deployId"] != "dep1" || num0(r.body["writtenCount"]) != 3 || num0(r.body["deletedCount"]) != 1 ||
+	if _, ok := r.body["deployId"]; ok || num0(r.body["writtenCount"]) != 3 || num0(r.body["deletedCount"]) != 1 ||
 		r.body["wasRunning"] != false || r.body["restarted"] != false || r.body["nothingChanged"] != false ||
 		r.body["restartNeeded"] != nil || f.mgr.stops != 0 {
 		t.Fatalf("commit body (hooks reload by themselves, no restart): %s", r.raw)
@@ -334,11 +316,10 @@ func TestAPIEndToEnd(t *testing.T) {
 	if f.read("pb_hooks/main.pb.js") != "routerAdd()" || f.read("pb_data/data.db") != "REMOTE DB" {
 		t.Fatal("files")
 	}
-	rec := f.be.last()
-	if rec.Status != "success" || rec.FileCount != 3 || rec.Commit != "deadbeef" || rec.UploadedCount != 3 || rec.TokenLabel != "CI" || rec.TotalBytes != int64(len("routerAdd()<h1>v1</h1>{}")) {
-		t.Fatalf("record: %+v", rec)
+	if num0(r.body["totalBytes"]) != len("routerAdd()<h1>v1</h1>{}") {
+		t.Fatalf("totalBytes: %s", r.raw)
 	}
-	if _, err := os.Stat(filepath.Join(f.root, "deploys", "inst1", "manifests", "dep1.json")); err != nil {
+	if ms, _ := os.ReadDir(filepath.Join(f.root, "deploys", "inst1", "manifests")); len(ms) != 1 {
 		t.Fatal("manifest not recorded")
 	}
 
@@ -349,10 +330,9 @@ func TestAPIEndToEnd(t *testing.T) {
 		t.Fatalf("pb_public deploy: %s stops=%d", r.raw, f.mgr.stops)
 	}
 
-	// nothing changed: no record, deployId null
-	n := len(f.be.records)
+	// nothing changed
 	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": "routerAdd()", "pb_public/index.html": "<h1>v2</h1>", "package.json": "{}"}, nil)
-	if r.body["nothingChanged"] != true || r.body["deployId"] != nil || len(f.be.records) != n {
+	if r.body["nothingChanged"] != true || num0(r.body["writtenCount"]) != 0 {
 		t.Fatalf("no-op: %s", r.raw)
 	}
 
@@ -363,13 +343,8 @@ func TestAPIEndToEnd(t *testing.T) {
 		t.Fatalf("startError: %s", r.raw)
 	}
 
-	// the mothership can't record: a local id
 	f.mgr.startErr = nil
-	f.be.recordErr = errors.New("down")
 	r = f.deploy(map[string]string{"pb_hooks/main.pb.js": "ok", "package.json": "{}"}, nil)
-	if id, _ := r.body["deployId"].(string); !strings.HasPrefix(id, "local-") {
-		t.Fatalf("local id: %s", r.raw)
-	}
 
 	// a migration waits for a restart: the commit says so and leaves the app alone...
 	stops = f.mgr.stops
@@ -488,8 +463,8 @@ func TestAPIFailedApply(t *testing.T) {
 	if r.status != 409 || f.read("pb_hooks/a.pb.js") != "A" {
 		t.Fatalf("%d %s", r.status, r.raw)
 	}
-	if rec := f.be.last(); rec.Status != "failed" || !strings.Contains(rec.Error, "pb_public/blocker is a directory") {
-		t.Fatalf("%+v", rec)
+	if !strings.Contains(string(r.raw), "pb_public/blocker is a directory") {
+		t.Fatalf("%s", r.raw)
 	}
 }
 

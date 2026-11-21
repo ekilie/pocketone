@@ -21,10 +21,32 @@ func NewExtension(cfg Config) *Extension { return &Extension{Config: cfg} }
 // Name implements [extkit.Extension].
 func (p *Extension) Name() string { return Name }
 
-// Migrations implements extkit.Migrator. 0001 renames _deploys (its name before extension tables were
-// `_<extension>_<table>`) to _deploy_deploys; the id stays.
+// Migrations implements extkit.Migrator. 0001 renamed the deploy history collection _deploys (its name before extension
+// tables were `_<extension>_<table>`) to _deploy_deploys; 0002 drops it, since deploys are no longer recorded.
 func (p *Extension) Migrations() []extkit.Migration {
-	return []extkit.Migration{extkit.RenameCollection("0001_rename_deploys", DeploysCollectionId, "_deploys", DeploysCollection)}
+	return []extkit.Migration{
+		extkit.RenameCollection("0001_rename_deploys", deploysCollectionId, "_deploys", "_deploy_deploys"),
+		{Name: "0002_drop_deploys", Up: dropDeploys},
+	}
+}
+
+// deploysCollectionId is the id the deploy history collection had under both names.
+const deploysCollectionId = "pbc_deploys"
+
+// dropDeploys deletes the deploy history collection and its rows, if it exists.
+func dropDeploys(tx core.App) error {
+	c, err := tx.FindCollectionByNameOrId(deploysCollectionId)
+	if err != nil {
+		return nil
+	}
+	// PocketBase refuses to delete a system collection: clear the flag first
+	if c.System {
+		c.System = false
+		if err := tx.SaveNoValidate(c); err != nil {
+			return err
+		}
+	}
+	return tx.Delete(c)
 }
 
 // Register implements [extkit.Extension].

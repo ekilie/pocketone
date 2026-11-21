@@ -10,11 +10,17 @@ Sections named after a PocketOne release are from before extensions had versions
 ### Upgrading
 
 1. The deploy API's file routes and `pocketone pull` no longer reach `pb_data`, powered off or not. Move data with the PocketBase API, backups (restore/v1), or by copying the folder on the server.
+2. Deploys are no longer recorded. The `_deploy_deploys` collection and its rows are deleted on the first start, by the extension's migration; export them first if you want to keep them.
+3. `pocketone deploy` no longer takes `--commit` or `-m`/`--message` (they only fed the deploy record): remove them from scripts and CI.
 
 ### Changed
 
 - The deploy API gets the instance's folder, writers' lock and restart from the new instance.fs/v1 contract, and provides it on a single app (the app's own folder). Its code-path rules moved there too.
 - File routes (`/files`, `/files/raw`) and `pull` never reach `pb_data`.
+
+### Removed
+
+- Deploy history: the `_deploy_deploys` collection, the commit response's `deployId`, and `Backend.RecordDeploy` (a host's backend now only finds the instance and authenticates).
 
 ## 0.1.0 (2026-11-18)
 

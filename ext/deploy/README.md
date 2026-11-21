@@ -68,14 +68,14 @@ your project folder (or any folder below it).
 
 ```bash
 pocketone deploy                      # to the default remote
-pocketone deploy prod -m "fix signup" # to the remote "prod", with a note
+pocketone deploy prod                 # to the remote "prod"
 pocketone deploy --restart            # and restart if migrations or packages changed (CI)
 pocketone deploy --dry-run            # list what would be sent, send nothing
 pocketone deploy --out /tmp/set       # write the files to a folder instead
 ```
 
 You'll see how many files are deployed and how many are uploaded, then a line like
-`Deployed <id>: 3 changed, 0 deleted, 41 unchanged.` With nothing changed it says `Up to date: no changes.`
+`Deployed: 3 changed, 0 deleted, 41 unchanged.` With nothing changed it says `Up to date: no changes.`
 
 | Flag | What it does |
 |---|---|
@@ -86,8 +86,6 @@ You'll see how many files are deployed and how many are uploaded, then a line li
 | `-e`, `--exclude` | Exclude patterns (`pb_data` is always excluded). |
 | `--node-modules` | Ship the production `node_modules` tree (the default when there's a `package.json`). |
 | `--no-node-modules` | Don't ship `node_modules`; leave the remote's alone. |
-| `--commit <sha>` | Commit to record. Default: `$GITHUB_SHA`, `$CI_COMMIT_SHA`, or git `HEAD`. |
-| `-m`, `--message` | A note to record with the deploy. |
 | `-v`, `--verbose` | List every file. |
 
 **What's sent:** files matching `pb_*` and `pb_*/**/*` except `pb_data`, plus `package.json`, `bun.lock(b)` and
@@ -175,11 +173,6 @@ pocketone logs prod -n 20
 Replays the last 100 lines (`-n`, `--lines`, 0 to 1000), then follows. Requests show as `GET /url → 200 (1.2 ms)` and
 errors are marked `ERR`. PocketBase writes its logs in batches, so lines show up a few seconds late. The stream
 reconnects by itself if it drops.
-
-### Deploy history
-
-Every deploy is recorded in the `_deploy_deploys` collection of the receiving app: status, file counts, bytes, commit,
-message, source, token name, superuser and any error. Superusers can browse it in the dashboard.
 
 ## Integrations
 

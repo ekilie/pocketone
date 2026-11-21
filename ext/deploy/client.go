@@ -13,7 +13,6 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	deployv1 "pocketone.dev/ext/contracts/deploy/v1"
 	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
@@ -348,7 +347,6 @@ func (c *Client) Upload(ctx context.Context, gz []byte) error {
 
 // CommitResult is the remote's answer to a commit.
 type CommitResult struct {
-	DeployId            *string  `json:"deployId"`
 	FileCount           int      `json:"fileCount"`
 	Written             []string `json:"written"`
 	Deleted             []string `json:"deleted"`
@@ -413,9 +411,6 @@ func (c *Client) Commit(ctx context.Context, body map[string]any) (*CommitResult
 // DeployOptions configure [Deploy].
 type DeployOptions struct {
 	CollectOptions
-	Commit  string // recorded commit (default: $GITHUB_SHA, $CI_COMMIT_SHA, or git HEAD)
-	Message string
-	Source  string // recorded source (default: github-actions, ci, or pocketone-cli)
 	Verbose bool
 	Log     func(string)
 	// Restart asks the remote to restart the app after the files are in, when migrations or packages changed.
@@ -465,15 +460,7 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 	if err := up.send(ctx, missing); err != nil {
 		return nil, err
 	}
-	dir := opts.Dir
-	if dir == "" {
-		dir = "."
-	}
-	body := map[string]any{
-		"files": manifest, "nodeModules": managesNM,
-		"commit": orStr(opts.Commit, detectCommit(dir)), "message": opts.Message,
-		"source": orStr(opts.Source, detectSource()), "restart": opts.Restart,
-	}
+	body := map[string]any{"files": manifest, "nodeModules": managesNM, "restart": opts.Restart}
 	res, err := up.commit(ctx, body)
 	if err != nil {
 		return nil, err
@@ -490,10 +477,6 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 		log("Up to date: no changes.")
 		return res, nil
 	}
-	id := ""
-	if res.DeployId != nil {
-		id = " " + *res.DeployId
-	}
 	restart := ""
 	switch {
 	case res.Restarted:
@@ -504,7 +487,7 @@ func Deploy(ctx context.Context, c *Client, opts DeployOptions) (*CommitResult, 
 		restart = " Migrations or packages changed: " + orStr(opts.RestartHint,
 			"run '"+extkit.Command+" restart' (or deploy with --restart) to apply them.")
 	}
-	log(fmt.Sprintf("Deployed%s: %d changed, %d deleted, %d unchanged.%s", id, res.WrittenCount, res.DeletedCount, res.Unchanged, restart))
+	log(fmt.Sprintf("Deployed: %d changed, %d deleted, %d unchanged.%s", res.WrittenCount, res.DeletedCount, res.Unchanged, restart))
 	return res, nil
 }
 
@@ -515,8 +498,6 @@ type uploader struct {
 	byHash  map[string]LocalFile
 	verbose bool
 	log     func(string)
-	count   int
-	bytes   int64
 }
 
 func (u *uploader) send(ctx context.Context, hashes []string) error {
@@ -560,13 +541,10 @@ func (u *uploader) send(ctx context.Context, hashes []string) error {
 			}
 		}
 	}
-	u.count += len(send)
-	u.bytes += bytesTotal
 	return nil
 }
 
 func (u *uploader) commit(ctx context.Context, body map[string]any) (*CommitResult, error) {
-	body["uploadedCount"], body["uploadedBytes"] = u.count, u.bytes
 	res, err := u.c.Commit(ctx, body)
 	var ae *remoteclient.APIError
 	// blobs can be garbage-collected by a concurrent deploy between upload and commit: upload again once
@@ -581,36 +559,10 @@ func (u *uploader) commit(ctx context.Context, body map[string]any) (*CommitResu
 			if err := u.send(ctx, again); err != nil {
 				return nil, err
 			}
-			body["uploadedCount"], body["uploadedBytes"] = u.count, u.bytes
 			res, err = u.c.Commit(ctx, body)
 		}
 	}
 	return res, err
-}
-
-func detectCommit(dir string) string {
-	for _, k := range []string{"GITHUB_SHA", "CI_COMMIT_SHA"} {
-		if v := os.Getenv(k); v != "" {
-			return v
-		}
-	}
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = dir
-	out, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
-}
-
-func detectSource() string {
-	switch {
-	case os.Getenv("GITHUB_ACTIONS") != "":
-		return "github-actions"
-	case os.Getenv("CI") != "":
-		return "ci"
-	}
-	return "pocketone-cli"
 }
 
 func humanBytes(n int64) string {

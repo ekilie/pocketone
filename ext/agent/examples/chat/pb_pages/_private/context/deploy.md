@@ -26,7 +26,7 @@ see a line like `Deployed <id>: 3 changed, 0 deleted, 41 unchanged.` With nothin
 A few more ways to run it:
 
 ```bash
-pocketone deploy prod -m "fix signup"   # to the remote named prod, with a note
+pocketone deploy prod                   # to the remote named prod
 pocketone deploy --dry-run              # list what would be sent, send nothing
 pocketone deploy --restart              # restart afterwards if migrations or packages changed
 pocketone restart                       # restart later instead
@@ -76,8 +76,7 @@ pocketone logs                         # the last 100 lines, then follow
 4. Click **Create token** and copy it. It's shown only once.
 
 In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for the remote named `prod`) to that token, then run
-`pocketone deploy --restart`. The commit is recorded from `$GITHUB_SHA`, `$CI_COMMIT_SHA` or git `HEAD`, or pass
-`--commit`.
+`pocketone deploy --restart`.
 
 ## From an agent
 
@@ -94,8 +93,7 @@ with `remote_restart` and read its log with `remote_logs`. There's no MCP tool t
 - **Never sent:** `pb_data` (your live data), `.git*` files and symlinks. Add your own patterns with `-e`.
 
 Only superusers, or an API token with the `deploy` scope, can deploy. A token with `deploy:read` can only pull files
-and read logs. Every deploy is recorded in the app's `_deploys` collection: who, when, what changed, the commit and your
-note. Superusers can browse it in the dashboard.
+and read logs.
 
 ## Change it
 
