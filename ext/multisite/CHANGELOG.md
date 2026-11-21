@@ -6,6 +6,14 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Upgrading
+
+1. Go: `Host.Runtimes` and `Handler.Runtimes` are now `Runtime` (one runtime/v1 provider); set `Runtime: rt` instead of `Runtimes: []multisite.Runtime{rt}`.
+
+### Changed
+
+- A host runs one runtime: runtime/v1 has one provider (two registered conflict at startup unless `providers: { runtime/v1: <name> }` picks), and an instance the runtime can't serve gets 503. Instances no longer name a runtime.
+
 ## 0.0.2 (2026-11-17)
 
 ### Changed

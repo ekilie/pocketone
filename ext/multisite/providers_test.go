@@ -113,8 +113,8 @@ instances: { file: inst.yaml, dev: true }
 	if src, ok := h.Source.(*YAMLSource); !ok || src.Path != "/etc/x/inst.yaml" || src.Required || !h.Dev {
 		t.Fatalf("source: %+v dev %v", h.Source, h.Dev)
 	}
-	if len(h.Gates) != 1 || len(h.Runtimes) != 1 || h.Runtimes[0].Name() != "fake" || h.Directory == nil {
-		t.Fatalf("gates %d runtimes %v", len(h.Gates), h.Runtimes)
+	if len(h.Gates) != 1 || h.Runtime == nil || h.Runtime.Name() != "fake" || h.Directory == nil {
+		t.Fatalf("gates %d runtime %v", len(h.Gates), h.Runtime)
 	}
 
 	// http alone: plain HTTP, no redirect; a source from the binary wins over the section
@@ -130,27 +130,19 @@ instances: { file: inst.yaml, dev: true }
 	}
 }
 
-// runtime/v1 is Many: every configured runtime in link order, unless `providers:` picks and orders them.
-func TestRuntimesFromProviders(t *testing.T) {
-	two := []Extension{&fakeRuntime{name: "pocker"}, &fakeRuntime{name: "docker"}}
-	names := func(h *Host) string {
-		var n []string
-		for _, rt := range h.Runtimes {
-			n = append(n, rt.Name())
-		}
-		return strings.Join(n, ",")
-	}
+// runtime/v1 is One: a host runs one runtime; two registered conflict unless `providers:` picks.
+func TestRuntimeFromProviders(t *testing.T) {
 	loadConfig(t, "multisite: {}\n")
-	h, err := FromConfig(Options{Extensions: two})
-	if err != nil || names(h) != "pocker,docker" {
-		t.Fatalf("default: %v %v", names(h), err)
+	h, err := FromConfig(Options{Extensions: []Extension{&fakeRuntime{name: "docker"}}})
+	if err != nil || h.Runtime == nil || h.Runtime.Name() != "docker" {
+		t.Fatalf("one: %v %v", h, err)
 	}
-	h, err = FromConfig(Options{Extensions: two, Choices: extkit.Choices{"runtime/v1": []any{"docker", "pocker"}}})
-	if err != nil || names(h) != "docker,pocker" {
-		t.Fatalf("ordered: %v %v", names(h), err)
+	two := []Extension{&fakeRuntime{name: "pocker"}, &fakeRuntime{name: "docker"}}
+	if _, err := FromConfig(Options{Extensions: two}); err == nil || !strings.Contains(err.Error(), "conflict: runtime/v1") {
+		t.Fatalf("two without a pick: %v", err)
 	}
-	h, err = FromConfig(Options{Extensions: two, Choices: extkit.Choices{"runtime/v1": []any{"docker"}}})
-	if err != nil || names(h) != "docker" {
-		t.Fatalf("docker only: %v %v", names(h), err)
+	h, err = FromConfig(Options{Extensions: two, Choices: extkit.Choices{"runtime/v1": "docker"}})
+	if err != nil || h.Runtime.Name() != "docker" {
+		t.Fatalf("picked: %v %v", h, err)
 	}
 }

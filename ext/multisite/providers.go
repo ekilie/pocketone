@@ -103,7 +103,7 @@ func FromConfig(o Options) (*Host, error) {
 	if _, err := h.Setup(o.Choices); err != nil {
 		return nil, err
 	}
-	if len(h.Runtimes) == 0 {
+	if h.Runtime == nil {
 		return nil, errors.New("multisite: no runtime: link one (pocker, docker) and configure it, or check `providers: { runtime/v1: ... }`")
 	}
 	return h, nil

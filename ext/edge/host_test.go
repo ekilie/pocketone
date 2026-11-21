@@ -46,7 +46,7 @@ func TestHostEdgesFromYAML(t *testing.T) {
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	addr := ln.Addr().String()
 	_ = ln.Close()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtimes: []multisite.Runtime{noRuntime{}},
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtime: noRuntime{},
 		Forward: NewRouter(RouterConfig{Edges: edges, Logger: quietLog}).Forward, Listeners: multisite.Listeners{Listen: addr}, Logger: quietLog}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)

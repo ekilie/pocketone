@@ -45,7 +45,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{rt}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: rt, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		slog.Error("host", "error", err)
 		os.Exit(1)

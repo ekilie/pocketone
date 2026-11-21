@@ -42,6 +42,16 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+### Upgrading
+
+1. A multisite host runs one runtime: docker when `pocketone.yaml` has a `docker` section, else pocker. A host that had a `docker` section and served most instances on pocker now serves them all on docker; remove the `docker` section to stay on pocker.
+2. Remove `runtime:` from instance records (instances file or mothership): it's no longer read, and every instance runs on the host's runtime.
+3. `providers: { runtime/v1: ... }` takes one name (`runtime/v1: docker`), not a list.
+
+### Changed
+
+- runtime/v1 has one provider per host: `pocketone serve` with a `multisite` section registers only the runtime it runs (docker with a `docker` section, else pocker), and the instance record's `runtime` field is gone.
+
 ## v0.0.1-alpha.10 (2026-11-20)
 
 ### Highlights

@@ -23,7 +23,7 @@ const DefaultHealthPath = "/.well-known/health"
 type Handler struct {
 	Dir      *Directory
 	Gate     Gate      // nil = admit everything
-	Runtimes []Runtime // in preference order (see [Runtime.Serves])
+	Runtime  Runtime // runtime/v1: runs every instance this host serves
 
 	// Forward serves a request for an instance another edge runs ([Instance.Remote] set), after the gates. Nil = a
 	// plain reverse proxy to Remote as a URL.
@@ -52,17 +52,9 @@ func (h *Handler) log() *slog.Logger {
 	return slog.Default()
 }
 
-// Ready reports whether the directory has loaded and every runtime is ready.
+// Ready reports whether the directory has loaded and the runtime is ready.
 func (h *Handler) Ready() bool {
-	if !h.Dir.Ready() {
-		return false
-	}
-	for _, rt := range h.Runtimes {
-		if !rt.Ready() {
-			return false
-		}
-	}
-	return true
+	return h.Dir.Ready() && h.Runtime != nil && h.Runtime.Ready()
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -115,9 +107,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rt := pick(h.Runtimes, inst)
-	if rt == nil {
-		http.Error(w, "no runtime on this server can run "+inst.ID+versionNote(inst), http.StatusServiceUnavailable)
+	rt := h.Runtime
+	if rt == nil || !rt.Serves(inst) {
+		http.Error(w, "this server can't run "+inst.ID+versionNote(inst), http.StatusServiceUnavailable)
 		return
 	}
 	if pc, ok := rt.(Prechecker); ok && !pc.Precheck(w, r, inst) {
@@ -238,10 +230,8 @@ var forwardTransport = &http.Transport{
 
 func (h *Handler) serveHealth(w http.ResponseWriter) {
 	running := 0
-	for _, rt := range h.Runtimes {
-		if s, ok := rt.(Statser); ok {
-			running += s.RunningCount()
-		}
+	if s, ok := h.Runtime.(Statser); ok {
+		running = s.RunningCount()
 	}
 	status := http.StatusOK
 	body := map[string]any{"status": "ok", "instances": h.Dir.Len(), "running": running}

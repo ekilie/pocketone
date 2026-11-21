@@ -51,7 +51,7 @@ instances:
 	}
 	addr := ln.Addr().String()
 	_ = ln.Close()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtimes: []multisite.Runtime{okRuntime{}},
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtime: okRuntime{},
 		Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: addr}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)

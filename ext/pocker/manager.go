@@ -171,7 +171,7 @@ func NewManager(scope *extkit.Scope, opts ManagerOptions) *Manager {
 		m.dir.Subscribe(m.Sync) // with a shared directory, the host subscribes its runtime
 	}
 	m.hooks = multisite.NewScriptWatcher(opts.Logger, m.hooksChanged)
-	m.handler = &multisite.Handler{Dir: m.dir, Gate: opts.Gate, Runtimes: []multisite.Runtime{m}, Forward: opts.Forward,
+	m.handler = &multisite.Handler{Dir: m.dir, Gate: opts.Gate, Runtime: m, Forward: opts.Forward,
 		InstanceRoutes: opts.InstanceRoutes, Dev: opts.Dev, Logger: opts.Logger}
 	return m
 }
@@ -238,8 +238,8 @@ func (m *Manager) Lookup(host string) (Instance, bool) { return m.dir.Lookup(hos
 // Name implements [multisite.Runtime].
 func (m *Manager) Name() string { return "pocker" }
 
-// Serves implements [multisite.Runtime]: every instance that doesn't ask for another runtime.
-func (m *Manager) Serves(inst Instance) bool { return inst.Runtime == "" || inst.Runtime == "pocker" }
+// Serves implements [multisite.Runtime]: every instance (they all run this process's PocketBase).
+func (m *Manager) Serves(Instance) bool { return true }
 
 // app returns the instance's running app, starting it (once, shared by concurrent callers) if needed.
 // A failed start is not cached: the next request tries again.

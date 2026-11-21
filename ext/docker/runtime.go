@@ -252,12 +252,12 @@ func (rt *Runtime) dial(ctx context.Context, network, addr string) (net.Conn, er
 // Name implements [multisite.Runtime].
 func (rt *Runtime) Name() string { return "docker" }
 
-// Serves implements [multisite.Runtime].
+// Serves implements [multisite.Runtime]: every instance, unless Config.Serves says otherwise.
 func (rt *Runtime) Serves(inst multisite.Instance) bool {
 	if rt.cfg.Serves != nil {
 		return rt.cfg.Serves(inst)
 	}
-	return inst.Runtime == "" || inst.Runtime == "docker"
+	return true
 }
 
 // Ready implements [multisite.Runtime]: true once Start has adopted the running containers.
@@ -891,7 +891,7 @@ func (rt *Runtime) Sync(ch multisite.Change, prev *multisite.Instance) {
 	if !ok {
 		return
 	}
-	if ch.Kind == multisite.Delete || ch.Instance.Remote != "" || (ch.Instance.Runtime != "" && ch.Instance.Runtime != "docker") {
+	if ch.Kind == multisite.Delete || ch.Instance.Remote != "" {
 		go rt.Stop(context.Background(), ch.Instance.ID)
 		return
 	}

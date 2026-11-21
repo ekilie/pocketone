@@ -62,8 +62,8 @@ func (h *Host) Use(exts ...Extension) error {
 	return nil
 }
 
-// Setup seals h's contracts, with `providers:` choices for the host-scope ones (`runtime/v1: [pocker, docker]`), and
-// takes h's source, runtimes, gates, wrappers and TLS from them. h.Source, if set, is the default source; gates and
+// Setup seals h's contracts, with `providers:` choices for the host-scope ones (`runtime/v1: docker`), and takes h's
+// source, runtime, gates, wrappers and TLS from them (a runtime set on h directly is used when none is provided). h.Source, if set, is the default source; gates and
 // wrappers set on h directly come after the contracts' (inside them). It returns the startup lines, also logged.
 func (h *Host) Setup(choices extkit.Choices) ([]string, error) {
 	s := h.scope()
@@ -78,7 +78,9 @@ func (h *Host) Setup(choices extkit.Choices) ([]string, error) {
 	if src, ok := sourcev1.Contract.In(s); ok {
 		h.Source = src
 	}
-	h.Runtimes = append(runtimev1.Contract.AllIn(s), h.Runtimes...)
+	if rt, ok := runtimev1.Contract.In(s); ok {
+		h.Runtime = rt
+	}
 	h.Gates = append(gatev1.Contract.AllIn(s), h.Gates...)
 	var wraps []func(http.Handler) http.Handler
 	for _, w := range wrapv1.Contract.AllIn(s) {

@@ -1,7 +1,6 @@
 // Package runtimev1 is the runtime/v1 contract: what runs a multisite host's instances (ext/pocker as isolates,
-// ext/docker in containers). A host may have several, in preference order: each instance runs on the one it names
-// (Instance.Runtime), else the first that serves it. `providers: { runtime/v1: [pocker, docker] }` picks and orders
-// them.
+// ext/docker in containers). A host runs exactly one: every instance runs on it. When more than one is registered,
+// `providers: { runtime/v1: docker }` picks.
 //
 // A host-scope service contract: providers register on the host's scope (ProvideIn), not on an app.
 package runtimev1
@@ -16,9 +15,9 @@ import (
 
 // Runtime runs instances on this host.
 type Runtime interface {
-	// Name identifies the runtime ("pocker", "docker"); an instance may ask for one in Instance.Runtime.
+	// Name identifies the runtime ("pocker", "docker"), for logs and the host's startup lines.
 	Name() string
-	// Serves reports whether this runtime can run inst (e.g. its PocketBase version).
+	// Serves reports whether this runtime can run inst (e.g. its PocketBase version); the host refuses one it can't.
 	Serves(inst sourcev1.Instance) bool
 	// ServeInstance serves a request for inst, starting it on demand. The host has already resolved the instance,
 	// admitted the request (gates) and decided it runs here.
@@ -57,4 +56,4 @@ type Statser interface {
 }
 
 // Contract is runtime/v1, on a host's scope.
-var Contract = extkit.NewContract[Runtime]("runtime/v1", extkit.Many)
+var Contract = extkit.NewContract[Runtime]("runtime/v1", extkit.One)

@@ -7,6 +7,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Changed
+
+- Serves every instance by default (`Config.Serves` can still narrow it); instances no longer name a runtime, and a host runs docker or pocker, never both.
+
 ## 0.0.3 (2026-11-18)
 
 ### Fixed
