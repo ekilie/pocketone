@@ -18,6 +18,7 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ### Changed
 
+- Each instance's `pb_cache` is outside its folder, in the host's `pb_cache/instances/<instance id>/`: the instance's extensions (`extkit.CacheDir`) and host-side caches about it (instance.fs/v1's `CacheDir`, deploy's upload store) go there. Copies, archives and moves of an instance folder no longer carry it; an old `pb_cache` left in an instance folder can be deleted.
 - Serves every instance; instances no longer name a runtime, and a host runs pocker or docker, never both.
 
 ## 0.1.1 (2026-11-18)

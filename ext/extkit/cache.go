@@ -17,16 +17,48 @@ import (
 //   - Disposable: anything in it may be deleted at any time (`pocketone cache clear`, an admin, a cleanup), and the
 //     extension carries on: it rebuilds, re-downloads or re-reads what it needs.
 //   - Never backed up (it's outside pb_data) and never deployed or synced by ext/deploy; projects gitignore it.
-//   - Per app: on a multisite host each instance has its own pb_cache/ in its folder, so it counts against that
-//     instance's disk and one instance never sees another's. A cache that serves every instance of a host at once
-//     uses [HostCacheDir].
+//   - Per app: each app has its own pb_cache, and one instance never sees another's. On a multisite host that set a
+//     cache root ([Scope.SetCacheRoot]) an instance's pb_cache is hoisted out of its folder, to
+//     <host pb_cache>/instances/<instance id>/: copies, archives and moves of the instance folder never carry it, and
+//     a container running the instance can't write to it. A cache that serves every instance of a host at once uses
+//     [HostCacheDir] (<host pb_cache>/<ext>).
 
 // CacheFolder is the name of the cache folder next to pb_data.
 const CacheFolder = "pb_cache"
 
-// CacheRoot is app's pb_cache folder (not created).
+// InstancesCacheFolder is the folder in a host's pb_cache that holds each instance's own pb_cache. No extension may
+// use it as a [HostCacheDir] name.
+const InstancesCacheFolder = "instances"
+
+// CacheRoot is app's pb_cache folder (not created): next to its pb_data, or, for an instance of a multisite host that
+// set a cache root, [InstanceCacheRoot].
 func CacheRoot(app core.App) string {
+	s := scopeOf(app)
+	s.mu.Lock()
+	host, instance := s.host, s.instance
+	s.mu.Unlock()
+	if host != nil {
+		if root := InstanceCacheRoot(host, instance); root != "" {
+			return root
+		}
+	}
 	return filepath.Join(filepath.Dir(filepath.Clean(app.DataDir())), CacheFolder)
+}
+
+// InstanceCacheRoot is the pb_cache of a host's instance, outside the instance's folder:
+// <host pb_cache>/instances/<instance>. "" when the host set no cache root ([Scope.SetCacheRoot]) or instance isn't a
+// plain name. Hosts use it for the caches they keep about an instance (instance.fs/v1's CacheDir).
+func InstanceCacheRoot(host *Scope, instance string) string {
+	if host == nil || instance == "" || instance == "." || instance == ".." || strings.ContainsAny(instance, `/\`) {
+		return ""
+	}
+	host.mu.Lock()
+	root := host.cacheRoot
+	host.mu.Unlock()
+	if root == "" {
+		return ""
+	}
+	return filepath.Join(root, InstancesCacheFolder, instance)
 }
 
 // CacheDir returns app's pb_cache/<ext>, creating it.
@@ -47,13 +79,17 @@ func HostCacheDir(app core.App, ext string) (string, error) {
 		root := host.cacheRoot
 		host.mu.Unlock()
 		if root != "" {
+			if ext == InstancesCacheFolder {
+				return "", fmt.Errorf("extkit: cache folder: %q is reserved for instances' caches", ext)
+			}
 			return makeCacheDir(root, ext)
 		}
 	}
 	return CacheDir(app, ext)
 }
 
-// SetCacheRoot sets a host scope's own pb_cache folder, where [HostCacheDir] puts its instances' shared caches.
+// SetCacheRoot sets a host scope's own pb_cache folder: [HostCacheDir] puts its instances' shared caches there, and
+// each instance's own pb_cache goes in its instances/ folder ([InstanceCacheRoot]). Set it before instances start.
 func (s *Scope) SetCacheRoot(dir string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

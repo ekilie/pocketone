@@ -13,6 +13,7 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ### Changed
 
+- The host keeps its own `pb_cache` next to the instances' folders, and each instance's host-side cache (instance.fs/v1's `CacheDir`, deploy's upload store) in its `instances/<instance id>/`, outside the folder the container mounts. `Runtime.Files` takes the host scope.
 - Serves every instance by default (`Config.Serves` can still narrow it); instances no longer name a runtime, and a host runs docker or pocker, never both.
 
 ## 0.0.3 (2026-11-18)

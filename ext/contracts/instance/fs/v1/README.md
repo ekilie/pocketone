@@ -36,8 +36,9 @@ The package also holds the code-path rules every user shares:
 - `Resolve(dir, p)`: a client path to a file inside `dir`, refusing unreachable paths, symlink crossings and anything
   that lands outside the folder (`*PathError`).
 
-`CacheDir(ctx, name)` is the extension's folder for files it can rebuild (`pb_cache/<name>` in the instance folder by
-default, PocketOne's `pb_cache` convention): anything in it may be deleted at any time, it is never code and never
+`CacheDir(ctx, name)` is the extension's folder for files it can rebuild, following PocketOne's `pb_cache` convention
+(`pb_cache/<name>` in the app's folder on a single app; Pocker and Docker hosts keep it outside the instance folder, in
+the host's `pb_cache/instances/<id>/<name>`): anything in it may be deleted at any time, it is never code and never
 reachable, and it is on the same filesystem as `Dir`, so an extension can stage files there and rename them in
 atomically.
 

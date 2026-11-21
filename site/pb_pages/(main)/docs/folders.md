@@ -31,7 +31,7 @@ pocketone cache clear          # empty every folder
 pocketone cache clear agent    # empty one
 ```
 
-On a multisite host every instance has its own `pb_cache` in its folder, and it counts against that instance's disk.
+On a multisite host every instance has its own `pb_cache`, kept by the host outside the instance's folder, in the host's `pb_cache/instances/<instance id>/`. Copies, archives and moves of an instance's folder never carry it, and a Docker container never sees it.
 
 ## Extension tables
 

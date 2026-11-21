@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
+	"pocketone.dev/ext/extkit"
 	"pocketone.dev/ext/multisite"
 )
 
@@ -20,7 +21,9 @@ func TestFiles(t *testing.T) {
 	rt := &Runtime{cfg: Config{DataRoot: data}, ctrs: map[string]*ctr{}}
 	dir := multisite.NewDirectory(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	dir.Load([]multisite.Instance{{ID: "abc", Hosts: []string{"abc.example.com"}}})
-	files := rt.Files(dir)
+	host := extkit.NewScope("multisite")
+	host.SetCacheRoot(filepath.Join(data, "pb_cache"))
+	files := rt.Files(dir, host)
 
 	if _, err := files.Instance(ctx, "nope"); !errors.Is(err, fsv1.ErrNoInstance) {
 		t.Fatalf("unknown: %v", err)
@@ -37,6 +40,15 @@ func TestFiles(t *testing.T) {
 	}
 	if d, _ := f.Dir(ctx); d != filepath.Join(data, "abc") {
 		t.Fatalf("dir: %s", d)
+	}
+	// its cache is outside the folder its container mounts, in the host's pb_cache
+	if d, err := f.CacheDir(ctx, "deploy"); err != nil || d != filepath.Join(data, "pb_cache", "instances", "abc", "deploy") {
+		t.Fatalf("cache: %s %v", d, err)
+	}
+	// a host without a cache root keeps it in the instance's folder
+	bare, _ := rt.Files(dir, extkit.NewScope("multisite")).Instance(ctx, "abc")
+	if d, _ := bare.CacheDir(ctx, "deploy"); d != filepath.Join(data, "abc", "pb_cache", "deploy") {
+		t.Fatalf("cache without host root: %s", d)
 	}
 
 	// not running: the change applies, nothing is held
