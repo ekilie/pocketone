@@ -7,6 +7,9 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- Tokens from another system keep working: `RegisterPrefix` lets secrets start with another prefix (e.g. `ph_pat_`)
+  besides `pbt_`, and `Import` stores a secret with a registered prefix (its hash) with an owner, scopes and expiry.
+  New tokens still start with `pbt_`.
 - New contract api-tokens.verify/v1: another server checks one of the app's tokens
   (`POST /api/_c/api-tokens.verify/v1`, superusers, scope `api_tokens_verify`) and gets its owner and scopes, or why
   it isn't valid. A host in front of an app's accounts uses it instead of a route of its own.

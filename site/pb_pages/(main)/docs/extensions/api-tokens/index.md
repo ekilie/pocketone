@@ -372,6 +372,22 @@ tokens.MustRegister(app, apitokens.Config{
 With `MaxTTL` set, a token asked for with no expiry or a later one gets the cap instead. If you narrow `Collections`,
 The OAuth server can only sign in accounts of those collections.
 
+### Bringing tokens from another system
+
+To keep tokens another system issued working (their owners already hold the secrets), register their prefix and
+store each one with `Import`, which keeps only its hash, as `Create` does:
+
+```go
+tk.RegisterPrefix("ph_pat_") // pbt_ is always registered
+rec, err := tk.Import(owner, "ph_pat_…", apitokens.CreateOptions{Name: "ci", Scopes: []string{"deploy"}})
+```
+
+Every registered prefix is checked the same way: a secret starts with one and has at least 32 characters after it.
+`Import` takes a `pbt_` secret too (a token moving from another app). The one difference: tokens the app creates
+always start with `pbt_`. A prefix is lower-case letters, digits and `_`, ends with `_`, and can't overlap one
+already registered. The old system's hash is usually of something else, so import a secret when it's next used
+(check it the old way, then `Import` it), not ahead of time.
+
 ## How it works
 
 - Tokens live in the `_api_tokens_tokens` collection: owner (collection id and record id), name, `hash` (SHA-256 of the secret;

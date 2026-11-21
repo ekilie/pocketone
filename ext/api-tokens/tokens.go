@@ -22,6 +22,7 @@ import (
 	"pocketone.dev/ext/extkit"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/dbx"
@@ -36,9 +37,9 @@ const Prefix = "pbt_"
 
 const (
 	storeKey      = "api-tokens"
-	secretLen     = 40 // random alphanumerics after the prefix (~238 bits)
-	displayLen    = len(Prefix) + 6
+	secretLen     = 40          // random alphanumerics after the prefix (~238 bits)
 	touchInterval = time.Minute // last_used is written at most this often per token
+	minSecret     = 32          // characters a secret needs after its prefix
 )
 
 // Errors returned by [Tokens.Verify].
@@ -70,6 +71,9 @@ type Tokens struct {
 	app      core.App
 	cfg      Config
 	registry registry
+
+	mu       sync.RWMutex
+	prefixes []string // token prefixes this app accepts: Prefix, then RegisterPrefix's
 }
 
 //go:embed ui
@@ -91,7 +95,7 @@ func Register(app core.App, cfg Config) (*Tokens, error) {
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
-	t := &Tokens{app: app, cfg: cfg}
+	t := &Tokens{app: app, cfg: cfg, prefixes: []string{Prefix}}
 	if p, ok := app.Store().Get(pendingKey).(*registry); ok { // registered by pb_hooks before Register
 		for _, s := range p.list() {
 			if err := t.registry.add(s); err != nil {
@@ -206,12 +210,42 @@ type CreateOptions struct {
 
 // Create issues a token for owner and returns its secret (shown once, never stored) and its record.
 func (t *Tokens) Create(owner *core.Record, opts CreateOptions) (string, *core.Record, error) {
+	scopes, err := t.checkNew(owner, &opts)
+	if err != nil {
+		return "", nil, err
+	}
+	secret := Prefix + security.RandomString(secretLen)
+	rec, err := t.save(owner, scopes, opts, secret, len(Prefix))
+	if err != nil {
+		return "", nil, err
+	}
+	return secret, rec, nil
+}
+
+// Import stores a token issued elsewhere, with the secret its owner already holds, so it keeps working here: a
+// PocketHost personal access token moving onto API tokens, or a pbt_ token from another app. The secret must start
+// with a registered prefix ([Tokens.RegisterPrefix]; pbt_ always is) and have at least 32 characters after it. Like
+// [Tokens.Create] otherwise: only its hash is stored, and owner, scopes and expiry are checked the same way.
+func (t *Tokens) Import(owner *core.Record, secret string, opts CreateOptions) (*core.Record, error) {
+	if !t.IsSecret(secret) {
+		return nil, fmt.Errorf("api-tokens: an imported secret starts with one of %v and has at least %d characters after it",
+			t.Prefixes(), minSecret)
+	}
+	scopes, err := t.checkNew(owner, &opts)
+	if err != nil {
+		return nil, err
+	}
+	return t.save(owner, scopes, opts, secret, len(t.prefixOf(secret)))
+}
+
+// checkNew checks a new token's owner, scopes and expiry (capped by Config.MaxTTL).
+func (t *Tokens) checkNew(owner *core.Record, opts *CreateOptions) ([]string, error) {
 	if owner == nil || !t.AllowedCollection(owner.Collection()) {
-		return "", nil, fmt.Errorf("api-tokens: records of this collection can't own API tokens")
+		return nil, fmt.Errorf("api-tokens: records of this collection can't own API tokens")
 	}
 	scopes, err := t.normalizeScopes(owner, opts.Scopes)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	now := t.cfg.Now()
 	if t.cfg.MaxTTL > 0 {
@@ -221,20 +255,23 @@ func (t *Tokens) Create(owner *core.Record, opts CreateOptions) (string, *core.R
 		}
 	}
 	if !opts.Expires.IsZero() && !opts.Expires.After(now) {
-		return "", nil, fmt.Errorf("api-tokens: expiry is in the past")
+		return nil, fmt.Errorf("api-tokens: expiry is in the past")
 	}
+	return scopes, nil
+}
 
+// save writes a token record for secret; prefixLen is its prefix's length (the display prefix shows 6 more).
+func (t *Tokens) save(owner *core.Record, scopes []string, opts CreateOptions, secret string, prefixLen int) (*core.Record, error) {
 	col, err := t.app.FindCachedCollectionByNameOrId(CollectionId)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	secret := Prefix + security.RandomString(secretLen)
 	rec := core.NewRecord(col)
 	rec.Set("owner_collection", owner.Collection().Id)
 	rec.Set("owner", owner.Id)
 	rec.Set("name", strings.TrimSpace(opts.Name))
 	rec.Set("hash", hashSecret(secret))
-	rec.Set("prefix", secret[:displayLen])
+	rec.Set("prefix", secret[:prefixLen+6])
 	rec.Set("scopes", scopes)
 	rec.Set("client_id", opts.ClientId)
 	rec.Set("audience", strings.TrimSpace(opts.Audience))
@@ -242,9 +279,9 @@ func (t *Tokens) Create(owner *core.Record, opts CreateOptions) (string, *core.R
 		rec.Set("expires", opts.Expires.UTC())
 	}
 	if err := t.app.Save(rec); err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return secret, rec, nil
+	return rec, nil
 }
 
 // normalizeScopes checks a new token's scopes for owner: registered, allowed for its collection, values only on
@@ -309,7 +346,7 @@ func (i *Info) HasScopeFor(scope, value string) bool {
 
 // Verify resolves a secret to its token and owner. It doesn't record the use (the middleware does).
 func (t *Tokens) Verify(secret string) (*Info, error) {
-	if !strings.HasPrefix(secret, Prefix) || len(secret) != len(Prefix)+secretLen {
+	if !t.IsSecret(secret) {
 		return nil, ErrInvalid
 	}
 	rec, err := t.app.FindFirstRecordByData(CollectionId, "hash", hashSecret(secret))
@@ -406,6 +443,66 @@ func (t *Tokens) revokeWhere(where dbx.Expression) (int, error) {
 		return nil
 	})
 	return n, err
+}
+
+// RegisterPrefix lets token secrets start with p as well as pbt_: tokens another system issued, brought in with
+// [Tokens.Import] so the secrets their owners already hold keep working (PocketHost's "ph_pat_"). Tokens this app
+// creates always start with pbt_. A prefix is lower-case letters, digits and "_", ends with "_", and doesn't overlap
+// one already registered (one can't start with another). Registering the same prefix again does nothing.
+func (t *Tokens) RegisterPrefix(p string) error {
+	if !validPrefix(p) {
+		return fmt.Errorf("api-tokens: prefix %q: lower-case letters, digits and \"_\", ending with \"_\"", p)
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, q := range t.prefixes {
+		if q == p {
+			return nil
+		}
+		if strings.HasPrefix(p, q) || strings.HasPrefix(q, p) {
+			return fmt.Errorf("api-tokens: prefix %q overlaps %q", p, q)
+		}
+	}
+	t.prefixes = append(t.prefixes, p)
+	return nil
+}
+
+// Prefixes lists the prefixes token secrets may start with: pbt_ first, then the registered ones.
+func (t *Tokens) Prefixes() []string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return slices.Clone(t.prefixes)
+}
+
+// IsSecret reports whether s has the shape of one of this app's token secrets: a registered prefix and at least 32
+// characters after it (pbt_ tokens have 40). Anything else in an Authorization header is left to PocketBase (a JWT).
+func (t *Tokens) IsSecret(s string) bool {
+	p := t.prefixOf(s)
+	return p != "" && len(s)-len(p) >= minSecret
+}
+
+// prefixOf is the registered prefix s starts with, or "".
+func (t *Tokens) prefixOf(s string) string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	for _, p := range t.prefixes {
+		if strings.HasPrefix(s, p) {
+			return p
+		}
+	}
+	return ""
+}
+
+func validPrefix(p string) bool {
+	if len(p) < 2 || !strings.HasSuffix(p, "_") {
+		return false
+	}
+	for _, r := range p {
+		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '_') {
+			return false
+		}
+	}
+	return true
 }
 
 func hashSecret(s string) string {

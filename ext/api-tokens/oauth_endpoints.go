@@ -703,7 +703,7 @@ func (s *OAuthServer) revoke(e *core.RequestEvent) error {
 	}
 	tok := e.Request.PostFormValue("token")
 	switch {
-	case strings.HasPrefix(tok, Prefix):
+	case s.tokens().prefixOf(tok) != "":
 		if info, err := s.tokens().Verify(tok); err == nil && info.Token.GetString("client_id") == c.Id {
 			_ = s.tokens().Revoke(info.Token.Id)
 			if r, err := s.app.FindFirstRecordByData(CodesCollectionId, "token_id", info.Token.Id); err == nil {
