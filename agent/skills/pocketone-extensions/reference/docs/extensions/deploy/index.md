@@ -50,8 +50,9 @@ There is no `pocketone.yaml` section, flag or settings screen. Defaults on the r
   API token. A token needs the `deploy` scope (or no scopes); `deploy:read` allows reading files and logs only.
 - **Where files land:** next to `pb_data`, PocketBase's usual layout (`pb_hooks/`, `pb_migrations/`,
   `pb_public/`, `node_modules/` beside it).
-- **Upload store:** uploaded files and past deploys are kept in `.pb_deploy/` next to `pb_data`. It's outside
-  `pb_data`, so backups skip it, and it's never deployed.
+- **Upload store:** uploaded files and the last deploys' file lists are kept in `pb_cache/deploy/` next to
+  `pb_data`. It's only a cache: it's never backed up, deployed or reachable through the file API, and deleting it
+  is safe (files already in the app's folder count as uploaded, so deploys still send only what changed).
 
 On your machine, the commands use the project's remotes and saved logins from [Remotes](https://pocketone.dev/docs/extensions/remotes). In CI,
 set `P1_TOKEN` (or `P1_TOKEN_<REMOTE>`) instead of signing in.
@@ -216,13 +217,15 @@ Its HTTP API under `/api/_c/deploy/v1/`, as the contract describes.
   [ext/contracts/remote/v1/remoteclient](https://github.com/pocketonehq/pocketone/tree/main/ext/contracts/remote/v1/remoteclient)) and finds its deploy API.
   `Deploy`, `Pull`, `Collect`, `Watch` and `NewSyncer` (two-way sync: `Sync`, `RemoteChanged`) are the commands'
   building blocks.
-- **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Instances, PBRoot, DataRoot, PlatformPaths})`
-  builds the API; mount `api.Wrap(next)`. `Backend` decides which instance a request is for (`Lookup(r)`), who it
-  acts as (`Authenticate(r, inst)` → `Auth{UserID, Scopes, Via, TokenLabel}`, an `*AuthError`, or `ErrNoAccess` for a
-  404) and records history. `Instances` stops, swaps and starts instances (pocker's Manager is one). Serve it as deploy/v1 for the host's
-  instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
-- **Restarts.** Your `Instances` should reload an instance by itself when its `pb_hooks` change (pocker's Manager
-  does); deploy only restarts through it when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
+- **Your own host.** `deploy.New(deploy.Options{Prefix, Backend, Files, PlatformPaths})` builds the API.
+  `Backend` decides which instance a request is for (`Lookup(r)`) and who it acts as (`Authenticate(r, inst)` →
+  `Auth{UserID, Scopes, Via, TokenLabel}`, an `*AuthError`, or `ErrNoAccess` for a 404). `Files` returns the host's
+  [instance.fs/v1](https://pocketone.dev/docs/contracts/instance.fs/v1) (Pocker and Docker provide it on the host scope:
+  `fsv1.Contract.In(h.Scope)`), which gives each instance's folder, its `pb_cache/deploy` and its restarts. Serve it as
+  deploy/v1 for the host's instances (`deployv1.Contract.ProvideForInstances`, `extkit.HostRoutes` in
+  `multisite.Host.InstanceRoutes`); restart and logs are the host's remote/v1.
+- **Restarts.** Your runtime should reload an instance by itself when its `pb_hooks` change (pocker's Manager
+  does); deploy only restarts it (instance.fs/v1's `Restart`) when a client asks (`Client.Restart`, or `DeployOptions.Restart`).
 - **Discovery.** Deploy provides the [deploy/v1](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/deploy/v1/deploy.go) contract, which whoami lists, so
   clients find it at `/api/_c/deploy/v1`. A multisite host can provide it for its instances instead.
 

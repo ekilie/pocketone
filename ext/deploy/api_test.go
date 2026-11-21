@@ -148,7 +148,7 @@ func (f *managerFiles) Instance(_ context.Context, id string) (fsv1.FS, error) {
 			}
 			return filepath.Join(f.pbRoot, id)
 		},
-		State:     func(string) string { return filepath.Join(f.stateDir, id) },
+		Cache:     func(string) string { return filepath.Join(f.stateDir, id) },
 		IsRunning: func() bool { return f.m.Running(id) },
 		Stopped: func(ctx context.Context, fn func(context.Context) error) error {
 			return f.m.WithInstanceStopped(ctx, id, func(string) error { return fn(ctx) })
@@ -564,5 +564,64 @@ func TestAPIFiles(t *testing.T) {
 	f.be.pats["ph_pat_ro"] = fakeTok{UserID: "user1", Scopes: []string{"read"}}
 	if r = f.do("PUT", Prefix+"/files/raw?path=pb_hooks/x.js", []byte("x"), withToken("ph_pat_ro")); r.status != 403 {
 		t.Fatal(r.status)
+	}
+}
+
+// The upload store lives in the instance's pb_cache/deploy (instance.fs/v1's default cache folder). A deploy never
+// touches the rest of pb_cache, the file routes never list it, and deleting the store costs nothing: files already
+// in the instance folder count as uploaded.
+func TestAPIStoreInPBCache(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "inst1")
+	be := &fakeBackend{
+		insts: map[string]Instance{"myapp.example.com": {ID: "inst1", Subdomain: "myapp", OwnerID: "user1", Power: true}},
+		pats:  map[string]fakeTok{testPAT: {UserID: "user1", Label: "CI", Scopes: []string{"read", "write"}}},
+	}
+	local := &fsv1.Local{Folder: func() string { return dir }, IsRunning: func() bool { return false }}
+	instFiles := &fsv1.Instances{Known: func(id string) bool { return id == "inst1" }, New: func(string) *fsv1.Local { return local }}
+	api := New(Options{Prefix: Prefix, Backend: be, Files: func() fsv1.Files { return instFiles },
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	srv := httptest.NewServer(api.Wrap(http.NotFoundHandler()))
+	t.Cleanup(srv.Close)
+	f := &apiFixture{t: t, root: root, be: be, api: api, srv: srv}
+	other := filepath.Join(dir, "pb_cache", "cache", "entry")
+	_ = os.MkdirAll(filepath.Dir(other), 0o755)
+	_ = os.WriteFile(other, []byte("another extension's cache"), 0o644)
+
+	content := map[string]string{"pb_hooks/a.pb.js": "A", "pb_public/index.html": "hi"}
+	if r := f.deploy(content, nil); r.status != 200 {
+		t.Fatalf("deploy: %d %s", r.status, r.raw)
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Fatalf("a deploy deleted pb_cache: %v", err)
+	}
+	blob := filepath.Join(dir, "pb_cache", "deploy", "blobs", sha("A")[:2], sha("A"))
+	if _, err := os.Stat(blob); err != nil {
+		t.Fatalf("store not in pb_cache/deploy: %v", err)
+	}
+	if r := f.do("GET", Prefix+"/tree", nil); r.status != 200 || strings.Contains(string(r.raw), "pb_cache") {
+		t.Fatalf("tree lists pb_cache: %d %s", r.status, r.raw)
+	}
+	if r := f.do("GET", Prefix+"/files/raw?path=pb_cache/cache/entry", nil); r.status == 200 {
+		t.Fatalf("file route reached pb_cache: %s", r.raw)
+	}
+	m, _ := files(content)
+	if r := f.do("POST", Prefix+"/check", map[string]any{"files": m}); r.status != 200 || len(r.body["missing"].([]any)) != 0 {
+		t.Fatalf("unchanged deploy should upload nothing: %d %s", r.status, r.raw)
+	}
+
+	// the store is a cache: gone, files already in the instance folder still count, so only new content is uploaded
+	if err := os.RemoveAll(filepath.Join(dir, "pb_cache", "deploy")); err != nil {
+		t.Fatal(err)
+	}
+	if r := f.do("POST", Prefix+"/check", map[string]any{"files": m}); r.status != 200 || len(r.body["missing"].([]any)) != 0 {
+		t.Fatalf("after clearing the store: %d %s", r.status, r.raw)
+	}
+	content["pb_hooks/b.pb.js"] = "B"
+	if r := f.deploy(content, nil); r.status != 200 {
+		t.Fatalf("deploy after clearing the store: %d %s", r.status, r.raw)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "pb_hooks", "b.pb.js")); string(b) != "B" {
+		t.Fatalf("b.pb.js: %q", b)
 	}
 }

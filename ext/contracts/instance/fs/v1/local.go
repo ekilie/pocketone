@@ -12,8 +12,8 @@ import (
 type Local struct {
 	// Folder returns the instance folder ("" while there is none yet). Required.
 	Folder func() string
-	// State returns an extension's state folder. Default: <instance folder>/.pb_<name> (a dot-folder: never code).
-	State func(name string) string
+	// Cache returns an extension's cache folder. Default: <instance folder>/pb_cache/<name>.
+	Cache func(name string) string
 	// IsRunning reports whether the instance runs. Default: always.
 	IsRunning func() bool
 	// Stopped calls fn with the instance stopped; the instance runs again after (now or on its next request).
@@ -39,19 +39,19 @@ func (l *Local) Dir(context.Context) (string, error) {
 	return d, nil
 }
 
-func (l *Local) StateDir(ctx context.Context, name string) (string, error) {
+func (l *Local) CacheDir(ctx context.Context, name string) (string, error) {
 	if !IsSafeRelativePath(name) || filepath.Base(name) != name {
-		return "", errors.New("instance.fs/v1: bad state folder name " + name)
+		return "", errors.New("instance.fs/v1: bad cache folder name " + name)
 	}
 	var d string
-	if l.State != nil {
-		d = l.State(name)
+	if l.Cache != nil {
+		d = l.Cache(name)
 	} else {
 		dir, err := l.Dir(ctx)
 		if err != nil {
 			return "", err
 		}
-		d = filepath.Join(dir, ".pb_"+name)
+		d = filepath.Join(dir, CacheFolder, name)
 	}
 	return d, os.MkdirAll(d, 0o755)
 }

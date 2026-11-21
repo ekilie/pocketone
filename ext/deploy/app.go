@@ -31,8 +31,8 @@ type Config struct {
 	// the parent of the data dir, PocketBase's default layout.
 	Dir string
 
-	// StoreDir keeps uploaded blobs and past manifests. Default: <Dir>/.pb_deploy (outside pb_data, so backups
-	// skip it; not a pb_* name, so it's never deployed).
+	// StoreDir keeps uploaded blobs and past manifests, a cache the next deploy rebuilds if it's deleted. Default:
+	// pb_cache/deploy next to pb_data (never backed up, deployed or reachable through the file API).
 	StoreDir string
 
 	// Prefix is the API path (default deploy/v1's, /api/_c/deploy/v1).
@@ -109,7 +109,7 @@ func Register(app core.App, cfg Config) (*API, error) {
 			cfg.Dir = filepath.Dir(e.App.DataDir())
 		}
 		if cfg.StoreDir == "" {
-			cfg.StoreDir = filepath.Join(cfg.Dir, ".pb_deploy")
+			cfg.StoreDir = filepath.Join(extkit.CacheRoot(e.App), Name)
 		}
 		if t, ok := apitokensv1.Contract.Of(e.App); ok {
 			t.RegisterScope(apitokensv1.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages) and read files",
@@ -166,17 +166,17 @@ func (b *AppBackend) Authenticate(r *http.Request, _ Instance) (Auth, error) {
 	return a, nil
 }
 
-// AppFiles is a single app's instance.fs/v1: its own folder (cfg.Dir, set at bootstrap), deploy state in
-// cfg.StoreDir. It can't stop itself, so a restart applies the change while it runs (each rename is atomic) and then
+// AppFiles is a single app's instance.fs/v1: its own folder (cfg.Dir, set at bootstrap), deploy's cache in
+// cfg.StoreDir and other extensions' in the app's pb_cache. It can't stop itself, so a restart applies the change while it runs (each rename is atomic) and then
 // restarts it (cfg.Restart).
 func AppFiles(app core.App, cfg *Config) fsv1.Files {
 	l := &fsv1.Local{
 		Folder: func() string { return cfg.Dir },
-		State: func(name string) string {
+		Cache: func(name string) string {
 			if name == Name && cfg.StoreDir != "" {
 				return cfg.StoreDir
 			}
-			return filepath.Join(cfg.Dir, ".pb_"+name)
+			return filepath.Join(extkit.CacheRoot(app), name)
 		},
 		Start: func(context.Context) error { return cfg.Restart(app) },
 	}

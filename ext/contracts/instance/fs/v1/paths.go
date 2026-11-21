@@ -9,14 +9,16 @@ import (
 	"strings"
 )
 
-// An instance's code: the pb_* folders except pb_data, package.json and the bun lockfiles at the top, patches/, and
-// the production node_modules tree at the top. pb_data is never part of it, and nothing in this package reaches it.
+// An instance's code: the pb_* folders except pb_data and pb_cache, package.json and the bun lockfiles at the top,
+// patches/, and the production node_modules tree at the top. pb_data and pb_cache are never part of it, and nothing in
+// this package reaches them.
 
 // RootCodeFiles are the code files at the top of an instance folder.
 var RootCodeFiles = []string{"package.json", "bun.lock", "bun.lockb"}
 
 const (
 	DataDir        = "pb_data"
+	CacheFolder    = "pb_cache" // extensions' disposable files ([FS.CacheDir]; extkit's pb_cache convention)
 	NodeModulesDir = "node_modules"
 	PatchesDir     = "patches"
 	MaxPathLength  = 1024
@@ -41,9 +43,14 @@ func IsSafeRelativePath(p string) bool {
 // IsGitSegment: .git, .gitignore, ... never belong to the code.
 func IsGitSegment(seg string) bool { return strings.HasPrefix(seg, ".git") }
 
+// isPBCodeFolder: a top-level pb_* name that holds code (every one but pb_data and pb_cache).
+func isPBCodeFolder(name string) bool {
+	return strings.HasPrefix(name, "pb_") && name != DataDir && name != CacheFolder
+}
+
 // IsCodeRoot: a top-level name the code lives under (or is).
 func IsCodeRoot(name string) bool {
-	return (strings.HasPrefix(name, "pb_") && name != DataDir) || name == PatchesDir || slices.Contains(RootCodeFiles, name)
+	return isPBCodeFolder(name) || name == PatchesDir || slices.Contains(RootCodeFiles, name)
 }
 
 // IsCodePath reports whether p (relative to the instance folder) belongs to the code: what a deploy may write or
@@ -64,29 +71,26 @@ func IsCodePath(p string) bool {
 		return false
 	}
 	if len(segs) == 1 {
-		return slices.Contains(RootCodeFiles, first) || (strings.HasPrefix(first, "pb_") && first != DataDir)
+		return slices.Contains(RootCodeFiles, first) || isPBCodeFolder(first)
 	}
-	if first == DataDir {
-		return false
-	}
-	return strings.HasPrefix(first, "pb_") || first == PatchesDir
+	return isPBCodeFolder(first) || first == PatchesDir
 }
 
 // IsReachable reports whether a file API may read or write p: the code, node_modules at the top or inside a code
-// folder, and patches/. Never pb_data or .git*.
+// folder, and patches/. Never pb_data, pb_cache or .git*.
 func IsReachable(p string) bool {
 	if !IsSafeRelativePath(p) {
 		return false
 	}
 	segs := strings.Split(p, "/")
 	first := segs[0]
-	if first == DataDir || slices.ContainsFunc(segs, IsGitSegment) {
+	if first == DataDir || first == CacheFolder || slices.ContainsFunc(segs, IsGitSegment) {
 		return false
 	}
 	if first == NodeModulesDir || first == PatchesDir || IsCodePath(p) {
 		return true
 	}
-	return len(segs) > 1 && strings.HasPrefix(first, "pb_") && slices.Contains(segs, NodeModulesDir)
+	return len(segs) > 1 && isPBCodeFolder(first) && slices.Contains(segs, NodeModulesDir)
 }
 
 // PathError is a client path Resolve refuses.
@@ -95,7 +99,7 @@ type PathError struct{ Path, Reason string }
 func (e *PathError) Error() string { return e.Path + ": " + e.Reason }
 
 // ErrUnreachable is the reason for a path outside what [IsReachable] allows.
-var ErrUnreachable = errors.New("outside the files you can reach (pb_hooks, pb_migrations, pb_public and other pb_* folders except pb_data, node_modules, package.json, bun.lock(b), patches/)")
+var ErrUnreachable = errors.New("outside the files you can reach (pb_hooks, pb_migrations, pb_public and other pb_* folders except pb_data and pb_cache, node_modules, package.json, bun.lock(b), patches/)")
 
 // Resolve maps a client path (slash-separated, relative to dir; "" is dir itself) to a file path inside dir. It
 // refuses paths [IsReachable] doesn't allow, paths that cross a symbolic link, and anything that would land outside

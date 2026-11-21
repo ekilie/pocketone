@@ -21,6 +21,11 @@ Sections named after a PocketOne release are from before extensions had versions
 
 - The deploy API gets the instance's folder, writers' lock and restart from the new instance.fs/v1 contract, and provides it on a single app (the app's own folder). Its code-path rules moved there too.
 - File routes (`/files`, `/files/raw`) and `pull` never reach `pb_data`.
+- The upload store moves from `.pb_deploy/` to `pb_cache/deploy/` (PocketOne's folder for disposable files). Deploys still upload only what changed (files already in the app's folder count); the old `.pb_deploy/` folder can be deleted.
+
+### Fixed
+
+- A deploy no longer deletes the app's `pb_cache` folder (extensions' caches, such as ext/cache's disk tier), and the file routes no longer reach it: `pb_cache` was counted as code on the server.
 
 ### Removed
 
