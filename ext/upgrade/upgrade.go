@@ -127,6 +127,12 @@ func (p *extension) upgrade(backup, yes bool) error {
 		color.HiBlack("Homebrew keeps the previous version until `brew cleanup`.")
 		return nil
 	}
+	if app := scoopApp(exe); app != "" {
+		color.Yellow("This executable was installed with Scoop. Upgrade it with:")
+		fmt.Printf("\n  scoop update %s\n\n", app)
+		color.HiBlack("Scoop keeps the previous version until `scoop cleanup`.")
+		return nil
+	}
 	if _, err := os.Stat("/.dockerenv"); err == nil {
 		return errors.New("this looks like a Docker container: upgrade the image instead")
 	}
@@ -251,6 +257,18 @@ func KeptName(exe, v string) string {
 }
 
 // homebrewFormula returns the formula name when exe (symlinks resolved) is inside a Homebrew Cellar, else "".
+// scoopApp is the Scoop app name when exe is inside a Scoop install ("<scoop>/apps/<app>/<version or current>/..."),
+// else "". Scoop's default roots are ~/scoop and C:/ProgramData/scoop.
+func scoopApp(exe string) string {
+	parts := strings.Split(strings.ReplaceAll(exe, `\`, "/"), "/")
+	for i := 1; i+2 < len(parts); i++ {
+		if strings.EqualFold(parts[i-1], "scoop") && strings.EqualFold(parts[i], "apps") {
+			return parts[i+1]
+		}
+	}
+	return ""
+}
+
 func homebrewFormula(exe string) string {
 	parts := strings.Split(filepath.ToSlash(exe), "/")
 	for i, part := range parts {

@@ -140,10 +140,20 @@ PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and ta
 ## Homebrew (macOS and Linux)
 
 ```bash
-brew install pockethost/tap/pocketone
+brew install pocketonehq/tap/pocketone
 ```
 
-The formula lives in [pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap).
+The formula lives in [pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap).
+
+## Scoop (Windows)
+
+```powershell
+scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket
+scoop install pocketone
+```
+
+That's [Scoop](https://scoop.sh); the manifest lives in [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket).
+To install without Scoop, see [Install on Windows](https://pocketone.dev/docs/windows).
 
 ## Download a release
 
@@ -187,6 +197,8 @@ catches the mail and shows it at `http://127.0.0.1:8025`.
 ```bash
 pocketone upgrade
 ```
+
+Installed with Homebrew or Scoop? Upgrade with `brew upgrade pocketone` or `scoop update pocketone` instead.
 
 This replaces the executable with the latest release. The old one is kept beside it as `pocketone-<version>`, never
 deleted, so you can go back.
@@ -5735,8 +5747,9 @@ Source: https://pocketone.dev/docs/extensions/pages
 <div class="hero-brand rise">
 <span class="avatar"><img src="/docs/extensions/pages/pocketpages-logo.png" alt="PocketPages logo" /></span>
 <h1 class="hero-title">PocketPages</h1>
-<pre><code class="language-bash">brew install pockethost/tap/pocketone
+<pre><code class="language-bash">brew install pocketonehq/tap/pocketone
 pocketone pages create myapp</code></pre>
+<a class="hero-alt" href="/docs/installation#scoop-windows">On Windows? Install with Scoop</a>
 </div>
 <p class="hero-tagline rise" style="--delay: 0.2s; --rise: 30px">No-Build Multi-Page Apps for <span>PocketOne</span></p>
 <div class="cta-row rise" style="--delay: 0.4s; --rise: 30px">
@@ -24242,3 +24255,44 @@ git fetch upstream master
 | Script | [`run.sh`](https://github.com/pocketonehq/pocketone/blob/main/.github/upstream-tests/run.sh) |
 | Exceptions | [`known-deviations.txt`](https://github.com/pocketonehq/pocketone/blob/main/.github/upstream-tests/known-deviations.txt) |
 | Every core change | [Changes we made to PocketBase](https://github.com/pocketonehq/pocketone#changes-we-made-to-pocketbase) |
+
+
+---
+
+Source: https://pocketone.dev/docs/windows
+
+# Install on Windows
+
+The quickest way is [Scoop](https://pocketone.dev/docs/installation#scoop-windows). Without it, install from a release zip.
+
+Releases include 64-bit Windows builds: the zip ending in `_windows_amd64.zip` for most PCs, `_windows_arm64.zip` for
+ARM ones. The executable inside is `pocketone.exe`. Download one from
+[Releases](https://github.com/pocketonehq/pocketone/releases), then in PowerShell, from the folder you downloaded it to:
+
+```powershell
+$dir = "$env:LOCALAPPDATA\Programs\pocketone"
+Expand-Archive pocketone_*_windows_amd64.zip -DestinationPath $dir -Force
+Unblock-File "$dir\pocketone.exe"
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$dir", "User")
+```
+
+This puts PocketOne in a folder of your own, so it needs no administrator rights, and adds that folder to your user
+`PATH`. Open a new terminal, then check it:
+
+```powershell
+pocketone --version
+```
+
+`Unblock-File` clears the "downloaded from the internet" mark. The executable isn't code-signed, so if you start it
+from File Explorer instead, SmartScreen may stop it: choose **More info**, then **Run anyway**.
+
+## Upgrade
+
+```powershell
+pocketone upgrade
+```
+
+It keeps the old executable as `pocketone-<version>.exe` in the same folder.
+
+The commands in the rest of the docs are the same in PowerShell and in Command Prompt. Continue with
+[Run it](https://pocketone.dev/docs/installation#run-it).

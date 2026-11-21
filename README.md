@@ -26,11 +26,11 @@ PocketOne's core passes PocketBase's own test suite, unmodified, on every change
 ## Install
 
 ```bash
-brew install pockethost/tap/pocketone
+brew install pocketonehq/tap/pocketone
 ```
 
 That's [Homebrew](https://brew.sh) on macOS or Linux (the formula lives in
-[pockethost/homebrew-tap](https://github.com/pockethost/homebrew-tap)). Or download the zip for your platform from
+[pocketonehq/homebrew-tap](https://github.com/pocketonehq/homebrew-tap)). Or download the zip for your platform from
 [Releases](https://github.com/pocketonehq/pocketone/releases). Then:
 
 ```bash
