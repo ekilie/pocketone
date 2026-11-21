@@ -1,6 +1,6 @@
 ---
 title: "PocketOne alpha.11: install anywhere, clone any app"
-description: PocketOne v0.0.1-alpha.11 adds new installation tools, pocketone clone and safer deploys.
+description: PocketOne v0.0.1-alpha.11 adds new installation tools and pocketone clone.
 date: 2026-11-21
 author: Ben Allfree
 tags: release
@@ -12,6 +12,6 @@ Two things this time. It's easier to get PocketOne onto your machine, and easier
 
 **`pocketone clone`.** Got an app running somewhere? `pocketone clone https://myapp.example.com` gives you a local copy, signed in and ready. Then `pocketone dev` and you're editing live.
 
-**Deploys look before they leap.** If somebody changed files on the server since you last synced, `pocketone deploy` tells you which ones and stops. Add `--force` if you really mean it.
+**One fix.** `pocketone deploy` no longer overwrites files somebody changed on the server since you last synced. It tells you which ones and stops. Add `--force` if you really mean it.
 
 To upgrade, run `pocketone upgrade`. On Homebrew, the formula moved: `brew uninstall pocketone`, then `brew install pocketonehq/tap/pocketone`. Multisite hosts and anyone passing `--commit` or `-m` to deploy, check the [release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11) first.
