@@ -1,6 +1,6 @@
 # The release gate: everything, on one commit, before it may be tagged. examples/pocketone/release.sh refuses to tag a
-# commit unless this workflow passed on it. Day to day, a push to main tests only the modules it affects
-# (extensions.yml) and core tests run on core changes and daily (upstream-tests.yml); this is the one run that covers all
+# commit unless this workflow passed on it. Day to day, pushes to main run no tests; nightly.yml checks
+# main once a day and core tests run daily (upstream-tests.yml); this is the one run that covers all
 # of it at once, plus what only matters at a release:
 #
 #   modules   every extension module and examples/pocketone: build, vet, go test -race (extensions.yml, all modules)

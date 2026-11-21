@@ -1,8 +1,8 @@
 # Warms the Go build cache that extensions.yml's test jobs restore. Each test job only restores it (never saves), so
 # without this every job compiled PocketBase, sqlite and its dependencies with -race from scratch.
 #
-# Why it runs on main: a cache saved on a land/* branch is visible only to that branch, while one saved on main (the
-# default branch) is visible to every land branch and pull request. setup-go's own cache didn't work here either: all
+# Why it runs on main: a cache saved on another branch is visible only to that branch, while one saved on main (the
+# default branch) is visible to every branch and pull request. setup-go's own cache didn't work here either: all
 # jobs shared one key, so the first job to finish (extensions' `plan`, which only builds the .github/extensions tool)
 # saved it and every later job found the key taken.
 #

@@ -13,8 +13,9 @@ binary (`examples/pocketone`); the rest of `ext/` are **community extensions**. 
 ## Every core change gets an independent audit before it reaches main
 
 Any commit to `main` that changes core must pass an audit by a reviewer who didn't write it (a fresh agent with no
-context from the change's session, or a human), and must record the result in a `Core-Audit:` commit trailer. CI
-(`.github/workflows/core-audit.yml`) fails commits that change core without one.
+context from the change's session, or a human), and must record the result in a `Core-Audit:` commit trailer. Pushes
+to `main` don't wait on CI, so the audit happens before you push; the nightly run (`.github/workflows/nightly.yml`)
+flags any core commit of the day that lacks one, and pull requests are checked on the pull request.
 
 1. Get the core diff: `.github/core-audit/core-diff.sh origin/main HEAD` (or `<sha>^ <sha>` for one commit).
 2. Give the reviewer only that diff, this section, and the commit message. For each changed hunk it answers:
@@ -87,8 +88,7 @@ directly, and review it before it lands:
    broken.
 4. `go mod tidy` in every module (upstream's dependency bumps reach them), build, vet, and run the full test suite.
 5. Commit with `Core-Audit: upstream-merge vX.Y.Z`, add the **PocketBase** line to `CHANGELOG.md`, rebuild the
-   core branches with `core-changes-branch.sh`, then merge the side branch into local `main` and land it
-   (`.github/land.sh`).
+   core branches with `core-changes-branch.sh`, then merge the side branch into local `main` and push it.
 
 ## Core changes that aren't hooks
 
@@ -185,19 +185,16 @@ waits for (not published on pocketone.dev). `site/extensions.json` holds
   unreleased lines (minor with upgrade steps, else patch), stamps every changelog, and lists the new versions in the
   release's section, which is its notes (`examples/pocketone/release-notes.sh vX.Y.Z`). Upstream PocketBase's changelog
   is `CHANGELOG.pocketbase.md`; never edit it by hand (`.github/upstream-changelog.sh` refreshes it).
-- **`main` moves only through a land branch.** Nobody pushes to `main` directly. Merge your branch into local `main` as
-  usual (the pre-commit hook regenerates generated files), then run `.github/land.sh`. It pushes `HEAD` to
-  `land/<name>`, and `.github/workflows/land.yml` runs what `main` needs on those commits: the extension rules, tidy,
-  build, vet and `-race` tests of every affected module, Core-Audit trailers, PocketBase's suite when core changed, and
-  a check that generated files are current. It fast-forwards `main` only if all of them pass. Your machine is free once
-  the push returns. If `main` moved meanwhile, merge `origin/main` and land again. The `pre-push` hook (same
-  `core.hooksPath`) refuses direct pushes to `main` and, before a land push, runs `go run ./.github/extensions quick`
-  (the rules, `go mod tidy -diff` and `go vet` in each affected module, about 20 s). Outside pull requests get the same
-  checks on the pull request.
-- **Tests, by when they run.** Before landing: build and vet what you touched, and run the tests of the packages you
-  changed when they're quick; no full suite locally. The land branch runs the tests of every affected module in CI, so
-  a red run blocks that land and never reaches `main`. A test that fails on the land branch but not locally is a real
-  bug to fix (often Linux-only), not something to re-run until it passes. The full suite runs once per release: `examples/pocketone/release.sh --check` starts
+- **Pushing to `main` waits on nothing.** PocketOne is in alpha: merge your branch into local `main` (the pre-commit
+  hook regenerates generated files) and `git push origin main`. No CI gates the push. `go run ./.github/extensions quick`
+  (the rules, `go mod tidy -diff` and `go vet` in each affected module, about 20 s) is there when you want a fast check
+  first; nothing runs it for you. CI checks `main` out of band: `.github/workflows/nightly.yml` runs once a day when
+  `main` moved (or on demand, `gh workflow run nightly.yml --ref main`): the extension rules and every module's tidy,
+  build, vet and `-race` tests, Core-Audit trailers on the day's commits, and a check that generated files are current.
+  A red nightly is a bug to fix on `main` next. Outside pull requests get the checks on the pull request.
+- **Tests, by when they run.** Before pushing: build and vet what you touched, and run the tests of the packages you
+  changed when they're quick; no full suite locally. The nightly run tests every module on `main`. A test that fails
+  there but not locally is a real bug to fix (often Linux-only), not something to re-run until it passes. The full suite runs once per release: `examples/pocketone/release.sh --check` starts
   `.github/workflows/release-check.yml` on `main` (every module with `-race`, PocketBase's suite on our core, `ext/jsvm`
   on 32-bit ARM, every release target), and `release.sh vX.Y.Z` tags only a commit that passed it.
 - Plans and internal notes go in a private maintainer repo, never here.
