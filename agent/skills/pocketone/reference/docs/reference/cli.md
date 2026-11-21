@@ -34,6 +34,26 @@ pocketone cache clear [extension...]
 
 From [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
+## pocketone clone
+
+Starts a local project from a running app: makes the folder, links and signs in, and pulls its code
+
+```
+pocketone clone <url> [dir]
+```
+
+Makes dir (default: named after the app's host, e.g. pocketcon for https://pocketcon.dev), adds the app as the project's default remote, signs in (in the browser when the app offers it, else with an API token), and pulls pb\_hooks, pb\_migrations, pb\_pages, pb\_public, pb\_templates, package.json, the lockfile and patches/. pb\_data never comes. Then run `dev` in the folder to keep both sides in step.
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--device` | bool | – | sign in on another device with a code (SSH, headless) |
+| `--name` | string | `default` | remote name |
+| `--no-browser` | bool | – | print the sign-in URL instead of opening a browser |
+| `--token` | string | – | use this API token (pbt\_..., a PocketHost token, or a JWT) |
+| `--token-stdin` | bool | – | read the token from stdin |
+
+From [Deploy](https://pocketone.dev/docs/extensions/deploy).
+
 ## pocketone config
 
 Lists the pocketone.yaml sections this binary understands, with their defaults
@@ -481,7 +501,7 @@ From [PITR](https://pocketone.dev/docs/extensions/pitr).
 
 ## pocketone pull
 
-Downloads files from a remote into the project (default: pb\_hooks, pb\_migrations, pb\_pages, pb\_public, pb\_templates, package.json)
+Downloads files from a remote into the project (default: pb\_hooks, pb\_migrations, pb\_pages, pb\_public, pb\_templates, package.json, the lockfile, patches/)
 
 ```
 pocketone pull [remote] [paths...]

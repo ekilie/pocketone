@@ -1,9 +1,7 @@
 package remotes
 
 import (
-	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -257,68 +255,20 @@ func linkCommand() *cobra.Command {
 }
 
 func runLogin(c *cobra.Command, cl *remoteclient.Client, f loginFlags) error {
-	out := c.OutOrStdout()
-	in := bufio.NewReader(c.InOrStdin())
 	ctx, cancel := context.WithTimeout(c.Context(), 10*time.Minute)
 	defer cancel()
-	cl.Token, cl.TokenSource = "", ""
-
-	var (
-		res *remoteclient.LoginResult
-		err error
-	)
-	switch {
-	case f.tokenStdin:
-		line, rerr := in.ReadString('\n')
-		if rerr != nil && rerr != io.EOF {
-			return rerr
-		}
-		res, err = remoteclient.LoginWithToken(ctx, cl, line)
-	case f.token != "":
-		res, err = remoteclient.LoginWithToken(ctx, cl, f.token)
-	default:
-		// OAuth first, when the remote offers it and this binary has the client half
-		if BrowserLogin != nil {
-			wctx, wcancel := context.WithTimeout(ctx, 20*time.Second)
-			w, werr := cl.Whoami(wctx)
-			wcancel()
-			if werr != nil && !errors.Is(werr, remoteclient.ErrNoWhoami) {
-				return werr
-			}
-			if w != nil && w.Offers("oauth/v1") {
-				res, err = BrowserLogin(ctx, cl, w, remoteclient.BrowserLoginOptions{Device: f.device, NoBrowser: f.noBrowser, Out: out})
-				if err != nil {
-					return err
-				}
-			}
-		}
-		if res == nil {
-			if !isTerminal(c.InOrStdin()) {
-				return errors.New("no terminal to prompt in: pass --token, --token-stdin, or set " + remoteclient.EnvVar("TOKEN"))
-			}
-			fmt.Fprintf(out, "Signing in to %s.\nPaste an API token: ", cl.Remote.URL)
-			line, rerr := in.ReadString('\n')
-			if rerr != nil && rerr != io.EOF {
-				return rerr
-			}
-			res, err = remoteclient.LoginWithToken(ctx, cl, line)
-		}
+	opts := remoteclient.LoginOptions{Token: f.token, Device: f.device, NoBrowser: f.noBrowser, Out: c.OutOrStdout()}
+	if BrowserLogin != nil {
+		opts.Browser = BrowserLogin
 	}
-	if err != nil {
-		return err
+	if f.tokenStdin {
+		opts.TokenFrom = c.InOrStdin()
 	}
-	if err := remoteclient.SaveLogin(cl, res); err != nil {
-		return err
+	if isTerminal(c.InOrStdin()) {
+		opts.Prompt = c.InOrStdin()
 	}
-	who := res.Credential.Email
-	if who == "" {
-		who = "token"
-	}
-	fmt.Fprintf(out, "Logged in to %s as %s (%s).\n", cl.Remote.URL, who, res.Credential.Via)
-	if res.Warning != "" {
-		fmt.Fprintln(out, "Note: "+res.Warning)
-	}
-	return nil
+	_, err := remoteclient.Login(ctx, cl, opts)
+	return err
 }
 
 func isTerminal(r io.Reader) bool {

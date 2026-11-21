@@ -112,6 +112,7 @@ Root flags `--config <path>` and `--env-file <path>` pick the config file and it
 ## Deploy workflow
 
 ```bash
+pocketone clone https://myapp.example.com     # no local copy yet: make ./myapp, link, sign in, pull its code
 pocketone link https://myapp.example.com      # add remote "default" and sign in
 pocketone deploy                              # changed files only; hooks, pages, public go live at once
 pocketone deploy --restart                    # restart if migrations or packages changed (use in CI)

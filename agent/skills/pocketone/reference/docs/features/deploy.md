@@ -66,10 +66,24 @@ If a file changed on both sides, your copy wins and the app's copy is saved in `
 its state in `.pocketone/`, so add that folder to `.gitignore`. To leave files out, list gitignore-style patterns in
 `.pocketoneignore`.
 
+## Start from a running app
+
+With nothing local, `clone` gets you a project folder in one step:
+
+```bash
+pocketone clone https://myapp.example.com   # makes ./myapp, signs you in, downloads the app's code
+cd myapp
+bun install                                 # if there's a package.json: dev and deploy upload packages from here
+pocketone dev
+```
+
+It downloads the same files as `pull`, never `pb_data`, and remembers the app as the folder's remote. From there, `dev`
+keeps both sides in step: a save is live on the app's next request.
+
 ## Pull files and read logs
 
 ```bash
-pocketone pull                         # download pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json
+pocketone pull                         # download pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json, the lockfile, patches/
 pocketone pull pb_hooks pb_public/index.html
 pocketone logs                         # the last 100 lines, then follow
 ```

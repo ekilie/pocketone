@@ -13,7 +13,7 @@ summary: "pocketone deploy, dev, pull and logs, and the deploy API."
 Send your project's code to a running app from your own machine: `pb_hooks`, `pb_migrations`, `pb_pages`,
 `pb_public`, packages and the production `node_modules` tree. Only changed files are uploaded and the app swaps them
 in; `restart` applies new migrations and packages. `pocketone dev` keeps your folder and the app in step both ways and
-streams the app's logs; `pull` and `logs` work the other way.
+streams the app's logs; `pull` and `logs` work the other way. `clone` starts a local project from a running app.
 
 ```bash
 pocketone link https://myapp.example.com   # add the remote and sign in (Remotes)
@@ -161,10 +161,23 @@ out, such as ones your hooks generate, in `.pocketoneignore`, one gitignore-styl
 
 It takes the same file flags as `deploy`.
 
+### `clone`
+
+```bash
+pocketone clone https://myapp.example.com            # into ./myapp
+pocketone clone https://myapp.pockethost.io site --token ph_pat_...
+```
+
+Starts a local project from a running app, with nothing local to begin with: makes the folder (refusing one that isn't
+empty; default: the host's first label, or `app` for localhost), adds the app as the project's default remote, signs
+in like `link` (the same `--token`, `--token-stdin`, `--device` and `--no-browser` flags), and pulls the app's code as
+`pull` does. A folder `clone` made is removed again if it fails before any file came down. Then `cd` in, run `bun install` (or npm)
+if there's a `package.json`, and `pocketone dev`.
+
 ### `pull`
 
 ```bash
-pocketone pull prod                              # pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json
+pocketone pull prod                              # pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json, the lockfile, patches/
 pocketone pull prod pb_hooks pb_public/index.html
 pocketone pull prod --dry-run
 ```
