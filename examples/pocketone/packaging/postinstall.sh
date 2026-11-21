@@ -27,7 +27,7 @@ PocketOne is installed. To run it as a service:
   sudo nano /etc/pocketone/service.env     # your domain, for HTTPS on ports 80 and 443
   sudo systemctl enable --now pocketone
 
-Guide: https://pocketone.dev/docs/installation#run-it-as-a-service
+Guide: https://pocketone.dev/docs/guides/linux-server
 EOF
 	fi
 fi

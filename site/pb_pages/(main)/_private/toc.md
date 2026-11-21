@@ -29,6 +29,11 @@
 - [Contracts](/docs/contracts)
 - [Extensions](/docs/extensions)
 
+# Guides
+
+- [Advanced installation](/docs/guides/advanced-installation)
+- [Run on a Linux server](/docs/guides/linux-server)
+
 # Reference
 
 - [CLI](/docs/reference/cli)

@@ -1,0 +1,155 @@
+---
+title: Run PocketOne on a Linux server
+description: Install PocketOne on a Linux server as a .deb, .rpm or .apk package, run it as a systemd service with its own HTTPS or behind a proxy, deploy your app, upgrade and uninstall.
+---
+
+# Run PocketOne on a Linux server
+
+This guide sets PocketOne up on a Linux server as a systemd service that starts at boot, runs as its own `pocketone`
+user and serves your app over HTTPS. It takes a few minutes on any distribution with apt, dnf, yum, zypper or apk.
+
+## Install the package
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | sh
+```
+
+The [install script](/docs/installation#linux) installs the newest release's `.deb`, `.rpm` or `.apk` package for
+your system. The package makes the `pocketone` system user and a systemd service, and leaves the service stopped.
+
+### Or install a package by hand
+
+Every [release](https://github.com/pocketonehq/pocketone/releases) has `.deb` (Debian, Ubuntu), `.rpm` (Fedora, RHEL,
+Rocky, Alma, openSUSE) and `.apk` (Alpine) packages, named `pocketone_<version>_linux_<arch>.<deb|rpm|apk>`, and a
+`checksums.txt` with the SHA-256 of each. To install one:
+
+```bash
+# Debian, Ubuntu
+sudo apt install ./pocketone_<version>_linux_amd64.deb
+
+# Fedora, RHEL, Rocky, Alma
+sudo dnf install ./pocketone_<version>_linux_amd64.rpm
+
+# openSUSE
+sudo zypper install --allow-unsigned-rpm ./pocketone_<version>_linux_amd64.rpm
+
+# Alpine
+sudo apk add --allow-untrusted ./pocketone_<version>_linux_amd64.apk
+```
+
+The packages aren't signed; check them against `checksums.txt` (`sha256sum -c checksums.txt --ignore-missing`).
+
+### What the package installs
+
+| Path | What it is |
+|---|---|
+| `/usr/bin/pocketone` | The binary. |
+| `/usr/lib/systemd/system/pocketone.service` | The service (`.deb` and `.rpm`; Alpine uses OpenRC, so its package has the binary and config only). |
+| `/etc/pocketone/pocketone.yaml` | The service's [pocketone.yaml](/docs/pocketone-yaml): data in `/var/lib/pocketone`. Kept when you upgrade. |
+| `/etc/pocketone/service.env` | What the service passes to `pocketone serve`: your domain. Kept when you upgrade. |
+| `/var/lib/pocketone` | The `pocketone` user's home, holding `pb_data` and your app's `pb_hooks`, `pb_migrations`, `pb_public` and `pb_pages`. |
+
+Installing makes the `pocketone` system user and leaves the service stopped.
+
+## Run it as a service
+
+Create your first superuser, as the `pocketone` user so the files it makes are that user's:
+
+```bash
+sudo -u pocketone pocketone superuser upsert <email> <password> --config /etc/pocketone/pocketone.yaml
+```
+
+Run any other `pocketone` command for the service's app the same way, with `sudo -u pocketone` and
+`--config /etc/pocketone/pocketone.yaml`.
+
+Then choose how it's reached, in `/etc/pocketone/service.env`:
+
+- **Its own HTTPS.** Put your domain in `SERVE_ARGS`, after pointing the domain's DNS at the server:
+
+  ```bash
+  SERVE_ARGS=example.com
+  ```
+
+  `serve` then listens on ports 80 and 443 and gets a Let's Encrypt certificate for the domain by itself, as in
+  PocketBase. List more domains with spaces between them.
+
+- **Behind a reverse proxy** (Caddy, nginx) that handles HTTPS: leave `SERVE_ARGS` empty. PocketOne listens on
+  `127.0.0.1:8090`; point the proxy there.
+
+Start it now and at every boot, and follow its log:
+
+```bash
+sudo systemctl enable --now pocketone
+journalctl -u pocketone -f
+```
+
+After changing `service.env` or `pocketone.yaml`, restart it: `sudo systemctl restart pocketone`. Secrets for
+`pocketone.yaml` go in `/etc/pocketone/.env`, written in the yaml as `$NAME`; make it readable by the `pocketone`
+user only (`sudo chown root:pocketone /etc/pocketone/.env && sudo chmod 640 /etc/pocketone/.env`).
+
+To deploy your app, put its folders in `/var/lib/pocketone`, owned by the `pocketone` user, and restart the service:
+
+```bash
+sudo cp -r pb_hooks pb_migrations pb_public /var/lib/pocketone/
+sudo chown -R pocketone:pocketone /var/lib/pocketone
+sudo systemctl restart pocketone
+```
+
+Or push it from your machine with `pocketone deploy` ([Deploy and live sync](/docs/features/deploy)).
+
+## A service without a package
+
+With the plain binary in `/usr/local/bin` (the install script with `POCKETONE_NO_PACKAGE=1`, or a release zip), set
+the service up yourself. Make the user and data folder, and the first superuser:
+
+```bash
+sudo useradd --system --user-group --home-dir /var/lib/pocketone --create-home --shell /usr/sbin/nologin pocketone
+sudo -u pocketone pocketone superuser upsert <email> <password> --dir /var/lib/pocketone/pb_data
+```
+
+Save this as `/etc/systemd/system/pocketone.service`, with your domain in place of `example.com` (or, behind a
+reverse proxy, no domain and no `AmbientCapabilities` line):
+
+```ini
+[Unit]
+Description=PocketOne
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pocketone
+Group=pocketone
+WorkingDirectory=/var/lib/pocketone
+ExecStart=/usr/local/bin/pocketone serve example.com --dir /var/lib/pocketone/pb_data --publicDir /var/lib/pocketone/pb_public
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=4096
+# lets the pocketone user listen on ports 80 and 443
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now pocketone
+```
+
+## Upgrade
+
+Run the install script again. It installs the newest release's package over the old one; the package manager restarts
+the service if it's running and keeps your `/etc/pocketone` files and your data. For the plain binary of
+[A service without a package](#a-service-without-a-package), run `sudo pocketone upgrade` (it keeps the old one as
+`pocketone-<version>`), then `sudo systemctl restart pocketone`.
+
+## Uninstall
+
+```bash
+sudo apt remove pocketone     # or: sudo dnf remove pocketone, sudo zypper remove pocketone, sudo apk del pocketone
+```
+
+This stops the service and removes the binary and the service. Your data in `/var/lib/pocketone` and the `pocketone`
+user stay; delete them yourself if you're sure (`sudo rm -rf /var/lib/pocketone && sudo userdel pocketone`).
