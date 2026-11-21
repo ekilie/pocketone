@@ -8,7 +8,7 @@ tags: release
 
 Alpha.11 is about getting PocketOne onto your machine and getting your app back off the server.
 
-**Install it your way.** Windows gets Scoop: `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`, then `scoop install pocketone`. On macOS and Linux without Homebrew, `curl -fsSL https://pocketone.dev/install.sh | sh` installs the newest release and checks its checksum. Run it again to upgrade. Every release also ships `.deb`, `.rpm` and `.apk` packages. The `.deb` and `.rpm` set up a `pocketone` systemd service with its own user, config in `/etc/pocketone` and data in `/var/lib/pocketone`. It's all on one [Installation](/docs/installation) page now.
+**New installation tools.** Windows gets Scoop: `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`, then `scoop install pocketone`. On macOS and Linux without Homebrew, `curl -fsSL https://pocketone.dev/install.sh | sh` installs the newest release and checks its checksum. Run it again to upgrade. Every release also ships `.deb`, `.rpm` and `.apk` packages. The `.deb` and `.rpm` set up a `pocketone` systemd service with its own user, config in `/etc/pocketone` and data in `/var/lib/pocketone`. It's all on one [Installation](/docs/installation) page now.
 
 **`pocketone clone`.** Point it at a running app and you get a local project: `pocketone clone https://myapp.example.com` makes the folder, signs you in as a superuser in the browser, adds the app as the default remote and pulls its code. Then `pocketone dev` and you're editing live.
 
