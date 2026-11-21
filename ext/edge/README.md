@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.1
+version: 0.0.2
 title: "Edge"
 group: many
 summary: "Forwards each request to the edge that owns the instance."

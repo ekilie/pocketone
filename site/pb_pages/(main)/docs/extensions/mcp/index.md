@@ -7,7 +7,7 @@ source: "ext/mcp/README.md"
 
 # MCP
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [MCP for AI agents](https://pocketone.dev/docs/features/mcp). This page is the technical reference.
 

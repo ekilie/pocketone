@@ -7,7 +7,7 @@ source: "ext/edge/README.md"
 
 # Edge
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The fleet layer for a [Multisite](/docs/extensions/multisite): several servers (edges) share one set of instances, any edge accepts
 any request, and a request for an instance another edge runs is forwarded there over the private network. Works with

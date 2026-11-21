@@ -40,16 +40,15 @@ every extension that got a new version, with a link to its changes. Upstream Poc
   The release header adds a link to the blog post and the install and upgrade steps on top. Release notes are this file's section for the version,
   with its links pointing at the release on GitHub.
 
-### Fixed
-
-- Contract streams (`instance.watch/v1`'s stream, `remote/v1` logs and the rest) no longer end after 5 minutes: they clear the server's write timeout, as PocketBase's realtime does. Edges following the mothership reconnected (and refetched every hostname) every 5 minutes.
-
-### Changed
-
-- The `pocketone` commands that talk to a remote wait and try again when it answers 429 (rate limited), after its `Retry-After` (up to 4 times; a wait over a minute is reported instead).
-- `pocketone login`, `link` and `clone` sign in as a superuser in the browser: the app's sign-in page opens on the superuser form, even when the browser is signed in there as an app user (whose token the deploy API refuses).
-
 ## Unreleased
+
+## v0.0.1-alpha.11 (2026-11-21)
+
+### Highlights
+
+- **New installation tools.** Windows installs with Scoop, macOS and Linux with `curl -fsSL https://pocketone.dev/install.sh | sh`, and every release has `.deb`, `.rpm` and `.apk` packages that set PocketOne up as a systemd service ([Installation](https://pocketone.dev/docs/installation)). The Homebrew formula moved to `pocketonehq/tap` (see Upgrading).
+- **`pocketone clone`.** Start a local project from a running app: `pocketone clone <url>` signs you in as a superuser, pulls its code, and you're ready for `pocketone dev` ([Deploy](ext/deploy/CHANGELOG.md)).
+- **Deploys don't clobber the server.** `pocketone deploy` stops when files changed on the remote since your last deploy, pull or dev, and lists them; `--force` overwrites. Pull and clone download in bundles, and 429s are retried ([Deploy](ext/deploy/CHANGELOG.md)).
 
 ### Upgrading
 
@@ -69,6 +68,25 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 - On a multisite host, an instance's `pb_cache` is hoisted out of its folder to the host's `pb_cache/instances/<instance id>/` (`extkit.CacheDir` and `extkit.CacheRoot` return it; hosts use `extkit.InstanceCacheRoot`). `instances` is reserved in a host's `pb_cache`.
 - runtime/v1 has one provider per host: `pocketone serve` with a `multisite` section registers only the runtime it runs (docker with a `docker` section, else pocker), and the instance record's `runtime` field is gone.
+- The `pocketone` commands that talk to a remote wait and try again when it answers 429 (rate limited), after its `Retry-After` (up to 4 times; a wait over a minute is reported instead).
+- `pocketone login`, `link` and `clone` sign in as a superuser in the browser: the app's sign-in page opens on the superuser form, even when the browser is signed in there as an app user (whose token the deploy API refuses).
+
+### Fixed
+
+- Contract streams (`instance.watch/v1`'s stream, `remote/v1` logs and the rest) no longer end after 5 minutes: they clear the server's write timeout, as PocketBase's realtime does. Edges following the mothership reconnected (and refetched every hostname) every 5 minutes.
+
+### Extensions
+
+- [API Tokens](ext/api-tokens/CHANGELOG.md#021-2026-11-21) 0.2.0 → 0.2.1
+- [Deploy](ext/deploy/CHANGELOG.md#020-2026-11-21) 0.1.0 → 0.2.0 (has upgrade steps)
+- [Docker](ext/docker/CHANGELOG.md#004-2026-11-21) 0.0.3 → 0.0.4
+- [Edge](ext/edge/CHANGELOG.md#002-2026-11-21) 0.0.1 → 0.0.2
+- [MCP](ext/mcp/CHANGELOG.md#002-2026-11-21) 0.0.1 → 0.0.2
+- [Multisite](ext/multisite/CHANGELOG.md#010-2026-11-21) 0.0.2 → 0.1.0 (has upgrade steps)
+- [Pocker](ext/pocker/CHANGELOG.md#012-2026-11-21) 0.1.1 → 0.1.2
+- [Remotes](ext/remotes/CHANGELOG.md#002-2026-11-21) 0.0.1 → 0.0.2
+- [Standard Set](ext/standard/CHANGELOG.md#011-2026-11-21) 0.1.0 → 0.1.1
+- [Upgrade](ext/upgrade/CHANGELOG.md#003-2026-11-21) 0.0.2 → 0.0.3
 
 ## v0.0.1-alpha.10 (2026-11-20)
 

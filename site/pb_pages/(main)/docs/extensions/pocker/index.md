@@ -7,7 +7,7 @@ source: "ext/pocker/README.md"
 
 # Pocker
 
-Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
 

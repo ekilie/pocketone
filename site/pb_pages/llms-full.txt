@@ -10298,7 +10298,7 @@ Source: https://pocketone.dev/docs/extensions/api-tokens
 
 # API Tokens
 
-Version 0.2.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.2.1 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [API tokens](https://pocketone.dev/docs/features/tokens). This page is the technical reference.
 
@@ -12083,7 +12083,7 @@ Source: https://pocketone.dev/docs/extensions/deploy
 
 # Deploy
 
-Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.2.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [Deploy and live sync](https://pocketone.dev/docs/features/deploy). This page is the technical reference.
 
@@ -12855,7 +12855,7 @@ Source: https://pocketone.dev/docs/extensions/mcp
 
 # MCP
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [MCP for AI agents](https://pocketone.dev/docs/features/mcp). This page is the technical reference.
 
@@ -14408,7 +14408,7 @@ Source: https://pocketone.dev/docs/extensions/remotes
 
 # Remotes
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough for app owners: [Remote CLI](https://pocketone.dev/docs/features/remote). This page is the technical reference.
 
@@ -15341,7 +15341,7 @@ Source: https://pocketone.dev/docs/extensions/upgrade
 
 # Upgrade
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 `pocketone upgrade` replaces the `pocketone` executable with the latest PocketOne release and keeps the old one beside
 it as `<name>-<version>` (for example `pocketone-0.0.3`), so a project can keep running the engine it was built with.
@@ -16075,7 +16075,7 @@ Source: https://pocketone.dev/docs/extensions/docker
 
 # Docker
 
-Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.4 · Owners: [@benallfree](https://github.com/benallfree)
 
 Run every instance on a host in its own container, with the official PocketBase or PocketOne binary of the version
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
@@ -16378,7 +16378,7 @@ Source: https://pocketone.dev/docs/extensions/edge
 
 # Edge
 
-Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The fleet layer for a [Multisite](https://pocketone.dev/docs/extensions/multisite): several servers (edges) share one set of instances, any edge accepts
 any request, and a request for an instance another edge runs is forwarded there over the private network. Works with
@@ -16844,7 +16844,7 @@ Source: https://pocketone.dev/docs/extensions/multisite
 
 # Multisite
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
 
@@ -17083,7 +17083,7 @@ Source: https://pocketone.dev/docs/extensions/pocker
 
 # Pocker
 
-Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
 
@@ -18889,7 +18889,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 
 # Standard Set
 
-Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
