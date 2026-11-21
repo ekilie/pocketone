@@ -171,7 +171,7 @@ pocketone clone https://myapp.pockethost.io site --token ph_pat_...
 Starts a local project from a running app, with nothing local to begin with: makes the folder (refusing one that isn't
 empty; default: the host's first label, or `app` for localhost), adds the app as the project's default remote, signs
 in like `link` (the same `--token`, `--token-stdin`, `--device` and `--no-browser` flags), and pulls the app's code as
-`pull` does. A folder `clone` made is removed again if the sign-in fails. Then `cd` in, run `bun install` (or npm)
+`pull` does. A folder `clone` made is removed again if it fails before any file came down. Then `cd` in, run `bun install` (or npm)
 if there's a `package.json`, and `pocketone dev`.
 
 ### `pull`

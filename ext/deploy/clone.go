@@ -31,7 +31,7 @@ type CloneOptions struct {
 
 // Clone starts a local project from a running app: it makes the folder (refusing one that isn't empty), adds the
 // remote as the project's default, signs in, and pulls the app's code (pb_data never comes). It returns the folder
-// and how many files it pulled. On an error before the pull, a folder Clone made is removed again.
+// and how many files it pulled. On an error, a folder Clone made is removed again unless the pull got some files.
 func Clone(ctx context.Context, opts CloneOptions) (dir string, n int, err error) {
 	log := opts.Log
 	if log == nil {
@@ -52,9 +52,9 @@ func Clone(ctx context.Context, opts CloneOptions) (dir string, n int, err error
 	if err != nil {
 		return "", 0, err
 	}
-	pulling, made := false, dir
+	made := dir
 	defer func() {
-		if err != nil && created && !pulling {
+		if err != nil && created && n == 0 {
 			_ = os.RemoveAll(made) // not dir: an error return has set it to ""
 		}
 	}()
@@ -89,7 +89,7 @@ func Clone(ctx context.Context, opts CloneOptions) (dir string, n int, err error
 	if err != nil {
 		return "", 0, err
 	}
-	pulling = true // keep what came down if the pull stops partway
+	// keep what came down if the pull stops partway
 	n, err = Pull(ctx, c, PullOptions{Dir: dir, Log: log})
 	return dir, n, err
 }
