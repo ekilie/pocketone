@@ -1,6 +1,9 @@
 package deploy
 
 import (
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"io"
 	"io/fs"
@@ -261,5 +264,70 @@ func (a *API) deleteFile(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	writeJSON(w, 200, map[string]any{"path": rel, "deleted": true})
+	return nil
+}
+
+// readBundle: POST /files/bundle {"paths": [...]} answers the files' contents as one gzipped bundle, in the upload's
+// format (bundle.go: content-addressed, every entry its sha256), so pull and dev fetch many files in one request
+// instead of one each. A path that's missing, a folder or unreachable is left out: the caller compares the hashes it
+// expected (from the tree) with what came. The files together may hold at most maxBundleRawBytes.
+func (a *API) readBundle(w http.ResponseWriter, r *http.Request) error {
+	c, err := a.authorize(r, false)
+	if err != nil {
+		return err
+	}
+	body, err := readJSON(w, r)
+	if err != nil {
+		return err
+	}
+	raw, _ := body["paths"].([]any)
+	if len(raw) > maxListEntries {
+		return errf(400, "Too many paths: ask for at most %d", maxListEntries)
+	}
+	type want struct{ fsPath string }
+	var files []want
+	var total int64
+	for _, v := range raw {
+		p, _ := v.(string)
+		_, fsPath, err := resolveFilePath(c, p)
+		if err != nil {
+			continue
+		}
+		st, err := os.Stat(fsPath)
+		if err != nil || !st.Mode().IsRegular() {
+			continue
+		}
+		if total += st.Size(); total > maxBundleRawBytes {
+			return errf(400, "The files are more than %d MB together: ask for fewer at a time", maxBundleRawBytes>>20)
+		}
+		files = append(files, want{fsPath})
+	}
+	h := w.Header()
+	h.Set("Content-Type", "application/octet-stream")
+	h.Set("Cache-Control", "no-store")
+	w.WriteHeader(200)
+	gz := gzip.NewWriter(w)
+	if _, err := gz.Write(bundleMagic); err != nil {
+		return errHeadersSent
+	}
+	for _, f := range files {
+		data, err := os.ReadFile(f.fsPath)
+		if err != nil {
+			continue // gone since the stat: the caller sees it missing
+		}
+		sum := sha256.Sum256(data)
+		var n [4]byte
+		binary.BigEndian.PutUint32(n[:], uint32(len(data)))
+		if _, err := gz.Write(sum[:]); err != nil {
+			return errHeadersSent
+		}
+		_, _ = gz.Write(n[:])
+		if _, err := gz.Write(data); err != nil {
+			return errHeadersSent
+		}
+	}
+	if err := gz.Close(); err != nil {
+		return errHeadersSent
+	}
 	return nil
 }

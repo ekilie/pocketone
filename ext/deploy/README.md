@@ -183,7 +183,9 @@ pocketone pull prod --dry-run
 ```
 
 Downloads files from a remote into the project: its code, never `pb_data` (the deploy API doesn't reach it; data goes
-through the PocketBase API and backups).
+through the PocketBase API and backups). It reads the remote's tree once and downloads the files that differ from your
+copy in bundles, so a pull is a few requests whatever the app's size, and files already the same stay as they are.
+`clone` and `dev` download the same way. A remote that rate-limits (429) is asked again after the wait it gives.
 
 ### `logs`
 
@@ -283,7 +285,8 @@ and logs are remote/v1's (`/api/_c/remote/v1`), which deploy requires.
 | `POST /commit` | Stage, swap in, record. `"restartNeeded": true` in the answer when migrations or packages wait for a restart; `"restart": true` in the request restarts after the swap. With `"partial": true` only the listed files (and `"delete"`) change. |
 | `GET`/`DELETE /files` | List or delete files (the code set, `node_modules`, `patches/`; never `pb_data` or `.git*`). |
 | `GET`/`PUT /files/raw` | Download or upload one file (same reach). |
-| `GET /tree` | One folder of the code set (`?path=`, default the root) with a hash over everything below it; `hashOnly=1` for just the hash. |
+| `POST /files/bundle` | Download many files at once: `{"paths": [...]}` answers their contents as one gzipped bundle (the upload's format, each entry its sha256; at most 256 MB together). Paths it can't send are left out. |
+| `GET /tree` | One folder of the code set (`?path=`, default the root) with a hash over everything below it; `hashOnly=1` for just the hash, `deep=1` to add every folder below it (`folders`). |
 
 The protocol is the pockethost npm CLI's, so the same client deploys to PocketOne apps and PocketHost.
 

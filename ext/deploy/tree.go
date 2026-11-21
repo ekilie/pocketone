@@ -29,6 +29,9 @@ type TreeNode struct {
 	Hash    string      `json:"hash"`
 	Exists  bool        `json:"exists"`
 	Entries []TreeEntry `json:"entries,omitempty"`
+	// Folders, with deep=1: every folder below this one, each with its entries (never nested further), so a client
+	// gets the whole tree in one request. Nil when deep wasn't asked (or an older server ignored it).
+	Folders []TreeNode `json:"folders,omitempty"`
 }
 
 type treeDir struct {
@@ -99,7 +102,8 @@ func (d *treeDir) entries(p string, all map[string]*treeDir) []TreeEntry {
 	return out
 }
 
-// GET /tree?path=<folder>[&hashOnly=1]: one folder of the code set (default the root) with its hash and entries.
+// GET /tree?path=<folder>[&hashOnly=1][&deep=1]: one folder of the code set (default the root) with its hash and
+// entries; deep adds every folder below it (Folders), so a fresh client needs one request.
 func (a *API) tree(w http.ResponseWriter, r *http.Request) error {
 	c, err := a.authorize(r, false)
 	if err != nil {
@@ -120,6 +124,15 @@ func (a *API) tree(w http.ResponseWriter, r *http.Request) error {
 		node.Hash = d.hash
 		if !flag(r, "hashOnly") {
 			node.Entries = d.entries(p, dirs)
+			if flag(r, "deep") {
+				node.Folders = []TreeNode{}
+				for dp, dd := range dirs {
+					if dp != p && (p == "" || strings.HasPrefix(dp, p+"/")) {
+						node.Folders = append(node.Folders, TreeNode{Path: dp, Hash: dd.hash, Exists: true, Entries: dd.entries(dp, dirs)})
+					}
+				}
+				sort.Slice(node.Folders, func(i, j int) bool { return node.Folders[i].Path < node.Folders[j].Path })
+			}
 		}
 	}
 	writeJSON(w, 200, node)

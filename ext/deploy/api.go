@@ -294,6 +294,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.readFile(w, r)
 	case path == "/files/raw" && r.Method == http.MethodPut:
 		err = a.writeFile(w, r)
+	case path == "/files/bundle" && r.Method == http.MethodPost:
+		err = a.readBundle(w, r)
 	case path == "/tree" && r.Method == http.MethodGet:
 		err = a.tree(w, r)
 	default:

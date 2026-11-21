@@ -25,7 +25,8 @@ multisite host can provide it for its instances.
 | `GET /api/_c/deploy/v1/files` | list deployed files |
 | `DELETE /api/_c/deploy/v1/files` | delete files |
 | `GET` / `PUT /api/_c/deploy/v1/files/raw` | read or write one file (raw bytes) |
-| `GET /api/_c/deploy/v1/tree` | the app's code tree, for two-way sync |
+| `POST /api/_c/deploy/v1/files/bundle` | read many files at once (`{"paths"}` → a gzipped bundle, the upload's format) |
+| `GET /api/_c/deploy/v1/tree` | the app's code tree, for two-way sync (`deep=1`: every folder in one answer) |
 
 Token scopes: `deploy` (everything) and `deploy:read` (list, read, tree). The CLI: `pocketone deploy`, `dev`,
 `pull`.
