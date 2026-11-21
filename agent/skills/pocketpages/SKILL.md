@@ -347,6 +347,7 @@ More: [debugging](reference/docs/debugging.md), [errors](reference/docs/errors.m
 `pb_pages` deploys with the other `pb_*` folders. Pages are read on each request, so they go live without a restart.
 
 ```bash
+pocketone clone https://myapp.example.com  # no local copy yet: make ./myapp, link, log in, pull its code
 pocketone link https://myapp.example.com   # add the remote, make it default, log in
 pocketone deploy                           # upload what changed (pb_* except pb_data, package.json, node_modules)
 pocketone logs                             # follow the remote's log
@@ -355,7 +356,6 @@ pocketone dev                              # two-way sync while you work, with l
 
 - On PocketHost: `pocketone link https://<name>.pockethost.io <token>`. In CI, set `P1_TOKEN` instead.
 - Migrations and packages apply only on restart: `pocketone deploy --restart` or `pocketone restart`.
-  `pull` skips pages unless named: `pocketone pull prod pb_pages`.
 - Self-hosting: run `pocketone` (pages is built in) with `pb_pages` next to `pb_data`, without `--dev`, over HTTPS.
   Secrets are environment variables, read with `ctx.env('NAME')`.
 

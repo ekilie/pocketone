@@ -22,9 +22,9 @@ import (
 	"pocketone.dev/ext/extkit"
 )
 
-// Commands returns the client commands: deploy, dev, pull, logs.
+// Commands returns the client commands: clone, deploy, dev, pull, logs, restart.
 func Commands() []*cobra.Command {
-	return []*cobra.Command{deployCommand(), devCommand(), pullCommand(), logsCommand(), restartCommand()}
+	return []*cobra.Command{cloneCommand(), deployCommand(), devCommand(), pullCommand(), logsCommand(), restartCommand()}
 }
 
 type setFlags struct {
@@ -410,7 +410,7 @@ func pullCommand() *cobra.Command {
 	var dryRun bool
 	c := &cobra.Command{
 		Use:          "pull [remote] [paths...]",
-		Short:        "Downloads files from a remote into the project (default: pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json)",
+		Short:        "Downloads files from a remote into the project (default: pb_hooks, pb_migrations, pb_pages, pb_public, pb_templates, package.json, the lockfile, patches/)",
 		Example:      "pull prod\npull prod pb_hooks pb_public/index.html",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
