@@ -6,6 +6,9 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+- `Set.Switches`: the settings layer `Register` reads members' `enabled` from (default `ConfiguredSwitches`,
+  pocketone.yaml), so a binary can keep a member off in code when its own code does the same job.
+
 ## 0.1.0 (2026-11-18)
 
 ### Upgrading

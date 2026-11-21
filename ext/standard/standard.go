@@ -67,6 +67,11 @@ type Set struct {
 	// Providers is the `providers:` section of pocketone.yaml: which extension provides a contract when several do.
 	Providers extkit.Choices
 
+	// Switches is the settings layer Register reads each member's `enabled` from. Nil: [ConfiguredSwitches]
+	// (pocketone.yaml's `<member>: {enabled: false}`). A binary wraps it to keep a member off that clashes with its own
+	// code, e.g. `if name == "bulkmail" { return extkit.Config{{"enabled": false}} }; return standard.ConfiguredSwitches(name)`.
+	Switches func(name string) extkit.Config
+
 	extras []extkit.Extension
 }
 
@@ -290,7 +295,11 @@ func (s *Set) Register(app core.App, jsCfg jsvm.Config) error {
 // The pocketone binary passes PocketBase's own plugins/jsvm here in its goja compatibility mode; then the set's JS
 // APIs ($mcp, $apiTokens, $wasm, pages, JS contracts) aren't bound.
 func (s *Set) RegisterWith(app core.App, loadJS func(app core.App) error) error {
-	plan, err := s.Prepare(app, ConfiguredSwitches) // pocketone.yaml's `<member>: {enabled: false}`
+	switches := s.Switches
+	if switches == nil {
+		switches = ConfiguredSwitches // pocketone.yaml's `<member>: {enabled: false}`
+	}
+	plan, err := s.Prepare(app, switches)
 	if err != nil {
 		return err
 	}

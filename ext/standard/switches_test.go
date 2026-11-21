@@ -51,3 +51,32 @@ func TestYAMLSwitchTurnsAMemberOff(t *testing.T) {
 		}
 	}
 }
+
+func TestSwitchesInCode(t *testing.T) {
+	extkit.SetSectionSource(yamlSource{"remotes": "enabled: false"})
+	defer extkit.SetSectionSource(nil)
+
+	set := standard.New()
+	set.Switches = func(name string) extkit.Config {
+		if name == "bulkmail" {
+			return extkit.Config{{"enabled": false}}
+		}
+		return standard.ConfiguredSwitches(name) // pocketone.yaml still decides the rest
+	}
+	app, _ := newApp(t, set, nil)
+	plan, _ := app.Store().Get("standard.plan").(*extkit.Plan)
+	if plan == nil {
+		t.Fatal("no plan")
+	}
+	lines := strings.Join(plan.Lines, "\n")
+	for _, want := range []string{"bulkmail off: enabled: false", "remotes off: enabled: false"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("startup lines lack %q:\n%s", want, lines)
+		}
+	}
+	for _, e := range plan.On {
+		if e.Name() == "bulkmail" || e.Name() == "remotes" {
+			t.Errorf("%s is on", e.Name())
+		}
+	}
+}

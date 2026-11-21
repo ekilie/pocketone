@@ -56,6 +56,9 @@ fields they cover.
   for every instance under Pocker, in its `pocker: isolate_config:` section, and for one instance, in its
   `extensions.<name>`. Extensions that require it turn off too, and
   say why. cache, storage (s3-fallback), s3redirect and pitr read `enabled` in their own sections: off, they stay registered and do nothing.
+- **Keep one off in code:** a binary whose own code does what a member does sets `set.Switches`, which `Register`
+  reads each member's `enabled` from (nil: `standard.ConfiguredSwitches`, the `pocketone.yaml` sections). Wrap it:
+  `if name == "bulkmail" { return extkit.Config{{"enabled": false}} }; return standard.ConfiguredSwitches(name)`.
 - **Add your own:** `set.Add(myextension.New())`. Extras register after the members, under the same rules.
 - **Pick providers:** `set.Providers` is `pocketone.yaml`'s `providers:` section, for a contract more than one
   extension provides.
