@@ -46,6 +46,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ### Changed
 
+- The `pocketone` commands that talk to a remote wait and try again when it answers 429 (rate limited), after its `Retry-After` (up to 4 times; a wait over a minute is reported instead).
 - `pocketone login`, `link` and `clone` sign in as a superuser in the browser: the app's sign-in page opens on the superuser form, even when the browser is signed in there as an app user (whose token the deploy API refuses).
 
 ## Unreleased

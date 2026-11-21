@@ -57,6 +57,17 @@ func (c *Client) Tree(ctx context.Context, p string, hashOnly bool) (*TreeNode, 
 	return &n, err
 }
 
+// TreeDeep fetches a folder and every folder below it (TreeNode.Folders) in one request. Folders is nil when the
+// remote doesn't know deep (an older server): walk folder by folder with [Client.Tree] then.
+func (c *Client) TreeDeep(ctx context.Context, p string) (*TreeNode, error) {
+	var n TreeNode
+	err := c.call(ctx, http.MethodGet, "/tree?"+url.Values{"path": {p}, "deep": {"1"}}.Encode(), nil, &n)
+	if isNotFound(err) {
+		return nil, ErrNoSyncAPI
+	}
+	return &n, err
+}
+
 type syncState struct {
 	Remote string            `json:"remote"`
 	Files  map[string]string `json:"files"`
@@ -84,12 +95,14 @@ type Syncer struct {
 	ignore []string
 	hashes HashCache
 
-	mu        sync.Mutex
-	state     syncState
-	firstRun  bool
-	nodes     map[string]*TreeNode // remote folders by path, as last fetched
-	remote    map[string]string    // remote files: path -> hash
-	remoteTop string
+	mu         sync.Mutex
+	state      syncState
+	firstRun   bool
+	nodes      map[string]*TreeNode // remote folders by path, as last fetched
+	remote     map[string]string    // remote files: path -> hash
+	remoteSize map[string]int64     // remote files: path -> size (batches bundled downloads)
+	remoteTop  string
+	noBundle   bool // the remote has no /files/bundle (an older server): download file by file
 }
 
 // NewSyncer loads the sync state and the ignore file.
@@ -205,7 +218,14 @@ func (s *Syncer) RemoteChanged(ctx context.Context) (bool, error) {
 
 // fetchRemote refreshes the remote file list, fetching only folders whose hash changed since the last call.
 func (s *Syncer) fetchRemote(ctx context.Context) error {
-	root, err := s.c.Tree(ctx, "", false)
+	var root *TreeNode
+	var err error
+	if s.remote == nil {
+		// the first fetch: the whole tree in one request (deep), when the remote can
+		root, err = s.c.TreeDeep(ctx, "")
+	} else {
+		root, err = s.c.Tree(ctx, "", false)
+	}
 	if err != nil {
 		return err
 	}
@@ -213,6 +233,12 @@ func (s *Syncer) fetchRemote(ctx context.Context) error {
 		return nil
 	}
 	nodes := map[string]*TreeNode{"": root}
+	if root.Folders != nil {
+		for i := range root.Folders {
+			nodes[root.Folders[i].Path] = &root.Folders[i]
+		}
+		root.Folders = nil
+	}
 	var walk func(n *TreeNode) error
 	walk = func(n *TreeNode) error {
 		for _, e := range n.Entries {
@@ -220,6 +246,12 @@ func (s *Syncer) fetchRemote(ctx context.Context) error {
 				continue
 			}
 			p := path.Join(n.Path, e.Name)
+			if got := nodes[p]; got != nil && got.Hash == e.Hash { // came with the deep tree
+				if err := walk(got); err != nil {
+					return err
+				}
+				continue
+			}
 			child := s.nodes[p]
 			if child == nil || child.Hash != e.Hash {
 				if child, err = s.c.Tree(ctx, p, false); err != nil {
@@ -236,15 +268,15 @@ func (s *Syncer) fetchRemote(ctx context.Context) error {
 	if err := walk(root); err != nil {
 		return err
 	}
-	files := map[string]string{}
+	files, sizes := map[string]string{}, map[string]int64{}
 	for p, n := range nodes {
 		for _, e := range n.Entries {
 			if fp := path.Join(p, e.Name); !e.Dir && s.synced(fp) {
-				files[fp] = e.Hash
+				files[fp], sizes[fp] = e.Hash, e.Size
 			}
 		}
 	}
-	s.nodes, s.remote, s.remoteTop = nodes, files, root.Hash
+	s.nodes, s.remote, s.remoteSize, s.remoteTop = nodes, files, sizes, root.Hash
 	return nil
 }
 
@@ -450,13 +482,43 @@ func (s *Syncer) settleFirstDiffs(diffs []string) (keepLocal bool, err error) {
 }
 
 func (s *Syncer) pull(ctx context.Context, paths []string, localFiles map[string]LocalFile) error {
+	var todo []string
 	for _, p := range paths {
-		dest := filepath.Join(s.dir, filepath.FromSlash(p))
 		if f, ok := localFiles[p]; ok {
 			if h, _, err := s.hashes.hash(f.Source); err == nil && h != f.Hash {
 				continue // edited since the scan: the next sync sees it
 			}
 		}
+		todo = append(todo, p)
+	}
+	// many files in a few requests (bundles of up to UploadBatchBytes), so a pull doesn't trip a proxy's rate limit
+	got := map[string][]byte{}
+	if !s.noBundle && len(todo) > 0 {
+		for _, batch := range batchPaths(todo, s.remoteSize, UploadBatchBytes) {
+			m, err := s.c.DownloadBundle(ctx, batch)
+			if errors.Is(err, ErrNoBundle) {
+				s.noBundle = true
+				break
+			}
+			if err != nil {
+				return fmt.Errorf("pulling: %w", err)
+			}
+			for h, d := range m {
+				got[h] = d
+			}
+		}
+	}
+	for _, p := range todo {
+		dest := filepath.Join(s.dir, filepath.FromSlash(p))
+		if data, ok := got[s.remote[p]]; ok && s.remote[p] != "" {
+			if err := writeFileAtomic(dest, data); err != nil {
+				return fmt.Errorf("pulling %s: %w", p, err)
+			}
+			s.state.Files[p] = s.remote[p]
+			s.opts.Log("↓ " + p)
+			continue
+		}
+		// one at a time: an older remote, or a file that changed since the tree was read
 		if err := s.c.Download(ctx, p, dest); err != nil {
 			var ae *remoteclient.APIError
 			if errors.As(err, &ae) && ae.Status == http.StatusNotFound {
@@ -472,6 +534,39 @@ func (s *Syncer) pull(ctx context.Context, paths []string, localFiles map[string
 		s.opts.Log("↓ " + p)
 	}
 	return nil
+}
+
+// batchPaths groups paths into batches of at most max bytes by their remote sizes (a larger file gets its own).
+func batchPaths(paths []string, sizes map[string]int64, max int64) [][]string {
+	var out [][]string
+	var cur []string
+	var curBytes int64
+	for _, p := range paths {
+		n := sizes[p]
+		if len(cur) > 0 && curBytes+n > max {
+			out = append(out, cur)
+			cur, curBytes = nil, 0
+		}
+		cur = append(cur, p)
+		curBytes += n
+	}
+	if len(cur) > 0 {
+		out = append(out, cur)
+	}
+	return out
+}
+
+// writeFileAtomic writes data to dest through a temp file and a rename, making its folder.
+func writeFileAtomic(dest string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return err
+	}
+	tmp := dest + ".pull-tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return os.Rename(tmp, dest)
 }
 
 func (s *Syncer) push(ctx context.Context, paths, deletes []string, localFiles map[string]LocalFile, nodeModules bool) error {

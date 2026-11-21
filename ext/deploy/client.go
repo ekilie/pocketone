@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -397,6 +398,48 @@ func (r *RestartResult) Message() string {
 }
 
 // isNotFound: the remote doesn't have the route (an older server).
+// ErrNoBundle: the remote's deploy API has no /files/bundle (an older server); download files one at a time.
+var ErrNoBundle = errors.New("the remote can't send files in bundles")
+
+// DownloadBundle fetches the files at paths in one request, as a gzipped bundle (the upload's format), and returns
+// their contents by sha256. A path the remote doesn't have, or can't send, is missing from the map.
+func (c *Client) DownloadBundle(ctx context.Context, paths []string) (map[string][]byte, error) {
+	body, err := json.Marshal(map[string]any{"paths": paths})
+	if err != nil {
+		return nil, err
+	}
+	req, err := c.NewRequest(ctx, http.MethodPost, c.Prefix+"/files/bundle", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	res, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		err := remoteclient.DecodeResponse(res, nil)
+		if isNotFound(err) {
+			return nil, ErrNoBundle
+		}
+		return nil, err
+	}
+	gz, err := io.ReadAll(io.LimitReader(res.Body, maxBundleRawBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	entries, err := decodeBundle(gz, maxBundleRawBytes)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string][]byte, len(entries))
+	for _, e := range entries {
+		out[e.hash] = e.data
+	}
+	return out, nil
+}
+
 func isNotFound(err error) bool {
 	var ae *remoteclient.APIError
 	return errors.As(err, &ae) && (ae.Status == http.StatusNotFound || ae.Status == http.StatusMethodNotAllowed)

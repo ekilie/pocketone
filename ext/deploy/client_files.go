@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	remotev1 "pocketone.dev/ext/contracts/remote/v1"
 	"pocketone.dev/ext/extkit"
+	"sort"
 	"strings"
 	"time"
 
@@ -90,6 +91,11 @@ func Pull(ctx context.Context, c *Client, opts PullOptions) (int, error) {
 	if log == nil {
 		log = func(string) {}
 	}
+	// the remote's tree once, then the files that differ in bundles: a few requests whatever the app's size
+	if n, err := pullByTree(ctx, c, opts, log); !errors.Is(err, errPullFileByFile) {
+		return n, err
+	}
+
 	paths := opts.Paths
 	explicit := len(paths) > 0
 	if !explicit {
@@ -201,4 +207,75 @@ func (c *Client) remote() *remotev1.Client {
 		tok = "Bearer " + c.Token
 	}
 	return remotev1.NewClient(c.Remote.URL, tok, c.HTTP)
+}
+
+// errPullFileByFile: pullByTree can't do this pull (an older remote without the tree, or a path outside the synced
+// set); Pull lists folders and downloads files one at a time instead.
+var errPullFileByFile = errors.New("pull file by file")
+
+// pullByTree pulls through the two-way sync's tree and bundles: one request for the tree, one per bundle of changed
+// files (files already the same are skipped), and the deploy base saved from the same tree.
+func pullByTree(ctx context.Context, c *Client, opts PullOptions, log func(string)) (int, error) {
+	s, err := NewSyncer(c, SyncOptions{CollectOptions: CollectOptions{Dir: opts.Dir}})
+	if err != nil {
+		return 0, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.fetchRemote(ctx); err != nil {
+		if errors.Is(err, ErrNoSyncAPI) {
+			return 0, errPullFileByFile
+		}
+		return 0, err
+	}
+	paths := opts.Paths
+	explicit := len(paths) > 0
+	if !explicit {
+		paths = DefaultPullPaths
+	}
+	under := func(f, p string) bool { return f == p || strings.HasPrefix(f, p+"/") }
+	var want []string
+	matched := map[string]bool{}
+	for f := range s.remote {
+		for _, p := range paths {
+			if p = strings.Trim(p, "/"); under(f, p) {
+				matched[p] = true
+				want = append(want, f)
+				break
+			}
+		}
+	}
+	if explicit {
+		for _, p := range paths {
+			if !matched[strings.Trim(p, "/")] {
+				return 0, errPullFileByFile // not in the synced set (or not there): let the listing say so
+			}
+		}
+	}
+	sort.Strings(want)
+	if opts.DryRun {
+		for _, f := range want {
+			log("   " + f)
+		}
+		return len(want), nil
+	}
+	local, err := s.local()
+	if err != nil {
+		return 0, err
+	}
+	var fetch []string
+	for _, f := range want {
+		if l, ok := local[f]; ok && l.Hash == s.remote[f] {
+			s.state.Files[f] = s.remote[f] // already the same here
+			continue
+		}
+		fetch = append(fetch, f)
+	}
+	if err := s.pull(ctx, fetch, nil); err != nil {
+		return 0, err
+	}
+	if err := s.saveState(); err != nil {
+		log("Couldn't save the deploy base (.pocketone/sync.json): " + err.Error())
+	}
+	return len(want), nil
 }

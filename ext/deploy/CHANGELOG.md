@@ -5,6 +5,10 @@ commit. Each PocketOne release raises this extension's `version:` when there's s
 renames the section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 Sections named after a PocketOne release are from before extensions had versions of their own.
 
+### Changed
+
+- `pull`, `clone` and `dev` download in bundles: the tree once (`GET /tree?deep=1`, every folder in one answer) and the files that differ in one `POST /files/bundle` per 32 MB, instead of one request per folder and per file, so a pull no longer trips a proxy's rate limit (Cloudflare's on PocketHost). Files already the same aren't downloaded, and `pull` saves the deploy base from the same tree. Older servers are pulled file by file as before.
+
 ## Unreleased
 
 ### Upgrading

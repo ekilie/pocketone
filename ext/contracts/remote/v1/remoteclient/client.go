@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"pocketone.dev/ext/extkit"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -121,11 +122,63 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		h = NewHTTPClient()
 		c.HTTP = h
 	}
-	res, err := h.Do(req)
-	if err != nil {
-		return nil, &APIError{Status: 0, Message: fmt.Sprintf("could not reach %s: %v", c.Remote.URL, err)}
+	for attempt := 0; ; attempt++ {
+		res, err := h.Do(req)
+		if err != nil {
+			return nil, &APIError{Status: 0, Message: fmt.Sprintf("could not reach %s: %v", c.Remote.URL, err)}
+		}
+		// rate limited (by the app, or a proxy in front of it): wait as long as it says and try again, a few times,
+		// when the request can be sent again
+		if res.StatusCode != http.StatusTooManyRequests || attempt >= maxRateLimitRetries || (req.Body != nil && req.GetBody == nil) {
+			return res, nil
+		}
+		wait := retryAfter(res.Header.Get("Retry-After"), attempt)
+		io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10))
+		res.Body.Close()
+		if wait > maxRateLimitWait {
+			return nil, &APIError{Status: http.StatusTooManyRequests, Message: fmt.Sprintf("%s is rate limiting requests; try again in %s", c.Remote.URL, wait.Round(time.Second))}
+		}
+		if err := RetrySleep(req.Context(), wait); err != nil {
+			return nil, err
+		}
+		if req.GetBody != nil {
+			body, err := req.GetBody()
+			if err != nil {
+				return nil, err
+			}
+			req.Body = body
+		}
 	}
-	return res, nil
+}
+
+const (
+	maxRateLimitRetries = 4
+	maxRateLimitWait    = 60 * time.Second
+)
+
+// RetrySleep waits d before a rate-limited request is sent again, or until ctx ends (overridable for tests).
+var RetrySleep = func(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+
+// retryAfter reads a Retry-After header (seconds or an HTTP date); without one, 1, 2, 4, 8 s by attempt.
+func retryAfter(v string, attempt int) time.Duration {
+	if v = strings.TrimSpace(v); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return time.Duration(n) * time.Second
+		}
+		if t, err := http.ParseTime(v); err == nil {
+			return max(time.Until(t), 0)
+		}
+	}
+	return time.Second << attempt
 }
 
 // APIError is a non-2xx answer (Status 0: the remote couldn't be reached).
