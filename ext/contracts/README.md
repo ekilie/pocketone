@@ -36,6 +36,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`instance.lookup/v1`](instance/lookup/v1/README.md) | A multisite host asks what a hostname it doesn't know serves. | mothership |  |  | @benallfree |
 | [`instance.resolve/v1`](instance/resolve/v1/README.md) | On a control plane: what a hostname serves for an edge, and the records the answer was built from. | mothership (default) | mothership |  | @benallfree |
 | [`instance.source/v1`](instance/source/v1/README.md) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
+| [`instance.tokens/v1`](instance/tokens/v1/README.md) | A multisite host checks an API token one of its instances issued, to accept it on the routes it answers. | pocker |  |  | @benallfree |
 | [`instance.watch/v1`](instance/watch/v1/README.md) | An edge follows a control plane lazily: one stream, hostnames watched as requests name them. | mothership |  |  | @benallfree |
 | [`mail.fallback/v1`](mail/fallback/v1/README.md) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](mail/feedback/v1/README.md) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |

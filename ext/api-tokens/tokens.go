@@ -42,10 +42,10 @@ const (
 	minSecret     = 32          // characters a secret needs after its prefix
 )
 
-// Errors returned by [Tokens.Verify].
+// Errors returned by [Tokens.Verify]: api-tokens/v1's, so callers through the contract can tell them apart.
 var (
-	ErrInvalid = errors.New("invalid API token")
-	ErrExpired = errors.New("expired API token")
+	ErrInvalid = apitokensv1.ErrInvalid
+	ErrExpired = apitokensv1.ErrExpired
 )
 
 // Config is set by whoever builds the binary (with Pocker, an instance can override parts of it in its

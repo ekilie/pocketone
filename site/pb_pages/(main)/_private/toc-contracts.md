@@ -22,6 +22,7 @@
 - [instance.lookup/v1](/docs/contracts/instance.lookup/v1)
 - [instance.resolve/v1](/docs/contracts/instance.resolve/v1)
 - [instance.source/v1](/docs/contracts/instance.source/v1)
+- [instance.tokens/v1](/docs/contracts/instance.tokens/v1)
 - [instance.watch/v1](/docs/contracts/instance.watch/v1)
 - [mail.fallback/v1](/docs/contracts/mail.fallback/v1)
 - [mail.feedback/v1](/docs/contracts/mail.feedback/v1)

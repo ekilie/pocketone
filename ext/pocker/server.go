@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"path/filepath"
 	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
+	tokensv1 "pocketone.dev/ext/contracts/instance/tokens/v1"
 	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
 	"strings"
 
@@ -233,8 +234,9 @@ func (s *Server) RegisterHost(h *multisite.Host) error {
 		s.OnStart(s.Manager)
 	}
 	runtimev1.Contract.ProvideIn(h.Scope, s.Manager)
-	fsv1.Contract.ProvideIn(h.Scope, s.Manager.Files()) // instance.fs/v1: its instances' code files
-	if s.Wrap != nil {                                  // the host application's wrapper, inside the host extensions'
+	fsv1.Contract.ProvideIn(h.Scope, s.Manager.Files())      // instance.fs/v1: its instances' code files
+	tokensv1.Contract.ProvideIn(h.Scope, s.Manager.Tokens()) // instance.tokens/v1: its instances' own API tokens
+	if s.Wrap != nil {                                       // the host application's wrapper, inside the host extensions'
 		h.Wrappers = append(h.Wrappers, s.Wrap)
 	}
 	h.InstanceRoutes = append(h.InstanceRoutes, s.InstanceRoutes...)

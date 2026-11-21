@@ -173,6 +173,10 @@ failure is written there too.
   (`Manager.Files()`): host-side code asks it for an instance's folder, takes its writers' lock, and restarts it around
   a change (`WithInstanceStopped`, then `StartInstance`). It isn't host-provided to the instances: inside an instance,
   its own app's provider answers.
+- **Instance tokens.** The host provides [instance.tokens/v1](/docs/contracts/instance.tokens/v1) on its scope
+  (`Manager.Tokens()`): host-side code checks an API token one of its instances issued, with that instance's own
+  api-tokens/v1 (starting the instance if it isn't running). A host uses it to accept an instance's own tokens on the
+  routes it answers for that instance, so `pocketone login` and `clone`, which sign in to the instance, work there.
 - **Contracts the host provides.** `Server.Host` (or `Provider.Host`) is the host's contract scope. A contract the
   host provides for its instances steps aside inside each instance's app, and the host answers it on the instance's
   hostname in `Server.InstanceRoutes` (or `Provider.InstanceRoutes`, `ManagerOptions.InstanceRoutes`): after the

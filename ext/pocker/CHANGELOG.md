@@ -1,30 +1,26 @@
 # Pocker changelog
 
-Changes to `ext/pocker`, newest first. A user-visible change adds its line under `## Unreleased
-
-### Changed
-
-- The Manager's own handler (`Manager.ServeHTTP`) uses the host's instance.lookup/v1 when there is one.
-` in the same
+Changes to `ext/pocker`, newest first. A user-visible change adds its line under `## Unreleased` in the same
 commit. Each PocketOne release raises this extension's `version:` when there's something under `## Unreleased` and
 renames the section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 Sections named after a PocketOne release are from before extensions had versions of their own.
-
-### Fixed
-
-- Standard extensions keep their per-instance state apart: every instance's app has its instance id (`extkit.AppID`) before the standard set registers. It used to be set only for the host's own extensions, so every instance shared one cache bucket of each name (one budget, and one instance's clear emptied everyone's).
-
 
 ## Unreleased
 
 ### Added
 
 - The Pocker host provides [instance.fs/v1](../contracts/instance/fs/v1/README.md) on its scope (`Manager.Files()`): each instance's code folder, a writers' lock and a restart that stops its app and starts it again. Host-side code (a host's deploy or file drive) gets an instance's files from it; code inside an instance keeps its own.
+- The Pocker host provides [instance.tokens/v1](../contracts/instance/tokens/v1/README.md) on its scope (`Manager.Tokens()`): host-side code checks an API token an instance issued with that instance's own api-tokens/v1, so a host can accept the instance's tokens (`pocketone login` and `clone` sign in to the instance) on the routes it answers for it.
 
 ### Changed
 
+- The Manager's own handler (`Manager.ServeHTTP`) uses the host's instance.lookup/v1 when there is one.
 - Each instance's `pb_cache` is outside its folder, in the host's `pb_cache/instances/<instance id>/`: the instance's extensions (`extkit.CacheDir`) and host-side caches about it (instance.fs/v1's `CacheDir`, deploy's upload store) go there. Copies, archives and moves of an instance folder no longer carry it; an old `pb_cache` left in an instance folder can be deleted.
 - Serves every instance; instances no longer name a runtime, and a host runs pocker or docker, never both.
+
+### Fixed
+
+- Standard extensions keep their per-instance state apart: every instance's app has its instance id (`extkit.AppID`) before the standard set registers. It used to be set only for the host's own extensions, so every instance shared one cache bucket of each name (one budget, and one instance's clear emptied everyone's).
 
 ## 0.1.1 (2026-11-18)
 
