@@ -44,6 +44,10 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 - Contract streams (`instance.watch/v1`'s stream, `remote/v1` logs and the rest) no longer end after 5 minutes: they clear the server's write timeout, as PocketBase's realtime does. Edges following the mothership reconnected (and refetched every hostname) every 5 minutes.
 
+### Changed
+
+- `pocketone login`, `link` and `clone` sign in as a superuser in the browser: the app's sign-in page opens on the superuser form, even when the browser is signed in there as an app user (whose token the deploy API refuses).
+
 ## Unreleased
 
 ### Upgrading

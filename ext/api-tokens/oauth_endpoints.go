@@ -130,8 +130,12 @@ type authRequest struct {
 	state       string
 	challenge   string
 	scope       string
-	resource    string       // RFC 8707 audience, "" for none
-	device      *core.Record // set on the device verification page
+	resource    string // RFC 8707 audience, "" for none
+	// account is the auth collection the client needs the token from ("account" parameter, e.g. "_superusers"
+	// for the CLI): the sign-in page shows that form, a session of another collection doesn't count, and no other
+	// collection is issued a token. "" lets the user choose.
+	account string
+	device  *core.Record // set on the device verification page
 }
 
 // validResource: an absolute http(s) URL on this server's host, without a fragment (RFC 8707).
@@ -165,7 +169,7 @@ func (s *OAuthServer) parseAuthorizeWith(e *core.RequestEvent, get func(string) 
 		return nil, "Unknown client.", false
 	}
 	ar := &authRequest{client: c, redirectURI: get("redirect_uri"), state: get("state"),
-		challenge: get("code_challenge"), scope: get("scope"), resource: get("resource")}
+		challenge: get("code_challenge"), scope: get("scope"), resource: get("resource"), account: get("account")}
 	if ar.redirectURI == "" && len(c.RedirectURIs) == 1 {
 		ar.redirectURI = c.RedirectURIs[0]
 	}
@@ -174,6 +178,13 @@ func (s *OAuthServer) parseAuthorizeWith(e *core.RequestEvent, get func(string) 
 	}
 	if ar.resource != "" && !s.validResource(e, ar.resource) {
 		return ar, "invalid_target: resource must be a URL on this server", true
+	}
+	if ar.account != "" {
+		col, err := s.pickCollection(ar.account)
+		if err != nil {
+			return ar, "invalid_request: account: " + err.Error(), true
+		}
+		ar.account = col.Name
 	}
 	if get("response_type") != "code" {
 		return ar, "unsupported_response_type", true
@@ -191,7 +202,7 @@ func (ar *authRequest) hidden() map[string]string {
 	return map[string]string{
 		"client_id": ar.client.Id, "redirect_uri": ar.redirectURI, "state": ar.state, "scope": ar.scope,
 		"response_type": "code", "code_challenge": ar.challenge, "code_challenge_method": "S256",
-		"resource": ar.resource,
+		"resource": ar.resource, "account": ar.account,
 	}
 }
 
@@ -238,6 +249,11 @@ func (s *OAuthServer) flow(e *core.RequestEvent, ar *authRequest, action string)
 		return s.render(e, http.StatusBadRequest, base)
 	}
 	user := s.sessionUser(e)
+	if user != nil && !ar.accepts(user) {
+		// signed in, but as an account the client can't use: ask for the one it needs instead of offering consent
+		base.Notice = s.wrongAccountNotice(ar, user)
+		user = nil
+	}
 
 	if e.Request.Method == http.MethodPost {
 		if !s.checkCSRF(e) {
@@ -255,8 +271,13 @@ func (s *OAuthServer) flow(e *core.RequestEvent, ar *authRequest, action string)
 		case strings.HasPrefix(step, "oauth2:"):
 			return s.stepOAuth2(e, base, strings.TrimPrefix(step, "oauth2:"))
 		case strings.HasPrefix(step, "use:"):
-			// switch forms: another user collection, the superuser form ("use:_superusers") or back ("use:")
-			col, err := s.pickCollection(strings.TrimPrefix(step, "use:"))
+			// switch forms: another user collection, the superuser form ("use:_superusers") or back ("use:"); a client
+			// that needs one account type keeps its form
+			name := strings.TrimPrefix(step, "use:")
+			if ar.account != "" {
+				name = ar.account
+			}
+			col, err := s.pickCollection(name)
 			if err != nil {
 				return s.signInPage(e, base, nil, err.Error(), "")
 			}
@@ -278,7 +299,7 @@ func (s *OAuthServer) flow(e *core.RequestEvent, ar *authRequest, action string)
 }
 
 func (s *OAuthServer) basePage(e *core.RequestEvent, ar *authRequest, action string) PageData {
-	d := PageData{Action: action, Hidden: ar.hidden(), CSRF: s.csrf(e), ClientName: ar.client.Name}
+	d := PageData{Action: action, Hidden: ar.hidden(), CSRF: s.csrf(e), ClientName: ar.client.Name, Account: ar.account}
 	if ar.device == nil {
 		if u, err := url.Parse(ar.redirectURI); err == nil {
 			d.ClientHost = u.Host
@@ -322,7 +343,29 @@ func (s *OAuthServer) checkCSRF(e *core.RequestEvent) bool {
 	return err == nil && c.Value != "" && subtle.ConstantTimeCompare([]byte(c.Value), []byte(e.Request.PostFormValue("csrf"))) == 1
 }
 
+// accepts reports whether user's account type is one the client can use (any, when it didn't name one).
+func (ar *authRequest) accepts(user *core.Record) bool {
+	return ar.account == "" || user.Collection().Name == ar.account
+}
+
+// wrongAccountNotice tells a user signed in as one account type that the client needs another.
+func (s *OAuthServer) wrongAccountNotice(ar *authRequest, user *core.Record) string {
+	who := "This app"
+	if ar.client.Name != "" {
+		who = ar.client.Name
+	}
+	need := "a " + ar.account + " account"
+	if ar.account == core.CollectionNameSuperusers {
+		need = "a superuser"
+	}
+	return "You're signed in as " + accountName(user) + ". " + who + " needs " + need + ": sign in as one below."
+}
+
 func (s *OAuthServer) consentPage(e *core.RequestEvent, ar *authRequest, d PageData, user *core.Record) error {
+	if !ar.accepts(user) {
+		d.Notice = s.wrongAccountNotice(ar, user)
+		return s.signInPage(e, d, nil, "", "")
+	}
 	scopes, err := s.resolveScopes(ar.scope, user.Collection())
 	if err != nil {
 		if ar.device != nil {
@@ -349,6 +392,9 @@ func (s *OAuthServer) consentPage(e *core.RequestEvent, ar *authRequest, d PageD
 }
 
 func (s *OAuthServer) decide(e *core.RequestEvent, ar *authRequest, d PageData, user *core.Record, allow bool) error {
+	if allow && !ar.accepts(user) {
+		return s.consentPage(e, ar, d, user) // back to the sign-in form for the account the client needs
+	}
 	requested, err := s.resolveScopes(ar.scope, user.Collection())
 	if err != nil {
 		return s.consentPage(e, ar, d, user)
@@ -441,6 +487,14 @@ func (s *OAuthServer) deviceAuthorization(e *core.RequestEvent) error {
 	if resource != "" && !s.validResource(e, resource) {
 		return oauthError(e, http.StatusBadRequest, "invalid_target", "resource must be a URL on this server")
 	}
+	account := e.Request.PostFormValue("account")
+	if account != "" {
+		col, err := s.pickCollection(account)
+		if err != nil {
+			return oauthError(e, http.StatusBadRequest, "invalid_request", "account: "+err.Error())
+		}
+		account = col.Name
+	}
 	deviceCode := security.RandomString(40)
 	userCode := normalizeUserCode(security.RandomStringWithAlphabet(8, userCodeAlphabet))
 	col, err := s.app.FindCachedCollectionByNameOrId(CodesCollectionId)
@@ -454,6 +508,7 @@ func (s *OAuthServer) deviceAuthorization(e *core.RequestEvent) error {
 	rec.Set("client_id", c.Id)
 	rec.Set("scopes", strings.Fields(scope))
 	rec.Set("resource", resource)
+	rec.Set("account", account)
 	rec.Set("status", StatusPending)
 	rec.Set("expires", s.cfg.Now().Add(deviceTTL).UTC())
 	if err := s.app.Save(rec); err != nil {
@@ -498,7 +553,7 @@ func (s *OAuthServer) deviceRequest(userCode string) (*authRequest, error) {
 	}
 	var scopes []string
 	_ = dev.UnmarshalJSONField("scopes", &scopes)
-	return &authRequest{client: c, scope: strings.Join(scopes, " "), device: dev}, nil
+	return &authRequest{client: c, scope: strings.Join(scopes, " "), account: dev.GetString("account"), device: dev}, nil
 }
 
 // ---------------------------------------------------------------------------------------------------------------

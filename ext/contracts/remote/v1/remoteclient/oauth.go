@@ -28,7 +28,14 @@ type BrowserLoginOptions struct {
 	Device    bool // device code instead of a browser redirect
 	NoBrowser bool // print the URL, don't open a browser
 	Out       io.Writer
+	// Account is the auth collection to sign in as (oauth/v1's "account" parameter); "" is [AccountSuperusers]:
+	// the CLI's commands (deploy, remote control) need a superuser. The sign-in page then shows the superuser form,
+	// even when the browser is signed in there as someone else.
+	Account string
 }
+
+// AccountSuperusers is the account the CLI signs in as by default: an app's superusers.
+const AccountSuperusers = "_superusers"
 
 // OAuthMetadata is the part of RFC 8414 metadata the CLI uses.
 type OAuthMetadata struct {
@@ -100,11 +107,14 @@ func OAuthLogin(ctx context.Context, c *Client, w *Whoami, opts BrowserLoginOpti
 		return nil, err
 	}
 	var tr *tokenResponse
+	if opts.Account == "" {
+		opts.Account = AccountSuperusers
+	}
 	if opts.Device || (!opts.NoBrowser && !CanOpenBrowser()) {
 		if md.DeviceAuthorizationEndpoint == "" {
 			return nil, errors.New("the remote doesn't offer device sign-in; use --token")
 		}
-		tr, err = deviceFlow(ctx, c, md, out)
+		tr, err = deviceFlow(ctx, c, md, opts.Account, out)
 	} else {
 		tr, err = loopbackFlow(ctx, c, md, opts, out)
 	}
@@ -147,6 +157,7 @@ func loopbackFlow(ctx context.Context, c *Client, md *OAuthMetadata, opts Browse
 	q := url.Values{
 		"response_type": {"code"}, "client_id": {OAuthClientId}, "redirect_uri": {redirect}, "state": {state},
 		"code_challenge": {base64.RawURLEncoding.EncodeToString(sum[:])}, "code_challenge_method": {"S256"},
+		"account": {opts.Account},
 	}
 	authURL := md.AuthorizationEndpoint + "?" + q.Encode()
 
@@ -209,7 +220,7 @@ func htmlEscape(s string) string {
 	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;").Replace(s)
 }
 
-func deviceFlow(ctx context.Context, c *Client, md *OAuthMetadata, out io.Writer) (*tokenResponse, error) {
+func deviceFlow(ctx context.Context, c *Client, md *OAuthMetadata, account string, out io.Writer) (*tokenResponse, error) {
 	var da struct {
 		DeviceCode              string `json:"device_code"`
 		UserCode                string `json:"user_code"`
@@ -218,7 +229,11 @@ func deviceFlow(ctx context.Context, c *Client, md *OAuthMetadata, out io.Writer
 		ExpiresIn               int    `json:"expires_in"`
 		Interval                int    `json:"interval"`
 	}
-	if err := postForm(ctx, c, md.DeviceAuthorizationEndpoint, url.Values{"client_id": {OAuthClientId}}, &da); err != nil {
+	form := url.Values{"client_id": {OAuthClientId}}
+	if account != "" {
+		form.Set("account", account)
+	}
+	if err := postForm(ctx, c, md.DeviceAuthorizationEndpoint, form, &da); err != nil {
 		return nil, fmt.Errorf("device sign-in: %w", err)
 	}
 	fmt.Fprintf(out, "To sign in to %s, open\n  %s\non any device and enter the code  %s\n", c.Remote.URL, da.VerificationURI, da.UserCode)

@@ -70,6 +70,11 @@ type PageData struct {
 	UserCode string
 	Error    string
 	Message  string
+	// Notice explains the form, e.g. that the client needs another account type than the one signed in.
+	Notice string
+	// Account: the client needs a token from this auth collection (its "account" parameter); the sign-in form is
+	// that collection's, with no switching to another.
+	Account string
 }
 
 // Provider is an OAuth2 sign-in option. Its button posts step "oauth2:<Name>".

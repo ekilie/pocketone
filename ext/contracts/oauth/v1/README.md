@@ -24,6 +24,9 @@ A routed contract ([oauth.go](oauth.go)): the OAuth specs fix its API's shape, s
 | `POST /api/_c/oauth/v1/register` | dynamic client registration (when on) |
 | `GET` / `POST /api/_c/oauth/v1/provider/callback` | sign-in through an OAuth2 provider (Google, Apple, ...) |
 
+`authorize` and `device` take an optional `account`: the auth collection the client needs the token from (the CLI
+sends `_superusers`). The sign-in shows only that form, and no other collection is issued a token.
+
 In Go, another extension (MCP) turns on dynamic registration and sets token lifetimes:
 `oauthv1.Contract.Of(app)` → `EnableDynamicRegistration()`, `SetAccessTTL(path, ttl)`, `Issuer(e)`.
 

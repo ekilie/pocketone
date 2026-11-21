@@ -388,3 +388,91 @@ func TestSignInOAuth2(t *testing.T) {
 		t.Fatalf("device allow: %s", b.page)
 	}
 }
+
+// A client that names the account type it needs ("account"): the sign-in page shows that form, with no switching, a
+// session of another type doesn't skip to consent, and only that type is issued a token.
+func TestSignInAccountParameter(t *testing.T) {
+	e := newEnv(t, OAuthConfig{})
+	b := newBrowser(t)
+
+	// signed in as a user (an earlier sign-in, still in its 15-minute session)
+	b.get(e.url + "/api/_c/oauth/v1/authorize?" + authorizeQuery().Encode())
+	b.submit("password", map[string]string{"collection": "clients", "email": "test@example.com", "password": "1234567890"})
+	if !b.has("wants to access") || !b.has("User account") {
+		t.Fatalf("user consent: %s", b.page)
+	}
+
+	// the CLI asks for a superuser: the superuser form, saying why, not consent for the signed-in user
+	q := authorizeQuery()
+	q.Set("account", core.CollectionNameSuperusers)
+	b.get(e.url + "/api/_c/oauth/v1/authorize?" + q.Encode())
+	if b.status != 200 || !b.has("Superuser sign-in") || b.has("wants to access") ||
+		!b.has("You&#39;re signed in as test@example.com") || !b.has("needs a superuser") ||
+		b.has("Sign in as a user instead") || b.has(`value="use:`) || !b.has(`name="account" value="_superusers"`) {
+		t.Fatalf("superuser form for a user session: %d %s", b.status, b.page)
+	}
+	// a forged switch to the user form keeps the superuser form
+	b.submit("use:clients", nil)
+	if !b.has("Superuser sign-in") || !b.has(`name="collection" value="_superusers"`) {
+		t.Fatalf("forged switch: %s", b.page)
+	}
+	// a forged user sign-in on that request goes back to the superuser form, never to consent
+	b.submit("password", map[string]string{"collection": "clients", "email": "test@example.com", "password": "1234567890"})
+	if b.has("wants to access") || !b.has("Superuser sign-in") {
+		t.Fatalf("forged user sign-in: %s", b.page)
+	}
+	// and "allow" by the user session is refused the same way
+	res := b.submit("allow", nil)
+	if res.StatusCode == http.StatusFound || !b.has("Superuser sign-in") {
+		t.Fatalf("allow as user: %d %s", res.StatusCode, b.page)
+	}
+
+	// the superuser signs in, allows: a superuser token
+	b.submit("password", map[string]string{"email": "test@example.com", "password": "1234567890"})
+	if !b.has("wants to access") || !b.has("Superuser account") {
+		t.Fatalf("superuser consent: %s", b.page)
+	}
+	res = b.submit("allow", nil)
+	loc, _ := url.Parse(res.Header.Get("Location"))
+	st, tok := postToken(t, e.url, url.Values{"grant_type": {"authorization_code"}, "code": {loc.Query().Get("code")},
+		"redirect_uri": {"http://127.0.0.1:1/cb"}, "client_id": {CLIClientId}, "code_verifier": {strings.Repeat("v", 50)}})
+	if st != 200 {
+		t.Fatalf("token: %d %v", st, tok)
+	}
+	if info, err := e.tk.Verify(tok["access_token"].(string)); err != nil || info.Owner.Collection().Name != core.CollectionNameSuperusers {
+		t.Fatalf("token owner: %v %+v", err, info)
+	}
+
+	// an account type that can't sign in here goes back to the client as an error
+	q.Set("account", "nope")
+	res = b.get(e.url + "/api/_c/oauth/v1/authorize?" + q.Encode())
+	if loc, _ := url.Parse(res.Header.Get("Location")); res.StatusCode != http.StatusFound || loc.Query().Get("error") != "invalid_request" {
+		t.Fatalf("unknown account: %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+}
+
+// A device code that names the account type: its verification page asks for that account, whatever the session.
+func TestDeviceAccountParameter(t *testing.T) {
+	e := newEnv(t, OAuthConfig{})
+	res, err := http.PostForm(e.url+"/api/_c/oauth/v1/device", url.Values{"client_id": {CLIClientId}, "account": {core.CollectionNameSuperusers}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var da struct {
+		UserCode string `json:"user_code"`
+	}
+	_ = json.NewDecoder(res.Body).Decode(&da)
+	res.Body.Close()
+	if da.UserCode == "" {
+		t.Fatalf("device: %d", res.StatusCode)
+	}
+	b := newBrowser(t)
+	b.get(e.url + "/api/_c/oauth/v1/device/verify?user_code=" + url.QueryEscape(da.UserCode))
+	if !b.has("Superuser sign-in") || b.has("Sign in as a user instead") {
+		t.Fatalf("device form: %s", b.page)
+	}
+	res, _ = http.PostForm(e.url+"/api/_c/oauth/v1/device", url.Values{"client_id": {CLIClientId}, "account": {"nope"}})
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("device with an unknown account: %d", res.StatusCode)
+	}
+}
