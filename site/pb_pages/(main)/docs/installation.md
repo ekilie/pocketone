@@ -5,7 +5,7 @@ description: Install PocketOne on macOS, Windows or Linux (Homebrew, Scoop, the 
 
 # Installation
 
-PocketOne is one executable, `pocketone`. It is built on PocketBase v0.42 and takes the same commands and flags, plus its own.
+PocketOne is one executable, `pocketone`. It is built on PocketBase and takes the same commands and flags, plus its own.
 
 - **Install:** [macOS](#macos) · [Windows](#windows) · [Linux](#linux) · [Other ways](#other-ways-to-install) · [Install script settings](#install-script-settings)
 - **Use:** [Run it](#run-it) · [Linux server](#linux-server) · [Upgrade](#upgrade) · [Moving from PocketBase](#moving-from-pocketbase)
@@ -99,7 +99,7 @@ go build -o pocketone .
 The script reads these environment variables. With `curl | sh`, put them before `sh`:
 
 ```bash
-curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=v0.0.1-alpha.10 sh
+curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=<release tag> sh
 ```
 
 | Variable | What it does |
