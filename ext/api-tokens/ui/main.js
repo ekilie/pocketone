@@ -42,8 +42,21 @@
             items: [],
             scopes: [],
             created: null, // { token, record } right after create
-            form: { name: "", scopes: [], ttlDays: "", ownerCollection: "_superusers", owner: "" },
+            form: emptyForm(),
         });
+
+        function emptyForm() {
+            // values: per scope that takes values, the "only these" text (empty: every value)
+            return { name: "", scopes: [], values: {}, ttlDays: "", ownerCollection: "_superusers", owner: "" };
+        }
+
+        // tokenScopes: the ticked scopes, each either bare (every value) or one "name=value" per value typed
+        function tokenScopes(f) {
+            return f.scopes.flatMap((name) => {
+                const vals = (f.values[name] || "").split(/[\s,]+/).filter(Boolean);
+                return vals.length ? vals.map((v) => name + "=" + v) : [name];
+            });
+        }
 
         async function load() {
             try {
@@ -62,12 +75,12 @@
             try {
                 data.created = await api("", "POST", {
                     name: f.name,
-                    scopes: f.scopes,
+                    scopes: tokenScopes(f),
                     ttl: f.ttlDays ? Math.round(Number(f.ttlDays) * 86400) : 0,
                     ownerCollection: f.owner ? f.ownerCollection : "",
                     owner: f.owner.trim(),
                 });
-                data.form = { name: "", scopes: [], ttlDays: "", ownerCollection: "_superusers", owner: "" };
+                data.form = emptyForm();
                 load();
             } catch (err) {
                 app.checkApiError(err);
@@ -130,7 +143,17 @@
                                 t.span({ className: "txt-hint" }, "Scopes (none: full rights):"),
                                 ...data.scopes.map((s) => t.label({ className: "flex gap-5", title: s.description || "" },
                                     t.input({ type: "checkbox", checked: () => data.form.scopes.includes(s.name), onchange: () => toggleScope(s.name) }),
-                                    t.span({}, s.name))))
+                                    t.span({}, s.name),
+                                    // a scope that takes values: optionally limit it to some ("only these")
+                                    () => s.values && data.form.scopes.includes(s.name)
+                                        ? t.input({
+                                            type: "text", style: "width:14em",
+                                            placeholder: "all, or only: " + (s.values.description || "values"),
+                                            title: "Comma-separated. Empty: every value.",
+                                            value: () => data.form.values[s.name] || "",
+                                            oninput: (e) => (data.form.values = { ...data.form.values, [s.name]: e.target.value }),
+                                        })
+                                        : null)))
                             : t.span({ className: "txt-hint" }, "No scopes are registered: tokens get their owner's full rights.")),
                         t.div({ className: "col-lg-12" }, t.button({ type: "submit", className: "btn" }, "Create token")),
                     ),

@@ -40,7 +40,21 @@ type Scope struct {
 	// Collections, when not empty, limits which auth collections may hold a token with this scope (collection
 	// names, e.g. "_superusers"). Empty: any collection that may hold tokens.
 	Collections []string `json:"collections,omitempty"`
+
+	// Values, when set, lets a token hold the scope for some values only, written "name=value" in its scope list
+	// (e.g. "instances=abc123"); the bare name still means every value. Paths and Match don't see values: the
+	// routes the scope covers check them with [HasScopeFor] / [ValuesFor] (Go) or `$apiTokens.hasScope(e, name,
+	// value)` (JS).
+	Values *ScopeValues `json:"values,omitempty"`
 }
+
+// ScopeValues describes a scope's values: what one is, and an optional check when a token is created.
+type ScopeValues = apitokensv1.ScopeValues
+
+var scopeValueRe = regexp.MustCompile(`^[A-Za-z0-9._:@/+-]{1,200}$`)
+
+// ValidScopeValue reports whether value may follow a scope name ("name=value"): 1–200 letters, digits and . _ : @ / + -.
+func ValidScopeValue(value string) bool { return scopeValueRe.MatchString(value) }
 
 // Infrastructure reports whether the scope only reaches PocketOne's own routes (contract APIs under /api/_c/): a
 // client that needs one asks for it; consent pages and MCP don't offer it otherwise.
@@ -128,6 +142,9 @@ func (r *registry) add(s Scope) error {
 				old.Collections = append(old.Collections, c)
 			}
 		}
+		if old.Values == nil {
+			old.Values = s.Values
+		}
 		s = old
 	} else {
 		// notes:write and notes_write would share a header: refuse the second
@@ -168,7 +185,8 @@ func (r *registry) allows(scopes []string, e *core.RequestEvent) bool {
 	if anyTokenPath(path) {
 		return true
 	}
-	for _, name := range scopes {
+	for _, scope := range scopes {
+		name, _ := apitokensv1.SplitScope(scope)
 		s, ok := r.get(name)
 		if ok && s.matches(e) {
 			return true
@@ -226,7 +244,8 @@ func (t *Tokens) Reaches(scopes []string, method, pattern string) bool {
 	if anyTokenPath(pattern) {
 		return true
 	}
-	for _, name := range scopes {
+	for _, scope := range scopes {
+		name, _ := apitokensv1.SplitScope(scope)
 		s, ok := t.registry.get(name)
 		if !ok {
 			continue

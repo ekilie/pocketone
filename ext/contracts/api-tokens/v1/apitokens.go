@@ -47,10 +47,17 @@ type Grant struct {
 	Owner *core.Record `json:"-"` // the owner's record (inside the app)
 }
 
-// HasScope reports whether the token may act with scope: unscoped tokens have every scope.
-func (g *Grant) HasScope(scope string) bool {
-	return len(g.Scopes) == 0 || slices.Contains(g.Scopes, scope)
-}
+// HasScope reports whether the token may act with scope: unscoped tokens have every scope. A bare name ("instances")
+// is held by "instances" and by any "instances=<value>"; "instances=abc" is held by "instances" or "instances=abc".
+func (g *Grant) HasScope(scope string) bool { return HoldsScope(g.Scopes, scope) }
+
+// HasScopeFor reports whether the token may act with scope on value: it holds the scope with no value (every value),
+// or holds "scope=value". Unscoped tokens may.
+func (g *Grant) HasScopeFor(scope, value string) bool { return HoldsScope(g.Scopes, JoinScope(scope, value)) }
+
+// ScopeValues lists the values the token holds scope for. all is true when it holds the scope for every value (an
+// unscoped token, or the bare name); otherwise values may be empty (it doesn't hold the scope).
+func (g *Grant) ScopeValues(scope string) (values []string, all bool) { return ValuesOf(g.Scopes, scope) }
 
 // Scope is a named slice of an owner's rights that a token can be limited to. A token whose scopes are set
 // authenticates only on requests its scopes match (Paths + Methods, or Match).
@@ -68,6 +75,120 @@ type Scope struct {
 	Match func(e *core.RequestEvent) bool `json:"-"`
 	// Collections, when not empty, limits which auth collections may hold a token with this scope.
 	Collections []string `json:"collections,omitempty"`
+	// Values, when set, lets a token hold the scope for some values only ("instances=abc123"), e.g. record ids. The
+	// bare name still means every value. Paths and Match don't see values: whoever serves the scope's requests
+	// checks them ([Grant.HasScopeFor], [Grant.ScopeValues]).
+	Values *ScopeValues `json:"values,omitempty"`
+}
+
+// ScopeValues describes what a scope's values are.
+type ScopeValues struct {
+	// Description says what a value is (e.g. "an instance id"); token screens show it.
+	Description string `json:"description"`
+	// Check, if set, vets a value when a token is created for owner (e.g. that owner owns that record); an error
+	// refuses the token.
+	Check func(owner *core.Record, value string) error `json:"-"`
+}
+
+// ScopeValueSep joins a scope name and a value in a token's scope list: "instances=abc123".
+const ScopeValueSep = "="
+
+// SplitScope splits a token scope into its name and value ("" when it has none).
+func SplitScope(scope string) (name, value string) {
+	name, value, _ = strings.Cut(scope, ScopeValueSep)
+	return name, value
+}
+
+// JoinScope is "name=value", or name when value is "".
+func JoinScope(name, value string) string {
+	if value == "" {
+		return name
+	}
+	return name + ScopeValueSep + value
+}
+
+// HoldsScope reports whether a token with these scopes may act with scope (see [Grant.HasScope]). No scopes: every
+// scope.
+func HoldsScope(scopes []string, scope string) bool {
+	if len(scopes) == 0 {
+		return true
+	}
+	return holds(scopes, scope)
+}
+
+// holds is HoldsScope for a non-empty list (an empty one holds nothing).
+func holds(scopes []string, scope string) bool {
+	name, value := SplitScope(scope)
+	for _, s := range scopes {
+		n, v := SplitScope(s)
+		if n == name && (v == "" || value == "" || v == value) {
+			return true
+		}
+	}
+	return false
+}
+
+// CoversScope reports whether a token with these scopes may hand out scope to a token it creates: "instances" covers
+// "instances" and "instances=abc"; "instances=abc" covers only "instances=abc". No scopes: everything.
+func CoversScope(scopes []string, scope string) bool {
+	if len(scopes) == 0 {
+		return true
+	}
+	name, value := SplitScope(scope)
+	for _, s := range scopes {
+		n, v := SplitScope(s)
+		if n == name && (v == "" || v == value) {
+			return true
+		}
+	}
+	return false
+}
+
+// ValuesOf is [Grant.ScopeValues] for a scope list. No scopes: every value.
+func ValuesOf(scopes []string, scope string) (values []string, all bool) {
+	if len(scopes) == 0 {
+		return nil, true
+	}
+	for _, s := range scopes {
+		n, v := SplitScope(s)
+		if n != scope {
+			continue
+		}
+		if v == "" {
+			return nil, true
+		}
+		if !slices.Contains(values, v) {
+			values = append(values, v)
+		}
+	}
+	return values, false
+}
+
+// IntersectScopes is what both lists allow (both non-empty: an empty list here means nothing, not full rights):
+// "instances" ∩ "instances=abc" is "instances=abc". The result is sorted.
+func IntersectScopes(a, b []string) []string {
+	out := []string{}
+	add := func(s string) {
+		if !slices.Contains(out, s) {
+			out = append(out, s)
+		}
+	}
+	for _, s := range b {
+		name, value := SplitScope(s)
+		if CoversScope(a, s) && len(a) > 0 {
+			add(s)
+			continue
+		}
+		if value == "" { // b holds every value: keep a's values of it
+			for _, x := range a {
+				if n, _ := SplitScope(x); n == name {
+					add(x)
+				}
+			}
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // Infrastructure reports whether the scope only reaches PocketOne's own routes (contract APIs under /api/_c/): a
@@ -104,7 +225,7 @@ type scopesKey struct{}
 func WithScopes(ctx context.Context, scopes []string) context.Context {
 	next := slices.Clone(scopes)
 	if prev, ok := ScopesFromContext(ctx); ok {
-		next = slices.DeleteFunc(next, func(n string) bool { return !slices.Contains(prev, n) })
+		next = IntersectScopes(prev, next)
 	}
 	if next == nil {
 		next = []string{}

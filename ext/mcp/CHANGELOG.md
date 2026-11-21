@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+- A connection holding a scope for some values only (`notes=abc123`, new in API Tokens) sees the tools that scope covers.
+
 ## PocketOne v0.0.1-alpha.2 (2026-11-16)
 
 ### Changed

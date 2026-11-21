@@ -32,6 +32,17 @@ g := tokensv1.FromRequest(e)                       // the request's token, or ni
 ctx = tokensv1.WithScopes(ctx, []string{"notes:read"}) // requests made with ctx count as limited to these scopes
 ```
 
+A scope registered with `Values` can be held for some values only: `name=value` in the token's scopes
+(`instances=abc123`), the bare name meaning every value. Paths don't see values, so the route checks them:
+
+```go
+g := tokensv1.FromRequest(e)
+if g != nil && !g.HasScopeFor("instances", id) { return e.ForbiddenError("Not this instance.", nil) }
+vals, all := g.ScopeValues("instances")           // all: every value
+```
+
+`HoldsScope`, `CoversScope`, `ValuesOf` and `IntersectScopes` do the same on a plain scope list.
+
 ## Provide
 
 Implement `tokensv1.Issuer` (`Verify`, `RegisterScope`, `Scopes`, `Reaches`), authenticate requests that carry a

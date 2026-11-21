@@ -77,8 +77,9 @@ func (t *Tokens) middleware() *hook.Handler[*core.RequestEvent] {
 
 // scopeHeadersMiddleware sets `X-Token-Scope-<Name>: 1` for each scope a signed-in request holds, so collection
 // rules can read them (`@request.headers.x_token_scope_notes_write = "1"`) and hooks can see them. A JWT or an
-// unscoped token holds every registered scope; a scoped token only its own; an anonymous request none. It runs
-// after PocketBase's JWT middleware and before anything builds the request info that rules read.
+// unscoped token holds every registered scope; a scoped token only its own; an anonymous request none. A scope held
+// for some values only ("notes=a", "notes=b") gets those values instead of "1" ("a,b"), so `= "1"` stays "every
+// value". It runs after PocketBase's JWT middleware and before anything builds the request info that rules read.
 func (t *Tokens) scopeHeadersMiddleware() *hook.Handler[*core.RequestEvent] {
 	return &hook.Handler[*core.RequestEvent]{
 		Id:       ScopeHeadersMiddlewareId,
@@ -86,8 +87,13 @@ func (t *Tokens) scopeHeadersMiddleware() *hook.Handler[*core.RequestEvent] {
 		Func: func(e *core.RequestEvent) error {
 			if e.Auth != nil {
 				held := t.heldScopes(e)
-				for _, name := range held {
-					e.Request.Header.Set(ScopeHeader(name), "1")
+				for _, s := range held {
+					name, _ := apitokensv1.SplitScope(s)
+					v := "1"
+					if vals, all := apitokensv1.ValuesOf(held, name); !all {
+						v = strings.Join(vals, ",")
+					}
+					e.Request.Header.Set(ScopeHeader(name), v)
 				}
 			}
 			return e.Next()
@@ -100,7 +106,7 @@ func (t *Tokens) scopeHeadersMiddleware() *hook.Handler[*core.RequestEvent] {
 func (t *Tokens) heldScopes(e *core.RequestEvent) []string {
 	held := t.ownScopes(e)
 	if limit, ok := requestLimit(e); ok {
-		held = slices.DeleteFunc(held, func(n string) bool { return !slices.Contains(limit, n) })
+		held = apitokensv1.IntersectScopes(held, limit)
 	}
 	return held
 }
@@ -183,18 +189,48 @@ func FromRequest(e *core.RequestEvent) *Info {
 }
 
 // HasScope reports whether an authenticated request may act with scope: JWT auth and unscoped tokens have every
-// scope; a scoped token only its own; a request made for a scoped connection (WithScopes) only the connection's.
+// scope; a scoped token only its own; a request made for a scoped connection (WithScopes) only the connection's. A
+// bare name is held by a token holding it for some values only; to check one value use [HasScopeFor].
 func HasScope(e *core.RequestEvent, scope string) bool {
 	if e.Auth == nil {
 		return false
 	}
-	if limit, ok := requestLimit(e); ok && !slices.Contains(limit, scope) {
+	if limit, ok := requestLimit(e); ok && (len(limit) == 0 || !apitokensv1.HoldsScope(limit, scope)) {
 		return false
 	}
 	if i := FromRequest(e); i != nil {
 		return i.HasScope(scope)
 	}
 	return true
+}
+
+// HasScopeFor reports whether an authenticated request may act with scope on value: as [HasScope], where a token
+// holding the scope for some values only must hold this one ("instances=abc123").
+func HasScopeFor(e *core.RequestEvent, scope, value string) bool {
+	return HasScope(e, apitokensv1.JoinScope(scope, value))
+}
+
+// ValuesFor lists the values an authenticated request holds scope for; all is true when it may use every value
+// (JWT auth, an unscoped token, or the bare scope). Not signed in: none.
+func ValuesFor(e *core.RequestEvent, scope string) (values []string, all bool) {
+	if e.Auth == nil {
+		return nil, false
+	}
+	var held []string // nil: full rights
+	if i := FromRequest(e); i != nil && len(i.Scopes) > 0 {
+		held = i.Scopes
+	}
+	if limit, ok := requestLimit(e); ok {
+		if held == nil {
+			held = limit
+		} else {
+			held = apitokensv1.IntersectScopes(held, limit)
+		}
+		if len(held) == 0 {
+			return nil, false
+		}
+	}
+	return apitokensv1.ValuesOf(held, scope)
 }
 
 // RequireScope requires an authenticated request (JWT or API token) whose token, if any, has scope. Combine with

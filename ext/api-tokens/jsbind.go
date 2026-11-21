@@ -23,6 +23,11 @@ import (
 //	routerAdd("POST", "/api/notes/archive", (e) => { ... }, $apis.requireAuth(), $apiTokens.requireScope("notes:write"))
 //
 //	$apiTokens.hasScope(e, "notes:write")   // inside a handler
+//
+//	// a scope a token can hold for some records only ("notes=abc123"); the route checks the value
+//	$apiTokens.registerScope({ name: "notes", description: "Notes", paths: ["/api/notes/"], values: { description: "a note id" } })
+//	$apiTokens.hasScope(e, "notes", id)     // the bare scope, or "notes=<id>"
+//	$apiTokens.scopeValues(e, "notes")      // { all: true } or { all: false, values: ["abc123"] }
 //	$apiTokens.ruleField("notes:write")     // "@request.headers.x_token_scope_notes_write", for collection rules
 //	$apiTokens.scopes()                     // every registered scope
 //
@@ -38,6 +43,9 @@ func BindJS(app core.App, rt js.Runtime) {
 	_ = rt.Set("$apiTokens", map[string]any{
 		"registerScope": func(def map[string]any) error {
 			s := Scope{Name: str(def["name"]), Description: str(def["description"])}
+			if v, ok := def["values"].(map[string]any); ok {
+				s.Values = &ScopeValues{Description: str(v["description"])}
+			}
 			var err error
 			for field, dst := range map[string]*[]string{"paths": &s.Paths, "methods": &s.Methods, "collections": &s.Collections} {
 				if *dst, err = strs(def[field]); err != nil {
@@ -54,8 +62,20 @@ func BindJS(app core.App, rt js.Runtime) {
 			return nil
 		},
 		"requireScope": func(name string) any { return RequireScope(name) },
-		"hasScope":     func(e *core.RequestEvent, name string) bool { return HasScope(e, name) },
-		"ruleField":    func(name string) string { return ScopeRuleField(name) },
+		"hasScope": func(e *core.RequestEvent, name string, value ...string) bool {
+			if len(value) > 0 && value[0] != "" {
+				return HasScopeFor(e, name, value[0])
+			}
+			return HasScope(e, name)
+		},
+		"scopeValues": func(e *core.RequestEvent, name string) map[string]any {
+			values, all := ValuesFor(e, name)
+			if values == nil {
+				values = []string{}
+			}
+			return map[string]any{"values": values, "all": all}
+		},
+		"ruleField": func(name string) string { return ScopeRuleField(name) },
 		"scopes": func() ([]map[string]any, error) {
 			t, err := get()
 			if err != nil {
@@ -66,11 +86,19 @@ func BindJS(app core.App, rt js.Runtime) {
 				out = append(out, map[string]any{
 					"name": s.Name, "description": s.Description, "paths": s.Paths, "methods": s.Methods,
 					"collections": s.Collections, "header": s.Header(), "ruleField": s.RuleField(),
+					"values": jsValues(s.Values),
 				})
 			}
 			return out, nil
 		},
 	})
+}
+
+func jsValues(v *ScopeValues) any {
+	if v == nil {
+		return nil
+	}
+	return map[string]any{"description": v.Description}
 }
 
 const pendingKey = "api-tokens.pending"

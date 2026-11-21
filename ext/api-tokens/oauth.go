@@ -268,12 +268,14 @@ func (s *OAuthServer) resolveScopes(raw string, owner *core.Collection) ([]Scope
 	}
 	var out []ScopeInfo
 	seen := map[string]bool{}
-	for _, name := range strings.Fields(raw) {
+	for _, field := range strings.Fields(raw) {
+		name, value := apitokensv1.SplitScope(field)
 		name = strings.ToLower(name)
-		if seen[name] || name == OfflineAccess {
+		full := apitokensv1.JoinScope(name, value)
+		if seen[full] || name == OfflineAccess {
 			continue
 		}
-		seen[name] = true
+		seen[full] = true
 		sc, ok := registered[name]
 		if !ok {
 			return nil, fmt.Errorf("unknown scope %q", name)
@@ -281,7 +283,15 @@ func (s *OAuthServer) resolveScopes(raw string, owner *core.Collection) ([]Scope
 		if owner != nil && len(sc.Collections) > 0 && !slices.Contains(sc.Collections, owner.Name) {
 			return nil, fmt.Errorf("%s accounts can't grant the %q scope", owner.Name, name)
 		}
-		out = append(out, ScopeInfo{Name: sc.Name, Description: sc.Description})
+		desc := sc.Description
+		if strings.Contains(field, apitokensv1.ScopeValueSep) {
+			// the value itself is checked when the token is created (Values.Check needs the account)
+			if sc.Values == nil || !ValidScopeValue(value) {
+				return nil, fmt.Errorf("invalid scope %q", field)
+			}
+			desc += " (only " + value + ")"
+		}
+		out = append(out, ScopeInfo{Name: full, Description: desc})
 	}
 	return out, nil
 }

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
+
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
@@ -132,7 +134,7 @@ func (t *Tokens) bindAPI(g *router.RouterGroup[*core.RequestEvent]) {
 				body.Scopes = i.Scopes
 			}
 			for _, s := range body.Scopes {
-				if !i.HasScope(s) {
+				if !apitokensv1.CoversScope(i.Scopes, s) {
 					return e.ForbiddenError("A scoped token can't create a token with more scopes.", nil)
 				}
 			}
