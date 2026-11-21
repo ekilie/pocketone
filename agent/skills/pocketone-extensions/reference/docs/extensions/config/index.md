@@ -28,7 +28,7 @@ app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
-The module is `pocketone.dev/ext/config`. [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)
+The module is `pocketone.dev/ext/config`. [`examples/pocketone/binary/binary.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go)
 shows the full wiring: every `app` key as a flag default, and the `server` keys as the serve command's defaults.
 
 ## Configure
@@ -239,7 +239,7 @@ cfg, err := firewall.Section.Require() // fails when the file doesn't have the s
 
 ## Example
 
-Config is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
+Config is built into `pocketone`: [`examples/pocketone/binary/binary.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
 
 ## Go API
 

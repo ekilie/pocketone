@@ -24,7 +24,7 @@ multisite: {}       # pocker, unless there's a `docker` section (then docker)
 ```
 
 In your own Go build, pass the host extensions you link (one runtime), build the host from the
-config and run it. [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go) is the stock binary's version:
+config and run it. [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go) is the stock binary's version:
 
 ```go
 h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Choices: providersSection,

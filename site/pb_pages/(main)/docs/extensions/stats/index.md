@@ -247,7 +247,7 @@ func main() {
 ## How it works
 
 - Go module `pocketone.dev/ext/stats`. The stock binary wires it in
-  [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go).
+  [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go).
 - `Run` loads recorded facts from a `Loader` sink, then waits for the host's instance list to load (checking every
   second). From then on, once a minute, it asks the policy for decisions on the current facts, measures the instances
   it was asked to (`concurrency` at a time) and reports what it measured to the sink.

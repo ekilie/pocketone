@@ -93,7 +93,7 @@ runs its instance:
 ## Example
 
 Edge has no example program of its own. The stock binary wires it up in
-[`examples/pocketone/multi.go`](../../examples/pocketone/multi.go), together with the mothership's edge list.
+[`examples/pocketone/binary/multi.go`](../../examples/pocketone/binary/multi.go), together with the mothership's edge list.
 
 ## License
 

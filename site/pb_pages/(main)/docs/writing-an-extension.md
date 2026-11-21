@@ -49,7 +49,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
 - **Every app has the [standard set](/docs/extensions/standard)** (tokens, mcp, pitr, deploy and the rest). Add yours
   to it: `set.Add(myextension.New(...))`. On a standalone app, build the app with `set.NewApp(...)`, or build it
   yourself and call `set.Register(app, jsvm.Config{...})`. The stock binary does the second: `pocketbase.NewWithConfig`,
-  then `set.Register` ([`examples/pocketone`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)). Without the set:
+  then `set.Register` ([`examples/pocketone`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go)). Without the set:
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.

@@ -1,4 +1,4 @@
-package main
+package binary
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 // The upstream version must follow ui/.env, which every PocketBase release updates, so a merge that forgets to bump
 // upstreamVersion fails here.
 func TestUpstreamVersionMatchesUI(t *testing.T) {
-	env, err := os.ReadFile("../../ui/.env")
+	env, err := os.ReadFile("../../../ui/.env")
 	if err != nil {
 		t.Fatal(err)
 	}

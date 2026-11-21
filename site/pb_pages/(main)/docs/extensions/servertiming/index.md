@@ -64,7 +64,7 @@ first; values a server in front already sent are kept, and this host's entries a
 
 ## Example
 
-There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), which
+There's no `example/main.go`. See it used in [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go), which
 lists it first in the `pocketone` binary's host extensions.
 
 ## How it works

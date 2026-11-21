@@ -2584,7 +2584,7 @@ func (p *Extension) TypeScript() string { return `declare var $hello: { greet(na
 - **Every app has the [standard set](https://pocketone.dev/docs/extensions/standard)** (tokens, mcp, pitr, deploy and the rest). Add yours
   to it: `set.Add(myextension.New(...))`. On a standalone app, build the app with `set.NewApp(...)`, or build it
   yourself and call `set.Register(app, jsvm.Config{...})`. The stock binary does the second: `pocketbase.NewWithConfig`,
-  then `set.Register` ([`examples/pocketone`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)). Without the set:
+  then `set.Register` ([`examples/pocketone`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go)). Without the set:
   `extkit.MustRegister(app, extensions...)`, and `extkit.BindJS(app, vm, extensions...)` in jsvm's `OnInit`.
 - **On a multisite host** every instance gets the set, with that instance's `extensions.<name>` settings over your
   constructor's defaults. `enabled: false` there means `Register` and `BindJS` are never called for that instance.
@@ -11090,7 +11090,7 @@ autotls:
 
 ## Example
 
-Auto TLS is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go) registers it with the other default extensions.
+Auto TLS is built into `pocketone`: [`examples/pocketone/binary/binary.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go) registers it with the other default extensions.
 
 ## How it works
 
@@ -11807,7 +11807,7 @@ app := standard.New().NewApp(a.PocketBase, a.JS)
 app.RootCmd.AddCommand(config.NewCommand(func() config.Options { return config.FromArgs(os.Args[1:]) }))
 ```
 
-The module is `pocketone.dev/ext/config`. [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)
+The module is `pocketone.dev/ext/config`. [`examples/pocketone/binary/binary.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go)
 shows the full wiring: every `app` key as a flag default, and the `server` keys as the serve command's defaults.
 
 ## Configure
@@ -12018,7 +12018,7 @@ cfg, err := firewall.Section.Require() // fails when the file doesn't have the s
 
 ## Example
 
-Config is built into `pocketone`: [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
+Config is built into `pocketone`: [`examples/pocketone/binary/binary.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go) loads `pocketone.yaml` with it before the app starts and adds the `config` command.
 
 ## Go API
 
@@ -16436,7 +16436,7 @@ runs its instance:
 ## Example
 
 Edge has no example program of its own. The stock binary wires it up in
-[`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), together with the mothership's edge list.
+[`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go), together with the mothership's edge list.
 
 ## License
 
@@ -16668,7 +16668,7 @@ Both sides are built into `pocketone`; `pocketone.yaml`'s `mothership` section p
 The module is `pocketone.dev/ext/mothership`. In your own build: `extkit` registers `mothership.NewSchema()` and
 `mothership.NewServer()` on the mothership app (a control plane with its own collections registers only the server,
 beside its own instance.resolve/v1); on an edge, `client.FromSection(log)` returns the client for the config (nil
-without a `url`), a multisite host extension, as [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go)
+without a `url`), a multisite host extension, as [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go)
 does. The client keeps its answers in the host's cache/v1, so the host provides one (`cache.Extension.Host(scope)`).
 
 ## Configure
@@ -16768,8 +16768,8 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 
 ## Example
 
-There's no `example/main.go` yet. The stock binary is both sides: [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)
-registers the mothership, and its multi-instance mode, [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go),
+There's no `example/main.go` yet. The stock binary is both sides: [`examples/pocketone/binary/binary.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/binary.go)
+registers the mothership, and its multi-instance mode, [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go),
 follows one; `examples/pocketone/mothership_test.go` runs a mothership and two edges.
 
 ## How it works
@@ -16825,7 +16825,7 @@ multisite: {}       # pocker, unless there's a `docker` section (then docker)
 ```
 
 In your own Go build, pass the host extensions you link (one runtime), build the host from the
-config and run it. [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go) is the stock binary's version:
+config and run it. [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go) is the stock binary's version:
 
 ```go
 h, err := multisite.FromConfig(multisite.Options{Resolve: cfg.ResolvePath, Choices: providersSection,
@@ -17060,7 +17060,7 @@ instances instead of one app, with pocker as the runtime (docker too, when it ha
 multisite: {}
 ```
 
-In your own Go build, add it to the host's extensions ([`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go)
+In your own Go build, add it to the host's extensions ([`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go)
 is the stock binary's version), or run a `pocker.Server` on its own as [the example](#example) does:
 
 ```go
@@ -18156,7 +18156,7 @@ func main() {
 ## How it works
 
 - Go module `pocketone.dev/ext/stats`. The stock binary wires it in
-  [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go).
+  [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go).
 - `Run` loads recorded facts from a `Loader` sink, then waits for the host's instance list to load (checking every
   second). From then on, once a minute, it asks the policy for decisions on the current facts, measures the instances
   it was asked to (`concurrency` at a time) and reports what it measured to the sink.
@@ -18452,7 +18452,7 @@ first; values a server in front already sent are kept, and this host's entries a
 
 ## Example
 
-There's no `example/main.go`. See it used in [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), which
+There's no `example/main.go`. See it used in [`examples/pocketone/binary/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/binary/multi.go), which
 lists it first in the `pocketone` binary's host extensions.
 
 ## How it works
