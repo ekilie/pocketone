@@ -1,16 +1,17 @@
 ---
 owners: ["@benallfree"]
-summary: "An instance's code files on disk: its folder, a state folder, one writers' lock and a restart around a change."
+summary: "An instance's code files on disk: its folder, a cache folder, one writers' lock and a restart around a change."
 ---
 
 # instance.fs/v1
 
 An instance's code files, for extensions that read and write them: deploy today, a live file drive next. It answers
-where the instance's folder is, where an extension may keep its own state about it, the one lock every writer takes,
+where the instance's folder is, where an extension may keep files it can rebuild (its cache), the one lock every writer takes,
 whether the instance runs, and how to restart it around a change that mustn't happen under a running app.
 
-The code is the `pb_*` folders except `pb_data`, `package.json` and the bun lockfiles at the top, `patches/`, and the
-production `node_modules` tree at the top. **`pb_data` is never reachable through this contract.**
+The code is the `pb_*` folders except `pb_data` and `pb_cache`, `package.json` and the bun lockfiles at the top,
+`patches/`, and the production `node_modules` tree at the top. **`pb_data` and `pb_cache` are never reachable through
+this contract.**
 
 A service contract ([fs.go](fs.go)), one provider. It holds no request lookup and no auth: callers say which instance
 by id, and decide for themselves who may call them.
@@ -29,20 +30,22 @@ startErr, err := f.Restart(ctx, func(ctx context.Context) error { /* swap files 
 
 The package also holds the code-path rules every user shares:
 
-- `IsCodePath(p)`: what a deploy may write or delete.
-- `IsReachable(p)`: what a file API may read or write (the code, `node_modules`, `patches/`; never `pb_data` or
-  `.git*`).
+- `IsCodePath(p)`: what a deploy may write or delete (never `pb_data` or `pb_cache`).
+- `IsReachable(p)`: what a file API may read or write (the code, `node_modules`, `patches/`; never `pb_data`,
+  `pb_cache` or `.git*`).
 - `Resolve(dir, p)`: a client path to a file inside `dir`, refusing unreachable paths, symlink crossings and anything
   that lands outside the folder (`*PathError`).
 
-`StateDir(ctx, name)` is outside the code (a `.pb_<name>` dot-folder in the instance folder by default) and on the same
-filesystem as `Dir`, so an extension can stage files there and rename them in atomically.
+`CacheDir(ctx, name)` is the extension's folder for files it can rebuild (`pb_cache/<name>` in the instance folder by
+default, PocketOne's `pb_cache` convention): anything in it may be deleted at any time, it is never code and never
+reachable, and it is on the same filesystem as `Dir`, so an extension can stage files there and rename them in
+atomically.
 
 ## Provide
 
 Implement `fsv1.Files`: `Instance(ctx, id)` returns an `fsv1.FS` for each instance (`fsv1.Self` on a single app), or
 `fsv1.ErrNoInstance`. Return the same `FS` for the same instance every time: its `Lock` must be shared by every
-caller. `fsv1.Local` is an `FS` over a local folder to build on: give it the folder, and optionally a state folder,
+caller. `fsv1.Local` is an `FS` over a local folder to build on: give it the folder, and optionally a cache folder,
 whether it runs, how to stop it and how to start it again.
 
 - **Single app:** [deploy](../../../../deploy/README.md) provides it as the default: the app's own folder. The app can't

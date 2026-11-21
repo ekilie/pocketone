@@ -1,6 +1,6 @@
 // Package fsv1 is the instance.fs/v1 contract: one instance's code files on local disk, for extensions that read and
-// write them (ext/deploy today). It answers which folder, where an extension may keep its own state about the
-// instance, one writers' lock, and whether the instance runs (and how to restart it around a change).
+// write them (ext/deploy today). It answers which folder, where an extension may keep files it can rebuild about
+// the instance (its cache), one writers' lock, and whether the instance runs (and how to restart it around a change).
 //
 // There is no request lookup and no auth in it: callers say which instance by id. On a single app the app provides it
 // and is its only instance ([Self]); a multisite host provides it on its own scope (ProvideIn) for each of its
@@ -8,8 +8,8 @@
 // (PocketBase's auth on a single app, the host's auth function on a host).
 //
 // The package also holds the code-path rules: what belongs to an instance's code ([IsCodePath]), what a file API may
-// reach ([IsReachable]) and how a client path maps to a file without escaping the folder ([Resolve]). pb_data is
-// never reachable through this contract.
+// reach ([IsReachable]) and how a client path maps to a file without escaping the folder ([Resolve]). pb_data and
+// pb_cache are never reachable through this contract.
 package fsv1
 
 //go:generate go run pocketone.dev/ext/contracts/cmd/contractgen
@@ -41,10 +41,12 @@ type FS interface {
 	// never reaches). An error when there's no folder yet (a single app before it bootstraps).
 	Dir(ctx context.Context) (string, error)
 
-	// StateDir is a folder for an extension's own state about the instance (name: the extension's, e.g. "deploy"),
-	// made if missing. It is outside the code (never a code path; a dot-folder in Dir qualifies) and on the same
-	// filesystem as Dir, so renames between them are atomic.
-	StateDir(ctx context.Context, name string) (string, error)
+	// CacheDir is a folder for files an extension can rebuild about the instance (name: the extension's, e.g.
+	// "deploy"), made if missing: by default pb_cache/<name> in Dir, PocketOne's pb_cache convention. Anything in it
+	// may be deleted at any time (a cache clear, an admin, a cleanup) and the extension carries on. It is never code
+	// and never reachable ([IsCodePath], [IsReachable]), and it is on the same filesystem as Dir, so renames between
+	// them are atomic.
+	CacheDir(ctx context.Context, name string) (string, error)
 
 	// Lock takes the instance's writers' lock: every write to the code files (a deploy's commit, a file API write)
 	// holds it, so they never interleave. Call unlock when done.

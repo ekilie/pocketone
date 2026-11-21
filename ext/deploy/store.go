@@ -19,8 +19,10 @@ import (
 	"time"
 )
 
-// Store is one instance's deploy storage, outside the instance folder (so file access never sees it) but on the same
-// filesystem (so staged files can be renamed into place):
+// Store is one instance's deploy storage, in its pb_cache/deploy (instance.fs/v1's CacheDir: never code, so file
+// access never sees it, and on the same filesystem, so staged files can be renamed into place). It is only a cache:
+// files already in the instance folder count as uploaded (findMissing), so deleting it costs nothing but the
+// blobs of content no longer on disk.
 //
 //	<root>/blobs/<aa>/<sha256>   content-addressed file store (kept so later deploys upload less)
 //	<root>/manifests/<id>.json   manifest of each successful deploy

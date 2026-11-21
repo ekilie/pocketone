@@ -15,7 +15,7 @@ func TestIsReachable(t *testing.T) {
 			t.Errorf("%s should be reachable", p)
 		}
 	}
-	for _, p := range []string{"pb_data", "pb_data/data.db", "pb_hooks/.git/config", ".gitignore", "README.md",
+	for _, p := range []string{"pb_data", "pb_data/data.db", "pb_cache", "pb_cache/deploy/blobs/ab/abc", "pb_hooks/.git/config", ".gitignore", "README.md",
 		"../etc/passwd", "pb_hooks/../pb_data/data.db", "/pb_hooks/x.js", ""} {
 		if IsReachable(p) {
 			t.Errorf("%s shouldn't be reachable", p)
@@ -64,11 +64,11 @@ func TestLocalRestart(t *testing.T) {
 	if _, err := l.Restart(ctx, apply); err != nil || stops != 1 || starts != 1 || applied != 2 {
 		t.Fatalf("stopped: %v %d %d %d", err, stops, starts, applied)
 	}
-	if d, err := l.StateDir(ctx, "deploy"); err != nil || d != filepath.Join(dir, ".pb_deploy") {
-		t.Fatalf("state: %q %v", d, err)
+	if d, err := l.CacheDir(ctx, "deploy"); err != nil || d != filepath.Join(dir, "pb_cache", "deploy") {
+		t.Fatalf("cache: %q %v", d, err)
 	}
-	if _, err := l.StateDir(ctx, "../x"); err == nil {
-		t.Fatal("bad state name accepted")
+	if _, err := l.CacheDir(ctx, "../x"); err == nil {
+		t.Fatal("bad cache name accepted")
 	}
 	if _, err := (&Local{Folder: func() string { return "" }}).Dir(ctx); !errors.Is(err, ErrNoFolder) {
 		t.Fatal(err)
@@ -95,5 +95,22 @@ func TestInstances(t *testing.T) {
 	y, _ := files.Instance(ctx, "a")
 	if x != y || built != 1 {
 		t.Fatalf("one FS per instance: %v %d", x == y, built)
+	}
+}
+
+// pb_cache holds extensions' disposable files: never code, so a deploy never writes, lists or deletes it.
+func TestCodePathSkipsCache(t *testing.T) {
+	for _, p := range []string{"pb_hooks/main.pb.js", "pb_public/index.html", "pb_custom/x", "package.json", "node_modules/a/index.js"} {
+		if !IsCodePath(p) {
+			t.Errorf("%s should be code", p)
+		}
+	}
+	for _, p := range []string{"pb_cache", "pb_cache/deploy/blobs/ab/abc", "pb_cache/cache/x", "pb_data/data.db"} {
+		if IsCodePath(p) {
+			t.Errorf("%s should not be code", p)
+		}
+	}
+	if IsCodeRoot("pb_cache") || IsCodeRoot("pb_data") || !IsCodeRoot("pb_hooks") {
+		t.Error("code roots")
 	}
 }

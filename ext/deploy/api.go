@@ -254,11 +254,11 @@ func (a *API) authorize(r *http.Request, needWrite bool) (*reqCtx, error) {
 	if err != nil {
 		return nil, errf(503, "The server is starting; try again.")
 	}
-	stateDir, err := f.StateDir(r.Context(), Name)
+	cacheDir, err := f.CacheDir(r.Context(), Name)
 	if err != nil {
 		return nil, err
 	}
-	return &reqCtx{inst: inst, auth: auth, fs: f, store: a.storeFor(inst.ID, dir, stateDir), dir: dir}, nil
+	return &reqCtx{inst: inst, auth: auth, fs: f, store: a.storeFor(inst.ID, dir, cacheDir), dir: dir}, nil
 }
 
 func readJSON(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
