@@ -12,6 +12,10 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Changed
+
+- Serves every instance; instances no longer name a runtime, and a host runs pocker or docker, never both.
+
 ## 0.1.1 (2026-11-18)
 
 ### Fixed

@@ -125,7 +125,7 @@ is ignored from anyone else, so it can't be spoofed to escape a limit.
 | Extension | How they fit |
 |---|---|
 | [Multisite](/docs/extensions/multisite) | The firewall is a host gate: it checks the peer, then admits each request before the runtime or the forward hook. |
-| [Pocker](/docs/extensions/pocker), [Docker](/docs/extensions/docker) | Either provider; the firewall runs in front of both. |
+| [Pocker](/docs/extensions/pocker), [Docker](/docs/extensions/docker) | Either runtime; the firewall runs in front of it. |
 | [Edge](/docs/extensions/edge) | The entry edge applies the limits before forwarding. The owner edge's rate-limit headers replace the entry edge's, since the owner counted every request for the instance. |
 | [Multitenant](/docs/extensions/tenants) (planned) | Will write each instance's `extensions.firewall` settings, such as its owner's trusted IPs. |
 
@@ -182,7 +182,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{okRuntime{}}, Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: okRuntime{}, Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -33,15 +34,31 @@ func serveMany(cfg *config.Config) (handled bool, err error) {
 	set := standard.New()
 	set.Providers = standard.ConfiguredProviders()
 	log := slog.Default()
-	// host extensions, in order: wrappers first (servertiming outermost), then the runtimes in preference order
-	// (`providers: { runtime/v1: [...] }` picks and orders them; docker only runs with a `docker` section)
+	// one runtime per host (runtime/v1): docker with a `docker` section, else pocker; `providers: { runtime/v1:
+	// <name> }` overrides. Only that one is registered, so the other sets nothing up.
+	runtimeName := "pocker"
+	if _, on := docker.Section.Get(); on {
+		runtimeName = "docker"
+	}
+	if name, ok := set.Providers["runtime/v1"].(string); ok {
+		runtimeName = name
+	}
+	var runtime multisite.Extension
+	switch runtimeName {
+	case "pocker":
+		runtime = &pocker.Provider{Resolve: cfg.ResolvePath, Standard: set, Extensions: []pocker.Extension{
+			mailtrap.New(), // dev instances with SMTP off: mail goes to the inbox at http://127.0.0.1:8025
+		}}
+	case "docker":
+		runtime = &docker.Provider{Resolve: cfg.ResolvePath}
+	default:
+		return true, fmt.Errorf("providers: runtime/v1: %q isn't a runtime (pocker, docker)", runtimeName)
+	}
+	// host extensions, in order: wrappers first (servertiming outermost), then the runtime
 	opts := multisite.Options{Resolve: cfg.ResolvePath, Logger: log, Choices: set.Providers, Extensions: []multisite.Extension{
 		servertiming.New(), // http.wrap/v1: outermost, so its header includes everything below
 		autotls.New(),      // tls/v1 from the `autotls` section, whatever the runtime
-		&pocker.Provider{Resolve: cfg.ResolvePath, Standard: set, Extensions: []pocker.Extension{
-			mailtrap.New(), // dev instances with SMTP off: mail goes to the inbox at http://127.0.0.1:8025
-		}},
-		&docker.Provider{Resolve: cfg.ResolvePath},
+		runtime,
 	}}
 	edges, err := edge.FromSection(log)
 	if err != nil {
@@ -74,8 +91,8 @@ func serveMany(cfg *config.Config) (handled bool, err error) {
 		return true, err
 	}
 	h.Background = append(h.Background, background...)
-	if len(h.Runtimes) == 1 && h.Runtimes[0].Name() == "pocker" {
-		// pocker alone serves every instance in this process: it names itself (docker names each container's release)
+	if h.Runtime.Name() == "pocker" {
+		// pocker serves every instance in this process: it names itself (docker names each container's release)
 		poweredBy := "Pocker " + pocker.Version()
 		h.Wrappers = append(h.Wrappers, func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -12,8 +12,8 @@ summary: "Many instances behind one listener, routed by hostname, run by one pro
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](../firewall/README.md)), and a runtime serves it:
-[pocker](../pocker/README.md) runs instances as isolates in its own process, [docker](../docker/README.md) runs each in its own container,
-and a host can run both. Everything a host plugs in is a host-scope contract: [runtime/v1](../contracts/runtime/v1/README.md),
+[pocker](../pocker/README.md) runs instances as isolates in its own process, [docker](../docker/README.md) runs each in its own container.
+A host runs one of them, and every instance runs on it. Everything a host plugs in is a host-scope contract: [runtime/v1](../contracts/runtime/v1/README.md),
 [gate/v1](../contracts/gate/v1/README.md), [tls/v1](../contracts/tls/v1/README.md),
 [http.wrap/v1](../contracts/http/wrap/v1/README.md) and [instance.source/v1](../contracts/instance/source/v1/README.md).
 
@@ -23,12 +23,10 @@ Multisite is built into `pocketone`. It takes over `serve` when `pocketone.yaml`
 one, `pocketone serve` runs a single app as usual.
 
 ```yaml
-multisite: {}
-providers:
-  runtime/v1: [pocker, docker]   # optional: which runtimes, in preference order (default: every configured one)
+multisite: {}       # pocker, unless there's a `docker` section (then docker)
 ```
 
-In your own Go build, pass the host extensions you link (runtimes in preference order), build the host from the
+In your own Go build, pass the host extensions you link (one runtime), build the host from the
 config and run it. [`examples/pocketone/multi.go`](../../examples/pocketone/multi.go) is the stock binary's version:
 
 ```go
@@ -40,7 +38,8 @@ if errors.Is(err, multisite.ErrNoProvider) {
 err = h.Run(ctx)
 ```
 
-At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker, docker`.
+At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker`. Registering two
+runtimes is a conflict at startup unless `providers: { runtime/v1: docker }` picks one.
 
 The module is `pocketone.dev/ext/multisite`.
 
@@ -108,8 +107,8 @@ letters, digits, dots and dashes. Other fields: `version` and `runtime` (which r
 
 ### Switching runtime
 
-Switching between pocker and docker is a config change (`providers: { runtime/v1: [docker] }`, or an instance's own
-`runtime: docker`): both keep instances in `<root>/<id>`. Stop the containers
+Switching between pocker and docker is a config change (add or remove the `docker` section, or
+`providers: { runtime/v1: docker }`): both keep instances in `<root>/<id>`. Stop the containers
 first when leaving docker (they keep running across a host restart on purpose). Data only moves forward: an instance
 started on a newer version than wrote its data is upgraded.
 
@@ -197,7 +196,7 @@ func main() {
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{echoRuntime{}}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: echoRuntime{}, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -212,7 +211,7 @@ func main() {
 | `Instance`, `InstanceSource`, `YAMLSource` | The instance record (instance.source/v1) and where instances come from. |
 | `Directory` | Instances by hostname and id, kept current from the source. |
 | `Handler` | Health path, peer check, hostname, blocked, then remote (the `Forward` hook) or local (the instance routes, then the runtime), with the gates. |
-| `Runtime` | runtime/v1: what runs instances. One or more per host, in preference order. |
+| `Runtime` | runtime/v1: what runs instances. One per host. |
 | `Gate`, `ChainGates`, `HostGate` | Request gates (gate/v1). |
 | `Extension`, `Link`, `Host.Use`, `Host.Setup` | Host extensions and the host's contract scope. |
 | `Serve`, `TLSProvider` | Listeners: plain, TLS (a provider such as autotls, or cert files reloaded on change), redirect, graceful shutdown. |

@@ -62,7 +62,7 @@ func TestInstanceRoutesRunAfterTheGates(t *testing.T) {
 			})
 		}
 	}
-	h := &Handler{Dir: d, Gate: orderGate{&log}, Runtimes: []Runtime{orderRuntime{&log}}, Logger: quiet,
+	h := &Handler{Dir: d, Gate: orderGate{&log}, Runtime: orderRuntime{&log}, Logger: quiet,
 		InstanceRoutes: []func(http.Handler) http.Handler{route("outer"), route("inner")},
 		Forward: func(w http.ResponseWriter, _ *http.Request, inst Instance) {
 			log = append(log, "forward "+inst.ID)

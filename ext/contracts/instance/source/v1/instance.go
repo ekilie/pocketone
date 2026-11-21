@@ -13,12 +13,10 @@ type Instance struct {
 	// ID is a stable, unique identifier. It is also the default folder name under the data root.
 	ID string `yaml:"id"`
 
-	// Version is the PocketBase version the instance runs (e.g. "0.41.1" or "0.36.*"); it picks the runtime (see
-	// runtime/v1's Serves). Empty = the runtime's default.
+	// Version is the PocketBase version the instance runs (e.g. "0.41.1" or "0.36.*"), for runtimes that run
+	// releases (docker); the host's runtime refuses one it can't serve (runtime/v1's Serves). Empty = the runtime's
+	// default.
 	Version string `yaml:"version,omitempty"`
-
-	// Runtime names the runtime that must run the instance ("pocker", "docker"); empty = the first that serves it.
-	Runtime string `yaml:"runtime,omitempty"`
 
 	// Hosts are the hostnames (no port) that route to this instance, e.g. "blog.example.com".
 	Hosts []string `yaml:"hosts"`

@@ -7,7 +7,7 @@ Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](https://pocketone.dev/docs/extensions/firewall)), and a runtime serves it:
 [pocker](https://pocketone.dev/docs/extensions/pocker) runs instances as isolates in its own process, [docker](https://pocketone.dev/docs/extensions/docker) runs each in its own container,
-and a host can run both. Everything a host plugs in is a host-scope contract: [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1),
+A host runs one of them, and every instance runs on it. Everything a host plugs in is a host-scope contract: [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1),
 [gate/v1](https://pocketone.dev/docs/contracts/gate/v1), [tls/v1](https://pocketone.dev/docs/contracts/tls/v1),
 [http.wrap/v1](https://pocketone.dev/docs/contracts/http.wrap/v1) and [instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1).
 
@@ -21,7 +21,7 @@ one, `pocketone serve` runs a single app as usual.
 ```yaml
 multisite: {}
 providers:
-  runtime/v1: [pocker, docker]   # optional: which runtimes, in preference order (default: every configured one)
+  runtime/v1: docker   # optional: only when a build registers more than one runtime
 ```
 
 In your own Go build, pass the host extensions you link (runtimes in preference order), build the host from the
@@ -36,7 +36,7 @@ if errors.Is(err, multisite.ErrNoProvider) {
 err = h.Run(ctx)
 ```
 
-At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker, docker`.
+At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker`.
 
 The module is `pocketone.dev/ext/multisite`.
 
@@ -78,7 +78,7 @@ Where a multi-instance host's instances come from (a YAML file), and dev mode (s
 
 #### `multisite:`
 
-Serve many instances (a multisite host) instead of a single app. The runtimes are the providers of runtime/v1.
+Serve many instances (a multisite host) instead of a single app. The runtime is the provider of runtime/v1 (one per host).
 
 ## Use
 
@@ -119,8 +119,8 @@ letters, digits, dots and dashes. Other fields: `version` and `runtime` (which r
 
 ### Switching runtime
 
-Switching between pocker and docker is a config change (`providers: { runtime/v1: [docker] }`, or an instance's own
-`runtime: docker`): both keep instances in `<root>/<id>`. Stop the containers
+Switching between pocker and docker is a config change (add or remove the `docker` section, or
+`providers: { runtime/v1: docker }`): both keep instances in `<root>/<id>`. Stop the containers
 first when leaving docker (they keep running across a host restart on purpose). Data only moves forward: an instance
 started on a newer version than wrote its data is upgraded.
 
@@ -223,7 +223,7 @@ func main() {
 | `Instance`, `InstanceSource`, `YAMLSource` | The instance record (instance.source/v1) and where instances come from. |
 | `Directory` | Instances by hostname and id, kept current from the source. |
 | `Handler` | Health path, peer check, hostname, blocked, then remote (the `Forward` hook) or local (the instance routes, then the runtime), with the gates. |
-| `Runtime` | runtime/v1: what runs instances. One or more per host, in preference order. |
+| `Runtime` | runtime/v1: what runs instances. One per host. |
 | `Gate`, `ChainGates`, `HostGate` | Request gates (gate/v1). |
 | `Extension`, `Link`, `Host.Use`, `Host.Setup` | Host extensions and the host's contract scope. |
 | `Serve`, `TLSProvider` | Listeners: plain, TLS (a provider such as autotls, or cert files reloaded on change), redirect, graceful shutdown. |

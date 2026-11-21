@@ -12,14 +12,14 @@ Run every instance on a host in its own container, with the official PocketBase 
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
 
 Docker is one of the two runtime providers of the multi-instance [multisite](../multisite/README.md). The other is
-[Pocker](../pocker/README.md), which runs every instance inside one process. A host can run either or both.
+[Pocker](../pocker/README.md), which runs every instance inside one process. A host runs one of them.
 
 ## Install
 
 Docker is built into `pocketone`. It needs a Docker daemon on the same machine; nothing else to install.
 
-It's off until `pocketone.yaml` names it as the provider (below). Then `pocketone serve` runs the host instead of a
-single app.
+It's off until `pocketone.yaml` has a `multisite` and a `docker` section (below). Then `pocketone serve` runs the host
+instead of a single app.
 
 In your own Go build, add it to the host's extensions; it provides the [runtime/v1](../contracts/runtime/v1/README.md)
 contract when `pocketone.yaml` has a `docker` section:
@@ -35,9 +35,8 @@ The module is `pocketone.dev/ext/docker`. Add `docker.NewCommand(...)` to your r
 ## Configure
 
 Add a `multisite` section (host mode) and a `docker` section to `pocketone.yaml`. Listeners (`server`), instances
-(`instances`) and the firewall are the host's sections. With pocker linked too, both run: each instance on the one
-its record names (`runtime: docker`), else the first that serves its version; `providers: { runtime/v1: [docker] }`
-keeps docker alone.
+(`instances`) and the firewall are the host's sections. The `docker` section makes docker the host's runtime instead of
+pocker; every instance runs in a container.
 
 ```yaml
 multisite: {}
@@ -139,7 +138,7 @@ newer PocketBase than wrote its data is upgraded.
 | Extension | How they fit |
 |---|---|
 | [Multisite](../multisite/README.md) | Docker is a runtime provider of the host: the host routes by hostname, runs the listeners and gates, and hands each request to docker. |
-| [Pocker](../pocker/README.md) | The other provider. A host runs either or both, over the same instance folders. |
+| [Pocker](../pocker/README.md) | The other provider. A host runs one of them, over the same instance folders. |
 | [Edge](../edge/README.md) | For a fleet: requests for instances on another edge are forwarded there. |
 | [Mothership](../mothership/README.md) | Instances (and their versions) come from a mothership instead of a file. |
 | [Firewall](../firewall/README.md) | Rate limits and allow lists in front of every instance. |
@@ -217,7 +216,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{rt}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: rt, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		slog.Error("host", "error", err)
 		os.Exit(1)

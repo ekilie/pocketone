@@ -54,7 +54,7 @@ func TestServedRequestCarriesClientIP(t *testing.T) {
 		{resolverGate{}, "10.1.2.3:4433", "", "10.1.2.3:4433"},
 		{noopGate{}, "10.1.2.3:4433", "203.0.113.7", "10.1.2.3:4433"},
 	} {
-		h := &Handler{Dir: dir, Gate: tc.gate, Runtimes: []Runtime{rt}}
+		h := &Handler{Dir: dir, Gate: tc.gate, Runtime: rt}
 		r := httptest.NewRequest(http.MethodGet, "http://a.test/api/health", nil)
 		r.RemoteAddr = tc.peer
 		if tc.client != "" {

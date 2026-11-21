@@ -2937,7 +2937,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`oauth/v1`](https://pocketone.dev/docs/contracts/oauth/v1) | The app's OAuth 2.1 authorization server, so the CLI and MCP clients can sign in. | api-tokens |  | mcp | @benallfree |
 | [`remote/v1`](https://pocketone.dev/docs/contracts/remote/v1) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](https://pocketone.dev/docs/contracts/restore/v1) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
-| [`runtime/v1`](https://pocketone.dev/docs/contracts/runtime/v1) | What runs a multisite host's instances (as isolates, in containers), in preference order. | docker, pocker |  |  | @benallfree |
+| [`runtime/v1`](https://pocketone.dev/docs/contracts/runtime/v1) | What runs a multisite host's instances (as isolates, in containers): one per host. | docker, pocker |  |  | @benallfree |
 | [`settings/v1`](https://pocketone.dev/docs/contracts/settings/v1) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | agent, bulkmail, mailrelay, pitr, vacuum | @benallfree |
 | [`templates/v1`](https://pocketone.dev/docs/contracts/templates/v1) | An extension's own pages as Go templates a project can eject and edit. | templates |  | api-tokens | @benallfree |
 | [`tls/v1`](https://pocketone.dev/docs/contracts/tls/v1) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |
@@ -8274,29 +8274,29 @@ Source: https://pocketone.dev/docs/contracts/runtime/v1
 # runtime/v1
 
 What runs a multisite host's instances: [pocker](https://pocketone.dev/docs/extensions/pocker) as isolates,
-[docker](https://pocketone.dev/docs/extensions/docker) in containers. A host can have several at once, in preference order: each
-instance runs on the one it names (`runtime: docker` in its record), else the first that can serve it (by PocketBase
-version, for example). Having a `multisite` section makes the binary a host; the runtimes are this contract's
-providers.
+[docker](https://pocketone.dev/docs/extensions/docker) in containers. A host runs exactly one, and every instance runs on it; an instance
+it can't serve (by PocketBase version, for example) is refused. Having a `multisite` section makes the binary a host;
+its runtime is this contract's provider.
 
-A host-scope service contract, many providers in order ([runtime.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
+A host-scope service contract, one provider ([runtime.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
 
 ## Use
 
-Pick and order the runtimes in `pocketone.yaml`; by default it's every linked runtime that's configured, in link
-order (docker needs its `docker` section):
+The stock `pocketone` binary runs docker when `pocketone.yaml` has a `docker` section, else pocker. A build that
+registers more than one runtime picks with `providers:`:
 
 ```yaml
 multisite: {}
 providers:
-  runtime/v1: [pocker, docker]   # pocker first; docker for what pocker can't serve
+  runtime/v1: docker
 ```
 
 ## Provide
 
 Implement `runtimev1.Runtime` (`Name`, `Serves`, `ServeInstance`, `Ready`) and any optional hooks the host
 calls (`Prechecker`, `Syncer`, `Starter`, `Shutdowner`, `Statser`). Provide it in a host extension's
-`RegisterHost`, only when it's configured:
+`RegisterHost`, only when it's configured (a second provider on the same host is a conflict at startup unless
+`providers:` picks):
 
 ```go
 runtimev1.Contract.ProvideIn(h.Scope, myRuntime)
@@ -10979,8 +10979,8 @@ Each top-level key is one section, owned by the extension that uses it. This pac
 - `server`: what `serve` reads. `http`, `https` and `origins` are the defaults for `serve --http`, `--https` and
   `--origins`; for a single app, `public_dir`, `index_fallback`, `pages_dir`, `hooks_watch` and `automigrate` are the
   defaults for `--publicDir`, `--indexFallback`, `--pagesDir`, `--hooksWatch` and `--automigrate`.
-- `multisite`: add it only to run many instances from one binary (see [Integrations](#integrations)); `providers:
-  { runtime/v1: [...] }` picks which runtimes.
+- `multisite`: add it only to run many instances from one binary (see [Integrations](#integrations)); it runs pocker,
+  or docker when there's a `docker` section.
 
 ```yaml
 server:
@@ -11127,7 +11127,7 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 | Extension | How they fit |
 |---|---|
 | Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](https://pocketone.dev/docs/extensions/pitr), [S3 Redirect](https://pocketone.dev/docs/extensions/s3redirect) and [Auto TLS](https://pocketone.dev/docs/extensions/autotls) are examples. |
-| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes ([Pocker](https://pocketone.dev/docs/extensions/pocker), [Docker](https://pocketone.dev/docs/extensions/docker)) `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on one runtime: [Docker](https://pocketone.dev/docs/extensions/docker) with a `docker` section, else [Pocker](https://pocketone.dev/docs/extensions/pocker). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
 
 ### The server section with many instances
 
@@ -15159,7 +15159,7 @@ Run every instance on a host in its own container, with the official PocketBase 
 the instance asks for. One host can serve PocketBase 0.23 and 0.36 and PocketOne side by side.
 
 Docker is one of the two runtime providers of the multi-instance [multisite](https://pocketone.dev/docs/extensions/multisite). The other is
-[Pocker](https://pocketone.dev/docs/extensions/pocker), which runs every instance inside one process. A host can run either or both.
+[Pocker](https://pocketone.dev/docs/extensions/pocker), which runs every instance inside one process. A host runs one of them.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -15167,8 +15167,8 @@ Docker is one of the two runtime providers of the multi-instance [multisite](htt
 
 Docker is built into `pocketone`. It needs a Docker daemon on the same machine; nothing else to install.
 
-It's off until `pocketone.yaml` names it as the provider (below). Then `pocketone serve` runs the host instead of a
-single app.
+It's off until `pocketone.yaml` has a `multisite` and a `docker` section (below). Then `pocketone serve` runs the host
+instead of a single app.
 
 In your own Go build, add it to the host's extensions; it provides the [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1)
 contract when `pocketone.yaml` has a `docker` section:
@@ -15184,9 +15184,8 @@ The module is `pocketone.dev/ext/docker`. Add `docker.NewCommand(...)` to your r
 ## Configure
 
 Add a `multisite` section (host mode) and a `docker` section to `pocketone.yaml`. Listeners (`server`), instances
-(`instances`) and the firewall are the host's sections. With pocker linked too, both run: each instance on the one
-its record names (`runtime: docker`), else the first that serves its version; `providers: { runtime/v1: [docker] }`
-keeps docker alone.
+(`instances`) and the firewall are the host's sections. The `docker` section makes docker the host's runtime instead of
+pocker; every instance runs in a container.
 
 ```yaml
 multisite: {}
@@ -15337,7 +15336,7 @@ What it adds to the `pocketone` binary ([CLI reference](https://pocketone.dev/do
 | Extension | How they fit |
 |---|---|
 | [Multisite](https://pocketone.dev/docs/extensions/multisite) | Docker is a runtime provider of the host: the host routes by hostname, runs the listeners and gates, and hands each request to docker. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The other provider. A host runs either or both, over the same instance folders. |
+| [Pocker](https://pocketone.dev/docs/extensions/pocker) | The other provider. A host runs one of them, over the same instance folders. |
 | [Edge](https://pocketone.dev/docs/extensions/edge) | For a fleet: requests for instances on another edge are forwarded there. |
 | [Mothership](https://pocketone.dev/docs/extensions/mothership) | Instances (and their versions) come from a mothership instead of a file. |
 | [Firewall](https://pocketone.dev/docs/extensions/firewall) | Rate limits and allow lists in front of every instance. |
@@ -15415,7 +15414,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{rt}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: rt, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		slog.Error("host", "error", err)
 		os.Exit(1)
@@ -15685,7 +15684,7 @@ is ignored from anyone else, so it can't be spoofed to escape a limit.
 | Extension | How they fit |
 |---|---|
 | [Multisite](https://pocketone.dev/docs/extensions/multisite) | The firewall is a host gate: it checks the peer, then admits each request before the runtime or the forward hook. |
-| [Pocker](https://pocketone.dev/docs/extensions/pocker), [Docker](https://pocketone.dev/docs/extensions/docker) | Either provider; the firewall runs in front of both. |
+| [Pocker](https://pocketone.dev/docs/extensions/pocker), [Docker](https://pocketone.dev/docs/extensions/docker) | Either runtime; the firewall runs in front of it. |
 | [Edge](https://pocketone.dev/docs/extensions/edge) | The entry edge applies the limits before forwarding. The owner edge's rate-limit headers replace the entry edge's, since the owner counted every request for the instance. |
 | [Multitenant](https://pocketone.dev/docs/extensions/tenants) (planned) | Will write each instance's `extensions.firewall` settings, such as its owner's trusted IPs. |
 
@@ -15742,7 +15741,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{okRuntime{}}, Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: okRuntime{}, Gates: []multisite.Gate{fw}, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -15911,8 +15910,8 @@ Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 Many PocketOne instances behind one listener, routed by hostname. Each request's hostname picks an instance, the
 request passes the gates (such as the [firewall](https://pocketone.dev/docs/extensions/firewall)), and a runtime serves it:
-[pocker](https://pocketone.dev/docs/extensions/pocker) runs instances as isolates in its own process, [docker](https://pocketone.dev/docs/extensions/docker) runs each in its own container,
-and a host can run both. Everything a host plugs in is a host-scope contract: [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1),
+[pocker](https://pocketone.dev/docs/extensions/pocker) runs instances as isolates in its own process, [docker](https://pocketone.dev/docs/extensions/docker) runs each in its own container.
+A host runs one of them, and every instance runs on it. Everything a host plugs in is a host-scope contract: [runtime/v1](https://pocketone.dev/docs/contracts/runtime/v1),
 [gate/v1](https://pocketone.dev/docs/contracts/gate/v1), [tls/v1](https://pocketone.dev/docs/contracts/tls/v1),
 [http.wrap/v1](https://pocketone.dev/docs/contracts/http.wrap/v1) and [instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1).
 
@@ -15924,12 +15923,10 @@ Multisite is built into `pocketone`. It takes over `serve` when `pocketone.yaml`
 one, `pocketone serve` runs a single app as usual.
 
 ```yaml
-multisite: {}
-providers:
-  runtime/v1: [pocker, docker]   # optional: which runtimes, in preference order (default: every configured one)
+multisite: {}       # pocker, unless there's a `docker` section (then docker)
 ```
 
-In your own Go build, pass the host extensions you link (runtimes in preference order), build the host from the
+In your own Go build, pass the host extensions you link (one runtime), build the host from the
 config and run it. [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go) is the stock binary's version:
 
 ```go
@@ -15941,7 +15938,8 @@ if errors.Is(err, multisite.ErrNoProvider) {
 err = h.Run(ctx)
 ```
 
-At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker, docker`.
+At startup the host logs who provides each host contract, e.g. `multisite: runtime/v1 ← pocker`. Registering two
+runtimes is a conflict at startup unless `providers: { runtime/v1: docker }` picks one.
 
 The module is `pocketone.dev/ext/multisite`.
 
@@ -16024,8 +16022,8 @@ letters, digits, dots and dashes. Other fields: `version` and `runtime` (which r
 
 ### Switching runtime
 
-Switching between pocker and docker is a config change (`providers: { runtime/v1: [docker] }`, or an instance's own
-`runtime: docker`): both keep instances in `<root>/<id>`. Stop the containers
+Switching between pocker and docker is a config change (add or remove the `docker` section, or
+`providers: { runtime/v1: docker }`): both keep instances in `<root>/<id>`. Stop the containers
 first when leaving docker (they keep running across a host restart on purpose). Data only moves forward: an instance
 started on a newer version than wrote its data is upgraded.
 
@@ -16113,7 +16111,7 @@ func main() {
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtimes: []multisite.Runtime{echoRuntime{}}, Listeners: multisite.Listeners{Listen: *listen}}
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: *instances}, Runtime: echoRuntime{}, Listeners: multisite.Listeners{Listen: *listen}}
 	if err := h.Run(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -16128,7 +16126,7 @@ func main() {
 | `Instance`, `InstanceSource`, `YAMLSource` | The instance record (instance.source/v1) and where instances come from. |
 | `Directory` | Instances by hostname and id, kept current from the source. |
 | `Handler` | Health path, peer check, hostname, blocked, then remote (the `Forward` hook) or local (the instance routes, then the runtime), with the gates. |
-| `Runtime` | runtime/v1: what runs instances. One or more per host, in preference order. |
+| `Runtime` | runtime/v1: what runs instances. One per host. |
 | `Gate`, `ChainGates`, `HostGate` | Request gates (gate/v1). |
 | `Extension`, `Link`, `Host.Use`, `Host.Setup` | Host extensions and the host's contract scope. |
 | `Serve`, `TLSProvider` | Listeners: plain, TLS (a provider such as autotls, or cert files reloaded on change), redirect, graceful shutdown. |

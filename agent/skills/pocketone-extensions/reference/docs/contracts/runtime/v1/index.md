@@ -2,29 +2,29 @@
 # runtime/v1
 
 What runs a multisite host's instances: [pocker](https://pocketone.dev/docs/extensions/pocker) as isolates,
-[docker](https://pocketone.dev/docs/extensions/docker) in containers. A host can have several at once, in preference order: each
-instance runs on the one it names (`runtime: docker` in its record), else the first that can serve it (by PocketBase
-version, for example). Having a `multisite` section makes the binary a host; the runtimes are this contract's
-providers.
+[docker](https://pocketone.dev/docs/extensions/docker) in containers. A host runs exactly one, and every instance runs on it; an instance
+it can't serve (by PocketBase version, for example) is refused. Having a `multisite` section makes the binary a host;
+its runtime is this contract's provider.
 
-A host-scope service contract, many providers in order ([runtime.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
+A host-scope service contract, one provider ([runtime.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/runtime/v1/runtime.go)).
 
 ## Use
 
-Pick and order the runtimes in `pocketone.yaml`; by default it's every linked runtime that's configured, in link
-order (docker needs its `docker` section):
+The stock `pocketone` binary runs docker when `pocketone.yaml` has a `docker` section, else pocker. A build that
+registers more than one runtime picks with `providers:`:
 
 ```yaml
 multisite: {}
 providers:
-  runtime/v1: [pocker, docker]   # pocker first; docker for what pocker can't serve
+  runtime/v1: docker
 ```
 
 ## Provide
 
 Implement `runtimev1.Runtime` (`Name`, `Serves`, `ServeInstance`, `Ready`) and any optional hooks the host
 calls (`Prechecker`, `Syncer`, `Starter`, `Shutdowner`, `Statser`). Provide it in a host extension's
-`RegisterHost`, only when it's configured:
+`RegisterHost`, only when it's configured (a second provider on the same host is a conflict at startup unless
+`providers:` picks):
 
 ```go
 runtimev1.Contract.ProvideIn(h.Scope, myRuntime)

@@ -57,8 +57,8 @@ Each top-level key is one section, owned by the extension that uses it. This pac
 - `server`: what `serve` reads. `http`, `https` and `origins` are the defaults for `serve --http`, `--https` and
   `--origins`; for a single app, `public_dir`, `index_fallback`, `pages_dir`, `hooks_watch` and `automigrate` are the
   defaults for `--publicDir`, `--indexFallback`, `--pagesDir`, `--hooksWatch` and `--automigrate`.
-- `multisite`: add it only to run many instances from one binary (see [Integrations](#integrations)); `providers:
-  { runtime/v1: [...] }` picks which runtimes.
+- `multisite`: add it only to run many instances from one binary (see [Integrations](#integrations)); it runs pocker,
+  or docker when there's a `docker` section.
 
 ```yaml
 server:
@@ -205,7 +205,7 @@ What it adds to the `pocketone` binary ([CLI reference](/docs/reference/cli)):
 | Extension | How they fit |
 |---|---|
 | Every extension with a section | Each extension declares its own section; its values become that extension's defaults or flag defaults. [PITR](/docs/extensions/pitr), [S3 Redirect](/docs/extensions/s3redirect) and [Auto TLS](/docs/extensions/autotls) are examples. |
-| [Multisite](/docs/extensions/multisite) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on the runtimes ([Pocker](/docs/extensions/pocker), [Docker](/docs/extensions/docker)) `providers: { runtime/v1: [...] }` picks (default: every configured one). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
+| [Multisite](/docs/extensions/multisite) | Add a `multisite` section and `pocketone serve` runs many instances instead of one app, on one runtime: [Docker](/docs/extensions/docker) with a `docker` section, else [Pocker](/docs/extensions/pocker). The `app` section and `env_allow` don't apply then; each instance has its own folder under its runtime's root. |
 
 ### The server section with many instances
 

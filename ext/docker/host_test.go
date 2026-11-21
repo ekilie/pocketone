@@ -64,7 +64,7 @@ instances:
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	addr := ln.Addr().String()
 	_ = ln.Close()
-	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtimes: []multisite.Runtime{rt}, Gates: []multisite.Gate{tagGate{}},
+	h := &multisite.Host{Source: &multisite.YAMLSource{Path: instances, Required: true}, Runtime: rt, Gates: []multisite.Gate{tagGate{}},
 		Listeners: multisite.Listeners{Listen: addr}, Logger: quiet, Directory: multisite.NewDirectory(quiet)}
 	h.InstanceRoutes = append(h.InstanceRoutes, rt.serveRemote(nil, h.Directory, nil)) // as Provider.RegisterHost does
 	ctx, cancel := context.WithCancel(context.Background())

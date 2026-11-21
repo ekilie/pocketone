@@ -16,7 +16,7 @@ import (
 // Build it from config ([FromConfig]), or fill it in (Use and Setup, or the fields directly), then call Run.
 type Host struct {
 	Source   InstanceSource // instance.source/v1 (required)
-	Runtimes []Runtime      // runtime/v1, in preference order (at least one)
+	Runtime  Runtime        // runtime/v1: runs every instance (required)
 
 	// Scope is the host's contract scope: host extensions provide runtime/v1, gate/v1, tls/v1, http.wrap/v1 and
 	// instance.source/v1 on it ([Host.Use]); [Host.Setup] seals it. Its instances can be given contracts too
@@ -61,7 +61,7 @@ type Host struct {
 // Handler returns the request front (before the wrappers), built on first use.
 func (h *Host) Handler() *Handler {
 	if h.handler == nil {
-		h.handler = &Handler{Dir: h.dir(), Gate: ChainGates(h.Gates...), Runtimes: h.Runtimes, Forward: h.Forward,
+		h.handler = &Handler{Dir: h.dir(), Gate: ChainGates(h.Gates...), Runtime: h.Runtime, Forward: h.Forward,
 			InstanceRoutes: h.InstanceRoutes, Dev: h.Dev, HealthPath: h.HealthPath, Logger: h.log()}
 	}
 	return h.handler
@@ -84,15 +84,13 @@ func (h *Host) log() *slog.Logger {
 // Run serves until ctx is done or the source fails, then shuts down: the listeners (in-flight requests get
 // ShutdownTimeout), background work, the runtime.
 func (h *Host) Run(ctx context.Context) error {
-	if h.Source == nil || len(h.Runtimes) == 0 {
-		return errors.New("host: a Source and at least one runtime are required")
+	if h.Source == nil || h.Runtime == nil {
+		return errors.New("host: a Source and a runtime are required")
 	}
 	log := h.log()
 	dir := h.dir()
-	for _, rt := range h.Runtimes {
-		if s, ok := rt.(Syncer); ok {
-			dir.Subscribe(s.Sync)
-		}
+	if s, ok := h.Runtime.(Syncer); ok {
+		dir.Subscribe(s.Sync)
 	}
 	var handler http.Handler = h.Handler()
 	for i := len(h.Wrappers) - 1; i >= 0; i-- {
@@ -101,11 +99,9 @@ func (h *Host) Run(ctx context.Context) error {
 
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	for _, rt := range h.Runtimes {
-		if st, ok := rt.(RuntimeStarter); ok {
-			if err := st.Start(runCtx); err != nil {
-				return fmt.Errorf("host: runtime %s: %w", rt.Name(), err)
-			}
+	if st, ok := h.Runtime.(RuntimeStarter); ok {
+		if err := st.Start(runCtx); err != nil {
+			return fmt.Errorf("host: runtime %s: %w", h.Runtime.Name(), err)
 		}
 	}
 	sourceErr := make(chan error, 1)
@@ -139,10 +135,8 @@ func (h *Host) Run(ctx context.Context) error {
 	if h.OnShutdown != nil {
 		h.OnShutdown()
 	}
-	for _, rt := range h.Runtimes {
-		if s, ok := rt.(Shutdowner); ok {
-			s.Shutdown()
-		}
+	if s, ok := h.Runtime.(Shutdowner); ok {
+		s.Shutdown()
 	}
 	if len(h.Closers) > 0 {
 		cctx, ccancel := context.WithTimeout(context.Background(), 30*time.Second)
