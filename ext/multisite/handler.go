@@ -3,6 +3,7 @@ package multisite
 import (
 	"context"
 	"encoding/json"
+	lookupv1 "pocketone.dev/ext/contracts/instance/lookup/v1"
 	"log/slog"
 	"net"
 	"net/http"
@@ -37,6 +38,10 @@ type Handler struct {
 
 	// Dev serves any hostname: one the directory doesn't map becomes an instance with id [DevID] and Dev set.
 	Dev bool
+
+	// Lookup, when set (instance.lookup/v1: a source that doesn't hold every instance), answers every request's
+	// hostname instead of the directory: from its cache, or by asking. A failed lookup is 503, not 404.
+	Lookup lookupv1.Lookup
 
 	HealthPath string // "" = DefaultHealthPath
 	Logger     *slog.Logger
@@ -188,6 +193,17 @@ func versionNote(inst Instance) string {
 // the hostname ([DevID]). A non-zero status means the request can't be routed.
 func (h *Handler) resolve(r *http.Request) (Instance, int, string) {
 	host := NormalizeHost(r.Host)
+	if h.Lookup != nil {
+		res, err := h.Lookup.Lookup(r.Context(), host)
+		switch {
+		case err != nil:
+			h.log().Warn("edge: instance lookup failed", "host", host, "error", err)
+			return Instance{}, http.StatusServiceUnavailable, "instance lookup failed for " + host + "; try again shortly"
+		case !res.Found:
+			return Instance{}, http.StatusNotFound, host + " not found"
+		}
+		return res.Instance, 0, ""
+	}
 	if inst, ok := h.Dir.Lookup(host); ok {
 		return inst, 0, ""
 	}

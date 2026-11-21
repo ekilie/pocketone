@@ -64,6 +64,16 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 |---|---|---|---|---|
 | `cache_clear_clear` | Empties one of the app's cache buckets, or every bucket it has. |  | `cache` | `bucket` (string) |
 
+## instance.watch/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/instance.watch/v1).
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `instance_watch_stream` | Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes. | yes | `fleet` | `edge` (string) |
+| `instance_watch_watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). |  | `fleet` | `conn` (string), `edge` (string), `host` (string) |
+| `instance_watch_unwatch` | Stops changes for a hostname on a stream. |  | `fleet` | `conn` (string), `host` (string) |
+
 ## mail.suppression/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/mail.suppression/v1). Answered by [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) in the standard set.

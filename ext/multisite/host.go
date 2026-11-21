@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	lookupv1 "pocketone.dev/ext/contracts/instance/lookup/v1"
 	"pocketone.dev/ext/extkit"
 	"time"
 )
@@ -40,6 +41,9 @@ type Host struct {
 	TLS            TLSProvider                                                 // nil = Listeners.TLS cert files, or plain HTTP
 	Forward        func(w http.ResponseWriter, r *http.Request, inst Instance) // instances another server runs (ext/edge); nil = plain proxy to Remote
 	Dev            bool                                                        // also serve unknown hostnames (dev ids)
+	// Lookup answers hostnames the source doesn't hold (instance.lookup/v1, taken from the scope by Setup); nil =
+	// the directory alone.
+	Lookup lookupv1.Lookup
 
 	Listeners  Listeners
 	HealthPath string // default [DefaultHealthPath]
@@ -62,7 +66,7 @@ type Host struct {
 func (h *Host) Handler() *Handler {
 	if h.handler == nil {
 		h.handler = &Handler{Dir: h.dir(), Gate: ChainGates(h.Gates...), Runtime: h.Runtime, Forward: h.Forward,
-			InstanceRoutes: h.InstanceRoutes, Dev: h.Dev, HealthPath: h.HealthPath, Logger: h.log()}
+			InstanceRoutes: h.InstanceRoutes, Dev: h.Dev, Lookup: h.Lookup, HealthPath: h.HealthPath, Logger: h.log()}
 	}
 	return h.handler
 }
@@ -123,6 +127,12 @@ func (h *Host) Run(ctx context.Context) error {
 		}
 	}()
 	served := func(host string) bool {
+		if h.Lookup != nil {
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			res, err := h.Lookup.Lookup(ctx, host)
+			return err == nil && res.Found
+		}
 		_, ok := dir.Lookup(host)
 		return ok
 	}

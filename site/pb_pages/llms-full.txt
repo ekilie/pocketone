@@ -2932,13 +2932,16 @@ The table is generated from each contract's README and every extension's `Contra
 | [`api-tokens/v1`](https://pocketone.dev/docs/contracts/api-tokens/v1) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | api-tokens |  | deploy, mcp, remotes | @benallfree |
 | [`bulkmail/v1`](https://pocketone.dev/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](https://pocketone.dev/docs/contracts/cache.clear/v1) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
-| [`cache/v1`](https://pocketone.dev/docs/contracts/cache/v1) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
+| [`cache/v1`](https://pocketone.dev/docs/contracts/cache/v1) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) | mothership | pages | @benallfree |
 | [`cli.commands/v1`](https://pocketone.dev/docs/contracts/cli.commands/v1) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. | desktop |  |  | @benallfree |
 | [`deploy/v1`](https://pocketone.dev/docs/contracts/deploy/v1) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](https://pocketone.dev/docs/contracts/gate/v1) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](https://pocketone.dev/docs/contracts/http.wrap/v1) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |
 | [`instance.fs/v1`](https://pocketone.dev/docs/contracts/instance.fs/v1) | An instance's code files on disk: its folder, a cache folder, one writers' lock and a restart around a change. | deploy (default), docker, pocker | deploy |  | @benallfree |
+| [`instance.lookup/v1`](https://pocketone.dev/docs/contracts/instance.lookup/v1) | A multisite host asks what a hostname it doesn't know serves. | mothership |  |  | @benallfree |
+| [`instance.resolve/v1`](https://pocketone.dev/docs/contracts/instance.resolve/v1) | On a control plane: what a hostname serves for an edge, and the records the answer was built from. | mothership (default) | mothership |  | @benallfree |
 | [`instance.source/v1`](https://pocketone.dev/docs/contracts/instance.source/v1) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
+| [`instance.watch/v1`](https://pocketone.dev/docs/contracts/instance.watch/v1) | An edge follows a control plane lazily: one stream, hostnames watched as requests name them. | mothership |  |  | @benallfree |
 | [`mail.fallback/v1`](https://pocketone.dev/docs/contracts/mail.fallback/v1) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](https://pocketone.dev/docs/contracts/mail.feedback/v1) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](https://pocketone.dev/docs/contracts/mail.suppression/v1) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |
@@ -4262,6 +4265,55 @@ pocketone remote default <name>
 
 From [Remotes](https://pocketone.dev/docs/extensions/remotes).
 
+### pocketone remote instance
+
+Commands under remote instance
+
+### pocketone remote instance watch
+
+Calls instance.watch/v1 on a remote
+
+### pocketone remote instance watch stream
+
+Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes (instance.watch/v1)
+
+```
+pocketone remote instance watch stream
+```
+
+Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes.
+
+Calls GET /api/\_c/instance.watch/v1/stream on the remote (token scope: fleet).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--edge` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1) (generated).
+
+### pocketone remote instance watch unwatch
+
+Stops changes for a hostname on a stream (instance.watch/v1)
+
+```
+pocketone remote instance watch unwatch
+```
+
+Stops changes for a hostname on a stream.
+
+Calls POST /api/\_c/instance.watch/v1/unwatch on the remote (token scope: fleet).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--conn` | string | – |  |
+| `--host` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1) (generated).
+
 ### pocketone remote list
 
 Lists remotes and whether you're logged in
@@ -4928,6 +4980,16 @@ Its own API under `/api/_c/api-tokens/v1/`: see [api-tokens/v1](https://pocketon
 
 Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/docs/contracts/deploy/v1). Answered by [Deploy](https://pocketone.dev/docs/extensions/deploy) in the standard set.
 
+## instance.watch/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/instance.watch/v1).
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `GET /api/_c/instance.watch/v1/stream` | Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes. (stream) | `fleet` | `edge` (string) |
+| `POST /api/_c/instance.watch/v1/watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). | `fleet` | `conn` (string), `edge` (string), `host` (string) |
+| `POST /api/_c/instance.watch/v1/unwatch` | Stops changes for a hostname on a stream. | `fleet` | `conn` (string), `host` (string) |
+
 ## mail.feedback/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/mail.feedback/v1). Answered by [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) in the standard set.
@@ -5061,6 +5123,16 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | Tool | What it does | Reads only | Token scope | Arguments |
 |---|---|---|---|---|
 | `cache_clear_clear` | Empties one of the app's cache buckets, or every bucket it has. |  | `cache` | `bucket` (string) |
+
+## instance.watch/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/instance.watch/v1).
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `instance_watch_stream` | Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes. | yes | `fleet` | `edge` (string) |
+| `instance_watch_watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). |  | `fleet` | `conn` (string), `edge` (string), `host` (string) |
+| `instance_watch_unwatch` | Stops changes for a hostname on a stream. |  | `fleet` | `conn` (string), `host` (string) |
 
 ## mail.suppression/v1
 
@@ -5355,19 +5427,20 @@ Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `mothership:`
 
-A community mothership to mirror instances and edges from: url, login, this edge's id, internal URL, region, apex.
+A community mothership: serve: true makes this app one; url, login and self make a host follow one.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `url` | string |  | The mothership's URL. Required. |
+| `serve` | bool |  | This app is the mothership: it serves instance.watch/v1 to its edges (and keeps the edges and instances collections). |
+| `apex` | string |  | On the mothership: makes <name>.<apex> a hostname of every instance. Empty: hosts only. |
+| `url` | string |  | On an edge: the mothership's URL. Required there. |
 | `email` | string |  | Superuser email this edge logs in with; use a $VAR from the .env. |
 | `password` | string |  | Superuser password; use a $VAR from the .env. |
-| `self` | string |  | This edge's edge_id, such as lax-1. Default: the edges section's self. Required. |
+| `self` | string |  | This edge's edge_id, such as lax-1. Default: the edges section's self. Required on an edge. |
 | `internal_url` | string |  | Where other edges reach this one. Set: the edge registers itself when the mothership has no record for it. |
 | `region` | string |  | Region recorded when the edge registers itself. |
-| `apex` | string |  | Makes <name>.<apex> a hostname of every instance. Empty: hosts only. |
 | `heartbeat` | duration |  | How often this edge marks itself online. Default 15s; negative: never. |
-| `resync` | duration |  | How often everything is reloaded, in case a change was missed. Default 10m. |
+| `max_hosts` | int |  | Most hostnames an edge keeps answers for (its cache bucket mothership.hosts). Default 50000. |
 
 Owned by [Mothership](https://pocketone.dev/docs/extensions/mothership).
 
@@ -7471,6 +7544,17 @@ _ = b.Set(ctx, key, v, 0) // 0 = the bucket's TTL
 Name buckets after your extension (`myext.answers`) so two extensions never share one. Declare cache/v1 in
 `WorksWith`: when nothing provides it, `Open` returns a bucket that keeps nothing, so the same code runs uncached.
 
+When the value is expensive and many requests may ask for the same cold key at once, let `cachev1.Load` compute it:
+callers asking for the same key of the same bucket while it runs share one call, and all of them are released only
+after the value is stored. An error goes to the callers waiting then and is never stored; each caller waits on its own
+context, and the call keeps running for the others when one gives up (so bound its time yourself).
+
+```go
+v, err := cachev1.Load(ctx, b, key, func(ctx context.Context) ([]byte, error) { return compute(ctx) })
+```
+
+`Items` has the same `Load` for Go values.
+
 To empty every bucket the app has (after a change that left stale entries), call `cachev1.Clear(ctx, app)`; the
 app's admins can do the same from outside its code through [cache.clear/v1](https://pocketone.dev/docs/contracts/cache.clear/v1).
 
@@ -7539,6 +7623,7 @@ say in your README which ones you honour.
 | Extension | |
 |---|---|
 | [cache](https://pocketone.dev/docs/extensions/cache) | provides (default) |
+| [mothership](https://pocketone.dev/docs/extensions/mothership) | requires |
 | [pages](https://pocketone.dev/docs/extensions/pages/extension) | works with |
 
 <!-- /contracts:index -->
@@ -7852,6 +7937,98 @@ MIT
 
 ---
 
+Source: https://pocketone.dev/docs/contracts/instance.lookup/v1
+
+# instance.lookup/v1
+
+A companion to [instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1) for sources that don't hold every instance: the host
+asks on every request it can't route, and the provider answers from its cache or fetches.
+
+A host-scope service contract ([lookup.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/lookup/v1/lookup.go)).
+
+## Use
+
+When something provides it on the host's scope, [ext/multisite](https://pocketone.dev/docs/extensions/multisite) routes every
+request's hostname through `Lookup(ctx, host)` instead of its directory. `Found: false` is 404; an error is 503 (the
+answer isn't known, for instance while the control plane can't be reached and the host isn't cached).
+
+## Provide
+
+Implement `lookupv1.Lookup` and provide it in a host extension's `RegisterHost`, beside instance.source/v1:
+
+```go
+lookupv1.Contract.ProvideIn(h.Scope, myLookup)
+```
+
+The source's `Watch` should still report changes to instances it handed out, so the runtime recycles or stops them.
+[ext/mothership/client](https://github.com/pocketonehq/pocketone/blob/main/ext/mothership/client/client.go) is the provider.
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [mothership](https://pocketone.dev/docs/extensions/mothership) | provides |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/contracts/instance.resolve/v1
+
+# instance.resolve/v1
+
+How a control plane (a mothership) decides what a hostname serves for a given edge, from its own records. The watch
+server ([instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1)) asks it on every watch and asks again after every write to a
+record an answer depends on, so a resolver only has to be right; it never tracks changes.
+
+A service contract on the mothership app ([resolve.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/resolve/v1/resolve.go)).
+
+## Use
+
+`resolvev1.Contract.Must(app)` after registration:
+
+- `Resolve(ctx, Query{Edge, Host})`: the instance (`nil`: no such host) and its `Deps`.
+- `Standing(ctx, edge)`: instances the edge must hold whatever its traffic, with their deps.
+- `Edges(ctx)`: every edge, with the list's deps.
+- `Touches(ctx, record)`: the deps a write of the record touches besides its own record and collection.
+
+Deps are strings built with `resolvev1.Record(collection, id)`, `Collection(name)` (any record of it),
+`Host(name)` (whoever claims the name) and `Key(name)` (the resolver's own, such as which record is edge `lax-1`).
+
+## Provide
+
+Implement `resolvev1.Resolver` and provide it on the mothership app. [ext/mothership](https://pocketone.dev/docs/extensions/mothership)'s
+`Schema` provides the default over its `edges` and `instances` collections; a control plane with its own collections
+provides its own, and one that only adds to the default's answers wraps it (`Contract.Wrap`).
+
+`Touches` should report only what a write changed (compare `rec.Original()`): a record written often, such as an edge's
+heartbeat, mustn't re-resolve every answer that merely looked it up.
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [mothership](https://pocketone.dev/docs/extensions/mothership) | provides (default) |
+| [mothership](https://pocketone.dev/docs/extensions/mothership) | requires |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
 Source: https://pocketone.dev/docs/contracts/instance.source/v1
 
 # instance.source/v1
@@ -7889,6 +8066,116 @@ file would.
 |---|---|
 | [mothership](https://pocketone.dev/docs/extensions/mothership) | provides |
 | [pocker](https://pocketone.dev/docs/extensions/pocker) | requires |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/contracts/instance.watch/v1
+
+# instance.watch/v1
+
+An edge follows a mothership without holding every instance. It opens one stream; the first time a request names a
+hostname, it asks for it; from then on it hears every change to what that hostname serves, until it stops caring.
+Nothing is sent that no edge asked for, except the list of edges and the edge's standing set (instances it must hold
+whatever its traffic, such as a copy waiting to be made).
+
+A wire contract ([watch.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/instance/watch/v1/watch.go)) at `/api/_c/instance.watch/v1/`. Superusers only (scope `fleet`).
+
+## Use
+
+| Operation | | |
+|---|---|---|
+| `stream` | `GET /stream?edge=<edge id>` | Server-sent events, each `{kind, seq, ...}`: `hello` first (`conn`, `self`, `edges`, `standing`), then `host` (`host`, `answer`), `edges`, `standing`, and `ping` when idle |
+| `watch` | `POST /watch {conn, edge, host}` | Registers `host` on the stream `conn` and sends its answer there. With no live `conn`, the answer comes in the reply and nothing is watched |
+| `unwatch` | `POST /unwatch {conn, host}` | Stops changes for `host` on `conn` |
+
+The promise is in the order:
+
+- The hostname is registered before it is read, so no write between the two is missed.
+- The answer goes on the stream, never in the reply, so the answer and every later change arrive in the order they
+  happened. A `host` event with no `answer` means the hostname couldn't be resolved (an error, not "not found").
+- "No such host" is an answer (`found: false`), watched like any other: the instance that later takes the name
+  arrives.
+- A change is sent only when the answer differs from the one sent last on that stream.
+- `seq` numbers a stream's events from 1; a gap means something was lost and the edge reconnects.
+- A dropped stream forgets every watch. An edge starts over on its next stream; what it cached before is unwatched.
+
+In Go, [ext/mothership/client](https://github.com/pocketonehq/pocketone/blob/main/ext/mothership/client/client.go) is the edge side: it is a multisite host's
+instance.source/v1 and [instance.lookup/v1](https://pocketone.dev/docs/contracts/instance.lookup/v1).
+
+## Provide
+
+Implement `watchv1.Watcher` and provide it on the mothership app. [ext/mothership](https://pocketone.dev/docs/extensions/mothership)'s
+`Server` is the provider: it keeps each stream's watches in memory, indexes them by the deps
+[instance.resolve/v1](https://pocketone.dev/docs/contracts/instance.resolve/v1) returns, and resolves again after every committed write that
+touches them.
+
+## Commands and APIs
+
+Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](https://pocketone.dev/docs/features/remote), or the full [CLI](https://pocketone.dev/docs/reference/cli), [REST](https://pocketone.dev/docs/reference/rest) and [MCP](https://pocketone.dev/docs/reference/mcp) references.
+
+### stream
+
+Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/instance.watch/v1/stream` |
+| CLI | `pocketone remote instance watch stream --edge <value>` |
+| MCP | `instance_watch_stream` |
+| Token scope | `fleet` |
+| Answer | a stream of JSON entries (server-sent events); the command prints one line each |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `edge` | `--edge` | string |
+
+### watch
+
+Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply).
+
+| | |
+|---|---|
+| REST | `POST /api/_c/instance.watch/v1/watch` |
+| CLI | `pocketone remote instance watch --conn <value> --edge <value> --host <value>` |
+| MCP | `instance_watch_watch` |
+| Token scope | `fleet` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `conn` | `--conn` | string |
+| `edge` | `--edge` | string |
+| `host` | `--host` | string |
+
+### unwatch
+
+Stops changes for a hostname on a stream.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/instance.watch/v1/unwatch` |
+| CLI | `pocketone remote instance watch unwatch --conn <value> --host <value>` |
+| MCP | `instance_watch_unwatch` |
+| Token scope | `fleet` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `conn` | `--conn` | string |
+| `host` | `--host` | string |
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [mothership](https://pocketone.dev/docs/extensions/mothership) | provides |
 
 <!-- /contracts:index -->
 
@@ -16012,37 +16299,42 @@ Source: https://pocketone.dev/docs/extensions/mothership
 Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
 
 A control plane for a fleet of edges. The mothership is a PocketOne app that records which edges exist and which
-instances run where. Each edge follows it, serves its own instances and forwards requests for the rest to the edge
-that runs them.
+instances run where. Each edge asks it about a hostname the first time a request names one, follows changes to that
+hostname on one stream, serves its own instances and forwards requests for the rest to the edge that runs them.
 
-One operator, no users: owners and accounts are the [tenants](https://pocketone.dev/docs/extensions/tenants) extension (planned), which extends the
-mothership through its collections and the mirror's extensions. Each layer is optional: an [edge](https://pocketone.dev/docs/extensions/edge)
-runs without a mothership, and a mothership without tenants.
+One operator, no users: owners and accounts are the [tenants](https://pocketone.dev/docs/extensions/tenants) extension (planned), which adds
+its collections and wraps [instance.resolve/v1](https://pocketone.dev/docs/contracts/instance.resolve/v1). Each layer is optional:
+an [edge](https://pocketone.dev/docs/extensions/edge) runs without a mothership, and a mothership without tenants.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
 
-The edge side (the `mirror` package) is built into `pocketone`. It turns on when `pocketone.yaml` names a provider
-and has a `mothership` section (below); `pocketone serve` then takes its instances and the other edges from the
-mothership.
+Both sides are built into `pocketone`; `pocketone.yaml`'s `mothership` section picks one.
 
-The mothership side has no switch yet. In the Go code of the PocketOne app that will be the mothership, create its
-collections once the app has bootstrapped:
+- **The mothership** is a single app with `serve: true`. It keeps the `edges` and `instances` collections (`Schema`)
+  and serves [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1) to the edges (`Server`).
+- **An edge** is a multisite host with `url` and `self`. It takes its instances from the mothership
+  ([instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1) and
+  [instance.lookup/v1](https://pocketone.dev/docs/contracts/instance.lookup/v1)) and the other edges from it.
 
-```go
-if err := mothership.EnsureCollections(app); err != nil {
-	return err
-}
-```
-
-The module is `pocketone.dev/ext/mothership`. In your own edge build, `mirror.FromSection(log)`
-returns the mirror for the config (nil without a `mothership` section); use it as the host's instance source and the
-router's edge source, as [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go) does.
+The module is `pocketone.dev/ext/mothership`. In your own build: `extkit` registers `mothership.NewSchema()` and
+`mothership.NewServer()` on the mothership app (a control plane with its own collections registers only the server,
+beside its own instance.resolve/v1); on an edge, `client.FromSection(log)` returns the client for the config (nil
+without a `url`), a multisite host extension, as [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go)
+does. The client keeps its answers in the host's cache/v1, so the host provides one (`cache.Extension.Host(scope)`).
 
 ## Configure
 
-On each edge, add a `mothership` section to the host's config; the mirror becomes the host's [instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1). Logins come from the private `.env`:
+On the mothership:
+
+```yaml
+mothership:
+  serve: true
+  apex: example.com                 # <name>.example.com routes to each instance
+```
+
+On each edge, with logins from the private `.env`:
 
 ```yaml
 multisite: {}
@@ -16053,45 +16345,56 @@ mothership:
   self: lax-1                       # this edge's edge_id (or edges.self)
   internal_url: http://10.88.0.5:8080
   region: lax
-  apex: example.com                 # <name>.example.com routes to each instance
+  max_hosts: 50000                  # hostnames the edge keeps answers for (cache bucket mothership.hosts)
 ```
 
-`url` and `self` are required. The edge logs in as a superuser of the mothership.
-
-On the mothership, there's nothing to configure beyond creating the collections.
+`url` and `self` are required on an edge. The edge logs in as a superuser of the mothership.
 
 ### pocketone.yaml reference
 
 #### `mothership:`
 
-A community mothership to mirror instances and edges from: url, login, this edge's id, internal URL, region, apex.
+A community mothership: serve: true makes this app one; url, login and self make a host follow one.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `url` | string |  | The mothership's URL. Required. |
+| `serve` | bool |  | This app is the mothership: it serves instance.watch/v1 to its edges (and keeps the edges and instances collections). |
+| `apex` | string |  | On the mothership: makes <name>.<apex> a hostname of every instance. Empty: hosts only. |
+| `url` | string |  | On an edge: the mothership's URL. Required there. |
 | `email` | string |  | Superuser email this edge logs in with; use a $VAR from the .env. |
 | `password` | string |  | Superuser password; use a $VAR from the .env. |
-| `self` | string |  | This edge's edge_id, such as lax-1. Default: the edges section's self. Required. |
+| `self` | string |  | This edge's edge_id, such as lax-1. Default: the edges section's self. Required on an edge. |
 | `internal_url` | string |  | Where other edges reach this one. Set: the edge registers itself when the mothership has no record for it. |
 | `region` | string |  | Region recorded when the edge registers itself. |
-| `apex` | string |  | Makes <name>.<apex> a hostname of every instance. Empty: hosts only. |
 | `heartbeat` | duration |  | How often this edge marks itself online. Default 15s; negative: never. |
-| `resync` | duration |  | How often everything is reloaded, in case a change was missed. Default 10m. |
+| `max_hosts` | int |  | Most hostnames an edge keeps answers for (its cache bucket mothership.hosts). Default 50000. |
 
 ## Use
 
 You manage the fleet in the mothership's dashboard, in two collections only superusers can read or write:
 
 - **`edges`**: `edge_id` (such as `lax-1`), `internal_url`, `region`, `status` (`online`, `draining`, `offline`) and
-  `last_seen`. An edge with `internal_url` set registers itself when it has no record, marks itself online every
-  15 s, and offline when it shuts down.
+  `last_seen`. An edge with `internal_url` set registers itself when it has no record, and marks itself online every
+  15 s.
 - **`instances`**: `name` (`<name>.<apex>` routes to it), `hosts` (extra hostnames), `edge` (where it runs),
   `power` (off answers 409 "instance is powered off"), `suspension` (non-empty answers 403 with that message), `dev`,
   `version`, `secrets`, `encryption_key`, `access`, `limits`, `plugins` (extension settings; the field keeps its old name) and `status`.
 
-Changes reach the edges within moments over PocketBase's realtime stream; there's no polling. To move an instance,
-change its `edge`: the old edge drops its full record and forwards to the new one until the new edge has it. An
-instance with no `edge` isn't served anywhere.
+A change reaches every edge that has served the hostname within moments, on its stream; there's no polling and no full
+copy. To move an instance, change its `edge`. An instance with no `edge` isn't served anywhere; a hostname no instance
+has answers 404, and the edge hears when one takes it.
+
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [stream](https://pocketone.dev/docs/contracts/instance.watch/v1#stream) | `pocketone remote instance watch stream --edge <value>` | `GET /api/_c/instance.watch/v1/stream` | `instance_watch_stream` |
+| [watch](https://pocketone.dev/docs/contracts/instance.watch/v1#watch) | `pocketone remote instance watch --conn <value> --edge <value> --host <value>` | `POST /api/_c/instance.watch/v1/watch` | `instance_watch_watch` |
+| [unwatch](https://pocketone.dev/docs/contracts/instance.watch/v1#unwatch) | `pocketone remote instance watch unwatch --conn <value> --host <value>` | `POST /api/_c/instance.watch/v1/unwatch` | `instance_watch_unwatch` |
 
 ## Integrations
 
@@ -16099,48 +16402,47 @@ instance with no `edge` isn't served anywhere.
 
 | Extension | How they fit |
 |---|---|
-| [Multisite](https://pocketone.dev/docs/extensions/multisite) | The mirror is the host's instance source: which instances exist and which this edge runs. |
-| [Edge](https://pocketone.dev/docs/extensions/edge) | The mirror is also an edge source: where the other edges are, so requests for their instances are forwarded. It combines with a fixed `edges` list. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | The client is the host's instance source and lookup: which instance a hostname serves, asked on first use. |
+| [Edge](https://pocketone.dev/docs/extensions/edge) | The client is also an edge source: where the other edges are, so requests for their instances are forwarded. It combines with a fixed `edges` list. |
+| [Cache](https://pocketone.dev/docs/extensions/cache) | The client keeps answers in the host's bucket `mothership.hosts` (required). |
 | [Docker](https://pocketone.dev/docs/extensions/docker) and [Pocker](https://pocketone.dev/docs/extensions/pocker) | Run the instances this edge owns, with the version, secrets, limits and extension settings from each record. |
-| [Tenants](https://pocketone.dev/docs/extensions/tenants) (planned) | Adds owners and accounts through mirror extensions. |
+| [Tenants](https://pocketone.dev/docs/extensions/tenants) (planned) | Adds owners and accounts by wrapping instance.resolve/v1. |
 
 ### Building on Mothership
 
-- **Your own fields and collections.** `EnsureCollections` leaves fields an extension added alone, so an extension can add
-  its own fields and collections to the mothership.
-- **Mirror extensions.** Pass a `mirror.Extension` to `mirror.FromSection` or `mirror.Config.Extensions`. `Views()`
-  adds filtered subscriptions (such as `owners` filtered to `instances_via_owner.edge ?= {edge}`), `Instance()`
-  adjusts each instance as it's built (block a suspended owner's instances, add an owner's trusted IPs), and
-  `Changed()` names the instances a change in its views affects.
-- **Go API.** `mirror.New(mirror.Config{...})` builds a mirror without the config file. `Get(view, id)` and
-  `Records(view)` read any view; `SelfRecord()` is this edge's record id.
+- **Your own fields and collections.** `EnsureCollections` leaves fields an extension added alone.
+- **Your own answers.** Wrap instance.resolve/v1 (`resolvev1.Contract.Wrap`) to adjust what a hostname serves (block a
+  suspended owner's instances, add an owner's trusted IPs), or provide your own over your own collections. List the
+  records an answer read in its deps, and report from `Touches` the names and keys a write changes.
+- **The standing set.** `Standing(edge)` lists instances an edge must hold without traffic (work addressed to it); they
+  arrive in the stream's hello and whenever the set changes.
+- **Go API.** `client.New(client.Config{...})` builds an edge client without the config file; `Standing()`,
+  `EdgeRecords()` and `SelfRecord()` read what the stream sent.
 
 ## Example
 
-There's no `example/main.go` yet. The stock binary's multi-instance mode,
-[`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go), follows a mothership when the config has the
-section.
+There's no `example/main.go` yet. The stock binary is both sides: [`examples/pocketone/main.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/main.go)
+registers the mothership, and its multi-instance mode, [`examples/pocketone/multi.go`](https://github.com/pocketonehq/pocketone/blob/main/examples/pocketone/multi.go),
+follows one; `examples/pocketone/mothership_test.go` runs a mothership and two edges.
 
 ## How it works
 
-Each edge subscribes to filtered views, so it only receives what concerns it:
+- **One stream per edge** (`GET /api/_c/instance.watch/v1/stream?edge=<id>`). Its hello carries the connection id,
+  every edge and the edge's standing set.
+- **Lookup on a miss.** A hostname the edge's cache doesn't hold is watched on the stream; the mothership registers the
+  watch, then resolves, and sends the answer on the stream. Requests for one hostname share one ask.
+- **Changes.** After every committed write, the mothership resolves again each watch whose deps the record touches,
+  and sends only answers that changed. A cached hostname is updated; one the cache dropped is unwatched.
+- **Stream down.** The edge keeps serving what it cached; a miss is answered in the reply, used once and not cached.
+- **Reconnect.** A new stream is a new generation: the cache key carries it, so everything from before is ignored
+  (and cleared). A mothership restart drops every stream, and every edge starts over.
 
-| View | Collection | Filter / fields | Why |
-|---|---|---|---|
-| `edges` | edges | all | forwarding, and health from heartbeats |
-| `routes` | instances | fields `id,name,hosts,edge,updated` | the routing table: any edge may get any visitor |
-| `local` | instances | `edge = <this edge>` | full records (secrets, limits, plugins) for instances this edge runs |
-
-An instance moving away shows up in `routes` and its full record is dropped; one moving here arrives in `local`. The
-stream reconnects and reloads on its own, and reloads everything every 10 minutes in case anything was missed.
-
-Filters cut what each edge downloads and keeps (most edges run a few of thousands of instances). They are not a
-security boundary while edges log in as superusers.
+Edges log in as superusers today, so the edge names itself on the stream; a per-edge credential will carry it instead.
 
 ### Status
 
-Early. Built: the `edges` and `instances` collections (`EnsureCollections`) and the edge side (`mirror`). Not yet:
-the mothership's own endpoints (placement, moves) and instance status reports.
+Early. Built: the collections, the watch server, the default resolver and the edge client. Not yet: the mothership's
+own endpoints (placement, moves), instance status reports, per-edge credentials.
 
 ## License
 

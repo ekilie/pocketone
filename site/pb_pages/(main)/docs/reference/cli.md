@@ -1116,6 +1116,55 @@ pocketone remote default <name>
 
 From [Remotes](/docs/extensions/remotes).
 
+### pocketone remote instance
+
+Commands under remote instance
+
+### pocketone remote instance watch
+
+Calls instance.watch/v1 on a remote
+
+### pocketone remote instance watch stream
+
+Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes (instance.watch/v1)
+
+```
+pocketone remote instance watch stream
+```
+
+Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes.
+
+Calls GET /api/\_c/instance.watch/v1/stream on the remote (token scope: fleet).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--edge` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [instance.watch/v1](/docs/contracts/instance.watch/v1) (generated).
+
+### pocketone remote instance watch unwatch
+
+Stops changes for a hostname on a stream (instance.watch/v1)
+
+```
+pocketone remote instance watch unwatch
+```
+
+Stops changes for a hostname on a stream.
+
+Calls POST /api/\_c/instance.watch/v1/unwatch on the remote (token scope: fleet).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--conn` | string | – |  |
+| `--host` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [instance.watch/v1](/docs/contracts/instance.watch/v1) (generated).
+
 ### pocketone remote list
 
 Lists remotes and whether you're logged in

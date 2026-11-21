@@ -1,6 +1,11 @@
 # Multisite changelog
 
-Changes to `ext/multisite`, newest first. A user-visible change adds its line under `## Unreleased` in the same
+Changes to `ext/multisite`, newest first. A user-visible change adds its line under `## Unreleased
+
+### Added
+
+- A source that doesn't hold every instance can answer hostnames itself: with an instance.lookup/v1 provider on the host, every request's hostname is looked up there (404 not found, 503 when the answer isn't known). `multisite.Provides` is a host extension that only provides contracts.
+` in the same
 commit. Each PocketOne release raises this extension's `version:` when there's something under `## Unreleased` and
 renames the section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 

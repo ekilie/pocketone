@@ -238,19 +238,20 @@ Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `mothership:`
 
-A community mothership to mirror instances and edges from: url, login, this edge's id, internal URL, region, apex.
+A community mothership: serve: true makes this app one; url, login and self make a host follow one.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `url` | string |  | The mothership's URL. Required. |
+| `serve` | bool |  | This app is the mothership: it serves instance.watch/v1 to its edges (and keeps the edges and instances collections). |
+| `apex` | string |  | On the mothership: makes <name>.<apex> a hostname of every instance. Empty: hosts only. |
+| `url` | string |  | On an edge: the mothership's URL. Required there. |
 | `email` | string |  | Superuser email this edge logs in with; use a $VAR from the .env. |
 | `password` | string |  | Superuser password; use a $VAR from the .env. |
-| `self` | string |  | This edge's edge_id, such as lax-1. Default: the edges section's self. Required. |
+| `self` | string |  | This edge's edge_id, such as lax-1. Default: the edges section's self. Required on an edge. |
 | `internal_url` | string |  | Where other edges reach this one. Set: the edge registers itself when the mothership has no record for it. |
 | `region` | string |  | Region recorded when the edge registers itself. |
-| `apex` | string |  | Makes <name>.<apex> a hostname of every instance. Empty: hosts only. |
 | `heartbeat` | duration |  | How often this edge marks itself online. Default 15s; negative: never. |
-| `resync` | duration |  | How often everything is reloaded, in case a change was missed. Default 10m. |
+| `max_hosts` | int |  | Most hostnames an edge keeps answers for (its cache bucket mothership.hosts). Default 50000. |
 
 Owned by [Mothership](https://pocketone.dev/docs/extensions/mothership).
 

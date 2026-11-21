@@ -77,6 +77,16 @@ Its own API under `/api/_c/api-tokens/v1/`: see [api-tokens/v1](https://pocketon
 
 Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/docs/contracts/deploy/v1). Answered by [Deploy](https://pocketone.dev/docs/extensions/deploy) in the standard set.
 
+## instance.watch/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/instance.watch/v1).
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `GET /api/_c/instance.watch/v1/stream` | Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes. (stream) | `fleet` | `edge` (string) |
+| `POST /api/_c/instance.watch/v1/watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). | `fleet` | `conn` (string), `edge` (string), `host` (string) |
+| `POST /api/_c/instance.watch/v1/unwatch` | Stops changes for a hostname on a stream. | `fleet` | `conn` (string), `host` (string) |
+
 ## mail.feedback/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/mail.feedback/v1). Answered by [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail) in the standard set.

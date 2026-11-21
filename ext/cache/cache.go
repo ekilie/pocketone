@@ -138,8 +138,95 @@ func (x *Extension) Register(app core.App, layers extkit.Config) error {
 	return nil
 }
 
+// HostID is the id the host's own view of the store keeps its buckets under: never an instance id (those start with
+// a letter or digit).
+const HostID = "_host"
+
+// Host returns cache/v1 for the multisite host itself (not an instance): its own buckets in the same store every
+// instance shares, so host extensions that cache (a control plane's lazy mirror) count against the same ceilings.
+// Provide it on the host's scope (cachev1.Contract.ProvideIn(h.Scope, c)). The store opens on the first bucket, with
+// its disk tier in the scope's pb_cache (Scope.SetCacheRoot) when the store opens here first.
+func (x *Extension) Host(scope *extkit.Scope) cachev1.Cache { return &hostCache{x: x, scope: scope} }
+
+type hostCache struct {
+	x     *Extension
+	scope *extkit.Scope
+	once  sync.Once
+	p     *provider
+	err   error
+}
+
+func (h *hostCache) provider() (*provider, error) {
+	h.once.Do(func() {
+		c := h.x.cfg
+		if s, found := Section.Get(); found {
+			c = merge(c, s)
+		}
+		if h.err = c.validate(); h.err != nil {
+			return
+		}
+		st, err := h.x.storeOnce(c, func() (string, error) { return hostDiskDir(h.scope, c) })
+		if err != nil {
+			h.err = err
+			return
+		}
+		h.p = &provider{store: st, app: HostID, cfg: c, buckets: map[string]*bucket{}}
+	})
+	return h.p, h.err
+}
+
+// Bucket implements cachev1.Cache.
+func (h *hostCache) Bucket(name string, opts cachev1.Options) (cachev1.Bucket, error) {
+	p, err := h.provider()
+	if err != nil {
+		return nil, err
+	}
+	return p.Bucket(name, opts)
+}
+
+// Clear implements cachev1.Cache: the host's own buckets.
+func (h *hostCache) Clear(ctx context.Context) error {
+	p, err := h.provider()
+	if err != nil {
+		return err
+	}
+	return p.Clear(ctx)
+}
+
+// hostDiskDir is diskDir for a store the host opens: its pb_cache, or disk_path relative to the working directory.
+func hostDiskDir(scope *extkit.Scope, c Config) (string, error) {
+	on := c.DiskPath != "" || (c.Disk != nil && *c.Disk)
+	if c.Disk != nil && !*c.Disk {
+		on = false
+	}
+	if !on {
+		return "", nil
+	}
+	d := c.DiskPath
+	if d == "" {
+		root := ""
+		if scope != nil {
+			root = scope.CacheRoot()
+		}
+		if root == "" {
+			return "", nil // no pb_cache known yet: memory only
+		}
+		d = root
+	}
+	d, err := filepath.Abs(filepath.Join(d, Name))
+	if err != nil {
+		return "", err
+	}
+	return d, os.MkdirAll(d, 0o755)
+}
+
 // storeFor opens the store once, on the first app registered.
 func (x *Extension) storeFor(app core.App, c Config) (*store, error) {
+	return x.storeOnce(c, func() (string, error) { return diskDir(app, c) })
+}
+
+// storeOnce opens the store once, its disk tier in dir()'s folder.
+func (x *Extension) storeOnce(c Config, dir func() (string, error)) (*store, error) {
 	x.once.Do(func() {
 		if err := c.validate(); err != nil {
 			x.storeErr = err
@@ -155,7 +242,7 @@ func (x *Extension) storeFor(app core.App, c Config) (*store, error) {
 		if lim.maxDisk <= 0 {
 			lim.maxDisk = DefaultMaxDisk
 		}
-		lim.dir, x.storeErr = diskDir(app, c)
+		lim.dir, x.storeErr = dir()
 		if x.storeErr != nil {
 			return
 		}

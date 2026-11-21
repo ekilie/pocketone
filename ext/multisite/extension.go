@@ -9,6 +9,7 @@ import (
 
 	gatev1 "pocketone.dev/ext/contracts/gate/v1"
 	wrapv1 "pocketone.dev/ext/contracts/http/wrap/v1"
+	lookupv1 "pocketone.dev/ext/contracts/instance/lookup/v1"
 	sourcev1 "pocketone.dev/ext/contracts/instance/source/v1"
 	runtimev1 "pocketone.dev/ext/contracts/runtime/v1"
 	tlsv1 "pocketone.dev/ext/contracts/tls/v1"
@@ -77,6 +78,9 @@ func (h *Host) Setup(choices extkit.Choices) ([]string, error) {
 	}
 	if src, ok := sourcev1.Contract.In(s); ok {
 		h.Source = src
+	}
+	if l, ok := lookupv1.Contract.In(s); ok {
+		h.Lookup = l
 	}
 	if rt, ok := runtimev1.Contract.In(s); ok {
 		h.Runtime = rt
@@ -187,3 +191,19 @@ func (c gateChain) ClientIP(r *http.Request) netip.Addr {
 
 // ChainGates combines gates into one (nil when there are none).
 func ChainGates(gates ...Gate) Gate { return chainGates(gates) }
+
+// Provides is a host extension that only provides contracts on the host's scope: fn runs in RegisterHost, e.g.
+// `multisite.Provides("cache", func(s *extkit.Scope) { cachev1.Contract.ProvideIn(s, hostCache) })`.
+func Provides(name string, fn func(s *extkit.Scope)) Extension { return provides{name, fn} }
+
+type provides struct {
+	name string
+	fn   func(*extkit.Scope)
+}
+
+func (p provides) Name() string { return p.name }
+
+func (p provides) RegisterHost(h *Host) error {
+	p.fn(h.Scope)
+	return nil
+}

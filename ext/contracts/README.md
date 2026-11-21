@@ -27,13 +27,16 @@ The table is generated from each contract's README and every extension's `Contra
 | [`api-tokens/v1`](api-tokens/v1/README.md) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | api-tokens |  | deploy, mcp, remotes | @benallfree |
 | [`bulkmail/v1`](bulkmail/v1/README.md) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
 | [`cache.clear/v1`](cache/clear/v1/README.md) | Emptying an app's cache buckets, one or all, from the dashboard, the CLI or an agent. | cache (default) |  |  | @benallfree |
-| [`cache/v1`](cache/v1/README.md) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) |  | pages | @benallfree |
+| [`cache/v1`](cache/v1/README.md) | Named buckets of bytes an app keeps for a while, with limits and eviction; memory, disk or a shared cache behind it. | cache (default) | mothership | pages | @benallfree |
 | [`cli.commands/v1`](cli/commands/v1/README.md) | The pocketone command tree: every contract operation as a remote command by default; extensions replace or add commands. | desktop |  |  | @benallfree |
 | [`deploy/v1`](deploy/v1/README.md) | A project's code files on an app: check, upload, commit, list, read, write, delete, tree. | deploy (default) |  |  | @benallfree |
 | [`gate/v1`](gate/v1/README.md) | What admits requests on a multisite host: peer checks, client IPs and rate limits, in order. | firewall |  |  | @benallfree |
 | [`http.wrap/v1`](http/wrap/v1/README.md) | Middleware around everything a multisite host serves, nested in order. | servertiming |  |  | @benallfree |
 | [`instance.fs/v1`](instance/fs/v1/README.md) | An instance's code files on disk: its folder, a cache folder, one writers' lock and a restart around a change. | deploy (default), docker, pocker | deploy |  | @benallfree |
+| [`instance.lookup/v1`](instance/lookup/v1/README.md) | A multisite host asks what a hostname it doesn't know serves. | mothership |  |  | @benallfree |
+| [`instance.resolve/v1`](instance/resolve/v1/README.md) | On a control plane: what a hostname serves for an edge, and the records the answer was built from. | mothership (default) | mothership |  | @benallfree |
 | [`instance.source/v1`](instance/source/v1/README.md) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
+| [`instance.watch/v1`](instance/watch/v1/README.md) | An edge follows a control plane lazily: one stream, hostnames watched as requests name them. | mothership |  |  | @benallfree |
 | [`mail.fallback/v1`](mail/fallback/v1/README.md) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](mail/feedback/v1/README.md) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](mail/suppression/v1/README.md) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |

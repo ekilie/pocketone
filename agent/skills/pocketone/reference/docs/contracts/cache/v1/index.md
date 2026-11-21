@@ -43,6 +43,17 @@ _ = b.Set(ctx, key, v, 0) // 0 = the bucket's TTL
 Name buckets after your extension (`myext.answers`) so two extensions never share one. Declare cache/v1 in
 `WorksWith`: when nothing provides it, `Open` returns a bucket that keeps nothing, so the same code runs uncached.
 
+When the value is expensive and many requests may ask for the same cold key at once, let `cachev1.Load` compute it:
+callers asking for the same key of the same bucket while it runs share one call, and all of them are released only
+after the value is stored. An error goes to the callers waiting then and is never stored; each caller waits on its own
+context, and the call keeps running for the others when one gives up (so bound its time yourself).
+
+```go
+v, err := cachev1.Load(ctx, b, key, func(ctx context.Context) ([]byte, error) { return compute(ctx) })
+```
+
+`Items` has the same `Load` for Go values.
+
 To empty every bucket the app has (after a change that left stale entries), call `cachev1.Clear(ctx, app)`; the
 app's admins can do the same from outside its code through [cache.clear/v1](https://pocketone.dev/docs/contracts/cache.clear/v1).
 
@@ -111,6 +122,7 @@ say in your README which ones you honour.
 | Extension | |
 |---|---|
 | [cache](https://pocketone.dev/docs/extensions/cache) | provides (default) |
+| [mothership](https://pocketone.dev/docs/extensions/mothership) | requires |
 | [pages](https://pocketone.dev/docs/extensions/pages/extension) | works with |
 
 <!-- /contracts:index -->

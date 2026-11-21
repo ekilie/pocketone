@@ -27,6 +27,7 @@ import (
 	"pocketone.dev/ext/docker"
 	"pocketone.dev/ext/extkit"
 	"pocketone.dev/ext/mailtrap"
+	"pocketone.dev/ext/mothership"
 	"pocketone.dev/ext/pages"
 	"pocketone.dev/ext/pitr"
 	"pocketone.dev/ext/pocker"
@@ -81,6 +82,9 @@ func main() {
 	set.Add(vacuum.New())                          // compacts the app's databases on the `vacuum` section's schedule
 	set.Add(mailtrap.New())                        // dev mode with SMTP off: mail goes to the inbox at http://127.0.0.1:8025, never sendmail
 	set.Add(desktop.New())                         // `pocketone desktop build`: this folder's app as a native desktop app
+	// `mothership: { serve: true }`: this app is a fleet's control plane (edges and instances collections, and the
+	// instance.watch/v1 stream edges follow); off otherwise
+	set.Add(mothership.NewSchema(), mothership.NewServer())
 
 	// ---------------------------------------------------------------
 	// Flags: each lives on the commands that read it (flags.go). The app flags go on every command that opens this
