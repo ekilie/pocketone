@@ -14,6 +14,7 @@ package apitokensv1
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 
@@ -33,6 +34,12 @@ type Issuer interface {
 	// Reaches reports whether a token limited to scopes may call method on path.
 	Reaches(scopes []string, method, path string) bool
 }
+
+// Errors [Issuer.Verify] returns for a token that isn't valid; any other error is the provider failing.
+var (
+	ErrInvalid = errors.New("invalid API token") // unknown, malformed or revoked
+	ErrExpired = errors.New("expired API token")
+)
 
 // Grant is what a verified token allows.
 type Grant struct {
