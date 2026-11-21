@@ -316,7 +316,9 @@ onRecordCreate(async (e) => { e.record.set("summary", (await $wasm.run.async("ba
 // error as plain fields, and how long compiling and running took.
 func TestInspect(t *testing.T) {
 	t.Parallel()
-	e := withBasic(t, wasm.Config{})
+	// this checks what inspect reports, not time limits: a busy CI runner running the package's parallel tests under
+	// -race can keep the four calls waiting past the 5 s default
+	e := withBasic(t, wasm.Config{Timeout: 30 * time.Second})
 	text, err := jsEval(t, e.app, `Promise.all([
 		$wasm.inspect.async("basic", "logs", ""),
 		$wasm.inspect.async("basic", "fail", ""),
@@ -342,17 +344,17 @@ func TestInspect(t *testing.T) {
 		t.Fatal(err)
 	}
 	if r := got[0]; r.Output != "done" || r.Stderr != "working on it\n" || r.Error != nil || r.RunMs <= 0 {
-		t.Errorf("logs: %+v", r)
+		t.Errorf("logs: %+v (error %+v)", r, r.Error)
 	}
 	if r := got[1]; r.Output != nil || r.Error == nil || r.Error.Code != "rate_limited" || !r.Error.Retryable ||
 		!strings.Contains(r.Stderr, "rate_limited") {
-		t.Errorf("fail: %+v", r)
+		t.Errorf("fail: %+v (error %+v)", r, r.Error)
 	}
 	if r := got[2]; fmt.Sprint(r.Output) != "map[a:1]" || r.Error != nil {
-		t.Errorf("echo: %+v", r)
+		t.Errorf("echo: %+v (error %+v)", r, r.Error)
 	}
 	if r := got[3]; r.Error == nil || r.Error.Code != wasm.CodeNotFound || r.CompileMs != 0 {
-		t.Errorf("not found: %+v", r)
+		t.Errorf("not found: %+v (error %+v)", r, r.Error)
 	}
 }
 
