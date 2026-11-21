@@ -48,7 +48,6 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 - **New installation tools.** Windows installs with Scoop, macOS and Linux with `curl -fsSL https://pocketone.dev/install.sh | sh`, and every release has `.deb`, `.rpm` and `.apk` packages that set PocketOne up as a systemd service ([Installation](https://pocketone.dev/docs/installation)). The Homebrew formula moved to `pocketonehq/tap` (see Upgrading).
 - **`pocketone clone`.** Start a local project from a running app: `pocketone clone <url>` signs you in as a superuser, pulls its code, and you're ready for `pocketone dev` ([Deploy](ext/deploy/CHANGELOG.md)).
-- **Deploys don't clobber the server.** `pocketone deploy` stops when files changed on the remote since your last deploy, pull or dev, and lists them; `--force` overwrites. Pull and clone download in bundles, and 429s are retried ([Deploy](ext/deploy/CHANGELOG.md)).
 
 ### Upgrading
 
@@ -73,6 +72,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ### Fixed
 
+- `pocketone deploy` no longer overwrites files changed on the remote since your last deploy, pull or dev: it stops and lists them, and `--force` overwrites ([Deploy](ext/deploy/CHANGELOG.md)).
 - Contract streams (`instance.watch/v1`'s stream, `remote/v1` logs and the rest) no longer end after 5 minutes: they clear the server's write timeout, as PocketBase's realtime does. Edges following the mothership reconnected (and refetched every hostname) every 5 minutes.
 
 ### Extensions
