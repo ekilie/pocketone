@@ -3,6 +3,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"regexp"
 	"strings"
 	"testing"
@@ -15,7 +16,7 @@ func TestIsCodePath(t *testing.T) {
 		"package.json", "bun.lock", "bun.lockb", "patches/foo.patch", "pb_schema.json", "node_modules/marked/lib/marked.cjs",
 		"node_modules/marked/package.json", "node_modules/a/node_modules/b/index.js", "node_modules/@scope/pkg/dist/index.mjs",
 		"node_modules/.bin/x"} {
-		if !isCodePath(p) {
+		if !fsv1.IsCodePath(p) {
 			t.Errorf("should accept %q", p)
 		}
 	}
@@ -24,7 +25,7 @@ func TestIsCodePath(t *testing.T) {
 		"node_modules/../pb_data/data.db", "node_modules//x.js", "pb_hooks/.git/config", "pb_public/.gitignore", "README.md",
 		"src/index.ts", "patches", "../etc/passwd", "pb_hooks/../pb_data/data.db", "/pb_hooks/x.js", "pb_hooks//x.js",
 		"pb_hooks/./x.js", "pb_hooks\\x.js", ""} {
-		if isCodePath(p) {
+		if fsv1.IsCodePath(p) {
 			t.Errorf("should reject %q", p)
 		}
 	}

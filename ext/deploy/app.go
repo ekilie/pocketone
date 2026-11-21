@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	apitokensv1 "pocketone.dev/ext/contracts/api-tokens/v1"
 	deployv1 "pocketone.dev/ext/contracts/deploy/v1"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"pocketone.dev/ext/extkit"
 	"slices"
-	"sync"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
@@ -83,14 +83,17 @@ func Register(app core.App, cfg Config) (*API, error) {
 			return nil
 		}
 	}
-	insts := &appInstances{app: app, cfg: &cfg}
+	// instance.fs/v1: the app's own folder, as the default (a host provides it for its instances instead)
+	fsv1.Contract.ProvideDefault(app, AppFiles(app, &cfg))
 	api := New(Options{
-		Prefix:    cfg.Prefix,
-		Backend:   &AppBackend{App: app},
-		Instances: func() Instances { return insts },
-		Logger:    slog.New(slogHandler{app}),
+		Prefix:  cfg.Prefix,
+		Backend: &AppBackend{App: app},
+		Files: func() fsv1.Files {
+			f, _ := fsv1.Contract.Of(app)
+			return f
+		},
+		Logger: slog.New(slogHandler{app}),
 	})
-	insts.api = api
 	// deploy/v1: the contracts' seal mounts its routes under /api/_c/deploy/v1/ (a multisite host provides its own)
 	deployv1.Contract.ProvideDefault(app, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var auth requestAuth
@@ -110,8 +113,6 @@ func Register(app core.App, cfg Config) (*API, error) {
 		if cfg.StoreDir == "" {
 			cfg.StoreDir = filepath.Join(cfg.Dir, ".pb_deploy")
 		}
-		api.opts.PBRoot = cfg.Dir
-		api.opts.DataRoot = cfg.StoreDir
 		if t, ok := apitokensv1.Contract.Of(e.App); ok {
 			t.RegisterScope(apitokensv1.Scope{Name: ScopeDeploy, Description: "Deploy code (hooks, migrations, public files, packages) and read files",
 				Paths: []string{cfg.Prefix + "/"}, Collections: []string{core.CollectionNameSuperusers}})
@@ -191,28 +192,31 @@ func (b *AppBackend) RecordDeploy(_ context.Context, rec DeployRecord) (string, 
 	return r.Id, nil
 }
 
-// appInstances is the [Instances] of a single app: it can't stop itself, so files are swapped in while it runs
-// (each rename is atomic), and it restarts when a client asks.
-type appInstances struct {
-	app core.App
-	cfg *Config
-	api *API
-	mu  sync.Mutex
+// AppFiles is a single app's instance.fs/v1: its own folder (cfg.Dir, set at bootstrap), deploy state in
+// cfg.StoreDir. It can't stop itself, so a restart applies the change while it runs (each rename is atomic) and then
+// restarts it (cfg.Restart).
+func AppFiles(app core.App, cfg *Config) fsv1.Files {
+	l := &fsv1.Local{
+		Folder: func() string { return cfg.Dir },
+		State: func(name string) string {
+			if name == Name && cfg.StoreDir != "" {
+				return cfg.StoreDir
+			}
+			return filepath.Join(cfg.Dir, ".pb_"+name)
+		},
+		Start: func(context.Context) error { return cfg.Restart(app) },
+	}
+	return appFiles{l}
 }
 
-func (a *appInstances) Running(string) bool { return true }
+type appFiles struct{ fs *fsv1.Local }
 
-func (a *appInstances) InstanceDir(id string) (string, bool) {
-	return a.cfg.Dir, id == AppInstanceID && a.cfg.Dir != ""
+func (f appFiles) Instance(_ context.Context, id string) (fsv1.FS, error) {
+	if id != fsv1.Self {
+		return nil, fsv1.ErrNoInstance
+	}
+	return f.fs, nil
 }
-
-func (a *appInstances) WithInstanceStopped(_ context.Context, _ string, fn func(string) error) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return fn(a.cfg.Dir)
-}
-
-func (a *appInstances) StartInstance(context.Context, string) error { return a.cfg.Restart(a.app) }
 
 type slogHandler struct{ app core.App }
 

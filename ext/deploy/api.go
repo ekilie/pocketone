@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	deployv1 "pocketone.dev/ext/contracts/deploy/v1"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"strconv"
 	"strings"
 	"sync"
@@ -61,25 +62,13 @@ type Backend interface {
 	RecordDeploy(ctx context.Context, rec DeployRecord) (id string, err error)
 }
 
-// Instances is what the deploy API needs from the host's instance manager (pocker's Manager is one).
-type Instances interface {
-	Running(id string) bool
-	InstanceDir(id string) (string, bool)
-	WithInstanceStopped(ctx context.Context, id string, fn func(dir string) error) error
-	StartInstance(ctx context.Context, id string) error
-}
-
 // Options configure the API.
 type Options struct {
 	// Prefix is the API path (default deploy/v1's, /api/_c/deploy/v1). Whoami, restart and logs are remote/v1's.
 	Prefix  string
 	Backend Backend
-	// Instances returns the running Manager (nil until the server has started).
-	Instances func() Instances
-	// PBRoot holds instance folders (<PBRoot>/<id>) for instances the Manager doesn't know.
-	PBRoot string
-	// DataRoot holds deploy stores (<DataRoot>/<id>).
-	DataRoot string
+	// Files returns the instances' files (instance.fs/v1), looked up at serve time; nil answers 503.
+	Files func() fsv1.Files
 	// PlatformPaths are code-set paths that aren't the customer's: never compared or deleted.
 	PlatformPaths []string
 	// IsRemote, if set, reports hosts whose instance another edge runs: their requests go to next (which forwards
@@ -90,9 +79,8 @@ type Options struct {
 
 // API serves the deploy API.
 type API struct {
-	opts  Options
-	log   *slog.Logger
-	locks sync.Map // instance id -> *sync.Mutex
+	opts Options
+	log  *slog.Logger
 
 	mu     sync.Mutex
 	stores map[string]*Store
@@ -209,43 +197,43 @@ func clientIP(r *http.Request) string {
 type reqCtx struct {
 	inst  Instance
 	auth  Auth
+	fs    fsv1.FS
 	store *Store
 	dir   string
 }
 
-func (a *API) instances() Instances {
-	if a.opts.Instances == nil {
-		return nil
-	}
-	return a.opts.Instances()
-}
+// lock takes the instance's writers' lock (instance.fs/v1's): commits and file writes never interleave.
+func (c *reqCtx) lock(ctx context.Context) (func(), error) { return c.fs.Lock(ctx) }
 
-func (a *API) instanceDir(id string) string {
-	if m := a.instances(); m != nil {
-		if d, ok := m.InstanceDir(id); ok {
-			return d
-		}
-	}
-	return filepath.Join(a.opts.PBRoot, id)
-}
-
-func (a *API) storeFor(id, dir string) *Store {
+func (a *API) storeFor(id, dir, stateDir string) *Store {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	s, ok := a.stores[id]
 	if !ok || s.instanceDir != dir {
-		s = newStore(filepath.Join(a.opts.DataRoot, id), dir, a.opts.PlatformPaths)
+		s = newStore(stateDir, dir, a.opts.PlatformPaths)
 		a.stores[id] = s
 	}
 	return s
 }
 
-// lock serializes commits and file writes per instance.
-func (a *API) lock(id string) func() {
-	m, _ := a.locks.LoadOrStore(id, &sync.Mutex{})
-	mu := m.(*sync.Mutex)
-	mu.Lock()
-	return mu.Unlock
+// filesFor is the instance's instance.fs/v1 FS: a single app's own (AppInstanceID) is fsv1.Self.
+func (a *API) filesFor(ctx context.Context, inst Instance) (fsv1.FS, error) {
+	var files fsv1.Files
+	if a.opts.Files != nil {
+		files = a.opts.Files()
+	}
+	if files == nil {
+		return nil, errf(503, "The server is starting; try again.")
+	}
+	id := inst.ID
+	if id == AppInstanceID {
+		id = fsv1.Self
+	}
+	f, err := files.Instance(ctx, id)
+	if errors.Is(err, fsv1.ErrNoInstance) {
+		return nil, errf(404, "%s not found", inst.Subdomain)
+	}
+	return f, err
 }
 
 // authorize resolves the instance and checks the request may act on it. Not yours and not in the token's scope get
@@ -275,8 +263,19 @@ func (a *API) authorize(r *http.Request, needWrite bool) (*reqCtx, error) {
 	if inst.Elsewhere != "" {
 		return nil, errf(http.StatusMisdirectedRequest, "%s", inst.Elsewhere)
 	}
-	dir := a.instanceDir(inst.ID)
-	return &reqCtx{inst: inst, auth: auth, store: a.storeFor(inst.ID, dir), dir: dir}, nil
+	f, err := a.filesFor(r.Context(), inst)
+	if err != nil {
+		return nil, err
+	}
+	dir, err := f.Dir(r.Context())
+	if err != nil {
+		return nil, errf(503, "The server is starting; try again.")
+	}
+	stateDir, err := f.StateDir(r.Context(), Name)
+	if err != nil {
+		return nil, err
+	}
+	return &reqCtx{inst: inst, auth: auth, fs: f, store: a.storeFor(inst.ID, dir, stateDir), dir: dir}, nil
 }
 
 func readJSON(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
@@ -444,23 +443,23 @@ func (a *API) restart(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	ctx := context.WithoutCancel(r.Context())
-	unlock := a.lock(c.inst.ID)
-	defer unlock()
-	mgr := a.instances()
-	res := restartResult{}
-	if mgr == nil {
-		return errf(503, "The server is starting; try again.")
+	unlock, err := c.lock(ctx)
+	if err != nil {
+		return err
 	}
-	if _, known := mgr.InstanceDir(c.inst.ID); !known || !c.inst.Power || !mgr.Running(c.inst.ID) {
+	defer unlock()
+	res := restartResult{}
+	if running, err := c.fs.Running(ctx); err != nil || !c.inst.Power || !running {
 		writeJSON(w, 200, res)
 		return nil
 	}
 	res.WasRunning = true
-	if err := mgr.WithInstanceStopped(ctx, c.inst.ID, func(string) error { return nil }); err != nil {
+	startErr, err := c.fs.Restart(ctx, nil)
+	if err != nil {
 		return err
 	}
-	if err := mgr.StartInstance(ctx, c.inst.ID); err != nil {
-		res.StartError = err.Error()
+	if startErr != nil {
+		res.StartError = startErr.Error()
 	} else {
 		res.Restarted = true
 	}
@@ -487,7 +486,7 @@ func parsePartial(body map[string]any) (*Partial, error) {
 	}
 	for _, v := range raw {
 		path, _ := v.(string)
-		if !isCodePath(path) || isNodeModulesPath(path) {
+		if !fsv1.IsCodePath(path) || isNodeModulesPath(path) {
 			return nil, &ManifestError{fmt.Sprintf("delete: %q is outside the deployable set", path)}
 		}
 		p.Delete = append(p.Delete, path)
@@ -554,7 +553,10 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 		return a.opts.Backend.RecordDeploy(rctx, rec)
 	}
 
-	unlock := a.lock(c.inst.ID)
+	unlock, err := c.lock(ctx)
+	if err != nil {
+		return err
+	}
 	defer unlock()
 
 	_ = c.store.cleanTmp()
@@ -565,26 +567,29 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 	}
 	changed := append(append([]string{}, st.plan.toWrite...), st.plan.toDelete...)
 	if st.replaceNodeModules {
-		changed = append(changed, nodeModulesDir)
+		changed = append(changed, fsv1.NodeModulesDir)
 	}
 	nothingChanged := len(changed) == 0
-	mgr := a.instances()
 	_, hooksDirErr := os.Stat(filepath.Join(c.dir, "pb_hooks"))
 	createsHooks := hooksDirErr != nil && writesUnder(st, "pb_hooks/")
 	needsRestart := restartNeeded(st, createsHooks)
 
 	var applied *applyResult
+	running, _ := c.fs.Running(ctx)
 	wasRunning := false
-	if needsRestart && wantRestart && mgr != nil {
-		if _, known := mgr.InstanceDir(c.inst.ID); known {
-			wasRunning = mgr.Running(c.inst.ID)
-			err = mgr.WithInstanceStopped(ctx, c.inst.ID, func(string) error {
-				var aerr error
-				applied, aerr = c.store.apply(m, st)
-				return aerr
-			})
-		} else {
-			applied, err = c.store.apply(m, st)
+	restarted, startError := false, ""
+	if needsRestart && wantRestart && running && c.inst.Power {
+		wasRunning = true
+		var startErr error
+		startErr, err = c.fs.Restart(ctx, func(context.Context) error {
+			var aerr error
+			applied, aerr = c.store.apply(m, st)
+			return aerr
+		})
+		if startErr != nil {
+			startError = startErr.Error()
+		} else if err == nil {
+			restarted = true
 		}
 	} else {
 		applied, err = c.store.apply(m, st)
@@ -617,16 +622,8 @@ func (a *API) commit(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	restarted, startError := false, ""
-	if wasRunning && c.inst.Power && mgr != nil {
-		if err := mgr.StartInstance(ctx, c.inst.ID); err != nil {
-			startError = err.Error()
-		} else {
-			restarted = true
-		}
-	}
 	// the app only picks up these changes when it next starts; an instance that isn't running will on its own
-	pendingRestart := needsRestart && !restarted && startError == "" && (mgr == nil || mgr.Running(c.inst.ID))
+	pendingRestart := needsRestart && !restarted && startError == "" && running
 
 	id := "<none>"
 	if deployID != nil {

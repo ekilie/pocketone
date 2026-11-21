@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	deployv1 "pocketone.dev/ext/contracts/deploy/v1"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"pocketone.dev/ext/extkit"
 	"slices"
 	"strings"
@@ -140,7 +141,7 @@ func Collect(opts CollectOptions) (*DeploySet, error) {
 		if !glob.Any(include, rel) || glob.Any(exclude, rel) {
 			return nil
 		}
-		if !d.Type().IsRegular() || !isCodePath(rel) {
+		if !d.Type().IsRegular() || !fsv1.IsCodePath(rel) {
 			set.Skipped = append(set.Skipped, rel)
 			return nil
 		}

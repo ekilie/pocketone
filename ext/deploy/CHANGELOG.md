@@ -7,6 +7,15 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Upgrading
+
+1. The deploy API's file routes and `pocketone pull` no longer reach `pb_data`, powered off or not. Move data with the PocketBase API, backups (restore/v1), or by copying the folder on the server.
+
+### Changed
+
+- The deploy API gets the instance's folder, writers' lock and restart from the new instance.fs/v1 contract, and provides it on a single app (the app's own folder). Its code-path rules moved there too.
+- File routes (`/files`, `/files/raw`) and `pull` never reach `pb_data`.
+
 ## 0.1.0 (2026-11-18)
 
 ### Upgrading

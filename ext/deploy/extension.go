@@ -36,9 +36,9 @@ func (p *Extension) Register(app core.App, _ extkit.Config) error {
 // Contracts implements [extkit.Declarer].
 func (p *Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
-		Implements: extkit.IDs("deploy/v1"),
-		Defaults:   extkit.IDs("deploy/v1"), // a multisite host provides it for its instances instead
-		Requires:   extkit.IDs("remote/v1"), // restart and logs
+		Implements: extkit.IDs("deploy/v1", "instance.fs/v1"),
+		Defaults:   extkit.IDs("deploy/v1", "instance.fs/v1"), // a host provides them for its instances instead
+		Requires:   extkit.IDs("remote/v1", "instance.fs/v1"), // restart and logs; the instance's folder
 		WorksWith:  extkit.IDs("api-tokens/v1"),
 	}
 }

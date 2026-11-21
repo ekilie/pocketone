@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"pocketone.dev/ext/contracts/instance/source/v1/sourcetest"
 	"strings"
 	"testing"
@@ -30,7 +31,8 @@ func TestWithPockerManager(t *testing.T) {
 	inst := Instance{ID: "inst1", Subdomain: "myapp", OwnerID: "user1", Power: true}
 	be := &fakeBackend{insts: map[string]Instance{"myapp.example.com": inst},
 		pats: map[string]fakeTok{testPAT: {UserID: "user1", Scopes: []string{"read", "write"}}}}
-	api := New(Options{Prefix: Prefix, Backend: be, Instances: func() Instances { return mgr }, PBRoot: pbRoot, DataRoot: filepath.Join(root, "deploys"), Logger: quiet})
+	ifs := newManagerFiles(mgr, pbRoot, filepath.Join(root, "deploys"))
+	api := New(Options{Prefix: Prefix, Backend: be, Files: func() fsv1.Files { return ifs }, Logger: quiet})
 	srv := httptest.NewServer(api.Wrap(mgr))
 	defer srv.Close()
 	f := &apiFixture{t: t, root: root, be: be, api: api, srv: srv}

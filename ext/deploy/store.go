@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	fsv1 "pocketone.dev/ext/contracts/instance/fs/v1"
 	"slices"
 	"sort"
 	"strings"
@@ -197,7 +198,7 @@ func (s *Store) scan(withNodeModules bool) (files map[string]currentFile, replac
 			rel, _ := filepath.Rel(s.instanceDir, fsPath)
 			rel = filepath.ToSlash(rel)
 			inNM := isNodeModulesPath(rel)
-			if dir == s.instanceDir && !isCodeRoot(name) && !(withNodeModules && name == nodeModulesDir) {
+			if dir == s.instanceDir && !fsv1.IsCodeRoot(name) && !(withNodeModules && name == fsv1.NodeModulesDir) {
 				continue
 			}
 			st, err := os.Lstat(fsPath)
@@ -215,15 +216,15 @@ func (s *Store) scan(withNodeModules bool) (files map[string]currentFile, replac
 			}
 			if inNM {
 				switch {
-				case mode.IsRegular() && isCodePath(rel):
+				case mode.IsRegular() && fsv1.IsCodePath(rel):
 					if err := add(); err != nil {
 						return err
 					}
-				case mode.IsDir() && isCodePath(rel+"/x"):
+				case mode.IsDir() && fsv1.IsCodePath(rel+"/x"):
 					if err := walk(fsPath); err != nil {
 						return err
 					}
-				case rel == nodeModulesDir && mode.IsRegular():
+				case rel == fsv1.NodeModulesDir && mode.IsRegular():
 					// a stray file named node_modules: apply moves it aside when the first package dir is created
 				default:
 					replaceNodeModules = true
@@ -231,21 +232,21 @@ func (s *Store) scan(withNodeModules bool) (files map[string]currentFile, replac
 				continue
 			}
 			if mode&fs.ModeSymlink != 0 {
-				if isCodePath(rel) {
+				if fsv1.IsCodePath(rel) {
 					return &ConflictError{rel + " is a symlink; remove it and redeploy"}
 				}
 				continue
 			}
 			if mode.IsDir() {
 				// .git* dirs (and node_modules outside the root) are never walked into
-				if isCodePath(rel + "/x") {
+				if fsv1.IsCodePath(rel + "/x") {
 					if err := walk(fsPath); err != nil {
 						return err
 					}
 				}
 				continue
 			}
-			if !mode.IsRegular() || !isCodePath(rel) || s.platform[rel] {
+			if !mode.IsRegular() || !fsv1.IsCodePath(rel) || s.platform[rel] {
 				continue
 			}
 			if err := add(); err != nil {
@@ -535,7 +536,7 @@ func (s *Store) apply(m Manifest, st *staged) (*applyResult, error) {
 			return err
 		}
 		if st.replaceNodeModules {
-			if err := moveToBackup(nodeModulesDir); err != nil {
+			if err := moveToBackup(fsv1.NodeModulesDir); err != nil {
 				return err
 			}
 		}
