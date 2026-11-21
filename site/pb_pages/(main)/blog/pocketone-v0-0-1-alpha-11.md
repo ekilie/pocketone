@@ -18,6 +18,6 @@ Alpha.11 is about getting PocketOne onto your machine and getting your app back 
 
 - Homebrew moved taps: `brew uninstall pocketone`, then `brew install pocketonehq/tap/pocketone`.
 - Everyone else: `pocketone upgrade`.
-- Running a multisite host? Check the upgrade steps in the [release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11) for the deploy extension and multisite hosts.
+- Running a multisite host, or passing `--commit` or `-m` to `pocketone deploy` in scripts? The [release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11) have the steps.
 
 [Release notes](https://github.com/pocketonehq/pocketone/releases/tag/v0.0.1-alpha.11)
