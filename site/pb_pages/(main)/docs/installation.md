@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install PocketOne with Homebrew, Scoop, a release download or go build, and keep it up to date.
+description: Install PocketOne on macOS, Linux or Windows with Homebrew, Scoop, the install script, a Linux package, a release download or go build, and keep it up to date.
 ---
 
 # Installation
@@ -25,10 +25,43 @@ scoop install pocketone
 That's [Scoop](https://scoop.sh); the manifest lives in [pocketonehq/scoop-bucket](https://github.com/pocketonehq/scoop-bucket).
 To install without Scoop, see [Install on Windows](/docs/windows).
 
+## Install script (macOS and Linux)
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | sh
+```
+
+Without Homebrew, on macOS or Linux. It picks the newest release for your system and checks its checksum. On macOS it puts `pocketone` in
+`/usr/local/bin`. On Linux it installs the release's `.deb`, `.rpm` or `.apk` package, which also sets PocketOne up
+as a systemd service ([Linux](/docs/linux)); on a system with none of those package managers it installs the binary
+like on macOS. It asks for your password through `sudo` when it needs to write there. Run it again to upgrade.
+
+Settings go before `sh`:
+
+```bash
+curl -fsSL https://pocketone.dev/install.sh | POCKETONE_VERSION=v0.0.1-alpha.10 sh
+```
+
+| Variable | What it does |
+|---|---|
+| `POCKETONE_VERSION` | Install this release tag instead of the newest one. |
+| `POCKETONE_INSTALL_DIR` | Where the binary goes when no package is used. Default `/usr/local/bin`; a folder you own, such as `$HOME/.local/bin`, needs no `sudo`. |
+| `POCKETONE_NO_PACKAGE=1` | On Linux, install the plain binary, never a package. |
+
+Read the script first if you like: [pocketone.dev/install.sh](/install.sh).
+
+## Linux packages
+
+Every release has `.deb` (Debian, Ubuntu), `.rpm` (Fedora, RHEL, Rocky, Alma, openSUSE) and `.apk` (Alpine)
+packages for `amd64`, `arm64`, `armv7`, `ppc64le` and `s390x`. The `.deb` and `.rpm` add a systemd service that runs
+as its own `pocketone` user. [Linux](/docs/linux) covers installing one by hand, setting up the service, HTTPS and
+upgrades.
+
 ## Download a release
 
 Download the zip for your platform from
 [Releases](https://github.com/pocketonehq/pocketone/releases), unzip it, and put `pocketone` somewhere on your `PATH`.
+On Windows without Scoop, see [Install on Windows](/docs/windows). Each release's `checksums.txt` lists the SHA-256 of every file.
 
 ## Build from source
 
@@ -62,16 +95,24 @@ pocketone serve --dev --dir ./pb_data
 In dev mode (`serve --dev`), an app with no SMTP settings doesn't send mail through the system's `sendmail`. PocketOne
 catches the mail and shows it at `http://127.0.0.1:8025`.
 
+To run it on a Linux server as a service, see [Linux](/docs/linux).
+
 ## Upgrade
 
-```bash
-pocketone upgrade
-```
+Upgrade the way you installed:
 
-Installed with Homebrew or Scoop? Upgrade with `brew upgrade pocketone` or `scoop update pocketone` instead.
+| Installed with | Upgrade with |
+|---|---|
+| The install script | Run it again. |
+| Homebrew | `brew upgrade pocketone` |
+| Scoop | `scoop update pocketone` |
+| A Linux package | The install script, or install the newer package ([Linux](/docs/linux#upgrade)). |
+| A release zip or `go build` | `pocketone upgrade` |
 
-This replaces the executable with the latest release. The old one is kept beside it as `pocketone-<version>`, never
-deleted, so you can go back.
+`pocketone upgrade` replaces the executable with the latest release. The old one is kept beside it as
+`pocketone-<version>`, never deleted, so you can go back. Use it for the binary the install script put in
+`/usr/local/bin` too (with `sudo` if that folder is root's). For a Homebrew, Scoop or Linux package install it tells
+you the command above instead.
 
 ## Moving from PocketBase
 

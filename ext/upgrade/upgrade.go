@@ -136,6 +136,17 @@ func (p *extension) upgrade(backup, yes bool) error {
 	if _, err := os.Stat("/.dockerenv"); err == nil {
 		return errors.New("this looks like a Docker container: upgrade the image instead")
 	}
+	if linuxPackaged(runtime.GOOS, exe) {
+		color.Yellow("This executable is in /usr/bin, where your system's package manager installed it.")
+		if p.cfg.Owner == "pocketonehq" && p.cfg.Repo == "pocketone" {
+			fmt.Printf("Upgrade it with the install script, which installs the newer package:\n\n")
+			fmt.Printf("  curl -fsSL https://pocketone.dev/install.sh | sh\n\n")
+		} else {
+			fmt.Printf("Upgrade it by installing the newer package from https://github.com/%s/%s/releases\n\n",
+				p.cfg.Owner, p.cfg.Repo)
+		}
+		return nil
+	}
 
 	color.Yellow("Fetching release information...")
 	releases, err := p.cfg.FetchReleases(p.cfg.Context)
@@ -254,6 +265,12 @@ func KeptName(exe, v string) string {
 		return filepath.Join(dir, base+".old"+ext)
 	}
 	return filepath.Join(dir, base+"-"+v+ext)
+}
+
+// linuxPackaged reports whether exe sits in /usr/bin on Linux, where only the system's package manager installs
+// (PocketOne's .deb, .rpm and .apk packages put it there); a binary installed by hand goes in /usr/local/bin.
+func linuxPackaged(goos, exe string) bool {
+	return goos == "linux" && filepath.ToSlash(filepath.Dir(exe)) == "/usr/bin"
 }
 
 // homebrewFormula returns the formula name when exe (symlinks resolved) is inside a Homebrew Cellar, else "".

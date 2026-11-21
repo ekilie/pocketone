@@ -61,6 +61,8 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 ### Added
 
 - Install on Windows with [Scoop](https://scoop.sh): `scoop bucket add pocketonehq https://github.com/pocketonehq/scoop-bucket`, then `scoop install pocketone`. Every release updates the manifest; manual steps are in [Install on Windows](https://pocketone.dev/docs/windows).
+- Install script for macOS and Linux: `curl -fsSL https://pocketone.dev/install.sh | sh` installs the newest release, checking its checksum; run it again to upgrade ([Installation](https://pocketone.dev/docs/installation)).
+- Linux packages: every release has `.deb`, `.rpm` and `.apk` packages; the `.deb` and `.rpm` add a `pocketone` systemd service running as its own user, configured in `/etc/pocketone`, with data in `/var/lib/pocketone` ([Linux](https://pocketone.dev/docs/linux)).
 
 ### Changed
 
