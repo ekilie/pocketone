@@ -48,7 +48,7 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 ### Highlights
 
 - **LLM replaces Agent.** Your app calls cloud models on your own keys: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare Workers AI, OpenRouter or any OpenAI-compatible API. Add providers in Settings → LLM, then `await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt })` in page code. Calls run off the JS VM, and every result says what it cost ([AI in your app](https://pocketone.dev/docs/extensions/llm)). Agent and its built-in model are gone (see Upgrading).
-- **Two example apps, live.** [Docs Chat](https://learn.pocketone.dev) answers questions from the PocketOne and PocketBase docs, and [Bedtime Story](https://sleep.pocketone.dev) tells one topic slowly, read aloud with pictures and music. Both are plain PocketPages apps on `$llm`, walked through in the new [Example apps](https://pocketone.dev/docs/examples) section.
+- **Two example apps, live.** [Docs Chat](https://learn.pocketone.dev) answers questions from the PocketOne and PocketBase docs, and [Bedtime Story](https://sleep.pocketone.dev) tells one topic slowly, read aloud with pictures and music. Both are plain PocketOne apps on `$llm`, walked through in the new [Example apps](https://pocketone.dev/docs/examples) section.
 - **Long async handlers.** A route, hook or cron job may now await for up to 15 minutes in all (`await_time` in `pocketone.yaml`'s `app: js_limits:`), where before a handler waiting over 30 seconds timed out. A handler whose client went away now stops ([JSVM](ext/jsvm/CHANGELOG.md)).
 
 ### Upgrading
