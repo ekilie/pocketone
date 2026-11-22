@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"pocketone.dev/ext/agent/providers/oai"
+	"pocketone.dev/ext/llm/providers/oai"
 )
 
 // DefaultBaseURL is Vultr's inference API.

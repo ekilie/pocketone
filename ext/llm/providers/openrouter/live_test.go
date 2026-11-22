@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"pocketone.dev/ext/agent/providers/oai"
+	"pocketone.dev/ext/llm/providers/oai"
 )
 
 func live(t *testing.T, needKey bool) *Client {

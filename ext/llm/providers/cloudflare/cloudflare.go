@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	"pocketone.dev/ext/agent/providers/oai"
+	"pocketone.dev/ext/llm/providers/oai"
 )
 
 // Client is a Workers AI client for one account. The embedded oai.Client (BaseURL .../ai/v1) gives ChatStream and

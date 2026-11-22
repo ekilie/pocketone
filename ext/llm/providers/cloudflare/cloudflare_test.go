@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"pocketone.dev/ext/agent/providers/oai"
+	"pocketone.dev/ext/llm/providers/oai"
 )
 
 func TestDriver(t *testing.T) {
