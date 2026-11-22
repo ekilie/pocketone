@@ -8,6 +8,7 @@
 package jsvm
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -80,6 +81,9 @@ type VM struct {
 	settleTypes map[uint64]reflect.Type
 	refs        map[*jsRef]struct{}
 
+	// cur is the call whose JS is running now (nil outside handlers); async Go calls started now belong to it.
+	cur *owner
+
 	Log func(args ...any)
 
 	// HTTPClient is what $http.send uses (nil = http.DefaultClient).
@@ -104,6 +108,66 @@ type task struct {
 	fn        func()
 	done      chan struct{}
 	cancelled atomic.Bool
+}
+
+// owner is one JS call a Go caller waits for (a request, a hook, a cron job) together with the async work it
+// awaits. The caller cancels it when it stops waiting (AwaitLimit passed, the request abandoned): async Go calls the
+// owner started then never settle their promises (the code after its await never runs) and new ones throw, so the
+// handler stops at its next await instead of running on with nobody waiting for it. A detached promise belongs to
+// the call that started it and runs on after the call returns; only cancelling stops it.
+type owner struct {
+	mu  sync.Mutex
+	err error
+}
+
+func (o *owner) cancel(err error) {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	if o.err == nil {
+		o.err = err
+	}
+	o.mu.Unlock()
+}
+
+// cause is why the owner was cancelled, nil while it is live.
+func (o *owner) cause() error {
+	if o == nil {
+		return nil
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.err
+}
+
+// ErrAbandoned: the request a handler served ended (the client went away) before the handler settled.
+var ErrAbandoned = errors.New("jsvm: request abandoned before the handler finished")
+
+// awaitSettled waits off the loop for a call's promise: at most AwaitLimit, and no longer than ctx (the request it
+// serves; nil for none). Giving up cancels o, which stops the handler at its next await.
+func (vm *VM) awaitSettled(ch chan settled, o *owner, ctx context.Context) settled {
+	t := time.NewTimer(vm.cfg.AwaitLimit)
+	defer t.Stop()
+	var gone <-chan struct{}
+	if ctx != nil {
+		gone = ctx.Done()
+	}
+	select {
+	case s := <-ch:
+		return s
+	case <-t.C:
+		err := fmt.Errorf("%w: the handler was still awaiting after %s (AwaitLimit)", ErrTimeout, vm.cfg.AwaitLimit)
+		o.cancel(err)
+		return settled{err: err}
+	case <-gone:
+		err := fmt.Errorf("%w: %v", ErrAbandoned, context.Cause(ctx))
+		o.cancel(err)
+		return settled{err: err}
+	case <-vm.quit:
+		o.cancel(ErrClosed)
+		return settled{err: ErrClosed}
+	}
 }
 
 type settled struct {
@@ -211,11 +275,13 @@ func (vm *VM) runTask(t *task) {
 	}
 	C.avm_set_interrupt(vm.a, 0)
 	vm.statTasks.Add(1)
+	prevOwner := vm.cur // t.fn may set it (a handler, an async completion) for itself and the jobs it queues
 	_ = vm.guard(func() error {
 		t.fn()
 		vm.runJobs()
 		return nil
 	})
+	vm.cur = prevOwner
 	if t.done != nil {
 		close(t.done)
 		vm.drainPosts()

@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.1.1
+version: 0.1.2
 title: "JSVM"
 group: binary
 summary: "PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits."
@@ -46,8 +46,15 @@ The module is `pocketone.dev/ext/jsvm`.
 `MigrationsFilesPattern`, `TypesDir`; `HooksPoolSize` is accepted and ignored) plus:
 
 - `OnInit func(rt js.Runtime)`: add globals after everything else is set up.
-- `VM`: the limits. `MemoryLimit` (default 64 MiB), `TaskBudget` (JS time per task, default 5 s), `TaskWall` (wall time
-  per task, Go calls included, default 30 s), `QueueSize`, `MaxAsync`, `MaxPumpDepth`.
+- `VM`: the limits. `MemoryLimit` (JS heap plus the Go objects JS holds, default 64 MiB), `TaskBudget` (JS time per
+  stretch, default 5 s), `TaskWall` (wall time per stretch, sync Go calls included, default 30 s), `AwaitLimit` (a
+  whole async handler, awaits included, default 15 min), `WaitTimeout` (a handler's synchronous part, queue wait
+  included, default 30 s), `QueueSize`, `MaxAsync`, `MaxPumpDepth`. A stretch is the JS between two `await`s, so
+  time spent awaiting an `.async` call counts only toward `AwaitLimit`. Past `AwaitLimit`, or when the HTTP request a
+  handler serves ends (the client went away), the call fails and the handler stops at its next `await`: async calls it
+  started are dropped when they finish and new ones throw. A detached promise outlives its handler. The `pocketone`
+  binary sets `memory`, `task_time`, `task_wall` and `await_time` in `pocketone.yaml`'s `app: js_limits:`
+  ([QuickJS hooks](/docs/quickjs#6-memory-and-time-limits)).
   Array methods that walk every index (`join`, `indexOf`, `slice`, `forEach`, `concat`, `flat`, ...) and arrays passed
   to Go throw a `RangeError` past `MemoryLimit / 16` elements: QuickJS doesn't check `TaskBudget` inside those loops,
   and a sparse array (`new Array(1e9)`) or array-like costs no memory, so the cap is what stops them. No dense array

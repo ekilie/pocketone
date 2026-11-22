@@ -59,12 +59,12 @@ release:
   name_template: 'PocketOne {{ .Tag }}'
   # publishing the release starts its announcement in Discussions, with these notes
   discussion_category_name: Announcements
-  # every release's notes start with its blog post (site/pb_pages/(main)/blog/pocketone-vX-Y-Z.md) and how to install
-  # or upgrade; the version's own notes (from CHANGELOG.md) follow
+  # a release's notes start with its blog post when it has one (release.sh sets POCKETONE_BLOG_URL; maintenance
+  # releases have none) and how to install or upgrade; the version's own notes (from CHANGELOG.md) follow
   header: |
-    **[Read the announcement on the blog](https://pocketone.dev/blog/pocketone-{{ replace .Tag "." "-" }})**
+    {{ with index .Env "POCKETONE_BLOG_URL" }}**[Read the announcement on the blog]({{ . }})**
 
-    ## Install or upgrade
+    {{ end }}## Install or upgrade
 
     **New install on macOS or Linux:**
 
@@ -94,8 +94,10 @@ release:
     **Upgrade:**
 
     ```bash
-    brew upgrade pocketone
+    brew update && brew upgrade pocketone
     ```
+
+    `brew update` refreshes the tap first: Homebrew does that on its own only once a day, so a plain `brew upgrade` can miss a release that's hours old.
 
     On Windows with Scoop, `scoop update pocketone`. If you used the install script (or a Linux package), run the script again. Otherwise, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`, `pocketone-<version>.exe` on Windows) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
 

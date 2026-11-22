@@ -123,7 +123,7 @@ func (p *extension) upgrade(backup, yes bool) error {
 	}
 	if brew := homebrewFormula(exe); brew != "" {
 		color.Yellow("This executable was installed with Homebrew. Upgrade it with:")
-		fmt.Printf("\n  brew upgrade %s\n\n", brew)
+		fmt.Printf("\n  brew update && brew upgrade %s\n\n", brew)
 		color.HiBlack("Homebrew keeps the previous version until `brew cleanup`.")
 		return nil
 	}

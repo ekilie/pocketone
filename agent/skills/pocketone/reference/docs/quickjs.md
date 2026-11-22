@@ -223,25 +223,97 @@ Calls to `/hits` right after each one answered normally.
 
 These are the limits in the `pocketone` binary:
 
-| Limit | Default |
-|---|---|
-| Memory: the JS heap plus the Go objects JS holds | 64 MiB per app |
-| JS time per task | 5 s |
-| Wall time per task, Go calls included | 30 s |
+| Limit | What it counts | Default | `js_limits` key |
+|---|---|---|---|
+| Memory | The JS heap plus the Go objects JS holds, for the whole app | 64 MiB | `memory` |
+| JS time | Time spent running JS in one stretch of a task | 5 s | `task_time` |
+| Wall time | Clock time of one stretch, sync Go calls (`sleep`, `$http.send`, queries) included | 30 s | `task_wall` |
+| Await time | Clock time of a whole async handler, from its start until it returns, awaits included | 15 min | `await_time` |
 
-Change them in `pocketone.yaml` ([pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml)):
+A stretch is the JS between two `await`s: the start of a handler up to its first `await`, then each part that runs
+when an awaited result comes back. A handler without `await` is one stretch. JS time and wall time start over with each
+stretch. While a handler is awaiting an `.async` call (`sleep.async`, `e.app.save.async`, an `$llm` provider call,
+`$http.send.async`), no JS runs and the VM serves other requests, so the wait counts toward none of the first three
+limits, only toward await time.
+
+So a handler can await a slow provider call for a minute or two, and a loop of awaits can run for several minutes,
+while a loop that computes without awaiting is still stopped after 5 s:
+
+```js
+// pb_hooks/long.pb.js
+routerAdd("GET", "/long", async (e) => {
+  for (let i = 0; i < 6; i++) {
+    await sleep.async(10000) // 60 s in all, none of it JS time
+  }
+  return e.json(200, { waited: "60s" })
+})
+```
+
+When a handler passes its await time, or the client goes away (the browser closed the tab, a proxy gave up), the
+request fails and the handler stops at its next `await`: the result of the call it's waiting for is dropped, the code
+after the `await` never runs, and a new `.async` call from it throws. Work it handed off with no `await` (a detached
+promise) keeps running after the handler returns.
+
+Change the limits in `pocketone.yaml` ([pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml)):
 
 ```yaml
 app:
   js_limits:
     memory: 128MiB # the JS heap plus the Go objects JS holds
-    task_time: 10s # JS time per task
-    task_wall: 60s # wall time per task, Go calls included
+    task_time: 10s # JS time per stretch
+    task_wall: 60s # wall time per stretch, sync Go calls included
+    await_time: 30m # a whole async handler, awaits included
 ```
 
 With `task_time: 1s`, `/spin` stopped after 1.0 s instead of 5. A custom Go build sets the same limits in
 `jsvm.Config.VM` ([JSVM](https://pocketone.dev/docs/extensions/jsvm#configure)). On a multisite host each app has its own VM and its own
 limits, so one app's runaway script doesn't stop the others.
+
+### Jobs that take minutes
+
+Await time allows a long request, but the network in front of your app usually doesn't. Cloudflare closes a proxied
+request after about 100 seconds with no answer, and other proxies and browsers have their own limits. A request that
+waits through minutes of work gets cut off on the way, and its handler stops with it.
+
+For work that takes longer than a few seconds (generating images or audio, a chain of provider calls, a big import),
+answer at once and do the work in the background:
+
+1. The request saves a record for the job, starts the work without awaiting it, and answers with the record's id.
+2. The work saves its progress and results on that record as it goes.
+3. The page polls the record (or subscribes to it with realtime) and shows the progress.
+
+```js
+// pb_hooks/jobs.pb.js
+routerAdd("POST", "/jobs", (e) => {
+  const job = new Record(e.app.findCollectionByNameOrId("jobs"))
+  job.set("status", "running")
+  e.app.save(job)
+  runJob(e.app, job.id) // no await: it keeps running after this answer
+  return e.json(202, { id: job.id })
+})
+
+async function runJob(app, id) {
+  const save = async (fields) => {
+    const job = await app.findRecordById.async("jobs", id)
+    for (const [k, v] of Object.entries(fields)) job.set(k, v)
+    await app.save.async(job)
+  }
+  try {
+    for (let step = 1; step <= 5; step++) {
+      await sleep.async(10000) // stands in for a slow provider call
+      await save({ progress: step * 20 })
+    }
+    await save({ status: "done" })
+  } catch (err) {
+    await save({ status: "failed", error: String(err) })
+  }
+}
+```
+
+The page then reads `/api/collections/jobs/records/<id>` every few seconds until `status` is `done`. A detached job
+isn't tied to any request, so await time and abandoned requests don't stop it, but it isn't saved anywhere either: a
+restart (a deploy, a hooks change) ends it. Keep its state on the record, so a job left `running` after a restart can
+be found and started again (by a `cronAdd` job, say).
 
 ## How it performs
 

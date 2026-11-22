@@ -1,9 +1,10 @@
 package jsvm
 
 import (
+	"context"
+	"net/http"
 	"reflect"
 	"strings"
-	"time"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 )
@@ -62,7 +63,12 @@ func (vm *VM) runHandler(h *jsRef, app core.App, args ...any) error {
 	defer release()
 	var ch chan settled
 	var imm *settled
+	o := &owner{}
+	if vm.onLoop() {
+		o = vm.cur // a hook fired by a sync Go call from JS belongs to the call that made it
+	}
 	derr := vm.Do(func() {
+		vm.cur = o
 		if vm.OnTask != nil {
 			done, err := vm.OnTask()
 			if err != nil {
@@ -95,6 +101,7 @@ func (vm *VM) runHandler(h *jsRef, app core.App, args ...any) error {
 		}
 	})
 	if derr != nil {
+		o.cancel(derr)
 		return derr
 	}
 	var s settled
@@ -104,17 +111,31 @@ func (vm *VM) runHandler(h *jsRef, app core.App, args ...any) error {
 	case vm.onLoop():
 		s = vm.waitSettled(ch)
 	default:
-		select {
-		case s = <-ch:
-		case <-time.After(vm.cfg.WaitTimeout):
-			return ErrTimeout
-		}
+		s = vm.awaitSettled(ch, o, requestContext(args))
 	}
 	if s.err != nil {
 		return s.err
 	}
 	if rv, ok := s.val.(reflect.Value); ok {
 		return asError(rv)
+	}
+	return nil
+}
+
+var httpRequestType = reflect.TypeOf((*http.Request)(nil))
+
+// requestContext is the context of the HTTP request an event serves (a route's or a request hook's event: a
+// *core.RequestEvent or an event embedding one), nil for other events. A handler stops when it ends.
+func requestContext(args []any) context.Context {
+	for _, a := range args {
+		v := reflect.ValueOf(a)
+		if v.Kind() != reflect.Pointer || v.IsNil() || v.Elem().Kind() != reflect.Struct {
+			continue
+		}
+		f := v.Elem().FieldByName("Request")
+		if f.IsValid() && f.Type() == httpRequestType && !f.IsNil() {
+			return f.Interface().(*http.Request).Context()
+		}
 	}
 	return nil
 }

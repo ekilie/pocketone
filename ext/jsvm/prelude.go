@@ -217,6 +217,10 @@ func nativeAsync(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 	if h == 0 || vm.handles[h].kind != kindFn {
 		return C.throwType(vm.ctx, "async: not a Go function")
 	}
+	o := vm.cur
+	if err := o.cause(); err != nil {
+		return vm.throw(err) // the call this code runs for was given up: start nothing new
+	}
 	if vm.asyncInFlight >= vm.cfg.MaxAsync {
 		return vm.throw(fmt.Errorf("too many async Go calls in flight (%d)", vm.cfg.MaxAsync))
 	}
@@ -252,6 +256,10 @@ func nativeAsync(vm *VM, this JSValue, args []JSValue, ctor bool) JSValue {
 			vm.asyncInFlight--
 			defer vm.free_(resolve)
 			defer vm.free_(reject)
+			if o.cause() != nil {
+				return // given up: the promise never settles, so the code after the await never runs
+			}
+			vm.cur = o // the continuation (run by runTask's runJobs) and the async calls it starts belong to o
 			var v JSValue
 			if perr != nil {
 				v = vm.throw(perr)

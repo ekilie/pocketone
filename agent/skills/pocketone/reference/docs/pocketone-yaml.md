@@ -93,8 +93,8 @@ app:
     task_time: 10s
 ```
 
-`js_limits` sets the limits of the JS engine your hooks run on; [QuickJS hooks](https://pocketone.dev/docs/quickjs#6-memory-and-time-limits)
-shows what they stop.
+`js_limits` sets the limits of the JS engine your hooks run on (`memory`, `task_time`, `task_wall`, `await_time`);
+[QuickJS hooks](https://pocketone.dev/docs/quickjs#6-memory-and-time-limits) shows what each one counts and stops.
 
 To see every section your binary knows, with each key, run:
 
