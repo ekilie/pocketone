@@ -51,10 +51,12 @@ The module is `pocketone.dev/ext/llm`.
 
 ## Configure
 
-**Settings → LLM** (superusers) lists your providers. Add one, give it a name (the part before the slash in a model),
-and enter its key: an endpoint for `openai` providers (with its version path, like `https://api.groq.com/openai/v1`), the
-account ID for Cloudflare (with a token that has Workers AI permission). **Test** checks every provider with its key
-without spending anything. Saving applies at once.
+**Settings → LLM** (superusers) lists your providers. Press **New provider**, pick its type, give it a name (the part
+before the slash in a model) and enter its key: an endpoint for `openai` providers (with its version path, like
+`https://api.groq.com/openai/v1`), the account ID for Cloudflare (with a token that has Workers AI permission). Vultr,
+Cloudflare and OpenRouter providers can't be saved without a key; an `openai` one can (a local Ollama has none). Each
+provider's **Test** checks its key, typed or saved, without spending anything, and its check mark turns green when it
+passes. Saving applies at once.
 
 Keys stay on the server: the screen never shows a saved key again, and a key is never sent to an endpoint other than the
 one it was entered for (change a provider's endpoint and you enter its key again). The settings are in the app's

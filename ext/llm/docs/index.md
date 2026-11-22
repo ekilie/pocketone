@@ -41,7 +41,8 @@ Open your dashboard, go to **Settings → LLM** and add a provider:
 - **OpenAI-compatible API**: OpenAI, Groq, Together, or a model on your own machine with Ollama or llama-server. Give the
   endpoint with its version path (`http://localhost:11434/v1` for Ollama).
 
-Give each provider a short name: it's how your code picks it. Press **Test**, then **Save**.
+Press **New provider** and pick its type. Give it a short name (it's how your code picks it) and its key, press its
+**Test**, then **Save changes**.
 
 ## Name a model
 
