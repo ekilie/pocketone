@@ -90,7 +90,7 @@ Upgrade the way you installed:
 
 | Installed with | Upgrade with |
 |---|---|
-| Homebrew | `brew upgrade pocketone` |
+| Homebrew | `brew update && brew upgrade pocketone` |
 | Scoop | `scoop update pocketone` |
 | The install script | Run it again. |
 | Anything else | `pocketone upgrade` |

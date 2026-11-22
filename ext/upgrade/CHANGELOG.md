@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Changed
+
+- On a Homebrew install, `pocketone upgrade` prints `brew update && brew upgrade pocketone`, not just `brew upgrade`: Homebrew refreshes taps on its own only once a day, so a plain `brew upgrade` could miss a release that was hours old.
+
 ## 0.0.3 (2026-11-21)
 
 ### Changed
