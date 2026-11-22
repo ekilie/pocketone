@@ -3,7 +3,7 @@
 - [← PocketOne docs](/docs)
 - [Overview](/docs/examples)
 
-# Examples
+# Apps
 
 - [Docs Chat](/docs/examples/docs-chat)
 - [Bedtime Story](/docs/examples/bedtime-story)
