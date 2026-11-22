@@ -202,12 +202,16 @@ func TestSandboxBlocksEscapes(t *testing.T) {
 		}
 	}
 
-	hidden := []string{"rootSymlink", "rootLink", "fileChdir", "fileFd", "restart", "bootstrap", "rawDB", "onServe", "bindHook", "cron", "unsafeWithoutHooks"}
+	hidden := []string{"rootSymlink", "rootLink", "fileChdir", "fileFd", "restart", "bootstrap", "rawDB", "bindHook", "cron", "unsafeWithoutHooks"}
 	for _, name := range hidden {
 		res, _, _ := call(name)
 		if !res.OK || res.V != "undefined" {
 			t.Errorf("%s: expected undefined, got %+v", name, res)
 		}
+	}
+	// the app's own serve hook is open: it fires once, when this app starts serving (a superuser UI extension)
+	if res, _, _ := call("onServe"); !res.OK || res.V != "function" {
+		t.Errorf("onServe: expected the app's own serve hook, got %+v", res)
 	}
 
 	expect := map[string]any{
