@@ -59,6 +59,10 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 - [LLM](ext/llm/README.md), a standard extension: text, pictures, speech, transcription, music, video and embeddings from cloud providers on your own keys, as `$llm.<kind>` in page code and the `llm.*` contracts. Every call names its model as `provider/model`.
 
+### Changed
+
+- PocketPages is now just Pages, a feature of every PocketOne app: the docs, starter kits and `pocketone pages create` say "PocketOne app" (a new app's title and heading read PocketOne). The `pocketpages` Agent Skill is folded into the `pocketone` skill (`pages.md`); reinstall the plugin to drop the old skill.
+
 ### Extensions
 
 - [Config](ext/config/CHANGELOG.md#011-2026-11-22) 0.1.0 → 0.1.1
