@@ -192,12 +192,12 @@ func (s ledgerService) Summary(ctx context.Context, _ extkit.Auth, in ledgerv1.S
 		limit = 100
 	}
 	limit = min(limit, 1000)
-	order := "cost DESC, calls DESC"
+	order := []string{"cost DESC", "calls DESC"}
 	if in.By == "day" {
-		order = "key DESC"
+		order = []string{"key DESC"}
 	}
 	q := s.r.app.DB().Select(key+" AS key", totalsColumns).From(LedgerCollection).GroupBy("key").
-		OrderBy(order).Limit(int64(limit)).WithContext(ctx)
+		OrderBy(order...).Limit(int64(limit)).WithContext(ctx)
 	if w := where(from, to, in.Subject, in.Kind, in.Model); w != nil {
 		q = q.Where(w)
 	}
