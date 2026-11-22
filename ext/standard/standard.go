@@ -206,6 +206,7 @@ func (s *Set) Prepare(app core.App, layers func(name string) extkit.Config) (*ex
 	if layers == nil {
 		layers = func(string) extkit.Config { return nil }
 	}
+	bindBranding(app) // PocketOne's logo, version and docs link in the dashboard, whatever runs the app
 	var on []extkit.Extension
 	var offLines []string
 	for _, e := range s.Extensions() {

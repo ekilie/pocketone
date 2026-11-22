@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+- The superuser dashboard shows PocketOne's logo, favicon and version, and its Docs link opens pocketone.dev/docs, on
+  every app the set runs: instances on a multisite host and other builds on the set now get it, not only the `pocketone`
+  binary.
+
 ## 0.1.1 (2026-11-21)
 
 - `Set.Switches`: the settings layer `Register` reads members' `enabled` from (default `ConfiguredSwitches`,
