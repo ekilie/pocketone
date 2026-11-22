@@ -45,7 +45,9 @@ $kv.list("storytime/")                                       // [{ name, value, 
 ```
 
 Names are 1 to 128 characters: letters, digits and `_ - . : /`, starting with a letter or digit. Start yours with a
-prefix of your own (`storytime/`) so they stay apart from other code's.
+prefix of your own (`storytime/`) so they stay apart from other code's. Names starting with `_` are private to the
+app's Go code: extensions keep their secrets there (`_llm/settings`, `_bulkmail/settings`), and neither `$kv` nor the
+API below reaches them.
 
 Superusers (or an API token with the `kv` / `kv:read` scope) reach the same values over HTTP:
 
@@ -63,6 +65,7 @@ The same operations are `pocketone remote kv ...` commands and MCP tools (`kv_li
 
 | Extension | How they fit |
 |---|---|
+| [LLM](../llm/README.md), [Bulk Mail](../bulkmail/README.md), [API Tokens](../api-tokens/README.md) | Keep their settings and keys here, under private names. |
 | [Contracts](../contracts/README.md) | kv/v1 is the contract. Other extensions keep their own values with its Go helpers (`kvv1.Get(app, name, &v)`, `kvv1.Set`, `kvv1.Delete`, `kvv1.List`), which need no provider, and declare `WorksWith: kv/v1`. |
 | [Pages](../pages/README.md) | Page code gets `$kv`. |
 | [API Tokens](../api-tokens/README.md) | Tokens with the `kv:read` or `kv` scope reach the API. |

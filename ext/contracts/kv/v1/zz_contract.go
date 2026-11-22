@@ -26,7 +26,7 @@ var W = extkit.NewWire(Contract, "kv", func(inner Store, g *extkit.Guard[Store])
 },
 	extkit.Op[Store]{
 		Name:   "list",
-		Desc:   "Returns the values whose names start with prefix (all of them when it's empty), sorted by name.",
+		Desc:   "Returns the values whose names start with prefix (all of them when it's empty), sorted by name. Private names (starting with _) are left out.",
 		Method: "GET",
 		Path:   "",
 		Scope:  "kv:read",
@@ -42,7 +42,7 @@ var W = extkit.NewWire(Contract, "kv", func(inner Store, g *extkit.Guard[Store])
 	},
 	extkit.Op[Store]{
 		Name:   "get",
-		Desc:   "Returns one value. A name with no value is a not_found error.",
+		Desc:   "Returns one value. A name with no value is a not_found error; a private name is a private error.",
 		Method: "GET",
 		Path:   "get",
 		Scope:  "kv:read",

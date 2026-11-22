@@ -46,8 +46,34 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 // store is kv/v1 over the contract's helpers.
 type store struct{ app core.App }
 
+// public refuses a private name: only the app's Go code reaches those.
+func public(name string) error {
+	if kvv1.IsPrivate(name) {
+		return kvv1.ErrPrivate
+	}
+	return nil
+}
+
+// publicList is kvv1.List without the private names.
+func publicList(app core.App, prefix string) ([]kvv1.Entry, error) {
+	if err := public(prefix); err != nil {
+		return nil, err
+	}
+	entries, err := kvv1.List(app, prefix)
+	if err != nil {
+		return nil, err
+	}
+	out := entries[:0]
+	for _, e := range entries {
+		if !kvv1.IsPrivate(e.Name) {
+			out = append(out, e)
+		}
+	}
+	return out, nil
+}
+
 func (s store) List(_ context.Context, _ extkit.Auth, in kvv1.ListInput) (kvv1.Listing, error) {
-	entries, err := kvv1.List(s.app, in.Prefix)
+	entries, err := publicList(s.app, in.Prefix)
 	if err != nil {
 		return kvv1.Listing{}, err
 	}
@@ -55,6 +81,9 @@ func (s store) List(_ context.Context, _ extkit.Auth, in kvv1.ListInput) (kvv1.L
 }
 
 func (s store) Get(_ context.Context, _ extkit.Auth, in kvv1.Key) (kvv1.Entry, error) {
+	if err := public(in.Name); err != nil {
+		return kvv1.Entry{}, err
+	}
 	e, found, err := kvv1.Lookup(s.app, in.Name)
 	if err == nil && !found {
 		err = kvv1.ErrNotFound
@@ -63,19 +92,28 @@ func (s store) Get(_ context.Context, _ extkit.Auth, in kvv1.Key) (kvv1.Entry, e
 }
 
 func (s store) Set(_ context.Context, _ extkit.Auth, in kvv1.SetInput) (kvv1.Entry, error) {
+	if err := public(in.Name); err != nil {
+		return kvv1.Entry{}, err
+	}
 	return kvv1.SetRaw(s.app, in.Name, in.Value)
 }
 
 func (s store) Delete(_ context.Context, _ extkit.Auth, in kvv1.Key) error {
+	if err := public(in.Name); err != nil {
+		return err
+	}
 	return kvv1.Delete(s.app, in.Name)
 }
 
 // BindJS implements [extkit.JSBinder]: $kv in the app's page code and pb_hooks. Every call is local and sync (one
-// SQLite read or write), so none needs an Async form.
+// SQLite read or write), so none needs an Async form. Like the wire API, it never reaches private names.
 func (*Extension) BindJS(app core.App, rt js.Runtime) {
 	n := rt.NewObject()
 	// get(name): the value's JSON, or "" when there is none
 	_ = n.Set("get", func(name string) (string, error) {
+		if err := public(name); err != nil {
+			return "", jsErr("get", err)
+		}
 		e, found, err := kvv1.Lookup(app, name)
 		if err != nil || !found {
 			return "", jsErr("get", err)
@@ -83,12 +121,20 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		return string(e.Value), nil
 	})
 	_ = n.Set("set", func(name, value string) error {
+		if err := public(name); err != nil {
+			return jsErr("set", err)
+		}
 		_, err := kvv1.SetRaw(app, name, json.RawMessage(value))
 		return jsErr("set", err)
 	})
-	_ = n.Set("delete", func(name string) error { return jsErr("delete", kvv1.Delete(app, name)) })
+	_ = n.Set("delete", func(name string) error {
+		if err := public(name); err != nil {
+			return jsErr("delete", err)
+		}
+		return jsErr("delete", kvv1.Delete(app, name))
+	})
 	_ = n.Set("list", func(prefix string) (string, error) {
-		entries, err := kvv1.List(app, prefix)
+		entries, err := publicList(app, prefix)
 		if err != nil {
 			return "", jsErr("list", err)
 		}

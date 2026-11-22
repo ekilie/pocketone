@@ -88,6 +88,9 @@ A name is 1 to 128 characters: letters, digits and `_ - . : /`, starting with a 
 prefix of your own, such as your app's or extension's name (`storytime/settings`), so they never meet another
 extension's. A name that breaks these rules throws (in Go, returns `kvv1.ErrInvalidName`).
 
+Names starting with `_` are private to Go code on the app. Extensions keep their secrets there (LLM's provider keys
+are `_llm/settings`): `$kv`, the API and agents can't read, change or list them.
+
 A value is at most 1 MiB of JSON. For more than that, or for many similar things you want to filter, sort or let users
 own, use a collection.
 

@@ -191,7 +191,10 @@ const hooks = `onRecordCreate((e) => {
   $kv.delete("js/n")
   let badName = ""
   try { $kv.set("bad name", 1) } catch (err) { badName = String(err) }
-  e.record.set("result", JSON.stringify({ missing, back, fromGo, names, after: $kv.get("js/n"), badName }))
+  let privateErr = ""
+  try { $kv.get("_go/secret") } catch (err) { privateErr = String(err) }
+  e.record.set("result", JSON.stringify({ missing, back, fromGo, names, after: $kv.get("js/n"), badName, privateErr,
+    listed: $kv.list().map((x) => x.name) }))
   e.next()
 }, "probes")
 `
@@ -207,6 +210,7 @@ func TestJS(t *testing.T) {
 	if err := kvv1.Set(app, "go/value", map[string]bool{"ok": true}); err != nil {
 		t.Fatal(err)
 	}
+	_ = kvv1.Set(app, "_go/secret", "s")
 	dir := filepath.Join(t.TempDir(), "pb_hooks")
 	_ = os.MkdirAll(dir, 0o755)
 	if err := os.WriteFile(filepath.Join(dir, "main.pb.js"), []byte(hooks), 0o644); err != nil {
@@ -223,12 +227,14 @@ func TestJS(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out struct {
-		Missing any
-		Back    settings
-		FromGo  map[string]bool
-		Names   []string
-		After   any
-		BadName string
+		Missing    any
+		Back       settings
+		FromGo     map[string]bool
+		Names      []string
+		After      any
+		BadName    string
+		PrivateErr string
+		Listed     []string
 	}
 	if err := json.Unmarshal([]byte(r.GetString("result")), &out); err != nil {
 		t.Fatalf("result %q: %v", r.GetString("result"), err)
@@ -237,10 +243,95 @@ func TestJS(t *testing.T) {
 		strings.Join(out.Names, ",") != "js/n,js/settings" || out.After != nil || !strings.Contains(out.BadName, "invalid_name") && !strings.Contains(out.BadName, "a name is") {
 		t.Fatalf("from JS: %+v", out)
 	}
+	if !strings.Contains(out.PrivateErr, "private") || strings.Contains(strings.Join(out.Listed, ","), "_go") {
+		t.Fatalf("private names from JS: %+v", out)
+	}
 	var s struct {
 		Voices []string `json:"voices"`
 	}
 	if found, err := kvv1.Get(app, "js/settings", &s); err != nil || !found || len(s.Voices) != 1 {
 		t.Fatalf("JS's value from Go: %+v %v %v", s, found, err)
+	}
+}
+
+// Private names (starting with _): the helpers reach them; the wire API and $kv don't, and List leaves them out.
+func TestPrivateNames(t *testing.T) {
+	app := newApp(t)
+	if err := kvv1.Set(app, "_ext/secret", map[string]string{"key": "k"}); err != nil {
+		t.Fatal(err)
+	}
+	_ = kvv1.Set(app, "ext/open", 1)
+	var v map[string]string
+	if found, err := kvv1.Get(app, "_ext/secret", &v); err != nil || !found || v["key"] != "k" {
+		t.Fatalf("helpers: %v %v %v", v, found, err)
+	}
+	for _, bad := range []string{"_", "__x", "_/x"} {
+		if err := kvv1.ValidName(bad); !errors.Is(err, kvv1.ErrInvalidName) {
+			t.Errorf("name %q: %v", bad, err)
+		}
+	}
+	s := kvv1.Contract.Must(app)
+	ctx, su := context.Background(), extkit.Auth{Kind: "superuser"}
+	if _, err := s.Get(ctx, su, kvv1.Key{Name: "_ext/secret"}); !errors.Is(err, kvv1.ErrPrivate) {
+		t.Errorf("get: %v", err)
+	}
+	if _, err := s.Set(ctx, su, kvv1.SetInput{Name: "_ext/secret", Value: json.RawMessage(`1`)}); !errors.Is(err, kvv1.ErrPrivate) {
+		t.Errorf("set: %v", err)
+	}
+	if err := s.Delete(ctx, su, kvv1.Key{Name: "_ext/secret"}); !errors.Is(err, kvv1.ErrPrivate) {
+		t.Errorf("delete: %v", err)
+	}
+	if l, err := s.List(ctx, su, kvv1.ListInput{}); err != nil || len(l.Entries) != 1 || l.Entries[0].Name != "ext/open" {
+		t.Errorf("list: %+v %v", l, err)
+	}
+	if _, err := s.List(ctx, su, kvv1.ListInput{Prefix: "_"}); !errors.Is(err, kvv1.ErrPrivate) {
+		t.Errorf("list _: %v", err)
+	}
+}
+
+// MoveParam moves an extension's own pre-kv _params row once, keeping its value and times.
+func TestMoveParam(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	old := &core.Param{Value: []byte(`{"secret":"s"}`)}
+	old.Id = "myext"
+	old.MarkAsNew()
+	if err := app.Save(old); err != nil {
+		t.Fatal(err)
+	}
+	if moved, err := kvv1.MoveParam(app, "myext", "_myext/settings"); err != nil || !moved {
+		t.Fatalf("move: %v %v", moved, err)
+	}
+	var v struct{ Secret string }
+	if found, _ := kvv1.Get(app, "_myext/settings", &v); !found || v.Secret != "s" {
+		t.Fatalf("moved value: %+v", v)
+	}
+	if err := app.ModelQuery(&core.Param{}).Model("myext", &core.Param{}); err == nil {
+		t.Fatal("the old row is still there")
+	}
+	if moved, err := kvv1.MoveParam(app, "myext", "_myext/settings"); err != nil || moved {
+		t.Fatalf("second move: %v %v", moved, err)
+	}
+	if err := kvv1.MoveParamOnce(app, "myext", "_myext/settings"); err != nil {
+		t.Fatal(err)
+	}
+	// a leftover row never overwrites the moved value
+	again := &core.Param{Value: []byte(`{"secret":"stale"}`)}
+	again.Id = "myext"
+	again.MarkAsNew()
+	_ = app.Save(again)
+	if _, err := kvv1.MoveParam(app, "myext", "_myext/settings"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _ = kvv1.Get(app, "_myext/settings", &v); v.Secret != "s" {
+		t.Fatalf("a leftover row replaced the value: %+v", v)
+	}
+	for _, from := range []string{"settings", "kv:x", ""} {
+		if _, err := kvv1.MoveParam(app, from, "x"); err == nil {
+			t.Errorf("moved %q", from)
+		}
 	}
 }

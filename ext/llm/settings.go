@@ -2,7 +2,6 @@ package llm
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,10 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
+	kvv1 "pocketone.dev/ext/contracts/kv/v1"
 	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
 	"pocketone.dev/ext/extkit"
 )
@@ -75,7 +73,7 @@ func (p Provider) endpoint() string {
 	return ti.Endpoint
 }
 
-// Settings are Settings → LLM: the providers calls name. Stored in the app's _params.
+// Settings are Settings → LLM: the providers calls name. Stored in the app's key-value store (kv/v1, private).
 type Settings struct {
 	Providers []Provider `json:"providers"`
 }
@@ -89,20 +87,20 @@ func (s Settings) provider(name string) (Provider, bool) {
 	return Provider{}, false
 }
 
-const settingsParam = "llm"
+// settingsName is where the settings live in the app's key-value store (kv/v1), private to Go since they hold API keys.
+const settingsName = "_llm/settings"
+
+// legacyParam is the _params row the settings had before kv/v1; the first load moves it to settingsName.
+// Remove once every app has started on a release with kv/v1.
+const legacyParam = "llm"
 
 // LoadSettings returns the app's LLM settings (empty when its admins never saved any).
 func LoadSettings(app core.App) (Settings, error) {
-	var raw string
-	err := app.DB().NewQuery("SELECT value FROM {{_params}} WHERE id = {:id}").Bind(dbx.Params{"id": settingsParam}).Row(&raw)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Settings{}, nil
-	}
-	if err != nil {
-		return Settings{}, err
+	if err := kvv1.MoveParamOnce(app, legacyParam, settingsName); err != nil {
+		return Settings{}, fmt.Errorf("llm: settings: %w", err)
 	}
 	var s Settings
-	if err := json.Unmarshal([]byte(raw), &s); err != nil {
+	if _, err := kvv1.Get(app, settingsName, &s); err != nil {
 		return Settings{}, fmt.Errorf("llm: settings: %w", err)
 	}
 	return s, nil
@@ -110,15 +108,10 @@ func LoadSettings(app core.App) (Settings, error) {
 
 // SaveSettings stores the app's LLM settings.
 func SaveSettings(app core.App, s Settings) error {
-	b, err := json.Marshal(s)
-	if err != nil {
+	if err := kvv1.MoveParamOnce(app, legacyParam, settingsName); err != nil {
 		return err
 	}
-	now := types.NowDateTime().String()
-	_, err = app.DB().NewQuery(`INSERT INTO {{_params}} (id, value, created, updated) VALUES ({:id}, {:value}, {:now}, {:now})
-		ON CONFLICT(id) DO UPDATE SET value = excluded.value, updated = excluded.updated`).
-		Bind(dbx.Params{"id": settingsParam, "value": string(b), "now": now}).Execute()
-	return err
+	return kvv1.Set(app, settingsName, s)
 }
 
 // settingsSection is Settings → LLM, over settings/v1.

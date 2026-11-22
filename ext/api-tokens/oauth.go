@@ -13,7 +13,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -30,13 +29,17 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/router"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/security"
-	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
+	kvv1 "pocketone.dev/ext/contracts/kv/v1"
 	oauthv1 "pocketone.dev/ext/contracts/oauth/v1"
 )
 
 const (
 	oauthStoreKey = "oauthServer"
-	paramKey      = "oauth_server"
+	// keyName is where the server's HMAC key lives in the app's key-value store (kv/v1), private to Go.
+	keyName = "_api-tokens/oauth-server"
+	// legacyParam is the _params row the key had before kv/v1; the first load moves it to keyName.
+	// Remove once every app has started on a release with kv/v1.
+	legacyParam = "oauth_server"
 
 	// CLIClientId is the built-in public client `pocketone login` uses: loopback redirects and device codes.
 	CLIClientId = "pocketone-cli"
@@ -208,31 +211,27 @@ func (s *OAuthServer) allows(c *core.Collection) bool {
 	return c != nil && c.IsAuth() && (len(s.cfg.Collections) == 0 || slices.Contains(s.cfg.Collections, c.Name))
 }
 
-// key returns the server's HMAC key (generated once, stored in _params).
+// key returns the server's HMAC key (generated once, kept in the app's key-value store).
 func (s *OAuthServer) key() []byte {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.secret != nil {
 		return s.secret
 	}
-	param := &core.Param{}
 	var stored struct {
 		Secret string `json:"secret"`
 	}
-	if err := s.app.ModelQuery(param).Model(paramKey, param); err == nil {
-		_ = json.Unmarshal(param.Value, &stored)
-	} else {
-		param = &core.Param{}
-		param.Id = paramKey
-		param.MarkAsNew()
-		param.Created = types.NowDateTime()
+	if err := kvv1.MoveParamOnce(s.app, legacyParam, keyName); err != nil {
+		s.app.Logger().Error("api-tokens: oauth: move key", "error", err)
+	}
+	if _, err := kvv1.Get(s.app, keyName, &stored); err != nil {
+		// never replace a key we couldn't read: sign with a throwaway one this time and read again on the next call
+		s.app.Logger().Error("api-tokens: oauth: read key", "error", err)
+		return []byte(security.RandomString(48))
 	}
 	if stored.Secret == "" {
 		stored.Secret = security.RandomString(48)
-		raw, _ := json.Marshal(stored)
-		param.Value = types.JSONRaw(raw)
-		param.Updated = types.NowDateTime()
-		if err := s.app.Save(param); err != nil {
+		if err := kvv1.Set(s.app, keyName, stored); err != nil {
 			s.app.Logger().Error("api-tokens: oauth: save key", "error", err)
 		}
 	}

@@ -21,7 +21,7 @@ var s Settings
 found, err := kvv1.Get(app, "storytime/settings", &s) // found is false and s untouched when there's no value
 err = kvv1.Set(app, "storytime/settings", s)          // any value json.Marshal takes
 err = kvv1.Delete(app, "storytime/settings")          // no error when there was no value
-entries, err := kvv1.List(app, "storytime/")          // by name prefix, sorted by name; "" lists all
+entries, err := kvv1.List(app, "storytime/")          // by name prefix, sorted by name; "" lists all (private too)
 e, found, err := kvv1.Lookup(app, "storytime/settings") // the raw entry, with created and updated
 ```
 
@@ -52,6 +52,14 @@ MCP tools (`kv_list`, `kv_get`, `kv_set`, `kv_delete`).
 prefix of your own (`storytime/`, `myext:`) so they stay apart from other apps' and extensions'. A value is any JSON up
 to 1 MiB.
 
+**Private names** start with `_` (`_myext/settings`): the Go helpers read and write them, but the wire API (HTTP, the
+CLI, MCP) and `$kv` refuse them (`403 private`) and leave them out of lists. Keep secrets there, such as API keys and
+signing keys, which a `kv:read` token must never see.
+
+**Moving an extension's own row:** an extension that kept a `_params` row of its own before kv/v1 moves it once with
+`kvv1.MoveParamOnce(app, "oldrow", "_myext/settings")` before reading (`MoveParam` for a one-off): the value and its
+times move to the name and the old row goes away. LLM, Bulk Mail and API Tokens did this.
+
 **Storage:** name `storytime/settings` is the `_params` row with id `kv:storytime/settings`, its value the row's
 `value`. The `kv:` prefix keeps every name apart from PocketBase's own params (`settings`) and from rows extensions
 keep there themselves. Write through the helpers, never the table, so the rules above hold.
@@ -69,6 +77,9 @@ helpers read and write it directly.
 | Extension | |
 |---|---|
 | [kv](../../../../ext/kv/README.md) | provides (default) |
+| [api-tokens](../../../../ext/api-tokens/README.md) | works with |
+| [bulkmail](../../../../ext/bulkmail/README.md) | works with |
+| [llm](../../../../ext/llm/README.md) | works with |
 
 <!-- /contracts:index -->
 

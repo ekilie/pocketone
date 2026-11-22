@@ -7,6 +7,7 @@ import (
 	"errors"
 	"sort"
 	"strings"
+	"sync"
 
 	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
@@ -22,9 +23,18 @@ const MaxNameLength = 128
 // MaxValueBytes is the largest value, as JSON.
 const MaxValueBytes = 1 << 20
 
-// ValidName returns [ErrInvalidName] unless name can name a value.
+// PrivatePrefix starts a private name ("_llm/settings"): Go code reads and writes it through these helpers, but the
+// wire API (HTTP, the CLI, MCP) and page code's $kv never reach or list it. Keep secrets (API keys, signing keys) there.
+const PrivatePrefix = "_"
+
+// IsPrivate says whether name is private (starts with [PrivatePrefix]).
+func IsPrivate(name string) bool { return strings.HasPrefix(name, PrivatePrefix) }
+
+// ValidName returns [ErrInvalidName] unless name can name a value: after an optional [PrivatePrefix], a letter or digit,
+// then letters, digits and _ - . : / , at most [MaxNameLength] in all.
 func ValidName(name string) error {
-	if name == "" || len(name) > MaxNameLength || !alnum(name[0]) {
+	rest := strings.TrimPrefix(name, PrivatePrefix)
+	if rest == "" || len(name) > MaxNameLength || !alnum(rest[0]) {
 		return ErrInvalidName
 	}
 	if !validChars(name) {
@@ -157,6 +167,61 @@ func List(app core.App, prefix string) ([]Entry, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
+}
+
+// MoveParam moves the _params row fromID (an extension's own row from before kv/v1) to name, once: when name has no
+// value yet, it gets the row's value and times, and the row is deleted. When name already has one, a leftover row is
+// just deleted. moved says whether a value was moved. PocketBase's own rows and the store's rows can't be moved.
+func MoveParam(app core.App, fromID, name string) (moved bool, err error) {
+	if err := ValidName(name); err != nil {
+		return false, err
+	}
+	if fromID == "" || fromID == "settings" || strings.HasPrefix(fromID, Prefix) {
+		return false, errors.New("kv/v1: MoveParam: can't move _params row " + fromID)
+	}
+	err = app.RunInTransaction(func(tx core.App) error {
+		old := &core.Param{}
+		if err := tx.ModelQuery(old).Model(fromID, old); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil
+			}
+			return err
+		}
+		if _, found, err := Lookup(tx, name); err != nil {
+			return err
+		} else if !found {
+			p := &core.Param{Created: old.Created, Updated: old.Updated, Value: old.Value}
+			p.Id = ParamID(name)
+			p.MarkAsNew()
+			if err := tx.Save(p); err != nil {
+				return err
+			}
+			moved = true
+		}
+		return tx.Delete(old)
+	})
+	return moved, err
+}
+
+// MoveParamOnce is [MoveParam] at most once per app and row, for a load path that runs often: after the first call that
+// succeeds, later ones return at once.
+func MoveParamOnce(app core.App, fromID, name string) error {
+	m := app.Store().GetOrSet("kv/v1.move:"+fromID, func() any { return &moveOnce{} }).(*moveOnce)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.done {
+		return nil
+	}
+	if _, err := MoveParam(app, fromID, name); err != nil {
+		return err
+	}
+	m.done = true
+	return nil
+}
+
+type moveOnce struct {
+	mu   sync.Mutex
+	done bool
 }
 
 func entryOf(p *core.Param) Entry {
