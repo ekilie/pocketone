@@ -160,6 +160,7 @@
                     p.key ? t.span({ className: "label success" }, "New key")
                         : p.keySet ? t.span({ className: "label success" }, "Key set")
                         : t.span({ className: "label warning" }, "No key"),
+                        p.result?.kind === "success" ? t.i({ className: "ri-checkbox-circle-fill txt-success", ariaDescription: app.attrs.tooltip("Tested: the provider answered with this key", "left") }) : null,
                 ),
                 t.p({ className: "m-t-0 txt-hint" }, ti.about || ""),
                 t.div(
