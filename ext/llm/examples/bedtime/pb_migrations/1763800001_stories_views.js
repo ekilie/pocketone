@@ -1,5 +1,5 @@
 /// <reference path="../types.d.ts" />
-// views: how many times a story was listened to for at least 30 seconds (POST /view). The front page lists stories by it.
+// views: how many times a story was listened to for at least 10 seconds (POST /view). The front page lists stories by it.
 migrate((app) => {
   const stories = app.findCollectionByNameOrId('stories')
   stories.fields.add(new NumberField({ name: 'views', min: 0, onlyInt: true }))

@@ -54,7 +54,7 @@ PocketOne keeps of pocketbase.io. It splits them into sections and indexes the w
    chat: `$llm.chat.open(id).sendAsync(question, { context, onText })`. The chat keeps the conversation, so the page
    holds only the chat's id.
 3. Each piece of the answer is forwarded to the browser as it's written, with `ctx.res.sse()`, then a final event with
-   the sources and the cost (`usage.costUSD`).
+   the sources and the cost (`usage.costMicroUSD`, in millionths of a dollar).
 4. A second call, `$llm.text.completeAsync({ schema })`, suggests three follow-up questions as JSON.
 
 Every `$llm` call is awaited in an async handler, so the model works off the app's JS engine and the app keeps serving
@@ -109,9 +109,15 @@ each word brightening at its start time. The music loops under the voice at low 
 the arrow keys move through the story.
 
 **Inspire me** sends the titles and topics of every story told so far, and the topics it already suggested on this
-page, to the text model, which suggests one that none of them covers. **Listens:** after 30 seconds of actual listening
+page, to the text model, which suggests one that none of them covers. **Listens:** after 10 seconds of actual listening
 (time playing, not scrubbing), the player posts `/view`, which adds one to the story's `views` in a single SQL update so
 listens at the same moment all count. The front page lists stories by it.
 
-A 1-minute story with three pictures takes about two minutes to make and costs about 8 cents on Vultr, most of it the
+**Guards for a public copy.** Every model call's cost (`usage.costMicroUSD`) is saved as a row; once the day's total
+(from 00:00 UTC) reaches the budget, $1 by default, the form turns off with "Out of tokens for today" and the API
+refuses new stories. Before anything is made, the app checks that each model's provider is set up, answering and
+offering that model, and refuses the same way when it isn't. Stories are at most 5 minutes with 5 pictures, held both
+in the form and in the API.
+
+A 1-minute story with three pictures takes under a minute to make and costs a few cents on Vultr, most of it the
 pictures and the music.

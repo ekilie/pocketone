@@ -5,8 +5,9 @@ export async function post(ctx: any) {
   const story = ctx.resolve('story')
   const { prompt, minutes, pictures } = ctx.req.body()
   if (prompt !== undefined && typeof prompt !== 'string') throw ctx.httpError(400, 'send {prompt?, minutes?, pictures?}')
-  const busy = story.canStart(ctx.app)
-  if (busy) return ctx.res.json(429, { message: busy })
+  // the models must be there and answering, and today's spending under the budget
+  const no = await story.refusal(ctx.app, 'story')
+  if (no) return ctx.res.json(no.status, { message: no.message, reason: no.reason })
 
   const r = new Record(ctx.app.findCollectionByNameOrId('stories'))
   r.set('prompt', (prompt || '').trim().slice(0, 500) || story.ANY_TOPIC) // empty: the model picks the topic

@@ -85,6 +85,14 @@ const title = rec.getString('title') || 'Bedtime Story'
     .wait h1 { font-weight: normal; font-size: 28px; margin: 0; }
     .wait p { margin: 0; color: var(--dim); max-width: 520px; }
     .err { color: #ff9b8a; }
+    ol.steps { list-style: none; padding: 0; margin: 4px 0; text-align: left; display: grid; gap: 4px; font-size: 15px; }
+    ol.steps li { color: #5d6280; padding-left: 26px; position: relative; }
+    ol.steps li::before { content: '○'; position: absolute; left: 4px; }
+    ol.steps li.now { color: var(--ink); }
+    ol.steps li.now::before { content: '◐'; color: var(--glow); animation: spin 1.6s linear infinite; display: inline-block; }
+    ol.steps li.done { color: var(--dim); }
+    ol.steps li.done::before { content: '●'; color: var(--glow); }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -97,24 +105,54 @@ const title = rec.getString('title') || 'Bedtime Story'
     <% } else { %>
       <div class="moon"></div>
       <h1 id="title"><%= rec.getString('title') || 'Making your story' %></h1>
+      <ol class="steps" id="steps">
+        <li>Writing the story</li><li>Reading it aloud</li><li>Timing each word</li><li>Choosing the pictures</li>
+        <li>Painting the pictures</li><li>Composing the music</li>
+      </ol>
       <p id="progress"><%= rec.getString('progress') %></p>
-      <p style="font-size:14px">This takes a few minutes. You can keep this page open, or come back to it later.</p>
+      <p style="font-size:14px"><span id="elapsed"></span>You can keep this page open, or come back to it later.</p>
     <% } %>
   </div>
   <% if (making && !stale) { %>
   <script>
     // poll the record (open to anyone through the records API) until the story is done or failed
     const id = <%- JSON.stringify(rec.id) %>
+    const started = new Date(<%- JSON.stringify(rec.getString('created').replace(' ', 'T')) %>).getTime()
+    // which steps are done and which is running, read from the progress line the story saves
+    const steps = [...document.querySelectorAll('#steps li')]
+    const show = (progress) => {
+      const p = progress || ''
+      let now = 0
+      if (/^Reading/.test(p)) now = 1
+      else if (/^Listening/.test(p)) now = 2
+      else if (/^Choosing/.test(p)) now = 3
+      else if (/^Painting/.test(p)) now = 4
+      const painted = /Painting pictures (\d+)\/(\d+)/.exec(p), song = /Song ready/.test(p)
+      steps.forEach((li, i) => {
+        let state = i < now ? 'done' : i === now ? 'now' : ''
+        if (now === 4) state = i < 4 ? 'done' : i === 4 ? (painted && painted[1] === painted[2] ? 'done' : 'now') : (song ? 'done' : 'now')
+        li.className = state
+      })
+      if (painted) steps[4].textContent = `Painting the pictures (${painted[1]} of ${painted[2]})`
+    }
+    show(<%- JSON.stringify(rec.getString('progress')) %>)
+    const clock = () => {
+      const s = Math.max(0, Math.round((Date.now() - started) / 1000))
+      document.getElementById('elapsed').textContent = `Started ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} ago. `
+    }
+    clock()
+    setInterval(clock, 1000)
     const tick = async () => {
       try {
         const r = await (await fetch('/api/collections/stories/records/' + id + '?fields=status,title,progress')).json()
         if (r.status === 'done' || r.status === 'failed') return location.reload()
         if (r.title) document.getElementById('title').textContent = r.title
         if (r.progress) document.getElementById('progress').textContent = r.progress
+        show(r.progress)
       } catch (_) {}
-      setTimeout(tick, 3000)
+      setTimeout(tick, 2000)
     }
-    setTimeout(tick, 3000)
+    setTimeout(tick, 2000)
   </script>
   <% } %>
 <% } else { %>
@@ -244,13 +282,13 @@ const title = rec.getString('title') || 'Bedtime Story'
     }
     const toggle = () => (playing ? pause() : play())
 
-    // a view: 30 seconds actually heard (playing time, not where the scrubber is), counted once per visit
+    // a view: 10 seconds actually heard (playing time, not where the scrubber is), counted once per visit
     let heard = 0, lastTick = 0, counted = false
     const listen = (now) => {
       requestAnimationFrame(listen)
       if (playing && !voice.paused && lastTick) heard += (now - lastTick) / 1000
       lastTick = now
-      if (!counted && heard >= 30) {
+      if (!counted && heard >= 10) {
         counted = true
         fetch('/view', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: S.id }) })
       }

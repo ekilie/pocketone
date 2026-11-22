@@ -27,16 +27,16 @@ off the app's JS VM and the app keeps serving pages meanwhile.
 
 **Inspire me** sends the titles and topics of every story told (and the page's earlier suggestions) to the text model,
 which suggests a topic none of them covers; the page drops it into the prompt box. **Listens:** once a listener has
-heard 30 seconds (time playing, not where the scrubber is), the player posts `/view`, which adds one in SQL
+heard 10 seconds (time playing, not where the scrubber is), the player posts `/view`, which adds one in SQL
 (`views = views + 1`); the front page lists stories by it.
 
 ```
 pb_migrations/1763800000_stories.js   the stories collection: prompt, length, status, progress, the story with its timings, files
-pb_migrations/1763800001_stories_views.js   views: listens of 30 seconds or more
+pb_migrations/1763800001_stories_views.js   views: listens of 10 seconds or more
 pb_pages/
   index.ets            ask for a story (prompt, minutes, pictures, Inspire me); stories told, most listened to first
   inspire/+api.ts      POST /inspire {avoid?}: a topic no story has covered yet (the model sees every title)
-  view/+api.ts         POST /view {id}: counts a listen (the player sends it after 30 seconds heard)
+  view/+api.ts         POST /view {id}: counts a listen (the player sends it after 10 seconds heard)
   story/+api.ts        POST /story {prompt?, minutes?, pictures?}: saves the record, starts making it (no prompt: it picks the topic)
   story/[id].ets       progress while it's made, then the player (scrubber, space to pause, arrows to skip 10 s)
   _private/story.ts    the models, the limits and the six steps
@@ -51,12 +51,26 @@ pocketone serve --dir=pb_data
 ```
 
 Add a Vultr provider named `vultr` in Settings → LLM (the dashboard at `/_/`), then open `http://127.0.0.1:8090`. A
-1-minute story with 3 pictures takes about two minutes to make and costs about 8 cents on Vultr, most of it the song
-and the pictures.
+1-minute story with 3 pictures takes under a minute to make and costs a few cents on Vultr, most of it the song and the
+pictures; a 5-minute story with 5 pictures, about a minute and a half and 7 cents.
 
 The models are set in [`_private/story.ts`](pb_pages/_private/story.ts), each overridable from the environment:
 `STORY_TEXT_MODEL`, `STORY_IMAGE_MODEL`, `STORY_SPEECH_MODEL`, `STORY_ALIGN_MODEL`, `STORY_MUSIC_MODEL`. So are the
-limits for a public copy: `STORY_MAX_MAKING` stories in the making at once (3) and `STORY_MAX_PER_HOUR` started an hour
-(20).
+limits for a public copy: `STORY_MAX_MAKING` stories in the making at once (3), `STORY_MAX_PER_HOUR` started an hour
+(20), and `STORY_DAILY_BUDGET` dollars of model calls a day, counted from 00:00 UTC (1). A story is at most 5 minutes
+with 5 pictures (`MAX`); the form and `POST /story` both hold to it.
+
+## Guards
+
+- **Spending:** every model call's cost (`usage.costMicroUSD`, millionths of a dollar) is saved as a row in `costs`.
+  Once the day's rows add up to the budget, the front page says "Out of tokens for today; try again tomorrow. Please
+  enjoy something from our archives." and turns the form off, and `POST /story` and `POST /inspire` answer 429 with the
+  same message. A story already being made finishes.
+- **Models:** before anything is made, `health()` checks that `$llm` exists and that each model's provider is in
+  Settings → LLM, answers, and offers that model (Vultr lists its aligner only for a working key, so a wrong key shows
+  too). Checked at most once a minute. If not, the front page says the storyteller can't reach its models and turns
+  the form off, and both endpoints answer 503, with the reason for admins in `reason` and the server log.
+- **Progress:** the front page lists stories being made with their progress, and a story's page shows the six steps
+  and how long it has run, both kept current by polling the records API.
 
 A story that was being made when the app stopped shows as unfinished after 15 minutes.

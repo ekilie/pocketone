@@ -1,4 +1,4 @@
-// POST /view {id}: counts a view of a finished story. The player sends it once a listener has heard 30 seconds of it.
+// POST /view {id}: counts a view of a finished story. The player sends it once a listener has heard 10 seconds of it.
 // Counted in SQL (views + 1), so two views at once both count, and the record's updated time stays as it was.
 export async function post(ctx: any) {
   const { id } = ctx.req.body()

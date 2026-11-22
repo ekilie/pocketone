@@ -1,8 +1,13 @@
 <%
 // The front page: ask for a story, or pick one already told.
-const { DEFAULTS, MAX } = ctx.resolve('story')
-// most listened to first (a view is 30 seconds of listening), then the newest
+const { DEFAULTS, MAX, refusal } = ctx.resolve('story')
+// when no story can be made now (the models aren't there, or today's budget is spent), the form says why and is off
+const closed = await refusal(ctx.app, 'idea')
+// most listened to first (a view is 10 seconds of listening), then the newest
 const told = ctx.app.findRecordsByFilter('stories', "status = 'done'", '-views,-created', 60, 0)
+// stories being made right now (not ones cut off by a restart), shown with their progress
+const fresh = new Date(Date.now() - ctx.resolve('story').STALE_MS).toISOString().replace('T', ' ')
+const making = ctx.app.findRecordsByFilter('stories', "status != 'done' && status != 'failed' && updated > {:fresh}", '-created', 10, 0, { fresh })
 %>
 <!doctype html>
 <html lang="en">
@@ -30,6 +35,14 @@ const told = ctx.app.findRecordsByFilter('stories', "status = 'done'", '-views,-
       cursor: pointer; }
     button:disabled { opacity: .5; cursor: default; }
     .note { color: var(--dim); font-size: 14px; }
+    .closed { padding: 14px 16px; border-radius: 12px; border: 1px solid #3b4675; background: #121a3a; margin: 0 0 16px; }
+    form.off { opacity: .5; }
+    ul.making { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+    ul.making a { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: #0f1530;
+      border: 1px solid var(--line); color: var(--ink); text-decoration: none; flex-wrap: wrap; }
+    ul.making small { color: var(--dim); font-size: 13px; flex-basis: 100%; padding-left: 30px; }
+    .moonlet { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset -5px -2px 0 0 var(--glow); animation: bob 3s ease-in-out infinite; flex: none; }
+    @keyframes bob { 50% { transform: rotate(-20deg); } }
     button.ghost { background: transparent; color: var(--ink); border: 1px solid #3b4675; }
     ul.told small { display: block; color: var(--dim); font-size: 13px; margin-top: 2px; }
     .err { color: #ff9b8a; }
@@ -46,18 +59,29 @@ const told = ctx.app.findRecordsByFilter('stories', "status = 'done'", '-views,-
   <h1>Bedtime <span>Story</span></h1>
   <p class="sub">Something to fall asleep to: one topic, told slowly and in depth, with pictures and quiet music. The universe, the mind, a moment in history. Name one, or leave it empty and I'll pick.</p>
 
-  <form id="ask">
-    <textarea id="prompt" maxlength="500" placeholder="The deep sea at night..."></textarea>
+  <% if (closed) { %><p class="closed"><%= closed.message %></p><% } %>
+  <form id="ask"<% if (closed) { %> class="off"<% } %>>
+    <textarea id="prompt" maxlength="500" placeholder="The deep sea at night..."<% if (closed) { %> disabled<% } %>></textarea>
     <div class="row">
       <label>Minutes <input id="minutes" type="number" min="1" max="<%= MAX.minutes %>" value="<%= DEFAULTS.minutes %>"></label>
       <label>Pictures <input id="pictures" type="number" min="1" max="<%= MAX.pictures %>" value="<%= DEFAULTS.pictures %>"></label>
     </div>
     <div class="row">
-      <button id="go">Tell me a story</button>
-      <button type="button" class="ghost" id="inspire">Inspire me</button>
+      <button id="go"<% if (closed) { %> disabled<% } %>>Tell me a story</button>
+      <button type="button" class="ghost" id="inspire"<% if (closed) { %> disabled<% } %>>Inspire me</button>
       <span class="note" id="msg">A few cents a minute in model costs.</span>
     </div>
   </form>
+
+  <section id="making"<% if (!making.length) { %> hidden<% } %>>
+    <h2>Being made now</h2>
+    <ul class="making" id="making-list">
+      <% for (const s of making) { %>
+      <li><a href="/story/<%= s.id %>"><span class="moonlet"></span><b><%= s.getString('title') || s.getString('prompt') %></b>
+        <small><%= s.getString('progress') %></small></a></li>
+      <% } %>
+    </ul>
+  </section>
 
   <% if (told.length) { %>
   <h2>Stories told, most listened to first</h2>
@@ -76,6 +100,26 @@ const told = ctx.app.findRecordsByFilter('stories', "status = 'done'", '-views,-
 <script>
   const form = document.getElementById('ask'), prompt = document.getElementById('prompt'),
     go = document.getElementById('go'), msg = document.getElementById('msg')
+  // stories being made: refresh their progress every few seconds; when one finishes, reload to show it with the others
+  const makingList = document.getElementById('making-list'), makingBox = document.getElementById('making')
+  let shownIds = <%- JSON.stringify(making.map((s) => s.id)) %>
+  const esc = (t) => String(t || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+  const watch = async () => {
+    try {
+      const filter = encodeURIComponent("status != 'done' && status != 'failed'")
+      const r = await (await fetch(`/api/collections/stories/records?filter=${filter}&sort=-created&perPage=10&fields=id,title,prompt,progress,updated`)).json()
+      const items = (r.items || []).filter((s) => Date.now() - new Date(s.updated.replace(' ', 'T')).getTime() < <%- ctx.resolve('story').STALE_MS %>)
+      const ids = items.map((s) => s.id)
+      if (shownIds.some((id) => !ids.includes(id))) return location.reload() // one finished
+      shownIds = ids
+      makingBox.hidden = !items.length
+      makingList.innerHTML = items.map((s) => `<li><a href="/story/${esc(s.id)}"><span class="moonlet"></span><b>${esc(s.title || s.prompt)}</b>
+        <small>${esc(s.progress)}</small></a></li>`).join('')
+    } catch (_) {}
+    setTimeout(watch, 3000)
+  }
+  setTimeout(watch, 3000)
+
   // Inspire me: the model suggests a topic no story has covered yet, dropped into the box to use or change
   const inspire = document.getElementById('inspire'), suggested = []
   inspire.addEventListener('click', async () => {
