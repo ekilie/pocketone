@@ -115,9 +115,8 @@ export async function post(ctx: pages.Context) {
 }
 ```
 
-To tell a used-up limit apart from other failures (a wrong key, a provider that's down), check for the word `limit`
-in the message, or call the contract over HTTP and check the code: refused calls answer `429` with
-`{"code": "limit", ...}`.
+To tell a refused call apart from other failures (a wrong key, a provider that's down), check `err.code === "limit"`.
+Over HTTP, refused calls answer `429` with `{"code": "limit", ...}`.
 
 ## Showing what's left
 

@@ -9,6 +9,7 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 ### Upgrading
 
 - Guest calls (`$llm.for(e)` for a visitor who isn't signed in) are refused until Settings → LLM has a limit for all guests together. An app that answers visitors who aren't signed in adds one there (say $1 a day) after upgrading. Plain `$llm` calls aren't guest calls and aren't affected.
+- A failed `$llm` call's `err.message` no longer starts with its code (`provider: `, `unknown_model: `...). Code that matched on that text checks `err.code` instead.
 
 ### Added
 
@@ -21,6 +22,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 - Custom limits in code: `$llm.onCall` runs before every call that reaches a provider and may change its model, input or subject, or refuse it (`throw e.refuse("...")`, code `limit`); `$llm.onCallDone` runs after with what it used and cost. The limits in Settings → LLM are the built-in handler, run after yours. In Go: `llm.OnCall(app)` and `llm.OnCallDone(app)` in the shared contract package ([Custom limits](docs/guides/custom-limits.md)).
 
 ### Changed
+
+- An `$llm` call that fails throws an `Error` with the failure's `code` (`limit`, `provider`, `unknown_model`, ...) in `err.code` and the message alone in `err.message`. Before, the message began with the code (`provider: vultr: 401: Invalid API key`). Code that matched on that text checks `err.code` instead.
 
 - Settings → LLM is kept in the app's key-value store (kv/v1) under the private name `_llm/settings`; the old
   `_params` row `llm` moves there by itself the first time the settings are read. Nothing to do.

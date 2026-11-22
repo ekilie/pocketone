@@ -81,7 +81,16 @@ back empty. For hard questions, `"high"` lets the model think longer. A model th
 
 ## When something goes wrong
 
-A failed call throws an error with a code:
+A failed call throws an `Error` whose `code` says what went wrong, with a message you can show:
+
+```ts
+try {
+  const r = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt })
+} catch (err: any) {
+  if (err.code === "limit") return ctx.res.json(429, { error: err.message })   // "limit reached: ..., it resets at 00:00 UTC"
+  throw err
+}
+```
 
 | Code | Means |
 |---|---|
@@ -90,6 +99,7 @@ A failed call throws an error with a code:
 | `not_supported` | That kind of provider doesn't do this (music on Cloudflare, say). |
 | `provider` | The provider said no: a wrong key, no credits, a model it doesn't have. Its message is kept, with your provider's name in front. |
 | `timeout` | The provider didn't answer in time. |
+| `limit` | A limit refused the call before it reached the provider: one in Settings → LLM or your own ([Limits](guides/limits.md)). |
 
 ## Costs
 
