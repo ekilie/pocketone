@@ -24,6 +24,16 @@ const data = status === 'done' ? {
   pictures: story.pictures.map((p: any) => ({ start: p.start, image: files(p.image) })),
 } : null
 const title = rec.getString('title') || 'Bedtime Story'
+// how it was made, for the splash: when, how long it took, what it cost, and the models (older stories lack some)
+const made = (story && story.made) || null
+const when = new Date(rec.getString('created').replace(' ', 'T'))
+const clockOf = (s: number) => (s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`)
+const madeLine = [
+  // spelled out by hand: the JS engine has no locale formatting
+  `Made ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][when.getUTCMonth()]} ${when.getUTCDate()}, ${when.getUTCFullYear()}`,
+  made ? `in ${clockOf(made.seconds)}` : '',
+  rec.getFloat('cost') ? `for $${rec.getFloat('cost').toFixed(rec.getFloat('cost') < 0.1 ? 3 : 2)}` : '',
+].filter(Boolean).join(' ')
 %>
 <!doctype html>
 <html lang="en">
@@ -74,6 +84,10 @@ const title = rec.getString('title') || 'Bedtime Story'
     .cover.gone { opacity: 0; pointer-events: none; }
     .cover h1 { font-weight: normal; font-size: clamp(28px, 5vw, 52px); margin: 0; max-width: 900px; }
     .cover p { margin: 0; color: var(--dim); max-width: 560px; }
+    .made { font-size: 13px; line-height: 1.6; color: var(--dim); max-width: 640px; }
+    .made dl { display: inline-grid; grid-template-columns: auto auto; gap: 0 12px; margin: 6px 0 0; text-align: left; }
+    .made dt { opacity: .8; }
+    .made dd { margin: 0; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
     button.play { padding: 14px 30px; border: 0; border-radius: 999px; background: var(--glow); color: #1b1606; font: inherit;
       font-size: 19px; cursor: pointer; }
 
@@ -167,6 +181,15 @@ const title = rec.getString('title') || 'Bedtime Story'
     <h1><%= data.title %></h1>
     <p><%= (story && story.topic) || rec.getString('prompt') %></p>
     <button class="play" id="play">Play the story</button>
+    <div class="made">
+      <div><%= madeLine %></div>
+      <% if (made) { %>
+      <dl>
+        <% for (const step of ['writing', 'voice', 'timing', 'pictures', 'music']) { if (made.models[step]) { %><dt><%= step %></dt><dd><%= made.models[step] %></dd><% } } %>
+        <dt>narrator</dt><dd><%= made.voice %></dd>
+      </dl>
+      <% } %>
+    </div>
     <p style="font-size:14px"><a href="/">Tell another</a></p>
   </div>
   <script>

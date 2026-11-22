@@ -113,6 +113,13 @@ page, to the text model, which suggests one that none of them covers. **Listens:
 (time playing, not scrubbing), the player posts `/view`, which adds one to the story's `views` in a single SQL update so
 listens at the same moment all count. The front page lists stories by it.
 
+**Tuning in the dashboard.** Settings → Bedtime Story in the PocketBase dashboard edits the narrator (voice,
+instructions, seed, speed), the prompts, the picture and music additions, the models and the budget, each with a
+Sample button that plays or shows the result before you save. It's a superuser UI extension registered from
+`pb_hooks/admin_plugins.pb.js` (`e.uiExtensions.push({ name, fs: $os.dirFS(...) })` in `$app.onServe()`), with its
+screen in `pb_admin_ext/bedtime/main.js`. Each story records the models and voice that made it, how long it took and
+what it cost, shown on its splash.
+
 **Guards for a public copy.** Every model call's cost (`usage.costMicroUSD`) is saved as a row; once the day's total
 (from 00:00 UTC) reaches the budget, $1 by default, the form turns off with "Out of tokens for today" and the API
 refuses new stories. Before anything is made, the app checks that each model's provider is set up, answering and
