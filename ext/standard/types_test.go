@@ -26,7 +26,7 @@ func TestTypesFileHasTheSetsJSAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"declare var $mcp:", "declare var $apiTokens:", "declare var $bulkmail:",
+		"declare var $mcp:", "declare var $apiTokens:", "declare var $bulkmail:", "declare var $kv:",
 		"declare function onContracts(", "declare class ContractError", "interface Function {",
 	} {
 		if !strings.Contains(string(types), want) {

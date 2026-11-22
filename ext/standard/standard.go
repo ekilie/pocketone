@@ -31,6 +31,7 @@ import (
 	"pocketone.dev/ext/extkit"
 	"pocketone.dev/ext/extkit/js"
 	"pocketone.dev/ext/jsvm"
+	"pocketone.dev/ext/kv"
 	"pocketone.dev/ext/mcp"
 	"pocketone.dev/ext/pages"
 	"pocketone.dev/ext/pitr"
@@ -63,6 +64,7 @@ type Set struct {
 	LLM        *llm.Extension
 	LLMChat    *llmchat.Extension
 	UICache    *uicache.Extension
+	KV         *kv.Extension
 
 	// Providers is the `providers:` section of pocketone.yaml: which extension provides a contract when several do.
 	Providers extkit.Choices
@@ -97,6 +99,7 @@ func New() *Set {
 		LLM:        llm.New(),
 		LLMChat:    llmchat.New(),
 		UICache:    uicache.New(),
+		KV:         kv.New(),
 	}
 }
 
@@ -125,7 +128,7 @@ type member struct {
 func (s *Set) members() []member {
 	m := []member{
 		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"APITokens", s.APITokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
-		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache}, {"LLM", s.LLM}, {"LLMChat", s.LLMChat},
+		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache}, {"KV", s.KV}, {"LLM", s.LLM}, {"LLMChat", s.LLMChat},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
 		if isNil(m[i].ext) {
@@ -170,6 +173,8 @@ func isNil(e extkit.Extension) bool {
 	case *llmchat.Extension:
 		return v == nil
 	case *uicache.Extension:
+		return v == nil
+	case *kv.Extension:
 		return v == nil
 	}
 	return e == nil

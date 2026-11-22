@@ -61,6 +61,7 @@ no runtime overhead.
 | **[PITR](ext/pitr/README.md)** (Litestream) | Point-in-time restore of your database, from Settings → Backups or `pocketone pitr restore`. | On; `--pitr=false` turns it off |
 | **[Backups](ext/backups/README.md)** | Restore to a moment from your own backups (the latest one before it) when PITR is off. | On |
 | **[Settings](ext/settings/README.md)** | One API for the settings your extensions keep (PITR's bucket, Bulk Mail's sender). | On |
+| **[Key-Value Store](ext/kv/README.md)** | Named JSON values for your app's settings and state (`$kv` in page code), with no collection or migration. | On |
 | **[Pages](ext/pages/README.md)** (formerly PocketPages) | Server-rendered pages from a `pb_pages` folder. | On when `pb_pages` exists |
 | **[MCP](ext/mcp/README.md)** | An MCP endpoint at `/mcp` so agents can manage your app and call its tools. | On |
 | **[API Tokens](ext/api-tokens/README.md)** | Long-lived API tokens (`pbt_…`) with scopes, and an [OAuth server](ext/api-tokens/OAUTH.md) for `pocketone login` and MCP sign-in. | On |
