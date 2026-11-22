@@ -62,8 +62,9 @@ The single app, for every command that opens it: data dir, dev mode, encryption,
 | `migrations_dir` | string |  | The migrations folder. Default: pb_migrations next to pb_data. The --migrationsDir flag wins. |
 | `env_allow` | list of string |  | Names from the .env the app and its JS hooks may read. Default none. |
 | `js_limits.memory` | int |  | The app's JS memory: the JS heap plus the Go objects JS holds, such as 128MiB. Default 64MiB. |
-| `js_limits.task_time` | duration |  | JS time one task (a request, a hook, a cron job) may use, Go calls and waits not counted, such as 10s. Default 5s. |
-| `js_limits.task_wall` | duration |  | Wall time one task may take, Go calls included, such as 60s. Default 30s. |
+| `js_limits.task_time` | duration |  | JS time one stretch of a task (a request, a hook, a cron job, each part between awaits) may use, Go calls and waits not counted, such as 10s. Default 5s. |
+| `js_limits.task_wall` | duration |  | Wall time one stretch of JS may take, sync Go calls included, such as 60s; an async handler's awaits end a stretch and don't count. Default 30s. |
+| `js_limits.await_time` | duration |  | How long an async handler (a request, a hook, a cron job) may take in all, awaits included, such as 30m; past it, or when the client goes away, the handler stops at its next await. Default 15m. |
 
 #### `autotls:`
 

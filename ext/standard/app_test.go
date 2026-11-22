@@ -28,6 +28,7 @@ func TestAppFromConfig(t *testing.T) {
     memory: 1GiB
     task_time: 2m
     task_wall: 10m
+    await_time: 1h
 `
 	if err := os.WriteFile(path, []byte(yaml), 0o644); err != nil {
 		t.Fatal(err)
@@ -51,7 +52,8 @@ func TestAppFromConfig(t *testing.T) {
 	if js.HooksDir != filepath.Join(dir, "hooks") || js.MigrationsDir != "/abs/migrations" || js.HooksPoolSize != 3 {
 		t.Errorf("JS: %+v", js)
 	}
-	if js.VM.MemoryLimit != 1<<30 || js.VM.TaskBudget != 2*time.Minute || js.VM.TaskWall != 10*time.Minute {
+	if js.VM.MemoryLimit != 1<<30 || js.VM.TaskBudget != 2*time.Minute || js.VM.TaskWall != 10*time.Minute ||
+		js.VM.AwaitLimit != time.Hour {
 		t.Errorf("VM: %+v", js.VM)
 	}
 	if a.JSEngine != standard.JSEngineGoja {

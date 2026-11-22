@@ -60,6 +60,7 @@ type ServerTLS struct {
 //	    memory: 128MiB
 //	    task_time: 10s
 //	    task_wall: 60s
+//	    await_time: 30m
 type AppConfig struct {
 	Dir           string        `yaml:"dir" doc:"The data folder (pb_data). Default: pb_data next to the executable. The --dir flag wins."`
 	Dev           *bool         `yaml:"dev" doc:"Dev mode: logs and SQL statements printed to the console. The --dev flag wins."`
@@ -75,9 +76,10 @@ type AppConfig struct {
 
 // JSLimits are the QuickJS engine's limits for the app (ext/jsvm's VMConfig); 0 keeps each default.
 type JSLimits struct {
-	Memory   Size          `yaml:"memory" doc:"The app's JS memory: the JS heap plus the Go objects JS holds, such as 128MiB. Default 64MiB."`
-	TaskTime time.Duration `yaml:"task_time" doc:"JS time one task (a request, a hook, a cron job) may use, Go calls and waits not counted, such as 10s. Default 5s."`
-	TaskWall time.Duration `yaml:"task_wall" doc:"Wall time one task may take, Go calls included, such as 60s. Default 30s."`
+	Memory    Size          `yaml:"memory" doc:"The app's JS memory: the JS heap plus the Go objects JS holds, such as 128MiB. Default 64MiB."`
+	TaskTime  time.Duration `yaml:"task_time" doc:"JS time one stretch of a task (a request, a hook, a cron job, each part between awaits) may use, Go calls and waits not counted, such as 10s. Default 5s."`
+	TaskWall  time.Duration `yaml:"task_wall" doc:"Wall time one stretch of JS may take, sync Go calls included, such as 60s; an async handler's awaits end a stretch and don't count. Default 30s."`
+	AwaitTime time.Duration `yaml:"await_time" doc:"How long an async handler (a request, a hook, a cron job) may take in all, awaits included, such as 30m; past it, or when the client goes away, the handler stops at its next await. Default 15m."`
 }
 
 // Server and App are the sections this package owns. (A multisite host is the `multisite` section, ext/multisite;

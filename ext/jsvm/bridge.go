@@ -788,7 +788,12 @@ func (vm *VM) CallRef(r *jsRef, args []reflect.Value, ft reflect.Type) (reflect.
 	}
 	var ch chan settled
 	var immediate *settled
+	o := &owner{}
+	if vm.onLoop() {
+		o = vm.cur // re-entrant: it belongs to the call it runs for
+	}
 	derr := vm.Do(func() {
+		vm.cur = o
 		s, wait := vm.callHere(r.v, args, resT)
 		if wait != nil {
 			ch = wait
@@ -805,13 +810,7 @@ func (vm *VM) CallRef(r *jsRef, args []reflect.Value, ft reflect.Type) (reflect.
 	} else if vm.onLoop() {
 		s = vm.waitSettled(ch)
 	} else {
-		select {
-		case s = <-ch:
-		case <-time.After(vm.cfg.WaitTimeout):
-			return reflect.Value{}, ErrTimeout
-		case <-vm.quit:
-			return reflect.Value{}, ErrClosed
-		}
+		s = vm.awaitSettled(ch, o, nil)
 	}
 	if s.err != nil {
 		return reflect.Value{}, s.err

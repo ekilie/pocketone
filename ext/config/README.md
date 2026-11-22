@@ -69,6 +69,7 @@ app:
   js_limits:          # the JS engine's limits for the app
     memory: 128MiB
     task_time: 10s
+    await_time: 30m
 pitr:
   retention: 168h
 ```
