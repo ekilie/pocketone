@@ -184,17 +184,17 @@ func (s settingsSection) Test(ctx context.Context, values json.RawMessage) error
 	var problems []string
 	for _, p := range next.Providers {
 		if _, err := s.r.catalog(ctx, p, true); err != nil {
-			problems = append(problems, p.Name+": "+err.Error())
+			problems = append(problems, message(providerError(p, err)))
 			continue
 		}
 		if d, err := newDriver(p); err == nil {
 			if err := d.checkKey(ctx); err != nil {
-				problems = append(problems, providerError(p, err).Error())
+				problems = append(problems, message(providerError(p, err)))
 			}
 		}
 	}
 	if len(problems) > 0 {
-		return badRequest(strings.Join(problems, "; "))
+		return errors.New(strings.Join(problems, "; ")) // shown as is: each starts with its provider's name
 	}
 	return nil
 }
@@ -249,4 +249,13 @@ func (s settingsSection) parse(values json.RawMessage) (Settings, error) {
 		next.Providers = append(next.Providers, p)
 	}
 	return next, nil
+}
+
+// message is an error's text without its code: a contract error's message ("vultr: 401: Invalid API key").
+func message(err error) string {
+	var xe *extkit.Error
+	if errors.As(err, &xe) {
+		return xe.Message
+	}
+	return err.Error()
 }
