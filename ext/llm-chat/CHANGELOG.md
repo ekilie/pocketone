@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.1.0 (2026-11-22)
+
 ### Changed
 
 - Agent Chat is now LLM Chat (`ext/llm-chat`, contract `llm.chat/v1`), answered by the LLM extension's `llm.text/v1`. In page code: `$llm.chat.new()`, `await $llm.chat.open(id, { model }).sendAsync(text)`, `$llm.chat.list()`, `$llm.chat.forget()`. Every send names its `model` (on the chat or the send) and may set `reasoning`; summaries use the same model with reasoning off, and a failed summary no longer fails the send.

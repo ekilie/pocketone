@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.1.3 (2026-11-22)
+
 - The set's language-model members are now `LLM` (`llm`) and `LLMChat` (`llm-chat`), replacing `Agent` and `AgentChat`.
 
 ## 0.1.2 (2026-11-21)

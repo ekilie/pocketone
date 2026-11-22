@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.3 (2026-11-22)
+
 ### Fixed
 
 - A dev-mode instance no longer logs `pb_hooks/<file> failed to load; skipped it (dev mode): <nil>` for every hook file that loaded fine; only a file that really failed is logged.

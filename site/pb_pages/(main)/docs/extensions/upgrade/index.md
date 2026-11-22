@@ -7,7 +7,7 @@ source: "ext/upgrade/README.md"
 
 # Upgrade
 
-Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.4 · Owners: [@benallfree](https://github.com/benallfree)
 
 `pocketone upgrade` replaces the `pocketone` executable with the latest PocketOne release and keeps the old one beside
 it as `<name>-<version>` (for example `pocketone-0.0.3`), so a project can keep running the engine it was built with.

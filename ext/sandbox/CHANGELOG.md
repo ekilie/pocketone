@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.0.4 (2026-11-22)
+
 ### Fixed
 
 - A sandboxed app (every Pocker instance) may bind its own serve hook, `$app.onServe().bindFunc(...)`: it fires once when that app starts serving, so it never reached other apps. Hook files use it to register a superuser UI extension (`e.uiExtensions.push(...)`, as in PocketHost's admin extensions guide); before, the sandbox hid it and the file failed to load with `TypeError: not a function`. The event's server and listener stay hidden, and other hooks still can't be bound from a running handler.

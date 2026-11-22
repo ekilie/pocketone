@@ -7,6 +7,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.3 (2026-11-22)
+
 ### Changed
 
 - An async handler (a route, a hook, a cron job) may now await for up to 15 minutes in all (`VMConfig.AwaitLimit`, `await_time` in `pocketone.yaml`'s `app: js_limits:`). Before, a request whose handler awaited `.async` calls (`sleep.async`, provider calls) for more than 30 seconds failed with a timeout while the VM sat idle. `TaskBudget` (JS time) and `TaskWall` (wall time) now bound each stretch of JS between awaits, as they already did; `WaitTimeout` bounds only the synchronous part.

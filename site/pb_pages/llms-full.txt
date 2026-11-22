@@ -11836,7 +11836,7 @@ Source: https://pocketone.dev/docs/extensions/config
 
 # Config
 
-Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketOne's config file: `pocketone.yaml`, with secrets in a `.env` beside it. Put your app's settings in one file
 instead of a long line of flags. Each extension has its own section in the file.
@@ -12621,7 +12621,7 @@ Source: https://pocketone.dev/docs/extensions/jsvm
 
 # JSVM
 
-Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS API as PocketBase (`$app`, `onX`,
 `routerAdd`, `cronAdd`, `$http`, `$security`, ...) on QuickJS, with one VM per app:
@@ -13146,7 +13146,7 @@ Source: https://pocketone.dev/docs/extensions/llm-chat
 
 # LLM Chat
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 LLM Chat keeps conversations with a language model. Cloud models remember nothing between calls, so every turn has to
 send the conversation again; LLM Chat stores it for you. Start a chat, keep its id, and send it questions: it stores
@@ -15791,7 +15791,7 @@ Source: https://pocketone.dev/docs/extensions/upgrade
 
 # Upgrade
 
-Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.4 · Owners: [@benallfree](https://github.com/benallfree)
 
 `pocketone upgrade` replaces the `pocketone` executable with the latest PocketOne release and keeps the old one beside
 it as `<name>-<version>` (for example `pocketone-0.0.3`), so a project can keep running the engine it was built with.
@@ -17533,7 +17533,7 @@ Source: https://pocketone.dev/docs/extensions/pocker
 
 # Pocker
 
-Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 > Walkthrough: [PocketBase isolates](https://pocketone.dev/docs/features/isolates). This page is the technical reference.
 
@@ -18078,7 +18078,7 @@ Source: https://pocketone.dev/docs/extensions/sandbox
 
 # Sandbox
 
-Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.4 · Owners: [@benallfree](https://github.com/benallfree)
 
 Confines one PocketOne app's JS hooks and migrations, so apps from people you don't know can share one process.
 File access stays inside the app's folder, host primitives are gone, every JS call has a time limit, raw SQL can't
@@ -19341,7 +19341,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 
 # Standard Set
 
-Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every

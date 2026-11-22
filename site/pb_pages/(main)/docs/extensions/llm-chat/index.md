@@ -7,7 +7,7 @@ source: "ext/llm-chat/README.md"
 
 # LLM Chat
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
 
 LLM Chat keeps conversations with a language model. Cloud models remember nothing between calls, so every turn has to
 send the conversation again; LLM Chat stores it for you. Start a chat, keep its id, and send it questions: it stores
