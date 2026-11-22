@@ -3,6 +3,13 @@
 /** search/v1: the types pb_hooks sees. */
 declare namespace contracts.search.v1 {
   /**
+   * ModelInput picks the app's embedding model.
+   */
+  interface ModelInput {
+    model: string;
+  }
+
+  /**
    * Ref names a bucket.
    */
   interface Ref {
@@ -17,22 +24,17 @@ declare namespace contracts.search.v1 {
     title: string;
     description: string;
     owner: string;
-    /**
-     * Model and Dimensions apply only when the bucket is made; the admin can change them later.
-     */
-    model: string;
-    dimensions: number;
+    source: Source | null;
   }
 
   /**
-   * UpdateInput changes a bucket.
+   * UpdateInput changes a bucket. A Source with no collection stops following one (its documents stay).
    */
   interface UpdateInput {
     name: string;
     title: string | null;
     description: string | null;
-    model: string | null;
-    dimensions: number | null;
+    source: Source | null;
     maxDocuments: number | null;
     maxBytes: number | null;
   }
@@ -44,7 +46,7 @@ declare namespace contracts.search.v1 {
     bucket: string;
     /**
      * Name is the document's name in the bucket, usually its path ("guides/install.md"). Its extension picks the
-     * splitter: Markdown by headings, code by blocks, the rest by paragraphs.
+     * splitter: Markdown by headings, code and the rest by blank lines.
      */
     name: string;
     text: string;
@@ -80,20 +82,68 @@ declare namespace contracts.search.v1 {
    * SearchInput is a query.
    */
   interface SearchInput {
+    /**
+     * Buckets are searched together; none searches every bucket. Bucket is one more, for a single-bucket search.
+     */
+    buckets: Array<string>;
     bucket: string;
     query: string;
     /**
      * default 5, at most 50
      */
     limit: number;
-    mode: string;
     /**
      * Prefix keeps matches from documents whose name starts with it.
      */
     prefix: string;
+    viewer: Viewer | null;
+  }
+
+  /**
+   * Source makes a bucket follow one of the app's collections: each record (that Filter keeps) is a document named
+   * "<collection>/<record id>", made of Fields (the first one its title), added, replaced and removed as records are.
+   */
+  interface Source {
+    collection: string;
+    fields: Array<string>;
+    /**
+     * a PocketBase filter, e.g. "published = true"
+     */
+    filter: string;
+  }
+
+  /**
+   * Viewer is who a search is for. Matches from records they can't view (the collection's view rule, as PocketBase
+   * checks it) are left out; documents that aren't records are for everyone. A search without one sees everything.
+   */
+  interface Viewer {
+    /**
+     * Collection and ID are the signed-in auth record; both empty is a guest (signed out).
+     */
+    collection: string;
+    id: string;
   }
 }
 
+/**
+ * Status is the app's embedding model and how far embedding has got across every bucket.
+ *
+ * Runs on every status call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchStatus(handler: (e: contracts.CallEvent<{}>) => void): void;
+/**
+ * SetModel changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again).
+ * Every bucket is embedded again in the background; until a chunk is, keywords still find it.
+ *
+ * Runs on every set_model call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchSetModel(handler: (e: contracts.CallEvent<contracts.search.v1.ModelInput>) => void): void;
 /**
  * Buckets lists the app's buckets with their counts.
  *
@@ -114,7 +164,7 @@ declare function onSearchBuckets(handler: (e: contracts.CallEvent<{}>) => void):
 declare function onSearchBucket(handler: (e: contracts.CallEvent<contracts.search.v1.Ref>) => void): void;
 /**
  * Ensure makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an
- * empty title or description is filled in. Apps call it at startup for the bucket they need.
+ * empty title, description, owner or source is filled in. Apps call it at startup for the bucket they need.
  *
  * Runs on every ensure call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -123,8 +173,7 @@ declare function onSearchBucket(handler: (e: contracts.CallEvent<contracts.searc
  */
 declare function onSearchEnsure(handler: (e: contracts.CallEvent<contracts.search.v1.EnsureInput>) => void): void;
 /**
- * Update changes a bucket's title, description, model or limits (fields left out stay). A new model or dimensions
- * embeds every chunk again.
+ * Update changes a bucket's title, description, source or limits (fields left out stay).
  *
  * Runs on every update call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -180,7 +229,8 @@ declare function onSearchDocuments(handler: (e: contracts.CallEvent<contracts.se
  */
 declare function onSearchRemove(handler: (e: contracts.CallEvent<contracts.search.v1.RemoveInput>) => void): void;
 /**
- * Reindex splits and embeds a bucket's documents again (or only the named ones), e.g. after an error.
+ * Reindex splits and embeds a bucket's documents again (or only the named ones), e.g. after an error; a bucket
+ * that follows a collection reads its records again.
  *
  * Runs on every reindex call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -189,7 +239,7 @@ declare function onSearchRemove(handler: (e: contracts.CallEvent<contracts.searc
  */
 declare function onSearchReindex(handler: (e: contracts.CallEvent<contracts.search.v1.RemoveInput>) => void): void;
 /**
- * Search returns the chunks of a bucket that best match a query, best first.
+ * Search returns the chunks that best match a query across the buckets named, best first.
  *
  * Runs on every search call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

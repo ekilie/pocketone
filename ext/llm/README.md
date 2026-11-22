@@ -74,7 +74,7 @@ while a model works; there are no blocking versions to reach for. Each call name
 
 | Call | What it does |
 |---|---|
-| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage }`. With `schema`, `data` is the parsed JSON. |
+| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, enrich?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage, passages }`. With `schema`, `data` is the parsed JSON. With `enrich` (search buckets, `["help"]`), the best passages from them are sent after the prompt and listed in `passages` ([Search](../search/README.md)). |
 | `$llm.text.streamAsync(opts, onText, onReasoning?)` | The same, calling `onText` with each piece as it's written (`false` stops it). |
 | `$llm.text.count(text \| messages)` | About how many tokens (four characters each). Local, so not async. |
 | `$llm.image.generateAsync({ model, prompt, n?, size?, aspectRatio? })`, `editAsync({ ..., images })` | Pictures: `{ files, model, usage }`. |

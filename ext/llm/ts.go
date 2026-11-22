@@ -20,6 +20,7 @@ type LlmMessage = { role: "system" | "user" | "assistant"; content: string }
 type LlmTextInput = {
   /** "provider/model", e.g. "vultr/glm-5.3". */
   model: string
+  enrich?: LlmEnrich
   system?: string
   prompt?: string
   messages?: LlmMessage[]
@@ -34,7 +35,15 @@ type LlmTextInput = {
   options?: Record<string, any>
 }
 
-type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?: string; model: string; usage: LlmUsage }
+/** A passage enrich added to the prompt, from a search bucket. */
+type LlmPassage = { bucket: string; document: string; heading?: string; text: string; score: number }
+
+/** Adds the best passages from the app's search buckets after the prompt: the buckets, or { buckets, limit?, query? }. */
+type LlmEnrich = string[] | { buckets: string[]; limit?: number; query?: string }
+
+type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?: string; model: string; usage: LlmUsage;
+  /** what enrich added to the prompt, best first */
+  passages?: LlmPassage[] }
 
 type LlmModelsOpts = { provider?: string }
 
@@ -115,6 +124,8 @@ declare var $llm: {
 type LlmChatOptions = {
   /** "provider/model": every send needs one, here or on the send. */
   model?: string
+  /** passages from search buckets, added after each question (and saved with it) */
+  enrich?: LlmEnrich
   reasoning?: "" | "off" | "low" | "medium" | "high"
   system?: string
   /** Sent after the question (history shows the question alone): text, or a function of the question. */

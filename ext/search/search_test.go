@@ -14,6 +14,7 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
 	llmc "pocketone.dev/ext/contracts/llm"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
@@ -30,12 +31,14 @@ func init() {
 }
 
 // fakeEmbed makes a bag-of-words vector (each word hashed to one of 64 dimensions), so texts that share words are
-// close; it remembers every input and fails while fail is set.
+// close; it remembers every input and fails while fail is set. It lists two models: "p/cheap" and "p/dear".
 type fakeEmbed struct {
 	mu     sync.Mutex
 	inputs []string
+	models []string // the model of each input
 	calls  int
 	fail   error
+	none   bool // list no models
 }
 
 func (f *fakeEmbed) Embed(_ context.Context, _ extkit.Auth, in embedv1.EmbedInput) (embedv1.Result, error) {
@@ -46,17 +49,14 @@ func (f *fakeEmbed) Embed(_ context.Context, _ extkit.Auth, in embedv1.EmbedInpu
 		return embedv1.Result{}, f.fail
 	}
 	res := embedv1.Result{Model: in.Model, Usage: llmc.Usage{CostMicroUSD: int64(len(in.Input))}}
-	dims := 64
-	if in.Dimensions > 0 {
-		dims = in.Dimensions
-	}
 	for _, text := range in.Input {
 		f.inputs = append(f.inputs, text)
-		v := make([]float64, dims)
+		f.models = append(f.models, in.Model)
+		v := make([]float64, 64)
 		for _, w := range wordRe.FindAllString(strings.ToLower(text), -1) {
 			h := fnv.New32a()
 			_, _ = h.Write([]byte(w))
-			v[h.Sum32()%uint32(dims)]++
+			v[h.Sum32()%64]++
 		}
 		res.Vectors = append(res.Vectors, v)
 	}
@@ -64,7 +64,13 @@ func (f *fakeEmbed) Embed(_ context.Context, _ extkit.Auth, in embedv1.EmbedInpu
 }
 
 func (f *fakeEmbed) Models(context.Context, extkit.Auth, llmc.ModelsInput) (llmc.Models, error) {
-	return llmc.Models{}, nil
+	if f.none {
+		return llmc.Models{}, nil
+	}
+	return llmc.Models{Models: []llmc.ModelInfo{
+		{ID: "p/dear", Provider: "p", Kinds: []string{"embed"}, Prices: []llmc.Price{{Unit: "1M input tokens", USD: 0.13}}},
+		{ID: "p/cheap", Provider: "p", Kinds: []string{"embed"}, Prices: []llmc.Price{{Unit: "1M input tokens", USD: 0.05}}},
+	}}, nil
 }
 
 func (f *fakeEmbed) embedded() int {
@@ -132,12 +138,12 @@ func mustSearch(t *testing.T, s searchv1.Search, in searchv1.SearchInput) search
 // An app ensures its bucket; ensuring again keeps its settings and fills only what was empty.
 func TestEnsure(t *testing.T) {
 	_, _, s := setup(t)
-	b, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "storytime", Model: "p/embed", Owner: "Story Time"})
-	if err != nil || b.Model != "p/embed" || b.MaxDocuments != DefaultMaxDocuments || b.Owner != "Story Time" {
+	b, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "storytime", Owner: "Story Time"})
+	if err != nil || b.MaxDocuments != DefaultMaxDocuments || b.Owner != "Story Time" {
 		t.Fatalf("ensure: %+v %v", b, err)
 	}
-	b, err = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "storytime", Title: "Library", Model: "other/model", Owner: "x"})
-	if err != nil || b.Title != "Library" || b.Model != "p/embed" || b.Owner != "Story Time" {
+	b, err = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "storytime", Title: "Library", Owner: "x"})
+	if err != nil || b.Title != "Library" || b.Owner != "Story Time" {
 		t.Fatalf("ensure again: %+v %v", b, err)
 	}
 	if _, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "../x"}); !errors.Is(err, searchv1.ErrInvalidName) {
@@ -148,37 +154,49 @@ func TestEnsure(t *testing.T) {
 	}
 }
 
-// A document is split at once and embedded in the background; search finds it by meaning and by keywords.
+// A document is split at once and embedded in the background with the app's model (the cheapest one, picked
+// automatically); search ranks across the buckets asked for.
 func TestAddEmbedSearch(t *testing.T) {
 	app, fe, s := setup(t)
-	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb", Model: "p/embed"})
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "other"})
 	d, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "stories/lighthouse.md", Text: guide})
 	if err != nil || d.Status != StatusQueued || d.Chunks != 3 || d.Kind != KindMarkdown {
 		t.Fatalf("add: %+v %v", d, err)
 	}
+	_, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "other", Name: "owl.md", Text: "# Owl\n\nThe old owl watches the fox from the tower."})
 	drain(t, app)
 	docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "kb"})
 	if len(docs.Documents) != 1 || docs.Documents[0].Status != StatusReady || docs.Documents[0].CostMicroUSD != 3 {
 		t.Fatalf("after embedding: %+v", docs)
 	}
-	if fe.embedded() != 3 || !strings.HasPrefix(fe.inputs[1], "stories/lighthouse.md — Lighthouse › The fox\n\n") {
-		t.Fatalf("embedded: %q", fe.inputs)
+	if fe.embedded() != 4 || fe.models[0] != "p/cheap" || !strings.HasPrefix(fe.inputs[1], "stories/lighthouse.md — Lighthouse › The fox\n\n") {
+		t.Fatalf("embedded: %q with %q", fe.inputs, fe.models)
+	}
+	if st, _ := s.Status(ctx, extkit.Internal); st.Model != "p/cheap" || st.Chunks != 4 || st.Embedded != 4 {
+		t.Fatalf("status: %+v", st)
 	}
 
-	for _, mode := range []string{"", searchv1.ModeSemantic, searchv1.ModeKeyword} {
-		r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "red fox dunes", Mode: mode, Limit: 2})
-		if len(r.Results) == 0 || r.Results[0].Heading != "Lighthouse › The fox" || r.Results[0].Document != "stories/lighthouse.md" {
-			t.Fatalf("mode %q: %+v", mode, r)
-		}
-		if mode == "" && (r.Mode != searchv1.ModeHybrid || r.Results[0].Semantic <= 0 || r.Results[0].Keyword <= 0) {
-			t.Fatalf("hybrid: %+v", r)
-		}
+	r := mustSearch(t, s, searchv1.SearchInput{Buckets: []string{"kb"}, Query: "red fox dunes", Limit: 2})
+	if len(r.Results) == 0 || r.Results[0].Heading != "Lighthouse › The fox" || r.Results[0].Bucket != "kb" || r.Model != "p/cheap" {
+		t.Fatalf("one bucket: %+v", r)
+	}
+	all := mustSearch(t, s, searchv1.SearchInput{Query: "fox", Limit: 10})
+	got := map[string]bool{}
+	for _, x := range all.Results {
+		got[x.Bucket] = true
+	}
+	if !got["kb"] || !got["other"] {
+		t.Fatalf("every bucket: %+v", all)
 	}
 	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "fog", Prefix: "other/"}); len(r.Results) != 0 {
 		t.Fatalf("prefix: %+v", r)
 	}
+	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Buckets: []string{"nope"}, Query: "fox"}); err == nil {
+		t.Fatal("an unknown bucket was searched")
+	}
 	// FTS operators in a query are words, not syntax
-	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Bucket: "kb", Query: `fox" OR NEAR(*`, Mode: "keyword"}); err != nil {
+	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Bucket: "kb", Query: `fox" OR NEAR(*`}); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := s.Bucket(ctx, extkit.Internal, searchv1.Ref{Name: "kb"})
@@ -187,10 +205,10 @@ func TestAddEmbedSearch(t *testing.T) {
 	}
 }
 
-// The same text again costs nothing; a changed document embeds only its new chunks.
-func TestReingest(t *testing.T) {
+// The same text again costs nothing; a changed document embeds only its new chunks; a new model embeds everything.
+func TestReingestAndModel(t *testing.T) {
 	app, fe, s := setup(t)
-	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb", Model: "p/embed"})
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
 	_, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: guide})
 	drain(t, app)
 	d, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: guide})
@@ -198,57 +216,68 @@ func TestReingest(t *testing.T) {
 		t.Fatalf("again: %+v %v", d, err)
 	}
 	changed := strings.Replace(guide, "follow the beam", "trust the beam", 1)
-	d, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: changed})
-	if d.Status != StatusQueued {
+	if d, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: changed}); d.Status != StatusQueued {
 		t.Fatalf("changed: %+v", d)
 	}
 	drain(t, app)
 	if fe.embedded() != 4 || !strings.Contains(fe.inputs[3], "trust the beam") {
 		t.Fatalf("re-embedded more than the changed chunk: %q", fe.inputs)
 	}
-	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "trust", Mode: "keyword"}); len(r.Results) != 1 {
-		t.Fatalf("new text not indexed: %+v", r)
-	}
-	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "follow", Mode: "keyword"}); len(r.Results) != 0 {
-		t.Fatalf("old text still indexed: %+v", r)
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "trust", Limit: 1}); len(r.Results) != 1 || !strings.Contains(r.Results[0].Text, "trust") {
+		t.Fatalf("new text: %+v", r)
 	}
 
-	// a new model embeds everything again
-	model := "p/other"
-	if _, err := s.Update(ctx, extkit.Internal, searchv1.UpdateInput{Name: "kb", Model: &model}); err != nil {
-		t.Fatal(err)
+	st, err := s.SetModel(ctx, extkit.Internal, searchv1.ModelInput{Model: "p/dear"})
+	if err != nil || st.Model != "p/dear" || st.Embedded != 0 {
+		t.Fatalf("set model: %+v %v", st, err)
+	}
+	// until it's embedded again, keywords still find it
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "trust", Limit: 1}); len(r.Results) != 1 {
+		t.Fatalf("during the change: %+v", r)
 	}
 	drain(t, app)
-	if fe.embedded() != 7 {
-		t.Fatalf("after a model change: %d embedded", fe.embedded())
+	// 4 chunks and a query with p/cheap, a query with p/dear during the change, then the 3 chunks
+	if fe.embedded() != 9 || fe.models[8] != "p/dear" {
+		t.Fatalf("after a model change: %d embedded, %q", fe.embedded(), fe.models)
 	}
-	// reindex splits again from the kept text
+	if st, _ := s.Status(ctx, extkit.Internal); st.Embedded != 3 {
+		t.Fatalf("status after: %+v", st)
+	}
 	if n, err := s.Reindex(ctx, extkit.Internal, searchv1.RemoveInput{Bucket: "kb"}); err != nil || n.Count != 1 {
 		t.Fatalf("reindex: %+v %v", n, err)
 	}
+	if _, err := s.SetModel(ctx, extkit.Internal, searchv1.ModelInput{Model: "nomodel"}); err == nil {
+		t.Fatal("a model without a provider was accepted")
+	}
 }
 
-// Without a model a bucket is searched by keywords, and nothing is embedded.
-func TestKeywordOnly(t *testing.T) {
-	_, fe, s := setup(t)
+// Without an embedding model documents wait, search says what's missing, and nothing is lost.
+func TestNoModel(t *testing.T) {
+	app, fe, s := setup(t)
+	fe.none = true
 	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
 	d, _ := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "notes", Text: "The fox jumps.\n\nThe owl sleeps."})
-	if d.Status != StatusReady || d.Kind != KindText {
-		t.Fatalf("add: %+v", d)
+	drain(t, app)
+	if docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "kb"}); docs.Documents[0].Status != StatusQueued || d.Kind != KindText {
+		t.Fatalf("waiting: %+v", docs)
 	}
-	r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "jumping fox"})
-	if r.Mode != searchv1.ModeKeyword || len(r.Results) != 1 || fe.calls != 0 {
-		t.Fatalf("search: %+v (calls %d)", r, fe.calls)
+	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Bucket: "kb", Query: "fox"}); !errors.Is(err, searchv1.ErrNoModel) {
+		t.Fatalf("search: %v", err)
 	}
-	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Bucket: "kb", Query: "fox", Mode: "semantic"}); err == nil {
-		t.Fatal("semantic search without a model")
+	if st, _ := s.Status(ctx, extkit.Internal); st.Model != "" || st.Note == "" {
+		t.Fatalf("status: %+v", st)
+	}
+	fe.none = false // a provider is added
+	drain(t, app)
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "fox"}); len(r.Results) != 1 || fe.embedded() != 2 {
+		t.Fatalf("after a provider: %+v", r)
 	}
 }
 
 // Limits, removing, deleting, uploads and failures.
 func TestLimitsRemoveDelete(t *testing.T) {
 	app, fe, s := setup(t)
-	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb", Model: "p/embed"})
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
 	one := 1
 	_, _ = s.Update(ctx, extkit.Internal, searchv1.UpdateInput{Name: "kb", MaxDocuments: &one})
 	if _, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: "alpha"}); err != nil {
@@ -264,12 +293,8 @@ func TestLimitsRemoveDelete(t *testing.T) {
 
 	fe.fail = llmc.ErrUnknownModel
 	drain(t, app)
-	// a hybrid search whose query can't be embedded ranks by keywords and says why
-	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "alpha"}); r.Mode != searchv1.ModeKeyword || r.Note == "" || len(r.Results) != 1 {
-		t.Fatalf("fallback: %+v", r)
-	}
 	docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "kb"})
-	if docs.Documents[0].Status != StatusError || docs.Documents[0].Error == "" || fe.calls != 2 { // the failed embed, then the search's query
+	if docs.Documents[0].Status != StatusError || docs.Documents[0].Error == "" || fe.calls != 1 {
 		t.Fatalf("a failed embed: %+v (calls %d)", docs, fe.calls)
 	}
 	fe.fail = nil
@@ -288,9 +313,8 @@ func TestLimitsRemoveDelete(t *testing.T) {
 	if _, err := s.Delete(ctx, extkit.Internal, searchv1.Ref{Name: "kb"}); err != nil {
 		t.Fatal(err)
 	}
-	var left int
+	var left, chunks int
 	_ = app.DB().Select("count(*)").From(FTSTable).Row(&left)
-	var chunks int
 	_ = app.DB().Select("count(*)").From(ChunksCollection).Row(&chunks)
 	if left != 0 || chunks != 0 {
 		t.Fatalf("left behind: %d fts rows, %d chunks", left, chunks)
@@ -300,13 +324,120 @@ func TestLimitsRemoveDelete(t *testing.T) {
 	}
 }
 
+// A bucket that follows a collection keeps its records in sync, and a search for a viewer leaves out what they can't
+// view.
+func TestFollowCollection(t *testing.T) {
+	app, _, s := setup(t)
+	members := core.NewAuthCollection("members")
+	if err := app.Save(members); err != nil {
+		t.Fatal(err)
+	}
+	notes := core.NewBaseCollection("notes")
+	rule := "owner = @request.auth.id"
+	notes.ViewRule = types.Pointer(rule)
+	notes.Fields.Add(&core.TextField{Name: "title"}, &core.EditorField{Name: "body"}, &core.BoolField{Name: "published"},
+		&core.RelationField{Name: "owner", CollectionId: members.Id, MaxSelect: 1})
+	if err := app.Save(notes); err != nil {
+		t.Fatal(err)
+	}
+	member := func(email string) *core.Record {
+		r := core.NewRecord(members)
+		r.SetEmail(email)
+		r.SetPassword("password123")
+		if err := app.Save(r); err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	ann, bob := member("ann@example.com"), member("bob@example.com")
+	note := func(title, body, owner string, published bool) *core.Record {
+		r := core.NewRecord(notes)
+		r.Set("title", title)
+		r.Set("body", body)
+		r.Set("owner", owner)
+		r.Set("published", published)
+		if err := app.Save(r); err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	n1 := note("Fox facts", "<p>The <b>red fox</b> hunts at dawn.</p>", ann.Id, true) // before the bucket follows
+	if _, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "notes",
+		Source: &searchv1.Source{Collection: "notes", Fields: []string{"title", "body"}, Filter: "published = true"}}); err != nil {
+		t.Fatal(err)
+	}
+	n2 := note("Fox dens", "<p>A fox den has many exits.</p>", bob.Id, true)
+	_ = note("Fox secrets", "<p>Draft about the fox.</p>", ann.Id, false) // filtered out
+	drain(t, app)
+
+	docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "notes"})
+	if len(docs.Documents) != 2 || docs.Documents[0].Record == nil || docs.Documents[0].Kind != KindMarkdown {
+		t.Fatalf("documents: %+v", docs)
+	}
+	r := mustSearch(t, s, searchv1.SearchInput{Bucket: "notes", Query: "red fox hunts", Limit: 1})
+	if len(r.Results) != 1 || r.Results[0].Record.ID != n1.Id || r.Results[0].Heading != "Fox facts" ||
+		strings.Contains(r.Results[0].Text, "<b>") {
+		t.Fatalf("search: %+v", r)
+	}
+
+	ids := func(r searchv1.Results) string {
+		var out []string
+		for _, x := range r.Results {
+			out = append(out, x.Record.ID)
+		}
+		return strings.Join(out, ",")
+	}
+	all := mustSearch(t, s, searchv1.SearchInput{Bucket: "notes", Query: "fox"})
+	asAnn := mustSearch(t, s, searchv1.SearchInput{Bucket: "notes", Query: "fox", Viewer: &searchv1.Viewer{Collection: "members", ID: ann.Id}})
+	asGuest := mustSearch(t, s, searchv1.SearchInput{Bucket: "notes", Query: "fox", Viewer: &searchv1.Viewer{}})
+	if len(all.Results) != 2 || ids(asAnn) != n1.Id || len(asGuest.Results) != 0 {
+		t.Fatalf("viewers: all %s, ann %s, guest %s", ids(all), ids(asAnn), ids(asGuest))
+	}
+
+	// edits follow; unpublishing and deleting remove
+	n1.Set("body", "<p>The red fox naps in the sun.</p>")
+	_ = app.Save(n1)
+	drain(t, app)
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "notes", Query: "naps sun", Limit: 1}); len(r.Results) != 1 || !strings.Contains(r.Results[0].Text, "naps") {
+		t.Fatalf("after an edit: %+v", r)
+	}
+	n1.Set("published", false)
+	_ = app.Save(n1)
+	_ = app.Delete(n2)
+	if docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "notes"}); len(docs.Documents) != 0 {
+		t.Fatalf("after unpublish and delete: %+v", docs)
+	}
+	if _, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "bad", Source: &searchv1.Source{Collection: "notes", Fields: []string{"nope"}}}); err == nil {
+		t.Fatal("a source with a missing field was accepted")
+	}
+}
+
+// Enrich searches the buckets and words the passages for a prompt.
+func TestEnrich(t *testing.T) {
+	app, _, s := setup(t)
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	_, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: guide})
+	drain(t, app)
+	var e llmc.Enrich
+	if err := json.Unmarshal([]byte(`["kb"]`), &e); err != nil || len(e.Buckets) != 1 {
+		t.Fatalf("shorthand: %+v %v", e, err)
+	}
+	text, passages, err := searchv1.Enrich(ctx, app, &llmc.Enrich{Buckets: []string{"kb"}, Limit: 2}, "where does the fox live?")
+	if err != nil || len(passages) != 2 || passages[0].Heading != "Lighthouse › The fox" || !strings.Contains(text, "[1] a.md › Lighthouse › The fox\nA red fox") {
+		t.Fatalf("enrich: %q %+v %v", text, passages, err)
+	}
+	if text, p, err := searchv1.Enrich(ctx, app, nil, "x"); text != "" || p != nil || err != nil {
+		t.Fatal("enrich without buckets did something")
+	}
+}
+
 const hooks = `onRecordCreate(async (e) => {
-  const b = $search.ensure({ name: "storytime", title: "Story Time library", model: "p/embed" })
+  const b = $search.ensure({ name: "storytime", title: "Story Time library" })
   const d = $search.add({ bucket: "storytime", name: "fox.md", text: "# Fox\n\nThe red fox naps in the dunes." })
-  const r = await $search.searchAsync({ bucket: "storytime", query: "fox", mode: "keyword" })
+  const r = await $search.searchAsync({ buckets: "storytime", query: "fox", viewer: null })
   e.record.set("result", JSON.stringify({
     title: b.title, status: d.status, buckets: $search.buckets().length, docs: $search.documents("storytime").length,
-    heading: r.results[0].heading, removed: $search.remove("storytime", "fox.md"), syncSearch: typeof $search.search,
+    heading: r.results[0].heading, model: $search.status().model, removed: $search.remove("storytime", "fox.md"),
   }))
   e.next()
 }, "probes")
@@ -335,14 +466,14 @@ func TestJS(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out struct {
-		Title, Status, Heading, SyncSearch string
-		Buckets, Docs, Removed             int
+		Title, Status, Heading, Model string
+		Buckets, Docs, Removed        int
 	}
 	if err := json.Unmarshal([]byte(r.GetString("result")), &out); err != nil {
 		t.Fatalf("result %q: %v", r.GetString("result"), err)
 	}
 	if out.Title != "Story Time library" || out.Status != StatusQueued || out.Buckets != 1 || out.Docs != 1 ||
-		out.Heading != "Fox" || out.Removed != 1 || out.SyncSearch != "undefined" {
+		out.Heading != "Fox" || out.Model != "p/cheap" || out.Removed != 1 {
 		t.Fatalf("from JS: %+v", out)
 	}
 }

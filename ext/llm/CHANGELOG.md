@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Added
+
+- `enrich` on `$llm.text.completeAsync` and `streamAsync` (llm.text/v1): name search buckets (`enrich: ["help"]`, or `{ buckets, limit, query }`) and the best passages are searched with the prompt and sent after it; the answer's `passages` lists them. Needs the Search extension.
+
 ### Changed
 
 - Settings → LLM is kept in the app's key-value store (kv/v1) under the private name `_llm/settings`; the old

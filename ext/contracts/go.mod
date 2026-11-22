@@ -3,6 +3,7 @@ module pocketone.dev/ext/contracts
 go 1.27
 
 require (
+	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
@@ -13,7 +14,6 @@ require (
 
 require (
 	ganigeorgiev.com/fexpr v0.7.0 // indirect
-	ganigeorgiev.com/pocketbase/dbx v1.13.0 // indirect
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect

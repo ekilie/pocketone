@@ -73,6 +73,18 @@ const jsPrelude = `(() => {
   const callAsync = async (op, o) => JSON.parse(await n.call.async(op, S(o)));
   const ref = (x) => (typeof x === "string" ? { name: x } : x);
   const names = (x) => (x == null ? [] : [].concat(x));
+  // viewer: an auth record (ctx.auth, e.auth), or null/undefined for a guest; left out, the search sees everything
+  const viewer = (v) => {
+    if (v == null || v === "guest") return {};
+    if (typeof v.collection === "function") return { collection: v.collection().name, id: v.id };
+    return v;
+  };
+  const query = (o) => {
+    const q = { ...o };
+    if (typeof q.buckets === "string") q.buckets = [q.buckets];
+    if ("viewer" in q) q.viewer = viewer(q.viewer);
+    return q;
+  };
   globalThis.$search = Object.freeze({
     buckets: () => call("buckets").buckets,
     bucket: (name) => call("bucket", ref(name)),
@@ -83,42 +95,51 @@ const jsPrelude = `(() => {
     documents: (x) => call("documents", typeof x === "string" ? { bucket: x } : x).documents,
     remove: (bucket, list) => call("remove", { bucket, names: names(list) }).count,
     reindex: (bucket, list) => call("reindex", { bucket, names: names(list) }).count,
-    searchAsync: (o) => callAsync("search", o),
+    status: () => call("status"),
+    searchAsync: (o) => callAsync("search", query(o)),
   });
 })()`
 
 // TypeScript is $search's declarations for the app's types.d.ts.
 func (*Extension) TypeScript() string { return typeScript }
 
-const typeScript = `type SearchBucket = { name: string; title: string; description: string; owner: string; model: string; dimensions: number;
+const typeScript = `type SearchSource = { collection: string; fields: string[]; filter?: string }
+
+type SearchBucket = { name: string; title: string; description: string; owner: string; source?: SearchSource;
   maxDocuments: number; maxBytes: number; documents: number; chunks: number; bytes: number; pending: number; errors: number;
   created: string; updated: string }
 
-type SearchDocument = { bucket: string; name: string; kind: "markdown" | "code" | "text"; size: number; hash: string;
-  status: "queued" | "embedding" | "ready" | "error"; error?: string; chunks: number; tokens: number; costMicroUSD: number;
-  unchanged?: boolean; created: string; updated: string }
+type SearchRecordRef = { collection: string; id: string }
 
-type SearchResult = { text: string; document: string; heading?: string; startLine: number; endLine: number;
-  score: number; semantic?: number; keyword?: number }
+type SearchDocument = { bucket: string; name: string; kind: "markdown" | "code" | "text"; size: number; hash: string;
+  status: "queued" | "embedding" | "ready" | "error"; error?: string; chunks: number; record?: SearchRecordRef; tokens: number;
+  costMicroUSD: number; unchanged?: boolean; created: string; updated: string }
+
+type SearchResult = { bucket: string; document: string; text: string; heading?: string; startLine: number; endLine: number;
+  record?: SearchRecordRef; score: number }
 
 /** Search buckets (ext/search, the search/v1 contract). Searching is async; everything else is local. */
 declare var $search: {
   /** Every bucket, by name. */
   buckets(): SearchBucket[]
   bucket(name: string): SearchBucket
-  /** Makes the bucket if it's missing (call it at startup for the bucket your app needs) and returns it. */
-  ensure(o: string | { name: string; title?: string; description?: string; owner?: string; model?: string; dimensions?: number }): SearchBucket
-  update(o: { name: string; title?: string; description?: string; model?: string; dimensions?: number; maxDocuments?: number; maxBytes?: number }): SearchBucket
+  /** Makes the bucket if it's missing (call it at startup for the bucket your app needs) and returns it. With source,
+   * the bucket follows a collection: each record is a document, kept in sync as records are saved and deleted. */
+  ensure(o: string | { name: string; title?: string; description?: string; owner?: string; source?: SearchSource }): SearchBucket
+  update(o: { name: string; title?: string; description?: string; source?: SearchSource; maxDocuments?: number; maxBytes?: number }): SearchBucket
   /** Deletes a bucket and everything in it. */
   deleteBucket(name: string): number
   /** Adds (or replaces) a document by name; it's embedded in the background. */
   add(o: { bucket: string; name: string; text: string }): SearchDocument
   documents(bucket: string | { bucket: string; prefix?: string }): SearchDocument[]
   remove(bucket: string, names: string | string[]): number
-  /** Splits and embeds documents again (all of them when names is left out). */
+  /** Splits and embeds documents again (all of them when names is left out; a followed collection is read again). */
   reindex(bucket: string, names?: string | string[]): number
-  /** The best matches for a query, best first. mode: "hybrid" (default), "semantic" or "keyword". */
-  searchAsync(o: { bucket: string; query: string; limit?: number; mode?: "hybrid" | "semantic" | "keyword"; prefix?: string }):
-    Promise<{ results: SearchResult[]; mode: string; model?: string; usage: { costMicroUSD: number; inputTokens?: number } }>
+  /** The app's embedding model and how much is embedded. */
+  status(): { model: string; chunks: number; embedded: number; note?: string }
+  /** The best matches for a query across buckets (all of them when none are named), best first. viewer (an auth record,
+   * or null for a guest) leaves out records they can't view; left out, the search sees everything. */
+  searchAsync(o: { query: string; buckets?: string | string[]; bucket?: string; limit?: number; prefix?: string; viewer?: core.Record | null }):
+    Promise<{ results: SearchResult[]; model?: string; usage: { costMicroUSD: number; inputTokens?: number } }>
 }
 `

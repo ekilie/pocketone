@@ -31,6 +31,32 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	return &guardSearch{inner, g}
 },
 	extkit.Op[Search]{
+		Name:   "status",
+		Desc:   "Is the app's embedding model and how far embedding has got across every bucket.",
+		Method: "GET",
+		Path:   "status",
+		Scope:  "search:read",
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			return impl.Status(ctx, a)
+		},
+	},
+	extkit.Op[Search]{
+		Name:   "set_model",
+		Desc:   "Changes the app's embedding model (\"provider/model\" from llm.embed/v1's models; \"\" picks one again). Every bucket is embedded again in the background; until a chunk is, keywords still find it.",
+		Method: "POST",
+		Path:   "set-model",
+		In:     reflect.TypeOf(ModelInput{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in ModelInput
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.SetModel(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
 		Name:   "buckets",
 		Desc:   "Lists the app's buckets with their counts.",
 		Method: "GET",
@@ -59,7 +85,7 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	},
 	extkit.Op[Search]{
 		Name:   "ensure",
-		Desc:   "Makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an empty title or description is filled in. Apps call it at startup for the bucket they need.",
+		Desc:   "Makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an empty title, description, owner or source is filled in. Apps call it at startup for the bucket they need.",
 		Method: "POST",
 		Path:   "ensure",
 		In:     reflect.TypeOf(EnsureInput{}),
@@ -74,7 +100,7 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	},
 	extkit.Op[Search]{
 		Name:   "update",
-		Desc:   "Changes a bucket's title, description, model or limits (fields left out stay). A new model or dimensions embeds every chunk again.",
+		Desc:   "Changes a bucket's title, description, source or limits (fields left out stay).",
 		Method: "POST",
 		Path:   "update",
 		In:     reflect.TypeOf(UpdateInput{}),
@@ -162,7 +188,7 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	},
 	extkit.Op[Search]{
 		Name:   "reindex",
-		Desc:   "Splits and embeds a bucket's documents again (or only the named ones), e.g. after an error.",
+		Desc:   "Splits and embeds a bucket's documents again (or only the named ones), e.g. after an error; a bucket that follows a collection reads its records again.",
 		Method: "POST",
 		Path:   "reindex",
 		In:     reflect.TypeOf(RemoveInput{}),
@@ -177,7 +203,7 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	},
 	extkit.Op[Search]{
 		Name:   "search",
-		Desc:   "Returns the chunks of a bucket that best match a query, best first.",
+		Desc:   "Returns the chunks that best match a query across the buckets named, best first.",
 		Method: "POST",
 		Path:   "search",
 		Scope:  "search:read",
@@ -197,6 +223,35 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 type guardSearch struct {
 	inner Search
 	g     *extkit.Guard[Search]
+}
+
+func (d *guardSearch) Status(ctx context.Context, a extkit.Auth) (Status, error) {
+	in := struct{}{}
+	return extkit.Run(d.g, a, "status", &in, func(in *struct{}) (Status, error) {
+		return d.inner.Status(ctx, a)
+	})
+}
+
+// OnStatus binds fn to status calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse.
+func OnStatus(owner any, fn func(e *extkit.CallEvent) error) {
+	W.On(owner, "status").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e)
+	})
+}
+
+func (d *guardSearch) SetModel(ctx context.Context, a extkit.Auth, in ModelInput) (Status, error) {
+	return extkit.Run(d.g, a, "set_model", &in, func(in *ModelInput) (Status, error) {
+		return d.inner.SetModel(ctx, a, *in)
+	})
+}
+
+// OnSetModel binds fn to set_model calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnSetModel(owner any, fn func(e *extkit.CallEvent, in *ModelInput) error) {
+	W.On(owner, "set_model").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*ModelInput))
+	})
 }
 
 func (d *guardSearch) Buckets(ctx context.Context, a extkit.Auth) (BucketList, error) {
@@ -364,6 +419,16 @@ func NewClient(baseURL, token string, hc *http.Client) *Client {
 }
 
 var _ Search = (*Client)(nil)
+
+func (c *Client) Status(ctx context.Context, _ extkit.Auth) (Status, error) {
+	var out Status
+	return out, c.c.Call(ctx, "GET", "status", struct{}{}, &out)
+}
+
+func (c *Client) SetModel(ctx context.Context, _ extkit.Auth, in ModelInput) (Status, error) {
+	var out Status
+	return out, c.c.Call(ctx, "POST", "set-model", in, &out)
+}
 
 func (c *Client) Buckets(ctx context.Context, _ extkit.Auth) (BucketList, error) {
 	var out BucketList

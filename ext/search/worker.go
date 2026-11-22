@@ -91,13 +91,13 @@ func (s *service) embedNext(ctx context.Context) (bool, error) {
 	if err != nil {
 		return true, s.fail(doc, "its bucket is gone")
 	}
-	model := b.GetString("model")
-	if model == "" {
-		return true, s.setStatus(doc, StatusReady, "")
+	model, err := s.currentModel(ctx)
+	if err != nil {
+		return false, nil // no embedding model yet: documents wait, and Status says why
 	}
 	embed, ok := embedv1.Contract.Of(s.app)
 	if !ok {
-		return true, s.fail(doc, "nothing provides llm.embed/v1 (add the llm extension and a provider in Settings → LLM)")
+		return false, nil
 	}
 	if err := s.setStatus(doc, StatusEmbedding, ""); err != nil {
 		return true, err
@@ -106,13 +106,14 @@ func (s *service) embedNext(ctx context.Context) (bool, error) {
 	for {
 		var batch []pendingChunk
 		if err := s.app.DB().Select("id", "heading", "text").From(ChunksCollection).
-			Where(dbx.And(dbx.HashExp{"document": doc.Id, "vector": ""})).OrderBy("seq").Limit(int64(BatchSize)).All(&batch); err != nil {
+			Where(dbx.And(dbx.HashExp{"document": doc.Id}, dbx.Or(dbx.HashExp{"vector": ""}, dbx.Not(dbx.HashExp{"model": model})))).
+			OrderBy("seq").Limit(int64(BatchSize)).All(&batch); err != nil {
 			return true, err
 		}
 		if len(batch) == 0 {
 			break
 		}
-		in := embedv1.EmbedInput{Model: model, Dimensions: b.GetInt("dimensions")}
+		in := embedv1.EmbedInput{Model: model}
 		for _, c := range batch {
 			in.Input = append(in.Input, embedText(name, piece{Heading: c.Heading, Text: c.Text}))
 		}
@@ -129,7 +130,7 @@ func (s *service) embedNext(ctx context.Context) (bool, error) {
 		s.work.Lock()
 		err = s.app.RunInTransaction(func(tx core.App) error {
 			for i, c := range batch {
-				if _, err := tx.DB().Update(ChunksCollection, dbx.Params{"vector": encodeVector(res.Vectors[i])}, dbx.HashExp{"id": c.ID}).Execute(); err != nil {
+				if _, err := tx.DB().Update(ChunksCollection, dbx.Params{"vector": encodeVector(res.Vectors[i]), "model": model}, dbx.HashExp{"id": c.ID}).Execute(); err != nil {
 					return err
 				}
 			}
@@ -147,7 +148,8 @@ func (s *service) embedNext(ctx context.Context) (bool, error) {
 	s.work.Lock()
 	defer s.work.Unlock()
 	var left int
-	_ = s.app.DB().Select("count(*)").From(ChunksCollection).Where(dbx.HashExp{"document": doc.Id, "vector": ""}).Row(&left)
+	_ = s.app.DB().Select("count(*)").From(ChunksCollection).
+		Where(dbx.And(dbx.HashExp{"document": doc.Id}, dbx.Or(dbx.HashExp{"vector": ""}, dbx.Not(dbx.HashExp{"model": model})))).Row(&left)
 	if left > 0 {
 		return true, nil
 	}

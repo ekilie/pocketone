@@ -103,6 +103,12 @@ func setup(t *testing.T) (core.App, *fakeCloud) {
 	if _, err := extkit.Setup(app, []extkit.Extension{llm.New()}, nil, nil); err != nil {
 		t.Fatal(err)
 	}
+	return app, withFakeCloud(t, app)
+}
+
+// withFakeCloud adds a provider named "fake" that a fakeCloud answers.
+func withFakeCloud(t *testing.T, app core.App) *fakeCloud {
+	t.Helper()
 	fc := &fakeCloud{}
 	srv := httptest.NewServer(fc)
 	t.Cleanup(srv.Close)
@@ -111,7 +117,7 @@ func setup(t *testing.T) (core.App, *fakeCloud) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return app, fc
+	return fc
 }
 
 func TestText(t *testing.T) {

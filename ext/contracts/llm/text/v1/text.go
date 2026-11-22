@@ -57,6 +57,8 @@ type CompleteInput struct {
 	// doesn't reason ignores it.
 	Reasoning string      `json:"reasoning,omitempty"`
 	Options   llm.Options `json:"options,omitempty"`
+	// Enrich adds the best passages from the app's search buckets after the prompt (search/v1).
+	Enrich *llm.Enrich `json:"enrich,omitempty"`
 }
 
 // Message is one turn of a conversation.
@@ -74,6 +76,8 @@ type CompleteResult struct {
 	StopReason string    `json:"stopReason,omitempty"` // "stop", "length" or "cancelled"
 	Model      string    `json:"model"`                // the provider/model that answered
 	Usage      llm.Usage `json:"usage"`
+	// Passages are what Enrich added to the prompt, best first (cite them, or show where the answer came from).
+	Passages []llm.Passage `json:"passages,omitempty"`
 }
 
 // Chunk is one entry of a streamed answer: a piece of text (or of reasoning) as it's written, or, last, done with the

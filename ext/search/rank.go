@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	"ganigeorgiev.com/pocketbase/dbx"
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
 	"pocketone.dev/ext/contracts/llm"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
@@ -24,9 +24,10 @@ const (
 	maxQueries   = 256
 )
 
-// vecCache is a bucket's vectors as of a version.
+// vecCache is a bucket's vectors from one model, as of a version.
 type vecCache struct {
 	version int64
+	model   string
 	ids     []string
 	names   []string // each chunk's document name, for Prefix
 	vecs    [][]float32
@@ -38,23 +39,23 @@ type vecRow struct {
 	Vector string `db:"vector"`
 }
 
-// vectors returns a bucket's vectors, loading them when they changed.
-func (s *service) vectors(bucketID string) (*vecCache, error) {
+// vectors returns a bucket's vectors from model, loading them when they changed.
+func (s *service) vectors(bucketID, model string) (*vecCache, error) {
 	s.mu.Lock()
 	version := s.versions[bucketID]
 	c := s.vecs[bucketID]
 	s.mu.Unlock()
-	if c != nil && c.version == version {
+	if c != nil && c.version == version && c.model == model {
 		return c, nil
 	}
 	var rows []vecRow
 	err := s.app.DB().Select("c.id AS id", "d.name AS name", "c.vector AS vector").
 		From(ChunksCollection+" c").InnerJoin(DocumentsCollection+" d", dbx.NewExp("d.id = c.document")).
-		Where(dbx.And(dbx.HashExp{"c.bucket": bucketID}, dbx.NewExp("c.vector != ''"))).All(&rows)
+		Where(dbx.And(dbx.HashExp{"c.bucket": bucketID, "c.model": model}, dbx.NewExp("c.vector != ''"))).All(&rows)
 	if err != nil {
 		return nil, err
 	}
-	c = &vecCache{version: version}
+	c = &vecCache{version: version, model: model}
 	for _, r := range rows {
 		if v := decodeVector(r.Vector); len(v) > 0 {
 			c.ids, c.names, c.vecs = append(c.ids, r.ID), append(c.names, r.Name), append(c.vecs, v)
@@ -67,24 +68,24 @@ func (s *service) vectors(bucketID string) (*vecCache, error) {
 }
 
 // queryVector embeds a query (cached).
-func (s *service) queryVector(ctx context.Context, model string, dims int, q string) ([]float32, llm.Usage, string, error) {
-	key := model + "|" + strconv.Itoa(dims) + "|" + q
+func (s *service) queryVector(ctx context.Context, model, q string) ([]float32, llm.Usage, error) {
+	key := model + "|" + q
 	s.mu.Lock()
 	v, ok := s.queries[key]
 	s.mu.Unlock()
 	if ok {
-		return v, llm.Usage{}, model, nil
+		return v, llm.Usage{}, nil
 	}
 	embed, ok := embedv1.Contract.Of(s.app)
 	if !ok {
-		return nil, llm.Usage{}, "", llm.ErrNotConfigured
+		return nil, llm.Usage{}, searchv1.ErrNoModel
 	}
-	res, err := embed.Embed(ctx, extkit.Internal, embedv1.EmbedInput{Model: model, Input: []string{q}, Dimensions: dims})
+	res, err := embed.Embed(ctx, extkit.Internal, embedv1.EmbedInput{Model: model, Input: []string{q}})
 	if err != nil {
-		return nil, llm.Usage{}, "", err
+		return nil, llm.Usage{}, err
 	}
 	if len(res.Vectors) != 1 {
-		return nil, llm.Usage{}, "", fmt.Errorf("search: the model returned %d vectors for one query", len(res.Vectors))
+		return nil, llm.Usage{}, fmt.Errorf("search: the model returned %d vectors for one query", len(res.Vectors))
 	}
 	f := make([]float32, len(res.Vectors[0]))
 	for i, x := range res.Vectors[0] {
@@ -97,7 +98,7 @@ func (s *service) queryVector(ctx context.Context, model string, dims int, q str
 	}
 	s.queries[key] = v
 	s.mu.Unlock()
-	return v, res.Usage, res.Model, nil
+	return v, res.Usage, nil
 }
 
 type hit struct {
@@ -116,14 +117,21 @@ func ftsQuery(q string) string {
 	return strings.Join(words, " OR ")
 }
 
-// keyword ranks a bucket's chunks by BM25.
-func (s *service) keyword(bucketID, q, prefix string, n int) ([]hit, error) {
+// keyword ranks the buckets' chunks by BM25.
+func (s *service) keyword(bucketIDs []string, q, prefix string, n int) ([]hit, error) {
 	m := ftsQuery(q)
 	if m == "" {
 		return nil, nil
 	}
-	sql := "SELECT chunk, bm25(" + FTSTable + ") AS r FROM " + FTSTable + " WHERE " + FTSTable + " MATCH {:m} AND bucket = {:b}"
-	params := dbx.Params{"m": m, "b": bucketID, "n": n}
+	params := dbx.Params{"m": m, "n": n}
+	in := make([]string, len(bucketIDs))
+	for i, id := range bucketIDs {
+		k := fmt.Sprintf("b%d", i)
+		params[k] = id
+		in[i] = "{:" + k + "}"
+	}
+	sql := "SELECT chunk, bm25(" + FTSTable + ") AS r FROM " + FTSTable + " WHERE " + FTSTable + " MATCH {:m} AND bucket IN (" +
+		strings.Join(in, ",") + ")"
 	if prefix != "" {
 		sql += " AND substr(name, 1, {:pl}) = {:p}"
 		params["p"], params["pl"] = prefix, len(prefix)
@@ -143,18 +151,20 @@ func (s *service) keyword(bucketID, q, prefix string, n int) ([]hit, error) {
 	return out, nil
 }
 
-// semantic ranks a bucket's chunks by cosine similarity to qv.
-func semantic(c *vecCache, qv []float32, prefix string, n int) []hit {
+// semantic ranks the caches' chunks by cosine similarity to qv.
+func semantic(caches []*vecCache, qv []float32, prefix string, n int) []hit {
 	var out []hit
-	for i, v := range c.vecs {
-		if len(v) != len(qv) || (prefix != "" && !strings.HasPrefix(c.names[i], prefix)) {
-			continue
+	for _, c := range caches {
+		for i, v := range c.vecs {
+			if len(v) != len(qv) || (prefix != "" && !strings.HasPrefix(c.names[i], prefix)) {
+				continue
+			}
+			var dot float32
+			for j := range v {
+				dot += v[j] * qv[j]
+			}
+			out = append(out, hit{c.ids[i], float64(dot)})
 		}
-		var dot float32
-		for j := range v {
-			dot += v[j] * qv[j]
-		}
-		out = append(out, hit{c.ids[i], float64(dot)})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].score > out[j].score })
 	if len(out) > n {
@@ -170,18 +180,45 @@ type chunkRow struct {
 	StartLine int    `db:"start_line"`
 	EndLine   int    `db:"end_line"`
 	Name      string `db:"name"`
+	Record    string `db:"record"`
+	Bucket    string `db:"bucket"`
+}
+
+// searchBuckets is the bucket records a search names (every bucket when it names none).
+func (s *service) searchBuckets(in searchv1.SearchInput) ([]*core.Record, error) {
+	names := append([]string(nil), in.Buckets...)
+	if in.Bucket != "" {
+		names = append(names, in.Bucket)
+	}
+	if len(names) == 0 {
+		return s.app.FindRecordsByFilter(BucketsCollection, "", "name", 0, 0)
+	}
+	var out []*core.Record
+	seen := map[string]bool{}
+	for _, n := range names {
+		if seen[n] {
+			continue
+		}
+		seen[n] = true
+		b, err := s.findBucket(n)
+		if err != nil {
+			return nil, &extkit.Error{Code: searchv1.ErrNoBucket.Code, Status: searchv1.ErrNoBucket.Status, Message: "no bucket named " + n}
+		}
+		out = append(out, b)
+	}
+	return out, nil
 }
 
 // Search implements search/v1.
 func (s *service) Search(ctx context.Context, _ extkit.Auth, in searchv1.SearchInput) (searchv1.Results, error) {
 	out := searchv1.Results{Results: []searchv1.Result{}}
-	b, err := s.findBucket(in.Bucket)
-	if err != nil {
-		return out, err
-	}
 	q := strings.TrimSpace(in.Query)
 	if q == "" {
 		return out, badRequest("give a query")
+	}
+	buckets, err := s.searchBuckets(in)
+	if err != nil || len(buckets) == 0 {
+		return out, err
 	}
 	limit := in.Limit
 	if limit <= 0 {
@@ -189,103 +226,74 @@ func (s *service) Search(ctx context.Context, _ extkit.Auth, in searchv1.SearchI
 	}
 	limit = min(limit, MaxLimit)
 	pool := max(limit*4, 20)
-
-	mode := in.Mode
-	switch mode {
-	case "":
-		mode = searchv1.ModeHybrid
-	case searchv1.ModeHybrid, searchv1.ModeSemantic, searchv1.ModeKeyword:
-	default:
-		return out, badRequest("mode is hybrid, semantic or keyword")
+	viewer, err := s.viewer(in.Viewer)
+	if err != nil {
+		return out, err
 	}
-	model := b.GetString("model")
-	if model == "" {
-		if mode == searchv1.ModeSemantic {
-			return out, badRequest("this bucket has no embedding model; search it by keywords")
-		}
-		mode = searchv1.ModeKeyword
+	if viewer != nil {
+		pool *= 2 // some matches may be records the viewer can't see
 	}
-	out.Mode = mode
 
-	var kw, sem []hit
-	if mode != searchv1.ModeSemantic {
-		if kw, err = s.keyword(b.Id, q, in.Prefix, pool); err != nil {
+	model, err := s.currentModel(ctx)
+	if err != nil {
+		return out, err
+	}
+	ids := make([]string, len(buckets))
+	nameOf := map[string]string{}
+	for i, b := range buckets {
+		ids[i] = b.Id
+		nameOf[b.Id] = b.GetString("name")
+	}
+	kw, err := s.keyword(ids, q, in.Prefix, pool)
+	if err != nil {
+		return out, err
+	}
+	qv, usage, err := s.queryVector(ctx, model, q)
+	if err != nil {
+		return out, err
+	}
+	out.Usage, out.Model = usage, model
+	caches := make([]*vecCache, 0, len(ids))
+	for _, id := range ids {
+		c, err := s.vectors(id, model)
+		if err != nil {
 			return out, err
 		}
+		caches = append(caches, c)
 	}
-	if mode != searchv1.ModeKeyword {
-		qv, usage, used, err := s.queryVector(ctx, model, b.GetInt("dimensions"), q)
-		switch {
-		case err != nil && mode == searchv1.ModeHybrid:
-			// the keyword half still answers: a page that grounds a reply in the bucket keeps working
-			mode, out.Mode, out.Note = searchv1.ModeKeyword, searchv1.ModeKeyword, "ranked by keywords only: "+errText(err)
-		case err != nil:
-			return out, err
-		default:
-			out.Usage, out.Model = usage, used
-			c, err := s.vectors(b.Id)
-			if err != nil {
-				return out, err
-			}
-			sem = semantic(c, qv, in.Prefix, pool)
-		}
-	}
+	sem := semantic(caches, qv, in.Prefix, pool)
 
-	type scored struct {
-		id                     string
-		score, semantic, kword float64
-	}
-	byID := map[string]*scored{}
-	get := func(id string) *scored {
-		if byID[id] == nil {
-			byID[id] = &scored{id: id}
-		}
-		return byID[id]
-	}
+	// reciprocal rank fusion: keywords catch exact names an embedding blurs, meaning catches a reworded question
+	score := map[string]float64{}
 	for rank, h := range kw {
-		x := get(h.id)
-		x.kword = h.score
-		if mode == searchv1.ModeHybrid {
-			x.score += 1 / float64(rrfK+rank+1)
-		} else {
-			x.score = h.score
-		}
+		score[h.id] += 1 / float64(rrfK+rank+1)
 	}
 	for rank, h := range sem {
-		x := get(h.id)
-		x.semantic = h.score
-		if mode == searchv1.ModeHybrid {
-			x.score += 1 / float64(rrfK+rank+1)
-		} else {
-			x.score = h.score
-		}
+		score[h.id] += 1 / float64(rrfK+rank+1)
 	}
-	ranked := make([]*scored, 0, len(byID))
-	for _, x := range byID {
-		ranked = append(ranked, x)
+	ranked := make([]string, 0, len(score))
+	for id := range score {
+		ranked = append(ranked, id)
 	}
 	sort.Slice(ranked, func(i, j int) bool {
-		if ranked[i].score != ranked[j].score {
-			return ranked[i].score > ranked[j].score
+		if score[ranked[i]] != score[ranked[j]] {
+			return score[ranked[i]] > score[ranked[j]]
 		}
-		return ranked[i].id < ranked[j].id
+		return ranked[i] < ranked[j]
 	})
-	if len(ranked) > limit {
-		ranked = ranked[:limit]
-	}
 	if len(ranked) == 0 {
 		return out, nil
 	}
 
-	ids := make([]any, len(ranked))
-	for i, x := range ranked {
-		ids[i] = x.id
+	args := make([]any, len(ranked))
+	for i, id := range ranked {
+		args[i] = id
 	}
 	var rows []chunkRow
 	err = s.app.DB().Select("c.id AS id", "c.text AS text", "c.heading AS heading", "c.start_line AS start_line",
-		"c.end_line AS end_line", "d.name AS name").
+		"c.end_line AS end_line", "d.name AS name", "d.record AS record", "c.bucket AS bucket").
 		From(ChunksCollection+" c").InnerJoin(DocumentsCollection+" d", dbx.NewExp("d.id = c.document")).
-		Where(dbx.In("c.id", ids...)).All(&rows)
+		Where(dbx.In("c.id", args...)).All(&rows)
 	if err != nil {
 		return out, err
 	}
@@ -293,13 +301,58 @@ func (s *service) Search(ctx context.Context, _ extkit.Auth, in searchv1.SearchI
 	for _, r := range rows {
 		rowByID[r.ID] = r
 	}
-	for _, x := range ranked {
-		r, ok := rowByID[x.id]
+	allowed := map[string]bool{} // record ref -> the viewer may see it
+	for _, id := range ranked {
+		if len(out.Results) == limit {
+			break
+		}
+		r, ok := rowByID[id]
 		if !ok {
 			continue // removed meanwhile
 		}
-		out.Results = append(out.Results, searchv1.Result{Text: r.Text, Document: r.Name, Heading: r.Heading,
-			StartLine: r.StartLine, EndLine: r.EndLine, Score: x.score, Semantic: x.semantic, Keyword: x.kword})
+		ref := recordRef(r.Record)
+		if viewer != nil && ref != nil {
+			ok, seen := allowed[r.Record]
+			if !seen {
+				ok = s.canView(viewer, ref)
+				allowed[r.Record] = ok
+			}
+			if !ok {
+				continue
+			}
+		}
+		out.Results = append(out.Results, searchv1.Result{Bucket: nameOf[r.Bucket], Document: r.Name, Text: r.Text,
+			Heading: r.Heading, StartLine: r.StartLine, EndLine: r.EndLine, Record: ref, Score: score[id]})
 	}
 	return out, nil
+}
+
+// viewerAuth is who a search is for: auth is nil for a guest.
+type viewerAuth struct{ auth *core.Record }
+
+func (s *service) viewer(v *searchv1.Viewer) (*viewerAuth, error) {
+	if v == nil {
+		return nil, nil
+	}
+	if v.ID == "" {
+		return &viewerAuth{}, nil
+	}
+	r, err := s.app.FindRecordById(v.Collection, v.ID)
+	if err != nil || !r.Collection().IsAuth() {
+		return nil, badRequest("viewer: no auth record " + v.Collection + "/" + v.ID)
+	}
+	return &viewerAuth{auth: r}, nil
+}
+
+// canView checks the record's collection's view rule for the viewer, as PocketBase's record API does.
+func (s *service) canView(v *viewerAuth, ref *searchv1.RecordRef) bool {
+	rec, err := s.app.FindRecordById(ref.Collection, ref.ID)
+	if err != nil {
+		return false
+	}
+	if v.auth != nil && v.auth.IsSuperuser() {
+		return true
+	}
+	ok, err := s.app.CanAccessRecord(rec, &core.RequestInfo{Auth: v.auth}, rec.Collection().ViewRule)
+	return err == nil && ok
 }

@@ -33,8 +33,7 @@ func createTables(tx core.App) error {
 		&core.TextField{Id: "sb_title", Name: "title", Max: 200},
 		&core.TextField{Id: "sb_description", Name: "description", Max: 2000, Help: "What belongs in the bucket, shown to the admins who load it."},
 		&core.TextField{Id: "sb_owner", Name: "owner", Max: 200, Help: "Who made it (the app's name)."},
-		&core.TextField{Id: "sb_model", Name: "model", Max: 300, Help: "The embedding model (provider/model); empty searches by keywords only."},
-		&core.NumberField{Id: "sb_dimensions", Name: "dimensions", OnlyInt: true},
+		&core.JSONField{Id: "sb_source", Name: "source", MaxSize: 1 << 14, Help: "The collection it follows: {collection, fields, filter}."},
 		&core.NumberField{Id: "sb_max_documents", Name: "max_documents", OnlyInt: true},
 		&core.NumberField{Id: "sb_max_bytes", Name: "max_bytes", OnlyInt: true},
 		&core.AutodateField{Id: "sb_created", Name: "created", OnCreate: true, System: true},
@@ -56,6 +55,7 @@ func createTables(tx core.App) error {
 		&core.SelectField{Id: "sd_status", Name: "status", MaxSelect: 1, Values: []string{StatusQueued, StatusEmbedding, StatusReady, StatusError}},
 		&core.TextField{Id: "sd_error", Name: "error", Max: 2000},
 		&core.NumberField{Id: "sd_chunks", Name: "chunks", OnlyInt: true},
+		&core.TextField{Id: "sd_record", Name: "record", Max: 200, Help: "collection/id of the record it was made from (a bucket that follows a collection)."},
 		&core.NumberField{Id: "sd_tokens", Name: "tokens", OnlyInt: true},
 		&core.NumberField{Id: "sd_cost", Name: "cost", OnlyInt: true, Help: "What embedding it has cost, in millionths of a US dollar."},
 		&core.FileField{Id: "sd_source", Name: "source", MaxSelect: 1, MaxSize: MaxFileBytes, Protected: true, Help: "The text as added, to split it again later."},
@@ -64,6 +64,7 @@ func createTables(tx core.App) error {
 	)
 	docs.AddIndex("idx_search_documents_name", true, "bucket, name", "")
 	docs.AddIndex("idx_search_documents_status", false, "status", "")
+	docs.AddIndex("idx_search_documents_record", false, "record", "")
 	if err := tx.Save(docs); err != nil {
 		return err
 	}
@@ -80,6 +81,7 @@ func createTables(tx core.App) error {
 		&core.TextField{Id: "sc_text", Name: "text", Max: 1 << 16},
 		&core.TextField{Id: "sc_hash", Name: "hash", Max: 64, Help: "sha256 of what was embedded, to reuse its vector when the document changes."},
 		&core.TextField{Id: "sc_vector", Name: "vector", Max: 1 << 20, Help: "The embedding: little-endian float32s, base64."},
+		&core.TextField{Id: "sc_model", Name: "model", Max: 300, Help: "The model that made the vector; a chunk whose model isn't the app's is embedded again."},
 	)
 	chunks.AddIndex("idx_search_chunks_document", true, "document, seq", "")
 	chunks.AddIndex("idx_search_chunks_bucket", false, "bucket", "")
@@ -88,7 +90,7 @@ func createTables(tx core.App) error {
 	}
 
 	_, err := tx.DB().NewQuery(`CREATE VIRTUAL TABLE IF NOT EXISTS ` + FTSTable + ` USING fts5(
-		text, heading, chunk UNINDEXED, bucket UNINDEXED, document UNINDEXED, name UNINDEXED,
+		text, heading, chunk UNINDEXED, bucket UNINDEXED, document UNINDEXED, name UNINDEXED, record UNINDEXED,
 		tokenize = 'porter unicode61')`).Execute()
 	return err
 }

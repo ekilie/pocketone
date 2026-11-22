@@ -7,6 +7,7 @@
 package llm
 
 import (
+	"encoding/json"
 	"math"
 	"strings"
 
@@ -147,3 +148,32 @@ var (
 	ErrNotSupported = &extkit.Error{Code: "not_supported", Status: 400, Message: "that provider doesn't do this"}
 	ErrProvider     = &extkit.Error{Code: "provider", Status: 502, Message: "the provider answered with an error"}
 )
+
+// Enrich adds passages from the app's search buckets (search/v1) to a call's prompt: the call searches Buckets with
+// Query (default: the prompt, or the last user message) and sends the best Limit passages after it. In JSON it's an
+// object, or just the list of buckets (["storytime"]).
+type Enrich struct {
+	Buckets []string `json:"buckets"`
+	Limit   int      `json:"limit,omitempty"` // passages to add (default 5, at most 20)
+	Query   string   `json:"query,omitempty"`
+}
+
+// UnmarshalJSON takes the object form or a list of bucket names.
+func (e *Enrich) UnmarshalJSON(b []byte) error {
+	var names []string
+	if err := json.Unmarshal(b, &names); err == nil {
+		*e = Enrich{Buckets: names}
+		return nil
+	}
+	type plain Enrich
+	return json.Unmarshal(b, (*plain)(e))
+}
+
+// Passage is a piece of a search bucket that was added to a prompt, and where it came from.
+type Passage struct {
+	Bucket   string  `json:"bucket"`
+	Document string  `json:"document"`
+	Heading  string  `json:"heading,omitempty"`
+	Text     string  `json:"text"`
+	Score    float64 `json:"score"`
+}

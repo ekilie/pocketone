@@ -1,7 +1,7 @@
 // The Search screen for the PocketBase dashboard, for the search/v1 contract (PocketOne ext/contracts/search/v1): every
-// search bucket of the app, its documents, a drop zone and a paste box to add content, and a search to try. It calls
-// only search/v1 (and llm.embed/v1's model list, when something provides it), so it works whoever provides the
-// contract. Served at /_/extensions/search/main.js.
+// search bucket of the app, its documents, a drop zone and a paste box to add content, a collection a bucket can
+// follow, a search to try, and the app's embedding model. It calls only search/v1 (and llm.embed/v1's model list for
+// the model picker), so it works whoever provides the contract. Served at /_/extensions/search/main.js.
 (() => {
     const api = "/api/_c/search/v1";
     const send = (path, body) =>
@@ -34,27 +34,21 @@
     const statusLabel = (s, err) => t.span({
         className: `label ${s === "ready" ? "success" : s === "error" ? "danger" : "warning"}`,
         title: err || null,
-    }, s);
+    }, s === "queued" ? "waiting" : s);
+    const recordHref = (r) => `#/collections?collection=${encodeURIComponent(r.collection)}&recordId=${encodeURIComponent(r.id)}`;
 
+    // embedModels is llm.embed/v1's list: [{ id: "provider/model", name, prices }]
     async function embedModels() {
         try {
-            const r = await app.pb.send("/api/_c/llm.embed/v1/models", { requestKey: null });
-            return (r.models || []).map((m) => m.provider + "/" + m.id);
+            return (await app.pb.send("/api/_c/llm.embed/v1/models", { requestKey: null })).models || [];
         } catch (_) {
-            return []; // no llm.embed/v1 here, or no providers: keyword search only
+            return [];
         }
     }
-
-    // modelField edits obj[key], suggesting the models in models() (llm.embed/v1's list)
-    function modelField(obj, key, models) {
-        return t.div({ className: "field" },
-            t.label({}, "Embedding model"),
-            t.input({
-                type: "text", "html-list": "search-models", placeholder: "provider/model, or empty for keyword search only",
-                value: () => obj[key], oninput: (e) => (obj[key] = e.target.value),
-            }),
-            t.datalist({ id: "search-models" }, () => models().map((m) => t.option({ value: m }))));
-    }
+    const modelLabel = (m) => {
+        const p = (m.prices || []).find((x) => /token/i.test(x.unit));
+        return (m.name || m.id) + (p ? ` ($${p.usd} per ${p.unit})` : "");
+    };
 
     function page(title, crumbs, body) {
         app.store.title = title;
@@ -65,74 +59,178 @@
                 t.footer({ className: "page-footer" }, app.components.credits())));
     }
 
+    // results draws a search's matches
+    function results(r) {
+        if (!r) return null;
+        if (!r.results.length) return t.div({ className: "txt-hint" }, "No matches.");
+        return t.div(null,
+            t.div({ className: "txt-hint txt-sm m-b-sm" }, `Ranked by meaning and keywords with ${r.model}` +
+                (r.usage?.costMicroUSD ? `; the query cost ${fmtCost(r.usage.costMicroUSD)}` : "") + "."),
+            ...r.results.map((x) => t.div({ className: "search-result" },
+                t.div({ className: "flex gap-sm" },
+                    t.span({ className: "label" }, x.bucket),
+                    x.record ? t.a({ href: recordHref(x.record) }, t.strong(null, x.document)) : t.strong(null, x.document),
+                    x.heading ? t.span({ className: "txt-hint" }, "› " + x.heading) : null,
+                    t.span({ className: "txt-hint txt-sm" }, `lines ${x.startLine}–${x.endLine}`),
+                    t.span({ className: "m-l-auto txt-hint txt-sm" }, x.score.toFixed(4))),
+                t.pre(null, x.text))));
+    }
+
+    // searchBox is a query box over the given buckets (none: every bucket)
+    function searchBox(buckets) {
+        const s = store({ query: "", searching: false, results: null });
+        async function run(e) {
+            e.preventDefault();
+            if (!s.query.trim()) return;
+            s.searching = true;
+            try {
+                s.results = await send("/search", { buckets, query: s.query, limit: 8 });
+            } catch (err) {
+                s.results = null;
+                app.toasts.error(errText(err));
+            }
+            s.searching = false;
+        }
+        return t.div(null,
+            t.form({ className: "flex gap-sm m-b-sm", onsubmit: run },
+                t.input({ type: "text", placeholder: "A question or a few words", style: "flex: 1",
+                    value: () => s.query, oninput: (e) => (s.query = e.target.value) }),
+                t.button({ className: () => `btn ${s.searching ? "loading" : ""}` }, t.span({ className: "txt" }, "Search"))),
+            () => results(s.results));
+    }
+
     // ---- the bucket list
 
     app.routes.superuserOnly("#/search", () => {
-        const data = store({ loading: true, buckets: [], models: [], creating: false, name: "", title: "", model: "", dims: "" });
+        const data = store({
+            loading: true, buckets: [], status: null, models: [], changingModel: false, model: "",
+            creating: false, name: "", title: "", description: "",
+        });
 
+        let timer = null;
         async function load() {
             try {
-                data.buckets = (await send("/buckets")).buckets || [];
+                const [b, st] = await Promise.all([send("/buckets"), send("/status")]);
+                data.buckets = b.buckets || [];
+                data.status = st;
             } catch (err) {
                 app.checkApiError(err);
             }
             data.loading = false;
+            // while embedding runs (a new model, or content just added), follow it
+            clearTimeout(timer);
+            const st = data.status;
+            if (st?.model && st.embedded < st.chunks && document.querySelector(".page-search-list")) timer = setTimeout(load, 2000);
         }
 
         async function create(e) {
             e.preventDefault();
             try {
-                const b = await send("/ensure", {
-                    name: data.name.trim(), title: data.title.trim(), model: data.model.trim(), dimensions: parseInt(data.dims) || 0,
-                });
+                const b = await send("/ensure", { name: data.name.trim(), title: data.title.trim(), description: data.description.trim() });
                 window.location.hash = "#/search/" + encodeURIComponent(b.name);
             } catch (err) {
                 app.toasts.error(errText(err));
             }
         }
 
-        load();
-        embedModels().then((m) => (data.models = m));
+        async function openModel() {
+            data.models = await embedModels();
+            data.model = data.status?.model || "";
+            data.changingModel = true;
+        }
 
-        return page("Search", [t.div({ className: "breadcrumb-item" }, "Search")], () => {
+        async function saveModel(e) {
+            e.preventDefault();
+            if (data.model === data.status?.model) return (data.changingModel = false);
+            const chunks = data.status?.chunks || 0;
+            if (chunks && !confirm(`Embed all ${chunks} chunks again with the new model? Search keeps working (by keywords) while it runs.`)) return;
+            try {
+                data.status = await send("/set-model", { model: data.model });
+                data.changingModel = false;
+            } catch (err) {
+                app.toasts.error(errText(err));
+            }
+        }
+
+        load();
+
+        // progress is how far embedding has got across every bucket
+        function progress(st) {
+            const pct = st.chunks ? Math.floor((100 * st.embedded) / st.chunks) : 0;
+            return t.div({ className: "alert info m-t-sm" }, t.div({ className: "content" },
+                t.div({ className: "flex gap-sm" },
+                    t.span({ className: "loader sm" }),
+                    t.span(null, `Embedding: ${st.embedded} of ${st.chunks} chunks (${pct}%). Search keeps working; chunks not done yet are found by keywords.`)),
+                t.div({ style: "height: 6px; border-radius: 3px; background: var(--baseAlt2Color); margin-top: 8px; overflow: hidden" },
+                    t.div({ style: `height: 100%; width: ${pct}%; background: var(--primaryColor); transition: width 0.5s` }))));
+        }
+
+        function modelCard() {
+            const st = data.status;
+            if (!st) return null;
+            if (!st.model) {
+                return t.div({ className: "alert warning m-b-sm" }, t.div({ className: "content" },
+                    "Searching needs an AI provider with embedding models. Add one in ",
+                    t.a({ href: "#/settings/llm" }, "Settings → LLM"),
+                    "; content you add meanwhile waits and is embedded once there is one."));
+            }
+            return t.div({ className: "m-b-sm" },
+                () => data.changingModel
+                    ? t.form({ className: "flex gap-sm", onsubmit: saveModel },
+                        t.select({ onchange: (e) => (data.model = e.target.value) },
+                            ...data.models.map((m) => t.option({ value: m.id, selected: m.id === data.model }, modelLabel(m)))),
+                        t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.changingModel = false) }, t.span({ className: "txt" }, "Cancel")),
+                        t.button({ className: "btn" }, t.span({ className: "txt" }, "Use this model")))
+                    : t.div(null,
+                        t.p({ className: "txt-hint m-0" },
+                            "Every bucket is embedded with ", t.code(null, st.model), ". ",
+                            t.a({ href: "#", onclick: (e) => { e.preventDefault(); openModel(); } }, "Change")),
+                        st.embedded < st.chunks ? progress(st) : null));
+        }
+
+        return t.div({ className: "page-search-list", onunmount: () => clearTimeout(timer) }, page("Search", [t.div({ className: "breadcrumb-item" }, "Search")], () => {
             if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
             return t.div(null,
                 t.p({ className: "m-t-0" },
-                    "Buckets of content your app searches with ", t.code(null, "$search"), ". An app makes the bucket it needs; ",
-                    "load its content here by dropping files on it or pasting text."),
+                    "Buckets of content your app searches, and adds to its AI prompts with ", t.code(null, "enrich"), ". ",
+                    "An app makes the bucket it needs; load it here by dropping files on it, pasting text, or having it follow a collection."),
+                modelCard(),
                 data.buckets.length
                     ? t.table({ className: "search-table m-b-base" },
                         t.thead(null, t.tr(null, t.th(null, "Bucket"), t.th(null, "Made by"), t.th({ className: "search-num" }, "Documents"),
-                            t.th({ className: "search-num" }, "Chunks"), t.th({ className: "search-num" }, "Size"), t.th(null, "Model"), t.th(null, "Status"))),
+                            t.th({ className: "search-num" }, "Chunks"), t.th({ className: "search-num" }, "Size"), t.th(null, "Content"), t.th(null, "Status"))),
                         t.tbody(null, ...data.buckets.map((b) => t.tr({ className: "link", onclick: () => (window.location.hash = "#/search/" + encodeURIComponent(b.name)) },
                             t.td(null, t.strong(null, b.title || b.name), b.title ? t.div({ className: "txt-hint txt-sm" }, b.name) : null),
                             t.td(null, b.owner || ""),
                             t.td({ className: "search-num" }, b.documents),
                             t.td({ className: "search-num" }, b.chunks),
                             t.td({ className: "search-num" }, fmtBytes(b.bytes)),
-                            t.td(null, b.model ? t.code(null, b.model) : t.span({ className: "txt-hint" }, "keywords only")),
+                            t.td(null, b.source ? ["follows ", t.code(null, b.source.collection)] : "files and text"),
                             t.td(null, b.documents === 0 ? t.span({ className: "label warning" }, "empty")
                                 : b.errors ? t.span({ className: "label danger" }, b.errors + " failed")
-                                    : b.pending ? t.span({ className: "label warning" }, b.pending + " embedding")
+                                    : b.pending ? t.span({ className: "label warning" }, b.pending + " waiting")
                                         : t.span({ className: "label success" }, "ready"))))))
                     : t.div({ className: "block txt-center txt-hint p-base" }, "No buckets yet."),
                 () => data.creating
-                    ? t.form({ className: "grid", onsubmit: create },
+                    ? t.form({ className: "grid m-b-base", onsubmit: create },
                         t.div({ className: "col-lg-4" }, t.div({ className: "field" }, t.label({}, "Name"),
                             t.input({ type: "text", required: true, pattern: "[A-Za-z0-9][A-Za-z0-9_\\-]{0,63}", placeholder: "docs",
                                 value: () => data.name, oninput: (e) => (data.name = e.target.value) }))),
                         t.div({ className: "col-lg-8" }, t.div({ className: "field" }, t.label({}, "Title"),
                             t.input({ type: "text", value: () => data.title, oninput: (e) => (data.title = e.target.value) }))),
-                        t.div({ className: "col-lg-8" }, modelField(data, "model", () => data.models)),
-                        t.div({ className: "col-lg-4" }, t.div({ className: "field" }, t.label({}, "Dimensions"),
-                            t.input({ type: "number", min: 0, placeholder: "the model's own", value: () => data.dims, oninput: (e) => (data.dims = e.target.value) }))),
+                        t.div({ className: "col-lg-12" }, t.div({ className: "field" }, t.label({}, "What belongs in it"),
+                            t.input({ type: "text", value: () => data.description, oninput: (e) => (data.description = e.target.value) }))),
                         t.div({ className: "col-lg-12 flex" },
                             t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.creating = false) }, t.span({ className: "txt" }, "Cancel")),
                             t.button({ className: "btn" }, t.span({ className: "txt" }, "Create bucket"))))
-                    : t.button({ type: "button", className: "btn secondary sm", onclick: () => (data.creating = true) },
+                    : t.button({ type: "button", className: "btn secondary sm m-b-base", onclick: () => (data.creating = true) },
                         t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New bucket")),
+                data.buckets.length && data.status?.model ? t.div(null,
+                    t.hr(),
+                    t.div({ className: "txt-lg m-b-sm" }, "Search every bucket"),
+                    searchBox([])) : null,
             );
-        });
+        }));
     });
 
     // ---- one bucket
@@ -170,10 +268,9 @@
     app.routes.superuserOnly("#/search/{name}", (route) => {
         const name = decodeURIComponent(route.params.name);
         const data = store({
-            loading: true, bucket: null, documents: [], models: [], over: false, adding: "",
+            loading: true, bucket: null, documents: [], over: false, adding: "",
             pasteOpen: false, pasteName: "", pasteText: "",
-            query: "", mode: "", searching: false, results: null,
-            settingsOpen: false, edit: {},
+            settingsOpen: false, edit: {}, collections: [],
         });
         let timer = null;
 
@@ -244,37 +341,27 @@
             load();
         }
 
-        async function search(e) {
-            e.preventDefault();
-            if (!data.query.trim()) return;
-            data.searching = true;
-            try {
-                data.results = await send("/search", { bucket: name, query: data.query, mode: data.mode, limit: 8 });
-            } catch (err) {
-                data.results = null;
-                app.toasts.error(errText(err));
-            }
-            data.searching = false;
-        }
-
-        function openSettings() {
+        async function openSettings() {
             const b = data.bucket;
-            data.edit = { title: b.title, description: b.description, model: b.model, dims: b.dimensions || "", maxDocuments: b.maxDocuments, maxMB: Math.round(b.maxBytes / (1 << 20)) };
+            data.edit = {
+                title: b.title, description: b.description, maxDocuments: b.maxDocuments, maxMB: Math.round(b.maxBytes / (1 << 20)),
+                collection: b.source?.collection || "", fields: (b.source?.fields || []).join(", "), filter: b.source?.filter || "",
+            };
             data.settingsOpen = true;
-            embedModels().then((m) => (data.models = m));
+            try {
+                data.collections = (await app.pb.collections.getFullList({ requestKey: null })).filter((c) => !c.system && !c.name.startsWith("_"));
+            } catch (_) {
+                data.collections = [];
+            }
         }
 
         async function saveSettings(e) {
             e.preventDefault();
             const b = data.bucket, x = data.edit;
             const body = { name, title: x.title, description: x.description, maxDocuments: parseInt(x.maxDocuments) || 0, maxBytes: (parseInt(x.maxMB) || 0) * (1 << 20) };
-            const dims = parseInt(x.dims) || 0;
-            if (x.model.trim() !== b.model || dims !== b.dimensions) {
-                const est = b.chunks ? ` All ${b.chunks} chunks (about ${Math.round(data.documents.reduce((n, d) => n + d.tokens, 0) / 1000)}K tokens) are embedded again.` : "";
-                if (!confirm(`Change the embedding model?${est}`)) return;
-                body.model = x.model.trim();
-                body.dimensions = dims;
-            }
+            const fields = x.fields.split(",").map((f) => f.trim()).filter(Boolean);
+            const source = x.collection ? { collection: x.collection, fields, filter: x.filter.trim() } : { collection: "" };
+            if (JSON.stringify(source) !== JSON.stringify(b.source || { collection: "" })) body.source = source;
             try {
                 await send("/update", body);
                 data.settingsOpen = false;
@@ -301,6 +388,8 @@
             t.a({ className: "breadcrumb-item", href: "#/search" }, "Search"),
             t.div({ className: "breadcrumb-item" }, () => data.bucket?.title || name),
         ];
+        const field = (label, input, cls = "col-lg-12") => t.div({ className: cls }, t.div({ className: "field" }, t.label({}, label), input));
+        const text = (key, props = {}) => t.input({ type: "text", ...props, value: () => data.edit[key], oninput: (e) => (data.edit[key] = e.target.value) });
 
         return t.div({ className: "page-search-bucket", onunmount: () => clearTimeout(timer) }, page(name, crumbs, () => {
             if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
@@ -311,21 +400,19 @@
                     b.owner ? t.strong(null, b.owner + " wants: ") : null, b.description)) : null,
                 t.p({ className: "txt-hint m-t-0" },
                     `${b.documents} document${b.documents === 1 ? "" : "s"}, ${b.chunks} chunks, ${fmtBytes(b.bytes)}. `,
-                    b.model ? ["Embedded with ", t.code(null, b.model), b.dimensions ? ` (${b.dimensions} dimensions)` : "", "."] : "Searched by keywords only (no embedding model).",
-                    " ", t.a({ href: "#", onclick: (e) => { e.preventDefault(); openSettings(); } }, "Settings")),
+                    b.source ? ["Follows ", t.code(null, b.source.collection), ` (${b.source.fields.join(", ")}${b.source.filter ? "; " + b.source.filter : ""}). `] : "",
+                    t.a({ href: "#", onclick: (e) => { e.preventDefault(); openSettings(); } }, "Settings")),
 
                 () => data.settingsOpen ? t.form({ className: "grid m-b-base", onsubmit: saveSettings },
-                    t.div({ className: "col-lg-6" }, t.div({ className: "field" }, t.label({}, "Title"),
-                        t.input({ type: "text", value: () => data.edit.title, oninput: (e) => (data.edit.title = e.target.value) }))),
-                    t.div({ className: "col-lg-6" }, modelField(data.edit, "model", () => data.models)),
-                    t.div({ className: "col-lg-12" }, t.div({ className: "field" }, t.label({}, "Description (what belongs in the bucket)"),
-                        t.textarea({ rows: 2, value: () => data.edit.description, oninput: (e) => (data.edit.description = e.target.value) }))),
-                    t.div({ className: "col-lg-4" }, t.div({ className: "field" }, t.label({}, "Dimensions"),
-                        t.input({ type: "number", min: 0, placeholder: "the model's own", value: () => data.edit.dims, oninput: (e) => (data.edit.dims = e.target.value) }))),
-                    t.div({ className: "col-lg-4" }, t.div({ className: "field" }, t.label({}, "Most documents"),
-                        t.input({ type: "number", min: 0, value: () => data.edit.maxDocuments, oninput: (e) => (data.edit.maxDocuments = e.target.value) }))),
-                    t.div({ className: "col-lg-4" }, t.div({ className: "field" }, t.label({}, "Most text (MB)"),
-                        t.input({ type: "number", min: 0, value: () => data.edit.maxMB, oninput: (e) => (data.edit.maxMB = e.target.value) }))),
+                    field("Title", text("title"), "col-lg-6"),
+                    field("What belongs in it", text("description"), "col-lg-6"),
+                    field("Follow a collection", t.select({ onchange: (e) => (data.edit.collection = e.target.value) },
+                        t.option({ value: "", selected: !data.edit.collection }, "None (files and text only)"),
+                        ...data.collections.map((c) => t.option({ value: c.name, selected: c.name === data.edit.collection }, c.name))), "col-lg-4"),
+                    field("Fields to search (the first is the title)", text("fields", { placeholder: "title, body" }), "col-lg-4"),
+                    field("Only records matching", text("filter", { placeholder: "published = true" }), "col-lg-4"),
+                    field("Most documents", t.input({ type: "number", min: 0, value: () => data.edit.maxDocuments, oninput: (e) => (data.edit.maxDocuments = e.target.value) }), "col-lg-6"),
+                    field("Most text (MB)", t.input({ type: "number", min: 0, value: () => data.edit.maxMB, oninput: (e) => (data.edit.maxMB = e.target.value) }), "col-lg-6"),
                     t.div({ className: "col-lg-12 flex" },
                         t.button({ type: "button", className: "btn sm transparent danger", onclick: deleteBucket },
                             t.i({ className: "ri-delete-bin-7-line", ariaHidden: true }), t.span({ className: "txt" }, "Delete bucket")),
@@ -366,41 +453,22 @@
                         t.thead(null, t.tr(null, t.th(null, "Document"), t.th(null, "Kind"), t.th({ className: "search-num" }, "Size"),
                             t.th({ className: "search-num" }, "Chunks"), t.th({ className: "search-num" }, "Cost"), t.th(null, "Status"), t.th(null, ""))),
                         t.tbody(null, ...data.documents.map((d) => t.tr(null,
-                            t.td(null, d.name, d.error ? t.div({ className: "txt-danger txt-sm" }, d.error) : null),
-                            t.td(null, d.kind),
+                            t.td(null, d.record ? t.a({ href: recordHref(d.record) }, d.name) : d.name,
+                                d.error ? t.div({ className: "txt-danger txt-sm" }, d.error) : null),
+                            t.td(null, d.record ? "record" : d.kind),
                             t.td({ className: "search-num" }, fmtBytes(d.size)),
                             t.td({ className: "search-num" }, d.chunks),
                             t.td({ className: "search-num" }, fmtCost(d.costMicroUSD)),
                             t.td(null, statusLabel(d.status, d.error)),
                             t.td({ className: "txt-right" },
                                 d.status === "error" ? t.button({ type: "button", className: "btn xs transparent secondary", onclick: () => reindex([d.name]) }, "Retry") : null,
-                                t.button({ type: "button", className: "btn xs transparent danger", title: "Remove", onclick: () => remove(d) },
+                                d.record ? null : t.button({ type: "button", className: "btn xs transparent danger", title: "Remove", onclick: () => remove(d) },
                                     t.i({ className: "ri-delete-bin-7-line", ariaHidden: true })))))))
                     : t.div({ className: "block txt-center txt-hint p-base" }, "Nothing in this bucket yet."),
 
                 t.hr(),
                 t.div({ className: "txt-lg m-b-sm" }, "Try a search"),
-                t.form({ className: "flex gap-sm m-b-sm", onsubmit: search },
-                    t.input({ type: "text", placeholder: "A question or a few words", style: "flex: 1",
-                        value: () => data.query, oninput: (e) => (data.query = e.target.value) }),
-                    t.select({ onchange: (e) => (data.mode = e.target.value) },
-                        t.option({ value: "" }, "Meaning + keywords"), t.option({ value: "semantic" }, "Meaning"), t.option({ value: "keyword" }, "Keywords")),
-                    t.button({ className: () => `btn ${data.searching ? "loading" : ""}` }, t.span({ className: "txt" }, "Search"))),
-                () => {
-                    const r = data.results;
-                    if (!r) return null;
-                    if (!r.results.length) return t.div({ className: "txt-hint" }, "No matches.");
-                    return t.div(null,
-                        t.div({ className: "txt-hint txt-sm m-b-sm" }, r.note ? r.note : `Ranked by ${r.mode}` + (r.usage?.costMicroUSD ? `; the query cost ${fmtCost(r.usage.costMicroUSD)}` : "") + "."),
-                        ...r.results.map((x) => t.div({ className: "search-result" },
-                            t.div({ className: "flex gap-sm" },
-                                t.strong(null, x.document), x.heading ? t.span({ className: "txt-hint" }, "› " + x.heading) : null,
-                                t.span({ className: "txt-hint txt-sm" }, `lines ${x.startLine}–${x.endLine}`),
-                                t.span({ className: "m-l-auto label" }, x.score.toFixed(4)),
-                                x.semantic ? t.span({ className: "label info", title: "cosine similarity" }, "meaning " + x.semantic.toFixed(3)) : null,
-                                x.keyword ? t.span({ className: "label", title: "BM25" }, "keywords " + x.keyword.toFixed(2)) : null),
-                            t.pre(null, x.text))));
-                },
+                searchBox([name]),
             );
         }));
     });

@@ -32,6 +32,10 @@ declare namespace contracts.llm.text.v1 {
      */
     reasoning: string;
     options: Record<string, any>;
+    /**
+     * Enrich adds the best passages from the app's search buckets after the prompt (search/v1).
+     */
+    enrich: LlmEnrich | null;
   }
 
   /**
@@ -60,6 +64,12 @@ declare namespace contracts.llm.text.v1 {
      */
     role: string;
     content: string;
+  }
+
+  interface LlmEnrich {
+    buckets: Array<string>;
+    limit: number;
+    query: string;
   }
 }
 

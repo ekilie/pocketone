@@ -41,8 +41,13 @@ declare namespace contracts.llm.chat.v1 {
     model: string;
     /**
      * Reasoning is how much a reasoning model thinks first: "", "off", "low", "medium" or "high".
+     * Enrich adds the best passages from the app's search buckets after the question, beside Context (search/v1);
      */
     reasoning: string;
+    /**
+     * the answer's Passages lists them.
+     */
+    enrich: LlmEnrich | null;
   }
 
   /**
@@ -83,6 +88,12 @@ declare namespace contracts.llm.chat.v1 {
      */
     limit: number;
     offset: number;
+  }
+
+  interface LlmEnrich {
+    buckets: Array<string>;
+    limit: number;
+    query: string;
   }
 }
 

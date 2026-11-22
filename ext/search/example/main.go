@@ -1,10 +1,10 @@
 // Command example is a PocketBase app with search buckets: the llm extension embeds, search keeps the buckets. Add a
-// provider in Settings → LLM, run `go run . serve`, open the dashboard's Search screen, make a bucket with an
-// embedding model ("vultr/qwen3-embedding-4b") and drop Markdown files on it. Or over HTTP as a superuser:
+// provider with embedding models in Settings → LLM, run `go run . serve`, open the dashboard's Search screen, make a
+// bucket and drop Markdown files on it. Or over HTTP as a superuser:
 //
-//	POST /api/_c/search/v1/ensure   {"name": "docs", "model": "vultr/qwen3-embedding-4b", "dimensions": 1024}
+//	POST /api/_c/search/v1/ensure   {"name": "docs"}
 //	POST /api/_c/search/v1/add      {"bucket": "docs", "name": "install.md", "text": "# Install\n..."}
-//	POST /api/_c/search/v1/search   {"bucket": "docs", "query": "how do I install it"}
+//	POST /api/_c/search/v1/search   {"buckets": ["docs"], "query": "how do I install it"}
 //
 // In page code the same is $search.ensure(...), $search.add(...) and await $search.searchAsync(...).
 package main
