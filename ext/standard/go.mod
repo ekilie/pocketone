@@ -6,8 +6,6 @@ require (
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
-	pocketone.dev/ext/agent v0.0.0-00010101000000-000000000000
-	pocketone.dev/ext/agent-chat v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/api-tokens v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/backups v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/bulkmail v0.0.0-00010101000000-000000000000
@@ -17,6 +15,8 @@ require (
 	pocketone.dev/ext/deploy v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/jsvm v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/llm v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/llm-chat v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/mailtrap v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/mcp v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/multisite v0.0.0-00010101000000-000000000000
@@ -38,7 +38,6 @@ require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0 // indirect
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/benallfree/nollama v0.0.1-alpha.1 // indirect
 	github.com/benbjohnson/litestream v0.5.18 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -160,8 +159,8 @@ replace pocketone.dev/ext/cache => ../cache
 
 replace pocketone.dev/ext/wasm => ../wasm
 
-replace pocketone.dev/ext/agent => ../agent
+replace pocketone.dev/ext/llm => ../llm
 
 replace pocketone.dev/ext/uicache => ../uicache
 
-replace pocketone.dev/ext/agent-chat => ../agent-chat
+replace pocketone.dev/ext/llm-chat => ../llm-chat

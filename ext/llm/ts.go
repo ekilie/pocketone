@@ -1,0 +1,132 @@
+package llm
+
+// TypeScript implements the jsvm types hook: $llm's declarations, over the llm.* contracts' own types.
+func (*Extension) TypeScript() string { return typeScript }
+
+const typeScript = `/** A generated or sent file: data is base64. $llm.file(f) makes it a PocketBase file for record.set. */
+type LlmFile = { name?: string; type?: string; data?: string; url?: string }
+
+type LlmUsage = { inputTokens?: number; outputTokens?: number; cachedTokens?: number; reasoningTokens?: number; seconds?: number; costUSD?: number }
+
+type LlmModels = {
+  models: { id: string; provider: string; type: string; name?: string; kinds: string[]; inputs?: string[]; reasoning?: boolean;
+    contextTokens?: number; prices?: { unit: string; usd: number }[]; description?: string }[]
+  default?: string
+}
+
+type LlmJob = { id: string; status: "queued" | "running" | "done" | "failed"; progress?: number; files?: LlmFile[]; outputs?: number; error?: string; model: string; usage: LlmUsage }
+
+type LlmMessage = { role: "system" | "user" | "assistant"; content: string }
+
+type LlmTextInput = {
+  /** "provider/model"; empty uses the text default from Settings → LLM. */
+  model?: string
+  system?: string
+  prompt?: string
+  messages?: LlmMessage[]
+  /** A JSON schema the answer must match; the parsed answer is then in data. */
+  schema?: object | string
+  maxTokens?: number
+  temperature?: number
+  stop?: string[]
+  /** How much a reasoning model thinks first: "" (its default), "off", "low", "medium", "high". */
+  reasoning?: "" | "off" | "low" | "medium" | "high"
+  /** The provider's own fields, passed through. */
+  options?: Record<string, any>
+}
+
+type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?: string; model: string; usage: LlmUsage }
+
+/** An op with an .async twin, run off the app's VM. */
+type LlmOp<I, O> = ((opts: I) => O) & { async(opts: I): Promise<O> }
+
+/** Cloud models (the llm.* contracts): providers, keys and defaults are set in Settings → LLM. */
+declare var $llm: {
+  text: {
+    complete: LlmOp<LlmTextInput, LlmTextAnswer>
+    /** Like complete, calling onText with each piece of the answer as it's written (false stops it). */
+    stream(opts: LlmTextInput, onText?: (text: string) => boolean | void, onReasoning?: (text: string) => boolean | void): LlmTextAnswer
+    /** About how many tokens a text or a conversation is (four characters each). */
+    count(textOrMessages: string | LlmMessage[] | { text?: string; system?: string; messages?: LlmMessage[] }): number
+    models(opts?: { provider?: string }): LlmModels
+  }
+  image: {
+    generate: LlmOp<{ model?: string; prompt: string; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
+      { files: LlmFile[]; model: string; usage: LlmUsage }>
+    edit: LlmOp<{ model?: string; prompt: string; images: LlmFile[]; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
+      { files: LlmFile[]; model: string; usage: LlmUsage }>
+    models(opts?: { provider?: string }): LlmModels
+  }
+  speech: {
+    speak: LlmOp<{ model?: string; text: string; voice?: string; format?: string; speed?: number; instructions?: string; options?: Record<string, any> },
+      { file: LlmFile; model: string; usage: LlmUsage }>
+    voices(model?: string): { id: string; name?: string; language?: string; gender?: string }[]
+    models(opts?: { provider?: string }): LlmModels
+  }
+  transcribe: {
+    transcribe: LlmOp<{ model?: string; audio: LlmFile; language?: string; prompt?: string; options?: Record<string, any> },
+      { text: string; language?: string; model: string; usage: LlmUsage }>
+    models(opts?: { provider?: string }): LlmModels
+  }
+  /** Music is a job: create with wait ("5m") returns it done, files included; without, follow it with get. */
+  music: {
+    create: LlmOp<{ model?: string; prompt: string; lyrics?: string; seconds?: number; wait?: string; options?: Record<string, any> }, LlmJob>
+    get(id: string): LlmJob
+    content(id: string, index?: number): LlmFile
+    models(opts?: { provider?: string }): LlmModels
+  }
+  video: {
+    create: LlmOp<{ model?: string; prompt: string; image?: LlmFile; seconds?: number; size?: string; aspectRatio?: string; wait?: string; options?: Record<string, any> }, LlmJob>
+    get(id: string): LlmJob
+    content(id: string, index?: number): LlmFile
+    models(opts?: { provider?: string }): LlmModels
+  }
+  embed: {
+    embed: LlmOp<{ model?: string; input: string[]; dimensions?: number; options?: Record<string, any> }, { vectors: number[][]; model: string; usage: LlmUsage }>
+    models(opts?: { provider?: string }): LlmModels
+  }
+  /** A generated file as a PocketBase file: record.set("pictures+", $llm.file(r.files[0])). */
+  file(f: LlmFile): any
+  /** Stored conversations (llm.chat/v1, the llm-chat extension). */
+  chat: {
+    /** Starts a chat and returns its id. */
+    new(opts?: { title?: string; meta?: Record<string, any> }): string
+    /** A stored chat by id, with the options every send uses. */
+    open(id: string, opts?: LlmChatOptions): LlmChat
+    /** Chats, most recently updated first; meta keeps those whose meta has each key with that value. */
+    list(opts?: { meta?: Record<string, any>; limit?: number; offset?: number }): LlmChatInfo[]
+    /** Deletes every chat whose meta matches; returns how many. */
+    forget(opts: { meta: Record<string, any> }): number
+  }
+}
+
+type LlmChatOptions = {
+  model?: string
+  reasoning?: "" | "off" | "low" | "medium" | "high"
+  system?: string
+  /** Sent after the question (history shows the question alone): text, or a function of the question. */
+  context?: string | ((question: string) => string)
+  /** Messages sent before the summary takes over (default 12). */
+  window?: number
+  /** Fold the oldest messages into the summary once this many are past the window (default 6). */
+  summarizeEvery?: number
+  maxTokens?: number
+  temperature?: number
+}
+
+type LlmChatInfo = { id: string; title: string; summary: string; meta: any; messages: number; created: string; updated: string }
+
+type LlmChat = {
+  id: string
+  /** Asks and saves both turns. With onText, streams the answer to it. */
+  send: ((text: string, opts?: LlmChatOptions & { onText?: (text: string) => boolean | void; onReasoning?: (text: string) => boolean | void; schema?: object | string }) => LlmTextAnswer) & {
+    async(text: string, opts?: LlmChatOptions & { schema?: object | string }): Promise<LlmTextAnswer>
+  }
+  get(): LlmChatInfo
+  history(opts?: { limit?: number; before?: string }): { id: string; role: "user" | "assistant"; content: string; created: string }[]
+  summary(): string
+  title(text?: string): string
+  meta(obj?: Record<string, any>): any
+  forget(): void
+}
+`
