@@ -63,10 +63,16 @@
         }
         const hasChanges = () => JSON.stringify(values()) !== data.saved;
 
+        // open holds the uids of the expanded providers: kept outside the store, so editing a field (which redraws the
+        // list) doesn't fold them up
+        const open = new Set();
+        let nextUID = 1;
+
         function fill(v) {
             data.view = v;
             data.providers = (v.providers || []).map((p) => ({
-                name: p.name, type: p.type, endpoint: p.endpoint || "", account: p.account || "", key: "", keySet: p.keySet,
+                uid: nextUID++, name: p.name, type: p.type, endpoint: p.endpoint || "", account: p.account || "", key: "",
+                keySet: p.keySet, keyHint: p.keyHint || "",
             }));
             data.saved = JSON.stringify(values());
         }
@@ -108,12 +114,30 @@
         // set replaces one provider (so the page redraws), merging changes.
         const set = (i, changes) => (data.providers = data.providers.map((p, j) => (j === i ? { ...p, ...changes } : p)));
 
-        function add(type) {
-            const ti = typeOf(type);
-            let name = ti.name || type;
-            for (let n = 2; data.providers.some((p) => p.name === name); n++) name = (ti.name || type) + n;
-            data.providers = [...data.providers, { name, type, endpoint: "", account: "", key: "", keySet: false, fresh: true }];
+        // freeName is the type's suggested name, numbered when another provider has it.
+        function freeName(type, except) {
+            const base = typeOf(type).name || type;
+            let name = base;
+            for (let n = 2; data.providers.some((p, j) => j !== except && p.name === name); n++) name = base + n;
+            return name;
+        }
+
+        function add() {
+            const type = data.view?.types?.[0]?.type || "openai";
+            const p = { uid: nextUID++, name: freeName(type), type, endpoint: "", account: "", key: "", keySet: false, keyHint: "" };
+            open.add(p.uid);
+            data.providers = [...data.providers, p];
             data.message = null;
+        }
+
+        // setType switches a provider's type: its endpoint and account go, and a name still at the old type's suggestion
+        // follows the new one. A saved key is kept only while the type, endpoint and account stay the same (the server
+        // decides), so a new type needs its key entered.
+        function setType(i, type) {
+            const p = data.providers[i];
+            if (!type || type === p.type) return;
+            const suggested = (t) => p.name === (typeOf(t).name || t) || new RegExp("^" + (typeOf(t).name || t) + "\\d+$").test(p.name);
+            set(i, { type, endpoint: "", account: "", name: !p.name || suggested(p.type) ? freeName(type, i) : p.name });
         }
 
         function remove(i) {
@@ -123,18 +147,27 @@
         function providerAccordion(p, i) {
             const ti = typeOf(p.type);
             return t.details(
-                { className: "accordion", open: !!p.fresh },
+                { className: "accordion", open: open.has(p.uid), ontoggle: (e) => (e.target.open ? open.add(p.uid) : open.delete(p.uid)) },
                 t.summary(
                     null,
                     t.i({ className: icons[p.type] || "ri-plug-line", ariaHidden: true }),
                     t.span({ className: "txt" }, ti.title),
                     t.span({ className: "label" }, `${p.name || "?"}/…`),
                     t.div({ className: "flex-fill" }),
-                    p.keySet || p.key ? t.span({ className: "label success" }, "Key set") : t.span({ className: "label warning" }, "No key"),
+                    p.key ? t.span({ className: "label success" }, "New key")
+                        : p.keySet ? t.span({ className: "label success txt-mono" }, p.keyHint || "Key set")
+                        : t.span({ className: "label warning" }, "No key"),
                 ),
-                t.p({ className: "m-t-0 txt-hint" }, ti.about || ""),
                 t.div(
                     { className: "grid" },
+                    t.div({ className: "col-md-5" }, field("Type",
+                        app.components.select({
+                            required: true,
+                            options: () => (data.view?.types || []).map((x) => ({ value: x.type, label: x.title })),
+                            value: () => p.type,
+                            onchange: (sel) => setType(i, sel?.[0]?.value),
+                        }))),
+                    t.div({ className: "col-md-7" }, t.p({ className: "txt-hint m-t-sm m-b-0" }, ti.about || "")),
                     t.div({ className: "col-md-4" }, field("Name",
                         t.input({ type: "text", required: true, value: p.name,                            onchange: (e) => set(i, { name: e.target.value }) }),
                         t.span(null, "Calls name its models as ", t.code(null, `${p.name || "name"}/model`), "."))),
@@ -147,7 +180,7 @@
                             ti.endpoint ? "Leave empty for the default." : "Include the version path, like /v1.")),
                     t.div({ className: "col-lg-12" }, field(ti.account ? "API token" : "API key",
                         t.input({ type: "password", autocomplete: "new-password", value: p.key,
-                            placeholder: p.keySet ? "Saved; leave empty to keep it" : "", onchange: (e) => set(i, { key: e.target.value }) }),
+                            placeholder: p.keySet ? `${p.keyHint || "Saved"} (leave empty to keep it)` : "", onchange: (e) => set(i, { key: e.target.value }) }),
                         ti.account ? "A token with Workers AI permission." : null)),
                     t.div({ className: "col-lg-12 flex" },
                         t.div({ className: "m-r-auto" }),
@@ -185,17 +218,11 @@
                             t.div({ className: "col-lg-12" },
                                 () => data.providers.length
                                     ? t.div({ className: "accordions" }, ...data.providers.map(providerAccordion))
-                                    : t.div({ className: "block txt-center txt-hint p-base" }, "No providers yet. Add one below."),
+                                    : t.div({ className: "block txt-center txt-hint p-base" }, "No providers yet."),
                             ),
                             t.div({ className: "col-lg-12" },
-                                t.div({ className: "flex gap-sm", style: "flex-wrap:wrap" },
-                                    t.span({ className: "txt-hint" }, "Add a provider:"),
-                                    ...(data.view?.types || []).map((ti) => t.button(
-                                        { type: "button", className: "btn sm secondary", onclick: () => add(ti.type) },
-                                        t.i({ className: "ri-add-line", ariaHidden: true }),
-                                        t.span({ className: "txt" }, ti.title),
-                                    )),
-                                ),
+                                t.button({ type: "button", className: "btn secondary sm", onclick: add },
+                                    t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New provider")),
                             ),
                             () => data.message
                                 ? t.div({ className: "col-lg-12" },

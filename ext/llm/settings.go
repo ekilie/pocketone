@@ -131,10 +131,12 @@ func (s settingsSection) Info() settingsv1.Info {
 		Description: "The providers $llm calls name as provider/model: Vultr, Cloudflare, OpenRouter, any OpenAI-compatible API."}
 }
 
-// providerView is a provider as Get returns it: the key never comes back, only whether one is set.
+// providerView is a provider as Get returns it: the key never comes back, only whether one is set and its start.
 type providerView struct {
 	Provider
-	KeySet bool `json:"keySet"`
+	KeySet  bool   `json:"keySet"`
+	KeyHint string `json:"keyHint,omitempty"` // the first few characters, then dots: sk-or-v1••••••••
+
 }
 
 // settingsView is the section's values.
@@ -150,7 +152,7 @@ func (s settingsSection) Get(context.Context) (json.RawMessage, error) {
 	}
 	v := settingsView{Types: Types, Providers: []providerView{}}
 	for _, p := range cur.Providers {
-		pv := providerView{Provider: p, KeySet: p.Key != ""}
+		pv := providerView{Provider: p, KeySet: p.Key != "", KeyHint: keyHint(p.Key)}
 		pv.Key = ""
 		v.Providers = append(v.Providers, pv)
 	}
@@ -258,4 +260,18 @@ func message(err error) string {
 		return xe.Message
 	}
 	return err.Error()
+}
+
+// keyHint is a saved key's first characters followed by dots, so an admin can tell which key is set: 8 characters of a
+// long key, 4 of a medium one, none of a short one (it would give too much of it away).
+func keyHint(key string) string {
+	switch n := len(key); {
+	case n == 0:
+		return ""
+	case n >= 32:
+		return key[:8] + "••••••••"
+	case n >= 16:
+		return key[:4] + "••••••••"
+	}
+	return "••••••••"
 }
