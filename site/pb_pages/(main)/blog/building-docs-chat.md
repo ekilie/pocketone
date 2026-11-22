@@ -10,6 +10,8 @@ Docs Chat started as a test. I wanted to see how inference clouds actually perfo
 
 That's [learn.pocketone.dev](https://learn.pocketone.dev). Ask it something about PocketOne or PocketBase and it answers from both sets of docs, cites the pages it used, and tells you what the answer cost.
 
+![Docs Chat answering "How do I restore my database to an earlier moment?": dashboard steps, the CLI command, a few things to know, then the model, time, tokens, cost and the docs sections it used](/blog/img/docs-chat-answer.jpg)
+
 It's five files. No Go, no build step, no vector database. Just a `pb_pages` folder and the stock `pocketone` binary. The whole thing is in the repo at [`ext/llm/examples/chat`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/chat).
 
 ```
@@ -20,8 +22,6 @@ pb_pages/
   _private/llm.ts        the model, the docs, search, the call to the chat
   _private/preamble.md   who the assistant is and how it answers
 ```
-
-Here's how it fits together.
 
 ### Teaching it the docs
 
@@ -122,9 +122,11 @@ return res.data.questions
 
 ### What it cost
 
-Every `$llm` result has `usage.costMicroUSD`, the call's cost in millionths of a dollar. It's the provider's figure when they report one, else estimated from the model's listed prices. The page shows it under every answer, so you can see exactly what a question costs.
+Every `$llm` result has `usage.costMicroUSD`, the call's cost in millionths of a dollar. It's the provider's figure when they report one, else estimated from the model's listed prices. The page shows it under every answer, so you can see exactly what a question costs. The restore answer above took 1.6 seconds and cost about $0.0008, and 512 of its 682 input tokens were billed at the cached rate.
 
-### The real product: `$llm`
+<p style="display: flex; justify-content: center"><img src="/blog/img/docs-chat-phone.jpg" alt="The same answer on a phone, with the cost line and sources under it" width="300"></p>
+
+### The `$llm` interface
 
 Docs Chat is small. Most of my time went into what's underneath it: the `$llm` object. I wanted one interface that works the same across providers, so switching from Vultr to Cloudflare Workers AI to OpenRouter is a change to the model name and nothing else. Every call names its model as `provider/model`. Every call that reaches a provider is async and says so in its name (`completeAsync`, `sendAsync`). Every result has the same shape, cost included.
 
