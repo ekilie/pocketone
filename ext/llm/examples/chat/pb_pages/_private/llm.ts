@@ -232,15 +232,18 @@ export async function answer(
   { chatId, question, onText }: { chatId?: string; question: string; onText?: (t: string) => void },
 ) {
   const kb = await knowledge(ctx)
-  const id = chatId || $llm.chat.new({ title: question.slice(0, 80) })
+  // $llm.for(ctx): every call counts for this visitor (their guest cookie), so the per-guest and all-guests limits in
+  // Settings → LLM apply; guest calls are refused until an all-guests limit is set there
+  const llm = $llm.for(ctx)
+  const id = chatId || llm.chat.new({ title: question.slice(0, 80) })
   // the question, plus the one before it, so a follow-up ("and how do I undo that?") still finds its topic
-  const before = chatId ? $llm.chat.open(id).history({ limit: 2 }).filter((m) => m.role === 'user').map((m) => m.content) : []
+  const before = chatId ? llm.chat.open(id).history({ limit: 2 }).filter((m) => m.role === 'user').map((m) => m.content) : []
   const context = search(kb, [...before, question].join(' '), 3)
   const excerpts = context.map((s, i) => `[${i + 1}] ${s.docs} docs: ${s.title} (${s.source})\n${s.text}`).join('\n\n')
   // The chat sends the preamble, a summary of older turns, the turns since, then this question with its excerpts after
   // it, and keeps the question as sent, so each turn's prompt starts exactly like the last one did (providers bill a
   // repeated start cheaper). Reasoning is off: the excerpts hold the answer, and thinking would only cost time.
-  const chat = $llm.chat.open(id, { model: MODEL, system: kb.preamble, maxTokens: 600, temperature: 0.3, reasoning: 'off' })
+  const chat = llm.chat.open(id, { model: MODEL, system: kb.preamble, maxTokens: 600, temperature: 0.3, reasoning: 'off' })
   const started = Date.now()
   const res = await chat.sendAsync(question, { context: `Documentation excerpts to answer from:\n\n${excerpts}`, onText })
   return {
@@ -256,7 +259,7 @@ export async function answer(
 
 /** Three short follow-up questions, as JSON in the shape asked (a schema). */
 export async function followUps(ctx: any, question: string, reply: string): Promise<string[]> {
-  const res: LlmTextAnswer = await $llm.text.completeAsync({
+  const res: LlmTextAnswer = await $llm.for(ctx).text.completeAsync({
     model: MODEL,
     reasoning: 'off',
     system: 'Suggest three short follow-up questions a PocketOne user might ask next. Each under eight words.',

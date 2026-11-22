@@ -167,6 +167,9 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Streaming answers](https://pocketone.dev/docs/extensions/llm/guides/streaming): Show an answer as the model writes it: $llm.text.streamAsync in a page, forwarded to the browser with ctx.res.sse().
 - [Pictures, speech and music](https://pocketone.dev/docs/extensions/llm/guides/media): Generate pictures, narration, music and video with $llm and save them on your records as files.
 - [Conversations](https://pocketone.dev/docs/extensions/llm/guides/conversations): Chats that remember: send the conversation with each call, or let LLM Chat store it, summarize it and send it for you.
+- [Limits](https://pocketone.dev/docs/extensions/llm/guides/limits): Cap what your app spends on models: limits in Settings → LLM for the whole app, each user, each guest and all guests together, by dollars, tokens or calls, per UTC day or month.
+- [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom): $llm.for(ctx) counts a page's model calls for its signed-in user or its guest, so per-user and per-guest limits apply; how guests are told apart, and how to handle a refused call.
+- [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend): Every model call is a row in _llm_calls: what it was, whom it was for and what it cost. Read spend per user or model, and sell credits from a hook.
 
 ## Pages: Introduction
 

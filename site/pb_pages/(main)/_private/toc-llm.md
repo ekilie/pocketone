@@ -11,3 +11,6 @@
 - [Streaming answers](/docs/extensions/llm/guides/streaming)
 - [Pictures, speech and music](/docs/extensions/llm/guides/media)
 - [Conversations](/docs/extensions/llm/guides/conversations)
+- [Limits](/docs/extensions/llm/guides/limits)
+- [Whom a call is for](/docs/extensions/llm/guides/whom)
+- [Spend and the ledger](/docs/extensions/llm/guides/spend)

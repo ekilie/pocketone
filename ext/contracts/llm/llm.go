@@ -146,4 +146,7 @@ var (
 		Message: "no such model: name one as provider/model from this kind's models list"}
 	ErrNotSupported = &extkit.Error{Code: "not_supported", Status: 400, Message: "that provider doesn't do this"}
 	ErrProvider     = &extkit.Error{Code: "provider", Status: 502, Message: "the provider answered with an error"}
+	// ErrLimit: a limit in Settings → LLM refused the call before it reached the provider. Each refusal says which
+	// limit and when its window resets ("try again after 00:00 UTC").
+	ErrLimit = &extkit.Error{Code: "limit", Status: 429, Message: "a limit in Settings → LLM refused this call"}
 )

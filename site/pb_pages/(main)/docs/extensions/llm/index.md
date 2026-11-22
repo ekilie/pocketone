@@ -68,6 +68,9 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
 - [Streaming answers](/docs/extensions/llm/guides/streaming): show an answer as it's written.
 - [Pictures, speech and music](/docs/extensions/llm/guides/media): generate files and save them on records.
 - [Conversations](/docs/extensions/llm/guides/conversations): chats that remember, with LLM Chat.
+- [Limits](/docs/extensions/llm/guides/limits): cap what the app spends, per day or month, for the whole app, each user and each guest.
+- [Whom a call is for](/docs/extensions/llm/guides/whom): `$llm.for(ctx)`, so per-user and per-guest limits apply.
+- [Spend and the ledger](/docs/extensions/llm/guides/spend): every call's cost, per user and per model; selling credits.
 
 ## Thinking models
 

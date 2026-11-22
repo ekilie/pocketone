@@ -2238,6 +2238,9 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
 - [Streaming answers](https://pocketone.dev/docs/extensions/llm/guides/streaming): show an answer as it's written.
 - [Pictures, speech and music](https://pocketone.dev/docs/extensions/llm/guides/media): generate files and save them on records.
 - [Conversations](https://pocketone.dev/docs/extensions/llm/guides/conversations): chats that remember, with LLM Chat.
+- [Limits](https://pocketone.dev/docs/extensions/llm/guides/limits): cap what the app spends, per day or month, for the whole app, each user and each guest.
+- [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom): `$llm.for(ctx)`, so per-user and per-guest limits apply.
+- [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend): every call's cost, per user and per model; selling credits.
 
 ## Thinking models
 
@@ -13485,6 +13488,14 @@ one it was entered for (change a provider's endpoint and you enter its key again
 [key-value store](https://pocketone.dev/docs/extensions/kv/extension), under the private name `_llm/settings` (only Go code reaches it; the kv/v1 API
 and `$kv` don't).
 
+Under the providers, **Limits** cap what the app spends: the whole app, each signed-in user, each guest or all guests
+together, at most so many US dollars, output tokens, input tokens or calls a UTC day or month, optionally for one kind
+or model. Every call passes them before it reaches a provider, and a used-up limit refuses it with code `limit` (429).
+Page code says whom a call is for with `$llm.for(ctx)` (a page's `ctx` or a route's `e`): its signed-in user, or else a
+guest told apart by a signed cookie. Guest calls are refused until there's a limit for all guests together. Every call
+is recorded in the `_llm_calls` collection, and the screen shows today's and this month's spend from it
+([Limits](https://pocketone.dev/docs/extensions/llm/guides/limits), [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom), [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend)).
+
 There's no pocketone.yaml configuration besides the switch: `llm: {enabled: false}` turns it off on a single app (on a
 host, an instance's `extensions.llm`), and with it `$llm` and the `llm.*` contracts.
 
@@ -20434,6 +20445,378 @@ Providers cache the start of recent prompts and bill it cheaper when the next pr
 keeps the start of each turn identical until the next summary: the same system text, the same summary, the same earlier
 turns. Do the same in your own calls: put what changes (the question, the passages that answer it) at the end, and keep
 the system text the same from call to call.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/llm/guides/limits
+
+# Limits
+
+Every model call spends money on your provider account. On a page anyone can open, every visitor spends it. Limits cap
+that: you set them in **Settings → LLM**, and every call passes them before it reaches a provider. A call a used-up
+limit refuses never reaches the provider and costs nothing.
+
+This page covers setting limits up. [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom) covers the one line page code adds so per-user and
+per-guest limits work, and [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend) covers the record every call leaves.
+
+## Setting a limit
+
+Open the dashboard, go to **Settings → LLM**, and scroll past the providers to **Limits**. Press **New limit**, fill
+in the row, and press **Save changes**. Limits apply from the next call, with no restart.
+
+![Settings → LLM: four limits (all guests together $1 a day, each guest $0.10 a day, the whole app $25 a month, and 20 video calls a month) under today's and this month's spend](https://pocketone.dev/docs/extensions/llm/guides/limits-settings.png)
+
+Each limit reads as a sentence: **who** may use **at most** so much of **what**, **per** day or month.
+
+| Field | What it means |
+|---|---|
+| **Who** | Whose calls the limit counts. **The whole app**: every call. **Each signed-in user**: each user separately, so one user using theirs up leaves the others theirs. **Each guest**: each visitor who isn't signed in, separately. **All guests together**: every guest's calls in one shared bucket. |
+| **Counts** | What it counts. **US dollars**: what the calls cost. **Output tokens**: what the model wrote. **Input tokens**: what was sent to it. **Calls**: how many calls reached a provider. |
+| **At most** | The amount. Dollars may have cents (`0.10`); tokens and calls are whole numbers. `0` refuses every call the limit counts. |
+| **Per** | **a day** or **a month**, in UTC: a day starts at 00:00 UTC, a month on the 1st at 00:00 UTC. |
+| **Kind** | Count only one kind of call: `text`, `image`, `speech`, `transcribe`, `align`, `music`, `video` or `embed`. **Every kind** counts all of them. |
+| **Model** | Count only calls to one model, named as `provider/model` (`vultr/glm-5.3`). Empty counts every model. |
+
+A limit with a kind or a model counts only those calls toward its amount, and refuses only those calls. Add as many
+limits as you like: a call has to pass every one that counts it.
+
+Above the limits, the screen shows what the whole app has spent today and this month, and how many calls today a limit
+refused. The numbers come from [the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend).
+
+## When a limit is used up
+
+Before each call, every limit that counts it is checked against what's been used so far in its window. If one is used
+up, the call is refused before it reaches the provider. In page code the `$llm` call throws, over HTTP the contract
+answers `429`, and either way the error's code is `limit` and its message names the limit and when it resets:
+
+```
+limit reached: each guest, $0.10 a day (used $0.10); it resets at 00:00 UTC
+limit reached: the whole app, 20 calls a month of video (used 20 calls); it resets on Dec 1 (UTC)
+```
+
+The message is written to show to the person who made the call. [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom#when-a-call-is-refused)
+shows how to catch it in a page.
+
+A refused call still gets a row in the ledger, with the limit's message, so you can see how often visitors hit it.
+
+## Guests need a total
+
+A guest is told apart by a cookie (see [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom#guests)), and anyone can clear their cookies and
+come back as a new guest with a fresh allowance. A limit on **each guest** keeps one visitor from using everything up
+by accident, but it doesn't cap what guests spend. Only a limit on **all guests together** does.
+
+So guest calls are refused until there's a limit on all guests together that counts them. Until you add one, a guest's
+call fails with:
+
+```
+guest calls are off until the app caps what all guests together may spend: add a limit for all guests in Settings → LLM
+```
+
+and the Limits section shows a warning. Calls for signed-in users, and calls that aren't for anyone in particular,
+aren't guest calls and aren't affected.
+
+## Checked before, counted after
+
+A call's cost and tokens are known only once the provider answers, so a limit is checked before each call and the call
+is counted after it. Two things follow:
+
+- **The last call a limit lets through can take it over**, by that call's own cost. With $0.10 left and a call that
+  costs $0.15, the call goes through and the next one is refused. Keep your amounts a call or two under what you can
+  afford.
+- **Calls running at the same moment can all pass the check** before any of them is counted, so a burst of calls can
+  take a limit further over than one call. Limits keep spending in the right range day to day; they aren't an exact
+  meter.
+
+## Dollars need prices
+
+A call's cost is what the provider reports, or else what its listed prices say. A model with no price, such as a model
+on your own machine (Ollama, llama-server) or an OpenAI-compatible server that lists no prices, costs $0 as far as the
+ledger knows, so a dollar limit never fills up for it. Count **tokens** or **calls** for those models instead.
+
+Music and video are jobs: a call starts the job, and the job's cost is known once it's done. A job counts as a call as
+soon as it starts, and its cost is added to its ledger row once `createAsync` with `wait` sees it finish, or once
+`getAsync` does. A job nobody checks again after starting keeps a cost of $0.
+
+## Limits for common apps
+
+**An internal tool**, where everyone is signed in and trusted: one ceiling.
+
+- The whole app, US dollars, at most 20, per month.
+
+**A public demo**, like [Docs Chat](https://pocketone.dev/docs/examples/docs-chat), where visitors aren't signed in:
+
+- All guests together, US dollars, at most 1, per day.
+- Each guest, US dollars, at most 0.10, per day.
+- The whole app, US dollars, at most 20, per month.
+
+**An app with accounts**, where users sign in to use the model:
+
+- Each signed-in user, output tokens, at most 200000, per day.
+- The whole app, US dollars, at most 50, per month.
+
+**An expensive kind on its own**, next to whatever else you have:
+
+- The whole app, calls, at most 20, per month, kind video.
+- The whole app, US dollars, at most 5, per day, kind image.
+
+Plan tiers, credits users buy, and anything else that depends on who the user is belong in your app's own code: see
+[Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend#selling-credits).
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/llm/guides/whom
+
+# Whom a call is for
+
+[Limits](https://pocketone.dev/docs/extensions/llm/guides/limits) on each user, each guest and all guests together need to know whom each call is for. Page code says
+so with one change: call the model through `$llm.for(ctx)` instead of `$llm`.
+
+```ts
+// pb_pages/ask/+api.ts
+export async function post(ctx: pages.Context) {
+  const { question } = ctx.req.body()
+  const r: LlmTextAnswer = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt: question })
+  return ctx.res.json({ answer: r.text })
+}
+```
+
+`$llm.for()` takes the request you're answering: a page's `ctx`, or a `pb_hooks` route's `e`. It returns the same API as
+`$llm`, every kind, chats and streams included, with each call counted for that request:
+
+- **its signed-in user**, when the request carries an auth record (counted as `user:<collection>/<id>`);
+- else **a guest**, told apart by a cookie (below).
+
+```js
+// pb_hooks/ask.pb.js
+routerAdd("POST", "/api/ask", async (e) => {
+  const { question } = e.requestInfo().body
+  const r = await $llm.for(e).text.completeAsync({ model: "vultr/glm-5.3", prompt: question })
+  return e.json(200, { answer: r.text })
+})
+```
+
+Keep the object for the whole request when you make several calls, so they all count for the same person:
+
+```ts
+const llm = $llm.for(ctx)
+const chat = llm.chat.open(chatId, { model: "vultr/glm-5.3" })
+const r = await chat.sendAsync(question)
+const more = await llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: `Three follow-up questions to: ${question}` })
+```
+
+## Calls that aren't for anyone
+
+Plain `$llm` counts toward limits on **the whole app** only. Use it for work that isn't on someone's behalf: a cron,
+a hook that tags new records, a migration. Those calls are recorded with no subject, never count as a guest's, and are
+never refused for a missing guest total.
+
+```js
+// pb_hooks/tags.pb.js: tags every new post; counted toward the whole app only
+onRecordAfterCreateSuccess(async (e) => {
+  const r = await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: "Three tags for: " + e.record.get("title") })
+  e.record.set("tags", r.text)
+  $app.save(e.record)
+  e.next()
+}, "posts")
+```
+
+Calls over HTTP and MCP (`/api/_c/llm.text/v1/...`) come from superusers and API tokens, never from visitors, so they
+also count toward the whole app only.
+
+## Guests
+
+A visitor who isn't signed in is a guest. Guests are told apart by a cookie, `pocketone_llm_guest`, which the first
+`$llm.for()` call for a visitor sets on the response:
+
+- It holds a random id and a signature, so a visitor can't pick someone else's id. The signing key is made the first
+  time it's needed and kept in the app's [key-value store](https://pocketone.dev/docs/extensions/kv) at the private name `_llm/guest-key`.
+  Deleting it gives every guest a new id.
+- It lasts a year, is `HttpOnly` (page JavaScript can't read it), `SameSite=Lax`, and `Secure` when the app is served
+  over HTTPS.
+- Until the browser sends it back, the visitor counts by IP address (`guest:ip:<address>`). The first call of a visit
+  is counted that way, and so is every call from a client that never keeps cookies, so dropping cookies doesn't get a
+  fresh allowance on every call.
+
+A visitor who clears their cookies comes back as a new guest. That's why guest calls need [a limit on all guests
+together](limits.md#guests-need-a-total) before they're answered: it's the only limit a visitor can't reset.
+
+## When a call is refused
+
+A refused call throws. Its message is written for the person who made the request ("limit reached: each guest, $0.10 a
+day (used $0.10); it resets at 00:00 UTC"), so the simplest handling is to show it:
+
+```ts
+// pb_pages/ask/+api.ts
+export async function post(ctx: pages.Context) {
+  const { question } = ctx.req.body()
+  try {
+    const r: LlmTextAnswer = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt: question })
+    return ctx.res.json({ answer: r.text })
+  } catch (err: any) {
+    return ctx.res.json(429, { error: String(err.message || err) })
+  }
+}
+```
+
+A streamed answer throws the same way, before any text arrives. With server-sent events, send the message as an event
+the page shows in place of the answer, as [Docs Chat](https://pocketone.dev/docs/examples/docs-chat) does:
+
+```ts
+// pb_pages/chat/+api.ts
+export async function post(ctx: pages.Context) {
+  const { question } = ctx.req.body()
+  const stream = ctx.res.sse()
+  try {
+    const r = await $llm.for(ctx).text.streamAsync({ model: "vultr/glm-5.3", prompt: question },
+      (text) => stream.send("text", JSON.stringify(text)))
+    stream.send("done", JSON.stringify({ usage: r.usage }))
+  } catch (err: any) {
+    stream.send("error", JSON.stringify(String(err.message || err)))
+  }
+  stream.close()
+}
+```
+
+To tell a used-up limit apart from other failures (a wrong key, a provider that's down), check for the word `limit`
+in the message, or call the contract over HTTP and check the code: refused calls answer `429` with
+`{"code": "limit", ...}`.
+
+## In Go
+
+A custom build makes calls through the `llm.*` contracts. The subject travels in the call's context, set with the
+helpers in the shared contract package:
+
+```go
+import (
+	llmc "pocketone.dev/ext/contracts/llm"
+	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/llm"
+)
+
+func answer(app core.App, e *core.RequestEvent, question string) (string, error) {
+	// whom the request is for: its auth record, else its guest cookie (set on e's response when missing), else its IP
+	ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+	r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
+		Model: "vultr/glm-5.3", Prompt: question,
+	})
+	return r.Text, err
+}
+```
+
+- `llmc.WithSubject(ctx, s)` and `llmc.SubjectOf(ctx)` set and read the subject; `llmc.UserSubject(collection, id)`
+  builds a user's. A call whose context has no subject counts toward the whole app only.
+- `llm.SubjectOf(app, e)` is what `$llm.for(e)` uses: the request's user, guest or IP.
+- Pass the context on and the subject goes with it: LLM Chat's calls to `llm.text/v1` count for the subject of the
+  send that made them.
+- A refused call returns an `*extkit.Error` with `Code` `"limit"` and `Status` `429` (`llmc.ErrLimit`'s).
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/llm/guides/spend
+
+# Spend and the ledger
+
+Every call that reaches a provider, and every call a [limit](https://pocketone.dev/docs/extensions/llm/guides/limits) refuses, leaves a row in the `_llm_calls`
+collection: what kind of call it was, which model answered, whom it was for, what it used and what it cost. Limits count
+from it, Settings → LLM shows today's and this month's spend from it, and your app can read it like any other
+collection.
+
+## What a row holds
+
+| Field | |
+|---|---|
+| `kind` | `text`, `image`, `speech`, `transcribe`, `align`, `music`, `video` or `embed`. |
+| `model` | The model, as `provider/model`. |
+| `subject` | Whom the call was for: `user:<collection>/<id>`, `guest:<id>`, `guest:ip:<address>`, or empty for calls made with plain `$llm` ([Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom)). |
+| `via` | How the call arrived: `go` (page code and hooks), `http`, `mcp`. |
+| `input`, `cached`, `output` | Input tokens, the input tokens billed at the cheaper cached rate, and output tokens. |
+| `seconds` | Seconds of audio or video, for the kinds billed by length. |
+| `cost` | What the call cost, in millionths of a US dollar (`57000` is $0.057). |
+| `estimated` | True when the cost was worked out from the model's listed prices because the provider didn't report one. |
+| `refused` | Why a limit refused the call (its message); empty for a call that reached the provider. |
+| `job` | A music or video job's id. Its cost is filled in once the job is done ([Limits](https://pocketone.dev/docs/extensions/llm/guides/limits#dollars-need-prices)). |
+| `created` | When the call was made. |
+
+It's a system collection with no API rules: superusers see it in the dashboard (Collections → `_llm_calls`), and your
+app's own code reads it with `$app`. Visitors can't list it. Show them what's theirs through your own routes.
+
+Rows are kept for 13 months. A daily job deletes older ones, since limits only look back a month.
+
+## Reading spend
+
+What a signed-in user has spent today, for a page that shows it:
+
+```ts
+// pb_pages/usage/+page.ts
+export function load(ctx: pages.Context) {
+  if (!ctx.auth) return { spent: 0 }
+  const since = new Date().toISOString().slice(0, 10) + " 00:00:00.000Z" // today, UTC
+  const row = new DynamicModel({ cost: 0 })
+  $app.db()
+    .newQuery("SELECT COALESCE(SUM(cost), 0) AS cost FROM _llm_calls WHERE subject = {:s} AND created >= {:since} AND refused = ''")
+    .bind({ s: `user:${ctx.auth.collection().name}/${ctx.auth.id}`, since })
+    .one(row)
+  return { spent: row.cost / 1e6 } // dollars
+}
+```
+
+This month's spend by model, for an admin page:
+
+```sql
+SELECT model, COUNT(*) AS calls, SUM(cost) / 1e6 AS dollars
+FROM _llm_calls
+WHERE created >= strftime('%Y-%m-01 00:00:00.000Z', 'now') AND refused = ''
+GROUP BY model ORDER BY dollars DESC
+```
+
+And how often limits refused calls today, by limit:
+
+```sql
+SELECT refused, COUNT(*) AS times
+FROM _llm_calls
+WHERE created >= strftime('%Y-%m-%d 00:00:00.000Z', 'now') AND refused != ''
+GROUP BY refused ORDER BY times DESC
+```
+
+Each of these runs in the dashboard's SQL console too.
+
+## Selling credits
+
+Limits cap spending per period. If users buy credits, keep the balance on their own record and use the ledger to
+spend it: every row is created like any record, so a hook sees each call as it's recorded.
+
+```js
+// pb_hooks/credits.pb.js: users have a "credits" number field, in millionths of a dollar
+onRecordAfterCreateSuccess((e) => {
+  const m = e.record.get("subject").match(/^user:users\/(.+)$/)
+  if (m && e.record.get("cost") > 0) {
+    e.app.db()
+      .newQuery("UPDATE users SET credits = credits - {:cost} WHERE id = {:id}")
+      .bind({ cost: e.record.get("cost"), id: m[1] })
+      .execute()
+  }
+  e.next()
+}, "_llm_calls")
+```
+
+Then check the balance before calling the model, and refuse in your own words:
+
+```ts
+// pb_pages/ask/+api.ts
+export async function post(ctx: pages.Context) {
+  if (!ctx.auth) throw ctx.httpError(401, "sign in first")
+  if (ctx.auth.getInt("credits") <= 0) return ctx.res.json(402, { error: "You're out of credits." })
+  const r: LlmTextAnswer = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt: ctx.req.body().question })
+  return ctx.res.json({ answer: r.text })
+}
+```
+
+As with limits, the check comes before the call and the cost after it, so a user's last call can take them a little
+below zero. Keep a whole-app limit as well, so a mistake in your own code can't run up the bill.
 
 
 ---

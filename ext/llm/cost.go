@@ -17,12 +17,19 @@ type used struct {
 	chars int // characters read aloud
 }
 
-// fillCost sets u.CostMicroUSD from t's listed prices when the provider didn't report a cost. It never fails a call: without a
-// list, a listed price or a unit it can count, the cost stays empty.
+// fillCost sets u.CostMicroUSD from t's listed prices when the provider didn't report a cost, then writes the call's
+// ledger row. It never fails a call: without a list, a listed price or a unit it can count, the cost stays empty.
 func (r *router) fillCost(ctx context.Context, t target, u *llmc.Usage, x used) {
-	if u == nil || u.CostMicroUSD != 0 {
+	if u == nil {
 		return
 	}
+	if u.CostMicroUSD == 0 {
+		r.estimateCost(ctx, t, u, x)
+	}
+	r.record(ctx, t.c, *u, "")
+}
+
+func (r *router) estimateCost(ctx context.Context, t target, u *llmc.Usage, x used) {
 	ms, err := r.catalog(ctx, t.p, false)
 	if err != nil {
 		return
