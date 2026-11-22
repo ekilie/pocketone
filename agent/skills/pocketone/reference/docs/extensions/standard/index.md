@@ -4,7 +4,7 @@
 Version 0.1.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
+Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, dashboard cache headers (UI Cache), and a key-value store ($kv). Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
@@ -94,6 +94,14 @@ Turns the deploy extension off on a single app (`enabled: false`). On a multisit
 |---|---|---|---|
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
+#### `kv:`
+
+Turns the kv extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.kv`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
 #### `llm-chat:`
 
 Turns the llm-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.llm-chat`.
@@ -167,7 +175,7 @@ Turns the wasm extension off on a single app (`enabled: false`). On a multisite 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, llm, llm-chat
+standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, kv, llm, llm-chat
 standard: api-tokens/v1 ← api-tokens
 ```
 

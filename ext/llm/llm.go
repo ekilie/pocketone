@@ -52,7 +52,7 @@ func (*Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
 		Implements: extkit.IDs("llm.text/v1", "llm.image/v1", "llm.speech/v1", "llm.transcribe/v1", "llm.align/v1",
 			"llm.music/v1", "llm.video/v1", "llm.embed/v1"),
-		WorksWith: extkit.IDs("settings/v1"),
+		WorksWith: extkit.IDs("settings/v1", "kv/v1"),
 	}
 }
 

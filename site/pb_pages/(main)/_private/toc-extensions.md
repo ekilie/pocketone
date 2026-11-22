@@ -17,6 +17,7 @@
 - [Deploy](/docs/extensions/deploy)
 - [Desktop](/docs/extensions/desktop/extension)
 - [JSVM](/docs/extensions/jsvm)
+- [Key-Value Store](/docs/extensions/kv/extension)
 - [LLM](/docs/extensions/llm/extension)
 - [LLM Chat](/docs/extensions/llm-chat)
 - [MCP](/docs/extensions/mcp)

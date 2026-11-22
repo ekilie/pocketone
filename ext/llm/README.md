@@ -60,7 +60,8 @@ passes. Saving applies at once.
 
 Keys stay on the server: the screen never shows a saved key again, and a key is never sent to an endpoint other than the
 one it was entered for (change a provider's endpoint and you enter its key again). The settings are in the app's
-`_params` table, row `llm`.
+[key-value store](../kv/README.md), under the private name `_llm/settings` (only Go code reaches it; the kv/v1 API
+and `$kv` don't).
 
 There's no pocketone.yaml configuration besides the switch: `llm: {enabled: false}` turns it off on a single app (on a
 host, an instance's `extensions.llm`), and with it `$llm` and the `llm.*` contracts.

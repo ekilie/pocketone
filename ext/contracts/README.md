@@ -36,6 +36,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`instance.source/v1`](instance/source/v1/README.md) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
 | [`instance.tokens/v1`](instance/tokens/v1/README.md) | A multisite host checks an API token one of its instances issued, to accept it on the routes it answers. | pocker |  |  | @benallfree |
 | [`instance.watch/v1`](instance/watch/v1/README.md) | An edge follows a control plane lazily: one stream, hostnames watched as requests name them. | mothership |  |  | @benallfree |
+| [`kv/v1`](kv/v1/README.md) | An app's key-value store: named JSON values with no collection or migration, kept in PocketBase's _params. | kv (default) |  | api-tokens, bulkmail, llm | @benallfree |
 | [`llm.align/v1`](llm/align/v1/README.md) | Forced alignment: audio and the exact words spoken in it in, the time of every line and word out. | llm |  |  | @benallfree |
 | [`llm.chat/v1`](llm/chat/v1/README.md) | Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | llm-chat |  |  | @benallfree |
 | [`llm.embed/v1`](llm/embed/v1/README.md) | Turn texts into vectors for search by meaning: texts in, one vector each out. | llm |  |  | @benallfree |
