@@ -167,7 +167,7 @@ export async function health(): Promise<string | null> {
         const provider = model.split('/')[0]
         const list = await ($llm as any)[kind].modelsAsync({ provider })
         if (!(list.models || []).some((m: any) => m.id === model)) {
-          problem = `${model} isn't offered by the ${provider} provider (is its key right?)`
+          problem = `${model} isn't offered: is a provider named "${provider}" in Settings → LLM, with a working key?`
           break
         }
       } catch (err: any) {
