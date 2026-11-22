@@ -14,8 +14,6 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 
 | Extension | What it does |
 |---|---|
-| [Agent](/docs/extensions/agent/extension) | A language model for your app: your own API, or a small model PocketOne runs itself in the same binary. |
-| [Agent Chat](/docs/extensions/agent-chat) | Stored conversations with your app's language model: $agent.chat(id).send(text), with history and summaries. |
 | [API Tokens](/docs/extensions/api-tokens) | Long-lived API tokens with scopes. |
 | [Auto TLS](/docs/extensions/autotls) | Certificates on demand and wildcards through ACME. |
 | [Backups](/docs/extensions/backups) | Restore an app to a moment from its own backups: the latest one before it. On by default. |
@@ -25,6 +23,8 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Deploy](/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
 | [Desktop](/docs/extensions/desktop/extension) | Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine. |
 | [JSVM](/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
+| [LLM](/docs/extensions/llm/extension) | Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API. |
+| [LLM Chat](/docs/extensions/llm-chat) | Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries. |
 | [MCP](/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [Pages](/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [PITR](/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |

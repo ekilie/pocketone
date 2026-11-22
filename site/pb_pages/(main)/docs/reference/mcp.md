@@ -8,37 +8,6 @@ description: "Every MCP tool a PocketOne app's contracts add at /mcp, with its t
 
 A PocketOne app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)): PocketBase's whole API as `pb_*` tools, the tools your `pb_hooks` add, and one tool per operation of every contract the app provides, listed here for the [standard set](/docs/extensions/standard). Each contract tool calls the contract, so it passes the same token scope check and hooks as the REST API and the CLI ([how](/docs/features/remote)). Uploads and downloads have no tool.
 
-## agent.chat/v1
-
-[Contract page](/docs/contracts/agent.chat/v1). Answered by [Agent Chat](/docs/extensions/agent-chat) in the standard set.
-
-| Tool | What it does | Reads only | Token scope | Arguments |
-|---|---|---|---|---|
-| `agent_chat_new` | Starts a chat and returns it; its id is how the app finds it again. |  | `chat` | `title` (string), `meta` (json) |
-| `agent_chat_send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to agent/v1, saves both turns, and folds older messages into the summary when it's due. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `wait` (string) |
-| `agent_chat_send_stream` | Is Send with the answer as it's written: agent/v1 chunks, the last one with done and the result. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `wait` (string) |
-| `agent_chat_get` | Returns a chat. |  | `chat:read` | `id` (string) |
-| `agent_chat_history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). |  | `chat:read` | `id` (string), `limit` (int), `before` (string) |
-| `agent_chat_update` | Sets a chat's title or meta (fields left out stay). |  | `chat` | `id` (string), `title` (json), `meta` (json) |
-| `agent_chat_list` | Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value. |  | `chat:read` | `meta` (json), `limit` (int), `offset` (int) |
-| `agent_chat_forget` | Deletes a chat, its messages and the model's state for it. |  | `chat` | `id` (string) |
-| `agent_chat_forget_where` | Deletes every chat whose meta matches (as in List), e.g. |  | `chat` | `meta` (json), `limit` (int), `offset` (int) |
-
-## agent/v1
-
-[Contract page](/docs/contracts/agent/v1). Answered by [Agent](/docs/extensions/agent/extension) in the standard set.
-
-| Tool | What it does | Reads only | Token scope | Arguments |
-|---|---|---|---|---|
-| `agent_complete` | Answers a prompt or a conversation with the app's language model. |  | `agent` | `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `model` (string), `thread` (string), `wait` (string) |
-| `agent_stream` | Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result. |  | `agent` | `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `model` (string), `thread` (string), `wait` (string) |
-| `agent_status` | Says which model answers the app's prompts and whether it's ready. | yes | `agent:read` |  |
-| `agent_warm` | Reads the start of prompts ahead of the calls that use it (a preamble, say), so they skip reading it. |  | `agent` | `system` (string), `messages` (json), `prompt` (string), `wait` (string) |
-| `agent_forget` | Releases a warm: its text may leave the cache like any other. |  | `agent` | `id` (string) |
-| `agent_count` | Says how many tokens a text or a conversation is for the app's model, for budgeting what to send. |  | `agent:read` | `text` (string), `system` (string), `messages` (json) |
-| `agent_threads` | Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread). | yes | `agent:read` |  |
-| `agent_forget_thread` | Drops a thread's kept state, in memory and on disk. |  | `agent` | `id` (string) |
-
 ## api-tokens.verify/v1
 
 [Contract page](/docs/contracts/api-tokens.verify/v1). Answered by [API Tokens](/docs/extensions/api-tokens) in the standard set.
@@ -78,6 +47,102 @@ A PocketOne app serves MCP at `/mcp` ([MCP](/docs/extensions/mcp)): PocketBase's
 | `instance_watch_stream` | Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes. | yes | `fleet` | `edge` (string) |
 | `instance_watch_watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). |  | `fleet` | `conn` (string), `edge` (string), `host` (string) |
 | `instance_watch_unwatch` | Stops changes for a hostname on a stream. |  | `fleet` | `conn` (string), `host` (string) |
+
+## llm.align/v1
+
+[Contract page](/docs/contracts/llm.align/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_align_align` | Says when each line and word of the text is said in the audio. |  | `llm` | `model` (string), `audio` (json), `text` (string), `mode` (string), `language` (string), `options` (json) |
+| `llm_align_models` | Lists the alignment models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
+
+## llm.chat/v1
+
+[Contract page](/docs/contracts/llm.chat/v1). Answered by [LLM Chat](/docs/extensions/llm-chat) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_chat_new` | Starts a chat and returns it; its id is how the app finds it again. |  | `chat` | `title` (string), `meta` (json) |
+| `llm_chat_send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
+| `llm_chat_send_stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
+| `llm_chat_get` | Returns a chat. |  | `chat:read` | `id` (string) |
+| `llm_chat_history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). |  | `chat:read` | `id` (string), `limit` (int), `before` (string) |
+| `llm_chat_update` | Sets a chat's title or meta (fields left out stay). |  | `chat` | `id` (string), `title` (json), `meta` (json) |
+| `llm_chat_list` | Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value. |  | `chat:read` | `meta` (json), `limit` (int), `offset` (int) |
+| `llm_chat_forget` | Deletes a chat, its messages and the model's state for it. |  | `chat` | `id` (string) |
+| `llm_chat_forget_where` | Deletes every chat whose meta matches (as in List), e.g. |  | `chat` | `meta` (json), `limit` (int), `offset` (int) |
+
+## llm.embed/v1
+
+[Contract page](/docs/contracts/llm.embed/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_embed_embed` | Returns one vector per input text, in order. |  | `llm` | `model` (string), `input` (strings), `dimensions` (int), `options` (json) |
+| `llm_embed_models` | Lists the embedding models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
+
+## llm.image/v1
+
+[Contract page](/docs/contracts/llm.image/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_image_generate` | Makes pictures from a prompt. |  | `llm` | `model` (string), `prompt` (string), `n` (int), `size` (string), `aspectRatio` (string), `options` (json) |
+| `llm_image_edit` | Changes the pictures it's given as the prompt says. |  | `llm` | `GenerateInput` (json), `images` (json) |
+| `llm_image_models` | Lists the image models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
+
+## llm.music/v1
+
+[Contract page](/docs/contracts/llm.music/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_music_create` | Starts making music. |  | `llm` | `model` (string), `prompt` (string), `lyrics` (string), `seconds` (float), `wait` (string), `options` (json) |
+| `llm_music_get` | Says how a job is going. |  | `llm:read` | `id` (string) |
+| `llm_music_content` | Fetches one of a done job's files. |  | `llm:read` | `id` (string), `index` (int) |
+| `llm_music_models` | Lists the music models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
+
+## llm.speech/v1
+
+[Contract page](/docs/contracts/llm.speech/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_speech_speak` | Reads the text aloud and returns the audio. |  | `llm` | `model` (string), `text` (string), `voice` (string), `format` (string), `speed` (float), `instructions` (string), `options` (json) |
+| `llm_speech_voices` | Lists a model's voices, when the provider says. |  | `llm:read` | `model` (string) |
+| `llm_speech_models` | Lists the speech models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
+
+## llm.text/v1
+
+[Contract page](/docs/contracts/llm.text/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_text_complete` | Answers a prompt or a conversation. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
+| `llm_text_stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
+| `llm_text_count` | Says about how many tokens a text or a conversation is, for budgeting what to send. |  | `llm:read` | `model` (string), `text` (string), `system` (string), `messages` (json) |
+| `llm_text_models` | Lists the text models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
+
+## llm.transcribe/v1
+
+[Contract page](/docs/contracts/llm.transcribe/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_transcribe_transcribe` | Writes down what's said in the audio. |  | `llm` | `model` (string), `audio` (json), `language` (string), `prompt` (string), `options` (json) |
+| `llm_transcribe_models` | Lists the transcription models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
+
+## llm.video/v1
+
+[Contract page](/docs/contracts/llm.video/v1). Answered by [LLM](/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_video_create` | Starts making a video. |  | `llm` | `model` (string), `prompt` (string), `image` (json), `seconds` (float), `size` (string), `aspectRatio` (string), `wait` (string), `options` (json) |
+| `llm_video_get` | Says how a job is going. |  | `llm:read` | `id` (string) |
+| `llm_video_content` | Fetches one of a done job's files. |  | `llm:read` | `id` (string), `index` (int) |
+| `llm_video_models` | Lists the video models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
 
 ## mail.suppression/v1
 

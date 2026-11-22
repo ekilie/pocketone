@@ -7,8 +7,6 @@
 
 # By name
 
-- [agent.chat/v1](/docs/contracts/agent.chat/v1)
-- [agent/v1](/docs/contracts/agent/v1)
 - [api-tokens.verify/v1](/docs/contracts/api-tokens.verify/v1)
 - [api-tokens/v1](/docs/contracts/api-tokens/v1)
 - [bulkmail/v1](/docs/contracts/bulkmail/v1)
@@ -24,6 +22,15 @@
 - [instance.source/v1](/docs/contracts/instance.source/v1)
 - [instance.tokens/v1](/docs/contracts/instance.tokens/v1)
 - [instance.watch/v1](/docs/contracts/instance.watch/v1)
+- [llm.align/v1](/docs/contracts/llm.align/v1)
+- [llm.chat/v1](/docs/contracts/llm.chat/v1)
+- [llm.embed/v1](/docs/contracts/llm.embed/v1)
+- [llm.image/v1](/docs/contracts/llm.image/v1)
+- [llm.music/v1](/docs/contracts/llm.music/v1)
+- [llm.speech/v1](/docs/contracts/llm.speech/v1)
+- [llm.text/v1](/docs/contracts/llm.text/v1)
+- [llm.transcribe/v1](/docs/contracts/llm.transcribe/v1)
+- [llm.video/v1](/docs/contracts/llm.video/v1)
 - [mail.fallback/v1](/docs/contracts/mail.fallback/v1)
 - [mail.feedback/v1](/docs/contracts/mail.feedback/v1)
 - [mail.suppression/v1](/docs/contracts/mail.suppression/v1)

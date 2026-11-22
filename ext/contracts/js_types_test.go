@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	_ "pocketone.dev/ext/contracts/agent/chat/v1"
-	_ "pocketone.dev/ext/contracts/agent/v1"
+	_ "pocketone.dev/ext/contracts/llm/chat/v1"
+	_ "pocketone.dev/ext/contracts/llm/text/v1"
 	_ "pocketone.dev/ext/contracts/bulkmail/v1"
 	_ "pocketone.dev/ext/contracts/mail/feedback/v1"
 	_ "pocketone.dev/ext/contracts/mail/suppression/v1"
@@ -33,7 +33,7 @@ func TestContractTypesAreTyped(t *testing.T) {
 	for _, want := range []string{
 		"declare function onExampleUpload(handler: (e: contracts.CallEvent<contracts.example.v1.UploadInput>) => void): void;",
 		"declare function onExampleManifest(handler: (e: contracts.CallEvent<{}>) => void): void;",
-		"declare function onAgentComplete(handler: (e: contracts.CallEvent<contracts.agent.v1.CompleteInput>) => void): void;",
+		"declare function onLlmTextComplete(handler: (e: contracts.CallEvent<contracts.llm.text.v1.CompleteInput>) => void): void;",
 		`"mail.fallback/v1": contracts.mail.fallback.v1.Sender;`,
 		"send(m: MailerMessage): void | Promise<void>;",
 	} {
@@ -62,7 +62,7 @@ onExampleUpload((e) => {
 
 onExampleManifest((e) => { e.next() })
 
-onAgentComplete((e) => {
+onLlmTextComplete((e) => {
   e.input.maxTokens = Math.min(e.input.maxTokens || 512, 512)
   const roles: string[] = e.input.messages.map((m) => m.role)
   if (e.input.temperature !== null && e.input.temperature > 1) e.input.temperature = 1
@@ -94,7 +94,7 @@ func TestContractTypesCheckWithTSC(t *testing.T) {
 	}
 	bad := map[string]struct{ src, want string }{
 		"unknown input field": {`onExampleUpload((e) => { console.log(e.input.filez); e.next() })`, "filez"},
-		"json name in a hook": {`onAgentComplete((e) => { e.input.MaxTokens = 3; e.next() })`, "MaxTokens"},
+		"json name in a hook": {`onLlmTextComplete((e) => { e.input.MaxTokens = 3; e.next() })`, "MaxTokens"},
 		"wrong field type":    {`onExampleUpload((e) => { e.input.files[0].size = "big"; e.next() })`, "not assignable"},
 		"provider misses its method": {`onContracts((e) => { e.provide("mail.fallback/v1", { sned() {} }); e.next() })`,
 			"sned"},

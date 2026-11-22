@@ -7,8 +7,6 @@
 
 # Standard extensions
 
-- [Agent](/docs/extensions/agent/extension)
-- [Agent Chat](/docs/extensions/agent-chat)
 - [API Tokens](/docs/extensions/api-tokens)
 - [API Tokens: OAuth](/docs/extensions/api-tokens/oauth)
 - [Auto TLS](/docs/extensions/autotls)
@@ -19,6 +17,8 @@
 - [Deploy](/docs/extensions/deploy)
 - [Desktop](/docs/extensions/desktop/extension)
 - [JSVM](/docs/extensions/jsvm)
+- [LLM](/docs/extensions/llm/extension)
+- [LLM Chat](/docs/extensions/llm-chat)
 - [MCP](/docs/extensions/mcp)
 - [Pages](/docs/extensions/pages/extension)
 - [Pages: PocketPages v1 specification](/docs/extensions/pages/spec)

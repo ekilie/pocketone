@@ -20,6 +20,7 @@
 - [pocketone.yaml](/docs/pocketone-yaml)
 - [AI in your app](/docs/extensions/agent)
 - [Desktop apps](/docs/extensions/desktop)
+- [AI in your app](/docs/extensions/llm)
 - [WASM](/docs/extensions/wasm)
 
 # Extend PocketOne
@@ -33,6 +34,7 @@
 
 - [Advanced installation](/docs/guides/advanced-installation)
 - [Run on a Linux server](/docs/guides/linux-server)
+- [Example apps](/docs/examples)
 
 # Reference
 

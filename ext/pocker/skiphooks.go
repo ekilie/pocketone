@@ -25,6 +25,9 @@ type skipBrokenHooks struct{ log *instanceLog }
 
 func (s skipBrokenHooks) OnLoad(_ js.Runtime, _, file string, _ []byte) (func(), func(error) error) {
 	return nil, func(err error) error {
+		if err == nil {
+			return nil // it loaded: called after every file, not only a failing one
+		}
 		s.log.Write("stderr", fmt.Sprintf("pb_hooks/%s failed to load; skipped it (dev mode): %v", file, err))
 		return nil
 	}

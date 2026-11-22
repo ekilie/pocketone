@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+- The set's language-model members are now `LLM` (`llm`) and `LLMChat` (`llm-chat`), replacing `Agent` and `AgentChat`.
+
 ## 0.1.2 (2026-11-21)
 
 - The superuser dashboard shows PocketOne's logo, favicon and version, and its Docs link opens pocketone.dev/docs, on

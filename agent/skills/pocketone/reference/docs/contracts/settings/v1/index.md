@@ -103,8 +103,8 @@ Checks one extension's settings without saving them (a test write to a bucket, a
 | Extension | |
 |---|---|
 | [settings](https://pocketone.dev/docs/extensions/settings) | provides (default) |
-| [agent](https://pocketone.dev/docs/extensions/agent/extension) | works with |
 | [bulkmail](https://pocketone.dev/docs/extensions/bulkmail) | works with |
+| [llm](https://pocketone.dev/docs/extensions/llm/extension) | works with |
 | [mailrelay](https://pocketone.dev/docs/extensions/mailrelay) | works with |
 | [pitr](https://pocketone.dev/docs/extensions/pitr) | works with |
 | [vacuum](https://pocketone.dev/docs/extensions/vacuum) | works with |

@@ -1,0 +1,139 @@
+---
+owners: ["@benallfree"]
+version: 0.0.2
+title: "LLM Chat"
+group: binary
+summary: "Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries."
+---
+
+# LLM Chat
+
+LLM Chat keeps conversations with a language model. Cloud models remember nothing between calls, so every turn has to
+send the conversation again; LLM Chat stores it for you. Start a chat, keep its id, and send it questions: it stores
+every turn, sends the model the recent ones with each new question, and folds older ones into a summary so long chats
+stay quick and cheap.
+
+```ts
+const id: string = $llm.chat.new({ meta: { user: ctx.auth.id } })
+const answer: LlmTextAnswer = await $llm.chat.open(id, { model: "vultr/glm-5.2", system: preamble }).sendAsync("How do I export my notes?")
+```
+
+In Go:
+
+```go
+chats := chatv1.Contract.Must(app) // llm.chat/v1, from pocketone.dev/ext/contracts/llm/chat/v1
+c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: json.RawMessage(`{"user":"` + e.Auth.Id + `"}`)})
+res, err := chats.Send(ctx, extkit.Internal, chatv1.SendInput{ID: c.ID, Model: "vultr/glm-5.2", System: preamble, Text: "How do I export my notes?"})
+```
+
+It needs the [LLM](../llm/README.md) extension (llm.text/v1), which answers. Chats aren't tied to users: your app
+keeps the id (on its own records, or in its frontend) and may put anything in a chat's `meta` to find it again.
+
+## Install
+
+LLM Chat is built into `pocketone` and on by default, in every app and every instance of a host (a standard member).
+In your own Go build, next to LLM:
+
+```go
+extkit.Setup(app, []extkit.Extension{llm.New(), llmchat.New()}, nil, nil)
+```
+
+The module is `pocketone.dev/ext/llm-chat`. Its two collections come from its own migration, `0001_chats` in
+[schema.go](schema.go), which runs on the first start (`pocketone extensions migrations` lists it). They stay empty
+until your app starts a chat.
+
+## Configure
+
+There's nothing to configure. Each send names its model and can say how much of the chat to send (below). Turn it off
+on a single app with `llm-chat: {enabled: false}` in pocketone.yaml (on a host, an instance's `extensions.llm-chat`);
+its collections and their data stay. `pocketone extensions migrate down llm-chat` removes them, data included.
+
+## Use
+
+`$llm.chat.new({ title?, meta? })` returns a new chat's id. `$llm.chat.open(id, options)` returns the chat:
+
+| Method | What it does |
+|---|---|
+| `sendAsync(text, { onText?, onReasoning?, schema?, ...options })` | Asks, saves both turns, resolves to llm.text/v1's answer (`text`, `usage`, ...). With `onText`, streams the answer to it as it's written. The only call that reaches a provider, so the only async one. |
+| `history({ limit?, before? })` | The chat's messages, oldest first: `{ id, role, content, created }`. |
+| `summary()` | What the older messages were folded into. |
+| `title(text?)`, `meta(object?)` | Read, or set and return. |
+| `forget()` | Deletes the chat and its messages. |
+
+Options for `$llm.chat.open(id, ...)`, used by every send (a send can override them):
+
+| Option | Default | What it does |
+|---|---|---|
+| `model` | | Required (here or on the send): the `provider/model` that answers, and writes the summaries. |
+| `reasoning` | the model's | As in `$llm.text.completeAsync`. Summaries always use `"off"`. |
+| `system` | | The preamble, first on every turn. |
+| `context` | | Text, or a function of the question returning text, sent after the question: the passages that answer it. `history()` shows the question alone; later turns send it with its context again, so each prompt starts the same way. |
+| `window` | 12 | Messages sent before the summary takes over. |
+| `summarizeEvery` | 6 | Once that many messages have piled up past the window, the oldest are folded into the summary (a second, short call). If that call fails, the answer is still returned and saved, and the next send tries again. |
+| `maxTokens`, `temperature` | the provider's | As in `$llm.text.completeAsync`. |
+
+`$llm.chat.list({ meta?, limit?, offset? })` lists chats, most recently updated first; `meta` keeps those whose meta has
+each of its top-level keys with that value. `$llm.chat.forget({ meta })` deletes every match and returns how many.
+
+The chats are in `_llm_chat_chats` and `_llm_chat_messages`, superuser-only: your routes decide what users see. A
+typical route checks that the chat's `meta.user` is the caller before sending:
+
+```ts
+// pb_pages/ask/[chat]/+api.ts: POST /ask/<chat id> {"question": "..."}
+export async function post(ctx: any) {
+  const chat = $llm.chat.open(ctx.params.chat, { model: "vultr/glm-5.2", system: preamble(ctx) })
+  if (!ctx.auth || chat.meta().user !== ctx.auth.id) throw ctx.httpError(404, "no such chat")
+  return ctx.res.json(await chat.sendAsync(ctx.req.body().question))
+}
+```
+
+**How a send is built:** the system text, then the summary (when there is one), then every message since the last
+fold, then the question with its context. That start stays the same from one turn to the next until the next fold,
+which the providers' prompt caches bill cheaper.
+
+## Integrations
+
+| With | What happens |
+|---|---|
+| [LLM](../llm/README.md) | Required: it answers (llm.text/v1). Its HTTP and MCP API is the [llm.chat/v1](../contracts/llm/chat/v1/README.md) contract. |
+| [Multisite](../multisite/README.md) | Each instance keeps its own chats in its own database, answered by its own providers. |
+
+## Example
+
+```go
+// Command example is a PocketBase app with stored chats: the llm extension answers, llm-chat keeps the
+// conversations. Add a provider and a text default in Settings → LLM, run `go run . serve`, and ask over HTTP as a
+// superuser:
+//
+//	POST /api/_c/llm.chat/v1/new  {"title": "Support"}            -> {"id": "..."}
+//	POST /api/_c/llm.chat/v1/send {"id": "...", "text": "Hello"}  -> {"answer": {"text": "..."}}
+//
+// In page code the same is $llm.chat.new() and $llm.chat.open(id).sendAsync(text).
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/llm"
+	llmchat "pocketone.dev/ext/llm-chat"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app)
+	if _, err := extkit.Setup(app, []extkit.Extension{llm.New(), llmchat.New()}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## License
+
+MIT

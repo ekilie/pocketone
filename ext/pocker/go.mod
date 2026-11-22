@@ -20,7 +20,6 @@ require (
 	ganigeorgiev.com/fexpr v0.7.0 // indirect
 	ganigeorgiev.com/pocketbase/ozzo-validation/v4 v4.4.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/benallfree/nollama v0.0.1-alpha.1 // indirect
 	github.com/benbjohnson/litestream v0.5.18 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -72,14 +71,14 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.62.0 // indirect
-	pocketone.dev/ext/agent v0.0.0-00010101000000-000000000000 // indirect
-	pocketone.dev/ext/agent-chat v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/api-tokens v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/backups v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/cache v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/config v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/llm v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/llm-chat v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/pages v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/pitr v0.0.0-00010101000000-000000000000 // indirect
@@ -163,8 +162,8 @@ replace pocketone.dev/ext/cache => ../cache
 
 replace pocketone.dev/ext/wasm => ../wasm
 
-replace pocketone.dev/ext/agent => ../agent
+replace pocketone.dev/ext/llm => ../llm
 
 replace pocketone.dev/ext/uicache => ../uicache
 
-replace pocketone.dev/ext/agent-chat => ../agent-chat
+replace pocketone.dev/ext/llm-chat => ../llm-chat

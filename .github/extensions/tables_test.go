@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func TestTablePrefix(t *testing.T) {
-	if got := tablePrefix("agent-chat"); got != "_agent_chat_" {
+	if got := tablePrefix("llm-chat"); got != "_llm_chat_" {
 		t.Fatal(got)
 	}
 }

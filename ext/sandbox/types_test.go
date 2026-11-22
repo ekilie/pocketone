@@ -68,7 +68,7 @@ func TestFilterTypes(t *testing.T) {
 	gone := map[string][]string{
 		"$os":         {"exec", "cmd", "exit"},
 		"$filesystem": {"local"},
-		"core":        {"restart", "bootstrap", "unsafeWithoutHooks", "onServe", "onTerminate", "cron", "server", "installerFunc"},
+		"core":        {"restart", "bootstrap", "unsafeWithoutHooks", "onTerminate", "cron", "server", "installerFunc"},
 		"hook":        {"bind", "bindFunc", "unbind", "trigger"},
 	}
 	for ns, names := range gone {

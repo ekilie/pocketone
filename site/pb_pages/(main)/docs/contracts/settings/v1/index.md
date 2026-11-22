@@ -109,8 +109,8 @@ Checks one extension's settings without saving them (a test write to a bucket, a
 | Extension | |
 |---|---|
 | [settings](/docs/extensions/settings) | provides (default) |
-| [agent](/docs/extensions/agent/extension) | works with |
 | [bulkmail](/docs/extensions/bulkmail) | works with |
+| [llm](/docs/extensions/llm/extension) | works with |
 | [mailrelay](/docs/extensions/mailrelay) | works with |
 | [pitr](/docs/extensions/pitr) | works with |
 | [vacuum](/docs/extensions/vacuum) | works with |

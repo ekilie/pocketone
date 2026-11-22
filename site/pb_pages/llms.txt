@@ -26,8 +26,8 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [MCP for AI agents](https://pocketone.dev/docs/features/mcp): Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
 - [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
 - [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
-- [AI in your app](https://pocketone.dev/docs/extensions/agent): $agent gives your pages and Go code a language model: label records, pull JSON out of text, summarize, answer questions. Built in, on your own CPU, or through any OpenAI-compatible API.
 - [Desktop apps](https://pocketone.dev/docs/extensions/desktop): Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker.
+- [AI in your app](https://pocketone.dev/docs/extensions/llm): $llm gives your pages and Go code cloud models: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API, on your own keys.
 - [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your page code, for libraries JavaScript doesn't have and work JavaScript does too slowly.
 
 ## Extend PocketOne
@@ -41,6 +41,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 - [Advanced installation](https://pocketone.dev/docs/guides/advanced-installation): Install PocketOne off the usual path - the install script's settings, Windows without Scoop, a release zip, or building it from source.
 - [Run on a Linux server](https://pocketone.dev/docs/guides/linux-server): Install PocketOne on a Linux server as a .deb, .rpm or .apk package, run it as a systemd service with its own HTTPS or behind a proxy, deploy your app, upgrade and uninstall.
+- [Example apps](https://pocketone.dev/docs/examples): PocketOne apps you can try live and read end to end - Docs Chat, Bedtime Story and the PocketPages starter kits - what each does and how it's built.
 
 ## Reference
 
@@ -51,25 +52,8 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Folders](https://pocketone.dev/docs/folders): What each pb_* folder next to your app holds, which ones are backed up, deployed or safe to delete, and where extensions keep their tables and files.
 - [PocketPages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
 
-## Agent: Using it
-
-- [Choosing a model](https://pocketone.dev/docs/extensions/agent/choosing): Off, a built-in model PocketOne runs on your CPU, or your own OpenAI-compatible API: what each is good for, and how fast the built-in models are.
-- [On a multisite host](https://pocketone.dev/docs/extensions/agent/hosting): One model for every app on a server: each app gets a few calls at once and can switch to its own API.
-- [Prompt caching](https://pocketone.dev/docs/extensions/agent/prompt-caching): The model keeps the start of recent prompts, so a repeated preamble or a chat's earlier turns aren't read again. How to order your prompts to get the most from it, and how to check it's working.
-
-## Agent: Guides
-
-- [Writing a preamble](https://pocketone.dev/docs/extensions/agent/guides/preamble): The system prompt that sets who the assistant is and how it answers: what to put in it, in what order, and how to keep it short enough for a small model.
-- [Remembering conversations](https://pocketone.dev/docs/extensions/agent/guides/conversations): A model remembers nothing between calls: use Agent Chat, or keep chats in collections yourself, send the recent turns, summarize the older ones, and recall what matters from past chats.
-- [Structured answers](https://pocketone.dev/docs/extensions/agent/guides/structured): Give $agent a JSON schema and get back data you can store: the built-in model can only write JSON that matches it.
-- [Streaming answers](https://pocketone.dev/docs/extensions/agent/guides/streaming): Show an answer as the model writes it: $agent.stream in a page, forwarded to the browser with ctx.res.sse().
-- [When the model is loading](https://pocketone.dev/docs/extensions/agent/guides/waiting): The built-in model downloads and loads after the app starts. Fail fast, wait, or show progress: what each $agent call does meanwhile.
-- [Your own knowledge](https://pocketone.dev/docs/extensions/agent/guides/context): Answer questions about your docs or data: arm $agent with a preamble and the passages that match each question, read from files or records.
-
 ## Contracts: By name
 
-- [agent.chat/v1](https://pocketone.dev/docs/contracts/agent.chat/v1): Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta.
-- [agent/v1](https://pocketone.dev/docs/contracts/agent/v1): Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model.
 - [api-tokens.verify/v1](https://pocketone.dev/docs/contracts/api-tokens.verify/v1): Another server checks an app's API token: who it acts as and what it may do.
 - [api-tokens/v1](https://pocketone.dev/docs/contracts/api-tokens/v1): An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API.
 - [bulkmail/v1](https://pocketone.dev/docs/contracts/bulkmail/v1): Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign.
@@ -85,6 +69,15 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1): The instance record a multisite host serves, and where the records come from.
 - [instance.tokens/v1](https://pocketone.dev/docs/contracts/instance.tokens/v1): A multisite host checks an API token one of its instances issued, to accept it on the routes it answers.
 - [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1): An edge follows a control plane lazily: one stream, hostnames watched as requests name them.
+- [llm.align/v1](https://pocketone.dev/docs/contracts/llm.align/v1): Forced alignment: audio and the exact words spoken in it in, the time of every line and word out.
+- [llm.chat/v1](https://pocketone.dev/docs/contracts/llm.chat/v1): Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta.
+- [llm.embed/v1](https://pocketone.dev/docs/contracts/llm.embed/v1): Turn texts into vectors for search by meaning: texts in, one vector each out.
+- [llm.image/v1](https://pocketone.dev/docs/contracts/llm.image/v1): Make pictures from a prompt, or change pictures you give it; they come back as files.
+- [llm.music/v1](https://pocketone.dev/docs/contracts/llm.music/v1): Make music from a prompt and lyrics, as a job: start it, follow it, fetch its files (or wait for them).
+- [llm.speech/v1](https://pocketone.dev/docs/contracts/llm.speech/v1): Read text aloud: text in, an audio file out, in a voice the model offers.
+- [llm.text/v1](https://pocketone.dev/docs/contracts/llm.text/v1): Ask a language model: a prompt or a conversation in, text (or JSON matching a schema) out, whole or streamed.
+- [llm.transcribe/v1](https://pocketone.dev/docs/contracts/llm.transcribe/v1): Write down what's said in audio: an audio file in, text out.
+- [llm.video/v1](https://pocketone.dev/docs/contracts/llm.video/v1): Make video from a prompt (and a first frame), as a job: start it, follow it, fetch its files (or wait for them).
 - [mail.fallback/v1](https://pocketone.dev/docs/contracts/mail.fallback/v1): Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on.
 - [mail.feedback/v1](https://pocketone.dev/docs/contracts/mail.feedback/v1): Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on.
 - [mail.suppression/v1](https://pocketone.dev/docs/contracts/mail.suppression/v1): Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries.
@@ -106,8 +99,6 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Extensions: Standard extensions
 
-- [Agent](https://pocketone.dev/docs/extensions/agent/extension): A language model for your app: your own API, or a small model PocketOne runs itself in the same binary.
-- [Agent Chat](https://pocketone.dev/docs/extensions/agent-chat): Stored conversations with your app's language model: $agent.chat(id).send(text), with history and summaries.
 - [API Tokens](https://pocketone.dev/docs/extensions/api-tokens): Long-lived API tokens with scopes.
 - [API Tokens: OAuth](https://pocketone.dev/docs/extensions/api-tokens/oauth): API Tokens: OAuth
 - [Auto TLS](https://pocketone.dev/docs/extensions/autotls): Certificates on demand and wildcards through ACME.
@@ -118,6 +109,8 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
 - [Desktop](https://pocketone.dev/docs/extensions/desktop/extension): Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine.
 - [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
+- [LLM](https://pocketone.dev/docs/extensions/llm/extension): Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API.
+- [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat): Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
 - [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
 - [Pages: PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
@@ -164,6 +157,13 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Extension Kit](https://github.com/pocketonehq/pocketone/blob/main/ext/extkit/extkit.go)
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
+
+## LLM: Guides
+
+- [Structured answers](https://pocketone.dev/docs/extensions/llm/guides/structured): Give $llm.text a JSON schema and get back data you can store.
+- [Streaming answers](https://pocketone.dev/docs/extensions/llm/guides/streaming): Show an answer as the model writes it: $llm.text.streamAsync in a page, forwarded to the browser with ctx.res.sse().
+- [Pictures, speech and music](https://pocketone.dev/docs/extensions/llm/guides/media): Generate pictures, narration, music and video with $llm and save them on your records as files.
+- [Conversations](https://pocketone.dev/docs/extensions/llm/guides/conversations): Chats that remember: send the conversation with each call, or let LLM Chat store it, summarize it and send it for you.
 
 ## Pages: Introduction
 
@@ -280,3 +280,6 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Optional
 
 - [PocketBase compatibility](https://pocketone.dev/docs/compatibility): Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.
+- [Bedtime Story](https://pocketone.dev/docs/examples/bedtime-story): One topic told slowly and in depth, read aloud with pictures and music - the six steps, the player, the guards and the tuning screen in the dashboard.
+- [Docs Chat](https://pocketone.dev/docs/examples/docs-chat): A chat about PocketOne and PocketBase that answers from both sets of docs, streams its answer and shows what it cost - how it's built, file by file.
+- [Starters](https://pocketone.dev/docs/examples/starters): The PocketPages starter kits - minimal, mvp, auth, daisyui, daisyui-docs, htmx, datastar and tsx - what each shows, how it's built and how to start an app from one.

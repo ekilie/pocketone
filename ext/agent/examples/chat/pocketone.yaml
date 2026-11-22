@@ -1,4 +1,0 @@
-# The model the chat app runs (see ../../README.md, "Configure"). Remove `model` and set your own API in
-# Settings → Agent instead, or name another: qwen3-0.6b (fastest), qwen3-4b (best answers).
-agent:
-  model: qwen3-1.7b

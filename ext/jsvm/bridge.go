@@ -297,6 +297,11 @@ func (vm *VM) fromJS(v JSValue, t reflect.Type) (reflect.Value, error) {
 		if t.Kind() == reflect.Interface || t.Kind() == reflect.Map {
 			return vm.objectToGo(v, t)
 		}
+		// a struct from an object holding Go values ({ name, fs: $os.dirFS(...) } for e.uiExtensions): field by field,
+		// so the Go values stay themselves instead of turning into JSON strings
+		if t.Kind() == reflect.Struct && vm.holdsGoValue(v) {
+			return vm.objectToStruct(v, t)
+		}
 		// structs and anything else: through JSON, like goja's export + PocketBase's own unmarshal
 		js := C.JS_JSONStringify(vm.ctx, v, C.avm_undefined(), C.avm_undefined())
 		if C.avm_is_exception(js) != 0 {
@@ -394,6 +399,56 @@ func (vm *VM) objectToGo(v JSValue, t reflect.Type) (reflect.Value, error) {
 		return r, nil
 	}
 	return out, nil
+}
+
+// holdsGoValue reports whether one of a plain object's own property values is a Go value.
+func (vm *VM) holdsGoValue(v JSValue) bool {
+	keys := C.avm_object_keys(vm.ctx, v)
+	if C.avm_is_exception(keys) != 0 {
+		_ = vm.exception() // clears it
+		return false
+	}
+	defer vm.free_(keys)
+	n := int(C.avm_length(vm.ctx, keys))
+	for i := 0; i < n; i++ {
+		kv := C.avm_array_get(vm.ctx, keys, uint32(i))
+		ck := C.CString(vm.goString(kv))
+		ev := C.avm_get_str(vm.ctx, v, ck)
+		C.free(ck)
+		vm.free_(kv)
+		h := C.avm_handle_of(vm.a, ev)
+		vm.free_(ev)
+		if h != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// objectToStruct makes a t from a plain object, each exported field from the property of its JS name (as JS sees
+// the struct's fields), converted like any other value; properties the struct doesn't have are ignored.
+func (vm *VM) objectToStruct(v JSValue, t reflect.Type) (reflect.Value, error) {
+	dst := reflect.New(t).Elem()
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if !f.IsExported() || f.Anonymous {
+			continue
+		}
+		ck := C.CString(jsName(f.Name))
+		ev := C.avm_get_str(vm.ctx, v, ck)
+		C.free(ck)
+		if tag := C.avm_tag(ev); tag == C.JS_TAG_UNDEFINED {
+			vm.free_(ev)
+			continue
+		}
+		gv, err := vm.fromJS(ev, f.Type)
+		vm.free_(ev)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf("%s: %w", jsName(f.Name), err)
+		}
+		dst.Field(i).Set(gv)
+	}
+	return dst, nil
 }
 
 // exportStruct makes a new st and fills its exported fields from src, as goja exports an object to a struct.

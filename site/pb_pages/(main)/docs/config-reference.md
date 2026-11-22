@@ -8,39 +8,6 @@ description: "Every section of the pocketone.yaml config file, generated from th
 
 Every section the `pocketone` binary understands, from `pocketone config --json`. Each extension owns its own section. `pocketone config check` checks a file. How the file works (where it's found, `.env` secrets) is on the [Config](/docs/extensions/config) page.
 
-#### `agent:`
-
-The language model PocketOne runs itself for agent/v1 ($agent.complete); on a multisite host, the model every instance shares.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool |  | false turns the extension off on this app ($agent and agent/v1 are gone). |
-| `model` | string |  | The model to run: qwen3-0.6b, qwen3-1.7b or qwen3-4b (downloaded once), hf:<org>/<repo>/<file>.gguf, or a path to a .gguf file. Empty: none. |
-| `threads` | int |  | CPU threads for the model (default: half the cores). |
-| `parallel` | int |  | Answers written at once; the rest wait their turn (default 1). |
-| `prompt_cache_mb` | int |  | Memory in MB for keeping the start of recent prompts, so one that begins the same way (a preamble, a chat so far) isn't read again (default 256, about 1,100 tokens of a Qwen3 model; -1 turns it off). |
-| `max_tokens` | int |  | Longest answer, in tokens, when a call doesn't say (default 512). |
-| `timeout` | string |  | Longest a call may take, waiting included (default 2m). |
-| `cache_dir` | string |  | Where downloaded models are kept (default: the user cache folder's pocketone/models). |
-| `thread_memory_mb` | int |  | Memory in MB for conversations' model state between calls ($agent's thread option), least recently used first (default 512; -1 keeps them on disk only). |
-| `thread_cache_gb` | number |  | Disk in GB for conversations' model state, in pb_cache/agent/threads (default 2; -1 turns it off). |
-| `per_instance.max_tokens` | int |  | Longest answer per call, in tokens (0: max_tokens). |
-| `per_instance.concurrency` | int |  | Calls an instance may have waiting or running at once (default 2). |
-| `per_instance.pinned_mb` | int |  | Memory in MB an instance's warmed prompts may hold in the prompt cache (default 64). |
-| `per_instance.thread_cache_gb` | number |  | Disk in GB for an instance's conversation state, in its own pb_cache (default 2.5, a quarter of a 10 GB instance). |
-
-Owned by [Agent](/docs/extensions/agent).
-
-#### `agent-chat:`
-
-Turns the agent-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.agent-chat`.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
-
-Owned by [Standard Set](/docs/extensions/standard).
-
 #### `api-tokens:`
 
 Turns the api-tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.api-tokens`.
@@ -231,6 +198,26 @@ Instance data on this host: how often disk use is measured and last-request time
 | `concurrency` | int | `2` | How many instances are measured at once. Default 2. |
 
 Owned by [Stats](/docs/extensions/stats).
+
+#### `llm:`
+
+Cloud models for $llm (the llm.* contracts); providers and keys are set in Settings → LLM.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | false turns the extension off on this app ($llm and the llm.* contracts are gone). |
+
+Owned by [LLM](/docs/extensions/llm).
+
+#### `llm-chat:`
+
+Turns the llm-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.llm-chat`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
 
 #### `mcp:`
 

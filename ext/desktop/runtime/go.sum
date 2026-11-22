@@ -81,8 +81,6 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.41.5 h1:SciGFVNZ4mHdm7gpD1dgZYnCuVdX
 github.com/aws/aws-sdk-go-v2/service/sts v1.41.5/go.mod h1:iW40X4QBmUxdP+fZNOpfmkdMZqsovezbAeO+Ubiv2pk=
 github.com/aws/smithy-go v1.24.2 h1:FzA3bu/nt/vDvmnkg+R8Xl46gmzEDam6mZ1hzmwXFng=
 github.com/aws/smithy-go v1.24.2/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
-github.com/benallfree/nollama v0.0.1-alpha.1 h1:YEQ4nY0uyJ336CZi01eMSfYYu45Gg2HVUCedz220Ghw=
-github.com/benallfree/nollama v0.0.1-alpha.1/go.mod h1:Ph3osizh7+Tr78Z15aY+JrX+sqa4Q7/LfQD8W8IpXhM=
 github.com/benbjohnson/litestream v0.5.18 h1:kelmbbFQvlgrm8dRrpt9bqvDrJ69OgWQca8hSflNF2U=
 github.com/benbjohnson/litestream v0.5.18/go.mod h1:4qjd9UcvoyYExdJPMqpoGUjeg7th7RU6DKqn/+NclpI=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

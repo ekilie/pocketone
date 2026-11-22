@@ -151,7 +151,7 @@ func CheckLifecycle(t TB, p extkit.Extension, o Options) {
 }
 
 // TablePrefix is the prefix every collection an extension adds starts with: `_<name>_`, with hyphens in the name as
-// underscores (agent-chat: `_agent_chat_`).
+// underscores (llm-chat: `_llm_chat_`).
 func TablePrefix(name string) string { return "_" + strings.ReplaceAll(name, "-", "_") + "_" }
 
 // CheckCollections: PocketBase's own collections are unchanged, and every collection the extension adds is named

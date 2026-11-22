@@ -76,6 +76,13 @@ var docsSites = []docsSite{
 }
 
 // agentOutDirs are the generated folders that sync also prunes (a removed page drops its copy).
+// pocketbaseRef is PocketBase's own docs as Markdown, inside the pocketone skill's reference folder but written by
+// .github/pocketbase-docs (from the PocketBase site), not by this program: never stale here.
+const pocketbaseRef = "agent/skills/pocketone/reference/pocketbase"
+
+// ownedElsewhere reports whether a file under an output folder is another tool's.
+func ownedElsewhere(rel string) bool { return under(rel, pocketbaseRef) }
+
 func agentOutDirs() []string {
 	var out []string
 	for _, s := range docsSites {

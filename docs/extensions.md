@@ -105,11 +105,11 @@ func createChats(txApp core.App) error {
   script, a JSON schema) embeds it with `//go:embed` and reads it in `Up`.
 
 **Table names:** every collection your extension creates is named **`_<name>_<table>`**: your extension's name with
-hyphens as underscores, then the table: `_bulkmail_campaigns`, `_api_tokens_oauth_clients`, `_agent_chat_messages` (for
-agent-chat). The leading underscore keeps them apart from the app's own collections, and the name says which extension
+hyphens as underscores, then the table: `_bulkmail_campaigns`, `_api_tokens_oauth_clients`, `_llm_chat_messages` (for
+llm-chat). The leading underscore keeps them apart from the app's own collections, and the name says which extension
 owns a table. The conformance test fails any other name unless `conformance.Options.AllowCollections` lists it with a
 reason (a collection the app's users are meant to see and edit, say). When one extension's prefix starts with
-another's (`agent`'s `_agent_` and `agent-chat`'s `_agent_chat_`), the shorter one never names a table under the longer
+another's (`llm`'s `_llm_` and `llm-chat`'s `_llm_chat_`), the shorter one never names a table under the longer
 one's prefix; `go run ./.github/extensions check` refuses it.
 
 The conformance test checks a Migrator's migrations too: they apply at bootstrap, applying again does nothing,

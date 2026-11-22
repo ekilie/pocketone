@@ -22,8 +22,6 @@ The table is generated from each contract's README and every extension's `Contra
 
 | Contract | What it promises | Provided by | Required by | Works with | Owners |
 |---|---|---|---|---|---|
-| [`agent.chat/v1`](https://pocketone.dev/docs/contracts/agent.chat/v1) | Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | agent-chat |  |  | @benallfree |
-| [`agent/v1`](https://pocketone.dev/docs/contracts/agent/v1) | Ask a language model for an answer: the app's own API, a model PocketOne runs, or its host's shared model. | agent | agent-chat |  | @benallfree |
 | [`api-tokens.verify/v1`](https://pocketone.dev/docs/contracts/api-tokens.verify/v1) | Another server checks an app's API token: who it acts as and what it may do. | api-tokens |  |  | @benallfree |
 | [`api-tokens/v1`](https://pocketone.dev/docs/contracts/api-tokens/v1) | An app's API tokens: check one, register scopes, read a request's token, limit in-process requests; the token API. | api-tokens |  | deploy, mcp, remotes | @benallfree |
 | [`bulkmail/v1`](https://pocketone.dev/docs/contracts/bulkmail/v1) | Run bulk mail campaigns: count an audience; start, pause, resume, cancel, preview and test a campaign. | bulkmail |  |  | @benallfree |
@@ -39,6 +37,15 @@ The table is generated from each contract's README and every extension's `Contra
 | [`instance.source/v1`](https://pocketone.dev/docs/contracts/instance.source/v1) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
 | [`instance.tokens/v1`](https://pocketone.dev/docs/contracts/instance.tokens/v1) | A multisite host checks an API token one of its instances issued, to accept it on the routes it answers. | pocker |  |  | @benallfree |
 | [`instance.watch/v1`](https://pocketone.dev/docs/contracts/instance.watch/v1) | An edge follows a control plane lazily: one stream, hostnames watched as requests name them. | mothership |  |  | @benallfree |
+| [`llm.align/v1`](https://pocketone.dev/docs/contracts/llm.align/v1) | Forced alignment: audio and the exact words spoken in it in, the time of every line and word out. | llm |  |  | @benallfree |
+| [`llm.chat/v1`](https://pocketone.dev/docs/contracts/llm.chat/v1) | Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | llm-chat |  |  | @benallfree |
+| [`llm.embed/v1`](https://pocketone.dev/docs/contracts/llm.embed/v1) | Turn texts into vectors for search by meaning: texts in, one vector each out. | llm |  |  | @benallfree |
+| [`llm.image/v1`](https://pocketone.dev/docs/contracts/llm.image/v1) | Make pictures from a prompt, or change pictures you give it; they come back as files. | llm |  |  | @benallfree |
+| [`llm.music/v1`](https://pocketone.dev/docs/contracts/llm.music/v1) | Make music from a prompt and lyrics, as a job: start it, follow it, fetch its files (or wait for them). | llm |  |  | @benallfree |
+| [`llm.speech/v1`](https://pocketone.dev/docs/contracts/llm.speech/v1) | Read text aloud: text in, an audio file out, in a voice the model offers. | llm |  |  | @benallfree |
+| [`llm.text/v1`](https://pocketone.dev/docs/contracts/llm.text/v1) | Ask a language model: a prompt or a conversation in, text (or JSON matching a schema) out, whole or streamed. | llm | llm-chat |  | @benallfree |
+| [`llm.transcribe/v1`](https://pocketone.dev/docs/contracts/llm.transcribe/v1) | Write down what's said in audio: an audio file in, text out. | llm |  |  | @benallfree |
+| [`llm.video/v1`](https://pocketone.dev/docs/contracts/llm.video/v1) | Make video from a prompt (and a first frame), as a job: start it, follow it, fetch its files (or wait for them). | llm |  |  | @benallfree |
 | [`mail.fallback/v1`](https://pocketone.dev/docs/contracts/mail.fallback/v1) | Where an app's mail goes when SMTP is off: a chain of providers that send it or pass it on. | mailrelay, mailtrap |  |  | @benallfree |
 | [`mail.feedback/v1`](https://pocketone.dev/docs/contracts/mail.feedback/v1) | Mail providers' reports (bounces, complaints, unsubscribes) received at one place and raised as events any extension can act on. | bulkmail (default) |  |  | @benallfree |
 | [`mail.suppression/v1`](https://pocketone.dev/docs/contracts/mail.suppression/v1) | Addresses an app must not send bulk mail to, and the unsubscribe link every bulk message carries. | bulkmail (default) |  |  | @benallfree |
@@ -47,7 +54,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`remote/v1`](https://pocketone.dev/docs/contracts/remote/v1) | Remote control of an app: whoami, status, restart, logs. The base every client starts from. | docker, remotes (default) | deploy |  | @benallfree |
 | [`restore/v1`](https://pocketone.dev/docs/contracts/restore/v1) | Put an app's data back as it was at a moment: from continuous history, or the latest backup before it. | backups (default), pitr |  |  | @benallfree |
 | [`runtime/v1`](https://pocketone.dev/docs/contracts/runtime/v1) | What runs a multisite host's instances (as isolates, in containers): one per host. | docker, pocker |  |  | @benallfree |
-| [`settings/v1`](https://pocketone.dev/docs/contracts/settings/v1) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | agent, bulkmail, mailrelay, pitr, vacuum | @benallfree |
+| [`settings/v1`](https://pocketone.dev/docs/contracts/settings/v1) | The settings an app's admins change for its extensions, one API for all of them. | settings (default) |  | bulkmail, llm, mailrelay, pitr, vacuum | @benallfree |
 | [`templates/v1`](https://pocketone.dev/docs/contracts/templates/v1) | An extension's own pages as Go templates a project can eject and edit. | templates |  | api-tokens | @benallfree |
 | [`tls/v1`](https://pocketone.dev/docs/contracts/tls/v1) | The TLS of a multisite host's listener: automatic certificates instead of certificate files. | autotls |  |  | @benallfree |
 | [`vacuum/v1`](https://pocketone.dev/docs/contracts/vacuum/v1) | Compacting an app's databases so freed space goes back to the disk, and when it last happened. | vacuum |  |  | @benallfree |

@@ -24,7 +24,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$apiTokens`, `$bulkmail`, `$wasm`, `$agent`) and resolves
+`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$apiTokens`, `$bulkmail`, `$wasm`, `$llm`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
 To build the app from `pocketone.yaml`'s `app` section (data folder, dev mode, hooks and migrations folders, JS engine
@@ -62,14 +62,6 @@ fields they cover.
 
 ### pocketone.yaml reference
 
-#### `agent-chat:`
-
-Turns the agent-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.agent-chat`.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
-
 #### `api-tokens:`
 
 Turns the api-tokens extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.api-tokens`.
@@ -97,6 +89,14 @@ Turns the bulkmail extension off on a single app (`enabled: false`). On a multis
 #### `deploy:`
 
 Turns the deploy extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.deploy`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+#### `llm-chat:`
+
+Turns the llm-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.llm-chat`.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -167,7 +167,7 @@ Turns the wasm extension off on a single app (`enabled: false`). On a multisite 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, agent, agent-chat
+standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, llm, llm-chat
 standard: api-tokens/v1 ← api-tokens
 ```
 

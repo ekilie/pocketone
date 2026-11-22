@@ -200,12 +200,14 @@ string for an attacker to get clever with.
 The following are gone from JS:
 - process control: `$os.cmd`, `$os.exec`, `$os.exit`, `$os.args`;
 - `$filesystem.local`;
-- PocketBase internals that reach the whole process: `$app.restart`, `bootstrap`, `onServe`, `onTerminate`, raw
-  `hook` triggers, `*sql.DB` handles;
+- PocketBase internals that reach the whole process: `$app.restart`, `bootstrap`, `$app.onTerminate` (use
+  `onTerminate(...)`), binding or firing hooks from a running handler, `*sql.DB` handles;
 - Go's `os/exec`, `net`, `syscall` and `database/sql/driver`.
 
 A field-name mapper hides them, so they read as `undefined`. Everything a normal app uses still works: `routerAdd`,
-`onRecord*`, `cronAdd`, `$app.findRecordById` and the rest.
+`onRecord*`, `cronAdd`, `$app.findRecordById` and the rest. The app's own serve hook stays open:
+`$app.onServe().bindFunc(...)` fires once when the app starts serving, which is how a hook file registers a superuser
+UI extension (`e.uiExtensions.push({ name, fs: $os.dirFS(...) })`); the event's server and listener stay hidden.
 
 #### 4. Environment: only the instance's own
 

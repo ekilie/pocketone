@@ -43,6 +43,14 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+### Upgrading
+
+- Agent is replaced by [LLM](ext/llm/README.md): add your providers (Vultr, Cloudflare Workers AI, OpenRouter, or any OpenAI-compatible API) in Settings → LLM, then change `$agent.complete(opts)` to `await $llm.text.completeAsync({ model: "<provider>/<model>", ...opts })` in an async handler (every `$llm` call that reaches a provider is async). The built-in model, `pocketone.yaml`'s `agent:` section and a multisite host's shared model are gone. Agent Chat is now [LLM Chat](ext/llm-chat/CHANGELOG.md) (`$llm.chat`).
+
+### Added
+
+- [LLM](ext/llm/README.md), a standard extension: text, pictures, speech, transcription, music, video and embeddings from cloud providers on your own keys, as `$llm.<kind>` in page code and the `llm.*` contracts. Every call names its model as `provider/model`.
+
 ## v0.0.1-alpha.12 (2026-11-21)
 
 ### Highlights

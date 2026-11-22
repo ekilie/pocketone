@@ -24,6 +24,8 @@ pocketone serve --dir ./pb_data
 `pocketone` keeps `pb_data` next to its executable unless you pass `--dir`; `pb_pages` and `pb_migrations` are found next
 to `pb_data`.
 
+How each kit is built, file by file, is in [Example apps → Starters](/docs/examples/starters).
+
 Each starter kit is an ordinary `pb_pages` folder written against the v1 API, in TypeScript with [ETS templates](/docs/extensions/pages/ets), so everything in these docs applies to it. The **tsx** kit starts an app in the [component style](/docs/extensions/pages/jsx) instead.
 
 | Starter | What it shows | Live demo |

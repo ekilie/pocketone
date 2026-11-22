@@ -536,400 +536,6 @@ pocketone remote add <name> <url>
 
 From [Remotes](/docs/extensions/remotes).
 
-### pocketone remote agent
-
-Calls agent/v1 on a remote
-
-### pocketone remote agent chat
-
-Calls agent.chat/v1 on a remote
-
-### pocketone remote agent chat forget
-
-Deletes a chat, its messages and the model's state for it (agent.chat/v1)
-
-```
-pocketone remote agent chat forget
-```
-
-Deletes a chat, its messages and the model's state for it.
-
-Calls POST /api/\_c/agent.chat/v1/forget on the remote (token scope: chat).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat forget-where
-
-Deletes every chat whose meta matches (as in List), e.g (agent.chat/v1)
-
-```
-pocketone remote agent chat forget-where
-```
-
-Deletes every chat whose meta matches (as in List), e.g. all of a user the app deleted.
-
-Calls POST /api/\_c/agent.chat/v1/forget-where on the remote (token scope: chat).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--limit` | int64 | `0` |  |
-| `--meta` | string | – | a JSON value (@file reads a file) |
-| `--offset` | int64 | `0` |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat get
-
-Returns a chat (agent.chat/v1)
-
-```
-pocketone remote agent chat get
-```
-
-Returns a chat.
-
-Calls POST /api/\_c/agent.chat/v1/get on the remote (token scope: chat:read).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat history
-
-Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and "") (agent.chat/v1)
-
-```
-pocketone remote agent chat history
-```
-
-Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and "").
-
-Calls POST /api/\_c/agent.chat/v1/history on the remote (token scope: chat:read).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--before` | string | – |  |
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--limit` | int64 | `0` |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat list
-
-Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value (agent.chat/v1)
-
-```
-pocketone remote agent chat list
-```
-
-Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value.
-
-Calls POST /api/\_c/agent.chat/v1/list on the remote (token scope: chat:read).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--limit` | int64 | `0` |  |
-| `--meta` | string | – | a JSON value (@file reads a file) |
-| `--offset` | int64 | `0` |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat new
-
-Starts a chat and returns it; its id is how the app finds it again (agent.chat/v1)
-
-```
-pocketone remote agent chat new
-```
-
-Starts a chat and returns it; its id is how the app finds it again.
-
-Calls POST /api/\_c/agent.chat/v1/new on the remote (token scope: chat).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--meta` | string | – | a JSON value (@file reads a file) |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--title` | string | – |  |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat send
-
-Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to agent/v1, saves both turns, and folds older messages into the summary when it's due (agent.chat/v1)
-
-```
-pocketone remote agent chat send
-```
-
-Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to agent/v1, saves both turns, and folds older messages into the summary when it's due.
-
-Calls POST /api/\_c/agent.chat/v1/send on the remote (token scope: chat).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--context` | string | – |  |
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--maxtokens` | int64 | `0` |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--schema` | string | – | a JSON value (@file reads a file) |
-| `--summarizeevery` | int64 | `0` |  |
-| `--system` | string | – |  |
-| `--temperature` | string | – | a JSON value (@file reads a file) |
-| `--text` | string | – |  |
-| `--wait` | string | – |  |
-| `--window` | int64 | `0` |  |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat send-stream
-
-Is Send with the answer as it's written: agent/v1 chunks, the last one with done and the result (agent.chat/v1)
-
-```
-pocketone remote agent chat send-stream
-```
-
-Is Send with the answer as it's written: agent/v1 chunks, the last one with done and the result.
-
-Calls POST /api/\_c/agent.chat/v1/send-stream on the remote (token scope: chat).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--context` | string | – |  |
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--maxtokens` | int64 | `0` |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--schema` | string | – | a JSON value (@file reads a file) |
-| `--summarizeevery` | int64 | `0` |  |
-| `--system` | string | – |  |
-| `--temperature` | string | – | a JSON value (@file reads a file) |
-| `--text` | string | – |  |
-| `--wait` | string | – |  |
-| `--window` | int64 | `0` |  |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent chat update
-
-Sets a chat's title or meta (fields left out stay) (agent.chat/v1)
-
-```
-pocketone remote agent chat update
-```
-
-Sets a chat's title or meta (fields left out stay).
-
-Calls POST /api/\_c/agent.chat/v1/update on the remote (token scope: chat).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--meta` | string | – | a JSON value (@file reads a file) |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--title` | string | – | a JSON value (@file reads a file) |
-
-From [agent.chat/v1](/docs/contracts/agent.chat/v1) (generated).
-
-### pocketone remote agent complete
-
-Answers a prompt or a conversation with the app's language model (agent/v1)
-
-```
-pocketone remote agent complete
-```
-
-Answers a prompt or a conversation with the app's language model.
-
-Calls POST /api/\_c/agent/v1/complete on the remote (token scope: agent).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--maxtokens` | int64 | `0` |  |
-| `--messages` | string | – | a JSON value (@file reads a file) |
-| `--model` | string | – |  |
-| `--prompt` | string | – |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--schema` | string | – | a JSON value (@file reads a file) |
-| `--stop` | stringSlice | – |  |
-| `--system` | string | – |  |
-| `--temperature` | string | – | a JSON value (@file reads a file) |
-| `--thread` | string | – |  |
-| `--wait` | string | – |  |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
-### pocketone remote agent count
-
-Says how many tokens a text or a conversation is for the app's model, for budgeting what to send (agent/v1)
-
-```
-pocketone remote agent count
-```
-
-Says how many tokens a text or a conversation is for the app's model, for budgeting what to send.
-
-Calls POST /api/\_c/agent/v1/count on the remote (token scope: agent:read).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--messages` | string | – | a JSON value (@file reads a file) |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--system` | string | – |  |
-| `--text` | string | – |  |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
-### pocketone remote agent forget
-
-Releases a warm: its text may leave the cache like any other (agent/v1)
-
-```
-pocketone remote agent forget
-```
-
-Releases a warm: its text may leave the cache like any other.
-
-Calls POST /api/\_c/agent/v1/forget on the remote (token scope: agent).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
-### pocketone remote agent forget-thread
-
-Drops a thread's kept state, in memory and on disk (agent/v1)
-
-```
-pocketone remote agent forget-thread
-```
-
-Drops a thread's kept state, in memory and on disk.
-
-Calls POST /api/\_c/agent/v1/threads/forget on the remote (token scope: agent).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--id` | string | – |  |
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
-### pocketone remote agent status
-
-Says which model answers the app's prompts and whether it's ready (agent/v1)
-
-```
-pocketone remote agent status
-```
-
-Says which model answers the app's prompts and whether it's ready.
-
-Calls GET /api/\_c/agent/v1/ on the remote (token scope: agent:read).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
-### pocketone remote agent stream
-
-Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result (agent/v1)
-
-```
-pocketone remote agent stream
-```
-
-Answers like Complete, sending the answer as it's written: a chunk with text for each piece, then one with done and the whole result.
-
-Calls POST /api/\_c/agent/v1/stream on the remote (token scope: agent).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--maxtokens` | int64 | `0` |  |
-| `--messages` | string | – | a JSON value (@file reads a file) |
-| `--model` | string | – |  |
-| `--prompt` | string | – |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--schema` | string | – | a JSON value (@file reads a file) |
-| `--stop` | stringSlice | – |  |
-| `--system` | string | – |  |
-| `--temperature` | string | – | a JSON value (@file reads a file) |
-| `--thread` | string | – |  |
-| `--wait` | string | – |  |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
-### pocketone remote agent threads
-
-Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread) (agent/v1)
-
-```
-pocketone remote agent threads
-```
-
-Lists the conversations whose model state the provider keeps for the app (CompleteInput.Thread).
-
-Calls GET /api/\_c/agent/v1/threads on the remote (token scope: agent:read).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
-### pocketone remote agent warm
-
-Reads the start of prompts ahead of the calls that use it (a preamble, say), so they skip reading it (agent/v1)
-
-```
-pocketone remote agent warm
-```
-
-Reads the start of prompts ahead of the calls that use it (a preamble, say), so they skip reading it. It returns at once with the warm's id and warms in the background, unless Wait says how long to wait for it. The id is the same for the same text on the same app, so warming again is cheap. A provider without a prompt cache returns Warmed false.
-
-Calls POST /api/\_c/agent/v1/warm on the remote (token scope: agent).
-
-| Flag | Type | Default | |
-|---|---|---|---|
-| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
-| `--messages` | string | – | a JSON value (@file reads a file) |
-| `--prompt` | string | – |  |
-| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
-| `--system` | string | – |  |
-| `--wait` | string | – |  |
-
-From [agent/v1](/docs/contracts/agent/v1) (generated).
-
 ### pocketone remote api-tokens
 
 Commands under remote api-tokens
@@ -1196,6 +802,782 @@ pocketone remote list
 Aliases: `ls`
 
 From [Remotes](/docs/extensions/remotes).
+
+### pocketone remote llm
+
+Commands under remote llm
+
+### pocketone remote llm align
+
+Says when each line and word of the text is said in the audio (llm.align/v1)
+
+```
+pocketone remote llm align
+```
+
+Says when each line and word of the text is said in the audio.
+
+Calls POST /api/\_c/llm.align/v1/align on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--audio` | string | – | a JSON value (@file reads a file) |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--language` | string | – |  |
+| `--mode` | string | – |  |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--text` | string | – |  |
+
+From [llm.align/v1](/docs/contracts/llm.align/v1) (generated).
+
+### pocketone remote llm align models
+
+Lists the alignment models of every provider in Settings → LLM (llm.align/v1)
+
+```
+pocketone remote llm align models
+```
+
+Lists the alignment models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.align/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.align/v1](/docs/contracts/llm.align/v1) (generated).
+
+### pocketone remote llm chat
+
+Calls llm.chat/v1 on a remote
+
+### pocketone remote llm chat forget
+
+Deletes a chat, its messages and the model's state for it (llm.chat/v1)
+
+```
+pocketone remote llm chat forget
+```
+
+Deletes a chat, its messages and the model's state for it.
+
+Calls POST /api/\_c/llm.chat/v1/forget on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat forget-where
+
+Deletes every chat whose meta matches (as in List), e.g (llm.chat/v1)
+
+```
+pocketone remote llm chat forget-where
+```
+
+Deletes every chat whose meta matches (as in List), e.g. all of a user the app deleted.
+
+Calls POST /api/\_c/llm.chat/v1/forget-where on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--limit` | int64 | `0` |  |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `--offset` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat get
+
+Returns a chat (llm.chat/v1)
+
+```
+pocketone remote llm chat get
+```
+
+Returns a chat.
+
+Calls POST /api/\_c/llm.chat/v1/get on the remote (token scope: chat:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat history
+
+Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and "") (llm.chat/v1)
+
+```
+pocketone remote llm chat history
+```
+
+Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and "").
+
+Calls POST /api/\_c/llm.chat/v1/history on the remote (token scope: chat:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--before` | string | – |  |
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--limit` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat list
+
+Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value (llm.chat/v1)
+
+```
+pocketone remote llm chat list
+```
+
+Returns chats, most recently updated first; Meta keeps those whose meta has each of its top-level keys with that value.
+
+Calls POST /api/\_c/llm.chat/v1/list on the remote (token scope: chat:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--limit` | int64 | `0` |  |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `--offset` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat new
+
+Starts a chat and returns it; its id is how the app finds it again (llm.chat/v1)
+
+```
+pocketone remote llm chat new
+```
+
+Starts a chat and returns it; its id is how the app finds it again.
+
+Calls POST /api/\_c/llm.chat/v1/new on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – |  |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat send
+
+Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due (llm.chat/v1)
+
+```
+pocketone remote llm chat send
+```
+
+Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due.
+
+Calls POST /api/\_c/llm.chat/v1/send on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--context` | string | – |  |
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `--model` | string | – |  |
+| `--reasoning` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--summarizeevery` | int64 | `0` |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+| `--text` | string | – |  |
+| `--window` | int64 | `0` |  |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat send-stream
+
+Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result (llm.chat/v1)
+
+```
+pocketone remote llm chat send-stream
+```
+
+Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result.
+
+Calls POST /api/\_c/llm.chat/v1/send-stream on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--context` | string | – |  |
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `--model` | string | – |  |
+| `--reasoning` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--summarizeevery` | int64 | `0` |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+| `--text` | string | – |  |
+| `--window` | int64 | `0` |  |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm chat update
+
+Sets a chat's title or meta (fields left out stay) (llm.chat/v1)
+
+```
+pocketone remote llm chat update
+```
+
+Sets a chat's title or meta (fields left out stay).
+
+Calls POST /api/\_c/llm.chat/v1/update on the remote (token scope: chat).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--meta` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – | a JSON value (@file reads a file) |
+
+From [llm.chat/v1](/docs/contracts/llm.chat/v1) (generated).
+
+### pocketone remote llm embed
+
+Returns one vector per input text, in order (llm.embed/v1)
+
+```
+pocketone remote llm embed
+```
+
+Returns one vector per input text, in order.
+
+Calls POST /api/\_c/llm.embed/v1/embed on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--dimensions` | int64 | `0` |  |
+| `--input` | stringSlice | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.embed/v1](/docs/contracts/llm.embed/v1) (generated).
+
+### pocketone remote llm embed models
+
+Lists the embedding models of every provider in Settings → LLM (llm.embed/v1)
+
+```
+pocketone remote llm embed models
+```
+
+Lists the embedding models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.embed/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.embed/v1](/docs/contracts/llm.embed/v1) (generated).
+
+### pocketone remote llm image
+
+Calls llm.image/v1 on a remote
+
+### pocketone remote llm image edit
+
+Changes the pictures it's given as the prompt says (llm.image/v1)
+
+```
+pocketone remote llm image edit
+```
+
+Changes the pictures it's given as the prompt says.
+
+Calls POST /api/\_c/llm.image/v1/edit on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--generateinput` | string | – | a JSON value (@file reads a file) |
+| `--images` | string | – | a JSON value (@file reads a file) |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.image/v1](/docs/contracts/llm.image/v1) (generated).
+
+### pocketone remote llm image generate
+
+Makes pictures from a prompt (llm.image/v1)
+
+```
+pocketone remote llm image generate
+```
+
+Makes pictures from a prompt.
+
+Calls POST /api/\_c/llm.image/v1/generate on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--aspectratio` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--model` | string | – |  |
+| `--n` | int64 | `0` |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `--prompt` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--size` | string | – |  |
+
+From [llm.image/v1](/docs/contracts/llm.image/v1) (generated).
+
+### pocketone remote llm image models
+
+Lists the image models of every provider in Settings → LLM (llm.image/v1)
+
+```
+pocketone remote llm image models
+```
+
+Lists the image models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.image/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.image/v1](/docs/contracts/llm.image/v1) (generated).
+
+### pocketone remote llm music
+
+Calls llm.music/v1 on a remote
+
+### pocketone remote llm music content
+
+Fetches one of a done job's files (llm.music/v1)
+
+```
+pocketone remote llm music content
+```
+
+Fetches one of a done job's files.
+
+Calls POST /api/\_c/llm.music/v1/content on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--index` | int64 | `0` |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.music/v1](/docs/contracts/llm.music/v1) (generated).
+
+### pocketone remote llm music create
+
+Starts making music (llm.music/v1)
+
+```
+pocketone remote llm music create
+```
+
+Starts making music. With Wait it returns once the job is done (or failed), its files included; otherwise at once, to follow with Get.
+
+Calls POST /api/\_c/llm.music/v1/create on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--lyrics` | string | – |  |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `--prompt` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--seconds` | float64 | `0` |  |
+| `--wait` | string | – |  |
+
+From [llm.music/v1](/docs/contracts/llm.music/v1) (generated).
+
+### pocketone remote llm music get
+
+Says how a job is going (llm.music/v1)
+
+```
+pocketone remote llm music get
+```
+
+Says how a job is going.
+
+Calls POST /api/\_c/llm.music/v1/get on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.music/v1](/docs/contracts/llm.music/v1) (generated).
+
+### pocketone remote llm music models
+
+Lists the music models of every provider in Settings → LLM (llm.music/v1)
+
+```
+pocketone remote llm music models
+```
+
+Lists the music models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.music/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.music/v1](/docs/contracts/llm.music/v1) (generated).
+
+### pocketone remote llm speech
+
+Calls llm.speech/v1 on a remote
+
+### pocketone remote llm speech models
+
+Lists the speech models of every provider in Settings → LLM (llm.speech/v1)
+
+```
+pocketone remote llm speech models
+```
+
+Lists the speech models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.speech/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.speech/v1](/docs/contracts/llm.speech/v1) (generated).
+
+### pocketone remote llm speech speak
+
+Reads the text aloud and returns the audio (llm.speech/v1)
+
+```
+pocketone remote llm speech speak
+```
+
+Reads the text aloud and returns the audio.
+
+Calls POST /api/\_c/llm.speech/v1/speak on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--format` | string | – |  |
+| `--instructions` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--speed` | float64 | `0` |  |
+| `--text` | string | – |  |
+| `--voice` | string | – |  |
+
+From [llm.speech/v1](/docs/contracts/llm.speech/v1) (generated).
+
+### pocketone remote llm speech voices
+
+Lists a model's voices, when the provider says (llm.speech/v1)
+
+```
+pocketone remote llm speech voices
+```
+
+Lists a model's voices, when the provider says.
+
+Calls POST /api/\_c/llm.speech/v1/voices on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--model` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.speech/v1](/docs/contracts/llm.speech/v1) (generated).
+
+### pocketone remote llm text
+
+Calls llm.text/v1 on a remote
+
+### pocketone remote llm text complete
+
+Answers a prompt or a conversation (llm.text/v1)
+
+```
+pocketone remote llm text complete
+```
+
+Answers a prompt or a conversation.
+
+Calls POST /api/\_c/llm.text/v1/complete on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `--messages` | string | – | a JSON value (@file reads a file) |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `--prompt` | string | – |  |
+| `--reasoning` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--stop` | stringSlice | – |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+
+From [llm.text/v1](/docs/contracts/llm.text/v1) (generated).
+
+### pocketone remote llm text count
+
+Says about how many tokens a text or a conversation is, for budgeting what to send (llm.text/v1)
+
+```
+pocketone remote llm text count
+```
+
+Says about how many tokens a text or a conversation is, for budgeting what to send.
+
+Calls POST /api/\_c/llm.text/v1/count on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--messages` | string | – | a JSON value (@file reads a file) |
+| `--model` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--system` | string | – |  |
+| `--text` | string | – |  |
+
+From [llm.text/v1](/docs/contracts/llm.text/v1) (generated).
+
+### pocketone remote llm text models
+
+Lists the text models of every provider in Settings → LLM (llm.text/v1)
+
+```
+pocketone remote llm text models
+```
+
+Lists the text models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.text/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.text/v1](/docs/contracts/llm.text/v1) (generated).
+
+### pocketone remote llm text stream
+
+Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result (llm.text/v1)
+
+```
+pocketone remote llm text stream
+```
+
+Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result.
+
+Calls POST /api/\_c/llm.text/v1/stream on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxtokens` | int64 | `0` |  |
+| `--messages` | string | – | a JSON value (@file reads a file) |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `--prompt` | string | – |  |
+| `--reasoning` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--schema` | string | – | a JSON value (@file reads a file) |
+| `--stop` | stringSlice | – |  |
+| `--system` | string | – |  |
+| `--temperature` | string | – | a JSON value (@file reads a file) |
+
+From [llm.text/v1](/docs/contracts/llm.text/v1) (generated).
+
+### pocketone remote llm transcribe
+
+Writes down what's said in the audio (llm.transcribe/v1)
+
+```
+pocketone remote llm transcribe
+```
+
+Writes down what's said in the audio.
+
+Calls POST /api/\_c/llm.transcribe/v1/transcribe on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--audio` | string | – | a JSON value (@file reads a file) |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--language` | string | – |  |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `--prompt` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.transcribe/v1](/docs/contracts/llm.transcribe/v1) (generated).
+
+### pocketone remote llm transcribe models
+
+Lists the transcription models of every provider in Settings → LLM (llm.transcribe/v1)
+
+```
+pocketone remote llm transcribe models
+```
+
+Lists the transcription models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.transcribe/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.transcribe/v1](/docs/contracts/llm.transcribe/v1) (generated).
+
+### pocketone remote llm video
+
+Calls llm.video/v1 on a remote
+
+### pocketone remote llm video content
+
+Fetches one of a done job's files (llm.video/v1)
+
+```
+pocketone remote llm video content
+```
+
+Fetches one of a done job's files.
+
+Calls POST /api/\_c/llm.video/v1/content on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--index` | int64 | `0` |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.video/v1](/docs/contracts/llm.video/v1) (generated).
+
+### pocketone remote llm video create
+
+Starts making a video (llm.video/v1)
+
+```
+pocketone remote llm video create
+```
+
+Starts making a video. With Wait it returns once the job is done (or failed); otherwise at once, to follow with Get. A done job lists how many files it made (Outputs); Content fetches each.
+
+Calls POST /api/\_c/llm.video/v1/create on the remote (token scope: llm).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--aspectratio` | string | – |  |
+| `--image` | string | – | a JSON value (@file reads a file) |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--model` | string | – |  |
+| `--options` | string | – | a JSON value (@file reads a file) |
+| `--prompt` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--seconds` | float64 | `0` |  |
+| `--size` | string | – |  |
+| `--wait` | string | – |  |
+
+From [llm.video/v1](/docs/contracts/llm.video/v1) (generated).
+
+### pocketone remote llm video get
+
+Says how a job is going (llm.video/v1)
+
+```
+pocketone remote llm video get
+```
+
+Says how a job is going.
+
+Calls POST /api/\_c/llm.video/v1/get on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--id` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.video/v1](/docs/contracts/llm.video/v1) (generated).
+
+### pocketone remote llm video models
+
+Lists the video models of every provider in Settings → LLM (llm.video/v1)
+
+```
+pocketone remote llm video models
+```
+
+Lists the video models of every provider in Settings → LLM.
+
+Calls GET /api/\_c/llm.video/v1/models on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--provider` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.video/v1](/docs/contracts/llm.video/v1) (generated).
 
 ### pocketone remote logs
 
