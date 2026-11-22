@@ -26,7 +26,7 @@ const (
 type App struct {
 	// PocketBase is dir, dev, encryption_env and query_timeout as the defaults of PocketBase's own flags.
 	PocketBase pocketbase.Config
-	// JS is hooks_dir, migrations_dir, hooks_pool and js_limits.
+	// JS is hooks_dir, migrations_dir, hooks_pool and js_limits (memory, task_time, task_wall, await_time).
 	JS jsvm.Config
 	// JSEngine is jsvm: JSEngineQuickJS (the default) or JSEngineGoja.
 	JSEngine string
@@ -71,6 +71,7 @@ func AppFromConfig(cfg *config.Config) (App, error) {
 				MemoryLimit: int64(a.JSLimits.Memory),
 				TaskBudget:  a.JSLimits.TaskTime,
 				TaskWall:    a.JSLimits.TaskWall,
+				AwaitLimit:  a.JSLimits.AwaitTime,
 			},
 		},
 		JSEngine: engine,

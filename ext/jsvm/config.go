@@ -51,8 +51,16 @@ type VMConfig struct {
 	TaskBudget time.Duration
 	// QueueSize caps the tasks waiting for the loop; more fail fast with ErrBusy.
 	QueueSize int
-	// WaitTimeout bounds how long a Go caller waits for a JS task to finish.
+	// WaitTimeout bounds how long a Go caller waits for a JS task's synchronous part (its time in the queue
+	// included). Awaits after it are bounded by AwaitLimit instead.
 	WaitTimeout time.Duration
+	// AwaitLimit bounds how long a Go caller waits for an async handler (a request, a hook, a cron job) to settle
+	// once its synchronous part has run (default 15 min). Time the handler spends awaiting async Go calls
+	// (`.async`, sleep.async, provider calls) counts here, not toward TaskBudget or TaskWall, which bound each
+	// stretch of JS between awaits. When the limit passes, or the request the handler serves is abandoned (the client
+	// went away), the handler stops: async Go calls it started are dropped when they finish, so the code after its
+	// await never runs, and new ones throw.
+	AwaitLimit time.Duration
 	// PumpSyncCalls runs blocking Go calls made from sync JS (DB, sleep) on their own goroutine and keeps serving
 	// other tasks meanwhile, nested on the same stack, up to MaxPumpDepth deep.
 	// TaskWall caps one top-level task's wall time, Go calls included (a loop over Go calls never hits TaskBudget).
@@ -84,6 +92,9 @@ func (c *VMConfig) defaults() {
 	}
 	if c.WaitTimeout == 0 {
 		c.WaitTimeout = 30 * time.Second
+	}
+	if c.AwaitLimit == 0 {
+		c.AwaitLimit = 15 * time.Minute
 	}
 	if c.TaskWall == 0 {
 		c.TaskWall = 30 * time.Second
