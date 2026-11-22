@@ -13,6 +13,8 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ### Fixed
 
+- A superuser UI extension registered from `pb_hooks` the documented way (`$app.onServe().bindFunc((e) => { e.uiExtensions.push({ name, fs: $os.dirFS(dir) }); e.next() })`) works: `$os.dirFS` now stays a Go file system in JS instead of turning into a string, and a JS object holding Go values becomes a Go struct field by field, so `fs` keeps its value. Before, the app stopped at startup with `cannot unmarshal string into Go struct field UIExtension.fs`.
+
 - A handler stops when its call is given up: past `AwaitLimit`, or when the request it serves ends because the client went away. Before, a request that timed out failed but its handler kept running with no one waiting. Now async calls it started are dropped when they finish (the code after its `await` never runs) and new ones throw. A detached promise still runs on after its handler returns.
 
 ## 0.1.2 (2026-11-21)

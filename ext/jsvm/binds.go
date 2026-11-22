@@ -616,7 +616,7 @@ func BindOS(vm *VM) {
 		"cmd":        exec.Command,
 		"exit":       os.Exit,
 		"getenv":     os.Getenv,
-		"dirFS":      os.DirFS,
+		"dirFS":      dirFS,
 		"stat":       os.Stat,
 		"readFile":   os.ReadFile,
 		"writeFile":  os.WriteFile,
@@ -840,6 +840,16 @@ type jsMiddleware struct {
 	priority int
 	id       string
 }
+
+// goFS keeps a file system a Go value in JS. os.DirFS's own type is a named string, which reaches JS as a plain
+// string, so { fs: $os.dirFS(dir) } lost it (a superuser UI extension's fs, pockethost.io/docs/admin-extensions).
+type goFS struct{ fs.FS }
+
+// dirFS is $os.dirFS: os.DirFS(dir), kept a Go value; it still answers ReadFile and Stat like os.DirFS.
+func dirFS(dir string) fs.FS { return goFS{os.DirFS(dir)} }
+
+func (f goFS) ReadFile(name string) ([]byte, error)  { return fs.ReadFile(f.FS, name) }
+func (f goFS) Stat(name string) (fs.FileInfo, error) { return fs.Stat(f.FS, name) }
 
 // hooksBinds adds onX(handler, ...tags) for every app.OnX hook (except OnServe), by reflecting on core.App.
 func hooksBinds(app core.App, vm *VM) {
