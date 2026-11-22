@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
 	llmc "pocketone.dev/ext/contracts/llm"
@@ -38,10 +39,12 @@ func createLedger(tx core.App) error {
 		&core.NumberField{Id: "llc_cost", Name: "cost", OnlyInt: true, Help: "What it cost, in millionths of a US dollar."},
 		&core.BoolField{Id: "llc_estimated", Name: "estimated", Help: "The cost was estimated from listed prices, not reported by the provider."},
 		&core.TextField{Id: "llc_refused", Name: "refused", Max: 500, Help: "Why a limit refused the call; empty when it reached the provider."},
+		&core.TextField{Id: "llc_job", Name: "job", Max: 300, Help: "A music or video job's id: its cost is filled in once the job is done."},
 		&core.AutodateField{Id: "llc_created", Name: "created", OnCreate: true, System: true},
 	)
 	c.AddIndex("idx_llm_calls_created", false, "created", "")
 	c.AddIndex("idx_llm_calls_subject_created", false, "subject, created", "")
+	c.AddIndex("idx_llm_calls_job", false, "job", "job != ''")
 	return tx.Save(c)
 }
 
@@ -63,6 +66,7 @@ type call struct {
 	model   string
 	subject string
 	via     string
+	job     string // a music or video job's id, once it has one
 }
 
 // record writes c's ledger row with what the call used. refused is the limit's reason when one refused it. A failed
@@ -88,8 +92,50 @@ func (r *router) record(ctx context.Context, c *call, u llmc.Usage, refused stri
 	rec.Set("cost", u.CostMicroUSD)
 	rec.Set("estimated", u.CostEstimated)
 	rec.Set("refused", refused)
+	rec.Set("job", c.job)
 	if err := r.app.SaveWithContext(ctx, rec); err != nil {
 		r.app.Logger().Warn("llm: ledger: write failed", "model", c.model, "error", err)
+	}
+}
+
+// ledgerKeep is how long ledger rows are kept: limits look back a month at most, and a year and a bit leaves room to
+// compare this month with the same one last year.
+const ledgerKeep = 13 * 31 * 24 * time.Hour
+
+// pruneLedger deletes rows older than ledgerKeep. A daily cron runs it.
+func pruneLedger(app core.App) error {
+	cut := time.Now().Add(-ledgerKeep).UTC().Format("2006-01-02 15:04:05.000Z")
+	_, err := app.DB().NewQuery("DELETE FROM {{" + LedgerCollection + "}} WHERE [[created]] < {:cut}").
+		Bind(dbx.Params{"cut": cut}).Execute()
+	return err
+}
+
+// settleJob fills in a finished job's cost: on its ledger row (written when the job was created, before its cost was
+// known) and on j. A job whose row already has a cost, or that has no row, is left alone.
+func (r *router) settleJob(ctx context.Context, t target, id string, j *llmc.Job) {
+	if j.Status != llmc.JobDone {
+		return
+	}
+	rec, err := r.app.FindFirstRecordByFilter(LedgerCollection, "job = {:job}", dbx.Params{"job": id})
+	if err != nil || rec.GetInt("cost") != 0 {
+		return
+	}
+	if _, model, ok := llmc.SplitModel(rec.GetString("model")); ok {
+		t.model = model
+	}
+	if j.Usage.CostMicroUSD == 0 {
+		r.estimateCost(ctx, t, &j.Usage, used{files: max(j.Outputs, len(j.Files))})
+	}
+	if j.Usage.CostMicroUSD == 0 {
+		return
+	}
+	rec.Set("cost", j.Usage.CostMicroUSD)
+	rec.Set("estimated", j.Usage.CostEstimated)
+	if j.Usage.Seconds > 0 {
+		rec.Set("seconds", j.Usage.Seconds)
+	}
+	if err := r.app.SaveWithContext(ctx, rec); err != nil {
+		r.app.Logger().Warn("llm: ledger: job cost not saved", "job", id, "error", err)
 	}
 }
 

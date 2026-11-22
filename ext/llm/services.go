@@ -286,6 +286,7 @@ func (s jobService) create(ctx context.Context, a extkit.Auth, model, wait strin
 		return llmc.Job{}, providerError(t.p, err)
 	}
 	j.ID, j.Model = jobID(t.p, j.ID), t.ref()
+	t.c.job = j.ID // so get can fill in its cost once it's done
 	j, err = s.r.waitJob(ctx, t, s.kind, j, wait)
 	if err == nil && j.Status == llmc.JobDone {
 		s.r.fillCost(ctx, t, &j.Usage, used{files: len(j.Files)})
@@ -305,6 +306,7 @@ func (s jobService) get(ctx context.Context, in llmc.JobRef) (llmc.Job, error) {
 		return llmc.Job{}, providerError(t.p, err)
 	}
 	j.ID = in.ID
+	s.r.settleJob(ctx, t, in.ID, &j)
 	return j, nil
 }
 
