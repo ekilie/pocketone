@@ -158,24 +158,24 @@
                         : p.keySet ? t.span({ className: "label success" }, "Key set")
                         : t.span({ className: "label warning" }, "No key"),
                 ),
+                t.p({ className: "m-t-0 txt-hint" }, ti.about || ""),
                 t.div(
                     { className: "grid" },
-                    t.div({ className: "col-md-5" }, field("Type",
+                    t.div({ className: "col-md-6" }, field("Type",
                         app.components.select({
                             required: true,
                             options: () => (data.view?.types || []).map((x) => ({ value: x.type, label: x.title })),
                             value: () => p.type,
                             onchange: (sel) => setType(i, sel?.[0]?.value),
                         }))),
-                    t.div({ className: "col-md-7" }, t.p({ className: "txt-hint m-t-sm m-b-0" }, ti.about || "")),
-                    t.div({ className: "col-md-4" }, field("Name",
-                        t.input({ type: "text", required: true, value: p.name,                            onchange: (e) => set(i, { name: e.target.value }) }),
-                        t.span(null, "Calls name its models as ", t.code(null, `${p.name || "name"}/model`), "."))),
+                    t.div({ className: "col-md-6" }, field("Name",
+                        t.input({ type: "text", required: true, value: p.name, onchange: (e) => set(i, { name: e.target.value }) }),
+                        t.span(null, "Models are named ", t.code(null, `${p.name || "name"}/…`)))),
                     ti.account
-                        ? t.div({ className: "col-md-8" }, field("Account ID",
+                        ? t.div({ className: "col-lg-12" }, field("Account ID",
                             t.input({ type: "text", value: p.account, autocomplete: "off", onchange: (e) => set(i, { account: e.target.value }) }),
                             "In your Cloudflare dashboard's URL, or under Account home."))
-                        : t.div({ className: "col-md-8" }, field("Endpoint",
+                        : t.div({ className: "col-lg-12" }, field("Endpoint",
                             t.input({ type: "url", value: p.endpoint, placeholder: ti.endpoint || "https://…/v1", onchange: (e) => set(i, { endpoint: e.target.value }) }),
                             ti.endpoint ? "Leave empty for the default." : "Include the version path, like /v1.")),
                     t.div({ className: "col-lg-12" }, field(ti.account ? "API token" : "API key",
