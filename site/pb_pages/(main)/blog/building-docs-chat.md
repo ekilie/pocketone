@@ -6,7 +6,9 @@ author: Ben Allfree
 tags: examples, AI, Pages, llm
 ---
 
-I wanted a place to send people with PocketOne questions, and a real app to put `$llm` through its paces. So I built [learn.pocketone.dev](https://learn.pocketone.dev). Ask it something about PocketOne or PocketBase and it answers from both sets of docs, cites the pages it used, and tells you what the answer cost.
+Docs Chat started as a test. I wanted to see how inference clouds actually perform when you call them from a PocketOne app, and I needed something real to exercise the new inference interface in the JSVM engine. Then I got curious. What would a simple chatbot look like that could teach you something about PocketOne?
+
+That's [learn.pocketone.dev](https://learn.pocketone.dev). Ask it something about PocketOne or PocketBase and it answers from both sets of docs, cites the pages it used, and tells you what the answer cost.
 
 It's five files. No Go, no build step, no vector database. Just a `pb_pages` folder and the stock `pocketone` binary. The whole thing is in the repo at [`ext/llm/examples/chat`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/chat).
 
@@ -28,6 +30,14 @@ The first version answered from copies of the extension READMEs. That was the wr
 Then I gave it PocketBase's own docs too. PocketOne keeps a Markdown copy of pocketbase.io's docs in the pocketone Agent Skill, so `_private/llm.ts` reads those as well. Every excerpt is labelled "PocketOne docs" or "PocketBase docs" and linked back to its site, and `preamble.md` explains how the two fit together.
 
 Both sets load in the background and refresh every ten minutes. They're split into sections, and the words in each section are indexed.
+
+### The docs don't fit
+
+My first idea was the obvious one. Put all the docs in the preamble and let the model read everything. That didn't work. GLM, the model I was using, couldn't fit the PocketOne and PocketBase docs in its context.
+
+So I added a pre-filter. Before the model sees anything, the app searches the docs and sends only the sections that are hopefully relevant.
+
+If I were building a real chatbot, I'd do it the other way. I'd use a bigger model, put the entire docs in the preamble, and let the provider cache it. But as near as I can tell, those caches aren't held forever. Every time the cache goes cold, the whole preamble gets sent again. That means more tokens at startup, and a slower first answer for whoever shows up after a quiet spell. I didn't try it, so that's my best guess and not a measurement. For proving the point, the pre-filter was good enough.
 
 ### Finding the right excerpts
 
@@ -113,6 +123,12 @@ return res.data.questions
 ### What it cost
 
 Every `$llm` result has `usage.costMicroUSD`, the call's cost in millionths of a dollar. It's the provider's figure when they report one, else estimated from the model's listed prices. The page shows it under every answer, so you can see exactly what a question costs.
+
+### The real product: `$llm`
+
+Docs Chat is small. Most of my time went into what's underneath it: the `$llm` object. I wanted one interface that works the same across providers, so switching from Vultr to Cloudflare Workers AI to OpenRouter is a change to the model name and nothing else. Every call names its model as `provider/model`. Every call that reaches a provider is async and says so in its name (`completeAsync`, `sendAsync`). Every result has the same shape, cost included.
+
+I spent a lot of time fine-tuning that interface, and Docs Chat was the app I tuned it against. The goal is simple. Writing an inference-powered agent into a PocketOne app should be easy. If it took me five files to build a docs bot, it should take you about the same to build whatever you have in mind. The full API is in [AI in your app](/docs/extensions/llm).
 
 ### Run it yourself
 
