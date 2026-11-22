@@ -69,7 +69,7 @@ or model. Every call passes them before it reaches a provider, and a used-up lim
 Page code says whom a call is for with `$llm.for(ctx)` (a page's `ctx` or a route's `e`): its signed-in user, or else a
 guest told apart by a signed cookie. Guest calls are refused until there's a limit for all guests together. Every call
 is recorded in the `_llm_calls` collection, and the screen shows today's and this month's spend from it
-([Limits](docs/guides/limits.md)).
+([Limits](docs/guides/limits.md), [Whom a call is for](docs/guides/whom.md), [Spend and the ledger](docs/guides/spend.md)).
 
 There's no pocketone.yaml configuration besides the switch: `llm: {enabled: false}` turns it off on a single app (on a
 host, an instance's `extensions.llm`), and with it `$llm` and the `llm.*` contracts.

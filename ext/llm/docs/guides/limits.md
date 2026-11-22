@@ -1,82 +1,116 @@
 ---
 title: Limits
-description: "Cap what your app spends on models: limits in Settings → LLM for the whole app, each user, each guest and all guests together, checked before every call, with $llm.for(e) to say whom a call is for."
+description: "Cap what your app spends on models: limits in Settings → LLM for the whole app, each user, each guest and all guests together, by dollars, tokens or calls, per UTC day or month."
 ---
 
 # Limits
 
-Every call to a model spends money on your provider account, and a public page lets every visitor spend it. Limits
-cap that. You set them in **Settings → LLM**, under the providers, and every call passes them before it reaches a
-provider. Nothing to write in your pages beyond saying whom a call is for.
+Every model call spends money on your provider account. On a page anyone can open, every visitor spends it. Limits cap
+that: you set them in **Settings → LLM**, and every call passes them before it reaches a provider. A call a used-up
+limit refuses never reaches the provider and costs nothing.
 
-## A limit
+This page covers setting limits up. [Whom a call is for](whom.md) covers the one line page code adds so per-user and
+per-guest limits work, and [Spend and the ledger](spend.md) covers the record every call leaves.
 
-Each limit is **who** × **what** × **at most** × **per**:
+## Setting a limit
 
-| | |
+Open the dashboard, go to **Settings → LLM**, and scroll past the providers to **Limits**. Press **New limit**, fill
+in the row, and press **Save changes**. Limits apply from the next call, with no restart.
+
+![Settings → LLM: four limits (all guests together $1 a day, each guest $0.10 a day, the whole app $25 a month, and 20 video calls a month) under today's and this month's spend](/docs/extensions/llm/guides/limits-settings.png)
+
+Each limit reads as a sentence: **who** may use **at most** so much of **what**, **per** day or month.
+
+| Field | What it means |
 |---|---|
-| Who | the whole app · each signed-in user · each guest · all guests together |
-| What | US dollars · output tokens · input tokens · calls |
-| Per | a day · a month (UTC: a day starts at 00:00 UTC) |
+| **Who** | Whose calls the limit counts. **The whole app**: every call. **Each signed-in user**: each user separately, so one user using theirs up leaves the others theirs. **Each guest**: each visitor who isn't signed in, separately. **All guests together**: every guest's calls in one shared bucket. |
+| **Counts** | What it counts. **US dollars**: what the calls cost. **Output tokens**: what the model wrote. **Input tokens**: what was sent to it. **Calls**: how many calls reached a provider. |
+| **At most** | The amount. Dollars may have cents (`0.10`); tokens and calls are whole numbers. `0` refuses every call the limit counts. |
+| **Per** | **a day** or **a month**, in UTC: a day starts at 00:00 UTC, a month on the 1st at 00:00 UTC. |
+| **Kind** | Count only one kind of call: `text`, `image`, `speech`, `transcribe`, `align`, `music`, `video` or `embed`. **Every kind** counts all of them. |
+| **Model** | Count only calls to one model, named as `provider/model` (`vultr/glm-5.3`). Empty counts every model. |
 
-A limit can also count only one kind (`text`, `image`, `speech`...) or one model (`vultr/glm-5.3`). Some that go
-together:
+A limit with a kind or a model counts only those calls toward its amount, and refuses only those calls. Add as many
+limits as you like: a call has to pass every one that counts it.
 
-- The whole app, $5 a day, and $50 a month.
-- Each signed-in user, 200,000 output tokens a day.
-- All guests together, $1 a day, and each guest, $0.10 a day.
-- The whole app, 20 `video` calls a month.
+Above the limits, the screen shows what the whole app has spent today and this month, and how many calls today a limit
+refused. The numbers come from [the ledger](spend.md).
 
-When a limit is used up, the call is refused before it reaches the provider: it throws with code `limit` (HTTP 429),
-and the message names the limit and when it resets:
+## When a limit is used up
+
+Before each call, every limit that counts it is checked against what's been used so far in its window. If one is used
+up, the call is refused before it reaches the provider. In page code the `$llm` call throws, over HTTP the contract
+answers `429`, and either way the error's code is `limit` and its message names the limit and when it resets:
 
 ```
 limit reached: each guest, $0.10 a day (used $0.10); it resets at 00:00 UTC
+limit reached: the whole app, 20 calls a month of video (used 20 calls); it resets on Dec 1 (UTC)
 ```
 
-Limits are checked before a call and counted after it (a call's cost is known only once the provider answers), so the
-last call a limit lets through can take it over by that call's own cost.
+The message is written to show to the person who made the call. [Whom a call is for](whom.md#when-a-call-is-refused)
+shows how to catch it in a page.
 
-## Whom a call is for
-
-Plain `$llm` calls count only toward limits on the whole app: the code making them could be serving anyone, or no one
-(a cron). In code that serves a request, `$llm.for()` says whom it's for, and the per-user and per-guest limits apply:
-
-```ts
-// pb_pages/ask/+api.ts
-export async function post(ctx: pages.Context) {
-  const { question } = ctx.req.body()
-  try {
-    const r: LlmTextAnswer = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt: question })
-    return ctx.res.json({ answer: r.text })
-  } catch (err: any) {
-    // a used-up limit: tell the visitor to come back later
-    return ctx.res.json(429, { error: String(err.message || err) })
-  }
-}
-```
-
-`$llm.for()` takes a page's `ctx` or a `pb_hooks` route's `e`, and gives the same API as `$llm` (chats and streams
-included). The request is for:
-
-- **its signed-in user**, when it carries an auth record;
-- else **a guest**, told apart by a cookie (`pocketone_llm_guest`, signed so a visitor can't pick someone else's) that
-  the first call sets. Until the browser sends the cookie back, the guest counts by IP address, so a client that drops
-  cookies can't get a fresh allowance on every call.
+A refused call still gets a row in the ledger, with the limit's message, so you can see how often visitors hit it.
 
 ## Guests need a total
 
-A guest who clears their cookies becomes a new guest with a fresh allowance, so a limit on each guest doesn't cap what
-guests spend. Only a limit on **all guests together** does. So guest calls are refused until you add one: an app that
-serves visitors who aren't signed in needs an all-guests limit in Settings → LLM before it answers them. The screen
-says so while there isn't one.
+A guest is told apart by a cookie (see [Whom a call is for](whom.md#guests)), and anyone can clear their cookies and
+come back as a new guest with a fresh allowance. A limit on **each guest** keeps one visitor from using everything up
+by accident, but it doesn't cap what guests spend. Only a limit on **all guests together** does.
 
-## What's been spent
+So guest calls are refused until there's a limit on all guests together that counts them. Until you add one, a guest's
+call fails with:
 
-Every call is recorded in the `_llm_calls` collection: when, the kind and model, whom it was for, the tokens and
-seconds it used, what it cost, and, for a refused call, which limit refused it. Settings → LLM shows today's and this
-month's spend from it.
+```
+guest calls are off until the app caps what all guests together may spend: add a limit for all guests in Settings → LLM
+```
 
-The rows are ordinary records, so your app can use them: show a user what they've spent, or debit credits they bought
-from an `onRecordAfterCreateSuccess` hook on `_llm_calls`. Anything the limits don't express (plans, tiers, credits)
-belongs in your app's own code, before it calls `$llm`.
+and the Limits section shows a warning. Calls for signed-in users, and calls that aren't for anyone in particular,
+aren't guest calls and aren't affected.
+
+## Checked before, counted after
+
+A call's cost and tokens are known only once the provider answers, so a limit is checked before each call and the call
+is counted after it. Two things follow:
+
+- **The last call a limit lets through can take it over**, by that call's own cost. With $0.10 left and a call that
+  costs $0.15, the call goes through and the next one is refused. Keep your amounts a call or two under what you can
+  afford.
+- **Calls running at the same moment can all pass the check** before any of them is counted, so a burst of calls can
+  take a limit further over than one call. Limits keep spending in the right range day to day; they aren't an exact
+  meter.
+
+## Dollars need prices
+
+A call's cost is what the provider reports, or else what its listed prices say. A model with no price, such as a model
+on your own machine (Ollama, llama-server) or an OpenAI-compatible server that lists no prices, costs $0 as far as the
+ledger knows, so a dollar limit never fills up for it. Count **tokens** or **calls** for those models instead.
+
+Music and video are jobs: a call starts the job, and the job's cost is known once it's done. A job counts as a call as
+soon as it starts, and its cost is added to its ledger row once `createAsync` with `wait` sees it finish, or once
+`getAsync` does. A job nobody checks again after starting keeps a cost of $0.
+
+## Limits for common apps
+
+**An internal tool**, where everyone is signed in and trusted: one ceiling.
+
+- The whole app, US dollars, at most 20, per month.
+
+**A public demo**, like [Docs Chat](/docs/examples/docs-chat), where visitors aren't signed in:
+
+- All guests together, US dollars, at most 1, per day.
+- Each guest, US dollars, at most 0.10, per day.
+- The whole app, US dollars, at most 20, per month.
+
+**An app with accounts**, where users sign in to use the model:
+
+- Each signed-in user, output tokens, at most 200000, per day.
+- The whole app, US dollars, at most 50, per month.
+
+**An expensive kind on its own**, next to whatever else you have:
+
+- The whole app, calls, at most 20, per month, kind video.
+- The whole app, US dollars, at most 5, per day, kind image.
+
+Plan tiers, credits users buy, and anything else that depends on who the user is belong in your app's own code: see
+[Spend and the ledger](spend.md#selling-credits).
