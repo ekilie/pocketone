@@ -42,6 +42,19 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+## v0.0.1-alpha.12 (2026-11-21)
+
+### Highlights
+
+- **JS hooks no longer crash the app on shared maps.** A hook that got a record or other value another goroutine was writing could abort the whole process with `concurrent map iteration and map write`. Fixed in [JSVM](ext/jsvm/CHANGELOG.md#012-2026-11-21). Upgrade if you run JS hooks under load.
+- **PocketOne branding in every dashboard.** Instances on a multisite host and other builds on the standard set now show PocketOne's logo and version, with Docs pointing at pocketone.dev.
+
+### Extensions
+
+- [Agent](ext/agent/CHANGELOG.md#003-2026-11-21) 0.0.2 → 0.0.3
+- [JSVM](ext/jsvm/CHANGELOG.md#012-2026-11-21) 0.1.1 → 0.1.2
+- [Standard Set](ext/standard/CHANGELOG.md#012-2026-11-21) 0.1.1 → 0.1.2
+
 ## v0.0.1-alpha.11 (2026-11-21)
 
 ### Highlights

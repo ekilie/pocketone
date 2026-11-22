@@ -9810,7 +9810,7 @@ Source: https://pocketone.dev/docs/extensions/agent/extension
 
 # Agent
 
-Version 0.0.2 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.0.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 Agent gives your app a language model to call: `$agent.complete()` from your pages' code, or the agent/v1
 contract from Go (`agentv1.Contract.Must(app).Complete(...)`). Use it for the small jobs that
@@ -12605,7 +12605,7 @@ Source: https://pocketone.dev/docs/extensions/jsvm
 
 # JSVM
 
-Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 PocketOne's JS engine for `pb_hooks` and `pb_migrations`. It runs the same JS API as PocketBase (`$app`, `onX`,
 `routerAdd`, `cronAdd`, `$http`, `$security`, ...) on QuickJS, with one VM per app:
@@ -18889,7 +18889,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 
 # Standard Set
 
-Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every

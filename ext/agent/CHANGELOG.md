@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.0.3 (2026-11-21)
+
 ### Changed
 
 - The built-in model runs on [nollama](https://github.com/benallfree/nollama)'s engine, which this extension now imports instead of keeping its own copy. Structured answers (`schema`) can no longer start with endless whitespace, which made `qwen3-1.7b` run until `maxTokens` without writing any JSON.
