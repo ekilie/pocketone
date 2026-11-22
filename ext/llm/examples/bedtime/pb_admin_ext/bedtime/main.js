@@ -44,6 +44,7 @@
             saving: false,
             message: null, // { kind, text }
             voices: [],
+            voiceChoice: "", // the voice picked on the page, for its help text
             spent: 0,
             version: 0, // bumped when the values are replaced, so the form redraws with them
             samples: {}, // what -> { busy, meta, error, audio, image, idea, story }
@@ -144,6 +145,14 @@
                 t.div({ className: "grid" }, ...children));
         }
 
+        // what each of auk's voices does (Vultr's own descriptions)
+        function voiceHelp(id) {
+            if (id === "design") return "A new voice made from the description in Instructions (required). The same seed gives the same voice.";
+            if (id === "default") return "A calm middle-aged woman with a low, clear voice, generated afresh each time: set a seed to keep it the same. Instructions change how she reads, not who she is.";
+            const x = data.voices.find((y) => y.id === id);
+            return x && x.description ? x.description : "";
+        }
+
         function voiceOptions() {
             const current = get("voice.voice") || "default";
             const ids = new Set(["default", ...data.voices.filter((x) => x.mode !== "clone" && x.id !== "clone").map((x) => x.id), current]);
@@ -160,10 +169,11 @@
                     "saved or not; new stories use what's saved.")),
                 t.div({ className: "col-lg-12 accordions" },
                     block("Narrator", "The voice that reads every story in a language the speech model speaks. \"design\" makes a voice from the instructions; the same seed makes the same voice each time.",
-                        t.div({ className: "col-md-4" }, field("Voice", app.components.select({
-                            required: true, options: voiceOptions, value: () => get("voice.voice") || "default",
-                            onchange: (sel) => put("voice.voice", sel?.[0]?.value || "default"),
-                        }))),
+                        // a plain <select>: the dashboard's own dropdown didn't keep the choice here
+                        t.div({ className: "col-md-4" }, field("Voice",
+                            t.select({ onchange: (e) => { put("voice.voice", e.target.value); data.voiceChoice = e.target.value } },
+                                ...voiceOptions().map((o) => t.option({ value: o.value, selected: o.value === (get("voice.voice") || "default") }, o.label))),
+                            () => voiceHelp(data.voiceChoice || get("voice.voice") || "default"))),
                         t.div({ className: "col-md-4" }, field("Seed", num("voice.seed"), "Empty: a little different each time.")),
                         t.div({ className: "col-md-4" }, field("Speed", num("voice.speed", { step: "0.05", min: "0.5", max: "2" }), "Empty: normal (1).")),
                         t.div({ className: "col-lg-12" }, field("Instructions", area("voice.instructions", 3),

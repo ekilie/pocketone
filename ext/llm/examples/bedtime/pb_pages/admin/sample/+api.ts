@@ -28,6 +28,9 @@ export async function post(ctx: any) {
   }
   try {
     if (what === 'voice') {
+      if (t.voice.voice === 'design' && !t.voice.instructions.trim()) {
+        return ctx.res.json(400, { message: 'design makes a voice from Instructions: describe the voice there first' })
+      }
       const call = story.speechCall(t, t.voice.sample || story.DEFAULT_TUNING.voice.sample, 'en')
       const r = await $llm.speech.speakAsync(call)
       return done(r, { audio: await audioURL(ctx.app, what, r.file), call: { ...call, text: undefined } })

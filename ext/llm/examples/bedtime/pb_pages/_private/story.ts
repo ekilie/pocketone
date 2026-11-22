@@ -218,7 +218,9 @@ export function speechCall(t: Tuning, text: string, language = 'en'): any {
   if (t.voice.seed !== null) options.seed = t.voice.seed
   if (other) return { model: t.models.speechOther, text, options }
   const call: any = { model: t.models.speech, text, options }
-  if (t.voice.voice && t.voice.voice !== 'default') call.voice = t.voice.voice
+  // design without a description has nothing to design from: the default voice reads instead
+  const designWithout = t.voice.voice === 'design' && !t.voice.instructions.trim()
+  if (t.voice.voice && t.voice.voice !== 'default' && !designWithout) call.voice = t.voice.voice
   if (t.voice.instructions.trim()) call.instructions = t.voice.instructions.trim()
   if (t.voice.speed !== null) call.speed = t.voice.speed
   return call
