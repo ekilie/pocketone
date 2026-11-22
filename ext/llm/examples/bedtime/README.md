@@ -4,7 +4,7 @@ A PocketPages app with no Go (`pb_pages`, one migration and the stock `pocketone
 for adults: one topic (the universe, the mind, a moment in history) told slowly and in depth, from a prompt or a topic
 it picks itself. It's read aloud by one narrator, with pictures that slowly pan and zoom, the words lit up as they're said, and
 a quiet song underneath. You pick its length in minutes and how many pictures it gets. Each story is saved, so it can
-be replayed and shared.
+be replayed and shared. It runs live at [sleep.pocketone.dev](https://sleep.pocketone.dev).
 
 It shows `$llm` doing a job longer than one request:
 

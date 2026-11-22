@@ -33,6 +33,7 @@
 
 - [Advanced installation](/docs/guides/advanced-installation)
 - [Run on a Linux server](/docs/guides/linux-server)
+- [Example apps](/docs/guides/example-apps)
 
 # Reference
 

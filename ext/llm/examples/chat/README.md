@@ -1,7 +1,8 @@
 # Docs Chat
 
 A chat app about PocketOne, written as a PocketPages app with no Go: `pb_pages` and the stock `pocketone` binary. It
-shows `$llm` from page code:
+runs live at
+[learn.pocketone.dev](https://learn.pocketone.dev). It shows `$llm` from page code:
 
 - **answering from both sets of docs:** [`_private/llm.ts`](pb_pages/_private/llm.ts) loads (off the VM, every 10
   minutes) PocketOne's user docs from pocketone.dev's `llms.txt` and `llms-full.txt` (the pages under Get started, New
