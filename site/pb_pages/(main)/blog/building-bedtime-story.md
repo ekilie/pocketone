@@ -10,7 +10,11 @@ Docs Chat was text in, text out. I wanted something that used everything `$llm` 
 
 Give it a topic, or leave it empty and let it pick one: the universe, the mind, a moment in history. A minute later it plays the story. One narrator reading, pictures that slowly pan and zoom, the words lighting up as they're said, quiet music underneath. Every story is saved, so you can replay it and share the link.
 
+![The player mid-story: a galaxy through a window, and the caption "everything we see is matter" with the word being spoken lit up](/blog/img/bedtime-player-galaxy.jpg)
+
 It's still a plain PocketOne app with no Go. Source is at [`ext/llm/examples/bedtime`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/bedtime).
+
+![The front page: a box for the topic, minutes and pictures, Tell me a story and Inspire me, then the stories told so far](/blog/img/bedtime-home.jpg)
 
 ```
 pb_migrations/         stories, listens, each call's cost, the saved tuning, audio samples
@@ -88,6 +92,14 @@ The voiceover, pictures and music land on the record as ordinary PocketBase file
 
 No video file. No canvas. The browser does the work.
 
+![A Good Day's Work at 0:15: a desk lamp, tea and an open notebook, with the caption reading along](/blog/img/bedtime-player.jpg)
+
+![The same story at 0:54, a later picture: the lamp and a candle lit beside the tea and notebook](/blog/img/bedtime-player-later.jpg)
+
+It works the same on a phone. The picture fills the screen and the caption sits above the controls.
+
+<p style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap"><img src="/blog/img/bedtime-phone-home.jpg" alt="The front page on a phone" width="260"> <img src="/blog/img/bedtime-phone-player.jpg" alt="The player on a phone: a candle beside an open book, the caption about Aquinas" width="260"></p>
+
 ### Inspire me and listens
 
 **Inspire me** sends the titles and topics of every story told so far to the text model and asks for one none of them cover. So the list keeps growing in new directions.
@@ -132,6 +144,8 @@ PocketBase serves that folder and loads its `main.js` into the dashboard, which 
 Here's the honest part. When I first wrote that hook, it didn't work. In QuickJS, `$os.dirFS` turned into a string on its way back to Go, and the app stopped at startup. Inside a Pocker instance, the sandbox wouldn't let an app bind its own serve hook at all. Both are fixed in [alpha.13](/blog/pocketone-v0-0-1-alpha-13). That's exactly why I build example apps. They find the bugs before you do.
 
 Saved tuning goes in a `settings` record that only superusers can read. It's merged over the defaults in `_private/story.ts` each time a story starts. Samples merge the unsaved values on top of that, so trying something never changes what listeners get. Each story also remembers how it was made: the time it took, the cost, and the models and voice. The story's splash shows them.
+
+![A story's splash: the title over its first picture, Play the story, then "Made Nov 22, 2026 in 18 s for $0.057" and the model behind each step](/blog/img/bedtime-splash.jpg)
 
 ### Run it yourself
 
