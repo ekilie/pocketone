@@ -200,6 +200,7 @@ async function ask(text) {
     follow(() => {
       pending.innerHTML = md(r.answer) +
         `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in (${r.usage.cachedTokens || 0} cached) / ${r.usage.outputTokens} out` +
+        (r.cost ? ` · <span title="${r.cost.exact ? 'what the provider charged' : 'estimated from the model\'s listed prices'}">${r.cost.exact ? '' : '≈ '}${usd(r.cost.usd)}</span>` : '') +
         `<br>Armed with: ${r.armedWith.map(f => `<code>${esc(f)}</code>`).join(' ')}` +
         (src ? `<br>Sources: ${src}` : '') + '</div>'
     })
@@ -208,6 +209,12 @@ async function ask(text) {
     history.pop()
     pending.innerHTML = `<span class="error">${esc(err.message)}</span>`
   } finally { clearInterval(tick); send.disabled = false; q.focus() }
+}
+
+// a dollar amount small enough to read: $0.0012, $0.000034
+function usd(n) {
+  if (n === 0) return '$0'
+  return '$' + (n >= 0.01 ? n.toFixed(2) : n.toPrecision(2).replace(/0+$/, ''))
 }
 
 // follow-up questions: a second $llm call that answers with JSON matching a schema: three strings
