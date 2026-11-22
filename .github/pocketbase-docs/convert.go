@@ -212,14 +212,23 @@ func onlyCode(t *html.Node) bool {
 var langs = map[string]string{"go": "go", "javascript": "js", "js": "js", "dart": "dart", "typescript": "ts", "sql": "sql",
 	"bash": "bash", "shell": "bash", "html": "html", "json": "json"}
 
-// code writes a code block; label (a tab's) names the language when it's one.
+// code writes a code block; label (a tab's) names the language when it's one, else a language-* class does.
 func (c *conv) code(n *html.Node, label string) {
-	lines := strings.Split(strings.Trim(text(n), "\n"), "\n")
+	lines := strings.Split(strings.Trim(textSkipping(n, func(x *html.Node) bool { return x.DataAtom == atom.Button }), "\n"), "\n")
 	for i, l := range lines {
 		lines[i] = strings.TrimRight(l, " \t")
 	}
 	src := strings.Join(lines, "\n")
 	lang := langs[strings.ToLower(label)]
+	if label == "" {
+		if code := find(n, func(x *html.Node) bool { return x.DataAtom == atom.Code }); code != nil {
+			for _, cl := range strings.Fields(attr(code, "class")) {
+				if strings.HasPrefix(cl, "language-") {
+					lang = strings.TrimPrefix(cl, "language-")
+				}
+			}
+		}
+	}
 	fence := "```"
 	for strings.Contains(src, fence) {
 		fence += "`"
@@ -423,8 +432,6 @@ func (c *conv) abs(href string) string {
 	switch {
 	case href == "":
 		return ""
-	case strings.HasPrefix(href, "#"):
-		return c.page + href
 	case strings.HasPrefix(href, "//"):
 		return "https:" + href
 	case strings.HasPrefix(href, "/"):
@@ -432,7 +439,7 @@ func (c *conv) abs(href string) string {
 	case strings.Contains(href, "://") || strings.HasPrefix(href, "mailto:"):
 		return href
 	}
-	return c.page + href
+	return resolve(c.page, href) // #anchor, page.html, ../dir/page.html
 }
 
 // wrapSpaces puts marks around s, keeping its outer spaces outside them (" a " → " **a** ").

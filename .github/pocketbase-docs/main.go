@@ -6,6 +6,10 @@
 //	agent/skills/pocketone/reference/pocketbase/<page>.md   one per page, each with its Source: https://pocketbase.io/docs/<page>/
 //	agent/skills/pocketone/reference/pocketbase/llms-full.txt  every page in one file ("---" and "Source:" between pages)
 //	agent/skills/pocketone/reference/pocketbase/README.md      what this is, the commit and PocketBase version, the license
+//	agent/skills/pocketone/reference/pocketbase/jsvm/...       the JSVM reference (pocketbase.io/jsvm), one file per page
+//
+// The JSVM reference is typedoc's site for PocketBase's JS API, committed in the site repo as static/jsvm: its pages
+// are converted as they are, each starting with its pocketbase.io/jsvm URL.
 //
 // Links and images point at pocketbase.io. Run it from its folder (Node and npm on PATH); it works on the repository it
 // sits in:
@@ -114,7 +118,19 @@ func run(update bool, siteDir string) error {
 		return err
 	}
 	logf("converted %d pages (PocketBase %s)", len(pages), version)
-	return write(pages, commit, date, version)
+	if err := write(pages, commit, date, version); err != nil {
+		return err
+	}
+	jsvm, err := convertJSVM(filepath.Join(siteDir, "static", "jsvm"))
+	if err != nil {
+		return err
+	}
+	logf("converted %d JSVM reference pages", len(jsvm))
+	if err := writeJSVM(jsvm, commit); err != nil {
+		return err
+	}
+	logf("wrote %s/jsvm (%d pages)", outDir, len(jsvm))
+	return nil
 }
 
 // page is one converted docs page.
@@ -223,7 +239,8 @@ PocketBase site ([pocketonehq/pocketbase-site](https://github.com/pocketonehq/po
 PocketOne is PocketBase plus extensions. These pages describe PocketBase itself, and everything in them holds in a
 PocketOne app unless PocketOne's own docs say otherwise. [PocketOne's docs](https://pocketone.dev/docs) cover what it adds
 and changes (the JS engine, pocketone.yaml, the extensions). Each page starts with its pocketbase.io URL, and its links
-point there.
+point there. [jsvm/](jsvm/README.md) is the JSVM reference (pocketbase.io/jsvm): every function and type the JS hooks
+see, with descriptions and examples.
 
 ## Pages
 

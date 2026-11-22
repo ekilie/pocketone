@@ -8,7 +8,8 @@ PocketBase site ([pocketonehq/pocketbase-site](https://github.com/pocketonehq/po
 PocketOne is PocketBase plus extensions. These pages describe PocketBase itself, and everything in them holds in a
 PocketOne app unless PocketOne's own docs say otherwise. [PocketOne's docs](https://pocketone.dev/docs) cover what it adds
 and changes (the JS engine, pocketone.yaml, the extensions). Each page starts with its pocketbase.io URL, and its links
-point there.
+point there. [jsvm/](jsvm/README.md) is the JSVM reference (pocketbase.io/jsvm): every function and type the JS hooks
+see, with descriptions and examples.
 
 ## Pages
 
