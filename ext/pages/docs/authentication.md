@@ -5,7 +5,7 @@ description: Sign users in and out with the auth plugin - passwords, one-time pa
 
 # Authentication
 
-PocketPages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
+Pages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
 
 ```ts
 // pb_pages/+config.ts

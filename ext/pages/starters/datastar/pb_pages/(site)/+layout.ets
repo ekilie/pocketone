@@ -6,7 +6,7 @@
     <title><%=meta('title') || 'Datastar Starter Kit'%></title>
     <meta
       name="description"
-      content="<%=meta('description') || 'Modern web applications with Datastar and PocketPages'%>"
+      content="<%=meta('description') || 'Modern web applications with Datastar and Pages'%>"
     />
     <meta
       property="og:title"
@@ -14,7 +14,7 @@
     />
     <meta
       property="og:description"
-      content="<%=meta('description') || 'Modern web applications with Datastar and PocketPages'%>"
+      content="<%=meta('description') || 'Modern web applications with Datastar and Pages'%>"
     />
     <meta
       property="og:image"
@@ -76,7 +76,7 @@
               </h1>
               <p class="text-lg text-gray-600 max-w-2xl mx-auto">
                 This demo shows you how to use Datastar to build a realtime app
-                with PocketPages.
+                with Pages.
               </p>
             </div>
             <%- slot() %> <%- include('count.ets') %>

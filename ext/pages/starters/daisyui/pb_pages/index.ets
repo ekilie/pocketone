@@ -2,7 +2,7 @@
   <div class="hero-content text-center">
     <div class="max-w-md">
       <h1 class="text-5xl font-bold">Daisy UI</h1>
-      <p class="py-6">The official PocketPages starter kit.</p>
+      <p class="py-6">The official Pages starter kit.</p>
       <div class="mockup-code text-left">
         <pre data-prefix="$"><code>code .</code></pre>
       </div>

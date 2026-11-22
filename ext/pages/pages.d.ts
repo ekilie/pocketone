@@ -1,4 +1,4 @@
-// ---- ext/pages: PocketPages (pb_pages) ----
+// ---- ext/pages: Pages (pb_pages) ----
 //
 // Types for page code: middleware, +page/+api handlers, +config, JS plugins and JSX/TSX components. Nothing here is a
 // global at runtime; use the types in your own files:

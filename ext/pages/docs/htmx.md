@@ -1,11 +1,11 @@
 ---
 title: 'HTMX Integration'
-description: 'Use HTMX with PocketPages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.'
+description: 'Use HTMX with Pages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.'
 ---
 
-# HTMX Integration with PocketPages
+# HTMX Integration with Pages
 
-[HTMX](https://htmx.org) lets HTML elements fetch HTML from the server and swap it into the page. PocketPages renders that HTML.
+[HTMX](https://htmx.org) lets HTML elements fetch HTML from the server and swap it into the page. Pages renders that HTML.
 
 ## Setting up HTMX
 

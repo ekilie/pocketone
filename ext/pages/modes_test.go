@@ -15,7 +15,7 @@ import (
 	"pocketone.dev/ext/extkit/modetest"
 )
 
-// Every PocketPages starter, the way a new user meets it: `pocketone pages create` and the next steps it prints
+// Every Pages starter, the way a new user meets it: `pocketone pages create` and the next steps it prints
 // (superuser, then serve), then its pages served as a single app and as an instance on a host. Some starters get a
 // closer look: an edit to the minimal page shows on reload without a restart, the htmx counter counts, the auth
 // starter registers, signs in and guards its account page, and daisyui serves its CSS but not its Tailwind input.

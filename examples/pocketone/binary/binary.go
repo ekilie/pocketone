@@ -195,7 +195,7 @@ func Main(o Options) {
 		&pagesDir,
 		"pagesDir",
 		cfg.ResolvePath(srv.PagesDir),
-		"the directory with the PocketPages app (default pb_pages next to pb_data); served when it exists",
+		"the directory with the app's pages (default pb_pages next to pb_data); served when it exists",
 	)
 
 	// pocketone.yaml's s3redirect section sets the defaults for --s3Redirect and --s3RedirectTTL

@@ -4,10 +4,10 @@ import Feature, { type FeatureProps } from './_private/Feature'
 type PageProps = pages.Props & { data: { features: FeatureProps[]; now: string } }
 
 export default function Home({ data, slot }: PageProps) {
-  slot('title', 'PocketPages')
+  slot('title', 'PocketOne')
   return (
     <>
-      <h1>PocketPages</h1>
+      <h1>PocketOne</h1>
       <p class="lead">Server-rendered TSX on PocketBase. Edit pb_pages/index.tsx and reload.</p>
       <div class="grid">
         {data.features.map((f) => (
@@ -15,7 +15,7 @@ export default function Home({ data, slot }: PageProps) {
         ))}
       </div>
       <footer>
-        Rendered at {data.now}. <a href="https://pocketone.dev/docs/extensions/pages">PocketPages docs</a>
+        Rendered at {data.now}. <a href="https://pocketone.dev/docs/extensions/pages">Pages docs</a>
       </footer>
     </>
   )

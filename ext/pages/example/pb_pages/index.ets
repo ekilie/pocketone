@@ -1,5 +1,5 @@
-<% slot('title', () => { %>PocketPages demo<% }) %>
-<h1>PocketPages, native in PocketBase</h1>
+<% slot('title', () => { %>Pages demo<% }) %>
+<h1>Pages, native in PocketBase</h1>
 <p>Everything here is served from <code>pb_pages/</code> by the <code>ext/pages</code> extension: routing, static files,
 EJS and esbuild run in Go, page code in PocketBase's JS VM. No Node, no build step. Edit a file and reload.</p>
 

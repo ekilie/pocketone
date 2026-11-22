@@ -20,7 +20,7 @@ export default function Layout({ children, slot }: pages.Props) {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{slot('title') || 'PocketPages'}</title>
+        <title>{slot('title') || 'PocketOne'}</title>
         <style dangerouslySetInnerHTML={{ __html: css }} />
       </head>
       <body>

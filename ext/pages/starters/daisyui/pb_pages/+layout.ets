@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PocketPages</title>
+    <title>PocketOne</title>
     <link href="<%=asset('/app.css')%>" rel="stylesheet" />
   </head>
   <body>
@@ -33,7 +33,7 @@
               </svg>
             </label>
           </div>
-          <div class="mx-2 flex-1 px-2"><a href="/">PocketPages</a></div>
+          <div class="mx-2 flex-1 px-2"><a href="/">PocketOne</a></div>
           <div class="hidden flex-none lg:block">
             <ul class="menu menu-horizontal">
               <!-- Navbar menu content here -->

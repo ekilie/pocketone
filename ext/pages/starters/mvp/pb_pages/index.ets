@@ -11,7 +11,7 @@
 
 <body>
   <main>
-    <h1>Welcome to PocketPages</h1>
+    <h1>Welcome to PocketOne</h1>
     <p>This is a starter page using MVP.css.</p>
   </main>
 </body>

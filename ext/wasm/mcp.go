@@ -16,7 +16,7 @@ const ToolListModules = "wasm_list_modules"
 // mcpInstructions is what the app's MCP server tells agents when they connect.
 const mcpInstructions = `WASM modules: pb_hooks/<name>.pb.wasm files are WASI programs the app's JS hooks call: ` +
 	"`await $wasm.run.async(name, input)`, or `await $wasm.call.async(name, function, input)` for a function other than " +
-	`"run". Calls are async only, so they go in async hooks (or PocketPages that await). A string input is the module's ` +
+	`"run". Calls are async only, so they go in async hooks (or pages that await). A string input is the module's ` +
 	`stdin as it is (raw text: EDIFACT, XML, CSV); anything else is sent as JSON, and JSON output comes back parsed. A ` +
 	"failed call throws a WasmError with `code`, `message`, `retryable` and `module`. A module reaches nothing but its " +
 	`input: the hook reads the data it needs and saves what comes back. ` + ToolListModules + ` lists the modules ` +

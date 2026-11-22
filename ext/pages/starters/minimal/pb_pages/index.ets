@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PocketPages - Build Fast</title>
+    <title>PocketOne - Build Fast</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       .gradient-bg {
@@ -75,7 +75,7 @@
               <h1
                 class="text-6xl md:text-8xl font-bold text-gradient animate-pulse-slow"
               >
-                PocketPages
+                PocketOne
               </h1>
             </div>
             <p

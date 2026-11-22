@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PocketPages</title>
+  <title>PocketOne</title>
   <link href="/assets/app.css" rel="stylesheet" />
 </head>
 

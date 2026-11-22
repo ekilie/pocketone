@@ -116,7 +116,7 @@ func Create(dir, kit string) error {
 func RegisterCommand(rootCmd *cobra.Command) {
 	cmd := &cobra.Command{
 		Use:   "pages",
-		Short: "PocketPages: create an app from a starter kit",
+		Short: "Pages: create an app from a starter kit",
 	}
 
 	var kit string

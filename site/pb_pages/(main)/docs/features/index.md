@@ -72,7 +72,7 @@ pocker: { root: ./pb_root }
 | | What you get |
 |---|---|
 | [QuickJS hooks](/docs/quickjs) | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
-| [PocketPages sites](/docs/features/sites) | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
+| [Pages](/docs/features/sites) | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
 | [PocketBase isolates](/docs/features/isolates) | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
 | [Point-in-time restore](/docs/features/restore) | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
 | [Deploy and live sync](/docs/features/deploy) | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |

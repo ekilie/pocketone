@@ -1,11 +1,11 @@
 ---
 title: 'Speedrun: Google OAuth2'
-description: Set up Google OAuth2 sign-in for a PocketPages app with the auth plugin.
+description: Set up Google OAuth2 sign-in for a PocketOne app with the auth plugin.
 ---
 
 # Google OAuth2 Setup Guide
 
-This guide walks you through setting up Google OAuth2 sign-in for your PocketPages app.
+This guide walks you through setting up Google OAuth2 sign-in for your PocketOne app.
 
 ## 1. Create/Select Google Cloud Project
 

@@ -8,7 +8,7 @@ extend or override behavior; the features themselves live in `ext/`.** Core is e
 
 Words: everything in `ext/` is an **extension**, never a "plugin". **Standard extensions** ship in every `pocketone`
 binary (`examples/pocketone`); the rest of `ext/` are **community extensions**. "Plugin" means only upstream's
-`plugins/` (jsvm, migratecmd, ghupdate) and PocketPages' own plugin system in `ext/pages` (`+config.js` `plugins`).
+`plugins/` (jsvm, migratecmd, ghupdate) and Pages' own plugin system in `ext/pages` (`+config.js` `plugins`).
 
 ## Every core change gets an independent audit before it reaches main
 
@@ -169,7 +169,7 @@ waits for (not published on pocketone.dev). `site/extensions.json` holds
   and CI regenerates on `main` after the merge and commits as github-actions[bot].
 - Agent Skills (`agent/`, listed in `.claude-plugin/marketplace.json`): `site/sync` also writes each skill's `reference/`
   folder and both sites' `llms.txt` / `llms-full.txt` from the docs pages (regenerated on `main`, as above). The `SKILL.md` files are hand-written: a change
-  that makes one wrong (a command, a `pocketone.yaml` key, an extension, a PocketPages API) fixes it in the same commit.
+  that makes one wrong (a command, a `pocketone.yaml` key, an extension, a Pages API) fixes it in the same commit.
 - JS types: after a core change that touches the JS API (a hook, a type JS sees) or an edit to `ext/jsvm/pocketone.d.ts`,
   run `go generate` in `ext/jsvm` to rebuild `ext/jsvm/types.d.ts` (its `TestTypes` tests fail until you do). An
   extension with a JS API declares it in a `TypeScript()` method.

@@ -1,13 +1,13 @@
 ---
 title: Starters
-description: The PocketPages starter kits - minimal, mvp, auth, daisyui, daisyui-docs, htmx, datastar and tsx - what each shows, how it's built and how to start an app from one.
+description: The Pages starter kits - minimal, mvp, auth, daisyui, daisyui-docs, htmx, datastar and tsx - what each shows, how it's built and how to start an app from one.
 ---
 
 # Starters
 
-Each starter kit is an ordinary `pb_pages` folder written against PocketPages v1, in TypeScript with
+Each starter kit is an ordinary `pb_pages` folder written against Pages, in TypeScript with
 [ETS templates](/docs/extensions/pages/ets) (the **tsx** kit uses [components](/docs/extensions/pages/jsx) instead), so
-everything in the [PocketPages docs](/docs/extensions/pages) applies to it. Start an app from one, then run it:
+everything in the [Pages docs](/docs/extensions/pages) applies to it. Start an app from one, then run it:
 
 ```bash
 pocketone pages create myapp --starter <kit>
@@ -23,7 +23,7 @@ folder must not exist yet. Each kit's source is in
 ## minimal
 
 A single `index.ets` page: a Tailwind (CDN) splash screen with no layout, no config and no build step. The smallest
-possible PocketPages app. Live demo: [pocketpages-minimal.pockethost.io](https://pocketpages-minimal.pockethost.io).
+possible PocketOne app. Live demo: [pocketpages-minimal.pockethost.io](https://pocketpages-minimal.pockethost.io).
 
 ```
 pb_pages/
@@ -131,7 +131,7 @@ pb_pages/
 
 Server-rendered components: a `+layout.tsx`, an `index.tsx` page built from a `_private/Feature.tsx` component, and a
 `+page.ts` that loads the page's data. TSX renders straight to HTML on the server (no React, no client runtime, no
-hydration), and PocketPages strips the types when it loads each file, so there is no build step. Pick one template
+hydration), and Pages strips the types when it loads each file, so there is no build step. Pick one template
 style per app: TSX here, or `.ets` in the other kits.
 
 ```

@@ -269,7 +269,7 @@ func cleanText(s string) string {
 
 // inlineIncludes replaces an EJS page's include('name') of a Markdown partial with the partial (its front matter
 // dropped, but its title kept if the page has none), looking in _private folders from the page's folder up, as
-// PocketPages does.
+// Pages does.
 func inlineIncludes(root, dir, content string) string {
 	return includeRe.ReplaceAllStringFunc(content, func(s string) string {
 		name := includeRe.FindStringSubmatch(s)[1]

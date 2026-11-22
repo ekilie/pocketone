@@ -25,7 +25,7 @@ r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.Comple
 // r.Text is the summary
 ```
 
-The examples show each thing in TypeScript, as [PocketPages](../../pages/docs/overview.md) page code (`+api.ts`,
+The examples show each thing in TypeScript, as [Pages](../../pages/docs/overview.md) page code (`+api.ts`,
 `+page.ts`), and in Go. The Go examples call the contract packages (`textv1` is
 `pocketone.dev/ext/contracts/llm/text/v1`) with a `context.Context` named `ctx`.
 

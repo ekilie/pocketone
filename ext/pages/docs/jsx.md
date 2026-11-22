@@ -5,7 +5,7 @@ description: The component style, with pages, layouts and partials as .tsx funct
 
 # Components with TSX
 
-PocketPages has two template styles. [ETS](ets.md) is HTML with code in it, and it's the one these docs use. TSX is
+Pages has two template styles. [ETS](ets.md) is HTML with code in it, and it's the one these docs use. TSX is
 code that returns HTML: every page, layout and partial is a function component. Pick TSX if you think in components
 and want typed props. Either way the page is rendered on the server and sent as plain HTML; nothing runs in the
 browser.

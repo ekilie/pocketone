@@ -1,9 +1,9 @@
 ---
-title: Serving Static Content in PocketPages
+title: Serving Static Content in Pages
 description: Files in pb_pages that aren't pages or framework files are served as-is, with content types and ETags.
 ---
 
-# Serving Static Content in PocketPages
+# Serving Static Content in Pages
 
 Any file in `pb_pages` that isn't a page (`.ets`, `.md` or `.tsx`, or the [JavaScript versions](file-types.md#javascript-works-too) `.ejs` and `.jsx`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
 

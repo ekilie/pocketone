@@ -1,4 +1,4 @@
-// Command example serves many PocketPages sites from one process: pocker in dev mode, with the standard extensions (pages among them). Every
+// Command example serves many PocketOne apps from one process: pocker in dev mode, with the standard extensions (pages among them). Every
 // hostname is its own instance, with its own folder <pb_root>/<hostname> (created on first use), its own
 // database, its own pb_pages and its own sandboxed JS.
 //

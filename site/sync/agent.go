@@ -47,14 +47,14 @@ var docsSites = []docsSite{
 	{
 		Name:    "PocketOne",
 		URL:     "https://pocketone.dev",
-		Summary: "PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and PocketPages server-rendered sites.",
+		Summary: "PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and server-rendered pages.",
 		Intro: "PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. " +
-			"Agent Skills for PocketOne and PocketPages: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).",
+			"Agent Skills for PocketOne: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).",
 		Pages:    "site/pb_pages",
 		Toc:      "site/pb_pages/(main)/_private/toc.md",
 		SkillRef: "agent/skills/pocketone/reference",
-		// each in its own skill
-		Skip: []string{"/docs/extensions/pages", "/docs/writing-an-extension"},
+		// the extension guide is the pocketone-extensions skill's
+		Skip: []string{"/docs/writing-an-extension"},
 	},
 	{
 		// writing an extension: the guide, the contracts, and the catalogue of extensions that exist
@@ -64,14 +64,6 @@ var docsSites = []docsSite{
 		Pick:     []string{"/docs/writing-an-extension", "/docs/contracts", "/docs/extensions", "/docs/config-reference"},
 		Skip:     []string{"/docs/extensions/pages"},
 		SkillRef: "agent/skills/pocketone-extensions/reference",
-	},
-	{
-		// PocketPages' docs are the pages extension's docs (ext/pages/docs), part of pocketone.dev
-		Name:     "PocketPages",
-		URL:      "https://pocketone.dev",
-		Pages:    "site/pb_pages",
-		Within:   "/docs/extensions/pages",
-		SkillRef: "agent/skills/pocketpages/reference",
 	},
 }
 

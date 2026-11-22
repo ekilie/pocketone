@@ -11,7 +11,7 @@ import (
 // Name is the extension's key: its pocketone.yaml switch and an instance's `extensions.<name>`.
 const Name = "pages"
 
-// Extension is PocketPages as a PocketOne extension, a member of the standard set (ext/standard). Config holds the defaults
+// Extension is Pages as a PocketOne extension, a member of the standard set (ext/standard). Config holds the defaults
 // for every app; an instance's `extensions.pages.enabled: false` turns it off there.
 type Extension struct{ Config Config }
 

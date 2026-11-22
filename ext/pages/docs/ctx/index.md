@@ -5,7 +5,7 @@ description: Reference for ctx, the one object per request passed to middleware,
 
 # The `ctx` Object
 
-PocketPages creates one `ctx` object per request and passes it to middleware, handlers, templates and plugins.
+Pages creates one `ctx` object per request and passes it to middleware, handlers, templates and plugins.
 
 ```ts
 // +middleware.ts

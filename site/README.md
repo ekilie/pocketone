@@ -1,6 +1,6 @@
 # pocketone.dev
 
-The PocketOne website: what PocketOne is, how to install it, and its extensions. A PocketPages v1 app (`ext/pages`),
+The PocketOne website: what PocketOne is, how to install it, and its extensions. A PocketOne app (`ext/pages`),
 started from the pocketpages.dev site, whose docs now live in [`../ext/pages/docs`](../ext/pages/docs) and appear here
 under `/docs/extensions/pages`.
 
@@ -38,7 +38,7 @@ cd site/sync && go run .
 - Each `ext/<name>/README.md` becomes `/docs/extensions/<name>`, with the extension's `pocketone.yaml` keys (from
   `pocketone config --json`, so it builds `examples/pocketone`) added to its `## Configure` section. Other `.md` files
   in the extension folder (`CHANGELOG.md` aside) become guides under it; `docs/extensions.md` becomes `/docs/writing-an-extension`.
-- An extension's `site/` folder (PocketPages pages, see `extsite.go` and
+- An extension's `site/` folder (pages, see `extsite.go` and
   [Writing an extension](../docs/extensions.md#what-an-extension-folder-contains)) is copied under
   `/docs/extensions/<name>/`, with its relative links pointed at site URLs and `source:` added for the edit link. Its
   `site/_private/toc.md` becomes `(main)/_private/toc-<name>.md`, and a `site/index.md` replaces the README as the
@@ -80,7 +80,7 @@ pocketone superuser upsert admin@example.com password --dir ./pb_data
 pocketone serve --dev --dir ./pb_data
 ```
 
-PocketPages finds `pb_pages` next to `pb_data`. Open http://localhost:8090.
+Pages finds `pb_pages` next to `pb_data`. Open http://localhost:8090.
 
 ## Deploy
 

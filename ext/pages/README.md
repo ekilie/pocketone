@@ -8,12 +8,12 @@ summary: "Server-rendered pages from a pb_pages folder (formerly PocketPages)."
 
 # Pages
 
-> Walkthrough for app owners: [PocketPages sites](https://pocketone.dev/docs/features/sites). This page is the technical reference.
+> Walkthrough for app owners: [PocketOne apps](https://pocketone.dev/docs/features/sites). This page is the technical reference.
 
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: `.ets` templates
 (EJS tags holding TypeScript) or [TSX](docs/jsx.md) components, Markdown pages, layouts, `.ts` middleware and API
 routes, plus static files. Every file type is listed in [File types](docs/file-types.md). Page code runs in your app's JS VM, so it
-can use your data directly. This is PocketPages v1, formerly the npm PocketPages package.
+can use your data directly. This is Pages, formerly the npm PocketPages package.
 
 ## Install
 
@@ -248,11 +248,11 @@ bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 
 ## More in this folder
 
-- [SPEC.md](SPEC.md): the full PocketPages v1 contract.
+- [SPEC.md](SPEC.md): the full Pages contract.
 - [fixtures/](fixtures/README.md): the request test cases (`go test ./...` runs them all).
 - [starters/](starters): the starter kits. [addons/](addons/README.md): JS add-ons such as Datastar.
-- [docs/](docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
-  pocketone.dev under this page. [blog/](blog): the PocketPages blog posts.
+- [docs/](docs/_private/toc.md): the Pages docs, as pages (formerly pocketpages.dev), shown on
+  pocketone.dev under this page. [blog/](blog): the Pages blog posts.
 
 ## License
 

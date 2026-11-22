@@ -1,13 +1,13 @@
 ---
-title: Overview of PocketPages
-description: PocketPages is server-rendered multi-page apps for PocketOne, from a pb_pages folder of ETS templates, TypeScript and Markdown files.
+title: Overview of Pages
+description: Pages is server-rendered multi-page apps for PocketOne, from a pb_pages folder of ETS templates, TypeScript and Markdown files.
 ---
 
-# Overview of PocketPages
+# Overview of Pages
 
-PocketPages turns a folder of files into a server-rendered website, inside PocketOne. It is built in as the `pages` extension (`ext/pages`): no npm package, no boot file, no build step.
+Pages turns a folder of files into a server-rendered website, inside PocketOne. It is built in as the `pages` extension (`ext/pages`): no npm package, no boot file, no build step.
 
-Use PocketPages to create slim and modern web apps:
+Use Pages to create slim and modern web apps:
 
 - Start small and iterate
 - SEO-first principles
@@ -42,4 +42,4 @@ Files become URLs, and `+layout.ets` files wrap the pages below them:
 
 ## Coming from the npm package?
 
-PocketPages v1 is a clean API. Apps written for PocketPages 0.x (the npm package) don't run unchanged. See [Moving from PocketPages 0.x](moving-from-0x.md).
+Pages is a clean API. Apps written for PocketPages 0.x (the npm package) don't run unchanged. See [Moving from PocketPages 0.x](moving-from-0x.md).

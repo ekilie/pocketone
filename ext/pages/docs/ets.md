@@ -82,7 +82,7 @@ A template returns its text. There is no `echo()`; anything you want in the outp
 
 ## await
 
-A template can `await`. Any tag that uses `await` turns the template into an async one, and PocketPages waits for it
+A template can `await`. Any tag that uses `await` turns the template into an async one, and Pages waits for it
 before it sends the page:
 
 ```ets

@@ -1,11 +1,11 @@
 ---
 title: Example apps
-description: PocketOne apps you can try live and read end to end - Docs Chat, Bedtime Story and the PocketPages starter kits - what each does and how it's built.
+description: PocketOne apps you can try live and read end to end - Docs Chat, Bedtime Story and the Pages starter kits - what each does and how it's built.
 ---
 
 # Example apps
 
-Small, complete apps that show what a PocketOne app looks like. Each is a PocketPages app with no Go: a `pb_pages`
+Small, complete apps that show what a PocketOne app looks like. Each is a PocketOne app with no Go: a `pb_pages`
 folder (and sometimes migrations and hooks) run by the stock `pocketone` binary. Their source is in the PocketOne
 repository, ready to copy.
 
@@ -40,7 +40,7 @@ pocketone pages create myapp --starter <kit>
 
 | Starter | What it shows |
 |---|---|
-| [minimal](/docs/examples/starters#minimal) | A single page, the smallest PocketPages app |
+| [minimal](/docs/examples/starters#minimal) | A single page, the smallest PocketOne app |
 | [mvp](/docs/examples/starters#mvp) | Classless MVP.css on plain semantic HTML |
 | [auth](/docs/examples/starters#auth) | Password, anonymous, OTP and OAuth2 sign-in, verification, password reset and email change |
 | [daisyui](/docs/examples/starters#daisyui) | Tailwind CSS with DaisyUI: a navbar and drawer |

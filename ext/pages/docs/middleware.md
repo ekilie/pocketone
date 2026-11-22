@@ -1,5 +1,5 @@
 ---
-title: Using Middleware in PocketPages
+title: Using Middleware in Pages
 description: +middleware.ts files run root first for every route below them, with one (ctx, next) signature.
 ---
 

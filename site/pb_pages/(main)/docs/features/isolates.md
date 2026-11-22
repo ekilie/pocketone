@@ -68,7 +68,7 @@ only the hostnames listed there are served. [Auto TLS](/docs/extensions/autotls)
 ## What each app gets
 
 - **Everything a PocketOne app has.** [Point-in-time restore](/docs/features/restore), [API tokens](/docs/features/tokens),
-  [MCP](/docs/features/mcp), [PocketPages](/docs/features/sites), [bulk mail](/docs/features/bulk-mail) and the rest
+  [MCP](/docs/features/mcp), [Pages](/docs/features/sites), [bulk mail](/docs/features/bulk-mail) and the rest
   are on in every isolate. Each can be turned off per app.
 - **Its own deploys.** [`pocketone deploy`](/docs/features/deploy) and the [Remote CLI](/docs/features/remote) work
   against each app's hostname.

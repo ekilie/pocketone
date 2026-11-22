@@ -1,18 +1,18 @@
----
-name: pocketpages
-description: Build, debug and deploy PocketPages v1 apps, the file-routed server-rendered pages built into PocketOne (the `pages` extension). Use whenever a project has a `pb_pages/` folder, a `+layout.ets`, `+page.ts`, `+config.ts`, `+middleware.ts` or `+api.ts` file (or their `.ejs`/`.js` twins), mentions `pocketone pages`, or the user asks for a server-rendered site on PocketOne or PocketBase. Covers routing, `+page.ts` handlers, middleware, layouts and slots, partials, the `ctx` API, plugins (auth, realtime, the Datastar add-on), JSVM limits, and running and deploying with `pocketone`. This is v1 on PocketOne, not the old npm package (0.x, `pb_hooks/pages/`); for a 0.x project, read reference/docs/moving-from-0x.md first.
----
+# Building pages (`pb_pages`)
 
-# PocketPages v1
+Read this when a project has a `pb_pages/` folder, a `+layout.ets`, `+page.ts`, `+config.ts`, `+middleware.ts` or
+`+api.ts` file (or their `.ejs`/`.js` twins), or wants a server-rendered site on PocketOne. It covers routing,
+handlers, middleware, layouts and slots, partials, the `ctx` API, plugins (auth, realtime, the Datastar add-on), JSVM
+limits, and running and deploying.
 
-PocketPages v1 is the `pages` extension built into PocketOne. Files in a `pb_pages/` folder next to `pb_data/` become
+Pages (formerly PocketPages) is the `pages` extension built into PocketOne. Files in a `pb_pages/` folder next to `pb_data/` become
 routes, like PHP. Pages are ETS templates (EJS tags holding TypeScript), Markdown or TSX components rendered on the server, with PocketBase's JSVM API
 (`$app`, `Record`, `$dbx`, `$security`, ...) available. No npm install, no boot file, no build step, no Node server.
 
 It is **not** the npm `pocketpages` package (0.x). That one lived in `pb_hooks/pages/`, passed an `api` object and had
-`+load.js`/`+get.js` loaders. Most 0.x code needs changes: see [moving-from-0x](reference/docs/moving-from-0x.md).
+`+load.js`/`+get.js` loaders. Most 0.x code needs changes: see [moving-from-0x](reference/docs/extensions/pages/moving-from-0x.md).
 
-The contract is [reference/docs/spec.md](reference/docs/spec.md). Where a doc and the SPEC differ, trust the SPEC.
+The contract is [spec](reference/docs/extensions/pages/spec.md). Where a doc and the SPEC differ, trust the SPEC.
 
 ## Write TypeScript and ETS
 
@@ -26,9 +26,9 @@ The contract is [reference/docs/spec.md](reference/docs/spec.md). Where a doc an
 - **`.md` pages run EJS tags with plain JavaScript**, not TypeScript.
 - **Types:** annotate with the `pages` namespace from the app's `types.d.ts` (no import): `load(ctx: pages.Context)`,
   `({ children, slot }: pages.Props)`, `module.exports = { ... } satisfies pages.Handlers`, `pages.Middleware`,
-  `pages.Config`. See [typescript](reference/docs/typescript.md).
+  `pages.Config`. See [typescript](reference/docs/extensions/pages/typescript.md).
 
-More: [file-types](reference/docs/file-types.md), [ets](reference/docs/ets.md).
+More: [file-types](reference/docs/extensions/pages/file-types.md), [ets](reference/docs/extensions/pages/ets.md).
 
 ## This is not Node
 
@@ -54,7 +54,7 @@ Page code (middleware, handlers, templates, plugins) runs in the app's JS VM (Qu
   `node_modules`. `./` and `../` never leave `pb_pages`; to reach `pb_hooks`, use `require(__hooks + '/lib/x')`.
   Install npm packages in the app folder (beside `pb_pages`), not inside it: non-private files in `pb_pages` are served.
 
-More: [jsvm](reference/docs/jsvm.md), [ctx.app](reference/docs/ctx/app.md).
+More: [jsvm](reference/docs/extensions/pages/jsvm.md), [ctx.app](reference/docs/extensions/pages/ctx/app.md).
 
 ## Project layout and running locally
 
@@ -116,7 +116,7 @@ from the left. Segment counts must match: `products/[id].ets` doesn't match `/pr
 `pb_pages` matches falls through to `pb_public`, then PocketBase. Matching is case-sensitive; a trailing slash matches
 the same route.
 
-Details: [routing](reference/docs/routing.md), [directory-structure](reference/docs/directory-structure.md).
+Details: [routing](reference/docs/extensions/pages/routing.md), [directory-structure](reference/docs/extensions/pages/directory-structure.md).
 
 ## Request flow
 
@@ -135,7 +135,7 @@ If any step sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file`
 - A handler can set `ctx.data.x` or return a plain object, which is **shallow**-assigned into `ctx.data`.
 - **JSON is only sent by `ctx.res.json()`** (or from `+api.ts`). Template output is never parsed as JSON.
 
-More: [loading-data](reference/docs/loading-data.md), [middleware](reference/docs/middleware.md), [api-routes](reference/docs/api-routes.md).
+More: [loading-data](reference/docs/extensions/pages/loading-data.md), [middleware](reference/docs/extensions/pages/middleware.md), [api-routes](reference/docs/extensions/pages/api-routes.md).
 
 ## Minimal patterns
 
@@ -247,8 +247,8 @@ module.exports = {
   `children`. Server HTML only: no hydration, event-handler props are dropped (use `onclick="..."`, `hx-get`,
   `data-on:click`). Compiled by esbuild in the binary; types are stripped, not checked.
 
-More: [ets](reference/docs/ets.md), [partials](reference/docs/partials.md), [layouts](reference/docs/layouts.md),
-[markdown](reference/docs/markdown.md), [jsx](reference/docs/jsx.md), [ctx overview](reference/docs/ctx/index.md).
+More: [ets](reference/docs/extensions/pages/ets.md), [partials](reference/docs/extensions/pages/partials.md), [layouts](reference/docs/extensions/pages/layouts.md),
+[markdown](reference/docs/extensions/pages/markdown.md), [jsx](reference/docs/extensions/pages/jsx.md), [ctx overview](reference/docs/extensions/pages/ctx/index.md).
 
 ## `ctx` at a glance
 
@@ -269,7 +269,7 @@ More: [ets](reference/docs/ets.md), [partials](reference/docs/partials.md), [lay
 Cookies set with `ctx.res.cookie` are `HttpOnly`, `SameSite=Lax`, `path=/` (and `Secure` on HTTPS) by default.
 Pass `{ httpOnly: false }` for a cookie the browser's JS must read.
 
-Reference: [req](reference/docs/ctx/req.md), [res](reference/docs/ctx/res.md), [data](reference/docs/ctx/data.md).
+Reference: [req](reference/docs/extensions/pages/ctx/req.md), [res](reference/docs/extensions/pages/ctx/res.md), [data](reference/docs/extensions/pages/ctx/data.md).
 
 ## Plugins
 
@@ -296,9 +296,9 @@ module.exports = {
   `patchSignals`, `signals()`, ...). Datastar 1.0 attributes use a colon: `data-on:click`.
 - **Your own plugin**: a factory returning `{ name, onRequest(ctx), extendContext(ctx), transform({ html, ctx, file }) }`.
 
-Details: [plugins](reference/docs/plugins/index.md), [auth](reference/docs/plugins/auth.md),
-[authentication guide](reference/docs/authentication.md), [realtime](reference/docs/plugins/realtime.md),
-[datastar](reference/docs/plugins/datastar.md), [authoring](reference/docs/plugins/authoring.md).
+Details: [plugins](reference/docs/extensions/pages/plugins/index.md), [auth](reference/docs/extensions/pages/plugins/auth.md),
+[authentication guide](reference/docs/extensions/pages/authentication.md), [realtime](reference/docs/extensions/pages/plugins/realtime.md),
+[datastar](reference/docs/extensions/pages/plugins/datastar.md), [authoring](reference/docs/extensions/pages/plugins/authoring.md).
 
 ## Top gotchas
 
@@ -340,7 +340,7 @@ These **change quietly** from 0.x:
 - A change doesn't show up? Look for a `pages:` startup error in the log: a bad name or route conflict keeps the
   previous routes serving.
 
-More: [debugging](reference/docs/debugging.md), [errors](reference/docs/errors.md).
+More: [debugging](reference/docs/extensions/pages/debugging.md), [errors](reference/docs/extensions/pages/errors.md).
 
 ## Deploying
 
@@ -359,63 +359,63 @@ pocketone dev                              # two-way sync while you work, with l
 - Self-hosting: run `pocketone` (pages is built in) with `pb_pages` next to `pb_data`, without `--dev`, over HTTPS.
   Secrets are environment variables, read with `ctx.env('NAME')`.
 
-More: [deploying](reference/docs/deploying.md), [secrets](reference/docs/secrets.md).
+More: [deploying](reference/docs/extensions/pages/deploying.md), [secrets](reference/docs/extensions/pages/secrets.md).
 
 ## Reference files
 
 Getting started
-- [spec](reference/docs/spec.md): the full v1 contract, including every change from 0.x (section 12).
-- [installation](reference/docs/installation.md): installing PocketOne, quickstart, where `pb_pages` lives.
-- [starter-kits](reference/docs/starter-kits.md): `pocketone pages create` and the kits.
-- [creating-a-page](reference/docs/creating-a-page.md): first pages, index files, nested folders.
-- [directory-structure](reference/docs/directory-structure.md): folder layout and the `+ _ - .` prefixes.
-- [moving-from-0x](reference/docs/moving-from-0x.md): porting an npm PocketPages app to v1.
+- [spec](reference/docs/extensions/pages/spec.md): the full v1 contract, including every change from 0.x (section 12).
+- [installation](reference/docs/extensions/pages/installation.md): installing PocketOne, quickstart, where `pb_pages` lives.
+- [starter-kits](reference/docs/extensions/pages/starter-kits.md): `pocketone pages create` and the kits.
+- [creating-a-page](reference/docs/extensions/pages/creating-a-page.md): first pages, index files, nested folders.
+- [directory-structure](reference/docs/extensions/pages/directory-structure.md): folder layout and the `+ _ - .` prefixes.
+- [moving-from-0x](reference/docs/extensions/pages/moving-from-0x.md): porting an app from the npm PocketPages package (0.x).
 
 Routing and request flow
-- [routing](reference/docs/routing.md): files to URLs, params, groups, API routes, precedence.
-- [parameters](reference/docs/parameters.md): `ctx.params` and `ctx.req.query()`.
-- [loading-data](reference/docs/loading-data.md): inline loading, `+page.ts` handlers, template-less pages.
-- [middleware](reference/docs/middleware.md): `(ctx, next)`, order, common uses.
-- [api-routes](reference/docs/api-routes.md): `+api.ts` and JSON responses.
-- [errors](reference/docs/errors.md): thrown errors, `ctx.httpError`, `+error` and `+404` pages.
+- [routing](reference/docs/extensions/pages/routing.md): files to URLs, params, groups, API routes, precedence.
+- [parameters](reference/docs/extensions/pages/parameters.md): `ctx.params` and `ctx.req.query()`.
+- [loading-data](reference/docs/extensions/pages/loading-data.md): inline loading, `+page.ts` handlers, template-less pages.
+- [middleware](reference/docs/extensions/pages/middleware.md): `(ctx, next)`, order, common uses.
+- [api-routes](reference/docs/extensions/pages/api-routes.md): `+api.ts` and JSON responses.
+- [errors](reference/docs/extensions/pages/errors.md): thrown errors, `ctx.httpError`, `+error` and `+404` pages.
 
 Templates
-- [file-types](reference/docs/file-types.md): `.ts`/`.ets`/`.tsx`, their JavaScript twins, `.md`.
-- [ets](reference/docs/ets.md): ETS templates: EJS tags holding TypeScript, escaping, what's in scope.
-- [layouts](reference/docs/layouts.md): `+layout` files and named slots.
-- [partials](reference/docs/partials.md): `include()`, lookup order, `locals`.
-- [private-files](reference/docs/private-files.md): `_private/` folders and unrouted names.
-- [markdown](reference/docs/markdown.md): `.md` pages, front matter, heading ids.
-- [jsx](reference/docs/jsx.md): `.tsx` (and `.jsx`) pages, layouts and partials.
-- [static-content](reference/docs/static-content.md), [asset-management](reference/docs/asset-management.md), [caching](reference/docs/caching.md): static files and ETags, `asset()` URLs, what's cached.
+- [file-types](reference/docs/extensions/pages/file-types.md): `.ts`/`.ets`/`.tsx`, their JavaScript twins, `.md`.
+- [ets](reference/docs/extensions/pages/ets.md): ETS templates: EJS tags holding TypeScript, escaping, what's in scope.
+- [layouts](reference/docs/extensions/pages/layouts.md): `+layout` files and named slots.
+- [partials](reference/docs/extensions/pages/partials.md): `include()`, lookup order, `locals`.
+- [private-files](reference/docs/extensions/pages/private-files.md): `_private/` folders and unrouted names.
+- [markdown](reference/docs/extensions/pages/markdown.md): `.md` pages, front matter, heading ids.
+- [jsx](reference/docs/extensions/pages/jsx.md): `.tsx` (and `.jsx`) pages, layouts and partials.
+- [static-content](reference/docs/extensions/pages/static-content.md), [asset-management](reference/docs/extensions/pages/asset-management.md), [caching](reference/docs/extensions/pages/caching.md): static files and ETags, `asset()` URLs, what's cached.
 
 The `ctx` object
-- [ctx/index](reference/docs/ctx/index.md): every `ctx` member, with links.
-- [ctx/req](reference/docs/ctx/req.md): method, URL, query, headers, cookies, body, uploads.
-- [ctx/res](reference/docs/ctx/res.md): status, headers, cookies, redirects, JSON/HTML/text/file, SSE.
-- [ctx/data](reference/docs/ctx/data.md): `ctx.data`, `ctx.params`, `ctx.route`.
-- [ctx/auth](reference/docs/ctx/auth.md): the signed-in record and page guards.
-- [ctx/app](reference/docs/ctx/app.md): records, collections, settings via `$app`.
-- [ctx/pb](reference/docs/ctx/pb.md): the JS SDK as the visitor; `ctx.pb()` vs `ctx.app`.
-- [ctx/flash](reference/docs/ctx/flash.md): one-time messages across a redirect.
-- [ctx/meta](reference/docs/ctx/meta.md), [ctx/asset](reference/docs/ctx/asset.md): page metadata and front matter; fingerprinted static URLs.
-- [ctx/resolve](reference/docs/ctx/resolve.md): loading `_private/` modules and files.
-- [ctx/env](reference/docs/ctx/env.md), [ctx/log](reference/docs/ctx/log.md), [ctx/store](reference/docs/ctx/store.md): environment variables, logging, the in-memory store.
+- [ctx/index](reference/docs/extensions/pages/ctx/index.md): every `ctx` member, with links.
+- [ctx/req](reference/docs/extensions/pages/ctx/req.md): method, URL, query, headers, cookies, body, uploads.
+- [ctx/res](reference/docs/extensions/pages/ctx/res.md): status, headers, cookies, redirects, JSON/HTML/text/file, SSE.
+- [ctx/data](reference/docs/extensions/pages/ctx/data.md): `ctx.data`, `ctx.params`, `ctx.route`.
+- [ctx/auth](reference/docs/extensions/pages/ctx/auth.md): the signed-in record and page guards.
+- [ctx/app](reference/docs/extensions/pages/ctx/app.md): records, collections, settings via `$app`.
+- [ctx/pb](reference/docs/extensions/pages/ctx/pb.md): the JS SDK as the visitor; `ctx.pb()` vs `ctx.app`.
+- [ctx/flash](reference/docs/extensions/pages/ctx/flash.md): one-time messages across a redirect.
+- [ctx/meta](reference/docs/extensions/pages/ctx/meta.md), [ctx/asset](reference/docs/extensions/pages/ctx/asset.md): page metadata and front matter; fingerprinted static URLs.
+- [ctx/resolve](reference/docs/extensions/pages/ctx/resolve.md): loading `_private/` modules and files.
+- [ctx/env](reference/docs/extensions/pages/ctx/env.md), [ctx/log](reference/docs/extensions/pages/ctx/log.md), [ctx/store](reference/docs/extensions/pages/ctx/store.md): environment variables, logging, the in-memory store.
 
 Plugins
-- [plugins/index](reference/docs/plugins/index.md): built-ins, custom plugins, add-ons, lookup order.
-- [plugins/auth](reference/docs/plugins/auth.md), [authentication](reference/docs/authentication.md): `ctx.session`; full sign-in flows (password, OTP, OAuth2, anonymous).
-- [plugins/realtime](reference/docs/plugins/realtime.md), [realtime](reference/docs/realtime.md): `ctx.realtime.send()`; receiving in the browser.
-- [plugins/datastar](reference/docs/plugins/datastar.md): the Datastar add-on and `ctx.datastar`.
-- [htmx](reference/docs/htmx.md): using htmx: fragments without layouts, forms, realtime.
-- [plugins/authoring](reference/docs/plugins/authoring.md): writing a custom plugin.
-- [config](reference/docs/config.md): `+config.ts` options.
+- [plugins/index](reference/docs/extensions/pages/plugins/index.md): built-ins, custom plugins, add-ons, lookup order.
+- [plugins/auth](reference/docs/extensions/pages/plugins/auth.md), [authentication](reference/docs/extensions/pages/authentication.md): `ctx.session`; full sign-in flows (password, OTP, OAuth2, anonymous).
+- [plugins/realtime](reference/docs/extensions/pages/plugins/realtime.md), [realtime](reference/docs/extensions/pages/realtime.md): `ctx.realtime.send()`; receiving in the browser.
+- [plugins/datastar](reference/docs/extensions/pages/plugins/datastar.md): the Datastar add-on and `ctx.datastar`.
+- [htmx](reference/docs/extensions/pages/htmx.md): using htmx: fragments without layouts, forms, realtime.
+- [plugins/authoring](reference/docs/extensions/pages/plugins/authoring.md): writing a custom plugin.
+- [config](reference/docs/extensions/pages/config.md): `+config.ts` options.
 
 Runtime, debugging, deploying
-- [jsvm](reference/docs/jsvm.md): the JS runtime, `$app`, npm packages.
-- [debugging](reference/docs/debugging.md): dev mode, `debug: true`, logging.
-- [deploying](reference/docs/deploying.md): going live with `pb_pages` next to `pb_data`.
-- [secrets](reference/docs/secrets.md): secrets as environment variables.
-- Speedruns: [google-oauth2](reference/docs/speedruns/google-oauth2/index.md) (Google sign-in),
-  [ses](reference/docs/speedruns/ses/index.md) and [gs-gmail](reference/docs/speedruns/gs-gmail/index.md) (email),
-  [custom-domain-fly-cloudflare](reference/docs/speedruns/custom-domain-fly-cloudflare.md) (domain on Fly.io).
+- [jsvm](reference/docs/extensions/pages/jsvm.md): the JS runtime, `$app`, npm packages.
+- [debugging](reference/docs/extensions/pages/debugging.md): dev mode, `debug: true`, logging.
+- [deploying](reference/docs/extensions/pages/deploying.md): going live with `pb_pages` next to `pb_data`.
+- [secrets](reference/docs/extensions/pages/secrets.md): secrets as environment variables.
+- Speedruns: [google-oauth2](reference/docs/extensions/pages/speedruns/google-oauth2/index.md) (Google sign-in),
+  [ses](reference/docs/extensions/pages/speedruns/ses/index.md) and [gs-gmail](reference/docs/extensions/pages/speedruns/gs-gmail/index.md) (email),
+  [custom-domain-fly-cloudflare](reference/docs/extensions/pages/speedruns/custom-domain-fly-cloudflare.md) (domain on Fly.io).
