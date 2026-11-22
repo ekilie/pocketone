@@ -156,6 +156,86 @@ type LlmAPI = {
   searchAsync(o: { query: string; buckets?: string | string[]; bucket?: string; limit?: number; prefix?: string; viewer?: core.Record | null }):
     Promise<{ results: SearchResult[]; model?: string; usage: { costMicroUSD: number; inputTokens?: number } }>
   }
+  /**
+   * The ledger: what calls used and cost. Local reads (not provider calls), so plain. On $llm.for(e), remaining and
+   * spent answer about that request's user or guest; on plain $llm, name a subject (or none: the whole app).
+   */
+  ledger: {
+    /** For each limit in Settings → LLM that counts the subject's calls, how much is used and left: the tightest first. */
+    remaining(opts?: { subject?: string }): LlmLimitLeft[]
+    /** What the subject's calls used: "day" or "month" (UTC), or { since, until }; optionally one kind or model. */
+    spent(window?: "day" | "month" | LlmLedgerWindow & { subject?: string; kind?: string; model?: string }): LlmTotals
+    /** Totals grouped by model (the default), kind, subject or day, the costliest (or, by day, latest) first. */
+    summary(opts?: LlmLedgerWindow & { by?: "model" | "kind" | "subject" | "day"; subject?: string; kind?: string; model?: string; limit?: number }): (LlmTotals & { key: string })[]
+    /** The ledger's rows, newest first. */
+    calls(opts?: LlmLedgerWindow & { subject?: string; kind?: string; model?: string; status?: "ok" | "refused"; limit?: number; offset?: number }): { calls: LlmLedgerCall[]; more: boolean }
+  }
+}
+
+type LlmLedgerWindow = { window?: "day" | "month"; since?: string; until?: string }
+
+type LlmTotals = { calls: number; refused: number; input: number; cached: number; output: number; seconds: number; costMicroUSD: number }
+
+type LlmLimitLeft = {
+  /** The limit in words: "each guest, $0.10 a day". */
+  limit: string
+  scope: "app" | "user" | "guest" | "guests"
+  window: "day" | "month"
+  metric: "cost" | "input" | "output" | "calls"
+  kind?: string
+  model?: string
+  /** In the metric's unit: US dollars for cost, else tokens or calls. */
+  amount: number
+  used: number
+  left: number
+  /** When the window ends (RFC 3339, UTC). */
+  resets: string
+}
+
+type LlmLedgerCall = {
+  id: string; created: string; kind: string; model: string; subject: string; via: string
+  input: number; cached: number; output: number; seconds: number; costMicroUSD: number; estimated: boolean
+  /** Why a limit refused the call. */
+  refused?: string
+  job?: string
+}
+
+/** A billable call on its way to a provider, as $llm.onCall handlers see it. */
+type LlmCallEvent = {
+  kind: "text" | "image" | "speech" | "transcribe" | "align" | "music" | "video" | "embed"
+  /** The operation: "complete", "stream", "generate", "edit", "speak", "transcribe", "align", "create" or "embed". */
+  op: string
+  /** "provider/model"; change it to send the call to another model. */
+  model: string
+  /** Whom the call is for: "user:<collection>/<id>", "guest:<id>", "guest:ip:<address>", "" or your own ("team:acme"). Change it to count the call elsewhere. */
+  subject: string
+  /** The signed-in user the call is for, or null. */
+  user: { collection: string; id: string } | null
+  /** The call is for a guest. */
+  guest: boolean
+  /** The operation's input (prompt, maxTokens, ...); change it as you like. */
+  input: Record<string, any>
+  /** Set it when this handler caps what guests may spend, so guest calls don't need a limit on all guests together. */
+  guestsCapped: boolean
+  /** Lets the call go on. A handler that neither calls it nor throws refuses the call. */
+  next(): void
+  /** An error refusing the call with your message (code "limit", 429): throw e.refuse("..."). */
+  refuse(message: string): Error
+}
+
+/** A call that reached a provider, as $llm.onCallDone handlers see it. */
+type LlmCallDoneEvent = {
+  kind: string
+  op: string
+  model: string
+  subject: string
+  user: { collection: string; id: string } | null
+  guest: boolean
+  /** What it used; usage.costMicroUSD is what it cost, in millionths of a dollar. */
+  usage: LlmUsage
+  /** A music or video job's id (its event comes once the job is done and its cost known). */
+  job?: string
+  next(): void
 }
 
 /**
@@ -165,6 +245,13 @@ type LlmAPI = {
  */
 declare var $llm: LlmAPI & {
   for(e: core.RequestEvent | { req: { event: core.RequestEvent } }): LlmAPI
+  /**
+   * Runs before every call that reaches a provider, every kind: change e.model, e.subject or e.input, then e.next();
+   * or throw e.refuse("...") to refuse it. Runs before the limits in Settings → LLM, which count what it settled on.
+   */
+  onCall(handler: (e: LlmCallEvent) => void | Promise<void>): void
+  /** Runs after every call that reached a provider, with what it used and cost. It can't refuse; the call happened. */
+  onCallDone(handler: (e: LlmCallDoneEvent) => void | Promise<void>): void
 }
 
 type SearchBucket = { name: string; title: string; description: string; owner: string;

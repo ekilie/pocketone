@@ -14,6 +14,7 @@ import (
 	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
+	ledgerv1 "pocketone.dev/ext/contracts/llm/ledger/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
 	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
@@ -46,6 +47,7 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 			}
 			return invoker(app, searchv1.Contract, searchv1.W)(op, raw)
 		},
+		"ledger": invoker(app, ledgerv1.Contract, ledgerv1.W),
 	}
 	n := rt.NewObject()
 	// call(kind, op, opts): any operation that answers JSON; the prelude calls it with .async
@@ -82,6 +84,7 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		}
 		return filesystem.NewFileFromURL(context.Background(), v.URL)
 	})
+	bindHooksJS(app, n) // onCall, onCallDone
 	// subject(e): whom a request's calls are for ($llm.for(e)); sets the guest cookie when the request has none
 	_ = n.Set("subject", func(e *core.RequestEvent) string { return SubjectOf(app, e) })
 	bindChatJS(app, rt, n)
@@ -231,10 +234,17 @@ var jsPrelude = `(() => {
     fileAsync: (f) => n.file.async(S(f), true),
     chat,
     search,
+    // the ledger: local reads, so plain calls; on $llm.for(e) they answer about that request's user or guest
+    ledger: Object.freeze({
+      remaining: (o) => J(n.call("ledger", "remaining", S(o))).limits,
+      spent: (o) => J(n.call("ledger", "spent", S(typeof o === "string" ? { window: o } : o))),
+      summary: (o) => J(n.call("ledger", "summary", S(o))).rows,
+      calls: (o) => J(n.call("ledger", "calls", S(o))),
+    }),
   });
   };
-  const base = build("");
+  const base = build("");` + hooksPrelude + `
   // for(e): e is a request event (a pb_hooks route's e) or a page's ctx (whose request event is ctx.req.event)
   const eventOf = (e) => (e && e.req && e.req.event) || (e && e.event) || e;
-  globalThis.$llm = Object.freeze({ ...base, for: (e) => build(n.subject(eventOf(e))) });
+  globalThis.$llm = Object.freeze({ ...base, for: (e) => build(n.subject(eventOf(e))), ...hooks });
 })()`

@@ -17,6 +17,7 @@ import (
 	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
+	ledgerv1 "pocketone.dev/ext/contracts/llm/ledger/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
@@ -52,7 +53,7 @@ func (*Extension) Name() string { return Name }
 func (*Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
 		Implements: extkit.IDs("llm.text/v1", "llm.image/v1", "llm.speech/v1", "llm.transcribe/v1", "llm.align/v1",
-			"llm.music/v1", "llm.video/v1", "llm.embed/v1"),
+			"llm.music/v1", "llm.video/v1", "llm.embed/v1", "llm.ledger/v1"),
 		// search/v1 (enrich) isn't declared: search works with llm.embed/v1, and the two declarations would order
 		// each other; enrich looks search up at call time.
 		WorksWith: extkit.IDs("settings/v1", "kv/v1"),
@@ -83,6 +84,7 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 	embedv1.Contract.Provide(app, embedService{r})
 	musicv1.Contract.Provide(app, musicService{jobService{r, llmc.KindMusic}})
 	videov1.Contract.Provide(app, videoService{jobService{r, llmc.KindVideo}})
+	ledgerv1.Contract.Provide(app, ledgerService{r})
 	return nil
 }
 
