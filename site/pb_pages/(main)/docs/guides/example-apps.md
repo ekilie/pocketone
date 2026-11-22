@@ -69,9 +69,11 @@ and quiet music underneath. You choose the length and how many pictures. Each st
 shared.
 
 ```
-pb_migrations/1763800000_stories.js   the stories collection
+pb_migrations/                  the stories collection, and its views count
 pb_pages/
-  index.ets            ask for a story; stories already told
+  index.ets            ask for a story, or Inspire me; stories told, most listened to first
+  inspire/+api.ts      POST /inspire: a topic no story has covered yet
+  view/+api.ts         POST /view: counts a listen
   story/+api.ts        POST /story: saves the record, starts making the story
   story/[id].ets       progress while it's made, then the player
   _private/story.ts    the models, the limits and the six steps
@@ -105,6 +107,11 @@ drives everything else from its current time: the picture whose start has passed
 CSS animation, placed by a negative `animation-delay` after a seek, and the caption shows the sentence being read with
 each word brightening at its start time. The music loops under the voice at low volume. A scrubber, the space bar and
 the arrow keys move through the story.
+
+**Inspire me** sends the titles and topics of every story told so far, and the topics it already suggested on this
+page, to the text model, which suggests one that none of them covers. **Listens:** after 30 seconds of actual listening
+(time playing, not scrubbing), the player posts `/view`, which adds one to the story's `views` in a single SQL update so
+listens at the same moment all count. The front page lists stories by it.
 
 A 1-minute story with three pictures takes about two minutes to make and costs about 8 cents on Vultr, most of it the
 pictures and the music.

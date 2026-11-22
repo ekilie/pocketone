@@ -20,6 +20,8 @@ export const MODELS = {
   speechOther: process.env.STORY_SPEECH_MODEL_OTHER || 'vultr/chatterbox',
   align: process.env.STORY_ALIGN_MODEL || 'vultr/aligner-1',
   music: process.env.STORY_MUSIC_MODEL || 'vultr/ace-step-1.5',
+  // suggests topics for Inspire me
+  idea: process.env.STORY_IDEA_MODEL || process.env.STORY_TEXT_MODEL || 'vultr/glm-5.2',
 }
 
 /** A story's length in minutes, and how many pictures it gets, when the form doesn't say. */
@@ -246,6 +248,32 @@ export async function make(app: any, id: string): Promise<void> {
       // the record is gone
     }
   }
+}
+
+const INSPIRE = `You suggest topics for bedtime stories for adults: one topic told slowly and in depth, such as the
+universe, consciousness and the mind, a moment or person in history, or how something in nature works. You get the
+stories already told. Suggest one new topic in the same spirit that none of them covers, as a short, specific phrase
+of a few words to a sentence ("The night the 1859 solar storm lit up the sky"). If none are listed, suggest a topic a
+curious grown-up would enjoy falling asleep to.`
+
+/** A topic for a new story, unlike the ones already told and the suggestions in avoid. */
+export async function inspire(app: any, avoid: string[] = []): Promise<string> {
+  const told = app.findRecordsByFilter('stories', "status = 'done'", '-views,-created', 200, 0)
+  const list = told.map((r: any) => {
+    const topic = (JSON.parse(r.getString('story') || '{}') || {}).topic
+    return `- ${r.getString('title')}${topic ? ` (${topic})` : ''}`
+  }).join('\n')
+  const r = await $llm.text.completeAsync({
+    model: MODELS.idea,
+    system: INSPIRE,
+    prompt: (list ? `Stories already told:\n${list}` : 'No stories have been told yet.') +
+      (avoid.length ? `\n\nAlready suggested, so suggest something different:\n${avoid.map((a) => `- ${a}`).join('\n')}` : ''),
+    schema: { type: 'object', properties: { topic: { type: 'string' } }, required: ['topic'] },
+    reasoning: 'off',
+    maxTokens: 4000,
+    temperature: 1,
+  })
+  return String((r.data && r.data.topic) || '').trim()
 }
 
 /** A story in the making whose record hasn't moved for this long was cut off (the app restarted). */

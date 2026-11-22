@@ -14,6 +14,7 @@ const files = (name: string) => `/api/files/stories/${rec.id}/${name}`
 const story = JSON.parse(rec.getString('story') || 'null') // a json field reads back as raw JSON
 // what the player needs: the voiceover with its timings, the pictures with their start times, and the song
 const data = status === 'done' ? {
+  id: rec.id,
   title: rec.getString('title'),
   voice: files(rec.getString('narration')),
   music: rec.getString('music') ? files(rec.getString('music')) : '',
@@ -242,6 +243,19 @@ const title = rec.getString('title') || 'Bedtime Story'
       if (music) music.pause()
     }
     const toggle = () => (playing ? pause() : play())
+
+    // a view: 30 seconds actually heard (playing time, not where the scrubber is), counted once per visit
+    let heard = 0, lastTick = 0, counted = false
+    const listen = (now) => {
+      requestAnimationFrame(listen)
+      if (playing && !voice.paused && lastTick) heard += (now - lastTick) / 1000
+      lastTick = now
+      if (!counted && heard >= 30) {
+        counted = true
+        fetch('/view', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: S.id }) })
+      }
+    }
+    requestAnimationFrame(listen)
 
     voice.addEventListener('ended', () => {
       pause()

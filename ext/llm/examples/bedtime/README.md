@@ -25,10 +25,18 @@ each step's progress on the record, and the page polls the record through the re
 are open, so anyone with the link can watch and play) until it's done. Every `$llm` call is awaited, so the models work
 off the app's JS VM and the app keeps serving pages meanwhile.
 
+**Inspire me** sends the titles and topics of every story told (and the page's earlier suggestions) to the text model,
+which suggests a topic none of them covers; the page drops it into the prompt box. **Listens:** once a listener has
+heard 30 seconds (time playing, not where the scrubber is), the player posts `/view`, which adds one in SQL
+(`views = views + 1`); the front page lists stories by it.
+
 ```
 pb_migrations/1763800000_stories.js   the stories collection: prompt, length, status, progress, the story with its timings, files
+pb_migrations/1763800001_stories_views.js   views: listens of 30 seconds or more
 pb_pages/
-  index.ets            ask for a story (prompt, minutes, pictures); stories already told
+  index.ets            ask for a story (prompt, minutes, pictures, Inspire me); stories told, most listened to first
+  inspire/+api.ts      POST /inspire {avoid?}: a topic no story has covered yet (the model sees every title)
+  view/+api.ts         POST /view {id}: counts a listen (the player sends it after 30 seconds heard)
   story/+api.ts        POST /story {prompt?, minutes?, pictures?}: saves the record, starts making it (no prompt: it picks the topic)
   story/[id].ets       progress while it's made, then the player (scrubber, space to pause, arrows to skip 10 s)
   _private/story.ts    the models, the limits and the six steps

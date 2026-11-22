@@ -1,15 +1,8 @@
 <%
 // The front page: ask for a story, or pick one already told.
 const { DEFAULTS, MAX } = ctx.resolve('story')
-const told = ctx.app.findRecordsByFilter('stories', "status = 'done'", '-created', 24, 0)
-const ideas = [
-  'How the Moon was made',
-  'The last days of the Library of Alexandria',
-  'What it might be like to be an octopus',
-  'The Voyager probes, still travelling',
-  'The night the 1859 solar storm lit up the sky',
-  'Why we dream',
-]
+// most listened to first (a view is 30 seconds of listening), then the newest
+const told = ctx.app.findRecordsByFilter('stories', "status = 'done'", '-views,-created', 60, 0)
 %>
 <!doctype html>
 <html lang="en">
@@ -37,10 +30,8 @@ const ideas = [
       cursor: pointer; }
     button:disabled { opacity: .5; cursor: default; }
     .note { color: var(--dim); font-size: 14px; }
-    .ideas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-    .ideas a { color: var(--dim); font-size: 14px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px;
-      text-decoration: none; cursor: pointer; }
-    .ideas a:hover { color: var(--ink); border-color: #3b4675; }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid #3b4675; }
+    ul.told small { display: block; color: var(--dim); font-size: 13px; margin-top: 2px; }
     .err { color: #ff9b8a; }
     h2 { font-weight: normal; font-size: 20px; margin: 56px 0 12px; color: var(--dim); }
     ul.told { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
@@ -63,21 +54,20 @@ const ideas = [
     </div>
     <div class="row">
       <button id="go">Tell me a story</button>
+      <button type="button" class="ghost" id="inspire">Inspire me</button>
       <span class="note" id="msg">A few cents a minute in model costs.</span>
     </div>
   </form>
-  <div class="ideas">
-    <% for (const idea of ideas) { %><a data-idea="<%= idea %>"><%= idea %></a><% } %>
-  </div>
 
   <% if (told.length) { %>
-  <h2>Stories told</h2>
+  <h2>Stories told, most listened to first</h2>
   <ul class="told">
     <% for (const s of told) {
       const pics = s.get('pictures') || [] %>
     <li><a href="/story/<%= s.id %>">
       <% if (pics.length) { %><img src="/api/files/stories/<%= s.id %>/<%= pics[0] %>?thumb=480x270" alt="" loading="lazy"><% } %>
-      <span><%= s.getString('title') || s.getString('prompt') %></span>
+      <span><%= s.getString('title') || s.getString('prompt') %>
+        <small><%= s.getInt('minutes') %> min<% if (s.getInt('views')) { %> · <%= s.getInt('views') %> <%= s.getInt('views') === 1 ? 'listen' : 'listens' %><% } %></small></span>
     </a></li>
     <% } %>
   </ul>
@@ -86,7 +76,27 @@ const ideas = [
 <script>
   const form = document.getElementById('ask'), prompt = document.getElementById('prompt'),
     go = document.getElementById('go'), msg = document.getElementById('msg')
-  document.querySelectorAll('[data-idea]').forEach((a) => a.addEventListener('click', () => { prompt.value = a.dataset.idea; prompt.focus() }))
+  // Inspire me: the model suggests a topic no story has covered yet, dropped into the box to use or change
+  const inspire = document.getElementById('inspire'), suggested = []
+  inspire.addEventListener('click', async () => {
+    inspire.disabled = true
+    inspire.textContent = 'Thinking...'
+    msg.className = 'note'
+    try {
+      const res = await fetch('/inspire', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avoid: suggested }) })
+      const body = await res.json()
+      if (!res.ok || !body.idea) throw new Error(body.message || 'no idea came back; try again')
+      prompt.value = body.idea
+      suggested.push(body.idea)
+      msg.textContent = 'Tell me a story to use this, or Inspire me again.'
+    } catch (err) {
+      msg.className = 'note err'
+      msg.textContent = err.message
+    }
+    inspire.disabled = false
+    inspire.textContent = 'Inspire me'
+  })
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     go.disabled = true
