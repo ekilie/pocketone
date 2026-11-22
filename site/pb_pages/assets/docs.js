@@ -167,10 +167,11 @@
     if (m && navs.has(m[1]) && !new RegExp(`^/docs/extensions/${m[1]}/extension(/|$)`).test(path)) return m[1]
     if (/^\/docs\/extensions(\/|$)/.test(path)) return 'extensions'
     if (/^\/docs\/contracts(\/|$)/.test(path)) return 'contracts'
+    if (/^\/docs\/examples(\/|$)/.test(path)) return 'examples'
     return ''
   }
-  // how deep a nav is: the main nav, a section (Contracts, Extensions), an extension's own docs
-  const depth = (nav) => (nav === '' ? 0 : nav === 'contracts' || nav === 'extensions' ? 1 : 2)
+  // how deep a nav is: the main nav, a section (Contracts, Extensions, Example apps), an extension's own docs
+  const depth = (nav) => (nav === '' ? 0 : nav === 'contracts' || nav === 'extensions' || nav === 'examples' ? 1 : 2)
   const current = toc?.dataset.nav || ''
   document.querySelectorAll('.docs-toc-navigation a[href^="/"]').forEach((a) => {
     const to = navOf(a.getAttribute('href'))

@@ -1,67 +1,12 @@
 ---
-title: Example apps
-description: Two PocketOne apps you can try live and read end to end - Docs Chat and Bedtime Story - what they do, where to find them, and how each is built.
+title: Bedtime Story
+description: One topic told slowly and in depth, read aloud with pictures and music - the six steps, the player, the guards and the tuning screen in the dashboard.
 ---
 
-# Example apps
+# Bedtime Story
 
-Two small apps show what a PocketOne app looks like when it uses cloud models. Each is a PocketPages app with no Go:
-a `pb_pages` folder (and, for one, a migration) run by the stock `pocketone` binary. Both run live on PocketHost, and
-their source is in the PocketOne repository, ready to copy.
-
-| App | Try it | Source |
-|---|---|---|
-| **Docs Chat**: ask about PocketOne and PocketBase, answered from both sets of docs | [learn.pocketone.dev](https://learn.pocketone.dev) | [`ext/llm/examples/chat`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/chat) |
-| **Bedtime Story**: one topic told slowly and in depth, read aloud with pictures and music | [sleep.pocketone.dev](https://sleep.pocketone.dev) | [`ext/llm/examples/bedtime`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/bedtime) |
-
-Both use [`$llm`](/docs/extensions/llm), PocketOne's cloud models, on providers added in Settings → LLM.
-
-## Run one yourself
-
-```bash
-cd ext/llm/examples/bedtime        # or ext/llm/examples/chat
-pocketone superuser upsert admin@example.com password --dir=pb_data
-pocketone serve --dir=pb_data
-```
-
-Open the dashboard at `http://127.0.0.1:8090/_/`, add a provider in Settings → LLM (both apps default to Vultr models
-under a provider named `vultr`), then open `http://127.0.0.1:8090`. To put your copy online, `pocketone link` your own
-app and `pocketone deploy` ([Deploy and live sync](/docs/features/deploy)).
-
-## Docs Chat
-
-A chat page that answers questions about PocketOne and PocketBase, citing the docs it used and showing what each answer
-cost.
-
-```
-pb_pages/
-  index.ejs              the chat page
-  chat/+api.ts           POST /chat: the answer as server-sent events; GET /chat: what the app knows
-  chat/suggest/+api.ts   POST /chat/suggest: three follow-up questions
-  _private/llm.ts        the model's name, the docs, search, the call to the chat
-  _private/preamble.md   who the assistant is and how it answers
-```
-
-**What it knows.** `_private/llm.ts` loads two sets of docs in the background and refreshes them every ten minutes:
-PocketOne's user docs from this site's `llms.txt` and `llms-full.txt`, and PocketBase's own docs from the Markdown copy
-PocketOne keeps of pocketbase.io. It splits them into sections and indexes the words in each.
-
-**Answering a question.**
-
-1. `POST /chat` finds the three sections that match the question best (a BM25 search, with a few synonyms), each
-   labelled with the docs it came from.
-2. It sends the preamble, the conversation so far, and the question with those excerpts to the model, through a stored
-   chat: `$llm.chat.open(id).sendAsync(question, { context, onText })`. The chat keeps the conversation, so the page
-   holds only the chat's id.
-3. Each piece of the answer is forwarded to the browser as it's written, with `ctx.res.sse()`, then a final event with
-   the sources and the cost (`usage.costMicroUSD`, in millionths of a dollar).
-4. A second call, `$llm.text.completeAsync({ schema })`, suggests three follow-up questions as JSON.
-
-Every `$llm` call is awaited in an async handler, so the model works off the app's JS engine and the app keeps serving
-other requests while an answer streams. Only the excerpts that match are sent, so each question is small and cheap, and
-because the start of each prompt repeats, providers bill it at their cheaper cached rate.
-
-## Bedtime Story
+Try it at [sleep.pocketone.dev](https://sleep.pocketone.dev). Source:
+[`ext/llm/examples/bedtime`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/bedtime).
 
 You give it a topic, or leave it empty and it picks one: the universe, the mind, a moment in history. A minute or two
 later it plays the story: one narrator reading, pictures that slowly pan and zoom, the words lit up as they're said,
@@ -119,7 +64,7 @@ page, to the text model, which suggests one that none of them covers. **Listens:
 (time playing, not scrubbing), the player posts `/view`, which adds one to the story's `views` in a single SQL update so
 listens at the same moment all count. The front page lists stories by it.
 
-### Tuning it from the dashboard
+## Tuning it from the dashboard
 
 Everything that shapes a story (the narrator's voice, what the models are told, how pictures and music are asked for,
 which models run and how much a day may cost) can be changed without touching code, from **Settings → Bedtime Story**
@@ -169,7 +114,7 @@ models and voice that made it. The story's splash shows them with its date and c
   Content-Security-Policy blocks `data:` audio), so each audio sample is saved in a `samples` collection, viewable by
   its random id only and trimmed to the last 20, and played from `/api/files/...`. Picture samples come back inline.
 
-### Guards for a public copy
+## Guards for a public copy
 
 Every model call's cost (`usage.costMicroUSD`) is saved as a row; once the day's total
 (from 00:00 UTC) reaches the budget, $1 by default, the form turns off with "Out of tokens for today" and the API
