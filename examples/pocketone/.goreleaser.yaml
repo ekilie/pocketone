@@ -94,8 +94,10 @@ release:
     **Upgrade:**
 
     ```bash
-    brew upgrade pocketone
+    brew update && brew upgrade pocketone
     ```
+
+    `brew update` refreshes the tap first: Homebrew does that on its own only once a day, so a plain `brew upgrade` can miss a release that's hours old.
 
     On Windows with Scoop, `scoop update pocketone`. If you used the install script (or a Linux package), run the script again. Otherwise, run `pocketone upgrade` (it keeps the old executable as `pocketone-<version>`, `pocketone-<version>.exe` on Windows) or download the zip below. Check the **Upgrading** section below, if this release has one, before you upgrade.
 

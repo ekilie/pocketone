@@ -62,7 +62,7 @@ It:
 
 Two cases where it does something else:
 
-- **Installed with Homebrew:** it prints `brew upgrade pocketone` instead. Homebrew keeps the previous version until
+- **Installed with Homebrew:** it prints `brew update && brew upgrade pocketone` instead (`brew update` refreshes the tap, which Homebrew otherwise does only once a day). Homebrew keeps the previous version until
   `brew cleanup`.
 - **In a Docker container:** it refuses; upgrade the image instead.
 
