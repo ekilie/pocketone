@@ -89,7 +89,9 @@ const statusEl = document.getElementById('status')
 fetch('/chat').then(r => r.json()).then(r => {
   const el = document.getElementById('armed')
   el.innerHTML = r.error ? `<span class="error">Couldn't load the docs: ${esc(r.error)}</span>`
-    : `Armed with <code>preamble.md</code> and ${r.pages} pages of the user docs (${r.sections} sections) from <code>${esc(r.docs)}</code>`
+    : `Armed with <code>preamble.md</code>, ${r.pages} pages of PocketOne's user docs (<code>${esc(r.docs)}</code>) and ` +
+      (r.pbError ? `<span class="error">no PocketBase docs (${esc(r.pbError)})</span>` : `${r.pbPages} pages of PocketBase's docs`) +
+      ` (${r.sections} sections)`
 }).catch(() => {})
 const history = [] // for the follow-up suggestions only: the server's chat keeps the conversation
 let chatId = '' // the stored chat ($llm.chat); a new one per page load

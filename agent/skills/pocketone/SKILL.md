@@ -68,7 +68,11 @@ rebuild, never backed up or deployed, safe to delete (`pocketone cache clear`); 
 ## How it differs from stock PocketBase
 
 Same dashboard, collections, rules, REST and realtime APIs, JS hooks and migrations; PocketBase's docs still apply to
-those. What changes:
+those, and they're here: [reference/pocketbase/](reference/pocketbase/README.md) is PocketBase's own documentation
+(pocketbase.io/docs) as Markdown, one file per page, each starting with its pocketbase.io URL (all of it in
+[llms-full.txt](reference/pocketbase/llms-full.txt)). Read it for collections, rules and filters, the Web API, auth,
+files, and hooks; read PocketOne's docs ([reference/docs/](reference/docs/)) for what PocketOne adds or changes. Where the
+two differ for a PocketOne app, PocketOne's docs win. What changes:
 
 - **PITR is on by default.** The database is replicated with Litestream into `pb_data/litestream/`; restore from
   Settings → Backups, `pocketone pitr restore`, or `pocketone remote restore to --at -2h`. `--pitr=false` turns it off.

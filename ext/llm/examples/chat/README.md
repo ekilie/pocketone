@@ -3,11 +3,14 @@
 A chat app about PocketOne, written as a PocketPages app with no Go: `pb_pages` and the stock `pocketone` binary. It
 shows `$llm` from page code:
 
-- **answering from the published docs:** [`_private/llm.ts`](pb_pages/_private/llm.ts) fetches pocketone.dev's
-  `llms.txt` and `llms-full.txt` (off the VM, every 10 minutes) and keeps the user docs: the pages under Get started,
-  New in PocketOne and Guides, plus PocketPages, not the extension and contract reference. It splits them into
-  sections, and for each question picks the three that match best (BM25, plus a few synonyms: people say "apps", the
-  docs say "instances"), sent after a preamble ([`preamble.md`](pb_pages/_private/preamble.md));
+- **answering from both sets of docs:** [`_private/llm.ts`](pb_pages/_private/llm.ts) loads (off the VM, every 10
+  minutes) PocketOne's user docs from pocketone.dev's `llms.txt` and `llms-full.txt` (the pages under Get started, New
+  in PocketOne and Guides, plus PocketPages, not the extension and contract reference) and PocketBase's own docs from
+  the Markdown copy PocketOne keeps of pocketbase.io/docs
+  ([`agent/skills/pocketone/reference/pocketbase/`](../../../../agent/skills/pocketone/reference/pocketbase/README.md)).
+  It splits them into sections, and for each question picks the three that match best (BM25, plus a few synonyms:
+  people say "apps", the docs say "instances"), each labelled "PocketBase docs" or "PocketOne docs" and linked to its
+  site, after a preamble ([`preamble.md`](pb_pages/_private/preamble.md)) that says how the two fit together;
 - **a stored chat, answered as it's written:** `$llm.chat.new()` once, then
   `await $llm.chat.open(id, { model, system }).sendAsync(question, { context, onText })` each turn (the llm-chat
   extension): the chat keeps the conversation (the page holds only its id), sends the preamble, the turns so far and
@@ -43,7 +46,9 @@ To answer with another model, set `CHAT_MODEL` to its `provider/model` when you 
 `CHAT_MODEL=or/openai/gpt-4o-mini pocketone serve --dir=pb_data` with an OpenRouter provider named `or`, or change
 `MODEL` in [`_private/llm.ts`](pb_pages/_private/llm.ts).
 
-It answers from `https://pocketone.dev`; set `DOCS_URL` to answer from another copy of the site (a local one at
+It reads PocketBase's docs from that folder on PocketOne's `main` (GitHub's raw URL); set `PB_DOCS` to another URL or
+to a local `llms-full.txt`. It answers from `https://pocketone.dev`; set `DOCS_URL` to answer from another copy of the
+site (a local one at
 `http://127.0.0.1:8090`, say). Any site with the same `llms.txt` / `llms-full.txt` shape works, so pointing it at your
 own docs means changing `DOCS_URL` and `SECTIONS` in `_private/llm.ts`, and `preamble.md`.
 

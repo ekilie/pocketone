@@ -613,6 +613,9 @@ func staleUnder(root, dir string, want map[string]string, out *[]string) error {
 		}
 		rel, _ := filepath.Rel(root, full)
 		rel = filepath.ToSlash(rel)
+		if ownedElsewhere(rel) {
+			return nil
+		}
 		if _, ok := want[rel]; !ok {
 			*out = append(*out, rel)
 		}

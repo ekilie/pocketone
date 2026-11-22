@@ -1,7 +1,8 @@
-// Arms $llm with what this app knows: a preamble (preamble.md) and pocketone.dev's user documentation, fetched from the
-// site itself (its llms.txt and llms-full.txt), so the chat always answers from the docs as they are published. For each
-// question it picks the few sections that match best and hands only those to the model, so every question is small and
-// cheap instead of sending every page every time.
+// Arms $llm with what this app knows: a preamble (preamble.md) and two sets of docs. PocketOne's user docs come from
+// pocketone.dev itself (its llms.txt and llms-full.txt); PocketBase's own docs come from the Markdown copy PocketOne
+// keeps of pocketbase.io/docs (agent/skills/pocketone/reference/pocketbase/llms-full.txt, built from the PocketBase
+// site). For each question it picks the few sections that match best, from either set, labels each with the docs it
+// came from, and hands only those to the model, so every question is small and cheap.
 
 /**
  * The model that answers, as provider/model: a provider you added in Settings → LLM, then that provider's model. Set
@@ -24,8 +25,25 @@ const SECTIONS = ['Get started', 'New in PocketOne', 'Guides']
 /** User docs listed under other sections. */
 const ALSO = ['/docs/extensions/pages'] // PocketPages' docs, listed under Reference
 
-type Section = { file: string; source: string; title: string; text: string; terms?: { [w: string]: number }; length?: number }
-type Knowledge = { preamble: string; files: string[]; sections: Section[]; df: { [w: string]: number }; avgLength: number; at: number }
+/**
+ * PocketBase's docs as one file (pages separated by "---", each starting "Source: <url>"): a URL, or a path to a local
+ * copy. Set PB_DOCS to use another (a checkout's agent/skills/pocketone/reference/pocketbase/llms-full.txt, say).
+ */
+export const PB_DOCS: string = process.env.PB_DOCS ||
+  'https://raw.githubusercontent.com/pocketonehq/pocketone/main/agent/skills/pocketone/reference/pocketbase/llms-full.txt'
+
+type Docs = 'PocketOne' | 'PocketBase'
+type Section = { docs: Docs; file: string; source: string; title: string; text: string; terms?: { [w: string]: number }; length?: number }
+type Knowledge = {
+  preamble: string
+  files: string[] // PocketOne pages
+  pbFiles: string[] // PocketBase pages
+  pbError?: string // PocketBase's docs didn't load: the chat answers from PocketOne's alone
+  sections: Section[]
+  df: { [w: string]: number }
+  avgLength: number
+  at: number
+}
 
 const privateDir = (ctx: any): string => `${ctx.pagesDir}/_private`
 const read = (path: string): string => toString($os.readFile(path))
@@ -78,8 +96,8 @@ const words = (s: string): string[] =>
 /** A question's terms, with the docs' words for them added. */
 const queryWords = (s: string): string[] => words(s).flatMap((w) => [w, ...(SYNONYMS[w] || [])])
 
-/** Splits one context file into sections at its ## and ### headings (never inside ``` blocks). */
-function sections(name: string, text: string): Section[] {
+/** Splits one page into sections at its ## and ### headings (never inside ``` blocks). */
+function sections(docs: Docs, name: string, text: string): Section[] {
   const source = (text.match(/^Source: (\S+)/m) || [])[1] || ''
   const title = (text.match(/^# (.+)$/m) || [])[1] || name
   const out: Section[] = []
@@ -89,7 +107,7 @@ function sections(name: string, text: string): Section[] {
   const flush = () => {
     const body = buf.join('\n').trim()
     buf = []
-    if (body) out.push({ file: name, source, title: heading ? `${title} › ${heading}` : title, text: body.slice(0, 1800) })
+    if (body) out.push({ docs, file: name, source, title: heading ? `${title} › ${heading}` : title, text: body.slice(0, 1800) })
   }
   for (const line of text.split('\n')) {
     if (line.trim().startsWith('```')) fenced = !fenced
@@ -120,30 +138,61 @@ export async function knowledge(ctx: any): Promise<Knowledge> {
   return loading
 }
 
+/** PocketBase's docs: fetched (off the VM) from a URL, or read from a local file. */
+async function readPocketBase(): Promise<string> {
+  return /^https?:/.test(PB_DOCS) ? fetchText(PB_DOCS) : read(PB_DOCS)
+}
+
+// The engine gives each task (a request, a promise continuation) a few seconds of JS time, and splitting and indexing
+// both sets of docs takes longer: yield now and then, so each stretch is a short task of its own.
+const breathe = () => sleep.async(0)
+
 async function load(ctx: any): Promise<Knowledge> {
-  const [index, full] = await Promise.all([fetchText(`${DOCS_URL}/llms.txt`), fetchText(`${DOCS_URL}/llms-full.txt`)])
+  const t0 = Date.now()
+  const [index, full, pb] = await Promise.all([
+    fetchText(`${DOCS_URL}/llms.txt`),
+    fetchText(`${DOCS_URL}/llms-full.txt`),
+    readPocketBase().catch((err) => err as Error),
+  ])
   const pages = userPages(index)
   const files: string[] = []
+  const pbFiles: string[] = []
   const all: Section[] = []
-  // llms-full.txt: pages separated by "---", each starting "Source: <url>"
+  // both files: pages separated by "---", each starting "Source: <url>"
+  let n = 0
   for (const page of full.split(/\n---\n/)) {
+    if (++n % 25 === 0) await breathe()
     const source = (page.match(/^Source: (\S+)/m) || [])[1]
     if (!source) continue
     const path = pathOf(source)
     if (!isUserPage(path, pages)) continue
     files.push(path)
-    all.push(...sections(path, page))
+    all.push(...sections('PocketOne', path, page))
+  }
+  if (typeof pb === 'string') {
+    for (const page of pb.split(/\n---\n/)) {
+      if (++n % 25 === 0) await breathe()
+      const source = (page.match(/^Source: (\S+)/m) || [])[1]
+      if (!source) continue
+      const path = pathOf(source)
+      pbFiles.push(path)
+      all.push(...sections('PocketBase', path, page))
+    }
   }
   const df: { [w: string]: number } = {}
-  for (const s of all) {
+  for (const [i, s] of all.entries()) {
+    if (i % 200 === 199) await breathe()
     s.terms = {}
     for (const w of words(`${s.title} ${s.title} ${s.title} ${s.text}`)) s.terms[w] = (s.terms[w] || 0) + 1 // titles count thrice
     s.length = Object.values(s.terms).reduce((a, b) => a + b, 0)
     for (const w in s.terms) df[w] = (df[w] || 0) + 1
   }
+  console.log(`docs: ${files.length} PocketOne pages, ${pbFiles.length} PocketBase pages, ${all.length} sections in ${Date.now() - t0} ms`)
   cached = {
     preamble: read(`${privateDir(ctx)}/preamble.md`).trim(),
     files,
+    pbFiles,
+    pbError: typeof pb === 'string' ? undefined : String(pb.message || pb),
     sections: all,
     df,
     avgLength: all.reduce((a, s) => a + (s.length || 0), 0) / Math.max(1, all.length),
@@ -187,7 +236,7 @@ export async function answer(
   // the question, plus the one before it, so a follow-up ("and how do I undo that?") still finds its topic
   const before = chatId ? $llm.chat.open(id).history({ limit: 2 }).filter((m) => m.role === 'user').map((m) => m.content) : []
   const context = search(kb, [...before, question].join(' '), 3)
-  const excerpts = context.map((s, i) => `[${i + 1}] ${s.title}\n${s.text}`).join('\n\n')
+  const excerpts = context.map((s, i) => `[${i + 1}] ${s.docs} docs: ${s.title} (${s.source})\n${s.text}`).join('\n\n')
   // The chat sends the preamble, a summary of older turns, the turns since, then this question with its excerpts after
   // it, and keeps the question as sent, so each turn's prompt starts exactly like the last one did (providers bill a
   // repeated start cheaper). Reasoning is off: the excerpts hold the answer, and thinking would only cost time.
@@ -200,8 +249,8 @@ export async function answer(
     model: res.model,
     usage: res.usage,
     ms: Date.now() - started,
-    armedWith: ['preamble.md', ...new Set(context.map((s) => s.file))],
-    sources: context.map((s) => ({ title: s.title, url: s.source })),
+    armedWith: ['preamble.md', ...new Set(context.map((s) => `${s.docs}: ${s.file}`))],
+    sources: context.map((s) => ({ title: `${s.docs} › ${s.title}`, url: s.source })),
   }
 }
 

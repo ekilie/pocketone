@@ -6,7 +6,8 @@ export async function get(ctx: any) {
   const llm = ctx.resolve('llm')
   try {
     const kb = await llm.knowledge(ctx)
-    return ctx.res.json({ model: llm.MODEL, docs: llm.DOCS_URL, pages: kb.files.length, sections: kb.sections.length })
+    return ctx.res.json({ model: llm.MODEL, docs: llm.DOCS_URL, pages: kb.files.length, pbPages: kb.pbFiles.length,
+      pbError: kb.pbError, sections: kb.sections.length })
   } catch (err: any) {
     return ctx.res.json(503, { model: llm.MODEL, docs: llm.DOCS_URL, error: String(err.message || err) })
   }
