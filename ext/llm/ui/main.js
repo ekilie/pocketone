@@ -155,7 +155,7 @@
                     t.span({ className: "label" }, `${p.name || "?"}/…`),
                     t.div({ className: "flex-fill" }),
                     p.key ? t.span({ className: "label success" }, "New key")
-                        : p.keySet ? t.span({ className: "label success txt-mono" }, p.keyHint || "Key set")
+                        : p.keySet ? t.span({ className: "label success" }, "Key set")
                         : t.span({ className: "label warning" }, "No key"),
                 ),
                 t.div(
