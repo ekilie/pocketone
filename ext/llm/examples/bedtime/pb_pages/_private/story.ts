@@ -1,4 +1,4 @@
-// Makes a bedtime story from a prompt, in the background, saving each step on its `stories` record so the page can
+// Makes a bedtime story for adults (one topic, told in depth) from a prompt, in the background, saving each step on its `stories` record so the page can
 // show progress (it polls the record) and play the story once it's done.
 //
 //   1. write: the story, one sentence per line
@@ -38,32 +38,42 @@ export const LIMITS = {
 /** The languages a speech model speaks, where it's known (GET /v1/audio/voices?model= on Vultr lists them). */
 const SPEAKS: { [model: string]: string[] } = { 'vultr/auk': ['en', 'zh'] }
 
-const WRITE = (minutes: number) => `You write gentle bedtime stories for young children, read aloud in about
-${minutes} minute${minutes === 1 ? '' : 's'}: ${Math.round(minutes * WORDS_PER_MINUTE * 0.9)} to ${Math.round(minutes * WORDS_PER_MINUTE * 1.1)} words.
-Keep it calm and warm: no danger, no villains, nothing scary. The story slows down toward the end and closes with the
-main character falling asleep. Use simple words, short sentences, gentle sounds and repetition children like.
+/** What the front page sends when the prompt is left empty: the model picks the topic. */
+export const ANY_TOPIC = 'Your pick'
+
+const WRITE = (minutes: number) => `You write bedtime stories for adults: calm, unhurried narration to fall asleep to,
+read aloud in about ${minutes} minute${minutes === 1 ? '' : 's'}: ${Math.round(minutes * WORDS_PER_MINUTE * 0.9)} to ${Math.round(minutes * WORDS_PER_MINUTE * 1.1)} words.
+Each story picks one topic and goes deep: the universe, consciousness and the mind, the history of an idea, an event,
+a place or a person, how something in nature works. Choose a narrow, specific angle within the request rather than a
+survey, and carry the listener through it with concrete detail: names, places, dates, numbers, how things felt and
+looked. Stay accurate: tell only what is known, and say so where something is uncertain or disputed; never invent
+facts, quotes or sources. The tone is warm, curious and quiet, never dramatic or sensational; long, flowing sentences
+are welcome, and the pace slows toward the end, closing on a gentle, spacious thought.
+If the request is "${ANY_TOPIC}", choose a topic yourself, something with depth that a curious adult may not know well.
 Write the story in the language the request is written in, unless the request asks for another language; "language"
-is that language's ISO 639-1 code ("en", "es", "ja"). Give the story one sentence per item of "sentences", in order. "character" describes the main character for an
-illustrator (kind of animal or child, colors, clothes), so every picture can show them the same way.`
+is that language's ISO 639-1 code ("en", "es", "ja"). "topic" is the story's subject in a short phrase. Give the story
+one sentence per item of "sentences", in order. "look" describes, for an illustrator, what recurs through the story's
+pictures (a place, a person with their dress and era, an object), so every picture can show it the same way.`
 
 const WRITE_SCHEMA = {
   type: 'object',
   properties: {
     title: { type: 'string' },
     language: { type: 'string' },
-    character: { type: 'string' },
+    topic: { type: 'string' },
+    look: { type: 'string' },
     sentences: { type: 'array', items: { type: 'string' } },
   },
-  required: ['title', 'language', 'character', 'sentences'],
+  required: ['title', 'language', 'topic', 'look', 'sentences'],
 }
 
-const PLACE = (n: number) => `You illustrate a bedtime story that has been read aloud. You get its transcript, one
+const PLACE = (n: number) => `You illustrate a story that has been read aloud. You get its transcript, one
 sentence per line, each with the second it starts. Choose exactly ${n} pictures, spread through the story: for each, the
 line where it should appear (the first picture at line 0, then in order, each where the story moves somewhere new or
-something new happens) and a prompt for an illustrator describing what the picture shows. Describe the main character
-the same way in every prompt. No text or letters in pictures.
-"style" is one line describing the look shared by every picture (for example: soft watercolor, warm lamplight, deep
-blue night). "music" is a prompt for a quiet instrumental lullaby that suits the story: instruments, mood and tempo, no
+something new happens) and a prompt for an illustrator describing what the picture shows. Describe anything that recurs
+(a place, a person, an object) the same way in every prompt. No text, letters or diagrams in pictures.
+"style" is one line describing the look shared by every picture (for example: muted oil painting, soft
+light, deep blues and ambers), suited to the topic and calm. "music" is a prompt for quiet instrumental ambient music that suits the story: instruments, mood and tempo, no
 drums.`
 
 const PLACE_SCHEMA = {
@@ -89,7 +99,8 @@ export type Picture = { start: number; prompt: string; image?: string }
 export type Story = {
   title: string
   language: string // ISO 639-1
-  character: string
+  topic: string
+  look: string
   sentences: string[]
   // from here on, filled in as the story is made
   duration?: number // seconds of narration
@@ -142,7 +153,8 @@ export async function make(app: any, id: string): Promise<void> {
     const story: Story = {
       title: String(written.title || 'A bedtime story'),
       language: String(written.language || 'en').toLowerCase().slice(0, 2),
-      character: String(written.character || ''),
+      topic: String(written.topic || ''),
+      look: String(written.look || ''),
       sentences: (written.sentences || []).map((s: any) => String(s).replace(/\s+/g, ' ').trim()).filter(Boolean),
     }
     if (story.sentences.length < 5) throw new Error('the story came back too short')
@@ -172,7 +184,7 @@ export async function make(app: any, id: string): Promise<void> {
     const transcript = story.lines.map((l) => `[${l.index}] ${l.start.toFixed(1)}s ${l.text}`).join('\n')
     const placed = await ask({
       system: PLACE(n),
-      prompt: `Main character: ${story.character}\nLength: ${a.duration.toFixed(0)} seconds\n\n${transcript}`,
+      prompt: `Topic: ${story.topic}\nWhat recurs in the pictures: ${story.look}\nLength: ${a.duration.toFixed(0)} seconds\n\n${transcript}`,
       schema: PLACE_SCHEMA,
     })
     const startOf = new Map(story.lines.map((l) => [l.index, l.start]))
@@ -185,7 +197,7 @@ export async function make(app: any, id: string): Promise<void> {
     }
     if (!pictures.length) throw new Error('no pictures were chosen')
     story.style = String(placed.style || 'soft watercolor, warm night light')
-    story.music = String(placed.music || 'a quiet lullaby on soft piano and harp')
+    story.music = String(placed.music || 'quiet ambient music on soft piano and strings')
     story.pictures = pictures
     save({ story, cost: spent })
 
@@ -204,7 +216,7 @@ export async function make(app: any, id: string): Promise<void> {
     const composed = (async () => {
       const r = await $llm.music.createAsync({
         model: MODELS.music,
-        prompt: `${story.music}. Soft ambient lullaby, instrumental, slow, gentle, no drums, no vocals.`,
+        prompt: `${story.music}. Soft ambient, instrumental, slow, spacious, no drums, no vocals.`,
         lyrics: '[instrumental]',
         seconds: 90,
         wait: '6m',

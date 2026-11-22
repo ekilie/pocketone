@@ -3,10 +3,12 @@
 const { DEFAULTS, MAX } = ctx.resolve('story')
 const told = ctx.app.findRecordsByFilter('stories', "status = 'done'", '-created', 24, 0)
 const ideas = [
-  'A little owl who is afraid of the dark learns the night is full of friends',
-  'A sleepy dragon who wants to see the snow',
-  'Two otters drifting down a moonlit river, holding hands',
-  'A teddy bear who goes looking for the moon',
+  'How the Moon was made',
+  'The last days of the Library of Alexandria',
+  'What it might be like to be an octopus',
+  'The Voyager probes, still travelling',
+  'The night the 1859 solar storm lit up the sky',
+  'Why we dream',
 ]
 %>
 <!doctype html>
@@ -51,10 +53,10 @@ const ideas = [
 <body>
 <main>
   <h1>Bedtime <span>Story</span></h1>
-  <p class="sub">Tell me what tonight's story is about. A minute or two later it's ready, read aloud, with pictures and a quiet song.</p>
+  <p class="sub">Something to fall asleep to: one topic, told slowly and in depth, with pictures and quiet music. The universe, the mind, a moment in history. Name one, or leave it empty and I'll pick.</p>
 
   <form id="ask">
-    <textarea id="prompt" maxlength="500" placeholder="A little fox who counts the stars..." required></textarea>
+    <textarea id="prompt" maxlength="500" placeholder="The deep sea at night..."></textarea>
     <div class="row">
       <label>Minutes <input id="minutes" type="number" min="1" max="<%= MAX.minutes %>" value="<%= DEFAULTS.minutes %>"></label>
       <label>Pictures <input id="pictures" type="number" min="1" max="<%= MAX.pictures %>" value="<%= DEFAULTS.pictures %>"></label>

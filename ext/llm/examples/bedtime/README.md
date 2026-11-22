@@ -1,14 +1,15 @@
 # Bedtime Story
 
 A PocketPages app with no Go (`pb_pages`, one migration and the stock `pocketone` binary) that makes a bedtime story
-from a prompt: read aloud by one narrator, with pictures that slowly pan and zoom, the words lit up as they're said, and
+for adults: one topic (the universe, the mind, a moment in history) told slowly and in depth, from a prompt or a topic
+it picks itself. It's read aloud by one narrator, with pictures that slowly pan and zoom, the words lit up as they're said, and
 a quiet song underneath. You pick its length in minutes and how many pictures it gets. Each story is saved, so it can
 be replayed and shared.
 
 It shows `$llm` doing a job longer than one request:
 
-1. **write** (`$llm.text.completeAsync` with a schema): a title, the main character described for an illustrator, and
-   the story one sentence per item;
+1. **write** (`$llm.text.completeAsync` with a schema): a title, the topic, what recurs in the pictures (a place, a
+   person, an object) described for an illustrator, and the story one sentence per item, in the prompt's language;
 2. **read it aloud** (`$llm.speech.speakAsync`): one voiceover of the whole story;
 3. **align** (`$llm.align.alignAsync`): when each sentence and word is said in the voiceover;
 4. **place the pictures** (`completeAsync` again): the model reads the timed transcript and chooses where each picture
@@ -16,7 +17,8 @@ It shows `$llm` doing a job longer than one request:
 5. **paint** the pictures (`$llm.image.generateAsync`, all at once) and 6. **compose** the song (`$llm.music.createAsync`
    with `wait`), at the same time.
 
-The pictures stay consistent because every prompt repeats the same character description and style line.
+The pictures stay consistent because every prompt repeats the same description of what recurs and the same style
+line. A story in a language `auk` doesn't speak (it speaks English and Chinese) is read by `chatterbox`.
 
 `POST /story` saves a `stories` record and starts the work without awaiting it, then answers at once. The work saves
 each step's progress on the record, and the page polls the record through the records API (`listRule` and `viewRule`
@@ -27,7 +29,7 @@ off the app's JS VM and the app keeps serving pages meanwhile.
 pb_migrations/1763800000_stories.js   the stories collection: prompt, length, status, progress, the story with its timings, files
 pb_pages/
   index.ets            ask for a story (prompt, minutes, pictures); stories already told
-  story/+api.ts        POST /story {prompt, minutes?, pictures?}: saves the record, starts making it
+  story/+api.ts        POST /story {prompt?, minutes?, pictures?}: saves the record, starts making it (no prompt: it picks the topic)
   story/[id].ets       progress while it's made, then the player (scrubber, space to pause, arrows to skip 10 s)
   _private/story.ts    the models, the limits and the six steps
 ```

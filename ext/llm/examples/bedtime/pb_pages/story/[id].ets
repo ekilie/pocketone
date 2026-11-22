@@ -126,7 +126,7 @@ const title = rec.getString('title') || 'Bedtime Story'
   </div>
   <div class="cover" id="cover">
     <h1><%= data.title %></h1>
-    <p><%= rec.getString('prompt') %></p>
+    <p><%= (story && story.topic) || rec.getString('prompt') %></p>
     <button class="play" id="play">Play the story</button>
     <p style="font-size:14px"><a href="/">Tell another</a></p>
   </div>
