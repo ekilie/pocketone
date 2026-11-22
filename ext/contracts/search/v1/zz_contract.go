@@ -85,7 +85,7 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	},
 	extkit.Op[Search]{
 		Name:   "ensure",
-		Desc:   "Makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an empty title, description, owner or source is filled in. Apps call it at startup for the bucket they need.",
+		Desc:   "Makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an empty title, description or owner is filled in. Apps call it at startup for the bucket they need.",
 		Method: "POST",
 		Path:   "ensure",
 		In:     reflect.TypeOf(EnsureInput{}),
@@ -100,7 +100,7 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	},
 	extkit.Op[Search]{
 		Name:   "update",
-		Desc:   "Changes a bucket's title, description, source or limits (fields left out stay).",
+		Desc:   "Changes a bucket's title, description or limits (fields left out stay).",
 		Method: "POST",
 		Path:   "update",
 		In:     reflect.TypeOf(UpdateInput{}),
@@ -129,8 +129,24 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 		},
 	},
 	extkit.Op[Search]{
+		Name:   "sources",
+		Desc:   "Lists a bucket's sources, by name.",
+		Method: "GET",
+		Path:   "sources",
+		Scope:  "search:read",
+		In:     reflect.TypeOf(BucketRef{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in BucketRef
+			if err := extkit.DecodeQuery(req.Query, &in); err != nil {
+				return nil, err
+			}
+			return impl.Sources(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
 		Name:   "add",
-		Desc:   "Puts a document in a bucket from its text, or replaces the document of that name. An unchanged document costs nothing; a changed one embeds only its new chunks. It returns at once; the document is embedded in the background (its status says how far it got).",
+		Desc:   "Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. The same text again costs nothing; changed text embeds only its new chunks. It returns at once; the document is embedded in the background (its status says how far it got).",
 		Method: "POST",
 		Path:   "add",
 		In:     reflect.TypeOf(AddInput{}),
@@ -145,7 +161,7 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 	},
 	extkit.Op[Search]{
 		Name:   "upload",
-		Desc:   "Is Add with the file as the request body: ?bucket=<name>&name=<path>.",
+		Desc:   "Adds a file sent as the request body: ?bucket=<name>&name=<file name>[&replace=<source>]. A .zip is one source with a document per text file inside it; anything else is a file source.",
 		Method: "POST",
 		Path:   "upload",
 		RawIn:  true,
@@ -156,24 +172,83 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 		},
 	},
 	extkit.Op[Search]{
-		Name:   "documents",
-		Desc:   "Lists a bucket's documents, by name.",
-		Method: "GET",
-		Path:   "documents",
-		Scope:  "search:read",
-		In:     reflect.TypeOf(DocumentsInput{}),
+		Name:   "put",
+		Desc:   "Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it.",
+		Method: "POST",
+		Path:   "put",
+		In:     reflect.TypeOf(PutInput{}),
 		Out:    extkit.OutJSON,
 		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
-			var in DocumentsInput
-			if err := extkit.DecodeQuery(req.Query, &in); err != nil {
+			var in PutInput
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
 				return nil, err
 			}
-			return impl.Documents(ctx, a, in)
+			return impl.Put(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
+		Name:   "prune",
+		Desc:   "Removes the documents of a folder source that aren't in Keep: the files the folder no longer has.",
+		Method: "POST",
+		Path:   "prune",
+		In:     reflect.TypeOf(PruneInput{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in PruneInput
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.Prune(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
+		Name:   "add_u_r_l",
+		Desc:   "Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current.",
+		Method: "POST",
+		Path:   "add-url",
+		In:     reflect.TypeOf(URLInput{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in URLInput
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.AddURL(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
+		Name:   "follow",
+		Desc:   "Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted.",
+		Method: "POST",
+		Path:   "follow",
+		In:     reflect.TypeOf(FollowInput{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in FollowInput
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.Follow(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
+		Name:   "refresh",
+		Desc:   "Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip.",
+		Method: "POST",
+		Path:   "refresh",
+		In:     reflect.TypeOf(SourceRef{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in SourceRef
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.Refresh(ctx, a, in)
 		},
 	},
 	extkit.Op[Search]{
 		Name:   "remove",
-		Desc:   "Deletes documents from a bucket by name.",
+		Desc:   "Takes sources out of a bucket, with their documents.",
 		Method: "POST",
 		Path:   "remove",
 		In:     reflect.TypeOf(RemoveInput{}),
@@ -187,18 +262,19 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 		},
 	},
 	extkit.Op[Search]{
-		Name:   "reindex",
-		Desc:   "Splits and embeds a bucket's documents again (or only the named ones), e.g. after an error; a bucket that follows a collection reads its records again.",
-		Method: "POST",
-		Path:   "reindex",
-		In:     reflect.TypeOf(RemoveInput{}),
+		Name:   "documents",
+		Desc:   "Lists a bucket's documents (or one source's), by source and name.",
+		Method: "GET",
+		Path:   "documents",
+		Scope:  "search:read",
+		In:     reflect.TypeOf(DocumentsInput{}),
 		Out:    extkit.OutJSON,
 		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
-			var in RemoveInput
-			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+			var in DocumentsInput
+			if err := extkit.DecodeQuery(req.Query, &in); err != nil {
 				return nil, err
 			}
-			return impl.Reindex(ctx, a, in)
+			return impl.Documents(ctx, a, in)
 		},
 	},
 	extkit.Op[Search]{
@@ -325,8 +401,22 @@ func OnDelete(owner any, fn func(e *extkit.CallEvent, in *Ref) error) {
 	})
 }
 
-func (d *guardSearch) Add(ctx context.Context, a extkit.Auth, in AddInput) (Document, error) {
-	return extkit.Run(d.g, a, "add", &in, func(in *AddInput) (Document, error) {
+func (d *guardSearch) Sources(ctx context.Context, a extkit.Auth, in BucketRef) (SourceList, error) {
+	return extkit.Run(d.g, a, "sources", &in, func(in *BucketRef) (SourceList, error) {
+		return d.inner.Sources(ctx, a, *in)
+	})
+}
+
+// OnSources binds fn to sources calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnSources(owner any, fn func(e *extkit.CallEvent, in *BucketRef) error) {
+	W.On(owner, "sources").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*BucketRef))
+	})
+}
+
+func (d *guardSearch) Add(ctx context.Context, a extkit.Auth, in AddInput) (Source, error) {
+	return extkit.Run(d.g, a, "add", &in, func(in *AddInput) (Source, error) {
 		return d.inner.Add(ctx, a, *in)
 	})
 }
@@ -339,8 +429,8 @@ func OnAdd(owner any, fn func(e *extkit.CallEvent, in *AddInput) error) {
 	})
 }
 
-func (d *guardSearch) Upload(ctx context.Context, a extkit.Auth, in extkit.RawIn) (Document, error) {
-	return extkit.Run(d.g, a, "upload", &in, func(in *extkit.RawIn) (Document, error) {
+func (d *guardSearch) Upload(ctx context.Context, a extkit.Auth, in extkit.RawIn) (Source, error) {
+	return extkit.Run(d.g, a, "upload", &in, func(in *extkit.RawIn) (Source, error) {
 		return d.inner.Upload(ctx, a, *in)
 	})
 }
@@ -353,17 +443,73 @@ func OnUpload(owner any, fn func(e *extkit.CallEvent, in *extkit.RawIn) error) {
 	})
 }
 
-func (d *guardSearch) Documents(ctx context.Context, a extkit.Auth, in DocumentsInput) (DocumentList, error) {
-	return extkit.Run(d.g, a, "documents", &in, func(in *DocumentsInput) (DocumentList, error) {
-		return d.inner.Documents(ctx, a, *in)
+func (d *guardSearch) Put(ctx context.Context, a extkit.Auth, in PutInput) (Document, error) {
+	return extkit.Run(d.g, a, "put", &in, func(in *PutInput) (Document, error) {
+		return d.inner.Put(ctx, a, *in)
 	})
 }
 
-// OnDocuments binds fn to documents calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// OnPut binds fn to put calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
 // to continue; return an error to refuse. in is the call's input; changes reach the provider.
-func OnDocuments(owner any, fn func(e *extkit.CallEvent, in *DocumentsInput) error) {
-	W.On(owner, "documents").BindFunc(func(e *extkit.CallEvent) error {
-		return fn(e, e.Input.(*DocumentsInput))
+func OnPut(owner any, fn func(e *extkit.CallEvent, in *PutInput) error) {
+	W.On(owner, "put").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*PutInput))
+	})
+}
+
+func (d *guardSearch) Prune(ctx context.Context, a extkit.Auth, in PruneInput) (Source, error) {
+	return extkit.Run(d.g, a, "prune", &in, func(in *PruneInput) (Source, error) {
+		return d.inner.Prune(ctx, a, *in)
+	})
+}
+
+// OnPrune binds fn to prune calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnPrune(owner any, fn func(e *extkit.CallEvent, in *PruneInput) error) {
+	W.On(owner, "prune").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*PruneInput))
+	})
+}
+
+func (d *guardSearch) AddURL(ctx context.Context, a extkit.Auth, in URLInput) (Source, error) {
+	return extkit.Run(d.g, a, "add_u_r_l", &in, func(in *URLInput) (Source, error) {
+		return d.inner.AddURL(ctx, a, *in)
+	})
+}
+
+// OnAddURL binds fn to add_u_r_l calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnAddURL(owner any, fn func(e *extkit.CallEvent, in *URLInput) error) {
+	W.On(owner, "add_u_r_l").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*URLInput))
+	})
+}
+
+func (d *guardSearch) Follow(ctx context.Context, a extkit.Auth, in FollowInput) (Source, error) {
+	return extkit.Run(d.g, a, "follow", &in, func(in *FollowInput) (Source, error) {
+		return d.inner.Follow(ctx, a, *in)
+	})
+}
+
+// OnFollow binds fn to follow calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnFollow(owner any, fn func(e *extkit.CallEvent, in *FollowInput) error) {
+	W.On(owner, "follow").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*FollowInput))
+	})
+}
+
+func (d *guardSearch) Refresh(ctx context.Context, a extkit.Auth, in SourceRef) (Source, error) {
+	return extkit.Run(d.g, a, "refresh", &in, func(in *SourceRef) (Source, error) {
+		return d.inner.Refresh(ctx, a, *in)
+	})
+}
+
+// OnRefresh binds fn to refresh calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnRefresh(owner any, fn func(e *extkit.CallEvent, in *SourceRef) error) {
+	W.On(owner, "refresh").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*SourceRef))
 	})
 }
 
@@ -381,17 +527,17 @@ func OnRemove(owner any, fn func(e *extkit.CallEvent, in *RemoveInput) error) {
 	})
 }
 
-func (d *guardSearch) Reindex(ctx context.Context, a extkit.Auth, in RemoveInput) (Removed, error) {
-	return extkit.Run(d.g, a, "reindex", &in, func(in *RemoveInput) (Removed, error) {
-		return d.inner.Reindex(ctx, a, *in)
+func (d *guardSearch) Documents(ctx context.Context, a extkit.Auth, in DocumentsInput) (DocumentList, error) {
+	return extkit.Run(d.g, a, "documents", &in, func(in *DocumentsInput) (DocumentList, error) {
+		return d.inner.Documents(ctx, a, *in)
 	})
 }
 
-// OnReindex binds fn to reindex calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// OnDocuments binds fn to documents calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
 // to continue; return an error to refuse. in is the call's input; changes reach the provider.
-func OnReindex(owner any, fn func(e *extkit.CallEvent, in *RemoveInput) error) {
-	W.On(owner, "reindex").BindFunc(func(e *extkit.CallEvent) error {
-		return fn(e, e.Input.(*RemoveInput))
+func OnDocuments(owner any, fn func(e *extkit.CallEvent, in *DocumentsInput) error) {
+	W.On(owner, "documents").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*DocumentsInput))
 	})
 }
 
@@ -455,19 +601,44 @@ func (c *Client) Delete(ctx context.Context, _ extkit.Auth, in Ref) (Removed, er
 	return out, c.c.Call(ctx, "POST", "delete", in, &out)
 }
 
-func (c *Client) Add(ctx context.Context, _ extkit.Auth, in AddInput) (Document, error) {
-	var out Document
+func (c *Client) Sources(ctx context.Context, _ extkit.Auth, in BucketRef) (SourceList, error) {
+	var out SourceList
+	return out, c.c.Call(ctx, "GET", "sources", in, &out)
+}
+
+func (c *Client) Add(ctx context.Context, _ extkit.Auth, in AddInput) (Source, error) {
+	var out Source
 	return out, c.c.Call(ctx, "POST", "add", in, &out)
 }
 
-func (c *Client) Upload(ctx context.Context, _ extkit.Auth, in extkit.RawIn) (Document, error) {
-	var out Document
+func (c *Client) Upload(ctx context.Context, _ extkit.Auth, in extkit.RawIn) (Source, error) {
+	var out Source
 	return out, c.c.CallRawIn(ctx, "POST", "upload", in, &out)
 }
 
-func (c *Client) Documents(ctx context.Context, _ extkit.Auth, in DocumentsInput) (DocumentList, error) {
-	var out DocumentList
-	return out, c.c.Call(ctx, "GET", "documents", in, &out)
+func (c *Client) Put(ctx context.Context, _ extkit.Auth, in PutInput) (Document, error) {
+	var out Document
+	return out, c.c.Call(ctx, "POST", "put", in, &out)
+}
+
+func (c *Client) Prune(ctx context.Context, _ extkit.Auth, in PruneInput) (Source, error) {
+	var out Source
+	return out, c.c.Call(ctx, "POST", "prune", in, &out)
+}
+
+func (c *Client) AddURL(ctx context.Context, _ extkit.Auth, in URLInput) (Source, error) {
+	var out Source
+	return out, c.c.Call(ctx, "POST", "add-url", in, &out)
+}
+
+func (c *Client) Follow(ctx context.Context, _ extkit.Auth, in FollowInput) (Source, error) {
+	var out Source
+	return out, c.c.Call(ctx, "POST", "follow", in, &out)
+}
+
+func (c *Client) Refresh(ctx context.Context, _ extkit.Auth, in SourceRef) (Source, error) {
+	var out Source
+	return out, c.c.Call(ctx, "POST", "refresh", in, &out)
 }
 
 func (c *Client) Remove(ctx context.Context, _ extkit.Auth, in RemoveInput) (Removed, error) {
@@ -475,9 +646,9 @@ func (c *Client) Remove(ctx context.Context, _ extkit.Auth, in RemoveInput) (Rem
 	return out, c.c.Call(ctx, "POST", "remove", in, &out)
 }
 
-func (c *Client) Reindex(ctx context.Context, _ extkit.Auth, in RemoveInput) (Removed, error) {
-	var out Removed
-	return out, c.c.Call(ctx, "POST", "reindex", in, &out)
+func (c *Client) Documents(ctx context.Context, _ extkit.Auth, in DocumentsInput) (DocumentList, error) {
+	var out DocumentList
+	return out, c.c.Call(ctx, "GET", "documents", in, &out)
 }
 
 func (c *Client) Search(ctx context.Context, _ extkit.Auth, in SearchInput) (Results, error) {

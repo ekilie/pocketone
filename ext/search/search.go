@@ -15,14 +15,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"regexp"
 	"sync"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
 	searchv1 "pocketone.dev/ext/contracts/search/v1"
 	"pocketone.dev/ext/extkit"
@@ -71,10 +69,12 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 	s := newService(app)
 	app.Store().Set(storeKey, s)
 	searchv1.Contract.Provide(app, s)
-	s.bindSources()
+	s.bindCollections()
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		s.loadFollowers()
 		s.kickWorker() // resume what was queued before a restart
+		// URL and repository sources with an interval, read when they're due
+		app.Cron().MustAdd("__pocketoneSearchRefresh__", "*/5 * * * *", func() { s.refreshDue() })
 		return e.Next()
 	})
 	app.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
@@ -154,6 +154,7 @@ func (s *service) findBucket(name string) (*core.Record, error) {
 
 type bucketStats struct {
 	Bucket    string `db:"bucket"`
+	Sources   int    `db:"-"`
 	Documents int    `db:"documents"`
 	Bytes     int64  `db:"bytes"`
 	Chunks    int    `db:"chunks"`
@@ -174,36 +175,30 @@ func (s *service) stats(bucketID string) map[string]bucketStats {
 	for _, r := range rows {
 		out[r.Bucket] = r
 	}
+	// sources, and the ones whose last read failed
+	var srcs []struct {
+		Bucket string `db:"bucket"`
+		N      int    `db:"n"`
+		Errors int    `db:"errors"`
+	}
+	sq := s.app.DB().Select("bucket", "count(*) AS n", "coalesce(sum(status = 'error'),0) AS errors").From(SourcesCollection).GroupBy("bucket")
+	if bucketID != "" {
+		sq = sq.Where(dbx.HashExp{"bucket": bucketID})
+	}
+	_ = sq.All(&srcs)
+	for _, r := range srcs {
+		st := out[r.Bucket]
+		st.Bucket, st.Sources, st.Errors = r.Bucket, r.N, st.Errors+r.Errors
+		out[r.Bucket] = st
+	}
 	return out
-}
-
-func sourceOf(r *core.Record) *searchv1.Source {
-	raw := r.GetString("source")
-	if raw == "" || raw == "null" {
-		return nil
-	}
-	var src searchv1.Source
-	if json.Unmarshal([]byte(raw), &src) != nil || src.Collection == "" {
-		return nil
-	}
-	return &src
-}
-
-// setSource stores a bucket's source as JSON (nil: none), so reading it back works before and after a save.
-func setSource(r *core.Record, src *searchv1.Source) {
-	if src == nil {
-		r.Set("source", types.JSONRaw("null"))
-		return
-	}
-	b, _ := json.Marshal(src)
-	r.Set("source", types.JSONRaw(b))
 }
 
 func bucketOf(r *core.Record, st bucketStats) searchv1.Bucket {
 	return searchv1.Bucket{Name: r.GetString("name"), Title: r.GetString("title"), Description: r.GetString("description"),
-		Owner: r.GetString("owner"), Source: sourceOf(r),
+		Owner:        r.GetString("owner"),
 		MaxDocuments: r.GetInt("max_documents"), MaxBytes: int64(r.GetInt("max_bytes")),
-		Documents: st.Documents, Chunks: st.Chunks, Bytes: st.Bytes, Pending: st.Pending, Errors: st.Errors,
+		Sources: st.Sources, Documents: st.Documents, Chunks: st.Chunks, Bytes: st.Bytes, Pending: st.Pending, Errors: st.Errors,
 		Created: r.GetDateTime("created").Time(), Updated: r.GetDateTime("updated").Time()}
 }
 
@@ -235,11 +230,6 @@ func (s *service) Ensure(ctx context.Context, a extkit.Auth, in searchv1.EnsureI
 	if !nameRe.MatchString(in.Name) {
 		return searchv1.Bucket{}, searchv1.ErrInvalidName
 	}
-	if in.Source != nil {
-		if err := s.checkSource(in.Source); err != nil {
-			return searchv1.Bucket{}, err
-		}
-	}
 	r, err := s.findBucket(in.Name)
 	if err == nil {
 		changed := false
@@ -249,18 +239,10 @@ func (s *service) Ensure(ctx context.Context, a extkit.Auth, in searchv1.EnsureI
 				changed = true
 			}
 		}
-		follow := in.Source != nil && sourceOf(r) == nil
-		if follow {
-			setSource(r, in.Source)
-			changed = true
-		}
 		if changed {
 			if err := s.app.Save(r); err != nil {
 				return searchv1.Bucket{}, err
 			}
-		}
-		if follow {
-			s.followChanged(r)
 		}
 		return s.Bucket(ctx, a, searchv1.Ref{Name: in.Name})
 	}
@@ -273,16 +255,10 @@ func (s *service) Ensure(ctx context.Context, a extkit.Auth, in searchv1.EnsureI
 	r.Set("title", in.Title)
 	r.Set("description", in.Description)
 	r.Set("owner", in.Owner)
-	if in.Source != nil {
-		setSource(r, in.Source)
-	}
 	r.Set("max_documents", DefaultMaxDocuments)
 	r.Set("max_bytes", DefaultMaxBytes)
 	if err := s.app.Save(r); err != nil {
 		return searchv1.Bucket{}, err
-	}
-	if in.Source != nil {
-		s.followChanged(r)
 	}
 	return s.Bucket(ctx, a, searchv1.Ref{Name: in.Name})
 }
@@ -305,23 +281,8 @@ func (s *service) Update(ctx context.Context, a extkit.Auth, in searchv1.UpdateI
 	if in.MaxBytes != nil {
 		r.Set("max_bytes", max(*in.MaxBytes, 0))
 	}
-	follow := false
-	if in.Source != nil {
-		if in.Source.Collection == "" {
-			setSource(r, nil)
-		} else {
-			if err := s.checkSource(in.Source); err != nil {
-				return searchv1.Bucket{}, err
-			}
-			setSource(r, in.Source)
-		}
-		follow = true
-	}
 	if err := s.app.Save(r); err != nil {
 		return searchv1.Bucket{}, err
-	}
-	if follow {
-		s.followChanged(r)
 	}
 	return s.Bucket(ctx, a, searchv1.Ref{Name: in.Name})
 }
@@ -345,8 +306,17 @@ func (s *service) Delete(_ context.Context, _ extkit.Auth, in searchv1.Ref) (sea
 		if _, err := tx.DB().Delete(FTSTable, dbx.HashExp{"bucket": r.Id}).Execute(); err != nil {
 			return err
 		}
+		srcs, err := tx.FindAllRecords(SourcesCollection, dbx.HashExp{"bucket": r.Id})
+		if err != nil {
+			return err
+		}
 		for _, d := range docs {
 			if err := tx.Delete(d); err != nil {
+				return err
+			}
+		}
+		for _, src := range srcs {
+			if err := tx.Delete(src); err != nil {
 				return err
 			}
 		}

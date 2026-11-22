@@ -182,6 +182,7 @@ type chunkRow struct {
 	Name      string `db:"name"`
 	Record    string `db:"record"`
 	Bucket    string `db:"bucket"`
+	Source    string `db:"source"`
 }
 
 // searchBuckets is the bucket records a search names (every bucket when it names none).
@@ -291,8 +292,9 @@ func (s *service) Search(ctx context.Context, _ extkit.Auth, in searchv1.SearchI
 	}
 	var rows []chunkRow
 	err = s.app.DB().Select("c.id AS id", "c.text AS text", "c.heading AS heading", "c.start_line AS start_line",
-		"c.end_line AS end_line", "d.name AS name", "d.record AS record", "c.bucket AS bucket").
+		"c.end_line AS end_line", "d.name AS name", "d.record AS record", "c.bucket AS bucket", "s.name AS source").
 		From(ChunksCollection+" c").InnerJoin(DocumentsCollection+" d", dbx.NewExp("d.id = c.document")).
+		InnerJoin(SourcesCollection+" s", dbx.NewExp("s.id = d.src")).
 		Where(dbx.In("c.id", args...)).All(&rows)
 	if err != nil {
 		return out, err
@@ -321,7 +323,7 @@ func (s *service) Search(ctx context.Context, _ extkit.Auth, in searchv1.SearchI
 				continue
 			}
 		}
-		out.Results = append(out.Results, searchv1.Result{Bucket: nameOf[r.Bucket], Document: r.Name, Text: r.Text,
+		out.Results = append(out.Results, searchv1.Result{Bucket: nameOf[r.Bucket], Source: r.Source, Document: r.Name, Text: r.Text,
 			Heading: r.Heading, StartLine: r.StartLine, EndLine: r.EndLine, Record: ref, Score: score[id]})
 	}
 	return out, nil

@@ -3,14 +3,14 @@ owners: ["@benallfree"]
 version: 0.1.0
 title: "Search"
 group: binary
-summary: "Buckets of content your app searches by meaning: files, text or a collection's records; $search, and enrich on $llm calls to answer from them."
+summary: "Buckets of content your app searches by meaning: files, folders, zips, web pages, Git repositories and collections; $search, and enrich on $llm calls to answer from them."
 ---
 
 # Search
 
-Search keeps **buckets** of content your app searches by meaning. Your app makes the bucket it needs; you load it from
-the dashboard's **Search** screen by dropping files or pasting text, or the bucket **follows a collection** and keeps
-its records in sync. Each document is split into chunks that remember where they came from (the document, its section,
+Search keeps **buckets** of content your app searches by meaning. Your app makes the bucket it needs; you fill it from
+the dashboard's **Search** screen with **sources**: files, folders and zips you drop, pasted text, web pages and Git
+repositories it keeps current, or collections it keeps in sync. Each document is split into chunks that remember where they came from (the document, its section,
 its lines, its record) and embedded with the app's one embedding model, picked for you from your providers in
 Settings → LLM.
 
@@ -61,50 +61,54 @@ nothing else to set:
   Change it on the Search screen: every bucket is embedded again in the background, with its progress shown there, and
   search keeps working meanwhile (chunks not yet done are still found by their words). Content added before there's a
   provider waits, and is embedded once there is one.
-- **Each bucket** has a title, a description of what belongs in it, an optional collection to follow, and limits: at
-  most 2,000 documents (none for a bucket that follows a collection) and 50 MB of text. A document is at most 10 MB.
+- **Each bucket** has a title, a description of what belongs in it, and limits: at most 2,000 documents and 50 MB of
+  text. A document is at most 10 MB, a zip 100 MB.
 
 Turn the extension off on a single app with `search: {enabled: false}` in pocketone.yaml (on a host, an instance's
 `extensions.search`); its collections and data stay.
 
 ## Use
 
-**Buckets.** `$search.ensure({ name, title?, description?, owner?, source? })` makes a bucket if it's missing and
+**Buckets.** `$search.ensure({ name, title?, description?, owner? })` makes a bucket if it's missing and
 returns it; call it at startup for the bucket your app needs. An existing bucket keeps its settings (only an empty
-title, description, owner or source is filled in), so your admins' changes stick. The description is what the Search
+title, description or owner is filled in), so your admins' changes stick. The description is what the Search
 screen shows them: say what to load. A name is letters, digits, `-` and `_`, up to 64.
 
-**Files and text.** Drop files or whole folders on a bucket's page, choose files, or paste text. From code,
-`$search.add({ bucket, name, text })`; over HTTP, `POST /api/_c/search/v1/add` or the file itself as the body of
-`POST /api/_c/search/v1/upload?bucket=<b>&name=<path>`. The name is the document's name in the bucket (usually its
-path) and picks how it's split:
+**Sources.** A bucket holds sources, each one tracked unit however many documents it brings:
 
-| Kind | Names | Split |
-|---|---|---|
-| Markdown | `.md`, `.mdx`, `.markdown` | At headings; each chunk carries its heading path ("Install › macOS", led by the front matter's `title`). Headings inside fenced code don't count. |
-| Code | `.go`, `.js`, `.ts`, `.py`, `.sql`, `.yaml`, `.json` and other common source files | At blank lines. |
-| Text | anything else | At blank lines. |
+| Source | Add it | Documents | Adding it again |
+|---|---|---|---|
+| File | drop it, or `$search.add({ bucket, name, text })`, or `POST upload?bucket=&name=` with the file as the body | one | replaces it |
+| Text | **paste text**, or `add` with `kind: "text"` | one | replaces it |
+| Folder | drop it (sent file by file, then pruned) | one per text file, by its path in the folder | updates changed files, adds new ones, **removes missing ones** |
+| Zip | drop it, or `upload` a `.zip` | one per text file inside (a shared top folder is dropped) | the same, from the new zip |
+| Web page | **add a URL**, or `$search.addURL({ bucket, url, every })` | one | read again on its interval |
+| Git repository | add its URL (a `.git` ending, or `github.com`/`gitlab.com`/`codeberg.org` owner/repo) | one per text file on the default branch, plus one per recent commit (300; `commits`) | read again on its interval: one small request when nothing changed |
+| Collection | **follow a collection**, or `$search.follow({ bucket, collection, fields, filter })` | one per record the filter keeps | kept in sync as records are saved and deleted |
 
-Paragraphs are packed into chunks of about 500 tokens, never over about 1,000. Only text is taken (binary files are
-refused). Adding returns at once with the document waiting; a background worker embeds its chunks, 64 to a request and
-under 120 requests a minute, and marks it `ready` (or `error`, with the reason; **Retry** on the screen splits and
-embeds it again). It picks up where it left off after a restart.
+A source's name identifies it in its bucket: the file, folder or zip name, the URL, or the collection. Adding one of
+the same name replaces it, and the screen asks first. A new version under another name (`notes-v2.zip` for
+`notes-v1.zip`) replaces the old one when you say so: **Upload a new version** on its row, or `replace: "<old name>"`.
+Dropping content that's already in the bucket under another name (same sha256) asks before adding it again. Each
+bucket's sources are its own: replacing `foo.zip` in one bucket leaves a `foo.zip` in another as it was.
 
-Add a document with the same name to replace it. The same text again does nothing and costs nothing; a changed document
-embeds only its chunks whose text changed. `$search.remove(bucket, names)` removes documents, `$search.reindex(bucket,
-names?)` splits and embeds them again from the text kept with each document, and `$search.deleteBucket(name)` removes a
-bucket and everything in it.
+Nothing is embedded twice. A document whose text didn't change is left alone, a changed one embeds only its chunks
+whose text changed, and a chunk whose content was embedded anywhere in the app (another source, another bucket) reuses
+that vector. So two buckets following the same collection, or the same zip in two buckets, cost one embedding.
 
-**Following a collection.** Give a bucket a `source` (on the screen: Settings → Follow a collection):
+Folders, zips and repositories leave out binaries, files over 1 MB, dot folders and dotfiles (`.git`, `.github`),
+`node_modules`, `vendor` and lockfiles; a repository also takes `exclude` patterns (`"docs/old"`, `"*.min.js"`). Markdown is
+split at headings (each chunk carries its heading path, led by the front matter's `title`), code and text at blank
+lines, into chunks of about 500 tokens; a page's HTML becomes Markdown (scripts, navigation and footers left out) and
+a commit is its subject, body, author, date and the files it changed (no diffs). A collection's record is its first
+field as the title and the others below it (editor fields' HTML as text); results from it name their `record`.
 
-```ts
-$search.ensure({ name: "notes", source: { collection: "notes", fields: ["title", "body"], filter: "published = true" } })
-```
-
-Each record the filter keeps becomes a document named `<collection>/<record id>`: the first field is its title, the
-others its text (editor fields' HTML as plain text). Existing records are read when the bucket starts following;
-after that, saving a record replaces its document (only edited text is embedded again), a record the filter no
-longer keeps leaves the bucket, and deleting a record removes its document. Results from it name their `record`.
+Everything is embedded in the background: 64 chunks to a request, under 120 requests a minute, picking up where it
+left off after a restart. **Refresh** on a row (or `$search.refresh(bucket, source)`) reads a source again now;
+`$search.remove(bucket, sources)` takes sources out; `$search.deleteBucket(name)` removes a bucket. URL and repository
+intervals (`every`: `hour`, `day`, `week`) are checked every five minutes. Fetches use Go's default HTTP client, so on
+a multitenant host (Pocker) the host's outbound guard applies; only `http` and `https` URLs are taken, public
+repositories only, with a 30-second limit per page and five minutes per repository.
 
 **Searching.** `await $search.searchAsync({ query, buckets?, limit?, prefix?, viewer? })` returns the best chunks across
 the buckets named (every bucket when none are): `{ results: [{ bucket, document, text, heading, startLine, endLine,
@@ -133,6 +137,7 @@ document shows what embedding it cost. `qwen3-embedding-4b` on Vultr is $0.05 pe
 | [LLM](../llm/README.md) | Embeds chunks and queries (llm.embed/v1), and adds passages to text calls with `enrich`. Search's own HTTP and MCP API is the [search/v1](../contracts/search/v1/README.md) contract. |
 | [LLM Chat](../llm-chat/README.md) | `enrich` on a chat or a send. |
 | [Key-Value Store](../kv/README.md) | Keeps the app's embedding model. |
+| [Sandbox](../sandbox/README.md) | On a Pocker host, its egress guard covers page and repository fetches. |
 | [Multisite](../multisite/README.md) | Each instance keeps its own buckets and model in its own database. |
 
 ## Example

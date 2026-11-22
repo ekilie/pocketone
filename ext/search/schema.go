@@ -10,6 +10,8 @@ import (
 const (
 	BucketsCollection     = "_search_buckets"
 	BucketsCollectionID   = "pbc_search_buckets"
+	SourcesCollection     = "_search_sources"
+	SourcesCollectionID   = "pbc_search_sources"
 	DocumentsCollection   = "_search_documents"
 	DocumentsCollectionID = "pbc_search_documents"
 	ChunksCollection      = "_search_chunks"
@@ -33,7 +35,6 @@ func createTables(tx core.App) error {
 		&core.TextField{Id: "sb_title", Name: "title", Max: 200},
 		&core.TextField{Id: "sb_description", Name: "description", Max: 2000, Help: "What belongs in the bucket, shown to the admins who load it."},
 		&core.TextField{Id: "sb_owner", Name: "owner", Max: 200, Help: "Who made it (the app's name)."},
-		&core.JSONField{Id: "sb_source", Name: "source", MaxSize: 1 << 14, Help: "The collection it follows: {collection, fields, filter}."},
 		&core.NumberField{Id: "sb_max_documents", Name: "max_documents", OnlyInt: true},
 		&core.NumberField{Id: "sb_max_bytes", Name: "max_bytes", OnlyInt: true},
 		&core.AutodateField{Id: "sb_created", Name: "created", OnCreate: true, System: true},
@@ -44,10 +45,34 @@ func createTables(tx core.App) error {
 		return err
 	}
 
+	sources := core.NewBaseCollection(SourcesCollection, SourcesCollectionID)
+	sources.System = true
+	sources.Fields.Add(
+		&core.RelationField{Id: "ss_bucket", Name: "bucket", CollectionId: BucketsCollectionID, MaxSelect: 1, Required: true, CascadeDelete: true},
+		&core.TextField{Id: "ss_name", Name: "name", Required: true, Max: 2000, Help: "The file, folder or zip name, the URL, or the collection."},
+		&core.SelectField{Id: "ss_kind", Name: "kind", MaxSelect: 1, Required: true, Values: []string{"file", "text", "folder", "zip", "page", "git", "collection"}},
+		&core.JSONField{Id: "ss_spec", Name: "spec", MaxSize: 1 << 16, Help: "Its settings: url, every, commits, exclude; collection, fields, filter."},
+		&core.SelectField{Id: "ss_status", Name: "status", MaxSelect: 1, Values: []string{"reading", "ready", "error"}},
+		&core.TextField{Id: "ss_error", Name: "error", Max: 2000},
+		&core.DateField{Id: "ss_refreshed", Name: "refreshed"},
+		&core.DateField{Id: "ss_next", Name: "next", Help: "When it's read next (URL and repository sources with an interval)."},
+		&core.TextField{Id: "ss_hash", Name: "hash", Max: 64, Help: "sha256 of a file's or zip's content as uploaded."},
+		&core.TextField{Id: "ss_state", Name: "state", Max: 200, Help: "What was read last: a page's ETag, a repository's commit."},
+		&core.FileField{Id: "ss_original", Name: "original", MaxSelect: 1, MaxSize: 100 << 20, Protected: true, Help: "A zip as uploaded, to split it again."},
+		&core.AutodateField{Id: "ss_created", Name: "created", OnCreate: true, System: true},
+		&core.AutodateField{Id: "ss_updated", Name: "updated", OnCreate: true, OnUpdate: true, System: true},
+	)
+	sources.AddIndex("idx_search_sources_name", true, "bucket, name", "")
+	sources.AddIndex("idx_search_sources_next", false, "next", "")
+	if err := tx.Save(sources); err != nil {
+		return err
+	}
+
 	docs := core.NewBaseCollection(DocumentsCollection, DocumentsCollectionID)
 	docs.System = true
 	docs.Fields.Add(
 		&core.RelationField{Id: "sd_bucket", Name: "bucket", CollectionId: BucketsCollectionID, MaxSelect: 1, Required: true, CascadeDelete: true},
+		&core.RelationField{Id: "sd_src", Name: "src", CollectionId: SourcesCollectionID, MaxSelect: 1, Required: true, CascadeDelete: true},
 		&core.TextField{Id: "sd_name", Name: "name", Required: true, Max: 1000},
 		&core.SelectField{Id: "sd_kind", Name: "kind", MaxSelect: 1, Values: []string{KindMarkdown, KindCode, KindText}},
 		&core.NumberField{Id: "sd_size", Name: "size", OnlyInt: true},
@@ -58,11 +83,12 @@ func createTables(tx core.App) error {
 		&core.TextField{Id: "sd_record", Name: "record", Max: 200, Help: "collection/id of the record it was made from (a bucket that follows a collection)."},
 		&core.NumberField{Id: "sd_tokens", Name: "tokens", OnlyInt: true},
 		&core.NumberField{Id: "sd_cost", Name: "cost", OnlyInt: true, Help: "What embedding it has cost, in millionths of a US dollar."},
-		&core.FileField{Id: "sd_source", Name: "source", MaxSelect: 1, MaxSize: MaxFileBytes, Protected: true, Help: "The text as added, to split it again later."},
+		&core.FileField{Id: "sd_text", Name: "text", MaxSelect: 1, MaxSize: MaxFileBytes, Protected: true, Help: "The text as added, to split it again later."},
 		&core.AutodateField{Id: "sd_created", Name: "created", OnCreate: true, System: true},
 		&core.AutodateField{Id: "sd_updated", Name: "updated", OnCreate: true, OnUpdate: true, System: true},
 	)
-	docs.AddIndex("idx_search_documents_name", true, "bucket, name", "")
+	docs.AddIndex("idx_search_documents_name", true, "src, name", "")
+	docs.AddIndex("idx_search_documents_bucket", false, "bucket", "")
 	docs.AddIndex("idx_search_documents_status", false, "status", "")
 	docs.AddIndex("idx_search_documents_record", false, "record", "")
 	if err := tx.Save(docs); err != nil {
@@ -85,12 +111,13 @@ func createTables(tx core.App) error {
 	)
 	chunks.AddIndex("idx_search_chunks_document", true, "document, seq", "")
 	chunks.AddIndex("idx_search_chunks_bucket", false, "bucket", "")
+	chunks.AddIndex("idx_search_chunks_hash", false, "hash, model", "")
 	if err := tx.Save(chunks); err != nil {
 		return err
 	}
 
 	_, err := tx.DB().NewQuery(`CREATE VIRTUAL TABLE IF NOT EXISTS ` + FTSTable + ` USING fts5(
-		text, heading, chunk UNINDEXED, bucket UNINDEXED, document UNINDEXED, name UNINDEXED, record UNINDEXED,
+		text, heading, chunk UNINDEXED, bucket UNINDEXED, document UNINDEXED, name UNINDEXED, src UNINDEXED,
 		tokenize = 'porter unicode61')`).Execute()
 	return err
 }
@@ -99,7 +126,7 @@ func dropTables(tx core.App) error {
 	if _, err := tx.DB().NewQuery(`DROP TABLE IF EXISTS ` + FTSTable).Execute(); err != nil {
 		return err
 	}
-	for _, name := range []string{ChunksCollection, DocumentsCollection, BucketsCollection} {
+	for _, name := range []string{ChunksCollection, DocumentsCollection, SourcesCollection, BucketsCollection} {
 		c, err := tx.FindCollectionByNameOrId(name)
 		if err != nil {
 			continue

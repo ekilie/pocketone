@@ -1,13 +1,18 @@
 package search
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"hash/fnv"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -135,6 +140,29 @@ func mustSearch(t *testing.T, s searchv1.Search, in searchv1.SearchInput) search
 	return r
 }
 
+func add(t *testing.T, s searchv1.Search, bucket, name, text string) searchv1.Source {
+	t.Helper()
+	src, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: bucket, Name: name, Text: text})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
+
+func docNames(t *testing.T, s searchv1.Search, bucket, source string) string {
+	t.Helper()
+	l, err := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: bucket, Source: source})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, d := range l.Documents {
+		out = append(out, d.Name)
+	}
+	sort.Strings(out)
+	return strings.Join(out, ",")
+}
+
 // An app ensures its bucket; ensuring again keeps its settings and fills only what was empty.
 func TestEnsure(t *testing.T) {
 	_, _, s := setup(t)
@@ -149,36 +177,28 @@ func TestEnsure(t *testing.T) {
 	if _, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "../x"}); !errors.Is(err, searchv1.ErrInvalidName) {
 		t.Fatalf("bad name: %v", err)
 	}
-	if l, _ := s.Buckets(ctx, extkit.Internal); len(l.Buckets) != 1 {
-		t.Fatalf("buckets: %+v", l)
-	}
 }
 
-// A document is split at once and embedded in the background with the app's model (the cheapest one, picked
-// automatically); search ranks across the buckets asked for.
+// A file is a source with one document, embedded in the background with the app's model (the cheapest, picked
+// automatically); search ranks across the buckets asked for and names each result's bucket and source.
 func TestAddEmbedSearch(t *testing.T) {
 	app, fe, s := setup(t)
 	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
 	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "other"})
-	d, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "stories/lighthouse.md", Text: guide})
-	if err != nil || d.Status != StatusQueued || d.Chunks != 3 || d.Kind != KindMarkdown {
-		t.Fatalf("add: %+v %v", d, err)
+	src := add(t, s, "kb", "lighthouse.md", guide)
+	if src.Kind != searchv1.KindFile || src.Documents != 1 || src.Pending != 1 || src.Chunks != 3 || src.Status != SourceReady || src.Hash == "" {
+		t.Fatalf("add: %+v", src)
 	}
-	_, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "other", Name: "owl.md", Text: "# Owl\n\nThe old owl watches the fox from the tower."})
+	add(t, s, "other", "owl.md", "# Owl\n\nThe old owl watches the fox from the tower.")
 	drain(t, app)
-	docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "kb"})
-	if len(docs.Documents) != 1 || docs.Documents[0].Status != StatusReady || docs.Documents[0].CostMicroUSD != 3 {
-		t.Fatalf("after embedding: %+v", docs)
-	}
-	if fe.embedded() != 4 || fe.models[0] != "p/cheap" || !strings.HasPrefix(fe.inputs[1], "stories/lighthouse.md — Lighthouse › The fox\n\n") {
+	if fe.embedded() != 4 || fe.models[0] != "p/cheap" || !strings.HasPrefix(fe.inputs[1], "lighthouse.md — Lighthouse › The fox\n\n") {
 		t.Fatalf("embedded: %q with %q", fe.inputs, fe.models)
 	}
 	if st, _ := s.Status(ctx, extkit.Internal); st.Model != "p/cheap" || st.Chunks != 4 || st.Embedded != 4 {
 		t.Fatalf("status: %+v", st)
 	}
-
 	r := mustSearch(t, s, searchv1.SearchInput{Buckets: []string{"kb"}, Query: "red fox dunes", Limit: 2})
-	if len(r.Results) == 0 || r.Results[0].Heading != "Lighthouse › The fox" || r.Results[0].Bucket != "kb" || r.Model != "p/cheap" {
+	if len(r.Results) == 0 || r.Results[0].Heading != "Lighthouse › The fox" || r.Results[0].Bucket != "kb" || r.Results[0].Source != "lighthouse.md" {
 		t.Fatalf("one bucket: %+v", r)
 	}
 	all := mustSearch(t, s, searchv1.SearchInput{Query: "fox", Limit: 10})
@@ -189,62 +209,47 @@ func TestAddEmbedSearch(t *testing.T) {
 	if !got["kb"] || !got["other"] {
 		t.Fatalf("every bucket: %+v", all)
 	}
-	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "fog", Prefix: "other/"}); len(r.Results) != 0 {
-		t.Fatalf("prefix: %+v", r)
-	}
 	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Buckets: []string{"nope"}, Query: "fox"}); err == nil {
 		t.Fatal("an unknown bucket was searched")
 	}
-	// FTS operators in a query are words, not syntax
 	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Bucket: "kb", Query: `fox" OR NEAR(*`}); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := s.Bucket(ctx, extkit.Internal, searchv1.Ref{Name: "kb"})
-	if b.Documents != 1 || b.Chunks != 3 || b.Pending != 0 || b.Bytes != int64(len(guide)) {
+	if b.Sources != 1 || b.Documents != 1 || b.Chunks != 3 || b.Pending != 0 || b.Bytes != int64(len(guide)) {
 		t.Fatalf("bucket: %+v", b)
 	}
 }
 
-// The same text again costs nothing; a changed document embeds only its new chunks; a new model embeds everything.
-func TestReingestAndModel(t *testing.T) {
+// The same file again costs nothing; a changed one embeds only its new chunks; a new model embeds everything.
+func TestReplaceAndModel(t *testing.T) {
 	app, fe, s := setup(t)
 	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
-	_, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: guide})
+	add(t, s, "kb", "a.md", guide)
 	drain(t, app)
-	d, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: guide})
-	if err != nil || !d.Unchanged || d.Status != StatusReady {
-		t.Fatalf("again: %+v %v", d, err)
+	add(t, s, "kb", "a.md", guide)
+	drain(t, app)
+	if fe.embedded() != 3 {
+		t.Fatalf("the same text was embedded again: %d", fe.embedded())
 	}
-	changed := strings.Replace(guide, "follow the beam", "trust the beam", 1)
-	if d, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: changed}); d.Status != StatusQueued {
-		t.Fatalf("changed: %+v", d)
-	}
+	add(t, s, "kb", "a.md", strings.Replace(guide, "follow the beam", "trust the beam", 1))
 	drain(t, app)
 	if fe.embedded() != 4 || !strings.Contains(fe.inputs[3], "trust the beam") {
 		t.Fatalf("re-embedded more than the changed chunk: %q", fe.inputs)
 	}
-	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "trust", Limit: 1}); len(r.Results) != 1 || !strings.Contains(r.Results[0].Text, "trust") {
-		t.Fatalf("new text: %+v", r)
-	}
-
 	st, err := s.SetModel(ctx, extkit.Internal, searchv1.ModelInput{Model: "p/dear"})
 	if err != nil || st.Model != "p/dear" || st.Embedded != 0 {
 		t.Fatalf("set model: %+v %v", st, err)
 	}
-	// until it's embedded again, keywords still find it
 	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "trust", Limit: 1}); len(r.Results) != 1 {
-		t.Fatalf("during the change: %+v", r)
+		t.Fatalf("during the change keywords still find it: %+v", r)
 	}
 	drain(t, app)
-	// 4 chunks and a query with p/cheap, a query with p/dear during the change, then the 3 chunks
-	if fe.embedded() != 9 || fe.models[8] != "p/dear" {
-		t.Fatalf("after a model change: %d embedded, %q", fe.embedded(), fe.models)
+	if st, _ := s.Status(ctx, extkit.Internal); st.Embedded != 3 || fe.models[len(fe.models)-1] != "p/dear" {
+		t.Fatalf("after the change: %+v", st)
 	}
-	if st, _ := s.Status(ctx, extkit.Internal); st.Embedded != 3 {
-		t.Fatalf("status after: %+v", st)
-	}
-	if n, err := s.Reindex(ctx, extkit.Internal, searchv1.RemoveInput{Bucket: "kb"}); err != nil || n.Count != 1 {
-		t.Fatalf("reindex: %+v %v", n, err)
+	if src, err := s.Refresh(ctx, extkit.Internal, searchv1.SourceRef{Bucket: "kb", Source: "a.md"}); err != nil || src.Status != SourceReady {
+		t.Fatalf("refresh: %+v %v", src, err)
 	}
 	if _, err := s.SetModel(ctx, extkit.Internal, searchv1.ModelInput{Model: "nomodel"}); err == nil {
 		t.Fatal("a model without a provider was accepted")
@@ -256,11 +261,8 @@ func TestNoModel(t *testing.T) {
 	app, fe, s := setup(t)
 	fe.none = true
 	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
-	d, _ := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "notes", Text: "The fox jumps.\n\nThe owl sleeps."})
+	add(t, s, "kb", "notes", "The fox jumps.\n\nThe owl sleeps.")
 	drain(t, app)
-	if docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "kb"}); docs.Documents[0].Status != StatusQueued || d.Kind != KindText {
-		t.Fatalf("waiting: %+v", docs)
-	}
 	if _, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Bucket: "kb", Query: "fox"}); !errors.Is(err, searchv1.ErrNoModel) {
 		t.Fatalf("search: %v", err)
 	}
@@ -274,15 +276,108 @@ func TestNoModel(t *testing.T) {
 	}
 }
 
-// Limits, removing, deleting, uploads and failures.
+// A dropped folder arrives file by file; Prune removes what the folder no longer has.
+func TestFolder(t *testing.T) {
+	app, _, s := setup(t)
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	for _, p := range []string{"a.md", "b.md", "sub/c.txt"} {
+		if _, err := s.Put(ctx, extkit.Internal, searchv1.PutInput{Bucket: "kb", Source: "docs", Path: p, Text: "text of " + p}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	src, err := s.Prune(ctx, extkit.Internal, searchv1.PruneInput{Bucket: "kb", Source: "docs", Keep: []string{"a.md", "sub/c.txt"}})
+	if err != nil || src.Kind != searchv1.KindFolder || src.Documents != 2 || src.Status != SourceReady {
+		t.Fatalf("prune: %+v %v", src, err)
+	}
+	drain(t, app)
+	if got := docNames(t, s, "kb", "docs"); got != "a.md,sub/c.txt" {
+		t.Fatalf("documents: %s", got)
+	}
+}
+
+func zipOf(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for name, text := range files {
+		w, _ := zw.Create(name)
+		_, _ = w.Write([]byte(text))
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func upload(t *testing.T, s searchv1.Search, bucket, name, replace string, data []byte) searchv1.Source {
+	t.Helper()
+	src, err := s.Upload(ctx, extkit.Internal, extkit.RawIn{Query: url.Values{"bucket": {bucket}, "name": {name}, "replace": {replace}},
+		Body: bytes.NewReader(data)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
+
+// A zip is one source: its text files (the shared top folder dropped; .git, node_modules, lockfiles and binaries
+// skipped). Uploading it again replaces it: unchanged files cost nothing, missing ones go. A renamed new version
+// replaces the old one when it says so. The same zip in another bucket embeds nothing new.
+func TestZip(t *testing.T) {
+	app, fe, s := setup(t)
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "other"})
+	v1 := zipOf(t, map[string]string{
+		"repo/README.md": "# Readme\n\nHello fox.", "repo/src/main.go": "package main\n\nfunc main() {}\n",
+		"repo/notes.txt": "Old notes.", "repo/.git/config": "[core]", "repo/node_modules/x/index.js": "x",
+		"repo/package-lock.json": "{}", "repo/logo.png": "\x89PNG\x00\x01",
+	})
+	src := upload(t, s, "kb", "repo.zip", "", v1)
+	if src.Kind != searchv1.KindZip || src.Documents != 3 || src.Hash == "" {
+		t.Fatalf("upload: %+v", src)
+	}
+	drain(t, app)
+	if got := docNames(t, s, "kb", "repo.zip"); got != "README.md,notes.txt,src/main.go" {
+		t.Fatalf("documents: %s", got)
+	}
+	first := fe.embedded()
+
+	v2 := zipOf(t, map[string]string{"repo/README.md": "# Readme\n\nHello fox.", "repo/src/main.go": "package main\n\nfunc main() { run() }\n"})
+	upload(t, s, "kb", "repo.zip", "", v2)
+	drain(t, app)
+	if got := docNames(t, s, "kb", "repo.zip"); got != "README.md,src/main.go" || fe.embedded() != first+1 {
+		t.Fatalf("after v2: %s, %d embedded (was %d)", got, fe.embedded(), first)
+	}
+
+	v3 := zipOf(t, map[string]string{"repo/README.md": "# Readme\n\nHello fox and owl."})
+	src = upload(t, s, "kb", "repo-v3.zip", "repo.zip", v3)
+	if l, _ := s.Sources(ctx, extkit.Internal, searchv1.BucketRef{Bucket: "kb"}); len(l.Sources) != 1 || l.Sources[0].Name != "repo-v3.zip" || src.Documents != 1 {
+		t.Fatalf("renamed version: %+v", l)
+	}
+	drain(t, app)
+
+	before := fe.embedded()
+	upload(t, s, "other", "repo.zip", "", v3) // same content, another bucket
+	drain(t, app)
+	if fe.embedded() != before {
+		t.Fatalf("the same content in another bucket was embedded again: %d -> %d", before, fe.embedded())
+	}
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "other", Query: "owl"}); len(r.Results) != 1 || r.Results[0].Source != "repo.zip" {
+		t.Fatalf("the other bucket: %+v", r)
+	}
+	// replacing it in one bucket leaves the other's alone
+	upload(t, s, "kb", "repo-v3.zip", "", zipOf(t, map[string]string{"repo/README.md": "# Readme\n\nSomething else."}))
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "other", Query: "owl"}); len(r.Results) != 1 {
+		t.Fatalf("the other bucket changed: %+v", r)
+	}
+}
+
+// Limits, removing, deleting, binaries and a failed embed.
 func TestLimitsRemoveDelete(t *testing.T) {
 	app, fe, s := setup(t)
 	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
 	one := 1
 	_, _ = s.Update(ctx, extkit.Internal, searchv1.UpdateInput{Name: "kb", MaxDocuments: &one})
-	if _, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: "alpha"}); err != nil {
-		t.Fatal(err)
-	}
+	add(t, s, "kb", "a.md", "alpha")
 	if _, err := s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "b.md", Text: "beta"}); err == nil {
 		t.Fatal("over max documents")
 	}
@@ -290,7 +385,6 @@ func TestLimitsRemoveDelete(t *testing.T) {
 		Body: strings.NewReader("a\x00b")}); !errors.Is(err, searchv1.ErrNotText) {
 		t.Fatalf("binary upload: %v", err)
 	}
-
 	fe.fail = llmc.ErrUnknownModel
 	drain(t, app)
 	docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "kb"})
@@ -298,43 +392,138 @@ func TestLimitsRemoveDelete(t *testing.T) {
 		t.Fatalf("a failed embed: %+v (calls %d)", docs, fe.calls)
 	}
 	fe.fail = nil
-	if _, err := s.Reindex(ctx, extkit.Internal, searchv1.RemoveInput{Bucket: "kb", Names: []string{"a.md"}}); err != nil {
+	if _, err := s.Refresh(ctx, extkit.Internal, searchv1.SourceRef{Bucket: "kb", Source: "a.md"}); err != nil {
 		t.Fatal(err)
 	}
 	drain(t, app)
 	if docs, _ = s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "kb"}); docs.Documents[0].Status != StatusReady {
-		t.Fatalf("after reindex: %+v", docs)
+		t.Fatalf("after refresh: %+v", docs)
 	}
-
-	if n, _ := s.Remove(ctx, extkit.Internal, searchv1.RemoveInput{Bucket: "kb", Names: []string{"a.md", "nope"}}); n.Count != 1 {
+	if n, _ := s.Remove(ctx, extkit.Internal, searchv1.RemoveInput{Bucket: "kb", Sources: []string{"a.md", "nope"}}); n.Count != 1 {
 		t.Fatalf("remove: %+v", n)
 	}
-	_, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "b.md", Text: "beta"})
+	add(t, s, "kb", "b.md", "beta")
 	if _, err := s.Delete(ctx, extkit.Internal, searchv1.Ref{Name: "kb"}); err != nil {
 		t.Fatal(err)
 	}
-	var left, chunks int
+	var left, chunks, srcs int
 	_ = app.DB().Select("count(*)").From(FTSTable).Row(&left)
 	_ = app.DB().Select("count(*)").From(ChunksCollection).Row(&chunks)
-	if left != 0 || chunks != 0 {
-		t.Fatalf("left behind: %d fts rows, %d chunks", left, chunks)
-	}
-	if _, err := s.Bucket(ctx, extkit.Internal, searchv1.Ref{Name: "kb"}); !errors.Is(err, searchv1.ErrNoBucket) {
-		t.Fatalf("deleted bucket: %v", err)
+	_ = app.DB().Select("count(*)").From(SourcesCollection).Row(&srcs)
+	if left != 0 || chunks != 0 || srcs != 0 {
+		t.Fatalf("left behind: %d fts rows, %d chunks, %d sources", left, chunks, srcs)
 	}
 }
 
-// A bucket that follows a collection keeps its records in sync, and a search for a viewer leaves out what they can't
-// view.
-func TestFollowCollection(t *testing.T) {
+// A page source is fetched and kept as Markdown; an unchanged page (its ETag) costs nothing; a changed one is
+// replaced; an interval reads it again when due.
+func TestPage(t *testing.T) {
+	app, fe, s := setup(t)
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	var mu sync.Mutex
+	body, etag, hits, notModified := `<html><head><title>Fox guide</title><script>var x</script></head><body><nav>Menu</nav>
+<h1>Foxes</h1><p>The red <b>fox</b> lives in dunes.</p><ul><li>Naps</li><li>Hunts</li></ul><pre>code  here</pre></body></html>`, `"v1"`, 0, 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		hits++
+		if r.Header.Get("If-None-Match") == etag {
+			notModified++
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("ETag", etag)
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+
+	src, err := s.AddURL(ctx, extkit.Internal, searchv1.URLInput{Bucket: "kb", URL: srv.URL + "/guide", Every: "day"})
+	if err != nil || src.Kind != searchv1.KindPage || src.Status != SourceReady || src.Documents != 1 || src.Next == nil {
+		t.Fatalf("add url: %+v %v", src, err)
+	}
+	drain(t, app)
+	r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "red fox dunes", Limit: 1})
+	if len(r.Results) != 1 || r.Results[0].Heading != "Fox guide › Foxes" || strings.Contains(r.Results[0].Text, "var x") || strings.Contains(r.Results[0].Text, "Menu") {
+		t.Fatalf("page: %+v", r)
+	}
+	if _, err := s.Refresh(ctx, extkit.Internal, searchv1.SourceRef{Bucket: "kb", Source: srv.URL + "/guide"}); err != nil {
+		t.Fatal(err)
+	}
+	n := fe.embedded()
+	mu.Lock()
+	body, etag = strings.Replace(body, "dunes", "woods", 1), `"v2"`
+	mu.Unlock()
+	// due now: the scheduled read picks it up
+	if _, err := app.DB().NewQuery("UPDATE " + SourcesCollection + " SET next = '2000-01-01 00:00:00.000Z'").Execute(); err != nil {
+		t.Fatal(err)
+	}
+	of(app).refreshDue()
+	drain(t, app)
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "woods", Limit: 1}); len(r.Results) != 1 || !strings.Contains(r.Results[0].Text, "woods") || fe.embedded() == n {
+		t.Fatalf("after a change: %+v", r)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if notModified != 0 && hits < 3 {
+		t.Fatalf("hits %d, not modified %d", hits, notModified)
+	}
+	if _, err := s.AddURL(ctx, extkit.Internal, searchv1.URLInput{Bucket: "kb", URL: "file:///etc/passwd"}); err == nil {
+		t.Fatal("a file URL was accepted")
+	}
+}
+
+func TestURLKind(t *testing.T) {
+	for raw, want := range map[string]string{
+		"https://github.com/benallfree/nollama": "git", "https://github.com/benallfree/nollama.git": "git",
+		"https://example.com/x/repo.git": "git", "https://github.com/benallfree/nollama/blob/main/README.md": "page",
+		"https://pocketone.dev/llms.txt": "page",
+	} {
+		u, _ := url.Parse(raw)
+		if got := urlKind(u); got != want {
+			t.Errorf("%s: %s, want %s", raw, got, want)
+		}
+	}
+	for p, skip := range map[string]bool{"src/a.go": false, ".git/HEAD": true, "a/node_modules/x.js": true, "go.sum": true,
+		"docs/old/x.md": true, "x.min.js": true, ".github/ci.yml": true} {
+		if got := skipPath(p, []string{"docs/old", "*.min.js"}); got != skip {
+			t.Errorf("skip %s: %v", p, got)
+		}
+	}
+}
+
+// A Git source against a real repository (set SEARCH_GIT_TEST=1; it fetches over the network).
+func TestGitNetwork(t *testing.T) {
+	if os.Getenv("SEARCH_GIT_TEST") == "" {
+		t.Skip("set SEARCH_GIT_TEST=1 to clone a public repository")
+	}
 	app, _, s := setup(t)
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	src, err := s.AddURL(ctx, extkit.Internal, searchv1.URLInput{Bucket: "kb", URL: "https://github.com/benallfree/nollama.git", Commits: 20})
+	if err != nil || src.Kind != searchv1.KindGit || src.Status != SourceReady || src.Documents < 20 {
+		t.Fatalf("git: %+v %v", src, err)
+	}
+	names := docNames(t, s, "kb", src.Name)
+	if !strings.Contains(names, "README.md") || !strings.Contains(names, "commit ") || strings.Contains(names, ".git/") {
+		t.Fatalf("documents: %s", names)
+	}
+	again, _ := s.Refresh(ctx, extkit.Internal, searchv1.SourceRef{Bucket: "kb", Source: src.Name})
+	if again.Documents != src.Documents {
+		t.Fatalf("refresh: %+v", again)
+	}
+	_ = app
+}
+
+// A collection is a source: its records are documents kept in sync, two buckets following it embed each record once,
+// and a search for a viewer leaves out what they can't view.
+func TestFollowCollection(t *testing.T) {
+	app, fe, s := setup(t)
 	members := core.NewAuthCollection("members")
 	if err := app.Save(members); err != nil {
 		t.Fatal(err)
 	}
 	notes := core.NewBaseCollection("notes")
-	rule := "owner = @request.auth.id"
-	notes.ViewRule = types.Pointer(rule)
+	notes.ViewRule = types.Pointer("owner = @request.auth.id")
 	notes.Fields.Add(&core.TextField{Name: "title"}, &core.EditorField{Name: "body"}, &core.BoolField{Name: "published"},
 		&core.RelationField{Name: "owner", CollectionId: members.Id, MaxSelect: 1})
 	if err := app.Save(notes); err != nil {
@@ -361,25 +550,34 @@ func TestFollowCollection(t *testing.T) {
 		}
 		return r
 	}
-	n1 := note("Fox facts", "<p>The <b>red fox</b> hunts at dawn.</p>", ann.Id, true) // before the bucket follows
-	if _, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "notes",
-		Source: &searchv1.Source{Collection: "notes", Fields: []string{"title", "body"}, Filter: "published = true"}}); err != nil {
-		t.Fatal(err)
+	n1 := note("Fox facts", "<p>The <b>red fox</b> hunts at dawn.</p>", ann.Id, true) // before anything follows
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "notes"})
+	src, err := s.Follow(ctx, extkit.Internal, searchv1.FollowInput{Bucket: "notes", Collection: "notes", Fields: []string{"title", "body"}, Filter: "published = true"})
+	if err != nil || src.Kind != searchv1.KindCollection || src.Name != "notes" || src.Documents != 1 {
+		t.Fatalf("follow: %+v %v", src, err)
 	}
 	n2 := note("Fox dens", "<p>A fox den has many exits.</p>", bob.Id, true)
 	_ = note("Fox secrets", "<p>Draft about the fox.</p>", ann.Id, false) // filtered out
 	drain(t, app)
-
-	docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "notes"})
-	if len(docs.Documents) != 2 || docs.Documents[0].Record == nil || docs.Documents[0].Kind != KindMarkdown {
-		t.Fatalf("documents: %+v", docs)
+	if got := docNames(t, s, "notes", "notes"); got != "notes/"+min(n1.Id, n2.Id)+",notes/"+max(n1.Id, n2.Id) {
+		t.Fatalf("documents: %s", got)
 	}
+
+	// a second bucket on the same collection embeds nothing new
+	before := fe.embedded()
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	if _, err := s.Follow(ctx, extkit.Internal, searchv1.FollowInput{Bucket: "kb", Collection: "notes", Fields: []string{"title", "body"}, Filter: "published = true"}); err != nil {
+		t.Fatal(err)
+	}
+	drain(t, app)
+	if fe.embedded() != before {
+		t.Fatalf("the second bucket embedded again: %d -> %d", before, fe.embedded())
+	}
+
 	r := mustSearch(t, s, searchv1.SearchInput{Bucket: "notes", Query: "red fox hunts", Limit: 1})
-	if len(r.Results) != 1 || r.Results[0].Record.ID != n1.Id || r.Results[0].Heading != "Fox facts" ||
-		strings.Contains(r.Results[0].Text, "<b>") {
+	if len(r.Results) != 1 || r.Results[0].Record.ID != n1.Id || r.Results[0].Heading != "Fox facts" || strings.Contains(r.Results[0].Text, "<b>") {
 		t.Fatalf("search: %+v", r)
 	}
-
 	ids := func(r searchv1.Results) string {
 		var out []string
 		for _, x := range r.Results {
@@ -394,21 +592,20 @@ func TestFollowCollection(t *testing.T) {
 		t.Fatalf("viewers: all %s, ann %s, guest %s", ids(all), ids(asAnn), ids(asGuest))
 	}
 
-	// edits follow; unpublishing and deleting remove
 	n1.Set("body", "<p>The red fox naps in the sun.</p>")
 	_ = app.Save(n1)
 	drain(t, app)
-	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "notes", Query: "naps sun", Limit: 1}); len(r.Results) != 1 || !strings.Contains(r.Results[0].Text, "naps") {
-		t.Fatalf("after an edit: %+v", r)
+	if r := mustSearch(t, s, searchv1.SearchInput{Bucket: "kb", Query: "naps sun", Limit: 1}); len(r.Results) != 1 || !strings.Contains(r.Results[0].Text, "naps") {
+		t.Fatalf("after an edit, in the second bucket: %+v", r)
 	}
 	n1.Set("published", false)
 	_ = app.Save(n1)
 	_ = app.Delete(n2)
-	if docs, _ := s.Documents(ctx, extkit.Internal, searchv1.DocumentsInput{Bucket: "notes"}); len(docs.Documents) != 0 {
-		t.Fatalf("after unpublish and delete: %+v", docs)
+	if got := docNames(t, s, "notes", "notes"); got != "" {
+		t.Fatalf("after unpublish and delete: %s", got)
 	}
-	if _, err := s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "bad", Source: &searchv1.Source{Collection: "notes", Fields: []string{"nope"}}}); err == nil {
-		t.Fatal("a source with a missing field was accepted")
+	if _, err := s.Follow(ctx, extkit.Internal, searchv1.FollowInput{Bucket: "kb", Collection: "notes", Fields: []string{"nope"}}); err == nil {
+		t.Fatal("a missing field was accepted")
 	}
 }
 
@@ -416,7 +613,7 @@ func TestFollowCollection(t *testing.T) {
 func TestEnrich(t *testing.T) {
 	app, _, s := setup(t)
 	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
-	_, _ = s.Add(ctx, extkit.Internal, searchv1.AddInput{Bucket: "kb", Name: "a.md", Text: guide})
+	add(t, s, "kb", "a.md", guide)
 	drain(t, app)
 	var e llmc.Enrich
 	if err := json.Unmarshal([]byte(`["kb"]`), &e); err != nil || len(e.Buckets) != 1 {
@@ -433,11 +630,12 @@ func TestEnrich(t *testing.T) {
 
 const hooks = `onRecordCreate(async (e) => {
   const b = $search.ensure({ name: "storytime", title: "Story Time library" })
-  const d = $search.add({ bucket: "storytime", name: "fox.md", text: "# Fox\n\nThe red fox naps in the dunes." })
+  const src = $search.add({ bucket: "storytime", name: "fox.md", text: "# Fox\n\nThe red fox naps in the dunes." })
   const r = await $search.searchAsync({ buckets: "storytime", query: "fox", viewer: null })
   e.record.set("result", JSON.stringify({
-    title: b.title, status: d.status, buckets: $search.buckets().length, docs: $search.documents("storytime").length,
-    heading: r.results[0].heading, model: $search.status().model, removed: $search.remove("storytime", "fox.md"),
+    title: b.title, kind: src.kind, sources: $search.sources("storytime").length, docs: $search.documents("storytime").length,
+    heading: r.results[0].heading, source: r.results[0].source, model: $search.status().model,
+    removed: $search.remove("storytime", "fox.md"),
   }))
   e.next()
 }, "probes")
@@ -466,14 +664,14 @@ func TestJS(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out struct {
-		Title, Status, Heading, Model string
-		Buckets, Docs, Removed        int
+		Title, Kind, Heading, Source, Model string
+		Sources, Docs, Removed              int
 	}
 	if err := json.Unmarshal([]byte(r.GetString("result")), &out); err != nil {
 		t.Fatalf("result %q: %v", r.GetString("result"), err)
 	}
-	if out.Title != "Story Time library" || out.Status != StatusQueued || out.Buckets != 1 || out.Docs != 1 ||
-		out.Heading != "Fox" || out.Model != "p/cheap" || out.Removed != 1 {
+	if out.Title != "Story Time library" || out.Kind != "file" || out.Sources != 1 || out.Docs != 1 ||
+		out.Heading != "Fox" || out.Source != "fox.md" || out.Model != "p/cheap" || out.Removed != 1 {
 		t.Fatalf("from JS: %+v", out)
 	}
 }

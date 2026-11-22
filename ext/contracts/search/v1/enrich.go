@@ -54,11 +54,14 @@ func Enrich(ctx context.Context, app core.App, e *llm.Enrich, query string) (str
 	passages := make([]llm.Passage, 0, len(res.Results))
 	for i, r := range res.Results {
 		where := r.Document
+		if r.Source != "" && r.Source != r.Document {
+			where = r.Source + " › " + where
+		}
 		if r.Heading != "" {
 			where += " › " + r.Heading
 		}
 		fmt.Fprintf(&b, "\n\n[%d] %s\n%s", i+1, where, r.Text)
-		passages = append(passages, llm.Passage{Bucket: r.Bucket, Document: r.Document, Heading: r.Heading, Text: r.Text, Score: r.Score})
+		passages = append(passages, llm.Passage{Bucket: r.Bucket, Source: r.Source, Document: r.Document, Heading: r.Heading, Text: r.Text, Score: r.Score})
 	}
 	return b.String(), passages, nil
 }

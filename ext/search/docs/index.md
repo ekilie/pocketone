@@ -1,13 +1,13 @@
 ---
 title: Search your content
 section: New in PocketOne
-description: "Buckets of content your app searches by meaning: drop files on them in the dashboard or have them follow a collection, then answer from them with enrich on $llm calls."
+description: "Buckets of content your app searches by meaning: files, folders, zips, web pages, Git repositories and collections, kept current; answer from them with enrich on $llm calls."
 ---
 
 # Search your content
 
-**Your app can search content you give it, and answer from it.** Put documents in a **bucket**: files you drop on it
-in the dashboard, or the records of one of your collections. Then name the bucket on a model call, and the passages
+**Your app can search content you give it, and answer from it.** Fill a **bucket** from the dashboard: files, folders
+and zips you drop, web pages and Git repositories it keeps current, or the records of your collections. Then name the bucket on a model call, and the passages
 that best match the question go into the prompt with it, so the answer comes from your content instead of the model's
 memory.
 
@@ -46,17 +46,22 @@ Calling it again changes nothing, so your admins' changes stick. You can also ma
 
 ## 2. Fill it
 
-Open the dashboard and choose **Search** in the header. Every bucket is listed with what's in it. Open yours, then:
+Open the dashboard and choose **Search** in the header. Every bucket is listed with what's in it. Open yours and add
+**sources**. Each one is a single row you can refresh, replace or remove, however many documents it brings:
 
-- **Drop files or whole folders** on it (Markdown, text or code), choose files, or paste text.
-- Or open **Settings** and have it **follow a collection**: pick the collection, the fields to search (the first is each
-  record's title) and, if you like, which records (`published = true`). It reads the records there now and keeps up as
-  they're saved and deleted.
-- Watch each document go from `waiting` to `ready` as it's embedded. A failed one shows why, with **Retry**.
-- **Try a search** to see what comes back, with each match's document, section and lines.
+- **Drop files, folders or zips** on it (Markdown, text or code inside), or choose files.
+- **Paste text.**
+- **Add a URL**: a web page, or a Git repository (`https://github.com/owner/repo`). Pick how often to read it again:
+  every hour, day or week. A repository brings its default branch's text files and its recent commits.
+- **Follow a collection**: pick the collection, the fields to search (the first is each record's title) and, if you
+  like, which records (`published = true`). It reads the records there now and keeps up as they're saved and deleted.
 
-Dropping a file with a name that's already there replaces it. The same file again costs nothing, and a changed one
-embeds only the parts that changed.
+Dropping something with the same name as a source replaces it: files that didn't change cost nothing, and files it no
+longer has are removed. For a new version under another name (`guide-v2.zip`), use **Upload a new version** on the old
+one's row. Watch each source go from `reading` to `ready` and its documents from `waiting` to embedded; open a row to
+see its documents. **Try a search** to see what comes back.
+
+Nothing is embedded twice: the same file in two buckets, or two buckets following one collection, cost one embedding.
 
 ## 3. Answer from it
 
@@ -77,7 +82,7 @@ const found = await $search.searchAsync({ buckets: ["help"], query: "export note
 
 ## Records and who sees them
 
-A bucket that follows a collection holds a copy of its records' text, so searching it skips the collection's API
+A collection source holds a copy of its records' text, so searching it skips the collection's API
 rules unless you say who's asking. Pass the signed-in user as `viewer` and matches from records they can't view are
 left out (`null` is a signed-out visitor):
 

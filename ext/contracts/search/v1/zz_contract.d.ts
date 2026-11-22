@@ -24,32 +24,46 @@ declare namespace contracts.search.v1 {
     title: string;
     description: string;
     owner: string;
-    source: Source | null;
   }
 
   /**
-   * UpdateInput changes a bucket. A Source with no collection stops following one (its documents stay).
+   * UpdateInput changes a bucket.
    */
   interface UpdateInput {
     name: string;
     title: string | null;
     description: string | null;
-    source: Source | null;
     maxDocuments: number | null;
     maxBytes: number | null;
   }
 
   /**
-   * AddInput is a document by name and text.
+   * BucketRef names a bucket, for operations on its sources.
+   */
+  interface BucketRef {
+    bucket: string;
+  }
+
+  /**
+   * AddInput is a file or pasted text.
    */
   interface AddInput {
     bucket: string;
     /**
-     * Name is the document's name in the bucket, usually its path ("guides/install.md"). Its extension picks the
+     * Name is the source's (and its document's) name, usually a file name ("install.md"). Its extension picks the
      * splitter: Markdown by headings, code and the rest by blank lines.
      */
     name: string;
     text: string;
+    /**
+     * Kind is file (the default) or text, for the dashboard.
+     */
+    kind: string;
+    /**
+     * Replace names an existing source this one replaces under the new name (a renamed new version: notes-v2.zip
+     * for notes-v1.zip). Without it, only a source of the same name is replaced.
+     */
+    replace: string;
   }
 
   interface ExtkitRawIn {
@@ -60,22 +74,111 @@ declare namespace contracts.search.v1 {
   }
 
   /**
+   * PutInput is one file of a dropped folder.
+   */
+  interface PutInput {
+    bucket: string;
+    /**
+     * the folder's name
+     */
+    source: string;
+    /**
+     * the file's path inside the folder
+     */
+    path: string;
+    text: string;
+    /**
+     * Replace names an existing source the folder replaces under its name (on its first file).
+     */
+    replace: string;
+  }
+
+  /**
+   * PruneInput ends a folder upload.
+   */
+  interface PruneInput {
+    bucket: string;
+    source: string;
+    /**
+     * every path the folder has now
+     */
+    keep: Array<string>;
+  }
+
+  /**
+   * URLInput is a web page or a Git repository.
+   */
+  interface URLInput {
+    bucket: string;
+    /**
+     * http or https
+     */
+    url: string;
+    /**
+     * Kind is page or git; "" decides from the URL (a .git ending, or github.com/gitlab.com/codeberg.org owner/repo).
+     */
+    kind: string;
+    /**
+     * hour, day, week; "" reads it only when added or refreshed
+     */
+    every: string;
+    /**
+     * Commits is how many recent commits of a repository become documents (subject, body, author, date, files; no
+     * diffs): 0 is the default (300), -1 none.
+     */
+    commits: number;
+    /**
+     * Exclude skips a repository's files whose path, or any folder in it, matches one of these patterns ("docs/old",
+     * "*.min.js"), beside what's always skipped (binaries, .git, node_modules, vendor, lockfiles).
+     */
+    exclude: Array<string>;
+  }
+
+  /**
+   * FollowInput is a collection.
+   */
+  interface FollowInput {
+    bucket: string;
+    collection: string;
+    /**
+     * Fields are searched; the first is each record's title.
+     */
+    fields: Array<string>;
+    /**
+     * a PocketBase filter, e.g. "published = true"
+     */
+    filter: string;
+  }
+
+  /**
+   * SourceRef names a source.
+   */
+  interface SourceRef {
+    bucket: string;
+    source: string;
+  }
+
+  /**
+   * RemoveInput names sources.
+   */
+  interface RemoveInput {
+    bucket: string;
+    sources: Array<string>;
+  }
+
+  /**
    * DocumentsInput picks a bucket's documents.
    */
   interface DocumentsInput {
     bucket: string;
     /**
+     * only this source's
+     */
+    source: string;
+    /**
      * only names starting with it
      */
     prefix: string;
-  }
-
-  /**
-   * RemoveInput names documents (none: all of them, for Reindex).
-   */
-  interface RemoveInput {
-    bucket: string;
-    names: Array<string>;
   }
 
   /**
@@ -97,19 +200,6 @@ declare namespace contracts.search.v1 {
      */
     prefix: string;
     viewer: Viewer | null;
-  }
-
-  /**
-   * Source makes a bucket follow one of the app's collections: each record (that Filter keeps) is a document named
-   * "<collection>/<record id>", made of Fields (the first one its title), added, replaced and removed as records are.
-   */
-  interface Source {
-    collection: string;
-    fields: Array<string>;
-    /**
-     * a PocketBase filter, e.g. "published = true"
-     */
-    filter: string;
   }
 
   /**
@@ -164,7 +254,7 @@ declare function onSearchBuckets(handler: (e: contracts.CallEvent<{}>) => void):
 declare function onSearchBucket(handler: (e: contracts.CallEvent<contracts.search.v1.Ref>) => void): void;
 /**
  * Ensure makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an
- * empty title, description, owner or source is filled in. Apps call it at startup for the bucket they need.
+ * empty title, description or owner is filled in. Apps call it at startup for the bucket they need.
  *
  * Runs on every ensure call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -173,7 +263,7 @@ declare function onSearchBucket(handler: (e: contracts.CallEvent<contracts.searc
  */
 declare function onSearchEnsure(handler: (e: contracts.CallEvent<contracts.search.v1.EnsureInput>) => void): void;
 /**
- * Update changes a bucket's title, description, source or limits (fields left out stay).
+ * Update changes a bucket's title, description or limits (fields left out stay).
  *
  * Runs on every update call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -191,9 +281,18 @@ declare function onSearchUpdate(handler: (e: contracts.CallEvent<contracts.searc
  */
 declare function onSearchDelete(handler: (e: contracts.CallEvent<contracts.search.v1.Ref>) => void): void;
 /**
- * Add puts a document in a bucket from its text, or replaces the document of that name. An unchanged document costs
- * nothing; a changed one embeds only its new chunks. It returns at once; the document is embedded in the background
- * (its status says how far it got).
+ * Sources lists a bucket's sources, by name.
+ *
+ * Runs on every sources call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchSources(handler: (e: contracts.CallEvent<contracts.search.v1.BucketRef>) => void): void;
+/**
+ * Add puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name.
+ * The same text again costs nothing; changed text embeds only its new chunks. It returns at once; the document is
+ * embedded in the background (its status says how far it got).
  *
  * Runs on every add call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -202,7 +301,8 @@ declare function onSearchDelete(handler: (e: contracts.CallEvent<contracts.searc
  */
 declare function onSearchAdd(handler: (e: contracts.CallEvent<contracts.search.v1.AddInput>) => void): void;
 /**
- * Upload is Add with the file as the request body: ?bucket=<name>&name=<path>.
+ * Upload adds a file sent as the request body: ?bucket=<name>&name=<file name>[&replace=<source>]. A .zip is one
+ * source with a document per text file inside it; anything else is a file source.
  *
  * Runs on every upload call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -211,16 +311,55 @@ declare function onSearchAdd(handler: (e: contracts.CallEvent<contracts.search.v
  */
 declare function onSearchUpload(handler: (e: contracts.CallEvent<contracts.search.v1.ExtkitRawIn>) => void): void;
 /**
- * Documents lists a bucket's documents, by name.
+ * Put adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder;
+ * Prune ends it.
  *
- * Runs on every documents call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * Runs on every put call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
  *
  * @group PocketOne
  */
-declare function onSearchDocuments(handler: (e: contracts.CallEvent<contracts.search.v1.DocumentsInput>) => void): void;
+declare function onSearchPut(handler: (e: contracts.CallEvent<contracts.search.v1.PutInput>) => void): void;
 /**
- * Remove deletes documents from a bucket by name.
+ * Prune removes the documents of a folder source that aren't in Keep: the files the folder no longer has.
+ *
+ * Runs on every prune call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchPrune(handler: (e: contracts.CallEvent<contracts.search.v1.PruneInput>) => void): void;
+/**
+ * AddURL adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads
+ * it in the background; Every keeps it current.
+ *
+ * Runs on every add_u_r_l call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchAddURL(handler: (e: contracts.CallEvent<contracts.search.v1.URLInput>) => void): void;
+/**
+ * Follow adds one of the app's collections as a source (named by the collection): each record the filter keeps is
+ * a document, kept in sync as records are saved and deleted.
+ *
+ * Runs on every follow call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchFollow(handler: (e: contracts.CallEvent<contracts.search.v1.FollowInput>) => void): void;
+/**
+ * Refresh reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip.
+ *
+ * Runs on every refresh call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchRefresh(handler: (e: contracts.CallEvent<contracts.search.v1.SourceRef>) => void): void;
+/**
+ * Remove takes sources out of a bucket, with their documents.
  *
  * Runs on every remove call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
@@ -229,15 +368,14 @@ declare function onSearchDocuments(handler: (e: contracts.CallEvent<contracts.se
  */
 declare function onSearchRemove(handler: (e: contracts.CallEvent<contracts.search.v1.RemoveInput>) => void): void;
 /**
- * Reindex splits and embeds a bucket's documents again (or only the named ones), e.g. after an error; a bucket
- * that follows a collection reads its records again.
+ * Documents lists a bucket's documents (or one source's), by source and name.
  *
- * Runs on every reindex call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * Runs on every documents call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.
  *
  * @group PocketOne
  */
-declare function onSearchReindex(handler: (e: contracts.CallEvent<contracts.search.v1.RemoveInput>) => void): void;
+declare function onSearchDocuments(handler: (e: contracts.CallEvent<contracts.search.v1.DocumentsInput>) => void): void;
 /**
  * Search returns the chunks that best match a query across the buckets named, best first.
  *

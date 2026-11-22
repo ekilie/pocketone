@@ -172,6 +172,7 @@ func (e *Enrich) UnmarshalJSON(b []byte) error {
 // Passage is a piece of a search bucket that was added to a prompt, and where it came from.
 type Passage struct {
 	Bucket   string  `json:"bucket"`
+	Source   string  `json:"source,omitempty"`
 	Document string  `json:"document"`
 	Heading  string  `json:"heading,omitempty"`
 	Text     string  `json:"text"`
