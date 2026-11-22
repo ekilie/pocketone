@@ -124,8 +124,14 @@ func (vm *VM) nativeValue(fn nativeGo, ctor bool) JSValue {
 	return C.avm_new_func(vm.a, uint32(h), int32(ctorBit))
 }
 
+// onSetGo, when set (tests only), sees every Go value given to JS as a global: the shared-map audit walks them.
+var onSetGo func(name string, v any)
+
 // setGo sets a global to a Go value, enumerable like goja's vm.Set.
 func (vm *VM) setGo(name string, v any) {
+	if onSetGo != nil {
+		onSetGo(name, v)
+	}
 	jv, err := vm.toJS(reflect.ValueOf(v))
 	if err != nil {
 		panic(err)
