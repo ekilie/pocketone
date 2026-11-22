@@ -41,14 +41,19 @@ type File struct {
 	URL  string `json:"url,omitempty"`
 }
 
-// Usage is what a call used, each field only when the provider says.
+// Usage is what a call used, each field only when it's known.
 type Usage struct {
-	InputTokens     int      `json:"inputTokens,omitempty"`
-	OutputTokens    int      `json:"outputTokens,omitempty"`
-	CachedTokens    int      `json:"cachedTokens,omitempty"`    // input tokens that came from the provider's prompt cache
-	ReasoningTokens int      `json:"reasoningTokens,omitempty"` // output tokens the model spent thinking
-	Seconds         float64  `json:"seconds,omitempty"`         // audio or video length billed
-	CostUSD         *float64 `json:"costUSD,omitempty"`         // what the provider charged, when it says
+	InputTokens     int     `json:"inputTokens,omitempty"`
+	OutputTokens    int     `json:"outputTokens,omitempty"`
+	CachedTokens    int     `json:"cachedTokens,omitempty"`    // input tokens that came from the provider's prompt cache
+	ReasoningTokens int     `json:"reasoningTokens,omitempty"` // output tokens the model spent thinking
+	Seconds         float64 `json:"seconds,omitempty"`         // audio or video length billed
+	// CostUSD is what the call cost in US dollars: what the provider charged when it says (OpenRouter on every call,
+	// Vultr for media), else an estimate from the model's listed prices and what the call used (CostEstimated). Nil
+	// when neither is known (no listed prices, or a unit the estimate doesn't count).
+	CostUSD *float64 `json:"costUSD,omitempty"`
+	// CostEstimated is true when CostUSD was worked out from listed prices rather than reported by the provider.
+	CostEstimated bool `json:"costEstimated,omitempty"`
 }
 
 // Price is one of a model's listed prices: USD per Unit ("1M input tokens", "image", "second", "1M characters").

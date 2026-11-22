@@ -60,6 +60,7 @@ func (s textService) answer(ctx context.Context, in textv1.CompleteInput, onDelt
 	if errors.Is(err, errStopped) {
 		res.StopReason = "cancelled"
 	}
+	s.r.fillCost(ctx, t, &res.Usage, used{})
 	return res, nil
 }
 
@@ -119,7 +120,11 @@ func (s imageService) run(ctx context.Context, in imagev1.GenerateInput, edit []
 	if res.Files == nil {
 		res.Files = []llmc.File{}
 	}
-	return res, providerError(t.p, err)
+	if err != nil {
+		return res, providerError(t.p, err)
+	}
+	s.r.fillCost(ctx, t, &res.Usage, used{files: len(res.Files)})
+	return res, nil
 }
 
 func (s imageService) Generate(ctx context.Context, _ extkit.Auth, in imagev1.GenerateInput) (imagev1.Result, error) {
@@ -151,7 +156,11 @@ func (s speechService) Speak(ctx context.Context, _ extkit.Auth, in speechv1.Spe
 	}
 	res, err := t.d.speak(ctx, t.model, in)
 	res.Model = t.ref()
-	return res, providerError(t.p, err)
+	if err != nil {
+		return res, providerError(t.p, err)
+	}
+	s.r.fillCost(ctx, t, &res.Usage, used{chars: utf8.RuneCountInString(in.Text)})
+	return res, nil
 }
 
 func (s speechService) Voices(ctx context.Context, _ extkit.Auth, in speechv1.VoicesInput) (speechv1.VoiceList, error) {
@@ -184,7 +193,11 @@ func (s transcribeService) Transcribe(ctx context.Context, _ extkit.Auth, in tra
 	}
 	res, err := t.d.transcribe(ctx, t.model, in)
 	res.Model = t.ref()
-	return res, providerError(t.p, err)
+	if err != nil {
+		return res, providerError(t.p, err)
+	}
+	s.r.fillCost(ctx, t, &res.Usage, used{})
+	return res, nil
 }
 
 func (s transcribeService) Models(ctx context.Context, _ extkit.Auth, in llmc.ModelsInput) (llmc.Models, error) {
@@ -208,7 +221,11 @@ func (s embedService) Embed(ctx context.Context, _ extkit.Auth, in embedv1.Embed
 	if res.Vectors == nil {
 		res.Vectors = [][]float64{}
 	}
-	return res, providerError(t.p, err)
+	if err != nil {
+		return res, providerError(t.p, err)
+	}
+	s.r.fillCost(ctx, t, &res.Usage, used{})
+	return res, nil
 }
 
 func (s embedService) Models(ctx context.Context, _ extkit.Auth, in llmc.ModelsInput) (llmc.Models, error) {
@@ -234,7 +251,11 @@ func (s jobService) create(ctx context.Context, model, wait string, in jobInput)
 		return llmc.Job{}, providerError(t.p, err)
 	}
 	j.ID, j.Model = jobID(t.p, j.ID), t.ref()
-	return s.r.waitJob(ctx, t, s.kind, j, wait)
+	j, err = s.r.waitJob(ctx, t, s.kind, j, wait)
+	if err == nil && j.Status == llmc.JobDone {
+		s.r.fillCost(ctx, t, &j.Usage, used{files: len(j.Files)})
+	}
+	return j, err
 }
 
 func (s jobService) get(ctx context.Context, in llmc.JobRef) (llmc.Job, error) {

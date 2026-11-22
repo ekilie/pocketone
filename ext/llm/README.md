@@ -101,6 +101,11 @@ when it keeps one (it may expire). Audio to transcribe is sent the same way.
 resolves once the job is done, its `files` included. The id names the provider
 (`vultr:music_02a2…`), so `get` finds it again after a restart; the provider keeps the job, not your app.
 
+**Cost:** every result's `usage.costUSD` is what the call cost in US dollars: what the provider charged when it says
+(OpenRouter on every call, Vultr for media), else worked out from the model's listed prices and what the call used
+(tokens, cached tokens, pictures, seconds, characters), with `usage.costEstimated` true. It's left out when the model
+lists no prices, or only in units it can't count.
+
 **Errors** have a code: `not_configured` (no providers yet), `unknown_model` (no model named, or no provider by that
 name), `not_supported` (that provider type doesn't do this kind), `provider` (the provider's own error, its message
 kept, with the provider's name in front), `timeout`.

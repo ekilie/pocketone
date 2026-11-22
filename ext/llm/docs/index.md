@@ -87,5 +87,7 @@ A failed call throws an error with a code:
 
 ## Costs
 
-Every call is billed by your provider, on your account. The answer's `usage` says what it used, and `usage.costUSD` what
-it cost when the provider says (OpenRouter always does; Vultr does for media).
+Every call is billed by your provider, on your account. Every answer's `usage` says what it used, and `usage.costUSD`
+what it cost in US dollars: what the provider charged when it says (OpenRouter always does; Vultr does for media), else
+worked out from the model's listed prices, with `usage.costEstimated` true. It's left out only when the model lists no
+prices PocketOne can count.

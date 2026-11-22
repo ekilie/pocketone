@@ -73,5 +73,6 @@ Video works the same with `$llm.video` (on Vultr and OpenRouter); `image` gives 
 
 ## What it costs
 
-Media is billed per picture, per second or per character by your provider. `usage.costUSD` says what a call cost when
-the provider reports it, and `$llm.image.modelsAsync()` and the others list each model's prices.
+Media is billed per picture, per second or per character by your provider. `usage.costUSD` says what a call cost: the provider's figure
+when it reports one, else estimated from the model's listed prices (`usage.costEstimated`). `$llm.image.modelsAsync()` and
+the others list each model's prices.

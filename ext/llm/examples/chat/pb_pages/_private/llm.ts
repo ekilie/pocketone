@@ -63,45 +63,6 @@ function sections(name: string, text: string): Section[] {
   return out
 }
 
-/**
- * What an answer cost, in US dollars: the provider's own figure when it reports one (OpenRouter does on every answer),
- * else an estimate from the model's listed prices and the tokens used (exact: false). Undefined when neither is known.
- */
-type Cost = { usd: number; exact: boolean } | undefined
-
-const prices: { [model: string]: { input: number; output: number } | null } = {} // per token, by provider/model
-
-/** The model's per-token input and output prices, from its provider's model list (read once per model). */
-async function priceOf(model: string) {
-  if (model in prices) return prices[model]
-  const provider = model.split('/')[0]
-  const list = await $llm.text.modelsAsync({ provider })
-  const m = list.models.find((x) => x.id === model)
-  let input = 0, output = 0
-  for (const p of m?.prices || []) {
-    const unit = p.unit.toLowerCase()
-    const perToken = /\b(1m|m)\b/.test(unit) ? p.usd / 1e6 : p.usd
-    if (unit.includes('cached')) continue
-    if (/input|prompt/.test(unit)) input = perToken
-    else if (/output|completion/.test(unit)) output = perToken
-  }
-  prices[model] = input || output ? { input, output } : null
-  return prices[model]
-}
-
-/** The answer's cost: the provider's, or estimated from the listed prices. */
-async function costOf(model: string, usage: LlmUsage): Promise<Cost> {
-  if (usage.costUSD != null) return { usd: usage.costUSD, exact: true }
-  try {
-    const p = await priceOf(model)
-    if (!p) return undefined
-    const cached = usage.cachedTokens || 0
-    return { usd: ((usage.inputTokens || 0) - cached) * p.input + (usage.outputTokens || 0) * p.output, exact: false }
-  } catch {
-    return undefined
-  }
-}
-
 let cached: Knowledge | undefined // a module loads once per app (per runtime in the pool), so this lasts across requests
 
 /**
@@ -181,7 +142,6 @@ export async function answer(
     answer: res.text.trim(),
     model: res.model,
     usage: res.usage,
-    cost: await costOf(res.model, res.usage),
     ms: Date.now() - started,
     armedWith: ['preamble.md', ...new Set(context.map((s) => s.file))],
     sources: context.map((s) => ({ title: s.title, url: s.source })),
