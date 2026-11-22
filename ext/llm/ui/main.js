@@ -177,8 +177,8 @@
         const money = (micro) => "$" + (micro / 1e6).toFixed(micro && micro < 10000 ? 4 : 2);
 
         function limitRow(l, i) {
-            const pick = (options, value, onpick, required = true) => app.components.select({
-                required, options: () => options, value: () => value, onchange: (sel) => sel?.[0] && onpick(sel[0].value),
+            const pick = (options, value, onpick) => app.components.select({
+                required: true, options: () => options, value: () => value, onchange: (sel) => sel?.[0] && onpick(sel[0].value),
             });
             return t.div(
                 { className: "grid m-b-sm" },
@@ -189,10 +189,10 @@
                     t.input({ type: "number", min: 0, step: l.metric === "cost" ? "0.01" : "1", required: true, value: l.amount,
                         onchange: (e) => setLimit(i, { amount: e.target.value }) }))),
                 t.div({ className: "col-md-3" }, field("Per", pick(WINDOWS, l.window, (v) => setLimit(i, { window: v })))),
-                t.div({ className: "col-md-4" }, field("Only",
+                t.div({ className: "col-md-4" }, field("Kind",
                     pick([{ value: "", label: "Every kind" }, ...(data.view?.kinds || []).map((k) => ({ value: k, label: k }))],
-                        l.kind, (v) => setLimit(i, { kind: v }), false))),
-                t.div({ className: "col-md-6" }, field("Only the model",
+                        l.kind, (v) => setLimit(i, { kind: v })))),
+                t.div({ className: "col-md-6" }, field("Model",
                     t.input({ type: "text", value: l.model, placeholder: "every model (or provider/model)", onchange: (e) => setLimit(i, { model: e.target.value }) }))),
                 t.div({ className: "col-md-2 flex" },
                     t.button({ type: "button", className: "btn sm transparent danger m-l-auto", onclick: () => (data.limits = data.limits.filter((_, j) => j !== i)),
