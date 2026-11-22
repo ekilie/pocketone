@@ -125,8 +125,8 @@ in the message, or call the contract over HTTP and check the code: refused calls
 say "4 questions left today" before anyone hits a refusal ([Spend and the ledger](spend.md#whats-left)):
 
 ```ets
-<% const left = $llm.for(ctx).ledger.remaining()[0] %>
-<% if (left) { %><p><%= left.left %> of <%= left.amount %> left today</p><% } %>
+<%% const left = $llm.for(ctx).ledger.remaining()[0] %>
+<%% if (left) { %><p><%%= left.left %> of <%%= left.amount %> left today</p><%% } %>
 ```
 
 ## In Go
