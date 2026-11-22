@@ -8,6 +8,9 @@ PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, back
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
+The set also gives every app's superuser dashboard PocketOne's logo and favicon, the running PocketOne version in the
+footer (linked to its releases) and a Docs link to pocketone.dev/docs.
+
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
 ## Install
