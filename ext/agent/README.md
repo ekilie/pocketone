@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.2
+version: 0.0.3
 title: "Agent"
 group: binary
 summary: "A language model for your app: your own API, or a small model PocketOne runs itself in the same binary."

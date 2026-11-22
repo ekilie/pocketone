@@ -7,6 +7,12 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+## 0.1.2 (2026-11-21)
+
+### Fixed
+
+- An app no longer crashes with `fatal error: concurrent map iteration and map write` when a JS hook gets a value (a record, a collection list, ...) that another goroutine is writing. The JS memory limit measured each Go call's result by walking every map it could reach, including maps other goroutines own; now types with their own sizer are measured under their own locks, structs holding a mutex are charged their size, and maps behind a pointer are charged from their length. This crashed the PocketHost mothership on 2026-11-21.
+
 ## 0.1.1 (2026-11-20)
 
 ### Fixed
