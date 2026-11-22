@@ -64,7 +64,7 @@ release:
   header: |
     {{ with index .Env "POCKETONE_BLOG_URL" }}**[Read the announcement on the blog]({{ . }})**
 
-    {{ end }}    ## Install or upgrade
+    {{ end }}## Install or upgrade
 
     **New install on macOS or Linux:**
 
