@@ -16,9 +16,9 @@ func tablePrefix(name string) string { return "_" + strings.ReplaceAll(name, "-"
 
 var quotedTable = regexp.MustCompile("[\"`](_[a-z0-9_]+)[\"`]")
 
-// checkTablePrefixes: conformance sees one extension at a time, so it can't tell that `_agent_chat_x`, made by agent,
-// sits under agent-chat's prefix. When one extension's prefix starts with another's (agent's `_agent_` and
-// agent-chat's `_agent_chat_`), the shorter one may not name a table under the longer one's prefix.
+// checkTablePrefixes: conformance sees one extension at a time, so it can't tell that `_llm_chat_x`, made by llm,
+// sits under llm-chat's prefix. When one extension's prefix starts with another's (llm's `_llm_` and
+// llm-chat's `_llm_chat_`), the shorter one may not name a table under the longer one's prefix.
 func checkTablePrefixes() []string {
 	entries, _ := os.ReadDir("ext")
 	var names []string

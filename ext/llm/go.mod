@@ -16,6 +16,7 @@ require (
 	ganigeorgiev.com/pocketbase/dbx v1.13.0
 	ganigeorgiev.com/pocketbase/pocketbase v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/contracts v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/devusers v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/jsvm v0.0.0-00010101000000-000000000000
 )
@@ -54,3 +55,5 @@ require (
 	modernc.org/memory v1.12.1 // indirect
 	modernc.org/sqlite v1.62.0 // indirect
 )
+
+replace pocketone.dev/ext/devusers => ../devusers

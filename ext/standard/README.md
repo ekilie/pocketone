@@ -27,7 +27,7 @@ app := set.NewApp(pocketbase.Config{}, jsvm.Config{HooksDir: "pb_hooks"})
 app.Start()
 ```
 
-`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$apiTokens`, `$bulkmail`, `$wasm`, `$agent`) and resolves
+`NewApp` registers the members, loads `pb_hooks` with their JS APIs (`$mcp`, `$apiTokens`, `$bulkmail`, `$wasm`, `$llm`) and resolves
 their contracts. On an app you built yourself, call `set.Register(app, jsvmConfig)` instead.
 
 To build the app from `pocketone.yaml`'s `app` section (data folder, dev mode, hooks and migrations folders, JS engine
@@ -68,7 +68,7 @@ fields they cover.
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, agent, agent-chat
+standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, llm, llm-chat
 standard: api-tokens/v1 ← api-tokens
 ```
 

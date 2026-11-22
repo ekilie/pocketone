@@ -69,8 +69,8 @@ no runtime overhead.
 | **[Bulk Mail](ext/bulkmail/README.md)** | Campaigns to your app's own users, with audiences from a collection, a view or SQL. | On; sends nothing until you start a campaign |
 | **[S3 Redirect](ext/s3redirect/README.md)** | File downloads as short-lived signed S3 redirects. | On when S3 file storage is on |
 | **[S3 Fallback](ext/s3-fallback/README.md)** | A default bucket for uploads and backups when an app hasn't set its own S3; on a multisite host, each instance gets its own folder. | Off until the `storage` section |
-| **[Agent](ext/agent/README.md)** | A language model for your app: your own API, or a small model PocketOne runs itself. | Off until you name a model or an API |
-| **[Agent Chat](ext/agent-chat/README.md)** | Stored conversations with your app's language model, with history and summaries. | On (needs Agent) |
+| **[LLM](ext/llm/README.md)** | Cloud models for your app: text, pictures, speech, transcription, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API. | On; does nothing until you add a provider in Settings → LLM |
+| **[LLM Chat](ext/llm-chat/README.md)** | Stored conversations with a language model, with history and summaries. | On (needs LLM) |
 | **[WASM](ext/wasm/README.md)** | Go, Rust or Zig modules called from page code, each a closed box. | On when `pb_hooks` holds a `.pb.wasm` file |
 | **[Cache](ext/cache/README.md)** | Cache buckets for every app in the process from one shared store. | On |
 | **[Templates](ext/templates/README.md)** | Theme an extension's own pages (the OAuth sign-in screens). | On |

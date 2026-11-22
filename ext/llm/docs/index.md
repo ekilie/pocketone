@@ -1,0 +1,90 @@
+---
+title: AI in your app
+section: New in PocketOne
+description: "$llm gives your pages and Go code cloud models: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API, on your own keys."
+---
+
+# AI in your app
+
+**Your app can call cloud models.** `$llm` writes text, draws pictures, reads text aloud, writes down what's said in
+audio, makes music and video, and turns text into vectors for search. You bring the provider accounts and keys;
+PocketOne connects them to your pages' code and your Go code.
+
+```ts
+const r: LlmTextAnswer = $llm.text.complete({
+  model: "vultr/glm-5.2",
+  prompt: "Summarize in one sentence: " + record.getString("body"),
+  reasoning: "off",
+})
+// r.text is the summary
+```
+
+```go
+r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
+	Model: "vultr/glm-5.2", Prompt: "Summarize in one sentence: " + record.GetString("body"), Reasoning: "off"})
+// r.Text is the summary
+```
+
+The examples show each thing in TypeScript, as [PocketPages](../../pages/docs/overview.md) page code (`+api.ts`,
+`+page.ts`), and in Go. The Go examples call the contract packages (`textv1` is
+`pocketone.dev/ext/contracts/llm/text/v1`) with a `context.Context` named `ctx`.
+
+## Add a provider
+
+Open your dashboard, go to **Settings → LLM** and add a provider:
+
+- **Vultr** (Serverless Inference): every kind, music and video included. Paste your API key.
+- **Cloudflare Workers AI**: text, pictures, speech, transcription and embeddings, with a free daily allowance. Enter
+  your account ID and a token with Workers AI permission.
+- **OpenRouter**: one key for hundreds of models. Pictures need credits on your OpenRouter account; small text models
+  run on its free allowance.
+- **OpenAI-compatible API**: OpenAI, Groq, Together, or a model on your own machine with Ollama or llama-server. Give the
+  endpoint with its version path (`http://localhost:11434/v1` for Ollama).
+
+Give each provider a short name: it's how your code picks it. Press **Test**, then **Save**.
+
+## Name a model
+
+Every call names its model as `provider/model`: the name you gave the provider, a slash, and the provider's own id for
+the model. With providers named `vultr`, `cf` and `or`:
+
+| Model | Means |
+|---|---|
+| `vultr/glm-5.2` | Vultr's `glm-5.2` |
+| `cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast` | Workers AI's Llama 3.3 |
+| `or/black-forest-labs/flux.2-klein-4b` | OpenRouter's FLUX.2 Klein |
+
+To see what you can use, ask: `$llm.text.models()`, `$llm.image.models()` and so on list each provider's models of that
+kind, with their prices where the provider lists them.
+
+Keep model names in one place in your app (a `_private/models.ts` module, say), so changing provider is one edit.
+
+## What you can do
+
+- [Structured answers](guides/structured.md): get JSON back that matches a schema.
+- [Streaming answers](guides/streaming.md): show an answer as it's written.
+- [Pictures, speech and music](guides/media.md): generate files and save them on records.
+- [Conversations](guides/conversations.md): chats that remember, with LLM Chat.
+
+## Thinking models
+
+Many models think before they answer, and their thinking counts toward `maxTokens`. For short jobs (a label, a title,
+some JSON) say `reasoning: "off"`; otherwise a short `maxTokens` can be spent entirely on thinking and the answer comes
+back empty. For hard questions, `"high"` lets the model think longer. A model that doesn't think ignores it.
+
+## When something goes wrong
+
+A failed call throws an error with a code:
+
+| Code | Means |
+|---|---|
+| `not_configured` | No provider in Settings → LLM yet. |
+| `unknown_model` | No model named, or no provider by that name. |
+| `not_supported` | That kind of provider doesn't do this (music on Cloudflare, say). |
+| `provider` | The provider said no: a wrong key, no credits, a model it doesn't have. Its message is kept, with your provider's name in front. |
+| `timeout` | The provider didn't answer in time. |
+
+## Costs
+
+Every call is billed by your provider, on your account. The answer's `usage` says what it used, and `usage.costUSD` what
+it cost when the provider says (OpenRouter always does; Vultr does for media).

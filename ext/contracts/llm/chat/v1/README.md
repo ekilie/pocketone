@@ -1,63 +1,61 @@
 ---
 owners: ["@benallfree"]
-summary: "Stored conversations with the app's language model: start a chat, send to it, read its history, find and forget chats by the app's own meta."
+summary: "Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta."
 ---
 
-# agent.chat/v1
+# llm.chat/v1
 
-A chat is a conversation with the app's language model that the provider stores: the app keeps only its id. Each
-question goes to [agent/v1](../../v1/README.md) with the chat's recent messages and a summary of the older ones, and
-both turns are saved. Chats aren't tied to users: an app that has them puts the user's id in the chat's `meta`, lists
-by it, and decides who may read what.
+A chat is a conversation with a language model that the provider stores: the app keeps only its id. Each question goes
+to [llm.text/v1](../../text/v1/README.md) with the chat's recent messages and a summary of the older ones, and both
+turns are saved. The cloud providers keep no conversations themselves (every call sends the whole conversation), which
+is what this contract is for. Chats aren't tied to users: an app that has them puts the user's id in the chat's `meta`,
+lists by it, and decides who may read what.
 
-A wire contract at `/api/_c/agent.chat/v1` ([chat.go](chat.go)), one provider. It requires agent/v1. The
-[agent-chat](../../../../agent-chat/README.md) extension provides it.
+A wire contract at `/api/_c/llm.chat/v1` ([chat.go](chat.go)), one provider. It requires llm.text/v1. The
+[llm-chat](../../../../llm-chat/README.md) extension provides it.
 
 ## Use
 
-From `pb_hooks` (the [agent](../../../../agent/README.md) extension binds these on `$agent` when a provider runs):
+In page code (the [llm](../../../../llm/README.md) extension binds these on `$llm.chat` when a provider runs):
 
 ```js
-const id = $agent.newChat({ title: "Support", meta: { user: e.auth.id } })
-const chat = $agent.chat(id, { system: preamble, context: (q) => findExcerpts(q) })
+const id = $llm.chat.new({ title: "Support", meta: { user: ctx.auth.id } })
+const chat = $llm.chat.open(id, { model: "vultr/glm-5.2", system: preamble, context: (q) => findExcerpts(q) })
 const answer = chat.send(question)            // or await chat.send.async(question), or send(q, { onText })
 chat.history({ limit: 20 })                   // [{ id, role, content, created }], oldest first
-$agent.chats.list({ meta: { user: e.auth.id } })
-$agent.chats.forget({ meta: { user: deletedUserId } })
+$llm.chat.list({ meta: { user: ctx.auth.id } })
+$llm.chat.forget({ meta: { user: deletedUserId } })
 ```
 
 Over HTTP (a superuser, or a token with the `chat` scope):
 
 | Operation | HTTP (`POST`) | Body | Token scope |
 |---|---|---|---|
-| New | `/api/_c/agent.chat/v1/new` | `{"title": "", "meta": {}}` | `chat` |
-| Send | `/api/_c/agent.chat/v1/send` | `{"id": "...", "text": "...", "system": "", "window": 12, "summarizeEvery": 6, "context": ""}` | `chat` |
-| Send, streamed | `/api/_c/agent.chat/v1/send-stream` | as Send; server-sent events of agent/v1 chunks | `chat` |
-| Get | `/api/_c/agent.chat/v1/get` | `{"id": "..."}` | `chat:read` |
-| History | `/api/_c/agent.chat/v1/history` | `{"id": "...", "limit": 0, "before": ""}` | `chat:read` |
-| Update | `/api/_c/agent.chat/v1/update` | `{"id": "...", "title": "...", "meta": {}}` | `chat` |
-| List | `/api/_c/agent.chat/v1/list` | `{"meta": {"user": "..."}, "limit": 50, "offset": 0}` | `chat:read` |
-| Forget | `/api/_c/agent.chat/v1/forget` | `{"id": "..."}` | `chat` |
-| Forget by meta | `/api/_c/agent.chat/v1/forget-where` | `{"meta": {"user": "..."}}` | `chat` |
+| New | `/api/_c/llm.chat/v1/new` | `{"title": "", "meta": {}}` | `chat` |
+| Send | `/api/_c/llm.chat/v1/send` | `{"id": "...", "text": "...", "model": "vultr/glm-5.2", "system": "", "window": 12, "summarizeEvery": 6, "context": ""}` | `chat` |
+| Send, streamed | `/api/_c/llm.chat/v1/send-stream` | as Send; server-sent events of llm.text/v1 chunks | `chat` |
+| Get | `/api/_c/llm.chat/v1/get` | `{"id": "..."}` | `chat:read` |
+| History | `/api/_c/llm.chat/v1/history` | `{"id": "...", "limit": 0, "before": ""}` | `chat:read` |
+| Update | `/api/_c/llm.chat/v1/update` | `{"id": "...", "title": "...", "meta": {}}` | `chat` |
+| List | `/api/_c/llm.chat/v1/list` | `{"meta": {"user": "..."}, "limit": 50, "offset": 0}` | `chat:read` |
+| Forget | `/api/_c/llm.chat/v1/forget` | `{"id": "..."}` | `chat` |
+| Forget by meta | `/api/_c/llm.chat/v1/forget-where` | `{"meta": {"user": "..."}}` | `chat` |
 
-`send` answers `{"answer": <agent/v1's result>, "summarized": bool}`. A chat is `{id, title, summary, meta, messages,
-created, updated}`. `meta` filters match each top-level key exactly (strings, numbers, true/false, null). `context` is
-sent after the question; `history` shows the question alone, and later turns send it with its context again, so each
-prompt starts exactly like the last one did (the prompt cache and the chat's thread).
-Errors: `not_found` (404) for an unknown chat, and agent/v1's.
+`send` needs `model` and answers `{"answer": <llm.text/v1's result>, "summarized": bool}`; it also takes `reasoning`,
+`schema`, `maxTokens` and `temperature`. A chat is `{id, title, summary, meta, messages, created, updated}`. `meta`
+filters match each top-level key exactly (strings, numbers, true/false, null). `context` is sent after the question;
+`history` shows the question alone, and later turns send it with its context again, so each prompt starts exactly like
+the last one did (which the providers' prompt caches reward). Errors: `not_found` (404) for an unknown chat, and
+llm.text/v1's.
 
 ## Provide
 
 Implement `chatv1.Chats` and provide it in `Register`. Keep chats in the app's own database (each instance of a host
-has its own), call agent/v1 for answers with the chat's id as the `thread`, and forget the thread with the chat.
+has its own) and call llm.text/v1 for answers and summaries.
 
 ## Extensions
 
 <!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
-
-| Extension | |
-|---|---|
-| [agent-chat](../../../../../ext/agent-chat/README.md) | provides |
 
 <!-- /contracts:index -->
 

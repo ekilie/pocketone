@@ -1,86 +1,88 @@
 ---
 owners: ["@benallfree"]
 version: 0.0.2
-title: "Agent Chat"
+title: "LLM Chat"
 group: binary
-summary: "Stored conversations with your app's language model: $agent.chat(id).send(text), with history and summaries."
+summary: "Stored conversations with a language model: $llm.chat.open(id).send(text), with history and summaries."
 ---
 
-# Agent Chat
+# LLM Chat
 
-Agent Chat keeps conversations with your app's language model. Start a chat, keep its id, and send it questions:
-it stores every turn, sends the model the recent ones with each new question, folds older ones into a summary so long
-chats stay fast, and with the built-in model keeps each chat's state between turns, so a turn reads only what's new.
+LLM Chat keeps conversations with a language model. Cloud models remember nothing between calls, so every turn has to
+send the conversation again; LLM Chat stores it for you. Start a chat, keep its id, and send it questions: it stores
+every turn, sends the model the recent ones with each new question, and folds older ones into a summary so long chats
+stay quick and cheap.
 
 ```ts
-const id: string = $agent.newChat({ meta: { user: ctx.auth.id } })
-const answer: AgentAnswer = $agent.chat(id, { system: preamble }).send("How do I export my notes?")
+const id: string = $llm.chat.new({ meta: { user: ctx.auth.id } })
+const answer: LlmTextAnswer = $llm.chat.open(id, { model: "vultr/glm-5.2", system: preamble }).send("How do I export my notes?")
 ```
 
 In Go:
 
 ```go
-chats := chatv1.Contract.Must(app) // agent.chat/v1, from pocketone.dev/ext/contracts/agent/chat/v1
+chats := chatv1.Contract.Must(app) // llm.chat/v1, from pocketone.dev/ext/contracts/llm/chat/v1
 c, err := chats.New(ctx, extkit.Internal, chatv1.NewInput{Meta: json.RawMessage(`{"user":"` + e.Auth.Id + `"}`)})
-res, err := chats.Send(ctx, extkit.Internal, chatv1.SendInput{ID: c.ID, System: preamble, Text: "How do I export my notes?"})
+res, err := chats.Send(ctx, extkit.Internal, chatv1.SendInput{ID: c.ID, Model: "vultr/glm-5.2", System: preamble, Text: "How do I export my notes?"})
 ```
 
-It needs the [Agent](../agent/README.md) extension (agent/v1), which answers. Chats aren't tied to users: your app
+It needs the [LLM](../llm/README.md) extension (llm.text/v1), which answers. Chats aren't tied to users: your app
 keeps the id (on its own records, or in its frontend) and may put anything in a chat's `meta` to find it again.
 
 ## Install
 
-Agent Chat is built into `pocketone` and on by default, in every app and every instance of a host (a standard
-member). In your own Go build, next to Agent:
+LLM Chat is built into `pocketone` and on by default, in every app and every instance of a host (a standard member).
+In your own Go build, next to LLM:
 
 ```go
-extkit.Setup(app, []extkit.Extension{agent.New(), agentchat.New()}, nil, nil)
+extkit.Setup(app, []extkit.Extension{llm.New(), llmchat.New()}, nil, nil)
 ```
 
-The module is `pocketone.dev/ext/agent-chat`. Its two collections come from its own migration,
-`0001_chats` in [schema.go](schema.go), which runs on the first start (`pocketone extensions migrations` lists it).
-They stay empty until your app starts a chat.
+The module is `pocketone.dev/ext/llm-chat`. Its two collections come from its own migration, `0001_chats` in
+[schema.go](schema.go), which runs on the first start (`pocketone extensions migrations` lists it). They stay empty
+until your app starts a chat.
 
 ## Configure
 
-There's nothing to configure. Each send can say how much of the chat to send (below). Turn it off on a single app with
-`agent-chat: {enabled: false}` in pocketone.yaml (on a host, an instance's `extensions.agent-chat`); its collections
-and their data stay. `pocketone extensions migrate down agent-chat` removes them, data included.
+There's nothing to configure. Each send names its model and can say how much of the chat to send (below). Turn it off
+on a single app with `llm-chat: {enabled: false}` in pocketone.yaml (on a host, an instance's `extensions.llm-chat`);
+its collections and their data stay. `pocketone extensions migrate down llm-chat` removes them, data included.
 
 ## Use
 
-`$agent.newChat({ title?, meta? })` returns a new chat's id. `$agent.chat(id, options)` returns the chat:
+`$llm.chat.new({ title?, meta? })` returns a new chat's id. `$llm.chat.open(id, options)` returns the chat:
 
 | Method | What it does |
 |---|---|
-| `send(text, { onText?, onWait?, schema? })` | Asks, saves both turns, returns agent/v1's answer (`text`, `usage`, ...). With `onText`, streams the answer to it as it's written. |
-| `send.async(text, { schema? })` | The same in async page code, waiting for a model that's still loading. |
+| `send(text, { onText?, onReasoning?, schema?, ...options })` | Asks, saves both turns, returns llm.text/v1's answer (`text`, `usage`, ...). With `onText`, streams the answer to it as it's written. |
+| `send.async(text, { schema?, ...options })` | The same in async page code. |
 | `history({ limit?, before? })` | The chat's messages, oldest first: `{ id, role, content, created }`. |
 | `summary()` | What the older messages were folded into. |
 | `title(text?)`, `meta(object?)` | Read, or set and return. |
-| `forget()` | Deletes the chat, its messages and the model's state for it. |
+| `forget()` | Deletes the chat and its messages. |
 
-Options for `$agent.chat(id, ...)`, used by every send:
+Options for `$llm.chat.open(id, ...)`, used by every send (a send can override them):
 
 | Option | Default | What it does |
 |---|---|---|
-| `system` | | The preamble, first on every turn ([Writing a preamble](../agent/docs/guides/preamble.md)). |
-| `context` | | Text, or a function of the question returning text, sent after the question: the passages that answer it. `history()` shows the question alone; later turns send it with its context again, so the model's state for the chat still matches. |
+| `model` | | Required (here or on the send): the `provider/model` that answers, and writes the summaries. |
+| `reasoning` | the model's | As in `$llm.text.complete`. Summaries always use `"off"`. |
+| `system` | | The preamble, first on every turn. |
+| `context` | | Text, or a function of the question returning text, sent after the question: the passages that answer it. `history()` shows the question alone; later turns send it with its context again, so each prompt starts the same way. |
 | `window` | 12 | Messages sent before the summary takes over. |
-| `summarizeEvery` | 6 | Once that many messages have piled up past the window, the oldest are folded into the summary (a second, short call). |
-| `maxTokens`, `temperature`, `wait` | agent's | As in `$agent.complete`. |
+| `summarizeEvery` | 6 | Once that many messages have piled up past the window, the oldest are folded into the summary (a second, short call). If that call fails, the answer is still returned and saved, and the next send tries again. |
+| `maxTokens`, `temperature` | the provider's | As in `$llm.text.complete`. |
 
-`$agent.chats.list({ meta?, limit?, offset? })` lists chats, most recently updated first; `meta` keeps those whose
-meta has each of its top-level keys with that value. `$agent.chats.forget({ meta })` deletes every match and returns
-how many.
+`$llm.chat.list({ meta?, limit?, offset? })` lists chats, most recently updated first; `meta` keeps those whose meta has
+each of its top-level keys with that value. `$llm.chat.forget({ meta })` deletes every match and returns how many.
 
-The chats are in `_agent_chat_chats` and `_agent_chat_messages`, superuser-only: your routes decide what users see.
-A typical route checks that the chat's `meta.user` is the caller before sending:
+The chats are in `_llm_chat_chats` and `_llm_chat_messages`, superuser-only: your routes decide what users see. A
+typical route checks that the chat's `meta.user` is the caller before sending:
 
 ```ts
 // pb_pages/ask/[chat]/+api.ts: POST /ask/<chat id> {"question": "..."}
 export function post(ctx: any) {
-  const chat = $agent.chat(ctx.params.chat, { system: preamble(ctx) })
+  const chat = $llm.chat.open(ctx.params.chat, { model: "vultr/glm-5.2", system: preamble(ctx) })
   if (!ctx.auth || chat.meta().user !== ctx.auth.id) throw ctx.httpError(404, "no such chat")
   return ctx.res.json(chat.send(ctx.req.body().question))
 }
@@ -88,26 +90,26 @@ export function post(ctx: any) {
 
 **How a send is built:** the system text, then the summary (when there is one), then every message since the last
 fold, then the question with its context. That start stays the same from one turn to the next until the next fold,
-which is what the built-in model's prompt cache and its per-chat thread need to skip re-reading the conversation.
+which the providers' prompt caches bill cheaper.
 
 ## Integrations
 
 | With | What happens |
 |---|---|
-| [Agent](../agent/README.md) | Required: it answers (agent/v1), with the chat's id as the thread. Its HTTP and MCP API is the [agent.chat/v1](../contracts/agent/chat/v1/README.md) contract. |
-| [Multisite](../multisite/README.md) | Each instance keeps its own chats in its own database; answers come from the instance's agent (its own API, or the host's shared model). |
+| [LLM](../llm/README.md) | Required: it answers (llm.text/v1). Its HTTP and MCP API is the [llm.chat/v1](../contracts/llm/chat/v1/README.md) contract. |
+| [Multisite](../multisite/README.md) | Each instance keeps its own chats in its own database, answered by its own providers. |
 
 ## Example
 
 ```go
-// Command example is a PocketBase app with stored chats: the agent extension answers, agent-chat keeps the
-// conversations. Name a model in pocketone.yaml (`agent: {model: qwen3-0.6b}`) or choose one in Settings → LLM, run
-// `go run . serve`, and ask over HTTP as a superuser:
+// Command example is a PocketBase app with stored chats: the llm extension answers, llm-chat keeps the
+// conversations. Add a provider and a text default in Settings → LLM, run `go run . serve`, and ask over HTTP as a
+// superuser:
 //
-//	POST /api/_c/agent.chat/v1/new  {"title": "Support"}            -> {"id": "..."}
-//	POST /api/_c/agent.chat/v1/send {"id": "...", "text": "Hello"}  -> {"answer": {"text": "..."}}
+//	POST /api/_c/llm.chat/v1/new  {"title": "Support"}            -> {"id": "..."}
+//	POST /api/_c/llm.chat/v1/send {"id": "...", "text": "Hello"}  -> {"answer": {"text": "..."}}
 //
-// In page code the same is $agent.newChat() and $agent.chat(id).send(text).
+// In page code the same is $llm.chat.new() and $llm.chat.open(id).send(text).
 package main
 
 import (
@@ -115,16 +117,16 @@ import (
 
 	"ganigeorgiev.com/pocketbase/pocketbase"
 
-	"pocketone.dev/ext/agent"
-	agentchat "pocketone.dev/ext/agent-chat"
 	"pocketone.dev/ext/devusers"
 	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/llm"
+	llmchat "pocketone.dev/ext/llm-chat"
 )
 
 func main() {
 	app := pocketbase.New()
 	devusers.Register(app)
-	if _, err := extkit.Setup(app, []extkit.Extension{agent.New(), agentchat.New()}, nil, nil); err != nil {
+	if _, err := extkit.Setup(app, []extkit.Extension{llm.New(), llmchat.New()}, nil, nil); err != nil {
 		log.Fatal(err)
 	}
 	if err := app.Start(); err != nil {
