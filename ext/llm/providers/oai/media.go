@@ -10,6 +10,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -19,6 +20,10 @@ type File struct {
 	Data        []byte
 	ContentType string
 	URL         string
+	// Seconds and Cost are what the provider billed for it, from its X-Usage-Seconds and X-Usage-Cost headers (Vultr's
+	// speech), when it sends them.
+	Seconds float64
+	Cost    *float64
 }
 
 // ImageRequest is POST /images/generations. Extra holds provider fields (aspect_ratio, seed, steps, ...).
@@ -139,7 +144,14 @@ func ReadFile(res *http.Response) (File, error) {
 	if strings.HasPrefix(ct, "application/json") || strings.HasPrefix(ct, "text/") {
 		return File{}, &Error{Status: res.StatusCode, Message: "expected a file, got " + ct, Body: clip(string(b), 300)}
 	}
-	return File{Data: b, ContentType: ct}, nil
+	f := File{Data: b, ContentType: ct}
+	if s, err := strconv.ParseFloat(res.Header.Get("X-Usage-Seconds"), 64); err == nil {
+		f.Seconds = s
+	}
+	if c, err := strconv.ParseFloat(res.Header.Get("X-Usage-Cost"), 64); err == nil {
+		f.Cost = &c
+	}
+	return f, nil
 }
 
 // Download fetches a URL (a provider-hosted result) with this client's key when it's on the same host.

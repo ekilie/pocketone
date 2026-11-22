@@ -213,7 +213,7 @@ func chatResult(r oai.ChatResponse, schema bool) (textv1.CompleteResult, error) 
 }
 
 func usageOf(u oai.Usage) llmc.Usage {
-	return llmc.Usage{InputTokens: u.PromptTokens, OutputTokens: u.CompletionTokens, CostUSD: u.Cost,
+	return llmc.Usage{InputTokens: u.PromptTokens, OutputTokens: u.CompletionTokens, CostMicroUSD: llmc.MicroUSD(u.Cost),
 		CachedTokens: u.PromptTokensDetails.CachedTokens, ReasoningTokens: u.CompletionTokensDetails.ReasoningTokens}
 }
 
@@ -231,7 +231,7 @@ func usageJSON(raw json.RawMessage) llmc.Usage {
 	if len(raw) == 0 || json.Unmarshal(raw, &v) != nil {
 		return llmc.Usage{}
 	}
-	u := llmc.Usage{CostUSD: v.Cost, Seconds: v.BilledSeconds, InputTokens: max(v.InputTokens, v.PromptTokens),
+	u := llmc.Usage{CostMicroUSD: llmc.MicroUSD(v.Cost), Seconds: v.BilledSeconds, InputTokens: max(v.InputTokens, v.PromptTokens),
 		OutputTokens: max(v.OutputTokens, v.Completion)}
 	if u.Seconds == 0 {
 		u.Seconds = v.DurationSeconds

@@ -10,7 +10,7 @@ yourself as `messages`:
 
 ```ts
 const r = await $llm.text.completeAsync({
-  model: "vultr/glm-5.2",
+  model: "vultr/glm-5.3",
   system: "You help with our notes app. Be brief.",
   messages: [
     { role: "user", content: "How do I export my notes?" },
@@ -25,7 +25,7 @@ sends the recent ones with each question, and folds older ones into a summary so
 
 ```ts
 const id: string = $llm.chat.new({ meta: { user: ctx.auth.id } })
-const chat = $llm.chat.open(id, { model: "vultr/glm-5.2", system: "You help with our notes app. Be brief." })
+const chat = $llm.chat.open(id, { model: "vultr/glm-5.3", system: "You help with our notes app. Be brief." })
 const answer: LlmTextAnswer = await chat.sendAsync("How do I export my notes?")
 ```
 

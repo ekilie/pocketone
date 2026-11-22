@@ -207,8 +207,8 @@ async function ask(text) {
     follow(() => {
       pending.innerHTML = md(r.answer) +
         `<div class="meta">${esc(r.model)} · ${(r.ms / 1000).toFixed(1)} s · ${r.usage.inputTokens} in (${r.usage.cachedTokens || 0} cached) / ${r.usage.outputTokens} out` +
-        // usage.costUSD: what the provider charged, or (costEstimated) worked out from the model's listed prices
-        (r.usage.costUSD != null ? ` · <span title="${r.usage.costEstimated ? 'estimated from the model\'s listed prices' : 'what the provider charged'}">${r.usage.costEstimated ? '≈ ' : ''}${usd(r.usage.costUSD)}</span>` : '') +
+        // usage.costMicroUSD: millionths of a dollar the provider charged, or (costEstimated) worked out from listed prices
+        (r.usage.costMicroUSD ? ` · <span title="${r.usage.costEstimated ? 'estimated from the model\'s listed prices' : 'what the provider charged'}">${r.usage.costEstimated ? '≈ ' : ''}${usd(r.usage.costMicroUSD / 1e6)}</span>` : '') +
         `<br>Armed with: ${r.armedWith.map(f => `<code>${esc(f)}</code>`).join(' ')}` +
         (src ? `<br>Sources: ${src}` : '') + '</div>'
     })

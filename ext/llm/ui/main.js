@@ -228,7 +228,7 @@
                                 t.p({ className: "m-t-0" },
                                     "The cloud providers behind ", t.code(null, "$llm"), " in your pages, each on your own key. ",
                                     "Every call names its model as ", t.code(null, "provider/model"), ": with a provider named ",
-                                    t.code(null, "vultr"), ", ", t.code(null, "vultr/glm-5.2"), " is its glm-5.2 model."),
+                                    t.code(null, "vultr"), ", ", t.code(null, "vultr/glm-5.3"), " is its glm-5.3 model."),
                             ),
                             t.div({ className: "col-lg-12" },
                                 () => data.providers.length

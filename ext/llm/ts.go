@@ -6,7 +6,7 @@ func (*Extension) TypeScript() string { return typeScript }
 const typeScript = `/** A generated or sent file: data is base64. $llm.file(f) makes it a PocketBase file for record.set. */
 type LlmFile = { name?: string; type?: string; data?: string; url?: string }
 
-type LlmUsage = { inputTokens?: number; outputTokens?: number; cachedTokens?: number; reasoningTokens?: number; seconds?: number; costUSD?: number }
+type LlmUsage = { inputTokens?: number; outputTokens?: number; cachedTokens?: number; reasoningTokens?: number; seconds?: number; /** what the call cost, in millionths of a US dollar (1000000 = $1); 0 when free or not known */ costMicroUSD: number; costEstimated?: boolean }
 
 type LlmModels = {
   models: { id: string; provider: string; type: string; name?: string; kinds: string[]; inputs?: string[]; reasoning?: boolean;
@@ -18,7 +18,7 @@ type LlmJob = { id: string; status: "queued" | "running" | "done" | "failed"; pr
 type LlmMessage = { role: "system" | "user" | "assistant"; content: string }
 
 type LlmTextInput = {
-  /** "provider/model", e.g. "vultr/glm-5.2". */
+  /** "provider/model", e.g. "vultr/glm-5.3". */
   model: string
   system?: string
   prompt?: string

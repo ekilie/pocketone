@@ -40,7 +40,7 @@ pocketone superuser upsert admin@example.com password --dir=pb_data
 pocketone serve --dir=pb_data
 ```
 
-Sign in at http://127.0.0.1:8090/_/ and add a provider in **Settings → LLM** (the app answers with `vultr/glm-5.2`, so
+Sign in at http://127.0.0.1:8090/_/ and add a provider in **Settings → LLM** (the app answers with `vultr/glm-5.3`, so
 a Vultr provider named `vultr`; or see below). Then open http://127.0.0.1:8090.
 
 To answer with another model, set `CHAT_MODEL` to its `provider/model` when you start the app, for example
@@ -55,7 +55,7 @@ own docs means changing `DOCS_URL` and `SECTIONS` in `_private/llm.ts`, and `pre
 
 ## What to expect
 
-With `vultr/glm-5.2`, an answer starts in about a second and streams quickly; the follow-up questions come a second
+With `vultr/glm-5.3`, an answer starts in about a second and streams quickly; the follow-up questions come a second
 after it ends. Each question costs a fraction of a cent on your provider account (the footer under each answer shows
 the tokens it used). The answers are only as good as the three sections it finds, so a question the context doesn't
 cover gets "I don't know" or a near miss.

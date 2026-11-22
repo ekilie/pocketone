@@ -12,7 +12,7 @@ PocketOne connects them to your pages' code and your Go code.
 
 ```ts
 const r: LlmTextAnswer = await $llm.text.completeAsync({
-  model: "vultr/glm-5.2",
+  model: "vultr/glm-5.3",
   prompt: "Summarize in one sentence: " + record.getString("body"),
   reasoning: "off",
 })
@@ -21,7 +21,7 @@ const r: LlmTextAnswer = await $llm.text.completeAsync({
 
 ```go
 r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
-	Model: "vultr/glm-5.2", Prompt: "Summarize in one sentence: " + record.GetString("body"), Reasoning: "off"})
+	Model: "vultr/glm-5.3", Prompt: "Summarize in one sentence: " + record.GetString("body"), Reasoning: "off"})
 // r.Text is the summary
 ```
 
@@ -51,7 +51,7 @@ the model. With providers named `vultr`, `cf` and `or`:
 
 | Model | Means |
 |---|---|
-| `vultr/glm-5.2` | Vultr's `glm-5.2` |
+| `vultr/glm-5.3` | Vultr's `glm-5.3` |
 | `cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast` | Workers AI's Llama 3.3 |
 | `or/black-forest-labs/flux.2-klein-4b` | OpenRouter's FLUX.2 Klein |
 
@@ -87,7 +87,8 @@ A failed call throws an error with a code:
 
 ## Costs
 
-Every call is billed by your provider, on your account. Every answer's `usage` says what it used, and `usage.costUSD`
-what it cost in US dollars: what the provider charged when it says (OpenRouter always does; Vultr does for media), else
-worked out from the model's listed prices, with `usage.costEstimated` true. It's left out only when the model lists no
-prices PocketOne can count.
+Every call is billed by your provider, on your account. Every answer's `usage` says what it used, and
+`usage.costMicroUSD` what it cost, in millionths of a US dollar (`1000000` is $1, so `usage.costMicroUSD / 1e6` is
+dollars). It's a whole number, so costs add up exactly, and it's on every answer of every kind: what the provider
+charged when it says (OpenRouter always does; Vultr does for media), else worked out from the model's listed prices,
+with `usage.costEstimated` true, else `0` (free, or no prices PocketOne can count).

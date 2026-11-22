@@ -91,7 +91,7 @@ func (d *vultrDriver) align(ctx context.Context, model string, in alignv1.AlignI
 		return alignv1.Result{}, err
 	}
 	out := alignv1.Result{Duration: a.Duration, Lines: []alignv1.Line{}, Words: []alignv1.Word{},
-		Usage: llmc.Usage{Seconds: a.Usage.Seconds, CostUSD: a.Usage.Cost}}
+		Usage: llmc.Usage{Seconds: a.Usage.Seconds, CostMicroUSD: llmc.MicroUSD(a.Usage.Cost)}}
 	for _, l := range a.Lines {
 		line := alignv1.Line{Index: l.Index, Text: l.Text, Start: l.Start, End: l.End, Score: l.Score, Certain: l.Certain}
 		if l.Tag != nil {
@@ -137,7 +137,8 @@ func (d *vultrDriver) speak(ctx context.Context, model string, in speechv1.Speak
 	if err != nil {
 		return speechv1.Result{}, err
 	}
-	return speechv1.Result{File: fileOf(f, "speech")}, nil
+	// Vultr bills speech per second of audio and says so in headers
+	return speechv1.Result{File: fileOf(f, "speech"), Usage: llmc.Usage{Seconds: f.Seconds, CostMicroUSD: llmc.MicroUSD(f.Cost)}}, nil
 }
 
 func (d *vultrDriver) voices(ctx context.Context, model string) ([]speechv1.Voice, error) {

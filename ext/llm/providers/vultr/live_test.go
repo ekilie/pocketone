@@ -85,7 +85,7 @@ func TestLiveAll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := pick(t, ms, "text", "qwen3.8-flash-next", "glm-5.3-flash", "glm-5.2")
+	text := pick(t, ms, "text", "qwen3.8-flash-next", "glm-5.3-flash", "glm-5.3")
 
 	t.Run("chat", func(t *testing.T) {
 		r, err := c.Chat(ctx, oai.ChatRequest{Model: text, MaxTokens: 1000, Messages: []oai.Message{{Role: "user", Content: "Say OK."}}})

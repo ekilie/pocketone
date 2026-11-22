@@ -59,7 +59,7 @@ func typeInfo(t string) (TypeInfo, bool) {
 
 // Provider is one connection the app's admins added in Settings → LLM.
 type Provider struct {
-	Name     string `json:"name"` // what calls name before the slash: "vultr" in "vultr/glm-5.2"
+	Name     string `json:"name"` // what calls name before the slash: "vultr" in "vultr/glm-5.3"
 	Type     string `json:"type"`
 	Endpoint string `json:"endpoint,omitempty"` // "" uses the type's default
 	Account  string `json:"account,omitempty"`  // Cloudflare's account id

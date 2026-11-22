@@ -8,7 +8,7 @@
  * The model that answers, as provider/model: a provider you added in Settings → LLM, then that provider's model. Set
  * CHAT_MODEL to change it without editing this file (CHAT_MODEL=or/openai/gpt-4o-mini pocketone serve).
  */
-export const MODEL: string = process.env.CHAT_MODEL || 'vultr/glm-5.2'
+export const MODEL: string = process.env.CHAT_MODEL || 'vultr/glm-5.3'
 
 /**
  * The site to answer from: its llms.txt lists the docs by section, its llms-full.txt has every page's text. Set

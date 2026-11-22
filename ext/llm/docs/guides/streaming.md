@@ -9,14 +9,14 @@ A model writes its answer a few words at a time. `$llm.text.streamAsync()` hands
 can show the answer as it appears instead of after a wait:
 
 ```ts
-const r: LlmTextAnswer = await $llm.text.streamAsync({ model: "vultr/glm-5.2", prompt: question }, (text) => {
+const r: LlmTextAnswer = await $llm.text.streamAsync({ model: "vultr/glm-5.3", prompt: question }, (text) => {
   // called with each piece, in order; return false to stop the answer there
 })
 // r is the whole answer, as $llm.text.completeAsync returns it
 ```
 
 ```go
-s, err := textv1.Contract.Must(app).Stream(ctx, extkit.Internal, textv1.CompleteInput{Model: "vultr/glm-5.2", Prompt: question})
+s, err := textv1.Contract.Must(app).Stream(ctx, extkit.Internal, textv1.CompleteInput{Model: "vultr/glm-5.3", Prompt: question})
 if err != nil {
 	return err
 }
@@ -44,7 +44,7 @@ module.exports = {
     const { question } = ctx.req.body()
     const stream = ctx.res.sse()
     try {
-      const r: LlmTextAnswer = await $llm.text.streamAsync({ model: "vultr/glm-5.2", prompt: question }, (text) => stream.send("text", JSON.stringify(text)))
+      const r: LlmTextAnswer = await $llm.text.streamAsync({ model: "vultr/glm-5.3", prompt: question }, (text) => stream.send("text", JSON.stringify(text)))
       stream.send("done", JSON.stringify({ usage: r.usage }))
     } catch (err: any) {
       stream.send("error", JSON.stringify(String(err.message || err)))

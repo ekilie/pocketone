@@ -10,7 +10,7 @@ tags. Pass a JSON schema as `schema`, and the answer's parsed value is `r.data`:
 
 ```ts
 const r: LlmTextAnswer = await $llm.text.completeAsync({
-  model: "vultr/glm-5.2",
+  model: "vultr/glm-5.3",
   reasoning: "off",
   system: "Extract the order from the email.",
   prompt: email,
@@ -39,7 +39,7 @@ const r: LlmTextAnswer = await $llm.text.completeAsync({
 
 ```go
 r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
-	Model:     "vultr/glm-5.2",
+	Model:     "vultr/glm-5.3",
 	Reasoning: "off",
 	System:    "Extract the order from the email.",
 	Prompt:    email,

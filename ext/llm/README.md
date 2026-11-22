@@ -13,14 +13,14 @@ embeddings. You add providers in Settings → LLM, each with your own key, and e
 `provider/model`:
 
 ```ts
-const r: LlmTextAnswer = await $llm.text.completeAsync({ model: "vultr/glm-5.2", prompt: "Summarize: " + body, reasoning: "off" })
+const r: LlmTextAnswer = await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: "Summarize: " + body, reasoning: "off" })
 const pic = await $llm.image.generateAsync({ model: "or/black-forest-labs/flux.2-klein-4b", prompt: "a lighthouse at dusk, watercolor" })
 record.set("cover", $llm.file(pic.files[0]))
 ```
 
 ```go
 r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
-	Model: "vultr/glm-5.2", Prompt: "Summarize: " + body, Reasoning: "off"})
+	Model: "vultr/glm-5.3", Prompt: "Summarize: " + body, Reasoning: "off"})
 ```
 
 `vultr` is the name you gave a provider; what follows the first slash is that provider's own id for the model. Any
@@ -102,10 +102,10 @@ when it keeps one (it may expire). Audio to transcribe is sent the same way.
 resolves once the job is done, its `files` included. The id names the provider
 (`vultr:music_02a2…`), so `get` finds it again after a restart; the provider keeps the job, not your app.
 
-**Cost:** every result's `usage.costUSD` is what the call cost in US dollars: what the provider charged when it says
-(OpenRouter on every call, Vultr for media), else worked out from the model's listed prices and what the call used
-(tokens, cached tokens, pictures, seconds, characters), with `usage.costEstimated` true. It's left out when the model
-lists no prices, or only in units it can't count.
+**Cost:** every result's `usage.costMicroUSD` is what the call cost, in millionths of a US dollar (`1000000` is $1), a
+whole number on every answer of every kind: what the provider charged when it says (OpenRouter on every call, Vultr for
+media), else worked out from the model's listed prices and what the call used (tokens, cached tokens, pictures,
+seconds, characters), with `usage.costEstimated` true, else `0` (free, or no prices it can count).
 
 **Errors** have a code: `not_configured` (no providers yet), `unknown_model` (no model named, or no provider by that
 name), `not_supported` (that provider type doesn't do this kind), `provider` (the provider's own error, its message
@@ -168,7 +168,7 @@ func main() {
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		go func() {
 			res, err := textv1.Contract.Must(app).Complete(context.Background(), extkit.Internal, textv1.CompleteInput{
-				Model: "vultr/glm-5.2", Prompt: "In one sentence: what is PocketBase?", MaxTokens: 200, Reasoning: "off"})
+				Model: "vultr/glm-5.3", Prompt: "In one sentence: what is PocketBase?", MaxTokens: 200, Reasoning: "off"})
 			app.Logger().Info("llm: answer", "text", res.Text, "model", res.Model, "error", err)
 		}()
 		return e.Next()

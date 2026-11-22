@@ -66,12 +66,12 @@ func (r *router) resolve(kind, ref string) (target, error) {
 	}
 	if strings.TrimSpace(ref) == "" {
 		return target{}, &extkit.Error{Code: llmc.ErrUnknownModel.Code, Status: 400,
-			Message: fmt.Sprintf("name the %s model as provider/model, like vultr/glm-5.2", kind)}
+			Message: fmt.Sprintf("name the %s model as provider/model, like vultr/glm-5.3", kind)}
 	}
 	name, model, ok := llmc.SplitModel(ref)
 	if !ok {
 		return target{}, &extkit.Error{Code: llmc.ErrUnknownModel.Code, Status: 400,
-			Message: fmt.Sprintf("model %q: name it as provider/model, like vultr/glm-5.2", ref)}
+			Message: fmt.Sprintf("model %q: name it as provider/model, like vultr/glm-5.3", ref)}
 	}
 	p, ok := s.provider(name)
 	if !ok {

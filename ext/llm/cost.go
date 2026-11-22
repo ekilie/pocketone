@@ -8,7 +8,7 @@ import (
 	llmc "pocketone.dev/ext/contracts/llm"
 )
 
-// Cost: every result's usage.costUSD, filled in when the provider didn't report one, from the model's listed prices
+// Cost: every result's usage.costMicroUSD, filled in when the provider didn't report one, from the model's listed prices
 // (the provider's model list, cached for listTTL) and what the call used. usage.costEstimated marks it.
 
 // used is what a call used beyond its usage's tokens and seconds, for prices per picture, character or request.
@@ -17,10 +17,10 @@ type used struct {
 	chars int // characters read aloud
 }
 
-// fillCost sets u.CostUSD from t's listed prices when the provider left it empty. It never fails a call: without a
+// fillCost sets u.CostMicroUSD from t's listed prices when the provider didn't report a cost. It never fails a call: without a
 // list, a listed price or a unit it can count, the cost stays empty.
 func (r *router) fillCost(ctx context.Context, t target, u *llmc.Usage, x used) {
-	if u == nil || u.CostUSD != nil {
+	if u == nil || u.CostMicroUSD != 0 {
 		return
 	}
 	ms, err := r.catalog(ctx, t.p, false)
@@ -30,7 +30,7 @@ func (r *router) fillCost(ctx context.Context, t target, u *llmc.Usage, x used) 
 	for _, m := range ms {
 		if m.ID == t.model {
 			if usd, ok := estimate(m.Prices, *u, x); ok {
-				u.CostUSD, u.CostEstimated = &usd, true
+				u.CostMicroUSD, u.CostEstimated = llmc.MicroUSD(&usd), true
 			}
 			return
 		}

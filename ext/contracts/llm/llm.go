@@ -7,6 +7,7 @@
 package llm
 
 import (
+	"math"
 	"strings"
 
 	"pocketone.dev/ext/extkit"
@@ -42,19 +43,29 @@ type File struct {
 	URL  string `json:"url,omitempty"`
 }
 
-// Usage is what a call used, each field only when it's known.
+// Usage is what a call used. The token and seconds fields appear only when known; CostMicroUSD is always there.
+// Every llm.* contract's reply carries one (chat's in its answer, music's and video's on the job).
 type Usage struct {
 	InputTokens     int     `json:"inputTokens,omitempty"`
 	OutputTokens    int     `json:"outputTokens,omitempty"`
 	CachedTokens    int     `json:"cachedTokens,omitempty"`    // input tokens that came from the provider's prompt cache
 	ReasoningTokens int     `json:"reasoningTokens,omitempty"` // output tokens the model spent thinking
 	Seconds         float64 `json:"seconds,omitempty"`         // audio or video length billed
-	// CostUSD is what the call cost in US dollars: what the provider charged when it says (OpenRouter on every call,
-	// Vultr for media), else an estimate from the model's listed prices and what the call used (CostEstimated). Nil
-	// when neither is known (no listed prices, or a unit the estimate doesn't count).
-	CostUSD *float64 `json:"costUSD,omitempty"`
-	// CostEstimated is true when CostUSD was worked out from listed prices rather than reported by the provider.
+	// CostMicroUSD is what the call cost, in millionths of a US dollar (1,000,000 is $1; 1,000 is a tenth of a cent),
+	// as a whole number so costs add up exactly. It's what the provider charged when it says (OpenRouter on every call,
+	// Vultr for media), else an estimate from the model's listed prices and what the call used (CostEstimated), else 0:
+	// 0 means free or not known.
+	CostMicroUSD int64 `json:"costMicroUSD"`
+	// CostEstimated is true when CostMicroUSD was worked out from listed prices rather than reported by the provider.
 	CostEstimated bool `json:"costEstimated,omitempty"`
+}
+
+// MicroUSD is a cost in US dollars as millionths of a dollar, rounded to the nearest; nil is 0.
+func MicroUSD(usd *float64) int64 {
+	if usd == nil {
+		return 0
+	}
+	return int64(math.Round(*usd * 1e6))
 }
 
 // Price is one of a model's listed prices: USD per Unit ("1M input tokens", "image", "second", "1M characters").

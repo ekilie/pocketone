@@ -24,7 +24,7 @@ func main() {
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		go func() {
 			res, err := textv1.Contract.Must(app).Complete(context.Background(), extkit.Internal, textv1.CompleteInput{
-				Model: "vultr/glm-5.2", Prompt: "In one sentence: what is PocketBase?", MaxTokens: 200, Reasoning: "off"})
+				Model: "vultr/glm-5.3", Prompt: "In one sentence: what is PocketBase?", MaxTokens: 200, Reasoning: "off"})
 			app.Logger().Info("llm: answer", "text", res.Text, "model", res.Model, "error", err)
 		}()
 		return e.Next()
