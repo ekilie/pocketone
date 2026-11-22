@@ -28,6 +28,7 @@ require (
 	pocketone.dev/ext/s3-fallback v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/s3redirect v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/sandbox v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/search v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/settings v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/templates v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/uicache v0.0.0-00010101000000-000000000000
@@ -167,3 +168,5 @@ replace pocketone.dev/ext/uicache => ../uicache
 replace pocketone.dev/ext/llm-chat => ../llm-chat
 
 replace pocketone.dev/ext/kv => ../kv
+
+replace pocketone.dev/ext/search => ../search

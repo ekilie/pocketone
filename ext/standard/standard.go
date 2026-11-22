@@ -21,8 +21,6 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
-	"pocketone.dev/ext/llm"
-	llmchat "pocketone.dev/ext/llm-chat"
 	"pocketone.dev/ext/api-tokens"
 	"pocketone.dev/ext/backups"
 	"pocketone.dev/ext/bulkmail"
@@ -32,12 +30,15 @@ import (
 	"pocketone.dev/ext/extkit/js"
 	"pocketone.dev/ext/jsvm"
 	"pocketone.dev/ext/kv"
+	"pocketone.dev/ext/llm"
+	llmchat "pocketone.dev/ext/llm-chat"
 	"pocketone.dev/ext/mcp"
 	"pocketone.dev/ext/pages"
 	"pocketone.dev/ext/pitr"
 	"pocketone.dev/ext/remotes"
 	s3fallback "pocketone.dev/ext/s3-fallback"
 	"pocketone.dev/ext/s3redirect"
+	"pocketone.dev/ext/search"
 	"pocketone.dev/ext/settings"
 	"pocketone.dev/ext/templates"
 	"pocketone.dev/ext/uicache"
@@ -63,6 +64,7 @@ type Set struct {
 	WASM       *wasm.Extension
 	LLM        *llm.Extension
 	LLMChat    *llmchat.Extension
+	Search     *search.Extension
 	UICache    *uicache.Extension
 	KV         *kv.Extension
 
@@ -98,6 +100,7 @@ func New() *Set {
 		WASM:       wasm.New(wasm.Config{}),
 		LLM:        llm.New(),
 		LLMChat:    llmchat.New(),
+		Search:     search.New(),
 		UICache:    uicache.New(),
 		KV:         kv.New(),
 	}
@@ -128,7 +131,7 @@ type member struct {
 func (s *Set) members() []member {
 	m := []member{
 		{"Settings", s.Settings}, {"Templates", s.Templates}, {"Cache", s.Cache}, {"APITokens", s.APITokens}, {"Remotes", s.Remotes}, {"MCP", s.MCP}, {"Pages", s.Pages},
-		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache}, {"KV", s.KV}, {"LLM", s.LLM}, {"LLMChat", s.LLMChat},
+		{"S3Fallback", s.S3Fallback}, {"S3Redirect", s.S3Redirect}, {"PITR", s.PITR}, {"Backups", s.Backups}, {"BulkMail", s.BulkMail}, {"Deploy", s.Deploy}, {"WASM", s.WASM}, {"UICache", s.UICache}, {"KV", s.KV}, {"LLM", s.LLM}, {"LLMChat", s.LLMChat}, {"Search", s.Search},
 	}
 	for i := range m { // a typed nil pointer in an interface isn't nil
 		if isNil(m[i].ext) {
@@ -171,6 +174,8 @@ func isNil(e extkit.Extension) bool {
 	case *llm.Extension:
 		return v == nil
 	case *llmchat.Extension:
+		return v == nil
+	case *search.Extension:
 		return v == nil
 	case *uicache.Extension:
 		return v == nil
