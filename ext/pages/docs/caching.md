@@ -1,9 +1,9 @@
 ---
-title: Understanding Caching in PocketPages
-description: How PocketPages caches templates, static files and fingerprinted assets.
+title: Understanding Caching in Pages
+description: How Pages caches templates, static files and fingerprinted assets.
 ---
 
-# Understanding Caching in PocketPages
+# Understanding Caching in Pages
 
 ## Fingerprinted assets
 

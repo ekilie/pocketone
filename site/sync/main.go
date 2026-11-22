@@ -454,7 +454,7 @@ func frontMatter(title, desc, src string) string {
 
 var scriptServerRe = regexp.MustCompile(`(?i)<script(\s[^>]*)?\sserver\b`)
 
-// escapeEJS keeps PocketPages from running anything in synced Markdown: "<%" renders as a literal "<%", and a
+// escapeEJS keeps Pages from running anything in synced Markdown: "<%" renders as a literal "<%", and a
 // `<script server>` tag (also run as code) is written out by EJS instead of being one.
 func escapeEJS(s string) string {
 	s = strings.ReplaceAll(s, "<%", "<%%")

@@ -1,14 +1,14 @@
 ---
-title: "PocketPages: sites in TSX, TypeScript or EJS"
+title: "Pages: sites in TSX, TypeScript or EJS"
 description: Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
 ---
 
-# PocketPages: sites in TSX, TypeScript or EJS
+# Pages: sites in TSX, TypeScript or EJS
 
 Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in a `pb_pages` folder next to `pb_data`, and your app serves it as a web
 page. Each file is a route. Components `import` each other, route files can be TypeScript (`+page.ts`, `+api.ts`), and
 page code reads and writes your records directly. Every part of a page can `await`, and the app keeps serving other
-requests while it waits. This is PocketPages, built into PocketOne.
+requests while it waits. This is Pages, built into PocketOne.
 
 esbuild is built into the `pocketone` binary, so TSX and TypeScript compile the first time a page is used: no Node, no
 `npm install`, no bundler, no build step. It's on for every PocketOne app whenever a `pb_pages` folder exists. No folder,
@@ -110,11 +110,11 @@ To send your pages to a running app, see [Deploy and live sync](/docs/features/d
 
 To serve pages from another folder, pass `--pagesDir` to `pocketone serve`, or set `server.pages_dir` in
 `pocketone.yaml` ([pocketone.yaml reference](/docs/config-reference)). Settings for the site itself, such as which
-PocketPages plugins to load, go in `pb_pages/+config.js` ([+config.js](/docs/extensions/pages/config)).
+Pages plugins to load, go in `pb_pages/+config.js` ([+config.js](/docs/extensions/pages/config)).
 
 ## Learn more
 
-The full PocketPages docs:
+The full Pages docs:
 
 - [Installation](/docs/extensions/pages/installation) and [starter kits](/docs/extensions/pages/starter-kits)
 - [JSX and TSX](/docs/extensions/pages/jsx)
@@ -128,4 +128,4 @@ The full PocketPages docs:
 
 - [Pages](/docs/extensions/pages/extension) serves the `pb_pages` folder and adds the `pages create` and
   `pages starters` commands. Page code runs in your app's JS engine.
-- [PocketPages](/docs/extensions/pages) is the home of its docs, guides and plugins.
+- [Pages](/docs/extensions/pages) is the home of its docs, guides and plugins.

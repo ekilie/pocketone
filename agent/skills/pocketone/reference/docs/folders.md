@@ -9,7 +9,7 @@ A PocketOne app is a folder. PocketBase's own folders sit next to each other in 
 | `pb_hooks` | your JS hooks (and `*.pb.wasm` modules) | as code, in git | yes | no |
 | `pb_migrations` | your app's migrations | as code, in git | yes | no |
 | `pb_public` | static files the app serves | as code, in git | yes | no |
-| `pb_pages` | PocketPages pages | as code, in git | yes | no |
+| `pb_pages` | your app's pages | as code, in git | yes | no |
 | `pb_templates` | page templates you ejected (`pocketone template eject`) | as code, in git | yes | no |
 | `pb_cache` | files extensions can rebuild, one folder each | never | never | yes, at any time |
 

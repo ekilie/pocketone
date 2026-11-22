@@ -1,11 +1,11 @@
 ---
 title: File types
-description: Which file extensions PocketPages runs, the two template styles (ETS and TSX), and the JavaScript versions that work the same way.
+description: Which file extensions Pages runs, the two template styles (ETS and TSX), and the JavaScript versions that work the same way.
 ---
 
 # File types
 
-PocketPages apps are server-rendered pages with no build step. Every file in `pb_pages` is either code, a template or
+PocketOne apps are server-rendered pages with no build step. Every file in `pb_pages` is either code, a template or
 a static file, and you write code and templates in TypeScript. PocketOne strips the types when it first uses a file,
 with esbuild built into the binary; it never checks them.
 

@@ -11,4 +11,4 @@ module.exports = { plugins: ['realtime', 'datastar'] }
 |---|---|
 | [datastar.js](datastar.js) | `ctx.datastar`: [Datastar](https://data-star.dev) script tags, SSE patches (`patchElements`, `patchSignals`, `executeScript`), signals, realtime broadcasts, and pages answering `Datastar-Request` with a patch. Its realtime helpers need the built-in `realtime` plugin. |
 
-Starter kits and the PocketPages site carry copies; a test keeps them identical to the files here.
+Starter kits and pocketone.dev carry copies; a test keeps them identical to the files here.

@@ -7,7 +7,7 @@ source: "ext/pages/docs/realtime.md"
 
 # Realtime Events
 
-PocketBase pushes realtime messages to browsers over server-sent events. In PocketPages, page code sends, and browsers receive.
+PocketBase pushes realtime messages to browsers over server-sent events. In Pages, page code sends, and browsers receive.
 
 ## Sending from a page
 

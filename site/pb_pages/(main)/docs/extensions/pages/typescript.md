@@ -9,7 +9,7 @@ source: "ext/pages/docs/typescript.md"
 
 PocketOne strips the types from `.ts` and `.tsx` files and runs them; it never checks them. To check them, use `tsc` or your editor with the types PocketOne writes for your app.
 
-When the app starts, it writes `types.d.ts` next to `pb_pages` (in the project folder, beside `pb_data` and `pocketone.yaml`) with the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
+When the app starts, it writes `types.d.ts` next to `pb_pages` (in the project folder, beside `pb_data` and `pocketone.yaml`) with the declarations of the whole JS API, Pages included. Pages adds no globals: its types live in the `pages` namespace and you use them by name.
 
 ## Set up
 

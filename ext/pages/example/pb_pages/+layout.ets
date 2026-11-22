@@ -15,13 +15,13 @@ const nav: [string, string][] = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title><%- slot('title') || 'PocketPages demo' %></title>
+    <title><%- slot('title') || 'Pages demo' %></title>
     <link rel="stylesheet" href="<%= asset('assets/app.css') %>" />
     <%- slot('head') %>
   </head>
   <body>
     <header>
-      <a class="brand" href="/">PocketPages</a>
+      <a class="brand" href="/">PocketOne</a>
       <nav>
         <% for (const [href, label] of nav) { %>
           <a href="<%= href %>"<% if (ctx.req.url.pathname === href) { %> class="on"<% } %>><%= label %></a>

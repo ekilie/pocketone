@@ -732,7 +732,7 @@ func (r *request) sendError(status int, message string, cause error) {
 	if cause != nil && r.dev {
 		where := r.errorWhere(cause)
 		var b strings.Builder
-		b.WriteString("<!doctype html><html><body><h1>PocketPages error</h1>")
+		b.WriteString("<!doctype html><html><body><h1>Pages error</h1>")
 		if where != "" {
 			b.WriteString("<p><code>" + html.EscapeString(where) + "</code></p>")
 		}

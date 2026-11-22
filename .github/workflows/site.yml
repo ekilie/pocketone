@@ -8,7 +8,7 @@
 # On main, `regenerate` runs .github/regenerate.sh and commits what changed as github-actions[bot] (only generated
 # files, never core; local commits already include them through .github/hooks/pre-commit, so this only finds work after
 # an outside pull request merges), then deploys site/pb_pages to the `pocketone` instance on PocketHost (pocketone.dev).
-# Extension sites (ext/<name>/site, such as PocketPages' docs, formerly pocketpages.dev) are part of it.
+# Extension sites (ext/<name>/site, such as Pages' docs, formerly pocketpages.dev) are part of it.
 # The deploy (pocketone deploy, to site/.pocketbase/remotes.json's remote) needs the POCKETHOST_TOKEN repository secret
 # (a PocketHost API token that can deploy to that instance); without it the job says so and skips.
 name: site

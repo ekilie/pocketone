@@ -1,8 +1,8 @@
 # PocketOne
 
-> PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and PocketPages server-rendered sites.
+> PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and server-rendered pages.
 
-PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne and PocketPages: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).
+PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).
 
 Every page below in one file: https://pocketone.dev/llms-full.txt
 
@@ -11,13 +11,13 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [What is PocketOne?](https://pocketone.dev/docs/overview): PocketOne is a community fork of PocketBase. Its core changes are kept small; everything else is an extension.
 - [Installation](https://pocketone.dev/docs/installation): Install PocketOne on macOS, Windows or Linux with Homebrew, Scoop or the install script, run it, and keep it up to date.
 - [Coming from PocketBase](https://pocketone.dev/docs/pocketbase): PocketOne is PocketBase with more built in. What stays the same, and how each added feature compares.
-- [Teach your coding agent](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and PocketPages with our Agent Skills and llms.txt.
+- [Teach your coding agent](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and Pages with our Agent Skills and llms.txt.
 
 ## New in PocketOne
 
 - [Everything new](https://pocketone.dev/docs/features): Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built into the pocketone binary.
 - [QuickJS: async, import, TS](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
-- [PocketPages: TSX, TS, EJS](https://pocketone.dev/docs/features/sites): Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
+- [Pages: TSX, TS, EJS](https://pocketone.dev/docs/features/sites): Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
 - [Isolates: many apps, one process](https://pocketone.dev/docs/features/isolates): Run hundreds of PocketBase apps as isolates inside one pocketone process, routed by hostname. Each starts on its first request in tens of milliseconds, costs a few MB, and is sandboxed from the others.
 - [Point-in-time restore](https://pocketone.dev/docs/features/restore): Put your app's data back as it was at any moment in the last few days, from the dashboard, your terminal or an agent.
 - [Deploy and live sync](https://pocketone.dev/docs/features/deploy): Send your app's hooks, migrations, pages and public files to a running PocketOne app with one command, and keep a folder in step while you work.
@@ -41,7 +41,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 - [Advanced installation](https://pocketone.dev/docs/guides/advanced-installation): Install PocketOne off the usual path - the install script's settings, Windows without Scoop, a release zip, or building it from source.
 - [Run on a Linux server](https://pocketone.dev/docs/guides/linux-server): Install PocketOne on a Linux server as a .deb, .rpm or .apk package, run it as a systemd service with its own HTTPS or behind a proxy, deploy your app, upgrade and uninstall.
-- [Example apps](https://pocketone.dev/docs/examples): PocketOne apps you can try live and read end to end - Docs Chat, Bedtime Story and the PocketPages starter kits - what each does and how it's built.
+- [Example apps](https://pocketone.dev/docs/examples): PocketOne apps you can try live and read end to end - Docs Chat, Bedtime Story and the Pages starter kits - what each does and how it's built.
 
 ## Reference
 
@@ -50,7 +50,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [MCP](https://pocketone.dev/docs/reference/mcp): Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments.
 - [pocketone.yaml](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
 - [Folders](https://pocketone.dev/docs/folders): What each pb_* folder next to your app holds, which ones are backed up, deployed or safe to delete, and where extensions keep their tables and files.
-- [PocketPages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
+- [Pages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. Pages is built into the pocketone binary as the pages extension.
 
 ## Contracts: By name
 
@@ -113,7 +113,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat): Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
 - [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
-- [Pages: PocketPages v1 specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: PocketPages v1 specification
+- [Pages: Pages specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: Pages specification
 - [PITR](https://pocketone.dev/docs/extensions/pitr): Point-in-time restore of your database with Litestream. On by default.
 - [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
 - [S3 Fallback](https://pocketone.dev/docs/extensions/s3-fallback): A default bucket for uploads and backups when an instance has no S3 of its own.
@@ -167,20 +167,20 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 ## Pages: Introduction
 
-- [Overview of PocketPages](https://pocketone.dev/docs/extensions/pages/overview): PocketPages is server-rendered multi-page apps for PocketOne, from a pb_pages folder of ETS templates, TypeScript and Markdown files.
-- [Moving from PocketPages 0.x](https://pocketone.dev/docs/extensions/pages/moving-from-0x): What changed between the PocketPages npm package (0.x) and PocketPages v1 in PocketOne.
-- [Coding agents](https://pocketone.dev/docs/extensions/pages/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketPages v1 with the pocketpages Agent Skill and llms.txt.
+- [Overview of Pages](https://pocketone.dev/docs/extensions/pages/overview): Pages is server-rendered multi-page apps for PocketOne, from a pb_pages folder of ETS templates, TypeScript and Markdown files.
+- [Moving from PocketPages 0.x](https://pocketone.dev/docs/extensions/pages/moving-from-0x): What changed between the PocketPages npm package (0.x) and Pages in PocketOne.
+- [Coding agents](https://pocketone.dev/docs/extensions/pages/agents): Teach Claude Code, Cursor, Codex and other coding agents Pages with the pocketone Agent Skill and llms.txt.
 
 ## Pages: Getting Started
 
-- [Installation](https://pocketone.dev/docs/extensions/pages/installation): Run PocketPages v1 on PocketOne with the pages extension, using a pb_pages folder.
-- [Starter Kits](https://pocketone.dev/docs/extensions/pages/starter-kits): Start a new PocketPages app from a starter kit with pocketone pages create.
+- [Installation](https://pocketone.dev/docs/extensions/pages/installation): Run Pages on PocketOne with the pages extension, using a pb_pages folder.
+- [Starter Kits](https://pocketone.dev/docs/extensions/pages/starter-kits): Start a new PocketOne app from a starter kit with pocketone pages create.
 
 ## Pages: Basics
 
 - [Creating a Page](https://pocketone.dev/docs/extensions/pages/creating-a-page): Create .ets and .md files in pb_pages to add pages, with index files and nested folders mapping to URLs.
 - [Directory Structure](https://pocketone.dev/docs/extensions/pages/directory-structure): How a pb_pages folder is organized, and the special +, _, - and . prefixes.
-- [File types](https://pocketone.dev/docs/extensions/pages/file-types): Which file extensions PocketPages runs, the two template styles (ETS and TSX), and the JavaScript versions that work the same way.
+- [File types](https://pocketone.dev/docs/extensions/pages/file-types): Which file extensions Pages runs, the two template styles (ETS and TSX), and the JavaScript versions that work the same way.
 - [Routing](https://pocketone.dev/docs/extensions/pages/routing): How files in pb_pages map to URLs: pages, [param] segments, groups, API routes, static files, and which route wins.
 - [Accessing Parameters](https://pocketone.dev/docs/extensions/pages/parameters): Read route parameters from [param] file and folder names with ctx.params, and query strings with ctx.req.query().
 - [Loading Data](https://pocketone.dev/docs/extensions/pages/loading-data): Load data inline in templates or in a +page.ts file with load and per-method handlers.
@@ -205,10 +205,10 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Pages: Configuration
 
 - [+config.ts](https://pocketone.dev/docs/extensions/pages/config): Turn on built-in plugins, add custom plugins, and enable debug output from pb_pages/+config.ts.
-- [Caching](https://pocketone.dev/docs/extensions/pages/caching): How PocketPages caches templates, static files and fingerprinted assets.
-- [Errors](https://pocketone.dev/docs/extensions/pages/errors): How PocketPages turns thrown errors into responses, ctx.httpError(), and custom +error and +404 pages.
+- [Caching](https://pocketone.dev/docs/extensions/pages/caching): How Pages caches templates, static files and fingerprinted assets.
+- [Errors](https://pocketone.dev/docs/extensions/pages/errors): How Pages turns thrown errors into responses, ctx.httpError(), and custom +error and +404 pages.
 - [Debugging](https://pocketone.dev/docs/extensions/pages/debugging): Dev mode, debug in +config.ts, and logging with ctx.log.
-- [Going Live](https://pocketone.dev/docs/extensions/pages/deploying): Deploy a PocketPages app by putting pb_pages next to pb_data on a PocketOne server (pages is built in).
+- [Going Live](https://pocketone.dev/docs/extensions/pages/deploying): Deploy a PocketOne app by putting pb_pages next to pb_data on a PocketOne server (pages is built in).
 
 ## Pages: Plugins
 
@@ -216,7 +216,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Authentication](https://pocketone.dev/docs/extensions/pages/plugins/auth): The built-in auth plugin keeps PocketBase auth in a cookie and adds ctx.session sign-in methods.
 - [Datastar](https://pocketone.dev/docs/extensions/pages/plugins/datastar): The Datastar add-on adds ctx.datastar helpers for Datastar script tags, SSE patches and signals.
 - [Realtime](https://pocketone.dev/docs/extensions/pages/plugins/realtime): The built-in realtime plugin sends messages to PocketBase realtime subscribers with ctx.realtime.send().
-- [Authoring](https://pocketone.dev/docs/extensions/pages/plugins/authoring): Write a custom plugin for PocketPages v1, a factory that returns onRequest, extendContext and transform hooks.
+- [Authoring](https://pocketone.dev/docs/extensions/pages/plugins/authoring): Write a custom plugin for Pages, a factory that returns onRequest, extendContext and transform hooks.
 
 ## Pages: ctx Reference
 
@@ -243,10 +243,10 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Pages: Guides
 
 - [Authentication](https://pocketone.dev/docs/extensions/pages/authentication): Sign users in and out with the auth plugin - passwords, one-time passwords, OAuth2 and anonymous sessions.
-- [HTMX Integration](https://pocketone.dev/docs/extensions/pages/htmx): Use HTMX with PocketPages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.
+- [HTMX Integration](https://pocketone.dev/docs/extensions/pages/htmx): Use HTMX with Pages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.
 - [Realtime Events](https://pocketone.dev/docs/extensions/pages/realtime): Send realtime messages from pages with the realtime plugin, and receive them in the browser with the PocketBase JS SDK.
 - [Custom Domains on Fly+Cloudflare](https://pocketone.dev/docs/extensions/pages/speedruns/custom-domain-fly-cloudflare): Step-by-step process to configure DNS records, SSL certificates, and domain verification between Fly.io and Cloudflare. Includes specific settings for A/AAAA records, CNAME verification, and SSL/TLS encryption modes.
-- [Google OAuth2](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketPages app with the auth plugin.
+- [Google OAuth2](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketOne app with the auth plugin.
 - [Outgoing Email with Amazon SES](https://pocketone.dev/docs/extensions/pages/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
 - [Setting up a new email domain in Google Suite](https://pocketone.dev/docs/extensions/pages/speedruns/gs-gmail): Complete walkthrough for configuring email domains in Google Suite, including domain verification, Gmail activation, catch-all email setup, MX record configuration, and sender account integration.
 
@@ -282,4 +282,4 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [PocketBase compatibility](https://pocketone.dev/docs/compatibility): Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.
 - [Bedtime Story](https://pocketone.dev/docs/examples/bedtime-story): One topic told slowly and in depth, read aloud with pictures and music - the six steps, the player, the guards and the tuning screen in the dashboard.
 - [Docs Chat](https://pocketone.dev/docs/examples/docs-chat): A chat about PocketOne and PocketBase that answers from both sets of docs, streams its answer and shows what it cost - how it's built, file by file.
-- [Starters](https://pocketone.dev/docs/examples/starters): The PocketPages starter kits - minimal, mvp, auth, daisyui, daisyui-docs, htmx, datastar and tsx - what each shows, how it's built and how to start an app from one.
+- [Starters](https://pocketone.dev/docs/examples/starters): The Pages starter kits - minimal, mvp, auth, daisyui, daisyui-docs, htmx, datastar and tsx - what each shows, how it's built and how to start an app from one.

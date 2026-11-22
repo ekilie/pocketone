@@ -1,9 +1,9 @@
 ---
-title: Debugging in PocketPages
+title: Debugging in Pages
 description: Dev mode, debug in +config.ts, and logging with ctx.log.
 ---
 
-# Debugging in PocketPages
+# Debugging in Pages
 
 ## Dev mode
 

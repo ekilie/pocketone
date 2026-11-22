@@ -21,7 +21,7 @@
 - [LLM Chat](/docs/extensions/llm-chat)
 - [MCP](/docs/extensions/mcp)
 - [Pages](/docs/extensions/pages/extension)
-- [Pages: PocketPages v1 specification](/docs/extensions/pages/spec)
+- [Pages: Pages specification](/docs/extensions/pages/spec)
 - [PITR](/docs/extensions/pitr)
 - [Remotes](/docs/extensions/remotes)
 - [S3 Fallback](/docs/extensions/s3-fallback)

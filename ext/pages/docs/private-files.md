@@ -1,5 +1,5 @@
 ---
-title: Working with Private Files and Directories in PocketPages
+title: Working with Private Files and Directories in Pages
 description: How _private folders hold partials and TypeScript modules for include() and ctx.resolve(), and which names are never routed.
 ---
 

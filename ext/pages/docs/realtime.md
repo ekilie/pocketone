@@ -5,7 +5,7 @@ description: Send realtime messages from pages with the realtime plugin, and rec
 
 # Realtime Events
 
-PocketBase pushes realtime messages to browsers over server-sent events. In PocketPages, page code sends, and browsers receive.
+PocketBase pushes realtime messages to browsers over server-sent events. In Pages, page code sends, and browsers receive.
 
 ## Sending from a page
 

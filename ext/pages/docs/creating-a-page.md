@@ -1,9 +1,9 @@
 ---
-title: Creating a PocketPages Page
+title: Creating a Page
 description: Create .ets and .md files in pb_pages to add pages, with index files and nested folders mapping to URLs.
 ---
 
-# Creating a PocketPages Page
+# Creating a Page
 
 A **page** is a template file, `.ets` or `.md`, anywhere in `pb_pages/`. Its path becomes its URL. (A `.tsx` component works too; see [File types](file-types.md).)
 

@@ -1,21 +1,21 @@
 ---
-title: PocketPages
+title: Pages
 section: Reference
-description: No-build, server-rendered multi-page apps for PocketOne. PocketPages is built into the pocketone binary as the pages extension.
+description: No-build, server-rendered multi-page apps for PocketOne. Pages is built into the pocketone binary as the pages extension.
 ---
 
 <!-- The HTML below has no blank lines on purpose: Markdown ends an HTML block at a blank line. -->
 <aside class="announce rise">
 <p class="announce-eyebrow">pocketpages.dev has moved</p>
-<h2>PocketPages is now part of PocketOne</h2>
-<p>PocketPages v1 is built into the <code>pocketone</code> binary as the <a href="/docs/extensions/pages/extension">pages extension</a>: no npm package, no boot file, no build step. Its docs and blog live here now, beside every other PocketOne extension. Coming from the npm package (0.x)? Start with <a href="/docs/extensions/pages/moving-from-0x">Moving from PocketPages 0.x</a>.</p>
+<h2>PocketPages is now Pages, part of PocketOne</h2>
+<p>Pages (formerly PocketPages) is built into the <code>pocketone</code> binary as the <a href="/docs/extensions/pages/extension">pages extension</a>: no npm package, no boot file, no build step. Its docs and blog live here now, beside every other PocketOne extension. Coming from the npm package (0.x)? Start with <a href="/docs/extensions/pages/moving-from-0x">Moving from PocketPages 0.x</a>.</p>
 </aside>
 <div class="splash inset">
 <section class="hero">
 <div>
 <div class="hero-brand rise">
-<span class="avatar"><img src="/docs/extensions/pages/pocketpages-logo.png" alt="PocketPages logo" /></span>
-<h1 class="hero-title">PocketPages</h1>
+<span class="avatar"><img src="/docs/extensions/pages/pocketpages-logo.png" alt="Pages logo" /></span>
+<h1 class="hero-title">Pages</h1>
 <pre><code class="language-bash">brew install pocketonehq/tap/pocketone
 pocketone pages create myapp</code></pre>
 <a class="hero-alt" href="/docs/installation#windows">On Windows? Install with Scoop</a>
@@ -26,13 +26,13 @@ pocketone pages create myapp</code></pre>
 <a href="/docs/extensions/pages/installation" class="btn btn-outline"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Quick Start</a>
 </div>
 <pre><code class="language-ets">&lt;!-- pb_pages/index.ets --&gt;
-&lt;%= `Hello, PocketPages!` %&gt;</code></pre>
-<div class="rise" style="--delay: 0.8s; --rise: 30px; width: min(100%, 42rem)"><%- include('browser', { content: 'Hello, PocketPages!' }) %></div>
+&lt;%= `Hello, PocketOne!` %&gt;</code></pre>
+<div class="rise" style="--delay: 0.8s; --rise: 30px; width: min(100%, 42rem)"><%- include('browser', { content: 'Hello, PocketOne!' }) %></div>
 </div>
 </section>
 <section class="section">
 <div class="section-head">
-<h2 class="section-title">Why PocketPages is Better</h2>
+<h2 class="section-title">Why Pages is Better</h2>
 <p class="lead">Zero compilation, zero bundling, zero build steps. Just write code and deploy, frontend and backend.</p>
 </div>
 <div class="grid">
@@ -56,7 +56,7 @@ pocketone pages create myapp</code></pre>
 <section class="section alt">
 <div class="section-head">
 <h2 class="section-title">Why Multi-Page Apps Matter</h2>
-<p class="lead">While SPAs dominate the conversation, MPAs offer proven benefits for most web applications. PocketPages brings this architecture to PocketBase's powerful backend.</p>
+<p class="lead">While SPAs dominate the conversation, MPAs offer proven benefits for most web applications. Pages brings this architecture to PocketBase's powerful backend.</p>
 </div>
 <div class="grid two">
 <div class="card glass">
@@ -104,7 +104,7 @@ const user = $app.findRecordById('users', params.id)
 </div>
 <div class="grid wide">
 <div class="window soft">
-<header>HTMX + PocketPages</header>
+<header>HTMX + Pages</header>
 <div>
 <pre><code class="language-html">&lt;%- include('header.ets') %&gt;
 &lt;div hx-get="/fragments/todos"
@@ -116,7 +116,7 @@ const user = $app.findRecordById('users', params.id)
 </div>
 </div>
 <div class="window soft">
-<header>Alpine.js + PocketPages</header>
+<header>Alpine.js + Pages</header>
 <div>
 <pre><code class="language-html">&lt;div x-data="{ todos: &lt;%= JSON.stringify(todos) %&gt; }"&gt;
   &lt;template x-for="todo in todos"&gt;
@@ -128,7 +128,7 @@ const user = $app.findRecordById('users', params.id)
 </div>
 </div>
 <div class="window soft">
-<header>Datastar + PocketPages</header>
+<header>Datastar + Pages</header>
 <div>
 <pre><code class="language-html">&lt;input type="text" name="message" data-bind:message /&gt;
 &lt;button data-on:click="@get('/fragments/chat')"&gt;

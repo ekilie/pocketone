@@ -358,7 +358,7 @@ The serve command: http, https and CORS origins, and for a single app its static
 | `shutdown_timeout` | duration |  | Many instances only: how long in-flight requests get to finish at stop. |
 | `public_dir` | string |  | Single app only: the static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |
 | `index_fallback` | bool |  | Single app only: serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins. |
-| `pages_dir` | string |  | Single app only: the PocketPages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
+| `pages_dir` | string |  | Single app only: the pages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
 | `hooks_watch` | bool |  | Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
 | `automigrate` | bool |  | Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
 

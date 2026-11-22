@@ -1,9 +1,9 @@
 ---
-title: Loading Data in PocketPages
+title: Loading Data in Pages
 description: Load data inline in templates or in a +page.ts file with load and per-method handlers.
 ---
 
-# Loading Data in PocketPages
+# Loading Data in Pages
 
 You can load data right in a template, or in a `+page.ts` file next to it.
 
@@ -90,7 +90,7 @@ If a handler sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file
 
 ### Async loading
 
-`load` and the method handlers can be `async`. PocketPages waits for them before it renders. Every Go function has an
+`load` and the method handlers can be `async`. Pages waits for them before it renders. Every Go function has an
 `.async` twin that does its work outside the JS VM, so other requests keep running while it waits:
 
 ```ts

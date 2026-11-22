@@ -9,7 +9,7 @@
 
 - [Everything new](/docs/features)
 - [QuickJS: async, import, TS](/docs/quickjs)
-- [PocketPages: TSX, TS, EJS](/docs/features/sites)
+- [Pages: TSX, TS, EJS](/docs/features/sites)
 - [Isolates: many apps, one process](/docs/features/isolates)
 - [Point-in-time restore](/docs/features/restore)
 - [Deploy and live sync](/docs/features/deploy)
@@ -43,4 +43,4 @@
 - [MCP](/docs/reference/mcp)
 - [pocketone.yaml](/docs/config-reference)
 - [Folders](/docs/folders)
-- [PocketPages](/docs/extensions/pages)
+- [Pages](/docs/extensions/pages)

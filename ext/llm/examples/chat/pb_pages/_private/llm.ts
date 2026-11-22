@@ -23,7 +23,7 @@ export const DOCS_URL: string = (process.env.DOCS_URL || 'https://pocketone.dev'
  */
 const SECTIONS = ['Get started', 'New in PocketOne', 'Guides']
 /** User docs listed under other sections. */
-const ALSO = ['/docs/extensions/pages'] // PocketPages' docs, listed under Reference
+const ALSO = ['/docs/extensions/pages'] // Pages' docs, listed under Reference
 
 /**
  * PocketBase's docs as one file (pages separated by "---", each starting "Source: <url>"): a URL, or a path to a local

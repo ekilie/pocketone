@@ -5,7 +5,7 @@ description: Turn on built-in plugins, add custom plugins, and enable debug outp
 
 # Configuration with `+config.ts`
 
-Create `pb_pages/+config.ts` to configure PocketPages for the app. It's only allowed at the top of `pb_pages`; a `+config.ts` in a subfolder is an error at startup.
+Create `pb_pages/+config.ts` to configure Pages for the app. It's only allowed at the top of `pb_pages`; a `+config.ts` in a subfolder is an error at startup.
 
 ```ts
 // pb_pages/+config.ts

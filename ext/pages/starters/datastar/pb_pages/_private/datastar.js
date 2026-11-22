@@ -1,10 +1,10 @@
-// Datastar add-on for PocketPages v1 (ext/pages). https://data-star.dev
+// Datastar add-on for Pages (ext/pages). https://data-star.dev
 //
 // Copy this file into pb_pages/_private/datastar.js and list it in +config.js by name:
 //
 //   module.exports = { plugins: ['realtime', 'datastar'] }
 //
-// It adds ctx.datastar (see the PocketPages docs). The realtime helpers need the built-in 'realtime' plugin.
+// It adds ctx.datastar (see the Pages docs). The realtime helpers need the built-in 'realtime' plugin.
 // Maintained in ext/pages/addons/datastar.js; starter kits carry a copy.
 
 var LOADER = "<script\n  type=\"module\"\n  defer\n  src=\"https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.5/bundles/datastar.js\"\n></script>\n<script language=\"javascript\">\n  const patchSignals = (signals) => {\n    document.dispatchEvent(\n      new CustomEvent('datastar-fetch', {\n        detail: {\n          type: 'datastar-patch-signals',\n          el: null,\n          argsRaw: {\n            signals: JSON.stringify(signals),\n          },\n        },\n      })\n    )\n  }\n</script>\n"

@@ -32,7 +32,7 @@ limits. [QuickJS hooks](https://pocketone.dev/docs/quickjs)
 
 PocketBase serves static files and single-page apps from `pb_public`, and hooks can render HTML with `$template`.
 PocketOne adds server-rendered pages: a `.tsx`, `.jsx`, `.ejs` or `.md` file in `pb_pages` becomes a route, with
-`await` everywhere and no build step. [PocketPages sites](https://pocketone.dev/docs/features/sites)
+`await` everywhere and no build step. [Pages](https://pocketone.dev/docs/features/sites)
 
 ### Many apps on one server
 

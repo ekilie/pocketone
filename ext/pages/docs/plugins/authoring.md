@@ -1,6 +1,6 @@
 ---
 title: Plugin Authoring Guide
-description: 'Write a custom plugin for PocketPages v1, a factory that returns onRequest, extendContext and transform hooks.'
+description: 'Write a custom plugin for Pages, a factory that returns onRequest, extendContext and transform hooks.'
 ---
 
 # Plugin Authoring Guide

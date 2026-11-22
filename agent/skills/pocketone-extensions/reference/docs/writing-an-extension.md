@@ -387,7 +387,7 @@ ext/<name>/
   modes_test.go     the feature on the real binary, in every mode it runs in (below)
   example/main.go   a minimal program that builds cleanly and shows the feature
   ui/               optional: admin screens (embedded main.js)
-  docs/             optional: end-user docs (tutorials, guides), as PocketPages pages (below)
+  docs/             optional: end-user docs (tutorials, guides), as pages (below)
   blog/             optional: posts for the pocketone.dev blog
 ```
 
@@ -470,9 +470,9 @@ ext/<name>/
   limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
 - **Your README is your extension's reference; end-user docs go in `docs/`.** The README is your extension's page in
   the Extensions reference. Tutorials, guides and recipes, written for someone learning to use it, go in an optional
-  `docs/` folder of [PocketPages](https://pocketone.dev/docs/extensions/pages) pages beside it, which pocketone.dev serves under your
+  `docs/` folder of [Pages](https://pocketone.dev/docs/extensions/pages) pages beside it, which pocketone.dev serves under your
   extension's URL: `docs/ctx/req.md` is `/docs/extensions/<name>/ctx/req`. [`ext/pages/docs`](../ext/pages/docs)
-  (PocketPages' docs) and [`ext/wasm/docs`](../ext/wasm/docs) are the examples.
+  (Pages' docs) and [`ext/wasm/docs`](../ext/wasm/docs) are the examples.
   - `docs/index.md` is required: the docs' landing page, at `/docs/extensions/<name>`. Its front matter names the main
     nav section that links it, one of the `# Section` headings of the main docs nav (`Tutorials`, `Reference`, ...),
     and the link's text is its `title`:
@@ -489,14 +489,14 @@ ext/<name>/
   - `docs/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. Your docs pages show it as
     their sidebar, in place of the main docs nav, under a link back and a link to `index.md`. The README and the guides
     beside it aren't in it: they're in the Extensions reference.
-  - Pages are templates: EJS runs in `.md` files as in any PocketPages app, so a code sample writes `<%%` for a
+  - Pages are templates: EJS runs in `.md` files as in any PocketOne app, so a code sample writes `<%%` for a
     literal `<%`. Partials go in `docs/_private/`; the site's own (`browser`, for one) are found too.
   - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `../README.md`, `shot.png` beside
     the page); the site turns them into site URLs, and a link to a file that doesn't exist fails the build.
   - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
-- **Examples are TypeScript page code and Go.** Show server code as [PocketPages](https://pocketone.dev/docs/extensions/pages) page code in
+- **Examples are TypeScript page code and Go.** Show server code as [Pages](https://pocketone.dev/docs/extensions/pages) page code in
   TypeScript (`+api.ts`, `+page.ts`, modules in `_private/`, and an `.ets` template when the example needs a page), and the
   same thing in Go when an app's Go code can do it. Not `pb_hooks`, and not JavaScript: pages give routes a file
   structure people can read, and TypeScript carries the types.

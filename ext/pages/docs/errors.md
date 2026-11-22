@@ -1,6 +1,6 @@
 ---
 title: Errors
-description: How PocketPages turns thrown errors into responses, ctx.httpError(), and custom +error and +404 pages.
+description: How Pages turns thrown errors into responses, ctx.httpError(), and custom +error and +404 pages.
 ---
 
 # Errors

@@ -430,7 +430,7 @@ From [API Tokens](/docs/extensions/api-tokens).
 
 ## pocketone pages
 
-PocketPages: create an app from a starter kit
+Pages: create an app from a starter kit
 
 From [Pages](/docs/extensions/pages/extension).
 
@@ -1915,7 +1915,7 @@ pocketone serve [domain(s)]
 | `--jsvm` | string | `quickjs` | the JS engine: quickjs (PocketOne's) or goja (PocketBase's own, for pure PocketBase compatibility) |
 | `--migrationsDir` | string | – | the directory with the user defined migrations |
 | `--origins` | stringSlice | `[*]` | CORS allowed domain origins list |
-| `--pagesDir` | string | – | the directory with the PocketPages app (default pb\_pages next to pb\_data); served when it exists |
+| `--pagesDir` | string | – | the directory with the app's pages (default pb\_pages next to pb\_data); served when it exists |
 | `--pitr` | bool | `true` | point-in-time restore: replicate data.db into pb\_data/litestream/ while serving |
 | `--pitrRetention` | duration | `72h0m0s` | how far back a point-in-time restore can go |
 | `--publicDir` | string | `<the binary's folder>/pb_public` | the directory to serve static files |

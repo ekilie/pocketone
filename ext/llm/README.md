@@ -179,7 +179,7 @@ func main() {
 }
 ```
 
-[examples/chat](examples/chat/README.md) is a whole PocketPages app (no Go) on `$llm`: a chat about PocketOne that
+[examples/chat](examples/chat/README.md) is a whole PocketOne app (no Go) on `$llm`: a chat about PocketOne that
 arms the model with a preamble and docs read from disk, streams each answer into a stored chat, and suggests follow-up
 questions with a JSON schema.
 

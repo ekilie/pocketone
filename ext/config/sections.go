@@ -32,7 +32,7 @@ type ServerConfig struct {
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" doc:"Many instances only: how long in-flight requests get to finish at stop."`
 	PublicDir       string        `yaml:"public_dir" doc:"Single app only: the static files folder. Default: pb_public next to the executable. The --publicDir flag wins."`
 	IndexFallback   *bool         `yaml:"index_fallback" doc:"Single app only: serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins."`
-	PagesDir        string        `yaml:"pages_dir" doc:"Single app only: the PocketPages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins."`
+	PagesDir        string        `yaml:"pages_dir" doc:"Single app only: the pages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins."`
 	HooksWatch      *bool         `yaml:"hooks_watch" doc:"Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins."`
 	Automigrate     *bool         `yaml:"automigrate" doc:"Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins."`
 }

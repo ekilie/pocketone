@@ -1,7 +1,7 @@
 package main
 
 // Extension docs. An extension's home is ext/<name>: its README (its page in the Extensions reference, under
-// /docs/extensions), its samples, and optionally end-user docs in PocketPages format:
+// /docs/extensions), its samples, and optionally end-user docs in Pages format:
 //
 //	ext/<name>/docs/            mounted at /docs/extensions/<name>/; the README moves to /docs/extensions/<name>/extension
 //	ext/<name>/docs/index.md    the docs' landing page; its front matter `section:` names the main nav's section (a

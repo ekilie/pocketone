@@ -33,7 +33,7 @@ migrate(
     app.save(demo)
 
     for (const [title, body] of [
-      ['Welcome to PocketPages', 'This note came from a migration. Sign in as user@example.com / password to add your own.'],
+      ['Welcome to PocketOne', 'This note came from a migration. Sign in as user@example.com / password to add your own.'],
       ['Pages are files', 'Every .ejs, .md, .jsx and .tsx file in pb_pages is a route.'],
       ['Data is PocketBase', 'This list is read with ctx.pb(), as the visitor, so the collection API rules apply.'],
     ]) {

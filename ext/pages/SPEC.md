@@ -1,10 +1,10 @@
-# PocketPages v1 specification
+# Pages specification
 
 The contract for `ext/pages`, PocketOne's server-rendered multi-page app extension. The test fixtures
-([`fixtures/`](fixtures)), the starter kits and the PocketPages site are written against this document. Where the
+([`fixtures/`](fixtures)), the starter kits and pocketone.dev are written against this document. Where the
 implementation and this document disagree, one of them is a bug.
 
-v1 is a clean API. It keeps PocketPages' ideas (a folder of files that become routes, EJS, layouts, middleware,
+v1 is a clean API. It keeps Pages' ideas (a folder of files that become routes, EJS, layouts, middleware,
 private partials) and changes the shapes. Apps written for the npm package (0.x) don't run unchanged; "Changes from
 0.x" (section 12) lists every difference.
 

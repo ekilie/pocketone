@@ -10,7 +10,7 @@ source: "ext/standard/README.md"
 Version 0.1.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
+Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 

@@ -1015,7 +1015,7 @@
     }
   }
 
-  /* A splash at the top of a docs page (an extension site's landing, such as PocketPages'): no full-screen hero,
+  /* A splash at the top of a docs page (an extension site's landing, such as Pages'): no full-screen hero,
      tighter sections, rounded into the page column. */
   .splash.inset {
     min-height: 0;

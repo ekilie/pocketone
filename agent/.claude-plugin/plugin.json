@@ -1,6 +1,6 @@
 {
   "name": "pocketone",
-  "description": "Build with PocketOne (the pocketone binary, pocketone.yaml, deploying, writing extensions and contracts) and PocketPages v1 server-rendered sites.",
+  "description": "Build with PocketOne (the pocketone binary, pocketone.yaml, deploying, writing extensions and contracts), including its server-rendered pages.",
   "author": {
     "name": "PocketHost",
     "url": "https://pocketone.dev"
@@ -8,5 +8,5 @@
   "homepage": "https://pocketone.dev/docs/agents",
   "repository": "https://github.com/pocketonehq/pocketone",
   "license": "MIT",
-  "keywords": ["pocketone", "pocketbase", "pocketpages", "pockethost"]
+  "keywords": ["pocketone", "pocketbase", "pages", "pockethost"]
 }

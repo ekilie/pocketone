@@ -1,6 +1,6 @@
 # Introduction
 
-- [Overview of PocketPages](../overview.md)
+- [Overview of Pages](../overview.md)
 - [Moving from PocketPages 0.x](../moving-from-0x.md)
 - [Coding agents](../agents.md)
 

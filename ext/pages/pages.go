@@ -1,4 +1,4 @@
-// Package pages serves server-rendered multi-page apps from an app's pb_pages folder (PocketPages v1).
+// Package pages serves server-rendered multi-page apps from an app's pb_pages folder (Pages).
 //
 // The contract is SPEC.md in this folder. This package owns the framework side: route discovery and matching,
 // static files and fingerprints, and (later) the EJS compiler; page code runs in the app's JS VM.

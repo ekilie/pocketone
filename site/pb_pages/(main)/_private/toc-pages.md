@@ -7,7 +7,7 @@
 
 # Introduction
 
-- [Overview of PocketPages](/docs/extensions/pages/overview)
+- [Overview of Pages](/docs/extensions/pages/overview)
 - [Moving from PocketPages 0.x](/docs/extensions/pages/moving-from-0x)
 - [Coding agents](/docs/extensions/pages/agents)
 

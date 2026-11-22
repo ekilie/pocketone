@@ -1,7 +1,7 @@
 {
-  "name": "pocketpages-starter-daisyui-docs",
+  "name": "pocketone-starter-daisyui-docs",
   "private": true,
-  "description": "A starter project for PocketPages with DaisyUI and Docs (Tailwind CSS build only; PocketPages itself needs no npm install)",
+  "description": "A starter project for a PocketOne app with DaisyUI and Docs (Tailwind CSS build only; Pages itself needs no npm install)",
   "scripts": {
     "dev:css": "tailwindcss -i ./pb_pages/assets/-app.tailwind.css -o ./pb_pages/assets/app.css --watch",
     "build:css": "tailwindcss -i ./pb_pages/assets/-app.tailwind.css -o ./pb_pages/assets/app.css --minify"

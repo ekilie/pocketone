@@ -1,6 +1,6 @@
 # Bedtime Story
 
-A PocketPages app with no Go (`pb_pages`, one migration and the stock `pocketone` binary) that makes a bedtime story
+A PocketOne app with no Go (`pb_pages`, one migration and the stock `pocketone` binary) that makes a bedtime story
 for adults: one topic (the universe, the mind, a moment in history) told slowly and in depth, from a prompt or a topic
 it picks itself. It's read aloud by one narrator, with pictures that slowly pan and zoom, the words lit up as they're said, and
 a quiet song underneath. You pick its length in minutes and how many pictures it gets. Each story is saved, so it can

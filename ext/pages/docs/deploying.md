@@ -1,11 +1,11 @@
 ---
 title: Going Live
-description: Deploy a PocketPages app by putting pb_pages next to pb_data on a PocketOne server (pages is built in).
+description: Deploy a PocketOne app by putting pb_pages next to pb_data on a PocketOne server (pages is built in).
 ---
 
 # Going Live
 
-A PocketPages app is a `pb_pages` folder. To go live, run PocketOne on your server (pages is built in) and put `pb_pages` next to `pb_data`, along with your other `pb_*` folders:
+A PocketOne app is a `pb_pages` folder. To go live, run PocketOne on your server (pages is built in) and put `pb_pages` next to `pb_data`, along with your other `pb_*` folders:
 
 ```
 pb_data/

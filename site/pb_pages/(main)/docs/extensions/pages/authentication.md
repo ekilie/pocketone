@@ -7,7 +7,7 @@ source: "ext/pages/docs/authentication.md"
 
 # Authentication
 
-PocketPages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
+Pages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
 
 ```ts
 // pb_pages/+config.ts

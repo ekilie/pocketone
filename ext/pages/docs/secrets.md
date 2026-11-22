@@ -1,9 +1,9 @@
 ---
-title: Managing Secrets in PocketPages
+title: Managing Secrets in Pages
 description: Read API keys and other secrets from environment variables with ctx.env().
 ---
 
-# Managing Secrets in PocketPages
+# Managing Secrets in Pages
 
 Keep API keys, passwords and other secrets in environment variables, and read them with `ctx.env(name)`. It returns `''` when the variable is unset.
 

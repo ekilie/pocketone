@@ -1,8 +1,8 @@
 # PocketOne
 
-> PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and PocketPages server-rendered sites.
+> PocketOne is a community fork of PocketBase (one Go binary: database, auth, files, realtime, admin UI) with extensions for point-in-time recovery, backups, mail, many instances on one server, deploys, tokens and OAuth, MCP, and server-rendered pages.
 
-PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne and PocketPages: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).
+PocketOne takes the same commands and flags as PocketBase, plus its own; core PocketBase topics live at https://pocketbase.io/docs. Agent Skills for PocketOne: https://github.com/pocketonehq/pocketone/tree/main/agent (Claude Code: `/plugin marketplace add pocketonehq/pocketone`).
 
 
 ---
@@ -48,7 +48,7 @@ Put `.tsx`, `.jsx`, `.ejs` or Markdown files in a `pb_pages` folder and they're 
 records a function call away. Components `import` each other, route files can be TypeScript, and every part of a
 page can `await`. esbuild is built into
 the binary, so there's no Node, no `npm install` and no build step. This site is one. `pocketone pages create myapp`
-starts a new site from a starter kit. [PocketPages](https://pocketone.dev/docs/features/sites) shows a page in TSX.
+starts a new site from a starter kit. [Pages](https://pocketone.dev/docs/features/sites) shows a page in TSX.
 
 ### Hundreds of apps in one process
 
@@ -272,7 +272,7 @@ limits. [QuickJS hooks](https://pocketone.dev/docs/quickjs)
 
 PocketBase serves static files and single-page apps from `pb_public`, and hooks can render HTML with `$template`.
 PocketOne adds server-rendered pages: a `.tsx`, `.jsx`, `.ejs` or `.md` file in `pb_pages` becomes a route, with
-`await` everywhere and no build step. [PocketPages sites](https://pocketone.dev/docs/features/sites)
+`await` everywhere and no build step. [Pages](https://pocketone.dev/docs/features/sites)
 
 ### Many apps on one server
 
@@ -341,10 +341,9 @@ PocketOne is new, so coding agents haven't seen much of it. Two things close tha
 
 ## Agent Skills
 
-The `pocketone` plugin has three skills:
+The `pocketone` plugin has two skills:
 
-- **pocketone:** using PocketOne in an app: the `pocketone` binary and its commands, `pocketone.yaml`, deploying, and every extension.
-- **pocketpages:** building PocketPages v1 sites in `pb_pages/`: routing, `ctx`, templates, layouts, auth and deploying.
+- **pocketone:** using PocketOne in an app: the `pocketone` binary and its commands, `pocketone.yaml`, deploying, every extension, and the app's pages in `pb_pages/` (routing, `ctx`, templates, layouts, auth).
 - **pocketone-extensions:** writing your own extension and contributing it as a pull request: contracts, `extkit`, tests, and the README and changelog CI checks.
 
 Each skill carries a copy of the docs in its `reference/` folder, so it works offline.
@@ -373,7 +372,7 @@ For agents and tools that read the web:
 - [pocketone.dev/llms.txt](https://pocketone.dev/llms.txt) indexes every docs page with a one-line summary.
 - [pocketone.dev/llms-full.txt](https://pocketone.dev/llms-full.txt) holds every docs page in one Markdown file.
 
-PocketPages' docs are part of this site, under [/docs/extensions/pages](https://pocketone.dev/docs/extensions/pages), so both files include them.
+Pages' docs are part of this site, under [/docs/extensions/pages](https://pocketone.dev/docs/extensions/pages), so both files include them.
 
 
 ---
@@ -449,7 +448,7 @@ pocker: { root: ./pb_root }
 | | What you get |
 |---|---|
 | [QuickJS hooks](https://pocketone.dev/docs/quickjs) | `async`/`await`, ES module `import`, TypeScript, shared globals and hard limits, on the same JS API |
-| [PocketPages sites](https://pocketone.dev/docs/features/sites) | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
+| [Pages](https://pocketone.dev/docs/features/sites) | Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, with `await` everywhere and no build step |
 | [PocketBase isolates](https://pocketone.dev/docs/features/isolates) | Hundreds of apps in one process, each starting in tens of ms, about 3 MB each, sandboxed |
 | [Point-in-time restore](https://pocketone.dev/docs/features/restore) | Every change recorded; restore to any second in the last 72 hours, and undo the restore |
 | [Deploy and live sync](https://pocketone.dev/docs/features/deploy) | `pocketone deploy` uploads only what changed; `pocketone dev` syncs a folder both ways and streams logs |
@@ -865,12 +864,12 @@ contracts, shared globals and async handlers.
 
 Source: https://pocketone.dev/docs/features/sites
 
-# PocketPages: sites in TSX, TypeScript or EJS
+# Pages: sites in TSX, TypeScript or EJS
 
 Put a `.tsx`, `.jsx`, `.ejs` or `.md` file in a `pb_pages` folder next to `pb_data`, and your app serves it as a web
 page. Each file is a route. Components `import` each other, route files can be TypeScript (`+page.ts`, `+api.ts`), and
 page code reads and writes your records directly. Every part of a page can `await`, and the app keeps serving other
-requests while it waits. This is PocketPages, built into PocketOne.
+requests while it waits. This is Pages, built into PocketOne.
 
 esbuild is built into the `pocketone` binary, so TSX and TypeScript compile the first time a page is used: no Node, no
 `npm install`, no bundler, no build step. It's on for every PocketOne app whenever a `pb_pages` folder exists. No folder,
@@ -972,11 +971,11 @@ To send your pages to a running app, see [Deploy and live sync](https://pocketon
 
 To serve pages from another folder, pass `--pagesDir` to `pocketone serve`, or set `server.pages_dir` in
 `pocketone.yaml` ([pocketone.yaml reference](https://pocketone.dev/docs/config-reference)). Settings for the site itself, such as which
-PocketPages plugins to load, go in `pb_pages/+config.js` ([+config.js](https://pocketone.dev/docs/extensions/pages/config)).
+Pages plugins to load, go in `pb_pages/+config.js` ([+config.js](https://pocketone.dev/docs/extensions/pages/config)).
 
 ## Learn more
 
-The full PocketPages docs:
+The full Pages docs:
 
 - [Installation](https://pocketone.dev/docs/extensions/pages/installation) and [starter kits](https://pocketone.dev/docs/extensions/pages/starter-kits)
 - [JSX and TSX](https://pocketone.dev/docs/extensions/pages/jsx)
@@ -990,7 +989,7 @@ The full PocketPages docs:
 
 - [Pages](https://pocketone.dev/docs/extensions/pages/extension) serves the `pb_pages` folder and adds the `pages create` and
   `pages starters` commands. Page code runs in your app's JS engine.
-- [PocketPages](https://pocketone.dev/docs/extensions/pages) is the home of its docs, guides and plugins.
+- [Pages](https://pocketone.dev/docs/extensions/pages) is the home of its docs, guides and plugins.
 
 
 ---
@@ -1062,7 +1061,7 @@ only the hostnames listed there are served. [Auto TLS](https://pocketone.dev/doc
 ## What each app gets
 
 - **Everything a PocketOne app has.** [Point-in-time restore](https://pocketone.dev/docs/features/restore), [API tokens](https://pocketone.dev/docs/features/tokens),
-  [MCP](https://pocketone.dev/docs/features/mcp), [PocketPages](https://pocketone.dev/docs/features/sites), [bulk mail](https://pocketone.dev/docs/features/bulk-mail) and the rest
+  [MCP](https://pocketone.dev/docs/features/mcp), [Pages](https://pocketone.dev/docs/features/sites), [bulk mail](https://pocketone.dev/docs/features/bulk-mail) and the rest
   are on in every isolate. Each can be turned off per app.
 - **Its own deploys.** [`pocketone deploy`](https://pocketone.dev/docs/features/deploy) and the [Remote CLI](https://pocketone.dev/docs/features/remote) work
   against each app's hostname.
@@ -2062,7 +2061,7 @@ r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.Comple
 // r.Text is the summary
 ```
 
-The examples show each thing in TypeScript, as [PocketPages](https://pocketone.dev/docs/extensions/pages/overview) page code (`+api.ts`,
+The examples show each thing in TypeScript, as [Pages](https://pocketone.dev/docs/extensions/pages/overview) page code (`+api.ts`,
 `+page.ts`), and in Go. The Go examples call the contract packages (`textv1` is
 `pocketone.dev/ext/contracts/llm/text/v1`) with a `context.Context` named `ctx`.
 
@@ -2793,7 +2792,7 @@ ext/<name>/
   modes_test.go     the feature on the real binary, in every mode it runs in (below)
   example/main.go   a minimal program that builds cleanly and shows the feature
   ui/               optional: admin screens (embedded main.js)
-  docs/             optional: end-user docs (tutorials, guides), as PocketPages pages (below)
+  docs/             optional: end-user docs (tutorials, guides), as pages (below)
   blog/             optional: posts for the pocketone.dev blog
 ```
 
@@ -2876,9 +2875,9 @@ ext/<name>/
   limits) goes in sections after these, and extra guides can sit next to the README as other `.md` files.
 - **Your README is your extension's reference; end-user docs go in `docs/`.** The README is your extension's page in
   the Extensions reference. Tutorials, guides and recipes, written for someone learning to use it, go in an optional
-  `docs/` folder of [PocketPages](https://pocketone.dev/docs/extensions/pages) pages beside it, which pocketone.dev serves under your
+  `docs/` folder of [Pages](https://pocketone.dev/docs/extensions/pages) pages beside it, which pocketone.dev serves under your
   extension's URL: `docs/ctx/req.md` is `/docs/extensions/<name>/ctx/req`. [`ext/pages/docs`](../ext/pages/docs)
-  (PocketPages' docs) and [`ext/wasm/docs`](../ext/wasm/docs) are the examples.
+  (Pages' docs) and [`ext/wasm/docs`](../ext/wasm/docs) are the examples.
   - `docs/index.md` is required: the docs' landing page, at `/docs/extensions/<name>`. Its front matter names the main
     nav section that links it, one of the `# Section` headings of the main docs nav (`Tutorials`, `Reference`, ...),
     and the link's text is its `title`:
@@ -2895,14 +2894,14 @@ ext/<name>/
   - `docs/_private/toc.md` is its nav: `# Section` headings and `- [Title](page.md)` links. Your docs pages show it as
     their sidebar, in place of the main docs nav, under a link back and a link to `index.md`. The README and the guides
     beside it aren't in it: they're in the Extensions reference.
-  - Pages are templates: EJS runs in `.md` files as in any PocketPages app, so a code sample writes `<%%` for a
+  - Pages are templates: EJS runs in `.md` files as in any PocketOne app, so a code sample writes `<%%` for a
     literal `<%`. Partials go in `docs/_private/`; the site's own (`browser`, for one) are found too.
   - Link the way GitHub does, relative to the file (`ctx/req.md`, `../routing.md`, `../README.md`, `shot.png` beside
     the page); the site turns them into site URLs, and a link to a file that doesn't exist fails the build.
   - Content only: no `+` files (layouts, `+config.js`, middleware, API routes).
   - `blog/*.md` files are posts on the pocketone.dev blog at `/blog/<file name>`, with the same front matter as the
     blog's own (title, description, date, author, tags) and links relative to the file.
-- **Examples are TypeScript page code and Go.** Show server code as [PocketPages](https://pocketone.dev/docs/extensions/pages) page code in
+- **Examples are TypeScript page code and Go.** Show server code as [Pages](https://pocketone.dev/docs/extensions/pages) page code in
   TypeScript (`+api.ts`, `+page.ts`, modules in `_private/`, and an `.ets` template when the example needs a page), and the
   same thing in Go when an app's Go code can do it. Not `pb_hooks`, and not JavaScript: pages give routes a file
   structure people can read, and TypeScript carries the types.
@@ -3490,7 +3489,7 @@ Source: https://pocketone.dev/docs/examples
 
 # Example apps
 
-Small, complete apps that show what a PocketOne app looks like. Each is a PocketPages app with no Go: a `pb_pages`
+Small, complete apps that show what a PocketOne app looks like. Each is a PocketOne app with no Go: a `pb_pages`
 folder (and sometimes migrations and hooks) run by the stock `pocketone` binary. Their source is in the PocketOne
 repository, ready to copy.
 
@@ -3525,7 +3524,7 @@ pocketone pages create myapp --starter <kit>
 
 | Starter | What it shows |
 |---|---|
-| [minimal](https://pocketone.dev/docs/examples/starters#minimal) | A single page, the smallest PocketPages app |
+| [minimal](https://pocketone.dev/docs/examples/starters#minimal) | A single page, the smallest PocketOne app |
 | [mvp](https://pocketone.dev/docs/examples/starters#mvp) | Classless MVP.css on plain semantic HTML |
 | [auth](https://pocketone.dev/docs/examples/starters#auth) | Password, anonymous, OTP and OAuth2 sign-in, verification, password reset and email change |
 | [daisyui](https://pocketone.dev/docs/examples/starters#daisyui) | Tailwind CSS with DaisyUI: a navbar and drawer |
@@ -3965,7 +3964,7 @@ From [API Tokens](https://pocketone.dev/docs/extensions/api-tokens).
 
 ## pocketone pages
 
-PocketPages: create an app from a starter kit
+Pages: create an app from a starter kit
 
 From [Pages](https://pocketone.dev/docs/extensions/pages/extension).
 
@@ -5450,7 +5449,7 @@ pocketone serve [domain(s)]
 | `--jsvm` | string | `quickjs` | the JS engine: quickjs (PocketOne's) or goja (PocketBase's own, for pure PocketBase compatibility) |
 | `--migrationsDir` | string | – | the directory with the user defined migrations |
 | `--origins` | stringSlice | `[*]` | CORS allowed domain origins list |
-| `--pagesDir` | string | – | the directory with the PocketPages app (default pb\_pages next to pb\_data); served when it exists |
+| `--pagesDir` | string | – | the directory with the app's pages (default pb\_pages next to pb\_data); served when it exists |
 | `--pitr` | bool | `true` | point-in-time restore: replicate data.db into pb\_data/litestream/ while serving |
 | `--pitrRetention` | duration | `72h0m0s` | how far back a point-in-time restore can go |
 | `--publicDir` | string | `<the binary's folder>/pb_public` | the directory to serve static files |
@@ -6460,7 +6459,7 @@ The serve command: http, https and CORS origins, and for a single app its static
 | `shutdown_timeout` | duration |  | Many instances only: how long in-flight requests get to finish at stop. |
 | `public_dir` | string |  | Single app only: the static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |
 | `index_fallback` | bool |  | Single app only: serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins. |
-| `pages_dir` | string |  | Single app only: the PocketPages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
+| `pages_dir` | string |  | Single app only: the pages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
 | `hooks_watch` | bool |  | Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
 | `automigrate` | bool |  | Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
 
@@ -6551,7 +6550,7 @@ A PocketOne app is a folder. PocketBase's own folders sit next to each other in 
 | `pb_hooks` | your JS hooks (and `*.pb.wasm` modules) | as code, in git | yes | no |
 | `pb_migrations` | your app's migrations | as code, in git | yes | no |
 | `pb_public` | static files the app serves | as code, in git | yes | no |
-| `pb_pages` | PocketPages pages | as code, in git | yes | no |
+| `pb_pages` | your app's pages | as code, in git | yes | no |
 | `pb_templates` | page templates you ejected (`pocketone template eject`) | as code, in git | yes | no |
 | `pb_cache` | files extensions can rebuild, one folder each | never | never | yes, at any time |
 
@@ -6590,20 +6589,20 @@ pocketone extensions migrate down bulkmail   # revert bulkmail's last migration 
 
 Source: https://pocketone.dev/docs/extensions/pages
 
-# PocketPages
+# Pages
 
 <!-- The HTML below has no blank lines on purpose: Markdown ends an HTML block at a blank line. -->
 <aside class="announce rise">
 <p class="announce-eyebrow">pocketpages.dev has moved</p>
-<h2>PocketPages is now part of PocketOne</h2>
-<p>PocketPages v1 is built into the <code>pocketone</code> binary as the <a href="/docs/extensions/pages/extension">pages extension</a>: no npm package, no boot file, no build step. Its docs and blog live here now, beside every other PocketOne extension. Coming from the npm package (0.x)? Start with <a href="/docs/extensions/pages/moving-from-0x">Moving from PocketPages 0.x</a>.</p>
+<h2>PocketPages is now Pages, part of PocketOne</h2>
+<p>Pages (formerly PocketPages) is built into the <code>pocketone</code> binary as the <a href="/docs/extensions/pages/extension">pages extension</a>: no npm package, no boot file, no build step. Its docs and blog live here now, beside every other PocketOne extension. Coming from the npm package (0.x)? Start with <a href="/docs/extensions/pages/moving-from-0x">Moving from PocketPages 0.x</a>.</p>
 </aside>
 <div class="splash inset">
 <section class="hero">
 <div>
 <div class="hero-brand rise">
-<span class="avatar"><img src="/docs/extensions/pages/pocketpages-logo.png" alt="PocketPages logo" /></span>
-<h1 class="hero-title">PocketPages</h1>
+<span class="avatar"><img src="/docs/extensions/pages/pocketpages-logo.png" alt="Pages logo" /></span>
+<h1 class="hero-title">Pages</h1>
 <pre><code class="language-bash">brew install pocketonehq/tap/pocketone
 pocketone pages create myapp</code></pre>
 <a class="hero-alt" href="/docs/installation#windows">On Windows? Install with Scoop</a>
@@ -6614,13 +6613,13 @@ pocketone pages create myapp</code></pre>
 <a href="/docs/extensions/pages/installation" class="btn btn-outline"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Quick Start</a>
 </div>
 <pre><code class="language-ets">&lt;!-- pb_pages/index.ets --&gt;
-&lt;%= `Hello, PocketPages!` %&gt;</code></pre>
-<div class="rise" style="--delay: 0.8s; --rise: 30px; width: min(100%, 42rem)"><%- include('browser', { content: 'Hello, PocketPages!' }) %></div>
+&lt;%= `Hello, PocketOne!` %&gt;</code></pre>
+<div class="rise" style="--delay: 0.8s; --rise: 30px; width: min(100%, 42rem)"><%- include('browser', { content: 'Hello, PocketOne!' }) %></div>
 </div>
 </section>
 <section class="section">
 <div class="section-head">
-<h2 class="section-title">Why PocketPages is Better</h2>
+<h2 class="section-title">Why Pages is Better</h2>
 <p class="lead">Zero compilation, zero bundling, zero build steps. Just write code and deploy, frontend and backend.</p>
 </div>
 <div class="grid">
@@ -6644,7 +6643,7 @@ pocketone pages create myapp</code></pre>
 <section class="section alt">
 <div class="section-head">
 <h2 class="section-title">Why Multi-Page Apps Matter</h2>
-<p class="lead">While SPAs dominate the conversation, MPAs offer proven benefits for most web applications. PocketPages brings this architecture to PocketBase's powerful backend.</p>
+<p class="lead">While SPAs dominate the conversation, MPAs offer proven benefits for most web applications. Pages brings this architecture to PocketBase's powerful backend.</p>
 </div>
 <div class="grid two">
 <div class="card glass">
@@ -6692,7 +6691,7 @@ const user = $app.findRecordById('users', params.id)
 </div>
 <div class="grid wide">
 <div class="window soft">
-<header>HTMX + PocketPages</header>
+<header>HTMX + Pages</header>
 <div>
 <pre><code class="language-html">&lt;%- include('header.ets') %&gt;
 &lt;div hx-get="/fragments/todos"
@@ -6704,7 +6703,7 @@ const user = $app.findRecordById('users', params.id)
 </div>
 </div>
 <div class="window soft">
-<header>Alpine.js + PocketPages</header>
+<header>Alpine.js + Pages</header>
 <div>
 <pre><code class="language-html">&lt;div x-data="{ todos: &lt;%= JSON.stringify(todos) %&gt; }"&gt;
   &lt;template x-for="todo in todos"&gt;
@@ -6716,7 +6715,7 @@ const user = $app.findRecordById('users', params.id)
 </div>
 </div>
 <div class="window soft">
-<header>Datastar + PocketPages</header>
+<header>Datastar + Pages</header>
 <div>
 <pre><code class="language-html">&lt;input type="text" name="message" data-bind:message /&gt;
 &lt;button data-on:click="@get('/fragments/chat')"&gt;
@@ -11972,7 +11971,7 @@ The serve command: http, https and CORS origins, and for a single app its static
 | `shutdown_timeout` | duration |  | Many instances only: how long in-flight requests get to finish at stop. |
 | `public_dir` | string |  | Single app only: the static files folder. Default: pb_public next to the executable. The --publicDir flag wins. |
 | `index_fallback` | bool |  | Single app only: serve index.html for a missing static path, for single-page apps. On unless false. The --indexFallback flag wins. |
-| `pages_dir` | string |  | Single app only: the PocketPages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
+| `pages_dir` | string |  | Single app only: the pages folder, served when it exists. Default: pb_pages next to pb_data. The --pagesDir flag wins. |
 | `hooks_watch` | bool |  | Single app only: restart the app when a pb_hooks file changes. On unless false. The --hooksWatch flag wins. |
 | `automigrate` | bool |  | Single app only: write a migration file when you change collections in the dashboard. On unless false. The --automigrate flag wins. |
 
@@ -13131,7 +13130,7 @@ func main() {
 }
 ```
 
-[examples/chat](https://github.com/pocketonehq/pocketone/blob/main/ext/llm/examples/chat/README.md) is a whole PocketPages app (no Go) on `$llm`: a chat about PocketOne that
+[examples/chat](https://github.com/pocketonehq/pocketone/blob/main/ext/llm/examples/chat/README.md) is a whole PocketOne app (no Go) on `$llm`: a chat about PocketOne that
 arms the model with a preamble and docs read from disk, streams each answer into a stored chat, and suggests follow-up
 questions with a JSON schema.
 
@@ -13706,12 +13705,12 @@ Source: https://pocketone.dev/docs/extensions/pages/extension
 
 Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
 
-> Walkthrough for app owners: [PocketPages sites](https://pocketone.dev/docs/features/sites). This page is the technical reference.
+> Walkthrough for app owners: [PocketOne apps](https://pocketone.dev/docs/features/sites). This page is the technical reference.
 
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: `.ets` templates
 (EJS tags holding TypeScript) or [TSX](https://pocketone.dev/docs/extensions/pages/jsx) components, Markdown pages, layouts, `.ts` middleware and API
 routes, plus static files. Every file type is listed in [File types](https://pocketone.dev/docs/extensions/pages/file-types). Page code runs in your app's JS VM, so it
-can use your data directly. This is PocketPages v1, formerly the npm PocketPages package.
+can use your data directly. This is Pages, formerly the npm PocketPages package.
 
 [Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
 
@@ -13961,11 +13960,11 @@ bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 
 ## More in this folder
 
-- [SPEC.md](https://pocketone.dev/docs/extensions/pages/spec): the full PocketPages v1 contract.
+- [SPEC.md](https://pocketone.dev/docs/extensions/pages/spec): the full Pages contract.
 - [fixtures/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/fixtures/README.md): the request test cases (`go test ./...` runs them all).
 - [starters/](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/starters): the starter kits. [addons/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/README.md): JS add-ons such as Datastar.
-- [docs/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/docs/_private/toc.md): the PocketPages docs, as PocketPages pages (formerly pocketpages.dev), shown on
-  pocketone.dev under this page. [blog/](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/blog): the PocketPages blog posts.
+- [docs/](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/docs/_private/toc.md): the Pages docs, as pages (formerly pocketpages.dev), shown on
+  pocketone.dev under this page. [blog/](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/blog): the Pages blog posts.
 
 ## License
 
@@ -13976,13 +13975,13 @@ MIT
 
 Source: https://pocketone.dev/docs/extensions/pages/spec
 
-# PocketPages v1 specification
+# Pages specification
 
 The contract for `ext/pages`, PocketOne's server-rendered multi-page app extension. The test fixtures
-([`fixtures/`](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/fixtures)), the starter kits and the PocketPages site are written against this document. Where the
+([`fixtures/`](https://github.com/pocketonehq/pocketone/tree/main/ext/pages/fixtures)), the starter kits and pocketone.dev are written against this document. Where the
 implementation and this document disagree, one of them is a bug.
 
-v1 is a clean API. It keeps PocketPages' ideas (a folder of files that become routes, EJS, layouts, middleware,
+v1 is a clean API. It keeps Pages' ideas (a folder of files that become routes, EJS, layouts, middleware,
 private partials) and changes the shapes. Apps written for the npm package (0.x) don't run unchanged; "Changes from
 0.x" (section 12) lists every difference.
 
@@ -19344,7 +19343,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 Version 0.1.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
+Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
@@ -19691,7 +19690,7 @@ run on the app's JS VM between pieces; the waiting for each piece doesn't, so ot
 
 ## In a page
 
-A PocketPages API route forwards the pieces to the browser as server-sent events:
+A Pages API route forwards the pieces to the browser as server-sent events:
 
 ```ts
 // pb_pages/ask/+api.ts
@@ -19883,11 +19882,11 @@ the system text the same from call to call.
 
 Source: https://pocketone.dev/docs/extensions/pages/overview
 
-# Overview of PocketPages
+# Overview of Pages
 
-PocketPages turns a folder of files into a server-rendered website, inside PocketOne. It is built in as the `pages` extension (`ext/pages`): no npm package, no boot file, no build step.
+Pages turns a folder of files into a server-rendered website, inside PocketOne. It is built in as the `pages` extension (`ext/pages`): no npm package, no boot file, no build step.
 
-Use PocketPages to create slim and modern web apps:
+Use Pages to create slim and modern web apps:
 
 - Start small and iterate
 - SEO-first principles
@@ -19922,7 +19921,7 @@ Files become URLs, and `+layout.ets` files wrap the pages below them:
 
 ## Coming from the npm package?
 
-PocketPages v1 is a clean API. Apps written for PocketPages 0.x (the npm package) don't run unchanged. See [Moving from PocketPages 0.x](https://pocketone.dev/docs/extensions/pages/moving-from-0x).
+Pages is a clean API. Apps written for PocketPages 0.x (the npm package) don't run unchanged. See [Moving from PocketPages 0.x](https://pocketone.dev/docs/extensions/pages/moving-from-0x).
 
 
 ---
@@ -19931,7 +19930,7 @@ Source: https://pocketone.dev/docs/extensions/pages/moving-from-0x
 
 # Moving from PocketPages 0.x
 
-PocketPages v1 is part of PocketOne (the `pages` extension). It keeps the ideas of the npm package (a folder of files that become routes, EJS, layouts, middleware, private partials) and changes the shapes. Apps written for 0.x don't run unchanged.
+Pages is part of PocketOne (the `pages` extension). It keeps the ideas of the npm package (a folder of files that become routes, EJS, layouts, middleware, private partials) and changes the shapes. Apps written for 0.x don't run unchanged.
 
 There is no migration tool. Start a new app with `pocketone pages create <name>`, then move your pages over using the list below. The npm package is being retired.
 
@@ -20079,7 +20078,7 @@ Source: https://pocketone.dev/docs/extensions/pages/agents
 
 # Coding agents
 
-Coding agents tend to write PocketPages as if it were a Node framework, or as if it were the 0.x npm package. The `pocketpages` Agent Skill teaches them v1: `pb_pages/`, `ctx`, routing, templates, layouts, auth and deploying. It's built from these docs and the v1 spec, so it changes when they change.
+Coding agents tend to write Pages as if it were a Node framework, or as if it were the 0.x npm package. The `pocketone` Agent Skill teaches them Pages: `pb_pages/`, `ctx`, routing, templates, layouts, auth and deploying, alongside the binary, `pocketone.yaml` and its extensions. It carries these docs and the spec, so it changes when they change.
 
 **Claude Code**
 
@@ -20088,19 +20087,17 @@ Coding agents tend to write PocketPages as if it were a Node framework, or as if
 /plugin install pocketone@pocketone
 ```
 
-The plugin also has the `pocketone` skill, for the binary, `pocketone.yaml` and its extensions.
-
 **Other agents that read Agent Skills** (Cursor, Codex, Gemini CLI and others)
 
 ```bash
 npx skills add pocketonehq/pocketone
 ```
 
-Or copy [`agent/skills/pocketpages`](https://github.com/pocketonehq/pocketone/tree/main/agent/skills/pocketpages) into your project.
+Or copy [`agent/skills/pocketone`](https://github.com/pocketonehq/pocketone/tree/main/agent/skills/pocketone) into your project.
 
 ## llms.txt
 
-- [pocketone.dev/llms.txt](https://pocketone.dev/llms.txt) indexes every docs page, these PocketPages pages included, with a one-line summary.
+- [pocketone.dev/llms.txt](https://pocketone.dev/llms.txt) indexes every docs page, the Pages docs included, with a one-line summary.
 - [pocketone.dev/llms-full.txt](https://pocketone.dev/llms-full.txt) holds every docs page in one Markdown file.
 
 
@@ -20110,17 +20107,17 @@ Source: https://pocketone.dev/docs/extensions/pages/installation
 
 # Installation
 
-PocketPages v1 is built into PocketOne as the `pages` extension (`ext/pages`). There is nothing to install from npm: the standard `pocketone` binary includes it.
+Pages is built into PocketOne as the `pages` extension (`ext/pages`). There is nothing to install from npm: the standard `pocketone` binary includes it.
 
 <%- include('quickstart') %>
 
 `pocketone pages create myapp` creates a new app. Add `--starter <kit>` to start from a [starter kit](https://pocketone.dev/docs/extensions/pages/starter-kits).
 
-_Note: `--dir` tells `pocketone` where `pb_data` is. PocketPages looks for `pb_pages` next to it. Create the superuser before the first `serve`; otherwise PocketBase opens its superuser installer in your browser._
+_Note: `--dir` tells `pocketone` where `pb_data` is. Pages looks for `pb_pages` next to it. Create the superuser before the first `serve`; otherwise PocketBase opens its superuser installer in your browser._
 
 Browse to `http://localhost:8090` and you'll see the starter's home page. The default `minimal` kit is one splash page:
 
-<%- include('browser', { content: `<h1>PocketPages</h1>` }) %>
+<%- include('browser', { content: `<h1>PocketOne</h1>` }) %>
 
 To start editing, open
 
@@ -20140,13 +20137,13 @@ myapp/
   pb_pages/
 ```
 
-- PocketPages finds the folder at `pb_pages` next to `pb_data`, or wherever `--pagesDir` points.
+- Pages finds the folder at `pb_pages` next to `pb_data`, or wherever `--pagesDir` points.
 - If the folder doesn't exist, the extension does nothing for that app.
 - Under a multitenant host, every instance has its own `pb_pages`.
 
 ## How does it work?
 
-PocketPages is a multi-page app server for PocketOne. It listens for requests and renders pages using file-based routing rules, like old-school PHP. URLs under `/api/` and `/_/` always belong to PocketBase. A URL nothing in `pb_pages` matches goes on to `pb_public`, then to PocketBase.
+Pages is a multi-page app server for PocketOne. It listens for requests and renders pages using file-based routing rules, like old-school PHP. URLs under `/api/` and `/_/` always belong to PocketBase. A URL nothing in `pb_pages` matches goes on to `pb_public`, then to PocketBase.
 
 
 ---
@@ -20178,7 +20175,7 @@ Each starter kit is an ordinary `pb_pages` folder written against the v1 API, in
 
 | Starter | What it shows | Live demo |
 | --- | --- | --- |
-| **minimal** | A minimal PocketPages starter with just the basics | [pocketpages-minimal.pockethost.io](https://pocketpages-minimal.pockethost.io) |
+| **minimal** | A minimal Pages starter with just the basics | [pocketpages-minimal.pockethost.io](https://pocketpages-minimal.pockethost.io) |
 | **mvp** | MVP.css, a minimalist classless CSS framework | [pocketpages-mvp.pockethost.io](https://pocketpages-mvp.pockethost.io) |
 | **auth** | Password, anonymous, OTP and OAuth2 sign-in, plus verification, password reset and email change | [pocketpages-auth.pockethost.io](https://pocketpages-auth.pockethost.io) |
 | **daisyui** | Tailwind CSS with DaisyUI components | [pocketpages-daisyui.pockethost.io](https://pocketpages-daisyui.pockethost.io) |
@@ -20192,7 +20189,7 @@ Each starter kit is an ordinary `pb_pages` folder written against the v1 API, in
 
 Source: https://pocketone.dev/docs/extensions/pages/creating-a-page
 
-# Creating a PocketPages Page
+# Creating a Page
 
 A **page** is a template file, `.ets` or `.md`, anywhere in `pb_pages/`. Its path becomes its URL. (A `.tsx` component works too; see [File types](https://pocketone.dev/docs/extensions/pages/file-types).)
 
@@ -20293,7 +20290,7 @@ Source: https://pocketone.dev/docs/extensions/pages/file-types
 
 # File types
 
-PocketPages apps are server-rendered pages with no build step. Every file in `pb_pages` is either code, a template or
+PocketOne apps are server-rendered pages with no build step. Every file in `pb_pages` is either code, a template or
 a static file, and you write code and templates in TypeScript. PocketOne strips the types when it first uses a file,
 with esbuild built into the binary; it never checks them.
 
@@ -20478,7 +20475,7 @@ const filters = JSON.parse(ctx.req.query('filters') ?? '{}')
 
 Source: https://pocketone.dev/docs/extensions/pages/loading-data
 
-# Loading Data in PocketPages
+# Loading Data in Pages
 
 You can load data right in a template, or in a `+page.ts` file next to it.
 
@@ -20565,7 +20562,7 @@ If a handler sends a response (`ctx.res.redirect`, `json`, `html`, `text`, `file
 
 ### Async loading
 
-`load` and the method handlers can be `async`. PocketPages waits for them before it renders. Every Go function has an
+`load` and the method handlers can be `async`. Pages waits for them before it renders. Every Go function has an
 `.async` twin that does its work outside the JS VM, so other requests keep running while it waits:
 
 ```ts
@@ -20859,7 +20856,7 @@ A template returns its text. There is no `echo()`; anything you want in the outp
 
 ## await
 
-A template can `await`. Any tag that uses `await` turns the template into an async one, and PocketPages waits for it
+A template can `await`. Any tag that uses `await` turns the template into an async one, and Pages waits for it
 before it sends the page:
 
 ```ets
@@ -20946,7 +20943,7 @@ A `.md` file in a `_private/` folder can be included from an `.ets` template wit
 
 Source: https://pocketone.dev/docs/extensions/pages/partials
 
-# Using Partials in PocketPages
+# Using Partials in Pages
 
 Partials are reusable templates that you include from other templates. They live in `_private/` folders, which are never routed.
 
@@ -20979,7 +20976,7 @@ pb_pages/
       index.ets
 ```
 
-PocketPages looks in `_private/` in the current template's folder, then in each parent folder up to `pb_pages/`.
+Pages looks in `_private/` in the current template's folder, then in each parent folder up to `pb_pages/`.
 
 ```ets
 <!-- In blog/posts/index.ets -->
@@ -21122,7 +21119,7 @@ Source: https://pocketone.dev/docs/extensions/pages/jsx
 
 # Components with TSX
 
-PocketPages has two template styles. [ETS](https://pocketone.dev/docs/extensions/pages/ets) is HTML with code in it, and it's the one these docs use. TSX is
+Pages has two template styles. [ETS](https://pocketone.dev/docs/extensions/pages/ets) is HTML with code in it, and it's the one these docs use. TSX is
 code that returns HTML: every page, layout and partial is a function component. Pick TSX if you think in components
 and want typed props. Either way the page is rendered on the server and sent as plain HTML; nothing runs in the
 browser.
@@ -21486,7 +21483,7 @@ See [asset](https://pocketone.dev/docs/extensions/pages/ctx/asset) and [Caching]
 
 Source: https://pocketone.dev/docs/extensions/pages/static-content
 
-# Serving Static Content in PocketPages
+# Serving Static Content in Pages
 
 Any file in `pb_pages` that isn't a page (`.ets`, `.md` or `.tsx`, or the [JavaScript versions](https://pocketone.dev/docs/extensions/pages/file-types#javascript-works-too) `.ejs` and `.jsx`), a framework file (`+...`), private (`_...`) or ignored (names starting with `-` or `.`) is a static file. It's served as-is at its path, with groups removed:
 
@@ -21518,7 +21515,7 @@ A URL nothing in `pb_pages` matches goes on to `pb_public`, so you can keep usin
 
 Source: https://pocketone.dev/docs/extensions/pages/secrets
 
-# Managing Secrets in PocketPages
+# Managing Secrets in Pages
 
 Keep API keys, passwords and other secrets in environment variables, and read them with `ctx.env(name)`. It returns `''` when the variable is unset.
 
@@ -21571,7 +21568,7 @@ Source: https://pocketone.dev/docs/extensions/pages/config
 
 # Configuration with `+config.ts`
 
-Create `pb_pages/+config.ts` to configure PocketPages for the app. It's only allowed at the top of `pb_pages`; a `+config.ts` in a subfolder is an error at startup.
+Create `pb_pages/+config.ts` to configure Pages for the app. It's only allowed at the top of `pb_pages`; a `+config.ts` in a subfolder is an error at startup.
 
 ```ts
 // pb_pages/+config.ts
@@ -21626,7 +21623,7 @@ Plugin hooks run in the order the plugins are listed. See [Plugin Authoring](htt
 
 Source: https://pocketone.dev/docs/extensions/pages/caching
 
-# Understanding Caching in PocketPages
+# Understanding Caching in Pages
 
 ## Fingerprinted assets
 
@@ -21732,7 +21729,7 @@ Create `pb_pages/+404.ets`. It renders inside the root layout, with status `404`
 
 Source: https://pocketone.dev/docs/extensions/pages/debugging
 
-# Debugging in PocketPages
+# Debugging in Pages
 
 ## Dev mode
 
@@ -21783,7 +21780,7 @@ Source: https://pocketone.dev/docs/extensions/pages/deploying
 
 # Going Live
 
-A PocketPages app is a `pb_pages` folder. To go live, run PocketOne on your server (pages is built in) and put `pb_pages` next to `pb_data`, along with your other `pb_*` folders:
+A PocketOne app is a `pb_pages` folder. To go live, run PocketOne on your server (pages is built in) and put `pb_pages` next to `pb_data`, along with your other `pb_*` folders:
 
 ```
 pb_data/
@@ -21966,7 +21963,7 @@ Source: https://pocketone.dev/docs/extensions/pages/plugins/datastar
 
 # Datastar Add-on
 
-The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a custom plugin that ships with PocketPages
+The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a custom plugin that ships with Pages
 rather than a built-in: copy [`addons/datastar.js`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/datastar.js)
 into `pb_pages/_private/` (the `datastar` starter kit already has it) and list it in `+config.ts` by name:
 
@@ -22220,7 +22217,7 @@ Source: https://pocketone.dev/docs/extensions/pages/ctx
 
 # The `ctx` Object
 
-PocketPages creates one `ctx` object per request and passes it to middleware, handlers, templates and plugins.
+Pages creates one `ctx` object per request and passes it to middleware, handlers, templates and plugins.
 
 ```ts
 // +middleware.ts
@@ -22829,7 +22826,7 @@ Source: https://pocketone.dev/docs/extensions/pages/typescript
 
 PocketOne strips the types from `.ts` and `.tsx` files and runs them; it never checks them. To check them, use `tsc` or your editor with the types PocketOne writes for your app.
 
-When the app starts, it writes `types.d.ts` next to `pb_pages` (in the project folder, beside `pb_data` and `pocketone.yaml`) with the declarations of the whole JS API, PocketPages included. PocketPages adds no globals: its types live in the `pages` namespace and you use them by name.
+When the app starts, it writes `types.d.ts` next to `pb_pages` (in the project folder, beside `pb_data` and `pocketone.yaml`) with the declarations of the whole JS API, Pages included. Pages adds no globals: its types live in the `pages` namespace and you use them by name.
 
 ## Set up
 
@@ -22906,7 +22903,7 @@ Source: https://pocketone.dev/docs/extensions/pages/authentication
 
 # Authentication
 
-PocketPages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
+Pages keeps PocketBase auth in a cookie with the built-in [`auth` plugin](plugins/auth.md). Turn it on:
 
 ```ts
 // pb_pages/+config.ts
@@ -23113,9 +23110,9 @@ module.exports = {
 
 Source: https://pocketone.dev/docs/extensions/pages/htmx
 
-# HTMX Integration with PocketPages
+# HTMX Integration with Pages
 
-[HTMX](https://htmx.org) lets HTML elements fetch HTML from the server and swap it into the page. PocketPages renders that HTML.
+[HTMX](https://htmx.org) lets HTML elements fetch HTML from the server and swap it into the page. Pages renders that HTML.
 
 ## Setting up HTMX
 
@@ -23336,7 +23333,7 @@ Source: https://pocketone.dev/docs/extensions/pages/realtime
 
 # Realtime Events
 
-PocketBase pushes realtime messages to browsers over server-sent events. In PocketPages, page code sends, and browsers receive.
+PocketBase pushes realtime messages to browsers over server-sent events. In Pages, page code sends, and browsers receive.
 
 ## Sending from a page
 
@@ -23437,7 +23434,7 @@ Source: https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2
 
 # Google OAuth2 Setup Guide
 
-This guide walks you through setting up Google OAuth2 sign-in for your PocketPages app.
+This guide walks you through setting up Google OAuth2 sign-in for your PocketOne app.
 
 ## 1. Create/Select Google Cloud Project
 
@@ -25443,9 +25440,9 @@ Source: https://pocketone.dev/docs/examples/starters
 
 # Starters
 
-Each starter kit is an ordinary `pb_pages` folder written against PocketPages v1, in TypeScript with
+Each starter kit is an ordinary `pb_pages` folder written against Pages, in TypeScript with
 [ETS templates](https://pocketone.dev/docs/extensions/pages/ets) (the **tsx** kit uses [components](https://pocketone.dev/docs/extensions/pages/jsx) instead), so
-everything in the [PocketPages docs](https://pocketone.dev/docs/extensions/pages) applies to it. Start an app from one, then run it:
+everything in the [Pages docs](https://pocketone.dev/docs/extensions/pages) applies to it. Start an app from one, then run it:
 
 ```bash
 pocketone pages create myapp --starter <kit>
@@ -25461,7 +25458,7 @@ folder must not exist yet. Each kit's source is in
 ## minimal
 
 A single `index.ets` page: a Tailwind (CDN) splash screen with no layout, no config and no build step. The smallest
-possible PocketPages app. Live demo: [pocketpages-minimal.pockethost.io](https://pocketpages-minimal.pockethost.io).
+possible PocketOne app. Live demo: [pocketpages-minimal.pockethost.io](https://pocketpages-minimal.pockethost.io).
 
 ```
 pb_pages/
@@ -25569,7 +25566,7 @@ pb_pages/
 
 Server-rendered components: a `+layout.tsx`, an `index.tsx` page built from a `_private/Feature.tsx` component, and a
 `+page.ts` that loads the page's data. TSX renders straight to HTML on the server (no React, no client runtime, no
-hydration), and PocketPages strips the types when it loads each file, so there is no build step. Pick one template
+hydration), and Pages strips the types when it loads each file, so there is no build step. Pick one template
 style per app: TSX here, or `.ets` in the other kits.
 
 ```

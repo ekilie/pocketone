@@ -7,7 +7,7 @@ source: "ext/pages/docs/plugins/datastar.md"
 
 # Datastar Add-on
 
-The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a custom plugin that ships with PocketPages
+The Datastar add-on adds helpers for [Datastar](https://data-star.dev). It's a custom plugin that ships with Pages
 rather than a built-in: copy [`addons/datastar.js`](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/addons/datastar.js)
 into `pb_pages/_private/` (the `datastar` starter kit already has it) and list it in `+config.ts` by name:
 
