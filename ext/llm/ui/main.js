@@ -45,7 +45,6 @@
         const data = store({
             loading: true,
             saving: false,
-            testing: false,
             view: null, // the section's settings/v1 values
             providers: [], // editable: { name, type, endpoint, account, key, keySet }
             saved: "", // values() as last loaded or saved, to tell when there are changes
@@ -99,20 +98,24 @@
             data.saving = false;
         }
 
-        async function test() {
-            data.testing = true;
-            data.message = null;
+        // test checks one provider's key as the card shows it (a key typed but not saved yet included), and shows the
+        // answer in the card.
+        async function test(i) {
+            const uid = data.providers[i].uid;
+            const at = () => data.providers.findIndex((p) => p.uid === uid);
+            set(i, { testing: true, result: null });
+            let result;
             try {
-                const r = await settingsAPI("/test", { extension: "llm", values: values() });
-                data.message = r.ok ? { kind: "success", text: "Every provider answered with its key." } : { kind: "danger", text: r.message };
+                const r = await settingsAPI("/test", { extension: "llm", values: { providers: [values().providers[i]] } });
+                result = r.ok ? { kind: "success", text: "The provider answered with this key." } : { kind: "danger", text: r.message };
             } catch (err) {
-                data.message = { kind: "danger", text: errText(err) };
+                result = { kind: "danger", text: errText(err) };
             }
-            data.testing = false;
+            if (at() >= 0) set(at(), { testing: false, result });
         }
 
         // set replaces one provider (so the page redraws), merging changes.
-        const set = (i, changes) => (data.providers = data.providers.map((p, j) => (j === i ? { ...p, ...changes } : p)));
+        const set = (i, changes) => (data.providers = data.providers.map((p, j) => (j === i ? { ...p, result: null, ...changes } : p)));
 
         // freeName is the type's suggested name, numbered when another provider has it.
         function freeName(type, except) {
@@ -182,7 +185,16 @@
                         t.input({ type: "password", autocomplete: "new-password", value: p.key,
                             placeholder: p.keySet ? `${p.keyHint || "Saved"} (leave empty to keep it)` : "", onchange: (e) => set(i, { key: e.target.value }) }),
                         ti.account ? "A token with Workers AI permission." : null)),
+                    p.result
+                        ? t.div({ className: "col-lg-12" }, t.div({ className: `alert ${p.result.kind} m-b-0` }, t.div({ className: "content" }, p.result.text)))
+                        : null,
                     t.div({ className: "col-lg-12 flex" },
+                        t.button({
+                            type: "button",
+                            className: `btn sm secondary ${p.testing ? "loading" : ""}`,
+                            disabled: !!p.testing,
+                            onclick: () => test(i),
+                        }, t.i({ className: "ri-checkbox-circle-line", ariaHidden: true }), t.span({ className: "txt" }, "Test")),
                         t.div({ className: "m-r-auto" }),
                         t.button({ type: "button", className: "btn sm transparent danger", onclick: () => remove(i) },
                             t.i({ className: "ri-delete-bin-7-line", ariaHidden: true }), t.span({ className: "txt" }, "Remove provider"))),
@@ -231,12 +243,6 @@
                             t.div({ className: "col-lg-12" }, t.hr()),
                             t.div({ className: "col-lg-12" },
                                 t.div({ className: "flex" },
-                                    t.button({
-                                        type: "button",
-                                        className: () => `btn transparent secondary ${data.testing ? "loading" : ""}`,
-                                        disabled: () => data.testing || !data.providers.length,
-                                        onclick: test,
-                                    }, t.i({ className: "ri-checkbox-circle-line", ariaHidden: true }), t.span({ className: "txt" }, "Test keys")),
                                     t.div({ className: "m-r-auto" }),
                                     t.button({
                                         type: "button",
