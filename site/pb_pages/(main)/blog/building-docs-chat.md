@@ -1,9 +1,9 @@
 ---
 title: "Building Docs Chat: a docs bot in five files"
-description: How learn.pocketone.dev works, file by file. A PocketPages app with no Go that answers from the PocketOne and PocketBase docs, streams its answer and shows what it cost.
+description: How learn.pocketone.dev works, file by file. A PocketOne app with no Go that answers from the PocketOne and PocketBase docs, streams its answer and shows what it cost.
 date: 2026-11-22
 author: Ben Allfree
-tags: examples, AI, PocketPages, llm
+tags: examples, AI, Pages, llm
 ---
 
 I wanted a place to send people with PocketOne questions, and a real app to put `$llm` through its paces. So I built [learn.pocketone.dev](https://learn.pocketone.dev). Ask it something about PocketOne or PocketBase and it answers from both sets of docs, cites the pages it used, and tells you what the answer cost.
@@ -23,7 +23,7 @@ Here's how it fits together.
 
 ### Teaching it the docs
 
-The first version answered from copies of the extension READMEs. That was the wrong material. People don't ask "what does the `llm.align/v1` contract promise," they ask "how do I deploy." So now it reads the same thing an AI agent would: pocketone.dev's [`llms.txt`](https://pocketone.dev/llms.txt) and `llms-full.txt`. It keeps the user docs (Get started, New in PocketOne, Guides, PocketPages) and skips the extension and contract reference.
+The first version answered from copies of the extension READMEs. That was the wrong material. People don't ask "what does the `llm.align/v1` contract promise," they ask "how do I deploy." So now it reads the same thing an AI agent would: pocketone.dev's [`llms.txt`](https://pocketone.dev/llms.txt) and `llms-full.txt`. It keeps the user docs (Get started, New in PocketOne, Guides, Pages) and skips the extension and contract reference.
 
 Then I gave it PocketBase's own docs too. PocketOne keeps a Markdown copy of pocketbase.io's docs in the pocketone Agent Skill, so `_private/llm.ts` reads those as well. Every excerpt is labelled "PocketOne docs" or "PocketBase docs" and linked back to its site, and `preamble.md` explains how the two fit together.
 

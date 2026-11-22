@@ -20,7 +20,7 @@ const r = await $llm.text.completeAsync({
 
 It's not just text. `$llm` draws pictures, reads text aloud, writes down what's said in audio, makes music and video, and turns text into embeddings. Every call runs off the JS VM, so your app keeps serving while a model works. And every result tells you what it cost. More in [AI in your app](/docs/extensions/llm).
 
-**Two example apps you can try right now.** [Docs Chat](https://learn.pocketone.dev) answers questions about PocketOne and PocketBase straight from both sets of docs. [Bedtime Story](https://sleep.pocketone.dev) picks one topic and tells it slowly, read aloud with pictures and music. Both are plain PocketPages apps, no Go, and the new [Example apps](/docs/examples) section walks through how each one is built.
+**Two example apps you can try right now.** [Docs Chat](https://learn.pocketone.dev) answers questions about PocketOne and PocketBase straight from both sets of docs. [Bedtime Story](https://sleep.pocketone.dev) picks one topic and tells it slowly, read aloud with pictures and music. Both are plain PocketOne apps, no Go, and the new [Example apps](/docs/examples) section walks through how each one is built.
 
 **Async handlers can wait longer.** A route, hook or cron job can now await for up to 15 minutes in all. Before, anything waiting more than 30 seconds timed out, which was no good for a model making a video. If the client goes away, the handler stops.
 

@@ -3,14 +3,14 @@ title: "Building Bedtime Story: six model calls and a little CSS"
 description: How sleep.pocketone.dev turns a topic into a narrated, illustrated story with music. A walkthrough of the pipeline, the player, the guards that keep a public copy cheap, and the tuning screen in the dashboard.
 date: 2026-11-22
 author: Ben Allfree
-tags: examples, AI, PocketPages, llm
+tags: examples, AI, Pages, llm
 ---
 
 Docs Chat was text in, text out. I wanted something that used everything `$llm` can do, all at once. So I built [sleep.pocketone.dev](https://sleep.pocketone.dev).
 
 Give it a topic, or leave it empty and let it pick one: the universe, the mind, a moment in history. A minute later it plays the story. One narrator reading, pictures that slowly pan and zoom, the words lighting up as they're said, quiet music underneath. Every story is saved, so you can replay it and share the link.
 
-It's still a plain PocketPages app with no Go. Source is at [`ext/llm/examples/bedtime`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/bedtime).
+It's still a plain PocketOne app with no Go. Source is at [`ext/llm/examples/bedtime`](https://github.com/pocketonehq/pocketone/tree/main/ext/llm/examples/bedtime).
 
 ```
 pb_migrations/         stories, listens, each call's cost, the saved tuning, audio samples
