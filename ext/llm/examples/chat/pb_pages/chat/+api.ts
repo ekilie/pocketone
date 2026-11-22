@@ -2,10 +2,14 @@
 // empty), armed with the preamble and matching context: "text" events as the model writes, then "done" with the chat's
 // id, the sources and timing (or "error").
 // GET /chat: the model and what the app knows, for the page's status line.
-export function get(ctx: any) {
+export async function get(ctx: any) {
   const llm = ctx.resolve('llm')
-  const kb = llm.knowledge(ctx)
-  return ctx.res.json({ model: llm.MODEL, files: kb.files, sections: kb.sections.length })
+  try {
+    const kb = await llm.knowledge(ctx)
+    return ctx.res.json({ model: llm.MODEL, docs: llm.DOCS_URL, pages: kb.files.length, sections: kb.sections.length })
+  } catch (err: any) {
+    return ctx.res.json(503, { model: llm.MODEL, docs: llm.DOCS_URL, error: String(err.message || err) })
+  }
 }
 
 export async function post(ctx: any) {

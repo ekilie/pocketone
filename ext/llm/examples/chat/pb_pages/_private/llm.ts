@@ -1,6 +1,7 @@
-// Arms $llm with what this app knows: a preamble (preamble.md) and context files (context/*.md), read from disk. For
-// each question it picks the few sections of the context that match best and hands only those to the model, so every
-// question is small and cheap instead of sending every file every time.
+// Arms $llm with what this app knows: a preamble (preamble.md) and pocketone.dev's user documentation, fetched from the
+// site itself (its llms.txt and llms-full.txt), so the chat always answers from the docs as they are published. For each
+// question it picks the few sections that match best and hands only those to the model, so every question is small and
+// cheap instead of sending every page every time.
 
 /**
  * The model that answers, as provider/model: a provider you added in Settings → LLM, then that provider's model. Set
@@ -8,11 +9,53 @@
  */
 export const MODEL: string = process.env.CHAT_MODEL || 'vultr/glm-5.2'
 
+/**
+ * The site to answer from: its llms.txt lists the docs by section, its llms-full.txt has every page's text. Set
+ * DOCS_URL to answer from another copy (DOCS_URL=http://127.0.0.1:8090 for a site you're running).
+ */
+export const DOCS_URL: string = (process.env.DOCS_URL || 'https://pocketone.dev').replace(/\/$/, '')
+
+/**
+ * The user docs: the pages llms.txt lists under these sections, plus the pages below each of them (an extension's
+ * guides). The rest of the site (Extend PocketOne, the contracts and extensions reference, the generated CLI, REST and
+ * MCP reference) is for people writing extensions, not using PocketOne, so the chat leaves it out.
+ */
+const SECTIONS = ['Get started', 'New in PocketOne', 'Guides']
+/** User docs listed under other sections. */
+const ALSO = ['/docs/extensions/pages'] // PocketPages' docs, listed under Reference
+
 type Section = { file: string; source: string; title: string; text: string; terms?: { [w: string]: number }; length?: number }
-type Knowledge = { preamble: string; files: string[]; sections: Section[]; df: { [w: string]: number }; avgLength: number }
+type Knowledge = { preamble: string; files: string[]; sections: Section[]; df: { [w: string]: number }; avgLength: number; at: number }
 
 const privateDir = (ctx: any): string => `${ctx.pagesDir}/_private`
 const read = (path: string): string => toString($os.readFile(path))
+
+/** A URL's path: https://pocketone.dev/docs/x → /docs/x (the engine has no URL class). */
+const pathOf = (url: string): string => url.replace(/^[a-z]+:\/\/[^/]+/i, '') || '/'
+
+/** Fetches a text file off the app's JS VM. */
+async function fetchText(url: string): Promise<string> {
+  const res = await $http.send.async({ url, method: 'GET', timeout: 30 })
+  if (res.statusCode !== 200) throw new Error(`${url}: HTTP ${res.statusCode}`)
+  return toString(res.body)
+}
+
+/** The user docs' URLs (paths), from llms.txt's sections. */
+function userPages(index: string): string[] {
+  const out: string[] = [...ALSO]
+  let keep = false
+  for (const line of index.split('\n')) {
+    const h = line.match(/^## (.+)$/)
+    if (h) keep = SECTIONS.includes(h[1].trim())
+    const link = keep && line.match(/^- \[[^\]]*\]\((\S+?)\)/)
+    if (link) out.push(pathOf(link[1]))
+  }
+  return out
+}
+
+/** Whether a page is user docs: one listed, or below one (not its extension reference page). */
+const isUserPage = (path: string, pages: string[]) =>
+  !path.endsWith('/extension') && pages.some((p) => path === p || path.startsWith(p + '/'))
 
 const STOP = new Set(
   `a an and are as at be but by can do does for from has have how i if in into is it its me my of on or so that the
@@ -63,20 +106,34 @@ function sections(name: string, text: string): Section[] {
   return out
 }
 
-let cached: Knowledge | undefined // a module loads once per app (per runtime in the pool), so this lasts across requests
+let cached: Knowledge | undefined // a module loads once per app, so this lasts across requests
+let loading: Promise<Knowledge> | undefined
+const MAX_AGE = 10 * 60 * 1000 // fetched again after 10 minutes, so a docs update shows up
 
-/**
- * What the app knows, read from disk once. In dev mode it's read again on every call, so edits to preamble.md or a
- * context file show up at once.
- */
-export function knowledge(ctx: any): Knowledge {
-  if (cached && !ctx.dev) return cached
-  const dir = `${privateDir(ctx)}/context`
-  const files = $os
-    .readDir(dir)
-    .filter((e) => !e.isDir() && e.name().endsWith('.md'))
-    .map((e) => e.name())
-  const all = files.flatMap((name) => sections(name, read(`${dir}/${name}`)))
+/** What the app knows, if it's loaded (for the page's header; answer() loads it). */
+export const knowledgeNow = (): Knowledge | undefined => cached
+
+/** What the app knows: the preamble, and the site's user docs split into sections and indexed for search. */
+export async function knowledge(ctx: any): Promise<Knowledge> {
+  if (cached && Date.now() - cached.at < MAX_AGE) return cached
+  loading ??= load(ctx).finally(() => (loading = undefined))
+  return loading
+}
+
+async function load(ctx: any): Promise<Knowledge> {
+  const [index, full] = await Promise.all([fetchText(`${DOCS_URL}/llms.txt`), fetchText(`${DOCS_URL}/llms-full.txt`)])
+  const pages = userPages(index)
+  const files: string[] = []
+  const all: Section[] = []
+  // llms-full.txt: pages separated by "---", each starting "Source: <url>"
+  for (const page of full.split(/\n---\n/)) {
+    const source = (page.match(/^Source: (\S+)/m) || [])[1]
+    if (!source) continue
+    const path = pathOf(source)
+    if (!isUserPage(path, pages)) continue
+    files.push(path)
+    all.push(...sections(path, page))
+  }
   const df: { [w: string]: number } = {}
   for (const s of all) {
     s.terms = {}
@@ -84,15 +141,15 @@ export function knowledge(ctx: any): Knowledge {
     s.length = Object.values(s.terms).reduce((a, b) => a + b, 0)
     for (const w in s.terms) df[w] = (df[w] || 0) + 1
   }
-  const kb: Knowledge = {
+  cached = {
     preamble: read(`${privateDir(ctx)}/preamble.md`).trim(),
     files,
     sections: all,
     df,
     avgLength: all.reduce((a, s) => a + (s.length || 0), 0) / Math.max(1, all.length),
+    at: Date.now(),
   }
-  cached = kb
-  return kb
+  return cached
 }
 
 /** The n sections that best match query (BM25). */
@@ -125,7 +182,7 @@ export async function answer(
   ctx: any,
   { chatId, question, onText }: { chatId?: string; question: string; onText?: (t: string) => void },
 ) {
-  const kb = knowledge(ctx)
+  const kb = await knowledge(ctx)
   const id = chatId || $llm.chat.new({ title: question.slice(0, 80) })
   // the question, plus the one before it, so a follow-up ("and how do I undo that?") still finds its topic
   const before = chatId ? $llm.chat.open(id).history({ limit: 2 }).filter((m) => m.role === 'user').map((m) => m.content) : []

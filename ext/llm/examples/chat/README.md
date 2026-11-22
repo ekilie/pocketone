@@ -3,10 +3,11 @@
 A chat app about PocketOne, written as a PocketPages app with no Go: `pb_pages` and the stock `pocketone` binary. It
 shows `$llm` from page code:
 
-- **arming the model from disk:** [`_private/llm.ts`](pb_pages/_private/llm.ts) reads a preamble
-  ([`preamble.md`](pb_pages/_private/preamble.md)) and context files ([`_private/context/`](pb_pages/_private/context),
-  eleven pages of pocketone.dev) with `$os.readDir` / `$os.readFile`, splits them into sections, and for each question
-  picks the three that match best (BM25, plus a few synonyms: people say "apps", the docs say "instances");
+- **answering from the published docs:** [`_private/llm.ts`](pb_pages/_private/llm.ts) fetches pocketone.dev's
+  `llms.txt` and `llms-full.txt` (off the VM, every 10 minutes) and keeps the user docs: the pages under Get started,
+  New in PocketOne and Guides, plus PocketPages, not the extension and contract reference. It splits them into
+  sections, and for each question picks the three that match best (BM25, plus a few synonyms: people say "apps", the
+  docs say "instances"), sent after a preamble ([`preamble.md`](pb_pages/_private/preamble.md));
 - **a stored chat, answered as it's written:** `$llm.chat.new()` once, then
   `await $llm.chat.open(id, { model, system }).sendAsync(question, { context, onText })` each turn (the llm-chat
   extension): the chat keeps the conversation (the page holds only its id), sends the preamble, the turns so far and
@@ -23,9 +24,8 @@ pb_pages/
   index.ejs              the chat page
   chat/+api.ts           POST /chat {chat?, question}: the answer as server-sent events; GET /chat: the model and what the app knows
   chat/suggest/+api.ts   POST /chat/suggest: three follow-up questions (JSON schema)
-  _private/llm.ts        the model's name, loads preamble + context, searches, asks the chat ($llm.chat)
+  _private/llm.ts        the model's name, fetches the docs, searches, asks the chat ($llm.chat)
   _private/preamble.md   who the assistant is and how it answers
-  _private/context/*.md  what it knows
 ```
 
 ## Run it
@@ -43,8 +43,9 @@ To answer with another model, set `CHAT_MODEL` to its `provider/model` when you 
 `CHAT_MODEL=or/openai/gpt-4o-mini pocketone serve --dir=pb_data` with an OpenRouter provider named `or`, or change
 `MODEL` in [`_private/llm.ts`](pb_pages/_private/llm.ts).
 
-To teach it something else, change `preamble.md` and put your own Markdown files in `_private/context/` (one
-`Source: <url>` line at the top of a file links its sections). In dev mode (`--dev`) edits show up on the next question.
+It answers from `https://pocketone.dev`; set `DOCS_URL` to answer from another copy of the site (a local one at
+`http://127.0.0.1:8090`, say). Any site with the same `llms.txt` / `llms-full.txt` shape works, so pointing it at your
+own docs means changing `DOCS_URL` and `SECTIONS` in `_private/llm.ts`, and `preamble.md`.
 
 ## What to expect
 

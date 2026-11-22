@@ -1,6 +1,5 @@
 <%
   const llm = ctx.resolve('llm')
-  const kb = llm.knowledge(ctx)
 %>
 <!doctype html>
 <html lang="en">
@@ -65,8 +64,7 @@
   <header>
     <h1>PocketOne Docs Chat</h1>
     <div id="status">Answered by <code><%= llm.MODEL %></code> (set <code>CHAT_MODEL</code> to change it)</div>
-    <div class="armed">Armed with <code>preamble.md</code> and <%= kb.files.length %> context files
-      (<%= kb.sections.length %> sections) from <code>pb_pages/_private</code></div>
+    <div class="armed" id="armed">Loading the docs from <code><%= llm.DOCS_URL %></code>…</div>
   </header>
   <div id="log">
     <div class="empty" id="empty">
@@ -86,6 +84,13 @@
 <script>
 const log = document.getElementById('log'), q = document.getElementById('q'), send = document.getElementById('send')
 const statusEl = document.getElementById('status')
+
+// the docs load on the server on first use (and every 10 minutes); show what the chat answers from
+fetch('/chat').then(r => r.json()).then(r => {
+  const el = document.getElementById('armed')
+  el.innerHTML = r.error ? `<span class="error">Couldn't load the docs: ${esc(r.error)}</span>`
+    : `Armed with <code>preamble.md</code> and ${r.pages} pages of the user docs (${r.sections} sections) from <code>${esc(r.docs)}</code>`
+}).catch(() => {})
 const history = [] // for the follow-up suggestions only: the server's chat keeps the conversation
 let chatId = '' // the stored chat ($llm.chat); a new one per page load
 
