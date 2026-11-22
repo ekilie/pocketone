@@ -25,6 +25,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/apis"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/template"
 	"pocketone.dev/ext/extkit/js"
 )
@@ -519,8 +520,11 @@ var hiddenMethods = map[string]map[string]bool{
 		// process lifecycle: one app must not restart, re-bootstrap or migrate the shared process
 		"Restart": true, "RestoreBackup": true, "Bootstrap": true, "ResetBootstrapState": true,
 		"RunAllMigrations": true, "RunSystemMigrations": true, "RunAppMigrations": true,
-		// server-level hooks and the cron scheduler (JS functions run on other goroutines; use cronAdd)
-		"OnServe": true, "OnTerminate": true, "OnBootstrap": true, "Cron": true,
+		// process-level hooks and the cron scheduler (JS functions run on other goroutines; use cronAdd). OnServe is
+		// not among them: each app has its own, fired once when that app starts serving (Pocker's buildHandler), and
+		// hook files bind it to register a superuser UI extension (e.uiExtensions) or routes; the event's Server,
+		// Listener and CertManager stay hidden (hiddenFields)
+		"OnTerminate": true, "OnBootstrap": true, "Cron": true,
 		// hookless copy of the app bypasses every hook, including the platform's
 		"UnsafeWithoutHooks": true,
 	},
@@ -585,6 +589,13 @@ func pkgOf(t reflect.Type) string {
 	return t.PkgPath()
 }
 
+var serveHookType = reflect.TypeOf((*hook.Hook[*core.ServeEvent])(nil))
+
+// serveHook reports whether t is the app's OnServe hook.
+func serveHook(t reflect.Type) bool {
+	return t == serveHookType || (t.Kind() != reflect.Pointer && reflect.PointerTo(t) == serveHookType)
+}
+
 // HideField implements js.Hider.
 func (s *Sandbox) HideField(t reflect.Type, f reflect.StructField) bool {
 	return isHiddenType(t) || hiddenFields[pkgOf(t)][f.Name] || isHiddenType(f.Type)
@@ -595,6 +606,11 @@ func (s *Sandbox) HideField(t reflect.Type, f reflect.StructField) bool {
 func (s *Sandbox) HideMethod(t reflect.Type, meth reflect.Method) bool {
 	if isHiddenType(t) {
 		return true
+	}
+	// the app's own serve hook may be bound: it fires only when this app starts serving, so a handler bound later
+	// waits for the next start instead of running for code that isn't ready
+	if serveHook(t) && (meth.Name == "Bind" || meth.Name == "BindFunc") {
+		return false
 	}
 	for _, pkg := range methodPkgs(t, meth.Name, 0) {
 		if hiddenMethods[pkg][meth.Name] {

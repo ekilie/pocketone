@@ -106,7 +106,7 @@ func TestConfinement(t *testing.T) {
 	check(`$filesystem.local("/")`, "sandboxed")
 	check(`$os.getenv("APP_KEY") + "|" + $os.getenv("HOST_SECRET")`, "app|")
 	check(`process.env.APP_KEY + "|" + (process.env.HOST_SECRET === undefined)`, "app|true")
-	check(`typeof $app.restart + "|" + typeof $app.bootstrap + "|" + typeof $app.onServe + "|" + typeof $app.findRecordById`, "undefined|undefined|undefined|function")
+	check(`typeof $app.restart + "|" + typeof $app.bootstrap + "|" + typeof $app.onServe + "|" + typeof $app.findRecordById`, "undefined|undefined|function|function")
 	check(`typeof $app.db().db`, "undefined")
 	check(`$os.args.length`, "0")
 }
