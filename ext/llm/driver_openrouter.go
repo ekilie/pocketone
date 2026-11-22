@@ -2,17 +2,18 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
 
 	llmc "pocketone.dev/ext/contracts/llm"
-	"pocketone.dev/ext/extkit"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	transcribev1 "pocketone.dev/ext/contracts/llm/transcribe/v1"
+	"pocketone.dev/ext/extkit"
 	"pocketone.dev/ext/llm/providers/oai"
 	"pocketone.dev/ext/llm/providers/openrouter"
 )
@@ -193,6 +194,12 @@ func (d *openRouterDriver) jobContent(ctx context.Context, kind, id string, inde
 		return llmc.File{}, err
 	}
 	return fileOf(f, "video-"+strconv.Itoa(index+1)), nil
+}
+
+// checkKey reads the key's own details, which needs the key (the model list doesn't).
+func (d *openRouterDriver) checkKey(ctx context.Context) error {
+	var v json.RawMessage
+	return d.c.JSON(ctx, "GET", "key", nil, &v)
 }
 
 // OpenRouter suggests polling videos every 10–30 s.

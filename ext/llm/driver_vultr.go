@@ -156,6 +156,12 @@ func (d *vultrDriver) jobContent(ctx context.Context, kind, id string, index int
 	return fileOf(f, kind+"-"+strconv.Itoa(index+1)), nil
 }
 
+// checkKey reads the account's usage, which needs the key (the model list doesn't).
+func (d *vultrDriver) checkKey(ctx context.Context) error {
+	var v json.RawMessage
+	return d.c.JSON(ctx, "GET", "usage", nil, &v)
+}
+
 func vultrJobPath(kind string) string {
 	if kind == llmc.KindVideo {
 		return "videos"

@@ -80,7 +80,7 @@ var W = extkit.NewWire(Contract, "llm", func(inner Video, g *extkit.Guard[Video]
 	},
 	extkit.Op[Video]{
 		Name:   "models",
-		Desc:   "Lists the enabled video models across providers, and the default.",
+		Desc:   "Lists the video models of every provider in Settings → LLM.",
 		Method: "GET",
 		Path:   "models",
 		Scope:  "llm:read",

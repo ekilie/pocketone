@@ -64,7 +64,7 @@ var W = extkit.NewWire(Contract, "llm", func(inner Speech, g *extkit.Guard[Speec
 	},
 	extkit.Op[Speech]{
 		Name:   "models",
-		Desc:   "Lists the enabled speech models across providers, and the default.",
+		Desc:   "Lists the speech models of every provider in Settings → LLM.",
 		Method: "GET",
 		Path:   "models",
 		Scope:  "llm:read",

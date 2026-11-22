@@ -103,8 +103,8 @@ type SendInput struct {
 	Schema      json.RawMessage `json:"schema,omitempty"`
 	MaxTokens   int             `json:"maxTokens,omitempty"`
 	Temperature *float64        `json:"temperature,omitempty"`
-	// Model is the text model to answer with ("provider/model"); empty uses the text default.
-	Model string `json:"model,omitempty"`
+	// Model is the text model to answer with ("provider/model", required).
+	Model string `json:"model"`
 	// Reasoning is how much a reasoning model thinks first: "", "off", "low", "medium" or "high".
 	Reasoning string `json:"reasoning,omitempty"`
 }
@@ -112,7 +112,7 @@ type SendInput struct {
 // SendResult is the answer, and whether this turn folded older messages into the summary.
 type SendResult struct {
 	Answer     textv1.CompleteResult `json:"answer"`
-	Summarized bool                   `json:"summarized,omitempty"`
+	Summarized bool                  `json:"summarized,omitempty"`
 }
 
 // HistoryInput picks a page of a chat's messages.

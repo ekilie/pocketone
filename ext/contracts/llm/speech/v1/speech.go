@@ -27,7 +27,7 @@ type Speech interface {
 	//
 	//op: POST voices scope=llm:read
 	Voices(ctx context.Context, a extkit.Auth, in VoicesInput) (VoiceList, error)
-	// Models lists the enabled speech models across providers, and the default.
+	// Models lists the speech models of every provider in Settings → LLM.
 	//
 	//op: GET models scope=llm:read
 	Models(ctx context.Context, a extkit.Auth, in llm.ModelsInput) (llm.Models, error)
@@ -35,7 +35,7 @@ type Speech interface {
 
 // SpeakInput is what to say and how.
 type SpeakInput struct {
-	Model string `json:"model,omitempty"`
+	Model string `json:"model"` // "provider/model", required
 	Text  string `json:"text"`
 	Voice string `json:"voice,omitempty"`
 	// Format is the audio format: mp3 (default), wav, opus, flac, pcm, as the provider allows.
@@ -53,9 +53,9 @@ type Result struct {
 	Usage llm.Usage `json:"usage"`
 }
 
-// VoicesInput names the model whose voices to list (empty: the speech default).
+// VoicesInput names the model whose voices to list.
 type VoicesInput struct {
-	Model string `json:"model,omitempty"`
+	Model string `json:"model"` // "provider/model", required
 }
 
 // VoiceList is a model's voices.

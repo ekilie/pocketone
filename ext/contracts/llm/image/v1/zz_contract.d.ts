@@ -6,6 +6,9 @@ declare namespace contracts.llm.image.v1 {
    * GenerateInput is what to draw.
    */
   interface GenerateInput {
+    /**
+     * "provider/model", required
+     */
     model: string;
     prompt: string;
     /**
@@ -67,7 +70,7 @@ declare function onLlmImageGenerate(handler: (e: contracts.CallEvent<contracts.l
  */
 declare function onLlmImageEdit(handler: (e: contracts.CallEvent<contracts.llm.image.v1.EditInput>) => void): void;
 /**
- * Models lists the enabled image models across providers, and the default.
+ * Models lists the image models of every provider in Settings → LLM.
  *
  * Runs on every models call to llm.image/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

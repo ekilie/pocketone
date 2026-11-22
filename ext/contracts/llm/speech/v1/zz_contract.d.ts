@@ -6,6 +6,9 @@ declare namespace contracts.llm.speech.v1 {
    * SpeakInput is what to say and how.
    */
   interface SpeakInput {
+    /**
+     * "provider/model", required
+     */
     model: string;
     text: string;
     voice: string;
@@ -22,9 +25,12 @@ declare namespace contracts.llm.speech.v1 {
   }
 
   /**
-   * VoicesInput names the model whose voices to list (empty: the speech default).
+   * VoicesInput names the model whose voices to list.
    */
   interface VoicesInput {
+    /**
+     * "provider/model", required
+     */
     model: string;
   }
 
@@ -52,7 +58,7 @@ declare function onLlmSpeechSpeak(handler: (e: contracts.CallEvent<contracts.llm
  */
 declare function onLlmSpeechVoices(handler: (e: contracts.CallEvent<contracts.llm.speech.v1.VoicesInput>) => void): void;
 /**
- * Models lists the enabled speech models across providers, and the default.
+ * Models lists the speech models of every provider in Settings → LLM.
  *
  * Runs on every models call to llm.speech/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

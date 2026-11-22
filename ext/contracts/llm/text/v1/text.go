@@ -1,5 +1,5 @@
-// Package textv1 is the llm.text/v1 contract: a language model answers a prompt or a conversation. The model is any
-// enabled text model of any provider the app's admins added in Settings → LLM ("vultr/glm-5.2"), or the text default.
+// Package textv1 is the llm.text/v1 contract: a language model answers a prompt or a conversation. Each call names
+// its model as provider/model ("vultr/glm-5.2"), a provider being one the app's admins added in Settings → LLM.
 //
 // A wire contract at /api/_c/llm.text/v1. In pb_hooks it's $llm.text.
 package textv1
@@ -34,7 +34,7 @@ type Text interface {
 	//
 	//op: POST count scope=llm:read
 	Count(ctx context.Context, a extkit.Auth, in CountInput) (CountResult, error)
-	// Models lists the enabled text models across providers, and the default.
+	// Models lists the text models of every provider in Settings → LLM.
 	//
 	//op: GET models scope=llm:read
 	Models(ctx context.Context, a extkit.Auth, in llm.ModelsInput) (llm.Models, error)
@@ -42,8 +42,8 @@ type Text interface {
 
 // CompleteInput is a prompt: Prompt, or Messages for a conversation (Prompt is then added as the last user message).
 type CompleteInput struct {
-	// Model is "provider/model"; empty uses the text default.
-	Model    string    `json:"model,omitempty"`
+	// Model is "provider/model" (required).
+	Model    string    `json:"model"`
 	System   string    `json:"system,omitempty"`
 	Prompt   string    `json:"prompt,omitempty"`
 	Messages []Message `json:"messages,omitempty"`
@@ -87,7 +87,7 @@ type Chunk struct {
 
 // CountInput is a text, or a conversation as a call would send it.
 type CountInput struct {
-	Model    string    `json:"model,omitempty"`
+	Model    string    `json:"model,omitempty"` // optional: the count is an estimate either way
 	Text     string    `json:"text,omitempty"`
 	System   string    `json:"system,omitempty"`
 	Messages []Message `json:"messages,omitempty"`

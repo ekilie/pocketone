@@ -23,7 +23,7 @@ type Embed interface {
 	//
 	//op: POST embed
 	Embed(ctx context.Context, a extkit.Auth, in EmbedInput) (Result, error)
-	// Models lists the enabled embedding models across providers, and the default.
+	// Models lists the embedding models of every provider in Settings → LLM.
 	//
 	//op: GET models scope=llm:read
 	Models(ctx context.Context, a extkit.Auth, in llm.ModelsInput) (llm.Models, error)
@@ -31,7 +31,7 @@ type Embed interface {
 
 // EmbedInput is the texts.
 type EmbedInput struct {
-	Model string   `json:"model,omitempty"`
+	Model string   `json:"model"` // "provider/model", required
 	Input []string `json:"input"`
 	// Dimensions shortens the vectors, for models that allow it.
 	Dimensions int         `json:"dimensions,omitempty"`

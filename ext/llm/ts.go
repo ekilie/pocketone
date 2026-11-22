@@ -11,7 +11,6 @@ type LlmUsage = { inputTokens?: number; outputTokens?: number; cachedTokens?: nu
 type LlmModels = {
   models: { id: string; provider: string; type: string; name?: string; kinds: string[]; inputs?: string[]; reasoning?: boolean;
     contextTokens?: number; prices?: { unit: string; usd: number }[]; description?: string }[]
-  default?: string
 }
 
 type LlmJob = { id: string; status: "queued" | "running" | "done" | "failed"; progress?: number; files?: LlmFile[]; outputs?: number; error?: string; model: string; usage: LlmUsage }
@@ -19,8 +18,8 @@ type LlmJob = { id: string; status: "queued" | "running" | "done" | "failed"; pr
 type LlmMessage = { role: "system" | "user" | "assistant"; content: string }
 
 type LlmTextInput = {
-  /** "provider/model"; empty uses the text default from Settings → LLM. */
-  model?: string
+  /** "provider/model", e.g. "vultr/glm-5.2". */
+  model: string
   system?: string
   prompt?: string
   messages?: LlmMessage[]
@@ -40,7 +39,7 @@ type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?
 /** An op with an .async twin, run off the app's VM. */
 type LlmOp<I, O> = ((opts: I) => O) & { async(opts: I): Promise<O> }
 
-/** Cloud models (the llm.* contracts): providers, keys and defaults are set in Settings → LLM. */
+/** Cloud models (the llm.* contracts): each call names provider/model; providers and keys are set in Settings → LLM. */
 declare var $llm: {
   text: {
     complete: LlmOp<LlmTextInput, LlmTextAnswer>
@@ -51,38 +50,38 @@ declare var $llm: {
     models(opts?: { provider?: string }): LlmModels
   }
   image: {
-    generate: LlmOp<{ model?: string; prompt: string; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
+    generate: LlmOp<{ model: string; prompt: string; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
       { files: LlmFile[]; model: string; usage: LlmUsage }>
-    edit: LlmOp<{ model?: string; prompt: string; images: LlmFile[]; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
+    edit: LlmOp<{ model: string; prompt: string; images: LlmFile[]; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
       { files: LlmFile[]; model: string; usage: LlmUsage }>
     models(opts?: { provider?: string }): LlmModels
   }
   speech: {
-    speak: LlmOp<{ model?: string; text: string; voice?: string; format?: string; speed?: number; instructions?: string; options?: Record<string, any> },
+    speak: LlmOp<{ model: string; text: string; voice?: string; format?: string; speed?: number; instructions?: string; options?: Record<string, any> },
       { file: LlmFile; model: string; usage: LlmUsage }>
-    voices(model?: string): { id: string; name?: string; language?: string; gender?: string }[]
+    voices(model: string): { id: string; name?: string; language?: string; gender?: string }[]
     models(opts?: { provider?: string }): LlmModels
   }
   transcribe: {
-    transcribe: LlmOp<{ model?: string; audio: LlmFile; language?: string; prompt?: string; options?: Record<string, any> },
+    transcribe: LlmOp<{ model: string; audio: LlmFile; language?: string; prompt?: string; options?: Record<string, any> },
       { text: string; language?: string; model: string; usage: LlmUsage }>
     models(opts?: { provider?: string }): LlmModels
   }
   /** Music is a job: create with wait ("5m") returns it done, files included; without, follow it with get. */
   music: {
-    create: LlmOp<{ model?: string; prompt: string; lyrics?: string; seconds?: number; wait?: string; options?: Record<string, any> }, LlmJob>
+    create: LlmOp<{ model: string; prompt: string; lyrics?: string; seconds?: number; wait?: string; options?: Record<string, any> }, LlmJob>
     get(id: string): LlmJob
     content(id: string, index?: number): LlmFile
     models(opts?: { provider?: string }): LlmModels
   }
   video: {
-    create: LlmOp<{ model?: string; prompt: string; image?: LlmFile; seconds?: number; size?: string; aspectRatio?: string; wait?: string; options?: Record<string, any> }, LlmJob>
+    create: LlmOp<{ model: string; prompt: string; image?: LlmFile; seconds?: number; size?: string; aspectRatio?: string; wait?: string; options?: Record<string, any> }, LlmJob>
     get(id: string): LlmJob
     content(id: string, index?: number): LlmFile
     models(opts?: { provider?: string }): LlmModels
   }
   embed: {
-    embed: LlmOp<{ model?: string; input: string[]; dimensions?: number; options?: Record<string, any> }, { vectors: number[][]; model: string; usage: LlmUsage }>
+    embed: LlmOp<{ model: string; input: string[]; dimensions?: number; options?: Record<string, any> }, { vectors: number[][]; model: string; usage: LlmUsage }>
     models(opts?: { provider?: string }): LlmModels
   }
   /** A generated file as a PocketBase file: record.set("pictures+", $llm.file(r.files[0])). */
@@ -101,6 +100,7 @@ declare var $llm: {
 }
 
 type LlmChatOptions = {
+  /** "provider/model": every send needs one, here or on the send. */
   model?: string
   reasoning?: "" | "off" | "low" | "medium" | "high"
   system?: string

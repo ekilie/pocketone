@@ -80,7 +80,7 @@ var W = extkit.NewWire(Contract, "llm", func(inner Music, g *extkit.Guard[Music]
 	},
 	extkit.Op[Music]{
 		Name:   "models",
-		Desc:   "Lists the enabled music models across providers, and the default.",
+		Desc:   "Lists the music models of every provider in Settings → LLM.",
 		Method: "GET",
 		Path:   "models",
 		Scope:  "llm:read",

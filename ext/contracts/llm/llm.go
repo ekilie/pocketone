@@ -3,7 +3,7 @@
 //
 // A model is named "provider/model": the name an app's admins gave a provider in Settings → LLM, a slash, and that
 // provider's own id for the model ("vultr/glm-5.2", "or/z-ai/glm-5.2", "cf/@cf/black-forest-labs/flux-1-schnell").
-// It's split on the first slash. An empty model means the kind's default from Settings → LLM.
+// It's split on the first slash. Every call names one: there are no defaults.
 package llm
 
 import (
@@ -57,7 +57,7 @@ type Price struct {
 	USD  float64 `json:"usd"`
 }
 
-// ModelInfo is one enabled model, as each contract's models operation lists it.
+// ModelInfo is one model, as each contract's models operation lists it.
 type ModelInfo struct {
 	ID       string   `json:"id"`       // "provider/model", what a call names
 	Provider string   `json:"provider"` // the provider's name in Settings → LLM
@@ -75,8 +75,6 @@ type ModelInfo struct {
 // Models is a models operation's answer.
 type Models struct {
 	Models []ModelInfo `json:"models"`
-	// Default is the kind's default model from Settings → LLM ("" when none is set).
-	Default string `json:"default,omitempty"`
 }
 
 // ModelsInput narrows a models operation to one provider (its name in Settings → LLM).
@@ -126,7 +124,7 @@ type ContentInput struct {
 // status and message (never the key).
 var (
 	ErrNotConfigured = &extkit.Error{Code: "not_configured", Status: 503,
-		Message: "no model for this: add a provider and choose a default in Settings → LLM, or name a model"}
+		Message: "no providers yet: add one in Settings → LLM, then name a model as provider/model"}
 	ErrUnknownModel = &extkit.Error{Code: "unknown_model", Status: 400,
 		Message: "no such model: name one as provider/model from this kind's models list"}
 	ErrNotSupported = &extkit.Error{Code: "not_supported", Status: 400, Message: "that provider doesn't do this"}

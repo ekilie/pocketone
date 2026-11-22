@@ -79,7 +79,7 @@ var W = extkit.NewWire(Contract, "llm", func(inner Text, g *extkit.Guard[Text]) 
 	},
 	extkit.Op[Text]{
 		Name:   "models",
-		Desc:   "Lists the enabled text models across providers, and the default.",
+		Desc:   "Lists the text models of every provider in Settings → LLM.",
 		Method: "GET",
 		Path:   "models",
 		Scope:  "llm:read",

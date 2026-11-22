@@ -23,7 +23,7 @@ type Transcribe interface {
 	//
 	//op: POST transcribe
 	Transcribe(ctx context.Context, a extkit.Auth, in TranscribeInput) (Result, error)
-	// Models lists the enabled transcription models across providers, and the default.
+	// Models lists the transcription models of every provider in Settings → LLM.
 	//
 	//op: GET models scope=llm:read
 	Models(ctx context.Context, a extkit.Auth, in llm.ModelsInput) (llm.Models, error)
@@ -31,7 +31,7 @@ type Transcribe interface {
 
 // TranscribeInput is the audio, with hints.
 type TranscribeInput struct {
-	Model string   `json:"model,omitempty"`
+	Model string   `json:"model"` // "provider/model", required
 	Audio llm.File `json:"audio"` // its Name's extension (story.mp3) or Type tells the provider the format
 	// Language is the spoken language as an ISO code ("en"), when known; empty lets the model tell.
 	Language string `json:"language,omitempty"`

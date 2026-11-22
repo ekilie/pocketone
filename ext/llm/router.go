@@ -20,8 +20,7 @@ import (
 // router sends each call to the provider its model names, with the app's settings read on every call (so a save in
 // Settings → LLM applies at once).
 type router struct {
-	app   core.App
-	fixed *Settings // settings to use instead of the app's (Test, before they're saved)
+	app core.App
 
 	mu    sync.Mutex
 	lists map[string]cachedList // provider fingerprint → its model list
@@ -36,9 +35,6 @@ type cachedList struct {
 const listTTL = 30 * time.Minute
 
 func (r *router) settings() (Settings, error) {
-	if r.fixed != nil {
-		return *r.fixed, nil
-	}
 	return LoadSettings(r.app)
 }
 
@@ -59,21 +55,18 @@ type target struct {
 // ref is the full "provider/model".
 func (t target) ref() string { return t.p.Name + "/" + t.model }
 
-// resolve finds what answers a call of kind naming ref ("" for the kind's default).
+// resolve finds what answers a call naming ref ("provider/model").
 func (r *router) resolve(kind, ref string) (target, error) {
 	s, err := r.settings()
 	if err != nil {
 		return target{}, err
 	}
+	if len(s.Providers) == 0 {
+		return target{}, llmc.ErrNotConfigured
+	}
 	if strings.TrimSpace(ref) == "" {
-		ref = s.Defaults[kind]
-		if ref == "" {
-			if len(s.Providers) == 0 {
-				return target{}, llmc.ErrNotConfigured
-			}
-			return target{}, &extkit.Error{Code: llmc.ErrNotConfigured.Code, Status: 503,
-				Message: fmt.Sprintf("no default %s model: name one as provider/model, or choose a default in Settings → LLM", kind)}
-		}
+		return target{}, &extkit.Error{Code: llmc.ErrUnknownModel.Code, Status: 400,
+			Message: fmt.Sprintf("name the %s model as provider/model, like vultr/glm-5.2", kind)}
 	}
 	name, model, ok := llmc.SplitModel(ref)
 	if !ok {
@@ -84,10 +77,6 @@ func (r *router) resolve(kind, ref string) (target, error) {
 	if !ok {
 		return target{}, &extkit.Error{Code: llmc.ErrUnknownModel.Code, Status: 400,
 			Message: fmt.Sprintf("model %q: no provider named %q in Settings → LLM", ref, name)}
-	}
-	if !p.enabled(model) {
-		return target{}, &extkit.Error{Code: llmc.ErrUnknownModel.Code, Status: 400,
-			Message: fmt.Sprintf("model %q isn't enabled in Settings → LLM", ref)}
 	}
 	d, err := newDriver(p)
 	if err != nil {
@@ -132,14 +121,14 @@ func (r *router) catalog(ctx context.Context, p Provider, fresh bool) ([]llmc.Mo
 	return ms, nil
 }
 
-// models is a kind's models operation: the enabled models of that kind across providers (or one), ids made full.
+// models is a kind's models operation: the models of that kind across providers (or one), ids made full.
 // A provider whose list fails is left out; when they all fail, the first error is the answer.
 func (r *router) models(ctx context.Context, kind string, in llmc.ModelsInput) (llmc.Models, error) {
 	s, err := r.settings()
 	if err != nil {
 		return llmc.Models{}, err
 	}
-	out := llmc.Models{Models: []llmc.ModelInfo{}, Default: s.Defaults[kind]}
+	out := llmc.Models{Models: []llmc.ModelInfo{}}
 	var firstErr error
 	for _, p := range s.Providers {
 		if in.Provider != "" && p.Name != in.Provider {
@@ -153,7 +142,7 @@ func (r *router) models(ctx context.Context, kind string, in llmc.ModelsInput) (
 			continue
 		}
 		for _, m := range ms {
-			if !p.enabled(m.ID) || !slices.Contains(m.Kinds, kind) {
+			if !slices.Contains(m.Kinds, kind) {
 				continue
 			}
 			m.ID = p.Name + "/" + m.ID

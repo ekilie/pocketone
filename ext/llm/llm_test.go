@@ -20,8 +20,8 @@ import (
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
-	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
+	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
 	"pocketone.dev/ext/extkit"
 	"pocketone.dev/ext/extkit/conformance"
 	"pocketone.dev/ext/extkit/js"
@@ -91,7 +91,7 @@ func (f *fakeCloud) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func jsonString(s string) string { b, _ := json.Marshal(s); return string(b) }
 
-// setup is an app with ext/llm and one OpenAI-compatible provider "fake" at a fake cloud, chat-1 the text default.
+// setup is an app with ext/llm and one OpenAI-compatible provider "fake" at a fake cloud.
 func setup(t *testing.T) (core.App, *fakeCloud) {
 	t.Helper()
 	app, err := tests.NewTestApp()
@@ -106,8 +106,7 @@ func setup(t *testing.T) (core.App, *fakeCloud) {
 	srv := httptest.NewServer(fc)
 	t.Cleanup(srv.Close)
 	if err := llm.SaveSettings(app, llm.Settings{
-		Providers: []llm.Provider{{Name: "fake", Type: llm.TypeOpenAI, Endpoint: srv.URL + "/v1", Key: "k1", AllModels: true}},
-		Defaults:  map[string]string{llmc.KindText: "fake/chat-1"},
+		Providers: []llm.Provider{{Name: "fake", Type: llm.TypeOpenAI, Endpoint: srv.URL + "/v1", Key: "k1"}},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -119,9 +118,9 @@ func TestText(t *testing.T) {
 	ctx := context.Background()
 	tx := textv1.Contract.Must(app)
 
-	r, err := tx.Complete(ctx, extkit.Internal, textv1.CompleteInput{Prompt: "hi", System: "Be brief.", Reasoning: "off"})
+	r, err := tx.Complete(ctx, extkit.Internal, textv1.CompleteInput{Model: "fake/chat-1", Prompt: "hi", System: "Be brief.", Reasoning: "off"})
 	if err != nil || r.Text != "Hello" || r.Model != "fake/chat-1" || r.Usage.InputTokens != 3 {
-		t.Fatalf("default: %+v %v", r, err)
+		t.Fatalf("complete: %+v %v", r, err)
 	}
 	b := fc.body("/v1/chat/completions")
 	if b["model"] != "chat-1" || b["reasoning_effort"] != "none" || len(b["messages"].([]any)) != 2 {
@@ -134,7 +133,7 @@ func TestText(t *testing.T) {
 		t.Fatalf("schema: %+v %v", r, err)
 	}
 
-	s, err := tx.Stream(ctx, extkit.Internal, textv1.CompleteInput{Prompt: "hi"})
+	s, err := tx.Stream(ctx, extkit.Internal, textv1.CompleteInput{Model: "fake/chat-1", Prompt: "hi"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +151,7 @@ func TestText(t *testing.T) {
 		t.Fatalf("stream: %v %q %+v", err, pieces, done)
 	}
 
-	for ref, code := range map[string]string{"nobody/x": "unknown_model", "noslash": "unknown_model"} {
+	for ref, code := range map[string]string{"nobody/x": "unknown_model", "noslash": "unknown_model", "": "unknown_model"} {
 		_, err := tx.Complete(ctx, extkit.Internal, textv1.CompleteInput{Model: ref, Prompt: "hi"})
 		var xe *extkit.Error
 		if !asError(err, &xe) || xe.Code != code {
@@ -161,7 +160,7 @@ func TestText(t *testing.T) {
 	}
 
 	ms, err := tx.Models(ctx, extkit.Internal, llmc.ModelsInput{})
-	if err != nil || ms.Default != "fake/chat-1" || len(ms.Models) != 2 || ms.Models[0].ID != "fake/chat-1" || ms.Models[0].Provider != "fake" {
+	if err != nil || len(ms.Models) != 2 || ms.Models[0].ID != "fake/chat-1" || ms.Models[0].Provider != "fake" {
 		t.Fatalf("models: %+v %v", ms, err)
 	}
 }
@@ -172,24 +171,6 @@ func asError(err error, xe **extkit.Error) bool {
 	return ok
 }
 
-// A model can be turned off in Settings → LLM; a call naming it is refused, and models doesn't list it.
-func TestEnabledModels(t *testing.T) {
-	app, _ := setup(t)
-	s, _ := llm.LoadSettings(app)
-	s.Providers[0].AllModels, s.Providers[0].Models = false, []string{"chat-1"}
-	if err := llm.SaveSettings(app, s); err != nil {
-		t.Fatal(err)
-	}
-	tx := textv1.Contract.Must(app)
-	if _, err := tx.Complete(context.Background(), extkit.Internal, textv1.CompleteInput{Model: "fake/chat-2", Prompt: "hi"}); err == nil {
-		t.Fatal("a disabled model answered")
-	}
-	ms, _ := tx.Models(context.Background(), extkit.Internal, llmc.ModelsInput{})
-	if len(ms.Models) != 1 {
-		t.Fatalf("models: %+v", ms.Models)
-	}
-}
-
 func TestMediaAndErrors(t *testing.T) {
 	app, _ := setup(t)
 	ctx := context.Background()
@@ -198,8 +179,8 @@ func TestMediaAndErrors(t *testing.T) {
 		t.Fatalf("image: %+v %v", im, err)
 	}
 	if _, err := imagev1.Contract.Must(app).Generate(ctx, extkit.Internal, imagev1.GenerateInput{Prompt: "cat"}); err == nil ||
-		!strings.Contains(err.Error(), "no default image model") {
-		t.Fatalf("no image default: %v", err)
+		!strings.Contains(err.Error(), "name the image model as provider/model") {
+		t.Fatalf("no model: %v", err)
 	}
 	em, err := embedv1.Contract.Must(app).Embed(ctx, extkit.Internal, embedv1.EmbedInput{Model: "fake/text-embedding-3-small", Input: []string{"a", "b"}})
 	if err != nil || len(em.Vectors) != 2 || em.Vectors[0][0] != 0.1 {
@@ -214,14 +195,13 @@ func TestMediaAndErrors(t *testing.T) {
 	s, _ := llm.LoadSettings(app)
 	s.Providers[0].Key = "wrong"
 	_ = llm.SaveSettings(app, s)
-	_, err = textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{Prompt: "hi"})
+	_, err = textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{Model: "fake/chat-1", Prompt: "hi"})
 	if xe, ok := err.(*extkit.Error); !ok || xe.Code != "provider" || !strings.Contains(xe.Message, "fake: ") || !strings.Contains(xe.Message, "bad key") {
 		t.Fatalf("bad key: %v", err)
 	}
 }
 
-// Settings → LLM: the key never comes back, an empty key keeps the saved one for the same endpoint only, and the
-// catalog lists the provider's models with what's enabled.
+// Settings → LLM: the key never comes back, and an empty key keeps the saved one for the same endpoint only.
 func TestSettingsSection(t *testing.T) {
 	app, _ := setup(t)
 	ctx := context.Background()
@@ -242,22 +222,16 @@ func TestSettingsSection(t *testing.T) {
 			Name     string `json:"name"`
 			Endpoint string `json:"endpoint"`
 			KeySet   bool   `json:"keySet"`
-			Catalog  []struct {
-				ID      string `json:"id"`
-				Enabled bool   `json:"enabled"`
-			} `json:"catalog"`
 		} `json:"providers"`
-		Defaults map[string]string `json:"defaults"`
 	}
 	_ = json.Unmarshal(raw, &view)
-	if len(view.Providers) != 1 || !view.Providers[0].KeySet || len(view.Providers[0].Catalog) != 4 || !view.Providers[0].Catalog[0].Enabled {
+	if len(view.Providers) != 1 || !view.Providers[0].KeySet {
 		t.Fatalf("view: %s", raw)
 	}
 	endpoint := view.Providers[0].Endpoint
 	save := func(endpoint string) llm.Settings {
 		t.Helper()
-		vals, _ := json.Marshal(map[string]any{"providers": []any{map[string]any{"name": "fake", "type": "openai", "endpoint": endpoint, "allModels": true}},
-			"defaults": map[string]string{"text": "fake/chat-1"}})
+		vals, _ := json.Marshal(map[string]any{"providers": []any{map[string]any{"name": "fake", "type": "openai", "endpoint": endpoint}}})
 		if _, err := st.Save(ctx, vals); err != nil {
 			t.Fatal(err)
 		}
@@ -277,9 +251,9 @@ func TestSettingsSection(t *testing.T) {
 }
 
 const hooks = `onRecordCreate((e) => {
-  const a = $llm.text.complete({ prompt: "hi" })
+  const a = $llm.text.complete({ model: "fake/chat-1", prompt: "hi" })
   const pieces = []
-  const s = $llm.text.stream({ prompt: "hi" }, (t) => { pieces.push(t) })
+  const s = $llm.text.stream({ model: "fake/chat-1", prompt: "hi" }, (t) => { pieces.push(t) })
   const img = $llm.image.generate({ model: "fake/gpt-image-1", prompt: "cat" })
   const f = $llm.file(img.files[0])
   e.record.set("result", JSON.stringify({ a: a.text, model: a.model, s: s.text, pieces: pieces.join("|"),
@@ -288,7 +262,7 @@ const hooks = `onRecordCreate((e) => {
 }, "probes")
 
 onRecordCreate(async (e) => {
-  const a = await $llm.text.complete.async({ prompt: "hi" })
+  const a = await $llm.text.complete.async({ model: "fake/chat-1", prompt: "hi" })
   e.record.set("result", a.text)
   e.next()
 }, "asyncprobes")

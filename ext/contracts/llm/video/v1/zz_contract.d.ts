@@ -6,6 +6,9 @@ declare namespace contracts.llm.video.v1 {
    * CreateInput is the video to make.
    */
   interface CreateInput {
+    /**
+     * "provider/model", required
+     */
     model: string;
     prompt: string;
     /**
@@ -78,7 +81,7 @@ declare function onLlmVideoGet(handler: (e: contracts.CallEvent<contracts.llm.vi
  */
 declare function onLlmVideoContent(handler: (e: contracts.CallEvent<contracts.llm.video.v1.LlmContentInput>) => void): void;
 /**
- * Models lists the enabled video models across providers, and the default.
+ * Models lists the video models of every provider in Settings → LLM.
  *
  * Runs on every models call to llm.video/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

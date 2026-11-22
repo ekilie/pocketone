@@ -63,7 +63,7 @@ var W = extkit.NewWire(Contract, "llm", func(inner Image, g *extkit.Guard[Image]
 	},
 	extkit.Op[Image]{
 		Name:   "models",
-		Desc:   "Lists the enabled image models across providers, and the default.",
+		Desc:   "Lists the image models of every provider in Settings → LLM.",
 		Method: "GET",
 		Path:   "models",
 		Scope:  "llm:read",

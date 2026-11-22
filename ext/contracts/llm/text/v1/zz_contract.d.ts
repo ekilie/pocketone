@@ -7,7 +7,7 @@ declare namespace contracts.llm.text.v1 {
    */
   interface CompleteInput {
     /**
-     * Model is "provider/model"; empty uses the text default.
+     * Model is "provider/model" (required).
      */
     model: string;
     system: string;
@@ -38,6 +38,9 @@ declare namespace contracts.llm.text.v1 {
    * CountInput is a text, or a conversation as a call would send it.
    */
   interface CountInput {
+    /**
+     * optional: the count is an estimate either way
+     */
     model: string;
     text: string;
     system: string;
@@ -89,7 +92,7 @@ declare function onLlmTextStream(handler: (e: contracts.CallEvent<contracts.llm.
  */
 declare function onLlmTextCount(handler: (e: contracts.CallEvent<contracts.llm.text.v1.CountInput>) => void): void;
 /**
- * Models lists the enabled text models across providers, and the default.
+ * Models lists the text models of every provider in Settings → LLM.
  *
  * Runs on every models call to llm.text/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

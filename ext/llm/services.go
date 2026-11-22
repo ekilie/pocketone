@@ -102,11 +102,6 @@ func (s textService) Models(ctx context.Context, _ extkit.Auth, in llmc.ModelsIn
 	return s.r.models(ctx, llmc.KindText, in)
 }
 
-// textCompleteInput is Test's one-word question to the text default.
-func textCompleteInput(model string) textv1.CompleteInput {
-	return textv1.CompleteInput{Model: model, Prompt: "Say OK.", MaxTokens: 200, Reasoning: "off"}
-}
-
 type imageService struct{ r *router }
 
 var _ imagev1.Image = imageService{}

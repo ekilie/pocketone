@@ -48,7 +48,7 @@ var W = extkit.NewWire(Contract, "llm", func(inner Transcribe, g *extkit.Guard[T
 	},
 	extkit.Op[Transcribe]{
 		Name:   "models",
-		Desc:   "Lists the enabled transcription models across providers, and the default.",
+		Desc:   "Lists the transcription models of every provider in Settings → LLM.",
 		Method: "GET",
 		Path:   "models",
 		Scope:  "llm:read",

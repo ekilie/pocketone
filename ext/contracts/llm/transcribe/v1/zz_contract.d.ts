@@ -6,6 +6,9 @@ declare namespace contracts.llm.transcribe.v1 {
    * TranscribeInput is the audio, with hints.
    */
   interface TranscribeInput {
+    /**
+     * "provider/model", required
+     */
     model: string;
     /**
      * its Name's extension (story.mp3) or Type tells the provider the format
@@ -44,7 +47,7 @@ declare namespace contracts.llm.transcribe.v1 {
  */
 declare function onLlmTranscribeTranscribe(handler: (e: contracts.CallEvent<contracts.llm.transcribe.v1.TranscribeInput>) => void): void;
 /**
- * Models lists the enabled transcription models across providers, and the default.
+ * Models lists the transcription models of every provider in Settings → LLM.
  *
  * Runs on every models call to llm.transcribe/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

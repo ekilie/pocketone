@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"slices"
 	"strings"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
 
-	llmc "pocketone.dev/ext/contracts/llm"
 	settingsv1 "pocketone.dev/ext/contracts/settings/v1"
 	"pocketone.dev/ext/extkit"
 )
@@ -66,15 +64,6 @@ type Provider struct {
 	Endpoint string `json:"endpoint,omitempty"` // "" uses the type's default
 	Account  string `json:"account,omitempty"`  // Cloudflare's account id
 	Key      string `json:"key,omitempty"`
-	// Models are the enabled models, by the provider's own id. Nil enables every model of a kind PocketOne supports.
-	Models []string `json:"models,omitempty"`
-	// AllModels distinguishes "every model" (true, Models ignored) from an explicit list, even an empty one.
-	AllModels bool `json:"allModels,omitempty"`
-}
-
-// enabled reports whether the provider's model id is turned on.
-func (p Provider) enabled(id string) bool {
-	return p.AllModels || slices.Contains(p.Models, id)
 }
 
 // endpoint is the provider's base URL: its own, or its type's default.
@@ -86,10 +75,9 @@ func (p Provider) endpoint() string {
 	return ti.Endpoint
 }
 
-// Settings are Settings → LLM: the providers, and each kind's default model. Stored in the app's _params.
+// Settings are Settings → LLM: the providers calls name. Stored in the app's _params.
 type Settings struct {
-	Providers []Provider        `json:"providers"`
-	Defaults  map[string]string `json:"defaults,omitempty"` // kind → "provider/model"
+	Providers []Provider `json:"providers"`
 }
 
 func (s Settings) provider(name string) (Provider, bool) {
@@ -140,52 +128,30 @@ type settingsSection struct {
 
 func (s settingsSection) Info() settingsv1.Info {
 	return settingsv1.Info{Extension: Name, Title: "LLM", Testable: true,
-		Description: "The providers $llm calls (Vultr, Cloudflare, OpenRouter, any OpenAI-compatible API), their models, and each kind's default."}
+		Description: "The providers $llm calls name as provider/model: Vultr, Cloudflare, OpenRouter, any OpenAI-compatible API."}
 }
 
 // providerView is a provider as Get returns it: the key never comes back, only whether one is set.
 type providerView struct {
 	Provider
 	KeySet bool `json:"keySet"`
-	// Catalog is every model the provider lists of a kind PocketOne supports, each with whether it's enabled.
-	Catalog []catalogEntry `json:"catalog"`
-	Error   string         `json:"error,omitempty"` // listing the models failed
-}
-
-type catalogEntry struct {
-	llmc.ModelInfo
-	Enabled bool `json:"enabled"`
 }
 
 // settingsView is the section's values.
 type settingsView struct {
-	Providers []providerView    `json:"providers"`
-	Defaults  map[string]string `json:"defaults"`
-	Types     []TypeInfo        `json:"types"`
-	Kinds     []string          `json:"kinds"`
+	Providers []providerView `json:"providers"`
+	Types     []TypeInfo     `json:"types"`
 }
 
-func (s settingsSection) Get(ctx context.Context) (json.RawMessage, error) {
+func (s settingsSection) Get(context.Context) (json.RawMessage, error) {
 	cur, err := LoadSettings(s.r.app)
 	if err != nil {
 		return nil, err
 	}
-	v := settingsView{Defaults: cur.Defaults, Types: Types, Kinds: llmc.AllKinds, Providers: []providerView{}}
-	if v.Defaults == nil {
-		v.Defaults = map[string]string{}
-	}
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
+	v := settingsView{Types: Types, Providers: []providerView{}}
 	for _, p := range cur.Providers {
-		pv := providerView{Provider: p, KeySet: p.Key != "", Catalog: []catalogEntry{}}
+		pv := providerView{Provider: p, KeySet: p.Key != ""}
 		pv.Key = ""
-		ms, err := s.r.catalog(ctx, p, false)
-		if err != nil {
-			pv.Error = err.Error()
-		}
-		for _, m := range ms {
-			pv.Catalog = append(pv.Catalog, catalogEntry{ModelInfo: m, Enabled: p.enabled(m.ID)})
-		}
 		v.Providers = append(v.Providers, pv)
 	}
 	return json.Marshal(v)
@@ -203,8 +169,8 @@ func (s settingsSection) Save(ctx context.Context, values json.RawMessage) (json
 	return s.Get(ctx)
 }
 
-// Test checks each provider by listing its models with its key (the cheapest call every cloud has), then asks the
-// text default a one-word question when there is one.
+// Test checks each provider by listing its models with its key (the cheapest call every cloud has). Vultr's and
+// OpenRouter's lists are open without a key, so for them it also checks the key with the key-only account call.
 func (s settingsSection) Test(ctx context.Context, values json.RawMessage) error {
 	next, err := s.parse(values)
 	if err != nil {
@@ -219,12 +185,12 @@ func (s settingsSection) Test(ctx context.Context, values json.RawMessage) error
 	for _, p := range next.Providers {
 		if _, err := s.r.catalog(ctx, p, true); err != nil {
 			problems = append(problems, p.Name+": "+err.Error())
+			continue
 		}
-	}
-	if def := next.Defaults[llmc.KindText]; def != "" && len(problems) == 0 {
-		r := &router{app: s.r.app, fixed: &next}
-		if _, err := (textService{r}).Complete(ctx, extkit.Internal, textCompleteInput(def)); err != nil {
-			problems = append(problems, "text default "+def+": "+err.Error())
+		if d, err := newDriver(p); err == nil {
+			if err := d.checkKey(ctx); err != nil {
+				problems = append(problems, providerError(p, err).Error())
+			}
 		}
 	}
 	if len(problems) > 0 {
@@ -244,13 +210,13 @@ var nameRE = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 func (s settingsSection) parse(values json.RawMessage) (Settings, error) {
 	var in Settings
 	if err := json.Unmarshal(values, &in); err != nil {
-		return Settings{}, badRequest(`expected {"providers": [...], "defaults": {...}}`)
+		return Settings{}, badRequest(`expected {"providers": [...]}`)
 	}
 	cur, err := LoadSettings(s.r.app)
 	if err != nil {
 		return Settings{}, err
 	}
-	next := Settings{Defaults: map[string]string{}}
+	next := Settings{Providers: []Provider{}}
 	seen := map[string]bool{}
 	for _, p := range in.Providers {
 		p.Name, p.Type = strings.TrimSpace(p.Name), strings.TrimSpace(p.Type)
@@ -281,20 +247,6 @@ func (s settingsSection) parse(values json.RawMessage) (Settings, error) {
 			}
 		}
 		next.Providers = append(next.Providers, p)
-	}
-	for kind, ref := range in.Defaults {
-		ref = strings.TrimSpace(ref)
-		if ref == "" {
-			continue
-		}
-		if !slices.Contains(llmc.AllKinds, kind) {
-			return Settings{}, badRequest(fmt.Sprintf("defaults: no kind %q", kind))
-		}
-		prov, _, ok := llmc.SplitModel(ref)
-		if !ok || !seen[prov] {
-			return Settings{}, badRequest(fmt.Sprintf("default %s: %q isn't provider/model with one of the providers above", kind, ref))
-		}
-		next.Defaults[kind] = ref
 	}
 	return next, nil
 }

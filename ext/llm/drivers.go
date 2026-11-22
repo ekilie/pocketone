@@ -11,12 +11,12 @@ import (
 	"time"
 
 	llmc "pocketone.dev/ext/contracts/llm"
-	"pocketone.dev/ext/extkit"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	transcribev1 "pocketone.dev/ext/contracts/llm/transcribe/v1"
+	"pocketone.dev/ext/extkit"
 	"pocketone.dev/ext/llm/providers/oai"
 )
 
@@ -36,6 +36,9 @@ type driver interface {
 	getJob(ctx context.Context, kind, id string) (llmc.Job, error)
 	jobContent(ctx context.Context, kind, id string, index int) (llmc.File, error)
 	pollInterval() time.Duration
+	// checkKey checks the key with a call that needs one and costs nothing, for a provider whose model list answers
+	// without a key (nil: listing the models already checks it).
+	checkKey(ctx context.Context) error
 }
 
 // jobInput is music's and video's create input, merged.
@@ -79,7 +82,9 @@ func (u unsupported) image(context.Context, string, imagev1.GenerateInput, []llm
 func (u unsupported) speak(context.Context, string, speechv1.SpeakInput) (speechv1.Result, error) {
 	return speechv1.Result{}, u.no("speech")
 }
-func (u unsupported) voices(context.Context, string) ([]speechv1.Voice, error) { return []speechv1.Voice{}, nil }
+func (u unsupported) voices(context.Context, string) ([]speechv1.Voice, error) {
+	return []speechv1.Voice{}, nil
+}
 func (u unsupported) transcribe(context.Context, string, transcribev1.TranscribeInput) (transcribev1.Result, error) {
 	return transcribev1.Result{}, u.no("transcription")
 }
@@ -95,7 +100,8 @@ func (u unsupported) getJob(_ context.Context, kind, _ string) (llmc.Job, error)
 func (u unsupported) jobContent(_ context.Context, kind, _ string, _ int) (llmc.File, error) {
 	return llmc.File{}, u.no(kind)
 }
-func (u unsupported) pollInterval() time.Duration { return 2 * time.Second }
+func (u unsupported) pollInterval() time.Duration    { return 2 * time.Second }
+func (u unsupported) checkKey(context.Context) error { return nil }
 
 // b64 is standard base64.
 func b64(b []byte) string { return base64.StdEncoding.EncodeToString(b) }

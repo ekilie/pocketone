@@ -6,6 +6,9 @@ declare namespace contracts.llm.music.v1 {
    * CreateInput is the music to make.
    */
   interface CreateInput {
+    /**
+     * "provider/model", required
+     */
     model: string;
     /**
      * the style: "gentle lullaby, music box and soft strings"
@@ -66,7 +69,7 @@ declare function onLlmMusicGet(handler: (e: contracts.CallEvent<contracts.llm.mu
  */
 declare function onLlmMusicContent(handler: (e: contracts.CallEvent<contracts.llm.music.v1.LlmContentInput>) => void): void;
 /**
- * Models lists the enabled music models across providers, and the default.
+ * Models lists the music models of every provider in Settings → LLM.
  *
  * Runs on every models call to llm.music/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

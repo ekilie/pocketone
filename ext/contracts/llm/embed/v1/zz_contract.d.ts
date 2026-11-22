@@ -6,6 +6,9 @@ declare namespace contracts.llm.embed.v1 {
    * EmbedInput is the texts.
    */
   interface EmbedInput {
+    /**
+     * "provider/model", required
+     */
     model: string;
     input: Array<string>;
     /**
@@ -30,7 +33,7 @@ declare namespace contracts.llm.embed.v1 {
  */
 declare function onLlmEmbedEmbed(handler: (e: contracts.CallEvent<contracts.llm.embed.v1.EmbedInput>) => void): void;
 /**
- * Models lists the enabled embedding models across providers, and the default.
+ * Models lists the embedding models of every provider in Settings → LLM.
  *
  * Runs on every models call to llm.embed/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
  * refuse.

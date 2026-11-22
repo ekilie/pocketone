@@ -33,7 +33,7 @@ type Video interface {
 	//
 	//op: POST content scope=llm:read
 	Content(ctx context.Context, a extkit.Auth, in llm.ContentInput) (llm.File, error)
-	// Models lists the enabled video models across providers, and the default.
+	// Models lists the video models of every provider in Settings → LLM.
 	//
 	//op: GET models scope=llm:read
 	Models(ctx context.Context, a extkit.Auth, in llm.ModelsInput) (llm.Models, error)
@@ -41,7 +41,7 @@ type Video interface {
 
 // CreateInput is the video to make.
 type CreateInput struct {
-	Model  string `json:"model,omitempty"`
+	Model  string `json:"model"` // "provider/model", required
 	Prompt string `json:"prompt"`
 	// Image is a first frame to start from, for models that take one.
 	Image   *llm.File `json:"image,omitempty"`

@@ -27,7 +27,7 @@ type Image interface {
 	//
 	//op: POST edit
 	Edit(ctx context.Context, a extkit.Auth, in EditInput) (Result, error)
-	// Models lists the enabled image models across providers, and the default.
+	// Models lists the image models of every provider in Settings → LLM.
 	//
 	//op: GET models scope=llm:read
 	Models(ctx context.Context, a extkit.Auth, in llm.ModelsInput) (llm.Models, error)
@@ -35,7 +35,7 @@ type Image interface {
 
 // GenerateInput is what to draw.
 type GenerateInput struct {
-	Model  string `json:"model,omitempty"`
+	Model  string `json:"model"` // "provider/model", required
 	Prompt string `json:"prompt"`
 	N      int    `json:"n,omitempty"`    // how many (default 1)
 	Size   string `json:"size,omitempty"` // "1024x1024"

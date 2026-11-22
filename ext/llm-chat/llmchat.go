@@ -229,8 +229,8 @@ func (c *chats) save(ctx context.Context, p *prepared, question, answer string) 
 	return true, nil
 }
 
-// fold summarizes the chat's n oldest unfolded messages into its summary, with the model the send used ("": the text
-// default) and reasoning off, so the thinking can't spend the summary's tokens.
+// fold summarizes the chat's n oldest unfolded messages into its summary, with the model the send used and
+// reasoning off, so the thinking can't spend the summary's tokens.
 func (c *chats) fold(ctx context.Context, chat *core.Record, n int, model string) error {
 	folded := chat.GetInt("folded")
 	msgs, err := c.messages(chat.Id, folded)

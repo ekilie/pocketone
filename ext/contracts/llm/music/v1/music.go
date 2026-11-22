@@ -33,7 +33,7 @@ type Music interface {
 	//
 	//op: POST content scope=llm:read
 	Content(ctx context.Context, a extkit.Auth, in llm.ContentInput) (llm.File, error)
-	// Models lists the enabled music models across providers, and the default.
+	// Models lists the music models of every provider in Settings → LLM.
 	//
 	//op: GET models scope=llm:read
 	Models(ctx context.Context, a extkit.Auth, in llm.ModelsInput) (llm.Models, error)
@@ -41,7 +41,7 @@ type Music interface {
 
 // CreateInput is the music to make.
 type CreateInput struct {
-	Model  string `json:"model,omitempty"`
+	Model  string `json:"model"`  // "provider/model", required
 	Prompt string `json:"prompt"` // the style: "gentle lullaby, music box and soft strings"
 	Lyrics string `json:"lyrics,omitempty"`
 	// Seconds is how long (the provider's default when 0).

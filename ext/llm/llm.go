@@ -2,8 +2,8 @@
 // llm.speech/v1, llm.transcribe/v1, llm.music/v1, llm.video/v1 and llm.embed/v1, and $llm in pb_hooks.
 //
 // The app's admins add providers in Settings → LLM (Vultr, Cloudflare Workers AI, OpenRouter, or any
-// OpenAI-compatible API, each with its own key), turn models on, and choose each kind's default. A call names its model
-// as "provider/model", or none for the default; this extension routes it to that provider's driver (providers/).
+// OpenAI-compatible API, each with its own key). Every call names its model as "provider/model"; this extension
+// routes it to that provider's driver (providers/).
 package llm
 
 import (

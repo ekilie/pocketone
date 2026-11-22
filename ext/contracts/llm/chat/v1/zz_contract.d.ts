@@ -36,7 +36,7 @@ declare namespace contracts.llm.chat.v1 {
     maxTokens: number;
     temperature: number | null;
     /**
-     * Model is the text model to answer with ("provider/model"); empty uses the text default.
+     * Model is the text model to answer with ("provider/model", required).
      */
     model: string;
     /**
