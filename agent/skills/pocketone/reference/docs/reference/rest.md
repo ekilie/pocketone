@@ -56,6 +56,17 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 | `POST /api/_c/instance.watch/v1/watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). | `fleet` | `conn` (string), `edge` (string), `host` (string) |
 | `POST /api/_c/instance.watch/v1/unwatch` | Stops changes for a hostname on a stream. | `fleet` | `conn` (string), `host` (string) |
 
+## kv/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/kv/v1). Answered by [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `GET /api/_c/kv/v1` | Returns the values whose names start with prefix (all of them when it's empty), sorted by name. | `kv:read` | `prefix` (string) |
+| `GET /api/_c/kv/v1/get` | Returns one value. | `kv:read` | `name` (string) |
+| `POST /api/_c/kv/v1/set` | Stores a JSON value under a name, replacing any value it had. | `kv` | `name` (string), `value` (json) |
+| `POST /api/_c/kv/v1/delete` | Removes a value. | `kv` | `name` (string) |
+
 ## llm.align/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.align/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.

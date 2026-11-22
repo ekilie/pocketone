@@ -22,6 +22,7 @@
 - [instance.source/v1](/docs/contracts/instance.source/v1)
 - [instance.tokens/v1](/docs/contracts/instance.tokens/v1)
 - [instance.watch/v1](/docs/contracts/instance.watch/v1)
+- [kv/v1](/docs/contracts/kv/v1)
 - [llm.align/v1](/docs/contracts/llm.align/v1)
 - [llm.chat/v1](/docs/contracts/llm.chat/v1)
 - [llm.embed/v1](/docs/contracts/llm.embed/v1)

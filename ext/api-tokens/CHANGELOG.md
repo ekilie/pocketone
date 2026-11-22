@@ -7,6 +7,12 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Changed
+
+- The OAuth server's signing key is kept in the app's key-value store (kv/v1) under the private name
+  `_api-tokens/oauth-server`; the old `_params` row `oauth_server` moves there by itself on first use, so signed-in
+  clients stay signed in.
+
 ## 0.2.1 (2026-11-21)
 
 - OAuth Server: an `account` parameter on authorize and device requests names the account type the client needs

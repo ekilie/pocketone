@@ -15,6 +15,7 @@ require (
 	pocketone.dev/ext/deploy v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/extkit v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/jsvm v0.0.0-00010101000000-000000000000
+	pocketone.dev/ext/kv v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/llm v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/llm-chat v0.0.0-00010101000000-000000000000
 	pocketone.dev/ext/mailtrap v0.0.0-00010101000000-000000000000
@@ -164,3 +165,5 @@ replace pocketone.dev/ext/llm => ../llm
 replace pocketone.dev/ext/uicache => ../uicache
 
 replace pocketone.dev/ext/llm-chat => ../llm-chat
+
+replace pocketone.dev/ext/kv => ../kv

@@ -786,6 +786,91 @@ Calls POST /api/\_c/instance.watch/v1/unwatch on the remote (token scope: fleet)
 
 From [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1) (generated).
 
+### pocketone remote kv
+
+Calls kv/v1 on a remote
+
+### pocketone remote kv delete
+
+Removes a value (kv/v1)
+
+```
+pocketone remote kv delete
+```
+
+Removes a value. Deleting a name with no value is not an error.
+
+Calls POST /api/\_c/kv/v1/delete on the remote (token scope: kv).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
+
+### pocketone remote kv get
+
+Returns one value (kv/v1)
+
+```
+pocketone remote kv get
+```
+
+Returns one value. A name with no value is a not\_found error; a private name is a private error.
+
+Calls GET /api/\_c/kv/v1/get on the remote (token scope: kv:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
+
+### pocketone remote kv list
+
+Returns the values whose names start with prefix (all of them when it's empty), sorted by name (kv/v1)
+
+```
+pocketone remote kv list
+```
+
+Returns the values whose names start with prefix (all of them when it's empty), sorted by name. Private names (starting with \_) are left out.
+
+Calls GET /api/\_c/kv/v1/ on the remote (token scope: kv:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--prefix` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
+
+### pocketone remote kv set
+
+Stores a JSON value under a name, replacing any value it had (kv/v1)
+
+```
+pocketone remote kv set
+```
+
+Stores a JSON value under a name, replacing any value it had.
+
+Calls POST /api/\_c/kv/v1/set on the remote (token scope: kv).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--value` | string | – | a JSON value (@file reads a file) |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
+
 ### pocketone remote list
 
 Lists remotes and whether you're logged in

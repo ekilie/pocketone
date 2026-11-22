@@ -60,7 +60,8 @@ passes. Saving applies at once.
 
 Keys stay on the server: the screen never shows a saved key again, and a key is never sent to an endpoint other than the
 one it was entered for (change a provider's endpoint and you enter its key again). The settings are in the app's
-`_params` table, row `llm`.
+[key-value store](../kv/README.md), under the private name `_llm/settings` (only Go code reaches it; the kv/v1 API
+and `$kv` don't).
 
 Under the providers, **Limits** cap what the app spends: the whole app, each signed-in user, each guest or all guests
 together, at most so many US dollars, output tokens, input tokens or calls a UTC day or month, optionally for one kind

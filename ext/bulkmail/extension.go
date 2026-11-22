@@ -41,7 +41,7 @@ func (p *Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
 		Implements: extkit.IDs("bulkmail/v1", "mail.suppression/v1", "mail.feedback/v1"),
 		Defaults:   extkit.IDs("mail.suppression/v1", "mail.feedback/v1"),
-		WorksWith:  extkit.IDs("settings/v1"),
+		WorksWith:  extkit.IDs("settings/v1", "kv/v1"),
 	}
 }
 

@@ -43,6 +43,17 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | `instance_watch_watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). |  | `fleet` | `conn` (string), `edge` (string), `host` (string) |
 | `instance_watch_unwatch` | Stops changes for a hostname on a stream. |  | `fleet` | `conn` (string), `host` (string) |
 
+## kv/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/kv/v1). Answered by [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `kv_list` | Returns the values whose names start with prefix (all of them when it's empty), sorted by name. | yes | `kv:read` | `prefix` (string) |
+| `kv_get` | Returns one value. | yes | `kv:read` | `name` (string) |
+| `kv_set` | Stores a JSON value under a name, replacing any value it had. |  | `kv` | `name` (string), `value` (json) |
+| `kv_delete` | Removes a value. |  | `kv` | `name` (string) |
+
 ## llm.align/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.align/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.

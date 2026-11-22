@@ -6,15 +6,20 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Upgrading
+
+- Guest calls (`$llm.for(e)` for a visitor who isn't signed in) are refused until Settings → LLM has a limit for all guests together. An app that answers visitors who aren't signed in adds one there (say $1 a day) after upgrading. Plain `$llm` calls aren't guest calls and aren't affected.
+
 ### Added
 
 - Limits in Settings → LLM, checked before every call: the whole app, each signed-in user, each guest, or all guests together, at most so many US dollars, output tokens, input tokens or calls a UTC day or month, optionally for one kind or one model. A used-up limit refuses the call with code `limit` (429), naming the limit and when it resets ([Limits](docs/guides/limits.md)).
 - `$llm.for(e)`: the same API as `$llm`, with every call counted for the request's signed-in user, or else its guest (a signed cookie, by IP until the browser sends it back), so per-user and per-guest limits apply. Pass a page's `ctx` or a route's `e`.
 - Every call is recorded in the `_llm_calls` collection (kind, model, whom it was for, tokens, seconds, cost, and which limit refused it); Settings → LLM shows today's and this month's spend.
 
-### Upgrading
+### Changed
 
-- Guest calls (`$llm.for(e)` for a visitor who isn't signed in) are refused until Settings → LLM has a limit for all guests together. An app that answers visitors who aren't signed in adds one there (say $1 a day) after upgrading. Plain `$llm` calls aren't guest calls and aren't affected.
+- Settings → LLM is kept in the app's key-value store (kv/v1) under the private name `_llm/settings`; the old
+  `_params` row `llm` moves there by itself the first time the settings are read. Nothing to do.
 
 ## 0.0.1 (2026-11-22)
 

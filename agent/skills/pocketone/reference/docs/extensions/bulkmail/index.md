@@ -60,7 +60,8 @@ The section also shows this app's limits and how many messages it sent today. Cl
 Unsubscribe links and the feedback URLs are built from **Settings → Application → Application URL**, so set it to
 the address people reach your app on.
 
-The settings are stored in the app's database (a `_params` row), so they go along with its backups. Secrets are
+The settings are stored in the app's [key-value store](https://pocketone.dev/docs/extensions/kv/extension) under the private name `_bulkmail/settings`
+(only Go code reaches it), so they go along with its backups. Secrets are
 never shown again after saving.
 
 ## Use

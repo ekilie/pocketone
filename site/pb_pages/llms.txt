@@ -27,6 +27,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
 - [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
 - [Desktop apps](https://pocketone.dev/docs/extensions/desktop): Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker.
+- [Key-Value Store](https://pocketone.dev/docs/extensions/kv): $kv keeps your app's settings and small pieces of state as named JSON values: no collection, no migration, and they ride along in backups.
 - [AI in your app](https://pocketone.dev/docs/extensions/llm): $llm gives your pages and Go code cloud models: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API, on your own keys.
 - [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your page code, for libraries JavaScript doesn't have and work JavaScript does too slowly.
 
@@ -69,6 +70,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [instance.source/v1](https://pocketone.dev/docs/contracts/instance.source/v1): The instance record a multisite host serves, and where the records come from.
 - [instance.tokens/v1](https://pocketone.dev/docs/contracts/instance.tokens/v1): A multisite host checks an API token one of its instances issued, to accept it on the routes it answers.
 - [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1): An edge follows a control plane lazily: one stream, hostnames watched as requests name them.
+- [kv/v1](https://pocketone.dev/docs/contracts/kv/v1): An app's key-value store: named JSON values with no collection or migration, kept in PocketBase's _params.
 - [llm.align/v1](https://pocketone.dev/docs/contracts/llm.align/v1): Forced alignment: audio and the exact words spoken in it in, the time of every line and word out.
 - [llm.chat/v1](https://pocketone.dev/docs/contracts/llm.chat/v1): Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta.
 - [llm.embed/v1](https://pocketone.dev/docs/contracts/llm.embed/v1): Turn texts into vectors for search by meaning: texts in, one vector each out.
@@ -109,6 +111,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Deploy](https://pocketone.dev/docs/extensions/deploy): pocketone deploy, dev, pull and logs, and the deploy API.
 - [Desktop](https://pocketone.dev/docs/extensions/desktop/extension): Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine.
 - [JSVM](https://pocketone.dev/docs/extensions/jsvm): PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits.
+- [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension): Named JSON values for an app's settings and state, with no collection or migration. On by default.
 - [LLM](https://pocketone.dev/docs/extensions/llm/extension): Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API.
 - [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat): Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.

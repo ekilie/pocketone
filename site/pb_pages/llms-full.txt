@@ -2038,6 +2038,142 @@ quite fit. Being worked out:
 
 ---
 
+Source: https://pocketone.dev/docs/extensions/kv
+
+# Key-Value Store
+
+**Keep a setting without making a collection.** Your app's title, a feature switch, the prompts your page sends a
+model, the last time a job ran: each is one value, not a table of records. `$kv` stores it under a name and gives it
+back:
+
+```ts
+const settings = $kv.get("storytime/settings") ?? { title: "Story Time", minutes: 10 }
+```
+
+```go
+var settings Settings
+found, err := kvv1.Get(app, "storytime/settings", &settings)
+```
+
+There's no collection to create and no migration to write. Values live in PocketBase's own `_params` table, beside its
+settings, so they ride along in every backup. It's built into `pocketone` and on by default.
+
+The examples show each thing in TypeScript, as [Pages](https://pocketone.dev/docs/extensions/pages/overview) page code or `pb_hooks`, and in
+Go. The Go examples use the contract's helpers (`kvv1` is `pocketone.dev/ext/contracts/kv/v1`).
+
+## Read and write values
+
+A value is anything JSON can hold: an object, a list, a string, a number, `true` or `false`.
+
+```ts
+$kv.set("storytime/settings", { title: "Story Time", minutes: 10, voices: ["alloy"] })
+
+const s = $kv.get("storytime/settings") // { title: "Story Time", minutes: 10, voices: ["alloy"] }
+const none = $kv.get("storytime/nothing") // null: no value under that name
+
+$kv.delete("storytime/settings") // no error when there was nothing to delete
+```
+
+```go
+err := kvv1.Set(app, "storytime/settings", Settings{Title: "Story Time", Minutes: 10})
+
+var s Settings
+found, err := kvv1.Get(app, "storytime/settings", &s) // found is false, and s untouched, when there's no value
+
+err = kvv1.Delete(app, "storytime/settings")
+```
+
+Every call is quick and local (one read or write of your app's database), so `$kv` has no `Async` forms. `set`
+replaces the whole value: to change one field, read the value, change it and set it again.
+
+## Defaults until someone changes them
+
+A common shape: ship defaults with your app, and store a value only once someone changes something.
+
+```ts
+const defaults = { title: "Story Time", minutes: 10 }
+
+// read: the stored settings over the defaults
+const settings = { ...defaults, ...($kv.get("storytime/settings") ?? {}) }
+
+// save: only what the form sent
+$kv.set("storytime/settings", { ...settings, minutes: Number(body.minutes) })
+```
+
+Merging over the defaults means a field you add in a later version gets its default on apps that saved settings
+before it existed.
+
+## List values
+
+Names can share a prefix, and `list` returns every value whose name starts with it, sorted by name:
+
+```ts
+$kv.list("storytime/")
+// [{ name: "storytime/settings", value: {...}, created: "2026-11-22T10:00:00Z", updated: "..." }, ...]
+```
+
+```go
+entries, err := kvv1.List(app, "storytime/") // each has Name, Value (JSON), Created, Updated
+```
+
+`$kv.list()` with no prefix returns every value in the store.
+
+## Names
+
+A name is 1 to 128 characters: letters, digits and `_ - . : /`, starting with a letter or digit. Start yours with a
+prefix of your own, such as your app's or extension's name (`storytime/settings`), so they never meet another
+extension's. A name that breaks these rules throws (in Go, returns `kvv1.ErrInvalidName`).
+
+Names starting with `_` are private to Go code on the app. Extensions keep their secrets there (LLM's provider keys
+are `_llm/settings`): `$kv`, the API and agents can't read, change or list them.
+
+A value is at most 1 MiB of JSON. For more than that, or for many similar things you want to filter, sort or let users
+own, use a collection.
+
+## From outside the app
+
+Superusers can read and change values from the API, the `pocketone` command and agents, for example to fix a setting
+on a live app:
+
+```bash
+curl -H "Authorization: $TOKEN" "https://app.example.com/api/_c/kv/v1?prefix=storytime/"           # list
+curl -H "Authorization: $TOKEN" "https://app.example.com/api/_c/kv/v1/get?name=storytime/settings" # one value
+curl -H "Authorization: $TOKEN" -d '{"name":"storytime/settings","value":{"minutes":15}}' \
+  https://app.example.com/api/_c/kv/v1/set
+curl -H "Authorization: $TOKEN" -d '{"name":"storytime/settings"}' https://app.example.com/api/_c/kv/v1/delete
+```
+
+`$TOKEN` is a superuser's token, or an [API token](https://pocketone.dev/docs/extensions/api-tokens) with the `kv:read` scope (list, get) or
+`kv` (all four). From your project folder, `pocketone remote kv` does the same on the project's remote:
+
+```bash
+pocketone remote kv list --prefix storytime/
+pocketone remote kv get --name storytime/settings
+pocketone remote kv set --name storytime/settings --value '{"minutes":15}'   # --value @settings.json reads a file
+pocketone remote kv delete --name storytime/settings
+```
+
+Agents get them as MCP tools (`kv_list`, `kv_get`, `kv_set`, `kv_delete`). Users and guests can't reach the store:
+your page code decides what, if anything, they see.
+
+## Good to know
+
+- **Where values live:** the value named `storytime/settings` is the `_params` row with id `kv:storytime/settings`.
+  The `kv:` prefix keeps your names apart from PocketBase's own rows (its `settings`) and from rows other extensions
+  keep there. Read and write through `$kv` or the helpers, never the table.
+- **Transactions:** the Go helpers take any `core.App`, so inside `app.RunInTransaction` pass the transaction's app and
+  the write is part of it. `$kv`, like `$app`, writes through the main app.
+- **Turning it off:** `kv: {enabled: false}` in `pocketone.yaml` removes `$kv` and the API. The Go helpers keep
+  working, since they need nothing but the database.
+
+## Next
+
+- [Key-Value Store reference](https://pocketone.dev/docs/extensions/kv/extension): the extension's page.
+- [kv/v1](https://pocketone.dev/docs/contracts/kv/v1): the contract, for extension authors.
+
+
+---
+
 Source: https://pocketone.dev/docs/extensions/llm
 
 # AI in your app
@@ -3042,6 +3178,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`instance.source/v1`](https://pocketone.dev/docs/contracts/instance.source/v1) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
 | [`instance.tokens/v1`](https://pocketone.dev/docs/contracts/instance.tokens/v1) | A multisite host checks an API token one of its instances issued, to accept it on the routes it answers. | pocker |  |  | @benallfree |
 | [`instance.watch/v1`](https://pocketone.dev/docs/contracts/instance.watch/v1) | An edge follows a control plane lazily: one stream, hostnames watched as requests name them. | mothership |  |  | @benallfree |
+| [`kv/v1`](https://pocketone.dev/docs/contracts/kv/v1) | An app's key-value store: named JSON values with no collection or migration, kept in PocketBase's _params. | kv (default) |  | api-tokens, bulkmail, llm | @benallfree |
 | [`llm.align/v1`](https://pocketone.dev/docs/contracts/llm.align/v1) | Forced alignment: audio and the exact words spoken in it in, the time of every line and word out. | llm |  |  | @benallfree |
 | [`llm.chat/v1`](https://pocketone.dev/docs/contracts/llm.chat/v1) | Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | llm-chat |  |  | @benallfree |
 | [`llm.embed/v1`](https://pocketone.dev/docs/contracts/llm.embed/v1) | Turn texts into vectors for search by meaning: texts in, one vector each out. | llm |  |  | @benallfree |
@@ -3194,6 +3331,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Deploy](https://pocketone.dev/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
 | [Desktop](https://pocketone.dev/docs/extensions/desktop/extension) | Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine. |
 | [JSVM](https://pocketone.dev/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
+| [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) | Named JSON values for an app's settings and state, with no collection or migration. On by default. |
 | [LLM](https://pocketone.dev/docs/extensions/llm/extension) | Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API. |
 | [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat) | Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
@@ -4324,6 +4462,91 @@ Calls POST /api/\_c/instance.watch/v1/unwatch on the remote (token scope: fleet)
 | `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
 
 From [instance.watch/v1](https://pocketone.dev/docs/contracts/instance.watch/v1) (generated).
+
+### pocketone remote kv
+
+Calls kv/v1 on a remote
+
+### pocketone remote kv delete
+
+Removes a value (kv/v1)
+
+```
+pocketone remote kv delete
+```
+
+Removes a value. Deleting a name with no value is not an error.
+
+Calls POST /api/\_c/kv/v1/delete on the remote (token scope: kv).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
+
+### pocketone remote kv get
+
+Returns one value (kv/v1)
+
+```
+pocketone remote kv get
+```
+
+Returns one value. A name with no value is a not\_found error; a private name is a private error.
+
+Calls GET /api/\_c/kv/v1/get on the remote (token scope: kv:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
+
+### pocketone remote kv list
+
+Returns the values whose names start with prefix (all of them when it's empty), sorted by name (kv/v1)
+
+```
+pocketone remote kv list
+```
+
+Returns the values whose names start with prefix (all of them when it's empty), sorted by name. Private names (starting with \_) are left out.
+
+Calls GET /api/\_c/kv/v1/ on the remote (token scope: kv:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--prefix` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
+
+### pocketone remote kv set
+
+Stores a JSON value under a name, replacing any value it had (kv/v1)
+
+```
+pocketone remote kv set
+```
+
+Stores a JSON value under a name, replacing any value it had.
+
+Calls POST /api/\_c/kv/v1/set on the remote (token scope: kv).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--value` | string | – | a JSON value (@file reads a file) |
+
+From [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) (generated).
 
 ### pocketone remote list
 
@@ -5746,6 +5969,17 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 | `POST /api/_c/instance.watch/v1/watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). | `fleet` | `conn` (string), `edge` (string), `host` (string) |
 | `POST /api/_c/instance.watch/v1/unwatch` | Stops changes for a hostname on a stream. | `fleet` | `conn` (string), `host` (string) |
 
+## kv/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/kv/v1). Answered by [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `GET /api/_c/kv/v1` | Returns the values whose names start with prefix (all of them when it's empty), sorted by name. | `kv:read` | `prefix` (string) |
+| `GET /api/_c/kv/v1/get` | Returns one value. | `kv:read` | `name` (string) |
+| `POST /api/_c/kv/v1/set` | Stores a JSON value under a name, replacing any value it had. | `kv` | `name` (string), `value` (json) |
+| `POST /api/_c/kv/v1/delete` | Removes a value. | `kv` | `name` (string) |
+
 ## llm.align/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.align/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.
@@ -5954,6 +6188,17 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | `instance_watch_stream` | Opens this edge's stream: a hello first, then answers and changes for the hostnames it watches, the edges list when it changes, and its standing set when that changes. | yes | `fleet` | `edge` (string) |
 | `instance_watch_watch` | Registers a hostname on a stream and sends its answer there (or, with no live stream, in the reply). |  | `fleet` | `conn` (string), `edge` (string), `host` (string) |
 | `instance_watch_unwatch` | Stops changes for a hostname on a stream. |  | `fleet` | `conn` (string), `host` (string) |
+
+## kv/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/kv/v1). Answered by [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `kv_list` | Returns the values whose names start with prefix (all of them when it's empty), sorted by name. | yes | `kv:read` | `prefix` (string) |
+| `kv_get` | Returns one value. | yes | `kv:read` | `name` (string) |
+| `kv_set` | Stores a JSON value under a name, replacing any value it had. |  | `kv` | `name` (string), `value` (json) |
+| `kv_delete` | Removes a value. |  | `kv` | `name` (string) |
 
 ## llm.align/v1
 
@@ -6287,6 +6532,16 @@ Where a multi-instance host's instances come from (a YAML file), and dev mode (s
 | `dev` | bool |  | Also serve unknown hostnames: each becomes an instance named after it, in dev mode, with its folder made on first use. |
 
 Owned by [Multisite](https://pocketone.dev/docs/extensions/multisite).
+
+#### `kv:`
+
+Turns the kv extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.kv`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
 
 #### `lifecycle:`
 
@@ -7841,6 +8096,160 @@ Stops changes for a hostname on a stream.
 | Extension | |
 |---|---|
 | [mothership](https://pocketone.dev/docs/extensions/mothership) | provides |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/contracts/kv/v1
+
+# kv/v1
+
+An app's key-value store: a name and a JSON value, kept without a collection or a migration. Use it for an app's
+settings, a feature's state, anything that is one blob rather than many records. Each value is a row in PocketBase's
+own `_params` table, so it rides along in backups.
+
+A wire contract ([kv.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/kv/v1/kv.go)) plus Go helpers ([helpers.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/kv/v1/helpers.go)).
+
+## Use
+
+**From Go** (an extension, a hook), call the helpers. They need no provider and work inside a transaction when given
+one:
+
+```go
+var s Settings
+found, err := kvv1.Get(app, "storytime/settings", &s) // found is false and s untouched when there's no value
+err = kvv1.Set(app, "storytime/settings", s)          // any value json.Marshal takes
+err = kvv1.Delete(app, "storytime/settings")          // no error when there was no value
+entries, err := kvv1.List(app, "storytime/")          // by name prefix, sorted by name; "" lists all (private too)
+e, found, err := kvv1.Lookup(app, "storytime/settings") // the raw entry, with created and updated
+```
+
+Declare `WorksWith: extkit.IDs("kv/v1")` when you do.
+
+**From page code and pb_hooks**, the provider gives `$kv` (sync, local):
+
+```js
+const settings = $kv.get("storytime/settings") ?? defaults // the parsed value, or null
+$kv.set("storytime/settings", { title: "Story Time", minutes: 10 })
+$kv.delete("storytime/settings")
+$kv.list("storytime/") // [{ name, value, created, updated }]
+```
+
+**Over HTTP** (superusers, or an API token with the scope):
+
+| Operation | HTTP | Token scope |
+|---|---|---|
+| List | `GET /api/_c/kv/v1?prefix=storytime/` | `kv:read` |
+| Get | `GET /api/_c/kv/v1/get?name=storytime/settings` | `kv:read` |
+| Set | `POST /api/_c/kv/v1/set` with `{"name": "storytime/settings", "value": {...}}` | `kv` |
+| Delete | `POST /api/_c/kv/v1/delete` with `{"name": "storytime/settings"}` | `kv` |
+
+Get answers `404 not_found` for a name with no value. The same operations are `pocketone remote kv ...` commands and
+MCP tools (`kv_list`, `kv_get`, `kv_set`, `kv_delete`).
+
+**Names** are 1 to 128 characters: letters, digits and `_ - . : /`, starting with a letter or digit. Start yours with a
+prefix of your own (`storytime/`, `myext:`) so they stay apart from other apps' and extensions'. A value is any JSON up
+to 1 MiB.
+
+**Private names** start with `_` (`_myext/settings`): the Go helpers read and write them, but the wire API (HTTP, the
+CLI, MCP) and `$kv` refuse them (`403 private`) and leave them out of lists. Keep secrets there, such as API keys and
+signing keys, which a `kv:read` token must never see.
+
+**Moving an extension's own row:** an extension that kept a `_params` row of its own before kv/v1 moves it once with
+`kvv1.MoveParamOnce(app, "oldrow", "_myext/settings")` before reading (`MoveParam` for a one-off): the value and its
+times move to the name and the old row goes away. LLM, Bulk Mail and API Tokens did this.
+
+**Storage:** name `storytime/settings` is the `_params` row with id `kv:storytime/settings`, its value the row's
+`value`. The `kv:` prefix keeps every name apart from PocketBase's own params (`settings`) and from rows extensions
+keep there themselves. Write through the helpers, never the table, so the rules above hold.
+
+## Provide
+
+**The wire API and `$kv`:** ext/kv provides `kvv1.Store` by default, over the helpers. Another provider implements
+`kvv1.Store` and provides it in `Register` (`kvv1.Contract.Provide(app, s)`); it must keep the storage above, since the
+helpers read and write it directly.
+
+## Commands and APIs
+
+Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](https://pocketone.dev/docs/features/remote), or the full [CLI](https://pocketone.dev/docs/reference/cli), [REST](https://pocketone.dev/docs/reference/rest) and [MCP](https://pocketone.dev/docs/reference/mcp) references.
+
+### list
+
+Returns the values whose names start with prefix (all of them when it's empty), sorted by name. Private names (starting with \_) are left out.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/kv/v1` |
+| CLI | `pocketone remote kv list --prefix <value>` |
+| MCP | `kv_list` |
+| Token scope | `kv:read` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `prefix` | `--prefix` | string |
+
+### get
+
+Returns one value. A name with no value is a not\_found error; a private name is a private error.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/kv/v1/get` |
+| CLI | `pocketone remote kv get --name <value>` |
+| MCP | `kv_get` |
+| Token scope | `kv:read` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `name` | `--name` | string |
+
+### set
+
+Stores a JSON value under a name, replacing any value it had.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/kv/v1/set` |
+| CLI | `pocketone remote kv set --name <value> --value <json>` |
+| MCP | `kv_set` |
+| Token scope | `kv` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `name` | `--name` | string |
+| `value` | `--value` | json |
+
+### delete
+
+Removes a value. Deleting a name with no value is not an error.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/kv/v1/delete` |
+| CLI | `pocketone remote kv delete --name <value>` |
+| MCP | `kv_delete` |
+| Token scope | `kv` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `name` | `--name` | string |
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [kv](https://pocketone.dev/docs/extensions/kv/extension) | provides (default) |
+| [api-tokens](https://pocketone.dev/docs/extensions/api-tokens) | works with |
+| [bulkmail](https://pocketone.dev/docs/extensions/bulkmail) | works with |
+| [llm](https://pocketone.dev/docs/extensions/llm/extension) | works with |
 
 <!-- /contracts:index -->
 
@@ -11335,7 +11744,8 @@ The section also shows this app's limits and how many messages it sent today. Cl
 Unsubscribe links and the feedback URLs are built from **Settings → Application → Application URL**, so set it to
 the address people reach your app on.
 
-The settings are stored in the app's database (a `_params` row), so they go along with its backups. Secrets are
+The settings are stored in the app's [key-value store](https://pocketone.dev/docs/extensions/kv/extension) under the private name `_bulkmail/settings`
+(only Go code reaches it), so they go along with its backups. Secrets are
 never shown again after saving.
 
 ## Use
@@ -12873,6 +13283,145 @@ MIT
 
 ---
 
+Source: https://pocketone.dev/docs/extensions/kv/extension
+
+# Key-Value Store
+
+Version 0.0.1 · Owners: [@benallfree](https://github.com/benallfree)
+
+A place for an app's settings and small pieces of state: a name and a JSON value, kept without a collection or a
+migration. Values live in PocketBase's own `_params` table, so they ride along in backups. Page code reads and writes
+them with `$kv`, Go code with the [kv/v1](https://pocketone.dev/docs/contracts/kv/v1) helpers, and superusers through the API, the
+CLI or an agent.
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+The Key-Value Store is built into `pocketone` and **on by default**; there's nothing to install. In your own Go build:
+
+```go
+extkit.Setup(app, []extkit.Extension{kv.New()}, nil, nil)
+```
+
+The module is `pocketone.dev/ext/kv`.
+
+## Configure
+
+There's nothing to configure. To turn it off on a single app (`$kv` and the API go away; the helpers keep working):
+
+```yaml
+kv:
+  enabled: false
+```
+
+## Use
+
+In page code and `pb_hooks`, `$kv` is sync and local:
+
+```js
+const defaults = { title: "Story Time", minutes: 10 }
+const settings = $kv.get("storytime/settings") ?? defaults // the stored value, or null when there is none
+$kv.set("storytime/settings", { ...settings, minutes: 15 })  // any value JSON.stringify takes, up to 1 MiB
+$kv.delete("storytime/settings")                             // no error when there was no value
+$kv.list("storytime/")                                       // [{ name, value, created, updated }], sorted by name
+```
+
+Names are 1 to 128 characters: letters, digits and `_ - . : /`, starting with a letter or digit. Start yours with a
+prefix of your own (`storytime/`) so they stay apart from other code's. Names starting with `_` are private to the
+app's Go code: extensions keep their secrets there (`_llm/settings`, `_bulkmail/settings`), and neither `$kv` nor the
+API below reaches them.
+
+Superusers (or an API token with the `kv` / `kv:read` scope) reach the same values over HTTP:
+
+```bash
+curl -H "Authorization: $TOKEN" "https://app.example.com/api/_c/kv/v1?prefix=storytime/"             # list
+curl -H "Authorization: $TOKEN" "https://app.example.com/api/_c/kv/v1/get?name=storytime/settings"   # one value
+curl -H "Authorization: $TOKEN" -d '{"name":"storytime/settings","value":{"minutes":15}}' \
+  https://app.example.com/api/_c/kv/v1/set
+curl -H "Authorization: $TOKEN" -d '{"name":"storytime/settings"}' https://app.example.com/api/_c/kv/v1/delete
+```
+
+The same operations are `pocketone remote kv ...` commands and MCP tools (`kv_list`, `kv_get`, `kv_set`, `kv_delete`).
+
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [kv/v1](https://pocketone.dev/docs/contracts/kv/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [list](https://pocketone.dev/docs/contracts/kv/v1#list) | `pocketone remote kv list --prefix <value>` | `GET /api/_c/kv/v1` | `kv_list` |
+| [get](https://pocketone.dev/docs/contracts/kv/v1#get) | `pocketone remote kv get --name <value>` | `GET /api/_c/kv/v1/get` | `kv_get` |
+| [set](https://pocketone.dev/docs/contracts/kv/v1#set) | `pocketone remote kv set --name <value> --value <json>` | `POST /api/_c/kv/v1/set` | `kv_set` |
+| [delete](https://pocketone.dev/docs/contracts/kv/v1#delete) | `pocketone remote kv delete --name <value>` | `POST /api/_c/kv/v1/delete` | `kv_delete` |
+
+## Integrations
+
+| Extension | How they fit |
+|---|---|
+| [LLM](https://pocketone.dev/docs/extensions/llm/extension), [Bulk Mail](https://pocketone.dev/docs/extensions/bulkmail), [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) | Keep their settings and keys here, under private names. |
+| [Contracts](https://pocketone.dev/docs/contracts) | kv/v1 is the contract. Other extensions keep their own values with its Go helpers (`kvv1.Get(app, name, &v)`, `kvv1.Set`, `kvv1.Delete`, `kvv1.List`), which need no provider, and declare `WorksWith: kv/v1`. |
+| [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Page code gets `$kv`. |
+| [API Tokens](https://pocketone.dev/docs/extensions/api-tokens) | Tokens with the `kv:read` or `kv` scope reach the API. |
+| [MCP](https://pocketone.dev/docs/extensions/mcp) | Agents get the operations as tools. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Every instance that runs PocketOne has its own store, in its own `_params`. |
+
+## Example
+
+The example serves a PocketBase app with the store, and keeps a greeting in it from Go:
+
+```go
+// Command example is a PocketBase app with the key-value store (kv/v1): page code and pb_hooks get $kv, and
+// superusers read and change values at /api/_c/kv/v1, e.g.
+// `curl -H "Authorization: <superuser token>" "http://127.0.0.1:8090/api/_c/kv/v1/get?name=example/greeting"`.
+//
+// Logins (ext/devusers, local testing only): dashboard admin@example.com / password.
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	kvv1 "pocketone.dev/ext/contracts/kv/v1"
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/kv"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app) // local testing: superuser admin@example.com and user user@example.com, password "password"
+	if _, err := extkit.Setup(app, []extkit.Extension{kv.New()}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	// a value from Go, kept until someone changes it
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		var greeting string
+		if found, err := kvv1.Get(e.App, "example/greeting", &greeting); err != nil {
+			return err
+		} else if !found {
+			if err := kvv1.Set(e.App, "example/greeting", "Hello from the key-value store"); err != nil {
+				return err
+			}
+		}
+		return e.Next()
+	})
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## License
+
+MIT
+
+
+---
+
 Source: https://pocketone.dev/docs/extensions/llm/extension
 
 # LLM
@@ -12933,7 +13482,8 @@ passes. Saving applies at once.
 
 Keys stay on the server: the screen never shows a saved key again, and a key is never sent to an endpoint other than the
 one it was entered for (change a provider's endpoint and you enter its key again). The settings are in the app's
-`_params` table, row `llm`.
+[key-value store](https://pocketone.dev/docs/extensions/kv/extension), under the private name `_llm/settings` (only Go code reaches it; the kv/v1 API
+and `$kv` don't).
 
 There's no pocketone.yaml configuration besides the switch: `llm: {enabled: false}` turns it off on a single app (on a
 host, an instance's `extensions.llm`), and with it `$llm` and the `llm.*` contracts.
@@ -19343,7 +19893,7 @@ Source: https://pocketone.dev/docs/extensions/standard
 Version 0.1.3 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
+Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, dashboard cache headers (UI Cache), and a key-value store ($kv). Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
@@ -19433,6 +19983,14 @@ Turns the deploy extension off on a single app (`enabled: false`). On a multisit
 |---|---|---|---|
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
+#### `kv:`
+
+Turns the kv extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.kv`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
 #### `llm-chat:`
 
 Turns the llm-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.llm-chat`.
@@ -19506,7 +20064,7 @@ Turns the wasm extension off on a single app (`enabled: false`). On a multisite 
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, llm, llm-chat
+standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, kv, llm, llm-chat
 standard: api-tokens/v1 ← api-tokens
 ```
 

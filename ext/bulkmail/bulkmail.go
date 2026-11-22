@@ -10,7 +10,6 @@ import (
 	"crypto/rand"
 	"embed"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	validation "ganigeorgiev.com/pocketbase/ozzo-validation/v4"
@@ -23,7 +22,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/mailer"
-	"ganigeorgiev.com/pocketbase/pocketbase/tools/types"
+	kvv1 "pocketone.dev/ext/contracts/kv/v1"
 )
 
 // NoBulkMail as [Config.Daily] means the app may not send bulk mail (the screens say so instead of offering Send).
@@ -33,7 +32,11 @@ const (
 	defaultRate  = 5.0
 	defaultDaily = 5000
 	storeKey     = "bulkmail"
-	paramKey     = "bulkmail"
+	// settingsName is where the settings live in the app's key-value store (kv/v1), private to Go: they hold secrets.
+	settingsName = "_bulkmail/settings"
+	// legacyParam is the _params row the settings had before kv/v1; the first load moves it to settingsName.
+	// Remove once every app has started on a release with kv/v1.
+	legacyParam = "bulkmail"
 )
 
 // Config is set by whoever builds the binary (or, on a multisite host with Pocker, per instance).
@@ -57,7 +60,8 @@ type Config struct {
 	Now func() time.Time
 }
 
-// Settings are stored per app (a _params row, so they ride along in backups) and edited in Settings → Bulk mail.
+// Settings are stored per app (in its key-value store, kv/v1, so they ride along in backups) and edited in Settings →
+// Bulk mail.
 type Settings struct {
 	// The default sender is the app's (Settings > Mail); a campaign's from_name / from_address override it.
 	PostalAddress string `json:"postalAddress"`
@@ -228,12 +232,11 @@ func (bm *BulkMail) Settings() (Settings, error) {
 	}
 
 	s := &Settings{}
-	param := &core.Param{}
-	err := bm.app.ModelQuery(param).Model(paramKey, param)
-	if err == nil && len(param.Value) > 0 {
-		if err := json.Unmarshal(param.Value, s); err != nil {
-			return Settings{}, fmt.Errorf("bulkmail: settings: %w", err)
-		}
+	if err := kvv1.MoveParamOnce(bm.app, legacyParam, settingsName); err != nil {
+		return Settings{}, fmt.Errorf("bulkmail: settings: %w", err)
+	}
+	if _, err := kvv1.Get(bm.app, settingsName, s); err != nil {
+		return Settings{}, fmt.Errorf("bulkmail: settings: %w", err)
 	}
 	if s.Secret == "" {
 		s.Secret = randomHex(32)
@@ -268,23 +271,7 @@ func (bm *BulkMail) SaveSettings(s Settings) error {
 }
 
 func (bm *BulkMail) saveLocked(s *Settings) error {
-	raw, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-	param := &core.Param{}
-	if err := bm.app.ModelQuery(param).Model(paramKey, param); err != nil {
-		param = &core.Param{}
-		param.Id = paramKey
-		param.MarkAsNew()
-	}
-	param.Value = types.JSONRaw(raw)
-	now := types.NowDateTime()
-	if param.IsNew() {
-		param.Created = now
-	}
-	param.Updated = now
-	return bm.app.Save(param)
+	return kvv1.Set(bm.app, settingsName, s)
 }
 
 func (bm *BulkMail) publicURL() string {

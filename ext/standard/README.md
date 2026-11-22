@@ -9,7 +9,7 @@ summary: "The extensions every PocketOne app has, as one set a host configures."
 # Standard Set
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
-Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
+Pages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, dashboard cache headers (UI Cache), and a key-value store ($kv). Every
 app uses it, standalone or an instance on a multisite host, so an app never misses one because its host forgot to
 list it. Members can be reconfigured or turned off per app, never removed.
 
@@ -68,7 +68,7 @@ fields they cover.
 Each app logs what it got when it starts:
 
 ```
-standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, llm, llm-chat
+standard: on: settings, templates, cache, api-tokens, remotes, mcp, pages, storage, s3redirect, pitr, backups, bulkmail, deploy, wasm, uicache, kv, llm, llm-chat
 standard: api-tokens/v1 ← api-tokens
 ```
 

@@ -7,15 +7,17 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strings"
+	"sync"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
+	kvv1 "pocketone.dev/ext/contracts/kv/v1"
 	llmc "pocketone.dev/ext/contracts/llm"
 )
 
 // GuestCookie is the cookie that tells one anonymous visitor from another, so each guest gets a bucket of their own.
-// Its value is a random id and a signature (HMAC-SHA256, keyed from the app's superuser token secret), so a visitor
-// can't pick someone else's id.
+// Its value is a random id and a signature (HMAC-SHA256 with a random key the app keeps in its key-value store, private
+// to Go), so a visitor can't pick someone else's id.
 const GuestCookie = "pocketone_llm_guest"
 
 // guestCookieAge is how long a guest keeps their id: a year.
@@ -47,15 +49,28 @@ func SubjectOf(app core.App, e *core.RequestEvent) string {
 	return "guest:ip:" + e.RealIP()
 }
 
-// guestKey is the signing key: derived from the superusers collection's token secret, which every app has and keeps
-// private. Changing that secret signs everyone out and gives every guest a new id.
+// guestKeyName is where the signing key lives in the app's key-value store: a private name, so only Go reads it.
+// Deleting it gives every guest a new id.
+const guestKeyName = "_llm/guest-key"
+
+var guestKeyMu sync.Mutex
+
+// guestKey is the signing key, made (32 random bytes) and stored the first time an app needs one.
 func guestKey(app core.App) []byte {
-	secret := ""
-	if c, err := app.FindCachedCollectionByNameOrId(core.CollectionNameSuperusers); err == nil {
-		secret = c.AuthToken.Secret
+	guestKeyMu.Lock()
+	defer guestKeyMu.Unlock()
+	var k string
+	if found, err := kvv1.Get(app, guestKeyName, &k); err == nil && found && len(k) == 64 {
+		if b, err := hex.DecodeString(k); err == nil {
+			return b
+		}
 	}
-	h := sha256.Sum256([]byte("pocketone llm guest\x00" + secret))
-	return h[:]
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	if err := kvv1.Set(app, guestKeyName, hex.EncodeToString(b)); err != nil {
+		app.Logger().Warn("llm: guest key: not saved, so guest cookies won't verify and guests count by IP", "error", err)
+	}
+	return b
 }
 
 func signGuest(key []byte, id string) string {

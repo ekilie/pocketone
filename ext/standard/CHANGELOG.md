@@ -6,6 +6,11 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Added
+
+- The [Key-Value Store](../kv/README.md) (`kv`) joins the set, on by default: `$kv` in page code and the kv/v1
+  API. `kv: {enabled: false}` turns it off.
+
 ## 0.1.3 (2026-11-22)
 
 - The set's language-model members are now `LLM` (`llm`) and `LLMChat` (`llm-chat`), replacing `Agent` and `AgentChat`.

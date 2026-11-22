@@ -23,6 +23,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Deploy](/docs/extensions/deploy) | pocketone deploy, dev, pull and logs, and the deploy API. |
 | [Desktop](/docs/extensions/desktop/extension) | Build your PocketOne app into a native desktop app for macOS, Windows and Linux, one executable each, from any machine. |
 | [JSVM](/docs/extensions/jsvm) | PocketOne's JS engine: one QuickJS VM per app, real globals, async handlers, hard limits. |
+| [Key-Value Store](/docs/extensions/kv/extension) | Named JSON values for an app's settings and state, with no collection or migration. On by default. |
 | [LLM](/docs/extensions/llm/extension) | Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API. |
 | [LLM Chat](/docs/extensions/llm-chat) | Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries. |
 | [MCP](/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |

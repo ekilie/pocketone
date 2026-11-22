@@ -109,6 +109,7 @@ require (
 	pocketone.dev/ext/bulkmail v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/cache v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/deploy v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/kv v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/llm v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/llm-chat v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
@@ -201,3 +202,5 @@ replace pocketone.dev/ext/llm => ../../ext/llm
 replace pocketone.dev/ext/uicache => ../../ext/uicache
 
 replace pocketone.dev/ext/llm-chat => ../../ext/llm-chat
+
+replace pocketone.dev/ext/kv => ../../ext/kv

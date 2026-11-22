@@ -187,6 +187,16 @@ Where a multi-instance host's instances come from (a YAML file), and dev mode (s
 
 Owned by [Multisite](/docs/extensions/multisite).
 
+#### `kv:`
+
+Turns the kv extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.kv`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](/docs/extensions/standard).
+
 #### `lifecycle:`
 
 Instance data on this host: how often disk use is measured and last-request times are reported.

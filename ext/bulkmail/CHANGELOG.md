@@ -5,3 +5,8 @@ commit. Each PocketOne release raises this extension's `version:` when there's s
 renames the section to that version ([Changelogs](../../docs/extensions.md#changelogs)).
 
 ## Unreleased
+
+### Changed
+
+- The settings are kept in the app's key-value store (kv/v1) under the private name `_bulkmail/settings`; the old
+  `_params` row `bulkmail` moves there by itself the first time they're read, so unsubscribe links keep working.
