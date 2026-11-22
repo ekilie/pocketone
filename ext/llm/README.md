@@ -3,7 +3,7 @@ owners: ["@benallfree"]
 version: 0.0.1
 title: "LLM"
 group: binary
-summary: "Cloud models for your app: text, pictures, speech, transcription, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API."
+summary: "Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API."
 ---
 
 # LLM
@@ -31,7 +31,7 @@ Providers come in four types:
 
 | Type | What it reaches |
 |---|---|
-| `vultr` | [Vultr Serverless Inference](https://docs.vultr.com/products/compute/serverless-inference): every kind, music and video included. |
+| `vultr` | [Vultr Serverless Inference](https://docs.vultr.com/products/compute/serverless-inference): every kind, music, video and alignment included. |
 | `cloudflare` | [Workers AI](https://developers.cloudflare.com/workers-ai/) on your Cloudflare account: text, pictures, speech, transcription and embeddings. |
 | `openrouter` | [OpenRouter](https://openrouter.ai): hundreds of models behind one key; text, pictures, speech, transcription, video and embeddings. |
 | `openai` | Any API shaped like OpenAI's: OpenAI itself, Groq, Together, or Ollama and llama-server on localhost. Add as many as you like. |
@@ -76,13 +76,14 @@ while a model works; there are no blocking versions to reach for. Each call name
 | `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage }`. With `schema`, `data` is the parsed JSON. |
 | `$llm.text.streamAsync(opts, onText, onReasoning?)` | The same, calling `onText` with each piece as it's written (`false` stops it). |
 | `$llm.text.count(text \| messages)` | About how many tokens (four characters each). Local, so not async. |
-| `$llm.image.generateAsync({ model, prompt, n?, size?, aspectRatio? })`, `edit({ ..., images })` | Pictures: `{ files, model, usage }`. |
-| `$llm.speech.speakAsync({ model, text, voice?, format?, speed?, instructions? })`, `voices(model)` | Audio: `{ file, model, usage }`. |
+| `$llm.image.generateAsync({ model, prompt, n?, size?, aspectRatio? })`, `editAsync({ ..., images })` | Pictures: `{ files, model, usage }`. |
+| `$llm.speech.speakAsync({ model, text, voice?, format?, speed?, instructions? })`, `voicesAsync(model)` | Audio: `{ file, model, usage }`. |
 | `$llm.transcribe.transcribeAsync({ model, audio, language?, prompt? })` | Text from audio: `{ text, language, model, usage }`. |
-| `$llm.music.createAsync({ model, prompt, lyrics?, seconds?, wait? })`, `get(id)`, `content(id, index)` | Music, as a job (below). |
-| `$llm.video.createAsync({ model, prompt, image?, seconds?, size?, aspectRatio?, wait? })`, `get(id)`, `content(id, index)` | Video, as a job. |
+| `$llm.align.alignAsync({ model, audio, text, mode?, language? })` | When each line and word of `text` is said in `audio`: `{ duration, lines, words, unaligned, model, usage }`, in seconds. For captions timed to a voice. |
+| `$llm.music.createAsync({ model, prompt, lyrics?, seconds?, wait? })`, `getAsync(id)`, `contentAsync(id, index)` | Music, as a job (below). |
+| `$llm.video.createAsync({ model, prompt, image?, seconds?, size?, aspectRatio?, wait? })`, `getAsync(id)`, `contentAsync(id, index)` | Video, as a job. |
 | `$llm.embed.embedAsync({ model, input, dimensions? })` | One vector per text: `{ vectors, model, usage }`. |
-| `$llm.<kind>.models({ provider? })` | The models your providers offer of that kind, with prices where the provider lists them. |
+| `$llm.<kind>.modelsAsync({ provider? })` | The models your providers offer of that kind, with prices where the provider lists them. |
 | `$llm.file(file)`, `$llm.fileAsync(file)` | A generated file as a PocketBase file, for `record.set("field", ...)`; `fileAsync` also downloads one the provider gave only a URL for. |
 | `$llm.chat.*` | Stored conversations, from the [LLM Chat](../llm-chat/README.md) extension. |
 
@@ -96,8 +97,8 @@ what the common fields don't cover.
 **Files** come back as `{ name, type, data, url }`: `data` is the bytes (base64 in JSON), `url` the provider's own copy
 when it keeps one (it may expire). Audio to transcribe is sent the same way.
 
-**Jobs:** music and video take a while. `create` starts one and returns `{ id, status }`; follow it with `get(id)` until
-`status` is `done`, then fetch each of its `outputs` with `content(id, index)`. Or pass `wait: "5m"`: `create` then
+**Jobs:** music and video take a while. `createAsync` starts one and returns `{ id, status }`; follow it with `getAsync(id)` until
+`status` is `done`, then fetch each of its `outputs` with `contentAsync(id, index)`. Or pass `wait: "5m"`: `createAsync` then
 resolves once the job is done, its `files` included. The id names the provider
 (`vultr:music_02a2…`), so `get` finds it again after a restart; the provider keeps the job, not your app.
 

@@ -17,6 +17,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
 	llmc "pocketone.dev/ext/contracts/llm"
+	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
@@ -190,6 +191,16 @@ func TestMediaAndErrors(t *testing.T) {
 	_, err = musicv1.Contract.Must(app).Create(ctx, extkit.Internal, musicv1.CreateInput{Model: "fake/x", Prompt: "lullaby"})
 	if xe, ok := err.(*extkit.Error); !ok || xe.Code != "not_supported" {
 		t.Fatalf("music: %v", err)
+	}
+	// alignment: inputs checked first, then an OpenAI-compatible API says it can't
+	al := alignv1.Contract.Must(app)
+	if _, err := al.Align(ctx, extkit.Internal, alignv1.AlignInput{Model: "fake/x", Audio: llmc.File{Data: []byte("a")}}); err == nil ||
+		!strings.Contains(err.Error(), "text") {
+		t.Fatalf("align without text: %v", err)
+	}
+	_, err = al.Align(ctx, extkit.Internal, alignv1.AlignInput{Model: "fake/x", Audio: llmc.File{Data: []byte("a")}, Text: "hi"})
+	if xe, ok := err.(*extkit.Error); !ok || xe.Code != "not_supported" {
+		t.Fatalf("align: %v", err)
 	}
 	// a wrong key: the provider's error, with its name
 	s, _ := llm.LoadSettings(app)

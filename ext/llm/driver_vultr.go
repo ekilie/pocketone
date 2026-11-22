@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	llmc "pocketone.dev/ext/contracts/llm"
+	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
@@ -58,6 +59,51 @@ func (d *vultrDriver) models(ctx context.Context) ([]llmc.ModelInfo, error) {
 		if len(info.Kinds) > 0 {
 			out = append(out, info)
 		}
+	}
+	// the aligner is only in the authenticated catalog (GET /models/all), under its feature
+	if d.c.Key != "" {
+		if cat, err := d.c.Catalog(ctx); err == nil {
+			for _, m := range cat {
+				if m.Has("AudioAlignment") {
+					out = append(out, llmc.ModelInfo{ID: m.ID, Kinds: []string{llmc.KindAlign}, Inputs: []string{"audio", "text"},
+						Description: "Forced alignment: when each line and word of a known text is said in its audio."})
+				}
+			}
+		}
+	}
+	return out, nil
+}
+
+func (d *vultrDriver) align(ctx context.Context, model string, in alignv1.AlignInput) (alignv1.Result, error) {
+	extra := map[string]string{}
+	for k, v := range in.Options {
+		if s, ok := v.(string); ok {
+			extra[k] = s
+		}
+	}
+	name := in.Audio.Name
+	if name == "" {
+		name = "audio" + orDefault(extFor(in.Audio.Type), ".mp3")
+	}
+	a, err := d.c.Align(ctx, vultr.AlignRequest{Model: model, Audio: in.Audio.Data, Filename: name, Text: in.Text, Mode: in.Mode,
+		Language: in.Language, Extra: extra})
+	if err != nil {
+		return alignv1.Result{}, err
+	}
+	out := alignv1.Result{Duration: a.Duration, Lines: []alignv1.Line{}, Words: []alignv1.Word{},
+		Usage: llmc.Usage{Seconds: a.Usage.Seconds, CostUSD: a.Usage.Cost}}
+	for _, l := range a.Lines {
+		line := alignv1.Line{Index: l.Index, Text: l.Text, Start: l.Start, End: l.End, Score: l.Score, Certain: l.Certain}
+		if l.Tag != nil {
+			line.Tag = *l.Tag
+		}
+		out.Lines = append(out.Lines, line)
+	}
+	for _, w := range a.Words {
+		out.Words = append(out.Words, alignv1.Word{Line: w.Line, Text: w.Text, Start: w.Start, End: w.End, Score: w.Score})
+	}
+	for _, u := range a.Unaligned {
+		out.Unaligned = append(out.Unaligned, alignv1.Unaligned{Line: u.Line, Text: u.Text, Reason: u.Reason})
 	}
 	return out, nil
 }

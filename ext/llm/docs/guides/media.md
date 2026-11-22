@@ -49,6 +49,23 @@ const r = await $llm.transcribe.transcribeAsync({ model: "vultr/whisper-large-v3
 // r.text: what was said
 ```
 
+## Timing words to audio
+
+When you already know the words (you wrote them, then had them spoken), alignment says when each line and word is
+said. Give the audio and the text, one line per line; every word comes back with its start and end in seconds:
+
+```ts
+const text = "Once upon a time, a small fox lived at the edge of a quiet wood.\nEvery night, she counted the stars."
+const speech = await $llm.speech.speakAsync({ model: "vultr/auk", text })
+const r = await $llm.align.alignAsync({ model: "vultr/aligner-1", audio: speech.file, text, mode: "speech" })
+// r.lines: [{ index: 0, text: "Once upon a time, ...", start: 0.3, end: 5.0, certain: true }, ...]
+// r.words: [{ line: 0, text: "Once", start: 0.3, end: 0.44 }, ...]
+```
+
+Use `mode: "speech"` for a voice; the default, `"lyrics"`, first separates a sung vocal from its music. A line in square
+brackets (`[Chorus]`) labels the lines under it and isn't timed. Vultr's `aligner-1` costs a fraction of a cent per
+minute of audio.
+
 ## Music and video
 
 These take a while, so they're jobs. The simplest way is to wait for it:

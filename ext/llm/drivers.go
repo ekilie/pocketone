@@ -11,6 +11,7 @@ import (
 	"time"
 
 	llmc "pocketone.dev/ext/contracts/llm"
+	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
@@ -31,6 +32,7 @@ type driver interface {
 	voices(ctx context.Context, model string) ([]speechv1.Voice, error)
 	transcribe(ctx context.Context, model string, in transcribev1.TranscribeInput) (transcribev1.Result, error)
 	embed(ctx context.Context, model string, in embedv1.EmbedInput) (embedv1.Result, error)
+	align(ctx context.Context, model string, in alignv1.AlignInput) (alignv1.Result, error)
 	// startJob starts music or video (kind); the job's id is the provider's own.
 	startJob(ctx context.Context, kind, model string, in jobInput) (llmc.Job, error)
 	getJob(ctx context.Context, kind, id string) (llmc.Job, error)
@@ -90,6 +92,9 @@ func (u unsupported) transcribe(context.Context, string, transcribev1.Transcribe
 }
 func (u unsupported) embed(context.Context, string, embedv1.EmbedInput) (embedv1.Result, error) {
 	return embedv1.Result{}, u.no("embeddings")
+}
+func (u unsupported) align(context.Context, string, alignv1.AlignInput) (alignv1.Result, error) {
+	return alignv1.Result{}, u.no("alignment")
 }
 func (u unsupported) startJob(_ context.Context, kind, _ string, _ jobInput) (llmc.Job, error) {
 	return llmc.Job{}, u.no(kind)
@@ -180,8 +185,28 @@ func chatResult(r oai.ChatResponse, schema bool) (textv1.CompleteResult, error) 
 		data = strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(data, "```json"), "```"), "```")
 		if json.Valid([]byte(strings.TrimSpace(data))) {
 			out.Data = json.RawMessage(strings.TrimSpace(data))
+		} else if data == "" {
+			msg := "the model wrote no answer"
+			if out.StopReason != "" {
+				msg += " (stopped: " + out.StopReason + ")"
+			}
+			if out.StopReason == "length" {
+				msg += "; raise maxTokens, or set reasoning off if the model was thinking"
+			}
+			return out, &extkit.Error{Code: "bad_answer", Status: 502, Message: msg}
 		} else {
-			return out, &extkit.Error{Code: "bad_answer", Status: 502, Message: "the answer doesn't match the schema: " + clip(out.Text, 200)}
+			msg := "the answer isn't valid JSON"
+			if out.StopReason != "" && out.StopReason != "stop" {
+				msg += " (stopped: " + out.StopReason + ")"
+			}
+			// the end shows where it broke off
+			t := []rune(strings.TrimSpace(out.Text))
+			if len(t) > 300 {
+				msg += ": …" + string(t[len(t)-300:])
+			} else {
+				msg += ": " + string(t)
+			}
+			return out, &extkit.Error{Code: "bad_answer", Status: 502, Message: msg}
 		}
 	}
 	return out, nil

@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	llmc "pocketone.dev/ext/contracts/llm"
+	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
@@ -230,6 +231,39 @@ func (s embedService) Embed(ctx context.Context, _ extkit.Auth, in embedv1.Embed
 
 func (s embedService) Models(ctx context.Context, _ extkit.Auth, in llmc.ModelsInput) (llmc.Models, error) {
 	return s.r.models(ctx, llmc.KindEmbed, in)
+}
+
+type alignService struct{ r *router }
+
+var _ alignv1.Align = alignService{}
+
+func (s alignService) Align(ctx context.Context, _ extkit.Auth, in alignv1.AlignInput) (alignv1.Result, error) {
+	if len(in.Audio.Data) == 0 {
+		return alignv1.Result{}, badInput("give the audio's data")
+	}
+	if strings.TrimSpace(in.Text) == "" {
+		return alignv1.Result{}, badInput("give the text spoken in the audio")
+	}
+	switch in.Mode {
+	case "", "speech", "lyrics":
+	default:
+		return alignv1.Result{}, badInput(`mode must be "speech" or "lyrics"`)
+	}
+	t, err := s.r.resolve(llmc.KindAlign, in.Model)
+	if err != nil {
+		return alignv1.Result{}, err
+	}
+	res, err := t.d.align(ctx, t.model, in)
+	res.Model = t.ref()
+	if err != nil {
+		return res, providerError(t.p, err)
+	}
+	s.r.fillCost(ctx, t, &res.Usage, used{})
+	return res, nil
+}
+
+func (s alignService) Models(ctx context.Context, _ extkit.Auth, in llmc.ModelsInput) (llmc.Models, error) {
+	return s.r.models(ctx, llmc.KindAlign, in)
 }
 
 // jobService is music and video: the same job operations for kind.

@@ -13,6 +13,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 
 	llmc "pocketone.dev/ext/contracts/llm"
+	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
@@ -49,8 +50,8 @@ func (*Extension) Name() string { return Name }
 // Contracts implements extkit.Declarer.
 func (*Extension) Contracts() extkit.Contracts {
 	return extkit.Contracts{
-		Implements: extkit.IDs("llm.text/v1", "llm.image/v1", "llm.speech/v1", "llm.transcribe/v1", "llm.music/v1",
-			"llm.video/v1", "llm.embed/v1"),
+		Implements: extkit.IDs("llm.text/v1", "llm.image/v1", "llm.speech/v1", "llm.transcribe/v1", "llm.align/v1",
+			"llm.music/v1", "llm.video/v1", "llm.embed/v1"),
 		WorksWith: extkit.IDs("settings/v1"),
 	}
 }
@@ -67,6 +68,7 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 	imagev1.Contract.Provide(app, imageService{r})
 	speechv1.Contract.Provide(app, speechService{r})
 	transcribev1.Contract.Provide(app, transcribeService{r})
+	alignv1.Contract.Provide(app, alignService{r})
 	embedv1.Contract.Provide(app, embedService{r})
 	musicv1.Contract.Provide(app, musicService{jobService{r, llmc.KindMusic}})
 	videov1.Contract.Provide(app, videoService{jobService{r, llmc.KindVideo}})

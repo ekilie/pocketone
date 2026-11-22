@@ -21,10 +21,11 @@ const (
 	KindMusic      = "music"
 	KindVideo      = "video"
 	KindEmbed      = "embed"
+	KindAlign      = "align"
 )
 
 // AllKinds lists every kind, in Settings → LLM's order.
-var AllKinds = []string{KindText, KindImage, KindSpeech, KindTranscribe, KindMusic, KindVideo, KindEmbed}
+var AllKinds = []string{KindText, KindImage, KindSpeech, KindTranscribe, KindAlign, KindMusic, KindVideo, KindEmbed}
 
 // SplitModel splits "provider/model" on the first slash. ok is false without a slash or with an empty part.
 func SplitModel(ref string) (provider, model string, ok bool) {

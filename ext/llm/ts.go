@@ -66,6 +66,18 @@ declare var $llm: {
     transcribeAsync(opts: { model: string; audio: LlmFile; language?: string; prompt?: string; options?: Record<string, any> }): Promise<{ text: string; language?: string; model: string; usage: LlmUsage }>
     modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
+  /** Forced alignment: when each line and word of a known text is said in its audio (captions, karaoke). */
+  align: {
+    alignAsync(opts: { model: string; audio: LlmFile; text: string; mode?: "speech" | "lyrics"; language?: string; options?: Record<string, any> }): Promise<{
+      duration: number
+      lines: { index: number; text: string; start: number; end: number; score: number; certain: boolean; tag?: string }[]
+      words: { line: number; text: string; start: number; end: number; score: number }[]
+      unaligned?: { line: number; text: string; reason: string }[]
+      model: string
+      usage: LlmUsage
+    }>
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
+  }
   /** Music is a job: createAsync with wait ("5m") resolves once it's done, files included; without, follow it with getAsync. */
   music: {
     createAsync(opts: { model: string; prompt: string; lyrics?: string; seconds?: number; wait?: string; options?: Record<string, any> }): Promise<LlmJob>

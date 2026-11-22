@@ -11,6 +11,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tools/filesystem"
 
 	llmc "pocketone.dev/ext/contracts/llm"
+	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
@@ -33,6 +34,7 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		llmc.KindImage:      invoker(app, imagev1.Contract, imagev1.W),
 		llmc.KindSpeech:     invoker(app, speechv1.Contract, speechv1.W),
 		llmc.KindTranscribe: invoker(app, transcribev1.Contract, transcribev1.W),
+		llmc.KindAlign:      invoker(app, alignv1.Contract, alignv1.W),
 		llmc.KindMusic:      invoker(app, musicv1.Contract, musicv1.W),
 		llmc.KindVideo:      invoker(app, videov1.Contract, videov1.W),
 		llmc.KindEmbed:      invoker(app, embedv1.Contract, embedv1.W),
@@ -156,6 +158,7 @@ var jsPrelude = `(() => {
       transcribeAsync: (o) => callAsync("transcribe", "transcribe", o),
       modelsAsync: modelsAsync("transcribe"),
     }),
+    align: Object.freeze({ alignAsync: (o) => callAsync("align", "align", o), modelsAsync: modelsAsync("align") }),
     music: jobs("music"),
     video: jobs("video"),
     embed: Object.freeze({ embedAsync: (o) => callAsync("embed", "embed", o), modelsAsync: modelsAsync("embed") }),
