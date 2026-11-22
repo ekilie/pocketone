@@ -111,7 +111,7 @@ const chatPrelude = `
       sendAsync: async (text, s = {}) => {
         const i = S(sendInput(id, o, text, s));
         if (s.onText || s.onReasoning) return readStream(n.streamStart("chat", i), s.onText, s.onReasoning);
-        return J(await n.chatSend.async(i)).answer;
+        try { return J(await n.chatSend.async(i)).answer; } catch (err) { throw clean(err); }
       },
       get: () => J(n.chatGet(id)),
       history: (h = {}) => J(n.chatHistory(S({ id, limit: h.limit, before: h.before }))).messages,

@@ -181,13 +181,15 @@ $llm.onCallDone((e) => {
   $app.save(r);
   e.next();
 });
+// a page's ctx carries the request event at ctx.req.event
+routerAdd("GET", "/page-ctx", (e) => e.json(200, $llm.for({ req: { event: e } }).ledger.spent("day")));
 routerAdd("POST", "/ask", async (e) => {
   const llm = $llm.for(e);
   try {
     const r = await llm.text.completeAsync({ model: "fake/chat-1", prompt: e.requestInfo().body.prompt });
     return e.json(200, { text: r.text, spent: llm.ledger.spent("day"), left: llm.ledger.remaining() });
   } catch (err) {
-    return e.json(429, { error: String(err.message || err) });
+    return e.json(429, { error: String(err.message || err), code: err.code });
   }
 });
 `
@@ -248,9 +250,19 @@ func TestJSMiddleware(t *testing.T) {
 		t.Fatalf("onCallDone: %v %v", done, err)
 	}
 	(&tests.ApiScenario{
+		Method: http.MethodGet, URL: "/page-ctx", DisableTestAppCleanup: true,
+		TestAppFactory: func(testing.TB) *tests.TestApp { return ta },
+		ExpectedStatus: 200, ExpectedContent: []string{`"refused":0`},
+		AfterTestFunc: func(t testing.TB, _ *tests.TestApp, res *http.Response) {
+			if !strings.Contains(res.Header.Get("Set-Cookie"), llm.GuestCookie) {
+				t.Errorf("$llm.for(ctx) set no guest cookie: %q", res.Header.Get("Set-Cookie"))
+			}
+		},
+	}).Test(t)
+	(&tests.ApiScenario{
 		Method: http.MethodPost, URL: "/ask", Body: strings.NewReader(`{"prompt":"forbidden"}`), DisableTestAppCleanup: true,
 		Headers:        map[string]string{"Content-Type": "application/json"},
 		TestAppFactory: func(testing.TB) *tests.TestApp { return ta },
-		ExpectedStatus: 429, ExpectedContent: []string{`Not that.`},
+		ExpectedStatus: 429, ExpectedContent: []string{`"error":"Not that."`, `"code":"limit"`},
 	}).Test(t)
 }

@@ -198,7 +198,7 @@ const streamPrelude = `
         }
       }
       if (r.done) {
-        if (r.error) throw new Error(r.error);
+        if (r.error) throw clean(new Error(r.error));
         return r.result || { text, stopReason: "cancelled" };
       }
     }
