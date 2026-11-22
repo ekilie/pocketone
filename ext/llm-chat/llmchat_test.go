@@ -126,6 +126,15 @@ func TestSendAndFold(t *testing.T) {
 	if got, _ := c.Get(ctx, extkit.Internal, chatv1.Ref{ID: chat.ID}); got.Summary != "SUMMARY" || got.Messages != 4 {
 		t.Fatalf("after the fold: %+v", got)
 	}
+	var summary textv1.CompleteInput
+	for _, x := range fa.inputs {
+		if strings.HasPrefix(x.System, "Update the summary") {
+			summary = x
+		}
+	}
+	if summary.Model != "p/m" || summary.Reasoning != "off" {
+		t.Fatalf("the summary didn't use the chat's model with reasoning off: %+v", summary)
+	}
 	send("q3")
 	in = fa.last()
 	if len(in.Messages) != 4 || !strings.Contains(in.Messages[0].Content, "SUMMARY") || in.Messages[1].Content != "q2\n\nCTX for q2" ||

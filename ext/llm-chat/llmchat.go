@@ -221,11 +221,17 @@ func (c *chats) save(ctx context.Context, p *prepared, question, answer string) 
 	if pending-p.window < p.every {
 		return false, nil
 	}
-	return true, c.fold(ctx, p.chat, pending-p.window)
+	// a failed summary doesn't fail the send: the answer is saved, and the next send tries the fold again
+	if err := c.fold(ctx, p.chat, pending-p.window, p.input.Model); err != nil {
+		c.app.Logger().Warn("llm-chat: summary", "chat", p.chat.Id, "error", err)
+		return false, nil
+	}
+	return true, nil
 }
 
-// fold summarizes the chat's n oldest unfolded messages into its summary.
-func (c *chats) fold(ctx context.Context, chat *core.Record, n int) error {
+// fold summarizes the chat's n oldest unfolded messages into its summary, with the model the send used ("": the text
+// default) and reasoning off, so the thinking can't spend the summary's tokens.
+func (c *chats) fold(ctx context.Context, chat *core.Record, n int, model string) error {
 	folded := chat.GetInt("folded")
 	msgs, err := c.messages(chat.Id, folded)
 	if err != nil || len(msgs) < n {
@@ -245,6 +251,8 @@ func (c *chats) fold(ctx context.Context, chat *core.Record, n int) error {
 	}
 	temp := 0.2
 	res, err := a.Complete(ctx, extkit.Internal, textv1.CompleteInput{
+		Model:       model,
+		Reasoning:   "off",
 		System:      "Update the summary of a conversation. Keep names, numbers, decisions and open questions. At most 120 words. Answer with the summary only.",
 		Prompt:      "Summary so far: " + prev + "\n\nNew turns:\n" + b.String(),
 		MaxTokens:   220,
@@ -252,6 +260,9 @@ func (c *chats) fold(ctx context.Context, chat *core.Record, n int) error {
 	})
 	if err != nil {
 		return err
+	}
+	if strings.TrimSpace(res.Text) == "" {
+		return fmt.Errorf("llm-chat: %s wrote an empty summary (stop reason %q); the messages stay unfolded until the next send", res.Model, res.StopReason)
 	}
 	chat.Set("summary", strings.TrimSpace(res.Text))
 	chat.Set("folded", folded+n)
