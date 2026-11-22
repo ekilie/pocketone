@@ -3,7 +3,7 @@ owners: ["@benallfree"]
 version: 0.0.2
 title: "LLM Chat"
 group: binary
-summary: "Stored conversations with a language model: $llm.chat.open(id).send(text), with history and summaries."
+summary: "Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries."
 ---
 
 # LLM Chat
@@ -15,7 +15,7 @@ stay quick and cheap.
 
 ```ts
 const id: string = $llm.chat.new({ meta: { user: ctx.auth.id } })
-const answer: LlmTextAnswer = $llm.chat.open(id, { model: "vultr/glm-5.2", system: preamble }).send("How do I export my notes?")
+const answer: LlmTextAnswer = await $llm.chat.open(id, { model: "vultr/glm-5.2", system: preamble }).sendAsync("How do I export my notes?")
 ```
 
 In Go:
@@ -54,8 +54,7 @@ its collections and their data stay. `pocketone extensions migrate down llm-chat
 
 | Method | What it does |
 |---|---|
-| `send(text, { onText?, onReasoning?, schema?, ...options })` | Asks, saves both turns, returns llm.text/v1's answer (`text`, `usage`, ...). With `onText`, streams the answer to it as it's written. |
-| `send.async(text, { schema?, ...options })` | The same in async page code. |
+| `sendAsync(text, { onText?, onReasoning?, schema?, ...options })` | Asks, saves both turns, resolves to llm.text/v1's answer (`text`, `usage`, ...). With `onText`, streams the answer to it as it's written. The only call that reaches a provider, so the only async one. |
 | `history({ limit?, before? })` | The chat's messages, oldest first: `{ id, role, content, created }`. |
 | `summary()` | What the older messages were folded into. |
 | `title(text?)`, `meta(object?)` | Read, or set and return. |
@@ -66,12 +65,12 @@ Options for `$llm.chat.open(id, ...)`, used by every send (a send can override t
 | Option | Default | What it does |
 |---|---|---|
 | `model` | | Required (here or on the send): the `provider/model` that answers, and writes the summaries. |
-| `reasoning` | the model's | As in `$llm.text.complete`. Summaries always use `"off"`. |
+| `reasoning` | the model's | As in `$llm.text.completeAsync`. Summaries always use `"off"`. |
 | `system` | | The preamble, first on every turn. |
 | `context` | | Text, or a function of the question returning text, sent after the question: the passages that answer it. `history()` shows the question alone; later turns send it with its context again, so each prompt starts the same way. |
 | `window` | 12 | Messages sent before the summary takes over. |
 | `summarizeEvery` | 6 | Once that many messages have piled up past the window, the oldest are folded into the summary (a second, short call). If that call fails, the answer is still returned and saved, and the next send tries again. |
-| `maxTokens`, `temperature` | the provider's | As in `$llm.text.complete`. |
+| `maxTokens`, `temperature` | the provider's | As in `$llm.text.completeAsync`. |
 
 `$llm.chat.list({ meta?, limit?, offset? })` lists chats, most recently updated first; `meta` keeps those whose meta has
 each of its top-level keys with that value. `$llm.chat.forget({ meta })` deletes every match and returns how many.
@@ -81,10 +80,10 @@ typical route checks that the chat's `meta.user` is the caller before sending:
 
 ```ts
 // pb_pages/ask/[chat]/+api.ts: POST /ask/<chat id> {"question": "..."}
-export function post(ctx: any) {
+export async function post(ctx: any) {
   const chat = $llm.chat.open(ctx.params.chat, { model: "vultr/glm-5.2", system: preamble(ctx) })
   if (!ctx.auth || chat.meta().user !== ctx.auth.id) throw ctx.httpError(404, "no such chat")
-  return ctx.res.json(chat.send(ctx.req.body().question))
+  return ctx.res.json(await chat.sendAsync(ctx.req.body().question))
 }
 ```
 
@@ -109,7 +108,7 @@ which the providers' prompt caches bill cheaper.
 //	POST /api/_c/llm.chat/v1/new  {"title": "Support"}            -> {"id": "..."}
 //	POST /api/_c/llm.chat/v1/send {"id": "...", "text": "Hello"}  -> {"answer": {"text": "..."}}
 //
-// In page code the same is $llm.chat.new() and $llm.chat.open(id).send(text).
+// In page code the same is $llm.chat.new() and $llm.chat.open(id).sendAsync(text).
 package main
 
 import (

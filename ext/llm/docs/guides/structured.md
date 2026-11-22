@@ -9,7 +9,7 @@ Most of what your code wants from a model is data, not prose: a label, a few fie
 tags. Pass a JSON schema as `schema`, and the answer's parsed value is `r.data`:
 
 ```ts
-const r: LlmTextAnswer = $llm.text.complete({
+const r: LlmTextAnswer = await $llm.text.completeAsync({
   model: "vultr/glm-5.2",
   reasoning: "off",
   system: "Extract the order from the email.",

@@ -16,8 +16,8 @@ import (
 
 	"ganigeorgiev.com/pocketbase/dbx"
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
-	chatv1 "pocketone.dev/ext/contracts/llm/chat/v1"
 	"pocketone.dev/ext/contracts/llm"
+	chatv1 "pocketone.dev/ext/contracts/llm/chat/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	"pocketone.dev/ext/extkit"
 )

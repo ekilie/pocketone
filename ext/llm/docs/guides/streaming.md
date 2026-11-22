@@ -1,18 +1,18 @@
 ---
 title: Streaming answers
-description: "Show an answer as the model writes it: $llm.text.stream in a page, forwarded to the browser with ctx.res.sse()."
+description: "Show an answer as the model writes it: $llm.text.streamAsync in a page, forwarded to the browser with ctx.res.sse()."
 ---
 
 # Streaming answers
 
-A model writes its answer a few words at a time. `$llm.text.stream()` hands you each piece as it's written, so a page
+A model writes its answer a few words at a time. `$llm.text.streamAsync()` hands you each piece as it's written, so a page
 can show the answer as it appears instead of after a wait:
 
 ```ts
-const r: LlmTextAnswer = $llm.text.stream({ model: "vultr/glm-5.2", prompt: question }, (text) => {
+const r: LlmTextAnswer = await $llm.text.streamAsync({ model: "vultr/glm-5.2", prompt: question }, (text) => {
   // called with each piece, in order; return false to stop the answer there
 })
-// r is the whole answer, as $llm.text.complete returns it
+// r is the whole answer, as $llm.text.completeAsync returns it
 ```
 
 ```go
@@ -30,7 +30,8 @@ err = s.Run(ctx, func(e any) error {
 })
 ```
 
-A third argument, `onReasoning`, gets the model's thinking as it's written, when the provider sends it.
+A third argument, `onReasoning`, gets the model's thinking as it's written, when the provider sends it. The callbacks
+run on the app's JS VM between pieces; the waiting for each piece doesn't, so other requests are served meanwhile.
 
 ## In a page
 
@@ -39,11 +40,11 @@ A PocketPages API route forwards the pieces to the browser as server-sent events
 ```ts
 // pb_pages/ask/+api.ts
 module.exports = {
-  post(ctx) {
+  async post(ctx) {
     const { question } = ctx.req.body()
     const stream = ctx.res.sse()
     try {
-      const r: LlmTextAnswer = $llm.text.stream({ model: "vultr/glm-5.2", prompt: question }, (text) => stream.send("text", JSON.stringify(text)))
+      const r: LlmTextAnswer = await $llm.text.streamAsync({ model: "vultr/glm-5.2", prompt: question }, (text) => stream.send("text", JSON.stringify(text)))
       stream.send("done", JSON.stringify({ usage: r.usage }))
     } catch (err: any) {
       stream.send("error", JSON.stringify(String(err.message || err)))

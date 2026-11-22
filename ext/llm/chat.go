@@ -55,29 +55,6 @@ func bindChatJS(app core.App, rt js.Runtime, n js.Object) {
 		}
 		return c.Send(ctx, extkit.Internal, in)
 	}))
-	_ = n.Set("chatStream", js.NativeFunc(func(cl js.Call) (any, error) {
-		c, err := get()
-		if err != nil {
-			return nil, err
-		}
-		var in chatv1.SendInput
-		if err := json.Unmarshal([]byte(cl.Arg(0).String()), &in); err != nil {
-			return nil, fmt.Errorf("chat.send: %w", err)
-		}
-		s, err := c.SendStream(ctx, extkit.Internal, in)
-		if err != nil {
-			return nil, err
-		}
-		if s.Close != nil {
-			defer s.Close()
-		}
-		res, err := runStream(s, cl.Arg(1).Func(), cl.Arg(2).Func())
-		if err != nil {
-			return nil, err
-		}
-		b, err := json.Marshal(chatv1.SendResult{Answer: *res})
-		return string(b), err
-	}))
 	_ = n.Set("chatGet", call("chat.get", func(c chatv1.Chats, raw []byte) (any, error) {
 		return c.Get(ctx, extkit.Internal, chatv1.Ref{ID: string(raw)})
 	}))
@@ -117,8 +94,9 @@ func bindChatJS(app core.App, rt js.Runtime, n js.Object) {
 	}))
 }
 
-// chatPrelude builds $llm.chat; jsPrelude calls it. A chat's context option may be a function of the question; it
-// runs in the hook's VM before the call (also for send.async).
+// chatPrelude builds $llm.chat; jsPrelude includes it. Sending is async only (sendAsync): it reaches a provider. The rest
+// reads or writes the chat's records and is plain. A chat's context option may be a function of the question; it runs
+// on the VM before the send.
 const chatPrelude = `
   const contextOf = (c, q) => typeof c === "function" ? String(c(q) ?? "") : (c ?? "");
   const sendInput = (id, o, text, s) => ({ id, text, system: o.system, window: o.window, summarizeEvery: o.summarizeEvery,
@@ -127,13 +105,13 @@ const chatPrelude = `
     schema: typeof s.schema === "string" ? JSON.parse(s.schema) : s.schema, context: contextOf(s.context ?? o.context, text) });
   const openChat = (id, o = {}) => {
     if (!id) throw new Error("$llm.chat.open: give the chat's id ($llm.chat.new() returns one)");
-    const send = twin((text, s = {}) => {
-      const i = S(sendInput(id, o, text, s));
-      return (s.onText || s.onReasoning ? J(n.chatStream(i, s.onText, s.onReasoning)) : J(n.chatSend(i))).answer;
-    }, async (text, s = {}) => J(await n.chatSend.async(S(sendInput(id, o, text, s)))).answer);
     return Object.freeze({
       id,
-      send,
+      sendAsync: async (text, s = {}) => {
+        const i = S(sendInput(id, o, text, s));
+        if (s.onText || s.onReasoning) return readStream(n.streamStart("chat", i), s.onText, s.onReasoning);
+        return J(await n.chatSend.async(i)).answer;
+      },
       get: () => J(n.chatGet(id)),
       history: (h = {}) => J(n.chatHistory(S({ id, limit: h.limit, before: h.before }))).messages,
       summary: () => J(n.chatGet(id)).summary,

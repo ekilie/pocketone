@@ -22,9 +22,11 @@ import (
 	"pocketone.dev/ext/extkit/js"
 )
 
-// BindJS exposes the llm.* contracts to the app's JS hooks as $llm.<kind>.<operation>. The Go side takes and answers
-// JSON text, and a small JS layer (jsPrelude) builds $llm over it, so hooks get plain JS data. Each call has an .async
-// twin, run off the app's VM by the JS engine, for slow calls (music and video with wait).
+// BindJS exposes the llm.* contracts to the app's page code as $llm.<kind>.<operation>Async. Every call that reaches a
+// provider is async only and says so in its name (await $llm.text.completeAsync({...})): the app has one JS VM, and a
+// model call that held it for seconds would make every other request wait. Only local calls (count, file, the chat
+// records) are plain. The Go side takes and answers JSON text; a small JS layer (jsPrelude) builds $llm over it and
+// runs each provider call with the engine's .async, off the VM.
 func (*Extension) BindJS(app core.App, rt js.Runtime) {
 	invokers := map[string]func(op string, raw json.RawMessage) (any, error){
 		llmc.KindText:       invoker(app, textv1.Contract, textv1.W),
@@ -36,7 +38,7 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		llmc.KindEmbed:      invoker(app, embedv1.Contract, embedv1.W),
 	}
 	n := rt.NewObject()
-	// call(kind, op, opts): any operation that answers JSON
+	// call(kind, op, opts): any operation that answers JSON; the prelude calls it with .async
 	_ = n.Set("call", func(kind, op, opts string) (string, error) {
 		inv, ok := invokers[kind]
 		if !ok {
@@ -49,21 +51,26 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		b, err := json.Marshal(res)
 		return string(b), err
 	})
-	// stream(opts, onText, onReasoning): on the calling VM, so onText can write to the response as the answer comes
-	_ = n.Set("stream", js.NativeFunc(func(c js.Call) (any, error) { return streamJS(app, c) }))
-	// file(f): a generated file as a PocketBase file, for record.set("field", ...)
-	_ = n.Set("file", func(f string) (*filesystem.File, error) {
+	_ = n.Set("streamStart", func(kind, opts string) (string, error) { return streamStart(app, kind, opts) })
+	_ = n.Set("streamNext", streamNext)
+	_ = n.Set("streamStop", streamStop)
+	// file(f, download): a generated file as a PocketBase file, for record.set("field", ...). Plain $llm.file takes only
+	// a file with its bytes; fileAsync may download one the provider only gave a URL for.
+	_ = n.Set("file", func(f string, download bool) (*filesystem.File, error) {
 		var v llmc.File
 		if err := json.Unmarshal([]byte(f), &v); err != nil {
 			return nil, errors.New("$llm.file: " + err.Error())
 		}
-		if len(v.Data) == 0 {
-			if v.URL == "" {
-				return nil, errors.New("$llm.file: the file has no data")
-			}
-			return filesystem.NewFileFromURL(context.Background(), v.URL)
+		if len(v.Data) > 0 {
+			return filesystem.NewFileFromBytes(v.Data, orDefault(v.Name, "file"))
 		}
-		return filesystem.NewFileFromBytes(v.Data, orDefault(v.Name, "file"))
+		if v.URL == "" {
+			return nil, errors.New("$llm.file: the file has no data")
+		}
+		if !download {
+			return nil, errors.New("$llm.file: the file has only a URL; use await $llm.fileAsync(file) to download it")
+		}
+		return filesystem.NewFileFromURL(context.Background(), v.URL)
 	})
 	bindChatJS(app, rt, n)
 	if err := rt.Set(nativeGlobal, n); err != nil {
@@ -117,110 +124,43 @@ var jsPrelude = `(() => {
   delete globalThis.__pocketone_llm;
   const J = (s) => JSON.parse(s);
   const S = (o) => JSON.stringify(o ?? {});
-  const twin = (sync, async) => Object.defineProperty(sync, "async", { value: async });
-  const op = (kind, name, prep) => twin(
-    (o) => J(n.call(kind, name, S(prep ? prep(o) : o))),
-    async (o) => J(await n.call.async(kind, name, S(prep ? prep(o) : o))),
-  );
+  // a provider call, off the VM
+  const callAsync = async (kind, op, o) => J(await n.call.async(kind, op, S(o)));
   const text = (o) => (o && typeof o.schema === "string" ? { ...o, schema: JSON.parse(o.schema) } : o);
   const count = (x) => typeof x === "string" ? { text: x } : Array.isArray(x) ? { messages: x } : (x ?? {});
-  const models = (kind) => (o) => J(n.call(kind, "models", S(o)));
+  const modelsAsync = (kind) => (o) => callAsync(kind, "models", o);
   const jobs = (kind) => Object.freeze({
-    create: op(kind, "create"),
-    get: (id) => J(n.call(kind, "get", S({ id }))),
-    content: (id, index) => J(n.call(kind, "content", S({ id, index: index ?? 0 }))),
-    models: models(kind),
-  });` + chatPrelude + `
+    createAsync: (o) => callAsync(kind, "create", o),
+    getAsync: (id) => callAsync(kind, "get", { id }),
+    contentAsync: (id, index) => callAsync(kind, "content", { id, index: index ?? 0 }),
+    modelsAsync: modelsAsync(kind),
+  });` + streamPrelude + chatPrelude + `
   globalThis.$llm = Object.freeze({
-    chat,
     text: Object.freeze({
-      complete: op("text", "complete", text),
-      stream: (o, onText, onReasoning) => J(n.stream(text(o), onText, onReasoning)),
+      completeAsync: (o) => callAsync("text", "complete", text(o)),
+      streamAsync: async (o, onText, onReasoning) => readStream(n.streamStart("text", S(text(o))), onText, onReasoning),
       count: (x) => J(n.call("text", "count", S(count(x)))).tokens,
-      models: models("text"),
+      modelsAsync: modelsAsync("text"),
     }),
-    image: Object.freeze({ generate: op("image", "generate"), edit: op("image", "edit"), models: models("image") }),
+    image: Object.freeze({
+      generateAsync: (o) => callAsync("image", "generate", o),
+      editAsync: (o) => callAsync("image", "edit", o),
+      modelsAsync: modelsAsync("image"),
+    }),
     speech: Object.freeze({
-      speak: op("speech", "speak"),
-      voices: (model) => J(n.call("speech", "voices", S({ model }))).voices,
-      models: models("speech"),
+      speakAsync: (o) => callAsync("speech", "speak", o),
+      voicesAsync: async (model) => (await callAsync("speech", "voices", { model })).voices,
+      modelsAsync: modelsAsync("speech"),
     }),
-    transcribe: Object.freeze({ transcribe: op("transcribe", "transcribe"), models: models("transcribe") }),
+    transcribe: Object.freeze({
+      transcribeAsync: (o) => callAsync("transcribe", "transcribe", o),
+      modelsAsync: modelsAsync("transcribe"),
+    }),
     music: jobs("music"),
     video: jobs("video"),
-    embed: Object.freeze({ embed: op("embed", "embed"), models: models("embed") }),
-    file: (f) => n.file(S(f)),
+    embed: Object.freeze({ embedAsync: (o) => callAsync("embed", "embed", o), modelsAsync: modelsAsync("embed") }),
+    file: (f) => n.file(S(f), false),
+    fileAsync: (f) => n.file.async(S(f), true),
+    chat,
   });
 })()`
-
-// streamJS is $llm.text.stream(opts, onText, onReasoning): onText(piece) as the answer is written (false stops it),
-// onReasoning(piece) for the model's thinking when the provider streams it.
-func streamJS(app core.App, c js.Call) (any, error) {
-	opts := c.Arg(0).Export()
-	b, err := json.Marshal(opts)
-	if err != nil {
-		return nil, errors.New("$llm.text.stream: " + err.Error())
-	}
-	var in textv1.CompleteInput
-	if err := json.Unmarshal(b, &in); err != nil {
-		return nil, errors.New("$llm.text.stream: " + err.Error())
-	}
-	t, ok := textv1.Contract.Of(app)
-	if !ok {
-		return nil, llmc.ErrNotConfigured
-	}
-	s, err := t.Stream(context.Background(), extkit.Internal, in)
-	if err != nil {
-		return nil, err
-	}
-	if s.Close != nil {
-		defer s.Close()
-	}
-	res, err := runStream(s, c.Arg(1).Func(), c.Arg(2).Func())
-	if err != nil {
-		return nil, err
-	}
-	out, err := json.Marshal(res)
-	return string(out), err
-}
-
-// runStream runs a llm.text/v1 stream on the calling VM and returns the result.
-func runStream(s extkit.Stream, onText, onReasoning js.Func) (*textv1.CompleteResult, error) {
-	var res *textv1.CompleteResult
-	var cbErr error
-	call := func(f js.Func, piece string) error {
-		if f == nil || piece == "" {
-			return nil
-		}
-		v, err := f.Call(piece)
-		if err != nil {
-			cbErr = errors.New(js.Message(err))
-			return cbErr
-		}
-		if v == false {
-			return errStopped
-		}
-		return nil
-	}
-	err := s.Run(context.Background(), func(e any) error {
-		ch, _ := e.(textv1.Chunk)
-		if ch.Done {
-			res = ch.Result
-			return nil
-		}
-		if err := call(onReasoning, ch.Reasoning); err != nil {
-			return err
-		}
-		return call(onText, ch.Text)
-	})
-	if cbErr != nil {
-		return nil, cbErr
-	}
-	if err != nil && !errors.Is(err, errStopped) {
-		return nil, err
-	}
-	if res == nil {
-		return &textv1.CompleteResult{StopReason: "cancelled"}, nil
-	}
-	return res, nil
-}

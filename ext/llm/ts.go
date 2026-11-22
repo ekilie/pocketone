@@ -36,57 +36,58 @@ type LlmTextInput = {
 
 type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?: string; model: string; usage: LlmUsage }
 
-/** An op with an .async twin, run off the app's VM. */
-type LlmOp<I, O> = ((opts: I) => O) & { async(opts: I): Promise<O> }
+type LlmModelsOpts = { provider?: string }
 
-/** Cloud models (the llm.* contracts): each call names provider/model; providers and keys are set in Settings → LLM. */
+/**
+ * Cloud models (the llm.* contracts): each call names provider/model; providers and keys are set in Settings → LLM.
+ * Every call that reaches a provider is async (its name ends in Async) and runs off the app's VM, so other requests keep
+ * being served while a model works: await it in an async handler.
+ */
 declare var $llm: {
   text: {
-    complete: LlmOp<LlmTextInput, LlmTextAnswer>
-    /** Like complete, calling onText with each piece of the answer as it's written (false stops it). */
-    stream(opts: LlmTextInput, onText?: (text: string) => boolean | void, onReasoning?: (text: string) => boolean | void): LlmTextAnswer
-    /** About how many tokens a text or a conversation is (four characters each). */
+    completeAsync(opts: LlmTextInput): Promise<LlmTextAnswer>
+    /** Like completeAsync, calling onText with each piece of the answer as it's written (false stops it). */
+    streamAsync(opts: LlmTextInput, onText?: (text: string) => boolean | void, onReasoning?: (text: string) => boolean | void): Promise<LlmTextAnswer>
+    /** About how many tokens a text or a conversation is (four characters each); local, not a provider call. */
     count(textOrMessages: string | LlmMessage[] | { text?: string; system?: string; messages?: LlmMessage[] }): number
-    models(opts?: { provider?: string }): LlmModels
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
   image: {
-    generate: LlmOp<{ model: string; prompt: string; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
-      { files: LlmFile[]; model: string; usage: LlmUsage }>
-    edit: LlmOp<{ model: string; prompt: string; images: LlmFile[]; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> },
-      { files: LlmFile[]; model: string; usage: LlmUsage }>
-    models(opts?: { provider?: string }): LlmModels
+    generateAsync(opts: { model: string; prompt: string; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> }): Promise<{ files: LlmFile[]; model: string; usage: LlmUsage }>
+    editAsync(opts: { model: string; prompt: string; images: LlmFile[]; n?: number; size?: string; aspectRatio?: string; options?: Record<string, any> }): Promise<{ files: LlmFile[]; model: string; usage: LlmUsage }>
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
   speech: {
-    speak: LlmOp<{ model: string; text: string; voice?: string; format?: string; speed?: number; instructions?: string; options?: Record<string, any> },
-      { file: LlmFile; model: string; usage: LlmUsage }>
-    voices(model: string): { id: string; name?: string; language?: string; gender?: string }[]
-    models(opts?: { provider?: string }): LlmModels
+    speakAsync(opts: { model: string; text: string; voice?: string; format?: string; speed?: number; instructions?: string; options?: Record<string, any> }): Promise<{ file: LlmFile; model: string; usage: LlmUsage }>
+    voicesAsync(model: string): Promise<{ id: string; name?: string; language?: string; gender?: string }[]>
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
   transcribe: {
-    transcribe: LlmOp<{ model: string; audio: LlmFile; language?: string; prompt?: string; options?: Record<string, any> },
-      { text: string; language?: string; model: string; usage: LlmUsage }>
-    models(opts?: { provider?: string }): LlmModels
+    transcribeAsync(opts: { model: string; audio: LlmFile; language?: string; prompt?: string; options?: Record<string, any> }): Promise<{ text: string; language?: string; model: string; usage: LlmUsage }>
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
-  /** Music is a job: create with wait ("5m") returns it done, files included; without, follow it with get. */
+  /** Music is a job: createAsync with wait ("5m") resolves once it's done, files included; without, follow it with getAsync. */
   music: {
-    create: LlmOp<{ model: string; prompt: string; lyrics?: string; seconds?: number; wait?: string; options?: Record<string, any> }, LlmJob>
-    get(id: string): LlmJob
-    content(id: string, index?: number): LlmFile
-    models(opts?: { provider?: string }): LlmModels
+    createAsync(opts: { model: string; prompt: string; lyrics?: string; seconds?: number; wait?: string; options?: Record<string, any> }): Promise<LlmJob>
+    getAsync(id: string): Promise<LlmJob>
+    contentAsync(id: string, index?: number): Promise<LlmFile>
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
   video: {
-    create: LlmOp<{ model: string; prompt: string; image?: LlmFile; seconds?: number; size?: string; aspectRatio?: string; wait?: string; options?: Record<string, any> }, LlmJob>
-    get(id: string): LlmJob
-    content(id: string, index?: number): LlmFile
-    models(opts?: { provider?: string }): LlmModels
+    createAsync(opts: { model: string; prompt: string; image?: LlmFile; seconds?: number; size?: string; aspectRatio?: string; wait?: string; options?: Record<string, any> }): Promise<LlmJob>
+    getAsync(id: string): Promise<LlmJob>
+    contentAsync(id: string, index?: number): Promise<LlmFile>
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
   embed: {
-    embed: LlmOp<{ model: string; input: string[]; dimensions?: number; options?: Record<string, any> }, { vectors: number[][]; model: string; usage: LlmUsage }>
-    models(opts?: { provider?: string }): LlmModels
+    embedAsync(opts: { model: string; input: string[]; dimensions?: number; options?: Record<string, any> }): Promise<{ vectors: number[][]; model: string; usage: LlmUsage }>
+    modelsAsync(opts?: LlmModelsOpts): Promise<LlmModels>
   }
-  /** A generated file as a PocketBase file: record.set("pictures+", $llm.file(r.files[0])). */
+  /** A generated file (with its bytes) as a PocketBase file: record.set("pictures+", $llm.file(r.files[0])). */
   file(f: LlmFile): any
-  /** Stored conversations (llm.chat/v1, the llm-chat extension). */
+  /** The same, downloading a file the provider gave only a URL for. */
+  fileAsync(f: LlmFile): Promise<any>
+  /** Stored conversations (llm.chat/v1, the llm-chat extension). Only sendAsync reaches a provider. */
   chat: {
     /** Starts a chat and returns its id. */
     new(opts?: { title?: string; meta?: Record<string, any> }): string
@@ -118,10 +119,8 @@ type LlmChatInfo = { id: string; title: string; summary: string; meta: any; mess
 
 type LlmChat = {
   id: string
-  /** Asks and saves both turns. With onText, streams the answer to it. */
-  send: ((text: string, opts?: LlmChatOptions & { onText?: (text: string) => boolean | void; onReasoning?: (text: string) => boolean | void; schema?: object | string }) => LlmTextAnswer) & {
-    async(text: string, opts?: LlmChatOptions & { schema?: object | string }): Promise<LlmTextAnswer>
-  }
+  /** Asks and saves both turns. With onText, streams the answer to it as it's written. */
+  sendAsync(text: string, opts?: LlmChatOptions & { onText?: (text: string) => boolean | void; onReasoning?: (text: string) => boolean | void; schema?: object | string }): Promise<LlmTextAnswer>
   get(): LlmChatInfo
   history(opts?: { limit?: number; before?: string }): { id: string; role: "user" | "assistant"; content: string; created: string }[]
   summary(): string

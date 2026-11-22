@@ -8,11 +8,11 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ### Changed
 
-- Agent Chat is now LLM Chat (`ext/llm-chat`, contract `llm.chat/v1`), answered by the LLM extension's `llm.text/v1`. In page code: `$llm.chat.new()`, `$llm.chat.open(id, { model }).send(text)`, `$llm.chat.list()`, `$llm.chat.forget()`. Every send names its `model` (on the chat or the send) and may set `reasoning`; summaries use the same model with reasoning off, and a failed summary no longer fails the send.
+- Agent Chat is now LLM Chat (`ext/llm-chat`, contract `llm.chat/v1`), answered by the LLM extension's `llm.text/v1`. In page code: `$llm.chat.new()`, `await $llm.chat.open(id, { model }).sendAsync(text)`, `$llm.chat.list()`, `$llm.chat.forget()`. Every send names its `model` (on the chat or the send) and may set `reasoning`; summaries use the same model with reasoning off, and a failed summary no longer fails the send.
 
 ### Upgrading
 
-- Replace `$agent.newChat()` with `$llm.chat.new()`, `$agent.chat(id, opts)` with `$llm.chat.open(id, { model: "<provider>/<model>", ...opts })`, and `$agent.chats.list/forget` with `$llm.chat.list/forget`. The collections are now `_llm_chat_chats` and `_llm_chat_messages`; chats in the old `_agent_chat_*` collections aren't moved. `wait` is gone.
+- Replace `$agent.newChat()` with `$llm.chat.new()`, `$agent.chat(id, opts)` with `$llm.chat.open(id, { model: "<provider>/<model>", ...opts })` and `send` with `await sendAsync` (sending is async only), and `$agent.chats.list/forget` with `$llm.chat.list/forget`. The collections are now `_llm_chat_chats` and `_llm_chat_messages`; chats in the old `_agent_chat_*` collections aren't moved. `wait` is gone.
 
 ## 0.0.2 (2026-11-18)
 

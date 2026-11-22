@@ -11,7 +11,7 @@ into a PocketBase file, so it goes straight into a record's file field.
 ## Pictures
 
 ```ts
-const r = $llm.image.generate({ model: "vultr/z-image-turbo", prompt: "a small lighthouse at dusk, watercolor" })
+const r = await $llm.image.generateAsync({ model: "vultr/z-image-turbo", prompt: "a small lighthouse at dusk, watercolor" })
 const page = new Record($app.findCollectionByNameOrId("pages"))
 page.set("picture", $llm.file(r.files[0]))
 $app.save(page)
@@ -28,16 +28,16 @@ page.Set("picture", f)
 ```
 
 `n` asks for several, `size` (`"1024x768"`) or `aspectRatio` (`"16:9"`) shapes them, as the model allows.
-`$llm.image.edit({ model, prompt, images: [file] })` changes pictures you give it (on OpenRouter).
+`$llm.image.editAsync({ model, prompt, images: [file] })` changes pictures you give it (on OpenRouter).
 
 ## Speech
 
 ```ts
-const r = $llm.speech.speak({ model: "vultr/qwen3-tts-12hz-1.7b", text: storyPage, voice: "vivian", instructions: "slow and calm" })
+const r = await $llm.speech.speakAsync({ model: "vultr/qwen3-tts-12hz-1.7b", text: storyPage, voice: "vivian", instructions: "slow and calm" })
 page.set("narration", $llm.file(r.file))
 ```
 
-`$llm.speech.voices(model)` lists a model's voices, where the provider says. `format` picks `mp3` (the default), `wav`,
+`$llm.speech.voicesAsync(model)` lists a model's voices, where the provider says. `format` picks `mp3` (the default), `wav`,
 `opus` or what else the model makes.
 
 ## Transcription
@@ -45,28 +45,28 @@ page.set("narration", $llm.file(r.file))
 Send audio as a file with its bytes in `data` (base64) and a name that says its format:
 
 ```ts
-const r = $llm.transcribe.transcribe({ model: "vultr/whisper-large-v3-turbo", audio: { name: "memo.mp3", data: base64Audio } })
+const r = await $llm.transcribe.transcribeAsync({ model: "vultr/whisper-large-v3-turbo", audio: { name: "memo.mp3", data: base64Audio } })
 // r.text: what was said
 ```
 
 ## Music and video
 
-These take a while, so they're jobs. The simplest way is to wait for it, in async page code:
+These take a while, so they're jobs. The simplest way is to wait for it:
 
 ```ts
-const job = await $llm.music.create.async({ model: "vultr/ace-step-1.5", prompt: "gentle lullaby, music box and soft strings", seconds: 60, wait: "5m" })
+const job = await $llm.music.createAsync({ model: "vultr/ace-step-1.5", prompt: "gentle lullaby, music box and soft strings", seconds: 60, wait: "5m" })
 if (job.status === "done") page.set("music", $llm.file(job.files[0]))
 ```
 
 Or start it and look again later, when you'd rather not hold a request open:
 
 ```ts
-const job = $llm.music.create({ model: "vultr/ace-step-1.5", prompt: "gentle lullaby", seconds: 60 })
+const job = await $llm.music.createAsync({ model: "vultr/ace-step-1.5", prompt: "gentle lullaby", seconds: 60 })
 page.set("music_job", job.id) // "vultr:music_02a2…"
 
 // later, in a cron or the next request
-const now = $llm.music.get(page.getString("music_job"))
-if (now.status === "done") page.set("music", $llm.file($llm.music.content(now.id, 0)))
+const now = await $llm.music.getAsync(page.getString("music_job"))
+if (now.status === "done") page.set("music", $llm.file(await $llm.music.contentAsync(now.id, 0)))
 ```
 
 Video works the same with `$llm.video` (on Vultr and OpenRouter); `image` gives it a first frame to start from.
@@ -74,4 +74,4 @@ Video works the same with `$llm.video` (on Vultr and OpenRouter); `image` gives 
 ## What it costs
 
 Media is billed per picture, per second or per character by your provider. `usage.costUSD` says what a call cost when
-the provider reports it, and `$llm.image.models()` and the others list each model's prices.
+the provider reports it, and `$llm.image.modelsAsync()` and the others list each model's prices.

@@ -254,27 +254,25 @@ func TestSettingsSection(t *testing.T) {
 	}
 }
 
-const hooks = `onRecordCreate((e) => {
-  const a = $llm.text.complete({ model: "fake/chat-1", prompt: "hi" })
+const hooks = `onRecordCreate(async (e) => {
+  const a = await $llm.text.completeAsync({ model: "fake/chat-1", prompt: "hi" })
   const pieces = []
-  const s = $llm.text.stream({ model: "fake/chat-1", prompt: "hi" }, (t) => { pieces.push(t) })
-  const img = $llm.image.generate({ model: "fake/gpt-image-1", prompt: "cat" })
+  const s = await $llm.text.streamAsync({ model: "fake/chat-1", prompt: "hi" }, (t) => { pieces.push(t) })
+  const stopped = await $llm.text.streamAsync({ model: "fake/chat-1", prompt: "hi" }, () => false)
+  const img = await $llm.image.generateAsync({ model: "fake/gpt-image-1", prompt: "cat" })
   const f = $llm.file(img.files[0])
+  const models = await $llm.text.modelsAsync()
+  let syncGone = typeof $llm.text.complete === "undefined" && typeof $llm.text.stream === "undefined"
   e.record.set("result", JSON.stringify({ a: a.text, model: a.model, s: s.text, pieces: pieces.join("|"),
-    models: $llm.text.models().models.length, img: img.files[0].type, file: f.originalName, tokens: $llm.text.count("abcdefgh") }))
+    stopped: stopped.stopReason + ":" + stopped.text, models: models.models.length, img: img.files[0].type,
+    file: f.originalName, tokens: $llm.text.count("abcdefgh"), syncGone }))
   e.next()
 }, "probes")
-
-onRecordCreate(async (e) => {
-  const a = await $llm.text.complete.async({ model: "fake/chat-1", prompt: "hi" })
-  e.record.set("result", a.text)
-  e.next()
-}, "asyncprobes")
 `
 
 func TestJS(t *testing.T) {
 	app, _ := setup(t)
-	for _, name := range []string{"probes", "asyncprobes"} {
+	for _, name := range []string{"probes"} {
 		c := core.NewBaseCollection(name)
 		c.Fields.Add(&core.TextField{Name: "result", Max: 10000})
 		if err := app.Save(c); err != nil {
@@ -297,22 +295,16 @@ func TestJS(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out struct {
-		A, Model, S, Pieces, Img, File string
-		Models, Tokens                 int
+		A, Model, S, Pieces, Stopped, Img, File string
+		Models, Tokens                          int
+		SyncGone                                bool
 	}
 	if err := json.Unmarshal([]byte(r.GetString("result")), &out); err != nil {
 		t.Fatalf("result %q: %v", r.GetString("result"), err)
 	}
 	if out.A != "Hello" || out.Model != "fake/chat-1" || out.S != "Hello" || out.Pieces != "Hel|lo" || out.Models != 2 ||
-		out.Img != "image/png" || out.File != "image-1.png" || out.Tokens != 2 {
+		out.Stopped != "cancelled:Hel" || out.Img != "image/png" || out.File != "image-1.png" || out.Tokens != 2 || !out.SyncGone {
 		t.Fatalf("from JS: %+v", out)
-	}
-	ar := core.NewRecord(mustCollection(t, app, "asyncprobes"))
-	if err := app.Save(ar); err != nil {
-		t.Fatal(err)
-	}
-	if got := ar.GetString("result"); got != "Hello" {
-		t.Fatalf("complete.async: %q", got)
 	}
 }
 

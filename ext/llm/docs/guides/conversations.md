@@ -9,7 +9,7 @@ Cloud models remember nothing between calls: every call sends the whole conversa
 yourself as `messages`:
 
 ```ts
-const r = $llm.text.complete({
+const r = await $llm.text.completeAsync({
   model: "vultr/glm-5.2",
   system: "You help with our notes app. Be brief.",
   messages: [
@@ -26,7 +26,7 @@ sends the recent ones with each question, and folds older ones into a summary so
 ```ts
 const id: string = $llm.chat.new({ meta: { user: ctx.auth.id } })
 const chat = $llm.chat.open(id, { model: "vultr/glm-5.2", system: "You help with our notes app. Be brief." })
-const answer: LlmTextAnswer = chat.send("How do I export my notes?")
+const answer: LlmTextAnswer = await chat.sendAsync("How do I export my notes?")
 ```
 
 Keep the id on your own record (or hand it to the browser) and open the chat again on the next question. `history()`

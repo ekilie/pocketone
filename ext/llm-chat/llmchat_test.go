@@ -23,7 +23,7 @@ import (
 
 // fakeText answers "answer N" (or "SUMMARY" when asked to summarize) and remembers every input.
 type fakeText struct {
-	mu        sync.Mutex
+	mu     sync.Mutex
 	inputs []textv1.CompleteInput
 }
 
@@ -211,34 +211,28 @@ func TestListUpdateForget(t *testing.T) {
 	}
 }
 
-const hooks = `onRecordCreate((e) => {
+const hooks = `onRecordCreate(async (e) => {
   const id = $llm.chat.new({ title: "From JS", meta: { user: "u9" } })
-  const chat = $llm.chat.open(id, { system: "Be brief.", context: (q) => "ctx:" + q })
-  const a1 = chat.send("hello")
+  const chat = $llm.chat.open(id, { model: "p/m", system: "Be brief.", context: (q) => "ctx:" + q })
+  const a1 = await chat.sendAsync("hello")
   const pieces = []
-  const a2 = chat.send("again", { onText: (t) => { pieces.push(t) } })
+  const a2 = await chat.sendAsync("again", { onText: (t) => { pieces.push(t) } })
   chat.title("Renamed")
   const out = {
     a1: a1.text, a2: a2.text, pieces: pieces.join("|"), history: chat.history().map((m) => m.role + ":" + m.content),
     title: chat.title(), meta: chat.meta(), listed: $llm.chat.list({ meta: { user: "u9" } }).length,
+    syncGone: typeof chat.send === "undefined",
   }
   out.forgotten = $llm.chat.forget({ meta: { user: "u9" } })
   e.record.set("result", JSON.stringify(out))
   e.next()
 }, "probes")
-
-onRecordCreate(async (e) => {
-  const chat = $llm.chat.open($llm.chat.new())
-  const a = await chat.send.async("async hello")
-  e.record.set("result", a.text)
-  e.next()
-}, "asyncprobes")
 `
 
 // $llm.chat from pb_hooks, over llm-chat (bound by ext/llm's BindJS whoever provides llm.text/v1).
 func TestJS(t *testing.T) {
 	app, fa, _ := setup(t)
-	for _, name := range []string{"probes", "asyncprobes"} {
+	for _, name := range []string{"probes"} {
 		c := core.NewBaseCollection(name)
 		c.Fields.Add(&core.TextField{Name: "result", Max: 10000})
 		if err := app.Save(c); err != nil {
@@ -266,26 +260,20 @@ func TestJS(t *testing.T) {
 		History               []string
 		Meta                  map[string]any
 		Listed, Forgotten     int
+		SyncGone              bool
 	}
 	if err := json.Unmarshal([]byte(r.GetString("result")), &out); err != nil {
 		t.Fatalf("result %q: %v", r.GetString("result"), err)
 	}
 	if out.A1 != "answer 1" || out.A2 != "answer 2" || out.Pieces != "answer |2" || out.Title != "Renamed" ||
 		strings.Join(out.History, ",") != "user:hello,assistant:answer 1,user:again,assistant:answer 2" ||
-		out.Meta["user"] != "u9" || out.Listed != 1 || out.Forgotten != 1 {
+		out.Meta["user"] != "u9" || out.Listed != 1 || out.Forgotten != 1 || !out.SyncGone {
 		t.Fatalf("from JS: %+v", out)
 	}
 	if q := fa.inputs[0].Messages[len(fa.inputs[0].Messages)-1].Content; q != "hello\n\nctx:hello" {
 		t.Fatalf("context function: %q", q)
 	}
 
-	ar := core.NewRecord(mustCollection(t, app, "asyncprobes"))
-	if err := app.Save(ar); err != nil {
-		t.Fatal(err)
-	}
-	if got := ar.GetString("result"); got != "answer 3" {
-		t.Fatalf("send.async: %q", got)
-	}
 }
 
 func mustCollection(t *testing.T, app core.App, name string) *core.Collection {

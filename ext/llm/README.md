@@ -13,8 +13,8 @@ embeddings. You add providers in Settings → LLM, each with your own key, and e
 `provider/model`:
 
 ```ts
-const r: LlmTextAnswer = $llm.text.complete({ model: "vultr/glm-5.2", prompt: "Summarize: " + body, reasoning: "off" })
-const pic = $llm.image.generate({ model: "or/black-forest-labs/flux.2-klein-4b", prompt: "a lighthouse at dusk, watercolor" })
+const r: LlmTextAnswer = await $llm.text.completeAsync({ model: "vultr/glm-5.2", prompt: "Summarize: " + body, reasoning: "off" })
+const pic = await $llm.image.generateAsync({ model: "or/black-forest-labs/flux.2-klein-4b", prompt: "a lighthouse at dusk, watercolor" })
 record.set("cover", $llm.file(pic.files[0]))
 ```
 
@@ -67,22 +67,23 @@ host, an instance's `extensions.llm`), and with it `$llm` and the `llm.*` contra
 
 ## Use
 
-In page code it's `$llm.<kind>`; each call names `model` and has an `.async` twin for async code
-(`await $llm.text.complete.async({...})`):
+In page code it's `$llm.<kind>`. Every call that reaches a provider is async, and its name says so: await it in an async
+handler (`await $llm.text.completeAsync({...})`). It runs off the app's JS VM, so the app keeps serving other requests
+while a model works; there are no blocking versions to reach for. Each call names its `model`:
 
 | Call | What it does |
 |---|---|
-| `$llm.text.complete({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage }`. With `schema`, `data` is the parsed JSON. |
-| `$llm.text.stream(opts, onText, onReasoning?)` | The same, calling `onText` with each piece as it's written (`false` stops it). |
-| `$llm.text.count(text \| messages)` | About how many tokens (four characters each). |
-| `$llm.image.generate({ model, prompt, n?, size?, aspectRatio? })`, `edit({ ..., images })` | Pictures: `{ files, model, usage }`. |
-| `$llm.speech.speak({ model, text, voice?, format?, speed?, instructions? })`, `voices(model)` | Audio: `{ file, model, usage }`. |
-| `$llm.transcribe.transcribe({ model, audio, language?, prompt? })` | Text from audio: `{ text, language, model, usage }`. |
-| `$llm.music.create({ model, prompt, lyrics?, seconds?, wait? })`, `get(id)`, `content(id, index)` | Music, as a job (below). |
-| `$llm.video.create({ model, prompt, image?, seconds?, size?, aspectRatio?, wait? })`, `get(id)`, `content(id, index)` | Video, as a job. |
-| `$llm.embed.embed({ model, input, dimensions? })` | One vector per text: `{ vectors, model, usage }`. |
+| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage }`. With `schema`, `data` is the parsed JSON. |
+| `$llm.text.streamAsync(opts, onText, onReasoning?)` | The same, calling `onText` with each piece as it's written (`false` stops it). |
+| `$llm.text.count(text \| messages)` | About how many tokens (four characters each). Local, so not async. |
+| `$llm.image.generateAsync({ model, prompt, n?, size?, aspectRatio? })`, `edit({ ..., images })` | Pictures: `{ files, model, usage }`. |
+| `$llm.speech.speakAsync({ model, text, voice?, format?, speed?, instructions? })`, `voices(model)` | Audio: `{ file, model, usage }`. |
+| `$llm.transcribe.transcribeAsync({ model, audio, language?, prompt? })` | Text from audio: `{ text, language, model, usage }`. |
+| `$llm.music.createAsync({ model, prompt, lyrics?, seconds?, wait? })`, `get(id)`, `content(id, index)` | Music, as a job (below). |
+| `$llm.video.createAsync({ model, prompt, image?, seconds?, size?, aspectRatio?, wait? })`, `get(id)`, `content(id, index)` | Video, as a job. |
+| `$llm.embed.embedAsync({ model, input, dimensions? })` | One vector per text: `{ vectors, model, usage }`. |
 | `$llm.<kind>.models({ provider? })` | The models your providers offer of that kind, with prices where the provider lists them. |
-| `$llm.file(file)` | A generated file as a PocketBase file, for `record.set("field", ...)`. |
+| `$llm.file(file)`, `$llm.fileAsync(file)` | A generated file as a PocketBase file, for `record.set("field", ...)`; `fileAsync` also downloads one the provider gave only a URL for. |
 | `$llm.chat.*` | Stored conversations, from the [LLM Chat](../llm-chat/README.md) extension. |
 
 **`reasoning`** is how much a reasoning model thinks before answering: `"off"`, `"low"`, `"medium"`, `"high"`, or left
@@ -97,7 +98,7 @@ when it keeps one (it may expire). Audio to transcribe is sent the same way.
 
 **Jobs:** music and video take a while. `create` starts one and returns `{ id, status }`; follow it with `get(id)` until
 `status` is `done`, then fetch each of its `outputs` with `content(id, index)`. Or pass `wait: "5m"`: `create` then
-returns once the job is done, its `files` included (use `.async` for that in page code). The id names the provider
+resolves once the job is done, its `files` included. The id names the provider
 (`vultr:music_02a2…`), so `get` finds it again after a restart; the provider keeps the job, not your app.
 
 **Errors** have a code: `not_configured` (no providers yet), `unknown_model` (no model named, or no provider by that
@@ -124,7 +125,7 @@ transcription, `tts` is speech, `embed` is embeddings, and so on; anything else 
 
 | With | What happens |
 |---|---|
-| [LLM Chat](../llm-chat/README.md) | Stored conversations on top of `llm.text/v1`: `$llm.chat.new()`, `$llm.chat.open(id).send(text)`. |
+| [LLM Chat](../llm-chat/README.md) | Stored conversations on top of `llm.text/v1`: `$llm.chat.new()`, `$llm.chat.open(id).sendAsync(text)`. |
 | [Settings](../settings/README.md) | Settings → LLM is its `settings/v1` section. |
 | [API Tokens](../api-tokens/README.md) | A token with the `llm` scope can call the contracts over HTTP, and MCP clients get them as tools. |
 | [Multisite](../multisite/README.md) | Each instance has its own Settings → LLM, providers and keys. |

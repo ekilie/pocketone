@@ -11,7 +11,7 @@ audio, makes music and video, and turns text into vectors for search. You bring 
 PocketOne connects them to your pages' code and your Go code.
 
 ```ts
-const r: LlmTextAnswer = $llm.text.complete({
+const r: LlmTextAnswer = await $llm.text.completeAsync({
   model: "vultr/glm-5.2",
   prompt: "Summarize in one sentence: " + record.getString("body"),
   reasoning: "off",
@@ -55,7 +55,7 @@ the model. With providers named `vultr`, `cf` and `or`:
 | `cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast` | Workers AI's Llama 3.3 |
 | `or/black-forest-labs/flux.2-klein-4b` | OpenRouter's FLUX.2 Klein |
 
-To see what you can use, ask: `$llm.text.models()`, `$llm.image.models()` and so on list each provider's models of that
+To see what you can use, ask: `$llm.text.modelsAsync()`, `$llm.image.modelsAsync()` and so on list each provider's models of that
 kind, with their prices where the provider lists them.
 
 Keep model names in one place in your app (a `_private/models.ts` module, say), so changing provider is one edit.

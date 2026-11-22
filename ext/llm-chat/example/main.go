@@ -5,7 +5,7 @@
 //	POST /api/_c/llm.chat/v1/new  {"title": "Support"}            -> {"id": "..."}
 //	POST /api/_c/llm.chat/v1/send {"id": "...", "text": "Hello"}  -> {"answer": {"text": "..."}}
 //
-// In page code the same is $llm.chat.new() and $llm.chat.open(id).send(text).
+// In page code the same is $llm.chat.new() and $llm.chat.open(id).sendAsync(text).
 package main
 
 import (
