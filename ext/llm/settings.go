@@ -75,9 +75,11 @@ func (p Provider) endpoint() string {
 	return ti.Endpoint
 }
 
-// Settings are Settings → LLM: the providers calls name. Stored in the app's _params.
+// Settings are Settings → LLM: the providers calls name, and the limits every call passes first (limits.go). Stored in
+// the app's _params.
 type Settings struct {
 	Providers []Provider `json:"providers"`
+	Limits    []Limit    `json:"limits,omitempty"`
 }
 
 func (s Settings) provider(name string) (Provider, bool) {
@@ -128,7 +130,7 @@ type settingsSection struct {
 
 func (s settingsSection) Info() settingsv1.Info {
 	return settingsv1.Info{Extension: Name, Title: "LLM", Testable: true,
-		Description: "The providers $llm calls name as provider/model: Vultr, Cloudflare, OpenRouter, any OpenAI-compatible API."}
+		Description: "The providers $llm calls name as provider/model (Vultr, Cloudflare, OpenRouter, any OpenAI-compatible API), and the limits every call passes first."}
 }
 
 // providerView is a provider as Get returns it: the key never comes back, only whether one is set and its start.
@@ -142,7 +144,10 @@ type providerView struct {
 // settingsView is the section's values.
 type settingsView struct {
 	Providers []providerView `json:"providers"`
+	Limits    []Limit        `json:"limits"`
 	Types     []TypeInfo     `json:"types"`
+	Kinds     []string       `json:"kinds"`
+	Spend     spend          `json:"spend"` // from the ledger: shown, never saved
 }
 
 func (s settingsSection) Get(context.Context) (json.RawMessage, error) {
@@ -150,7 +155,10 @@ func (s settingsSection) Get(context.Context) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := settingsView{Types: Types, Providers: []providerView{}}
+	v := settingsView{Types: Types, Kinds: kinds, Providers: []providerView{}, Limits: cur.Limits, Spend: s.r.spend(context.Background())}
+	if v.Limits == nil {
+		v.Limits = []Limit{}
+	}
 	for _, p := range cur.Providers {
 		pv := providerView{Provider: p, KeySet: p.Key != "", KeyHint: keyHint(p.Key)}
 		pv.Key = ""
@@ -218,7 +226,13 @@ func (s settingsSection) parse(values json.RawMessage) (Settings, error) {
 	if err != nil {
 		return Settings{}, err
 	}
-	next := Settings{Providers: []Provider{}}
+	next := Settings{Providers: []Provider{}, Limits: []Limit{}}
+	for i, l := range in.Limits {
+		if err := checkLimit(&l, i); err != nil {
+			return Settings{}, err
+		}
+		next.Limits = append(next.Limits, l)
+	}
 	seen := map[string]bool{}
 	for _, p := range in.Providers {
 		p.Name, p.Type = strings.TrimSpace(p.Name), strings.TrimSpace(p.Type)

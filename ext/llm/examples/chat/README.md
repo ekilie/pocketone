@@ -41,7 +41,10 @@ pocketone serve --dir=pb_data
 ```
 
 Sign in at http://127.0.0.1:8090/_/ and add a provider in **Settings → LLM** (the app answers with `vultr/glm-5.3`, so
-a Vultr provider named `vultr`; or see below). Then open http://127.0.0.1:8090.
+a Vultr provider named `vultr`; or see below). Visitors aren't signed in, so every question counts as a guest's
+(`$llm.for(ctx)`): under **Limits** on the same screen, add one for **All guests together** (say $1 a day), or each
+question is refused. A second one for **Each guest** (say $0.10 a day) keeps one visitor from using it all up. Then open
+http://127.0.0.1:8090.
 
 To answer with another model, set `CHAT_MODEL` to its `provider/model` when you start the app, for example
 `CHAT_MODEL=or/openai/gpt-4o-mini pocketone serve --dir=pb_data` with an OpenRouter provider named `or`, or change

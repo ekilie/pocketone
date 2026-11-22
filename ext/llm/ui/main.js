@@ -1,5 +1,5 @@
 // Settings → LLM for the PocketBase dashboard (PocketOne ext/llm): the providers $llm calls name as provider/model,
-// each with its endpoint and key. Loaded as a UI extension (/_/extensions/llm/main.js). A view over llm's settings/v1
+// each with its endpoint and key, and the limits every call passes first. Loaded as a UI extension (/_/extensions/llm/main.js). A view over llm's settings/v1
 // section, built from the stock settings pages' pieces (accordions, fields with help under them, the save footer).
 (() => {
     const SYSTEM = "System";
@@ -47,6 +47,7 @@
             saving: false,
             view: null, // the section's settings/v1 values
             providers: [], // editable: { name, type, endpoint, account, key, keySet }
+            limits: [], // editable: { scope, window, metric, amount, kind, model }
             saved: "", // values() as last loaded or saved, to tell when there are changes
             message: null, // { kind: "success" | "danger", text }
         });
@@ -57,6 +58,10 @@
             return {
                 providers: data.providers.map((p) => ({
                     name: p.name.trim(), type: p.type, endpoint: p.endpoint.trim(), account: p.account.trim(), key: p.key,
+                })),
+                limits: data.limits.map((l) => ({
+                    scope: l.scope, window: l.window, metric: l.metric, amount: Number(l.amount) || 0,
+                    kind: l.kind || "", model: (l.model || "").trim(),
                 })),
             };
         }
@@ -73,6 +78,7 @@
                 uid: nextUID++, name: p.name, type: p.type, endpoint: p.endpoint || "", account: p.account || "", key: "",
                 keySet: p.keySet, keyHint: p.keyHint || "",
             }));
+            data.limits = (v.limits || []).map((l) => ({ uid: nextUID++, ...l, kind: l.kind || "", model: l.model || "" }));
             data.saved = JSON.stringify(values());
         }
 
@@ -145,6 +151,54 @@
 
         function remove(i) {
             data.providers = data.providers.filter((_, j) => j !== i);
+        }
+
+        // Limits: scope × window × metric ≤ amount, optionally one kind or one model.
+        const SCOPES = [
+            { value: "app", label: "The whole app" },
+            { value: "user", label: "Each signed-in user" },
+            { value: "guest", label: "Each guest" },
+            { value: "guests", label: "All guests together" },
+        ];
+        const METRICS = [
+            { value: "cost", label: "US dollars" },
+            { value: "output", label: "Output tokens" },
+            { value: "input", label: "Input tokens" },
+            { value: "calls", label: "Calls" },
+        ];
+        const WINDOWS = [{ value: "day", label: "a day (UTC)" }, { value: "month", label: "a month (UTC)" }];
+        const setLimit = (i, changes) => (data.limits = data.limits.map((l, j) => (j === i ? { ...l, ...changes } : l)));
+        function addLimit() {
+            // the first one an app needs is usually the guest total: guest calls are refused until it's there
+            const scope = data.limits.some((l) => l.scope === "guests") ? "app" : "guests";
+            data.limits = [...data.limits, { uid: nextUID++, scope, window: "day", metric: "cost", amount: 1, kind: "", model: "" }];
+            data.message = null;
+        }
+        const money = (micro) => "$" + (micro / 1e6).toFixed(micro && micro < 10000 ? 4 : 2);
+
+        function limitRow(l, i) {
+            const pick = (options, value, onpick, required = true) => app.components.select({
+                required, options: () => options, value: () => value, onchange: (sel) => sel?.[0] && onpick(sel[0].value),
+            });
+            return t.div(
+                { className: "grid m-b-sm" },
+                i > 0 ? t.div({ className: "col-lg-12" }, t.hr({ className: "m-0" })) : null,
+                t.div({ className: "col-md-4" }, field("Who", pick(SCOPES, l.scope, (v) => setLimit(i, { scope: v })))),
+                t.div({ className: "col-md-3" }, field("Counts", pick(METRICS, l.metric, (v) => setLimit(i, { metric: v })))),
+                t.div({ className: "col-md-2" }, field(l.metric === "cost" ? "At most ($)" : "At most",
+                    t.input({ type: "number", min: 0, step: l.metric === "cost" ? "0.01" : "1", required: true, value: l.amount,
+                        onchange: (e) => setLimit(i, { amount: e.target.value }) }))),
+                t.div({ className: "col-md-3" }, field("Per", pick(WINDOWS, l.window, (v) => setLimit(i, { window: v })))),
+                t.div({ className: "col-md-4" }, field("Only",
+                    pick([{ value: "", label: "Every kind" }, ...(data.view?.kinds || []).map((k) => ({ value: k, label: k }))],
+                        l.kind, (v) => setLimit(i, { kind: v }), false))),
+                t.div({ className: "col-md-6" }, field("Only the model",
+                    t.input({ type: "text", value: l.model, placeholder: "every model (or provider/model)", onchange: (e) => setLimit(i, { model: e.target.value }) }))),
+                t.div({ className: "col-md-2 flex" },
+                    t.button({ type: "button", className: "btn sm transparent danger m-l-auto", onclick: () => (data.limits = data.limits.filter((_, j) => j !== i)),
+                        ariaDescription: app.attrs.tooltip("Remove limit", "left") },
+                        t.i({ className: "ri-delete-bin-7-line", ariaHidden: true }))),
+            );
         }
 
         function providerAccordion(p, i) {
@@ -238,6 +292,32 @@
                             t.div({ className: "col-lg-12" },
                                 t.button({ type: "button", className: "btn secondary sm", onclick: add },
                                     t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New provider")),
+                            ),
+                            t.div({ className: "col-lg-12" }, t.hr()),
+                            t.div({ className: "col-lg-12" },
+                                t.h6({ className: "m-b-xs" }, "Limits"),
+                                t.p({ className: "m-t-0 txt-hint" },
+                                    "Every call passes these before it reaches a provider; one that's used up refuses the call until its day or month resets (UTC). ",
+                                    "Page code counts a call for its user or guest with ", t.code(null, "$llm.for(e)"), "; plain ", t.code(null, "$llm"),
+                                    " counts only toward the whole app. A call can go over by its own cost: limits are checked before and counted after."),
+                                () => {
+                                    const sp = data.view?.spend;
+                                    return sp ? t.p({ className: "m-t-0" },
+                                        `Spent today: ${money(sp.todayMicroUSD)} over ${sp.todayCalls} call${sp.todayCalls === 1 ? "" : "s"}`,
+                                        sp.refusedToday ? `, ${sp.refusedToday} refused` : "",
+                                        `. This month: ${money(sp.monthMicroUSD)}.`) : null;
+                                },
+                            ),
+                            () => data.limits.some((l) => l.scope === "guests")
+                                ? null
+                                : t.div({ className: "col-lg-12" }, t.div({ className: "alert warning" }, t.div({ className: "content" },
+                                    "Guest calls are off: a page that calls ", t.code(null, "$llm.for(e)"), " for a visitor who isn't signed in is refused until you add a limit for all guests together."))),
+                            t.div({ className: "col-lg-12" }, () => data.limits.length
+                                ? t.div(null, ...data.limits.map(limitRow))
+                                : t.div({ className: "block txt-center txt-hint p-base" }, "No limits: calls are never refused for spending.")),
+                            t.div({ className: "col-lg-12" },
+                                t.button({ type: "button", className: "btn secondary sm", onclick: addLimit },
+                                    t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New limit")),
                             ),
                             () => data.message
                                 ? t.div({ className: "col-lg-12" },

@@ -74,6 +74,8 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		}
 		return filesystem.NewFileFromURL(context.Background(), v.URL)
 	})
+	// subject(e): whom a request's calls are for ($llm.for(e)); sets the guest cookie when the request has none
+	_ = n.Set("subject", func(e *core.RequestEvent) string { return SubjectOf(app, e) })
 	bindChatJS(app, rt, n)
 	if err := rt.Set(nativeGlobal, n); err != nil {
 		panic(fmt.Errorf("llm: bind JS: %w", err))
@@ -99,10 +101,23 @@ func invoker[T any](app core.App, c *extkit.Contract[T], w *extkit.Wire[T]) func
 			if o.Method == "GET" {
 				req.JSON, req.Query = nil, queryOf(raw)
 			}
-			return o.Invoke(context.Background(), impl, extkit.Internal, req)
+			return o.Invoke(subjectCtx(raw), impl, extkit.Internal, req)
 		}
 		return nil, fmt.Errorf("$llm: %s has no operation %q", c.ID(), op)
 	}
+}
+
+// subjectCtx is a context carrying the subject $llm.for(e) put in a call's input as "__subject" (contract inputs
+// ignore the key). Only page code calls $llm, and page code is the app's own, so the subject is trusted as given.
+func subjectCtx[B ~string | ~[]byte](raw B) context.Context {
+	var v struct {
+		Subject string `json:"__subject"`
+	}
+	_ = json.Unmarshal([]byte(raw), &v)
+	if v.Subject == "" {
+		return context.Background()
+	}
+	return llmc.WithSubject(context.Background(), v.Subject)
 }
 
 // queryOf is a GET operation's input (a JSON object) as query values.
@@ -111,7 +126,7 @@ func queryOf(raw json.RawMessage) url.Values {
 	_ = json.Unmarshal(raw, &m)
 	q := url.Values{}
 	for k, v := range m {
-		if v != nil {
+		if v != nil && k != "__subject" {
 			q.Set(k, fmt.Sprint(v))
 		}
 	}
@@ -125,7 +140,9 @@ var jsPrelude = `(() => {
   const n = globalThis.__pocketone_llm;
   delete globalThis.__pocketone_llm;
   const J = (s) => JSON.parse(s);
-  const S = (o) => JSON.stringify(o ?? {});
+  // build(sub) is $llm with every call made for subject sub ("" for nobody in particular): $llm.for(e) names it
+  const build = (sub) => {
+  const S = (o) => JSON.stringify(sub ? { ...(o ?? {}), __subject: sub } : (o ?? {}));
   // a provider call, off the VM
   const callAsync = async (kind, op, o) => J(await n.call.async(kind, op, S(o)));
   const text = (o) => (o && typeof o.schema === "string" ? { ...o, schema: JSON.parse(o.schema) } : o);
@@ -137,7 +154,7 @@ var jsPrelude = `(() => {
     contentAsync: (id, index) => callAsync(kind, "content", { id, index: index ?? 0 }),
     modelsAsync: modelsAsync(kind),
   });` + streamPrelude + chatPrelude + `
-  globalThis.$llm = Object.freeze({
+  return Object.freeze({
     text: Object.freeze({
       completeAsync: (o) => callAsync("text", "complete", text(o)),
       streamAsync: async (o, onText, onReasoning) => readStream(n.streamStart("text", S(text(o))), onText, onReasoning),
@@ -166,4 +183,8 @@ var jsPrelude = `(() => {
     fileAsync: (f) => n.file.async(S(f), true),
     chat,
   });
+  };
+  const base = build("");
+  // for(e): e is a request event (a pb_hooks route's e) or a page's ctx (its .event)
+  globalThis.$llm = Object.freeze({ ...base, for: (e) => build(n.subject(e && e.event ? e.event : e)) });
 })()`
