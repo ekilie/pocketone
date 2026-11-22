@@ -7,7 +7,7 @@ source: "ext/standard/README.md"
 
 # Standard Set
 
-Version 0.1.1 · Owners: [@benallfree](https://github.com/benallfree)
+Version 0.1.2 · Owners: [@benallfree](https://github.com/benallfree)
 
 The extensions every PocketOne app has: settings, page templates, a cache, API tokens (with the OAuth server), remotes (remote/v1), MCP,
 PocketPages, an S3 fallback bucket and S3 redirects, point-in-time restore, backups, bulk mail, deploy, WASM modules called from pb_hooks, and dashboard cache headers (UI Cache). Every
