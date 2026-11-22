@@ -9,8 +9,14 @@ Every model call spends money on your provider account. On a page anyone can ope
 that: you set them in **Settings → LLM**, and every call passes them before it reaches a provider. A call a used-up
 limit refuses never reaches the provider and costs nothing.
 
-This page covers setting limits up. [Whom a call is for](whom.md) covers the one line page code adds so per-user and
-per-guest limits work, and [Spend and the ledger](spend.md) covers the record every call leaves.
+The limits on this screen are PocketOne's built-in limits: one handler on the hook every call passes through
+before it reaches a provider. Anything they can't express, such as a user's plan, credits they bought or the team
+they're on, you write as your own handler on the same hook ([Custom limits](custom-limits.md)). Yours run first, and
+the built-in limits count what they settled on.
+
+This page covers the built-in limits. [Whom a call is for](whom.md) covers the one line page code adds so per-user and
+per-guest limits work, and [Spend and the ledger](spend.md) covers the record every call leaves and how to read what's
+left.
 
 ## Setting a limit
 
@@ -113,4 +119,4 @@ soon as it starts, and its cost is added to its ledger row once `createAsync` wi
 - The whole app, US dollars, at most 5, per day, kind image.
 
 Plan tiers, credits users buy, and anything else that depends on who the user is belong in your app's own code: see
-[Spend and the ledger](spend.md#selling-credits).
+[Custom limits](custom-limits.md).

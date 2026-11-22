@@ -79,8 +79,9 @@ together](limits.md#guests-need-a-total) before they're answered: it's the only 
 
 ## When a call is refused
 
-A refused call throws. Its message is written for the person who made the request ("limit reached: each guest, $0.10 a
-day (used $0.10); it resets at 00:00 UTC"), so the simplest handling is to show it:
+A refused call throws, whether a built-in limit refused it or one of your [onCall handlers](custom-limits.md) did.
+Its message is written for the person who made the request ("limit reached: each guest, $0.10 a day (used $0.10); it
+resets at 00:00 UTC", or your handler's own words), so the simplest handling is to show it:
 
 ```ts
 // pb_pages/ask/+api.ts
@@ -117,6 +118,16 @@ export async function post(ctx: pages.Context) {
 To tell a used-up limit apart from other failures (a wrong key, a provider that's down), check for the word `limit`
 in the message, or call the contract over HTTP and check the code: refused calls answer `429` with
 `{"code": "limit", ...}`.
+
+## Showing what's left
+
+`$llm.for(ctx).ledger.remaining()` lists the limits that count this visitor, with what's used and left, so a page can
+say "4 questions left today" before anyone hits a refusal ([Spend and the ledger](spend.md#whats-left)):
+
+```ets
+<% const left = $llm.for(ctx).ledger.remaining()[0] %>
+<% if (left) { %><p><%= left.left %> of <%= left.amount %> left today</p><% } %>
+```
 
 ## In Go
 
