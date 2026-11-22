@@ -83,6 +83,9 @@ func TestDevModeSkipsBrokenHookFile(t *testing.T) {
 	if !strings.Contains(string(log), "pb_hooks/broken.pb.js failed to load; skipped it (dev mode)") {
 		t.Errorf("instance log should name the skipped file:\n%s", log)
 	}
+	if n := strings.Count(string(log), "failed to load"); n != 1 {
+		t.Errorf("only the broken file should be logged as failing, got %d lines:\n%s", n, log)
+	}
 
 	prod := Instance{ID: "prod", Hosts: []string{"prod.test"}, Dir: d}
 	m2 := newTestManager(t, false, prod)
