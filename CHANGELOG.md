@@ -28,16 +28,17 @@ every extension that got a new version, with a link to its changes. Upstream Poc
      `## Unreleased` (minor when it has upgrade steps, else patch) and stamps that section with it, renames this
      file's `## Unreleased` to `## vX.Y.Z (YYYY-MM-DD)` with an Extensions list, and starts new empty `## Unreleased`
      sections. Review and commit.
-  2. Write the section's **Highlights**, and the release's blog post from them: `site/pb_pages/(main)/blog/pocketone-vX-Y-Z.md`
-     (front matter `title`, `description`, `date`, `author`, `tags: release`), what's new and why it matters, the
-     upgrade steps if any, and links to the docs and the release. Commit both and land them (the post goes live on
-     pocketone.dev with the next site deploy, so land it just before publishing, or right after).
+  2. Write the section's **Highlights**. A release with a user-facing new feature also gets a blog post written from
+     them: `site/pb_pages/(main)/blog/pocketone-vX-Y-Z.md` (front matter `title`, `description`, `date`, `author`,
+     `tags: release`), what's new and why it matters, the upgrade steps if any, and links to the docs and the release.
+     A maintenance release (fixes only) gets no post. Commit and land them (a post goes live on pocketone.dev with the
+     next site deploy, so land it just before publishing, or right after).
   3. Run `examples/pocketone/release.sh --check`, then `examples/pocketone/release.sh vX.Y.Z` once it passed: it tags,
      writes the notes (`examples/pocketone/release-notes.sh vX.Y.Z`) and runs goreleaser, which leaves a draft release.
   4. Publishing the draft starts its announcement in GitHub Discussions (Announcements, with the release notes;
      goreleaser sets the category).
 
-  The release header adds a link to the blog post and the install and upgrade steps on top. Release notes are this file's section for the version,
+  The release header adds a link to the blog post (when there is one) and the install and upgrade steps on top. Release notes are this file's section for the version,
   with its links pointing at the release on GitHub.
 
 ## Unreleased
