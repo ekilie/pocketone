@@ -30,7 +30,7 @@ Open the dashboard at `http://127.0.0.1:8090/_/`, add a provider in Settings →
 under a provider named `vultr`), then open `http://127.0.0.1:8090`. To put your copy online, `pocketone link` your own
 app and `pocketone deploy` ([Deploy and live sync](/docs/features/deploy)).
 
-## PocketPages starters
+## Starters
 
 Starting points for your own app, one command away:
 

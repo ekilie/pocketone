@@ -1,9 +1,9 @@
 ---
-title: PocketPages starters
+title: Starters
 description: The PocketPages starter kits - minimal, mvp, auth, daisyui, daisyui-docs, htmx, datastar and tsx - what each shows, how it's built and how to start an app from one.
 ---
 
-# PocketPages starters
+# Starters
 
 Each starter kit is an ordinary `pb_pages` folder written against PocketPages v1, in TypeScript with
 [ETS templates](/docs/extensions/pages/ets) (the **tsx** kit uses [components](/docs/extensions/pages/jsx) instead), so
