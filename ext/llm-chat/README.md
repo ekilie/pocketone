@@ -1,6 +1,6 @@
 ---
 owners: ["@benallfree"]
-version: 0.0.2
+version: 0.1.0
 title: "LLM Chat"
 group: binary
 summary: "Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries."

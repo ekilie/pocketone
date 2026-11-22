@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.0.1 (2026-11-22)
+
 ### Added
 
 - New standard extension, replacing Agent: cloud models for your app, one contract per kind (`llm.text/v1`, `llm.image/v1`, `llm.speech/v1`, `llm.transcribe/v1`, `llm.align/v1`, `llm.music/v1`, `llm.video/v1`, `llm.embed/v1`) and `$llm.<kind>` in page code, where every call that reaches a provider is async and named so (`await $llm.text.completeAsync({...})`, `generateAsync`, `speakAsync`...): it runs off the app's JS VM, so the app keeps serving other requests while a model works. Providers are added in Settings → LLM with your own keys: Vultr, Cloudflare Workers AI, OpenRouter, or any OpenAI-compatible API. Every call names its model as `provider/model`. Music and video are jobs (`createAsync`, `getAsync`, `contentAsync`, or `wait`); `$llm.file()` turns a generated file into a PocketBase file. Every result's `usage.costMicroUSD` is what the call cost, in millionths of a US dollar (a whole number, `0` when free or not known): the provider's figure when it reports one, else estimated from the model's listed prices (`usage.costEstimated`).
@@ -13,3 +15,4 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 ### Upgrading
 
 - Agent is gone, with its built-in model, `pocketone.yaml`'s `agent:` section and a multisite host's shared model. Replace `$agent.complete(opts)` with `await $llm.text.completeAsync({ model: "<provider>/<model>", ...opts })` (in an async handler) after adding a provider in Settings → LLM; `$agent.stream` is `await $llm.text.streamAsync`. There are no blocking versions. `thread`, `wait`, `warm`, `forget`, `threads` and `status` have no replacement (they were the built-in model's).
+

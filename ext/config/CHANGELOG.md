@@ -6,6 +6,8 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+## 0.1.1 (2026-11-22)
+
 ### Added
 
 - `await_time` in `app: js_limits:`: how long an async JS handler may take in all, awaits included (default 15m). `task_time` and `task_wall` count each stretch of JS between awaits.

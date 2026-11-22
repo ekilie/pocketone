@@ -43,6 +43,14 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 
 ## Unreleased
 
+## v0.0.1-alpha.13 (2026-11-22)
+
+### Highlights
+
+- **LLM replaces Agent.** Your app calls cloud models on your own keys: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare Workers AI, OpenRouter or any OpenAI-compatible API. Add providers in Settings → LLM, then `await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt })` in page code. Calls run off the JS VM, and every result says what it cost ([AI in your app](https://pocketone.dev/docs/extensions/llm)). Agent and its built-in model are gone (see Upgrading).
+- **Two example apps, live.** [Docs Chat](https://learn.pocketone.dev) answers questions from the PocketOne and PocketBase docs, and [Bedtime Story](https://sleep.pocketone.dev) tells one topic slowly, read aloud with pictures and music. Both are plain PocketPages apps on `$llm`, walked through in the new [Example apps](https://pocketone.dev/docs/examples) section.
+- **Long async handlers.** A route, hook or cron job may now await for up to 15 minutes in all (`await_time` in `pocketone.yaml`'s `app: js_limits:`), where before a handler waiting over 30 seconds timed out. A handler whose client went away now stops ([JSVM](ext/jsvm/CHANGELOG.md)).
+
 ### Upgrading
 
 - Agent is replaced by [LLM](ext/llm/README.md): add your providers (Vultr, Cloudflare Workers AI, OpenRouter, or any OpenAI-compatible API) in Settings → LLM, then change `$agent.complete(opts)` to `await $llm.text.completeAsync({ model: "<provider>/<model>", ...opts })` in an async handler (every `$llm` call that reaches a provider is async). The built-in model, `pocketone.yaml`'s `agent:` section and a multisite host's shared model are gone. Agent Chat is now [LLM Chat](ext/llm-chat/CHANGELOG.md) (`$llm.chat`).
@@ -50,6 +58,17 @@ every extension that got a new version, with a link to its changes. Upstream Poc
 ### Added
 
 - [LLM](ext/llm/README.md), a standard extension: text, pictures, speech, transcription, music, video and embeddings from cloud providers on your own keys, as `$llm.<kind>` in page code and the `llm.*` contracts. Every call names its model as `provider/model`.
+
+### Extensions
+
+- [Config](ext/config/CHANGELOG.md#011-2026-11-22) 0.1.0 → 0.1.1
+- [JSVM](ext/jsvm/CHANGELOG.md#013-2026-11-22) 0.1.2 → 0.1.3
+- [LLM](ext/llm/CHANGELOG.md#001-2026-11-22) 0.0.1 (new)
+- [LLM Chat](ext/llm-chat/CHANGELOG.md#010-2026-11-22) 0.0.2 → 0.1.0 (has upgrade steps)
+- [Pocker](ext/pocker/CHANGELOG.md#013-2026-11-22) 0.1.2 → 0.1.3
+- [Sandbox](ext/sandbox/CHANGELOG.md#004-2026-11-22) 0.0.3 → 0.0.4
+- [Standard Set](ext/standard/CHANGELOG.md#013-2026-11-22) 0.1.2 → 0.1.3
+- [Upgrade](ext/upgrade/CHANGELOG.md#004-2026-11-22) 0.0.3 → 0.0.4
 
 ## v0.0.1-alpha.12 (2026-11-21)
 
