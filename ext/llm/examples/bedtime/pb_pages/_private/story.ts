@@ -16,6 +16,8 @@ export const MODELS = {
   text: process.env.STORY_TEXT_MODEL || 'vultr/glm-5.2',
   image: process.env.STORY_IMAGE_MODEL || 'vultr/z-image-turbo',
   speech: process.env.STORY_SPEECH_MODEL || 'vultr/auk',
+  // for a story in a language the speech model doesn't speak (auk speaks English and Chinese)
+  speechOther: process.env.STORY_SPEECH_MODEL_OTHER || 'vultr/chatterbox',
   align: process.env.STORY_ALIGN_MODEL || 'vultr/aligner-1',
   music: process.env.STORY_MUSIC_MODEL || 'vultr/ace-step-1.5',
 }
@@ -33,21 +35,26 @@ export const LIMITS = {
   perHour: Number(process.env.STORY_MAX_PER_HOUR || 20),
 }
 
+/** The languages a speech model speaks, where it's known (GET /v1/audio/voices?model= on Vultr lists them). */
+const SPEAKS: { [model: string]: string[] } = { 'vultr/auk': ['en', 'zh'] }
+
 const WRITE = (minutes: number) => `You write gentle bedtime stories for young children, read aloud in about
 ${minutes} minute${minutes === 1 ? '' : 's'}: ${Math.round(minutes * WORDS_PER_MINUTE * 0.9)} to ${Math.round(minutes * WORDS_PER_MINUTE * 1.1)} words.
 Keep it calm and warm: no danger, no villains, nothing scary. The story slows down toward the end and closes with the
 main character falling asleep. Use simple words, short sentences, gentle sounds and repetition children like.
-Give the story one sentence per item of "sentences", in order. "character" describes the main character for an
+Write the story in the language the request is written in, unless the request asks for another language; "language"
+is that language's ISO 639-1 code ("en", "es", "ja"). Give the story one sentence per item of "sentences", in order. "character" describes the main character for an
 illustrator (kind of animal or child, colors, clothes), so every picture can show them the same way.`
 
 const WRITE_SCHEMA = {
   type: 'object',
   properties: {
     title: { type: 'string' },
+    language: { type: 'string' },
     character: { type: 'string' },
     sentences: { type: 'array', items: { type: 'string' } },
   },
-  required: ['title', 'character', 'sentences'],
+  required: ['title', 'language', 'character', 'sentences'],
 }
 
 const PLACE = (n: number) => `You illustrate a bedtime story that has been read aloud. You get its transcript, one
@@ -81,6 +88,7 @@ type Word = { line: number; text: string; start: number; end: number }
 export type Picture = { start: number; prompt: string; image?: string }
 export type Story = {
   title: string
+  language: string // ISO 639-1
   character: string
   sentences: string[]
   // from here on, filled in as the story is made
@@ -133,6 +141,7 @@ export async function make(app: any, id: string): Promise<void> {
     const written = await ask({ system: WRITE(minutes), prompt: `Tonight's story: ${prompt}`, schema: WRITE_SCHEMA, temperature: 0.9 })
     const story: Story = {
       title: String(written.title || 'A bedtime story'),
+      language: String(written.language || 'en').toLowerCase().slice(0, 2),
       character: String(written.character || ''),
       sentences: (written.sentences || []).map((s: any) => String(s).replace(/\s+/g, ' ').trim()).filter(Boolean),
     }
@@ -140,12 +149,16 @@ export async function make(app: any, id: string): Promise<void> {
     save({ status: 'making', title: story.title, story, progress: 'Reading it aloud', cost: spent })
 
     // 2. one voiceover of the whole story
-    const voice = await $llm.speech.speakAsync({ model: MODELS.speech, text: story.sentences.join(' ') })
+    // the speech model for the story's language, told the language (chatterbox picks its checkpoint by it)
+    const speech = SPEAKS[MODELS.speech]?.includes(story.language) === false ? MODELS.speechOther : MODELS.speech
+    const voice = await $llm.speech.speakAsync({ model: speech, text: story.sentences.join(' '),
+      options: { language: story.language } })
     spent += cost(voice.usage)
     save({ progress: 'Listening for when each word is said', cost: spent })
 
     // 3. align: one line per sentence
-    const a = await $llm.align.alignAsync({ model: MODELS.align, audio: voice.file, text: story.sentences.join('\n'), mode: 'speech' })
+    const a = await $llm.align.alignAsync({ model: MODELS.align, audio: voice.file, text: story.sentences.join('\n'), mode: 'speech',
+      language: story.language })
     spent += cost(a.usage)
     story.duration = a.duration
     story.lines = a.lines.map((l: any) => ({ index: l.index, text: l.text, start: l.start, end: l.end }))
