@@ -248,6 +248,10 @@ func TestSettingsSection(t *testing.T) {
 	if _, err := st.Save(ctx, bad); err == nil {
 		t.Fatal("a provider name with a slash was accepted")
 	}
+	nokey, _ := json.Marshal(map[string]any{"providers": []any{map[string]any{"name": "vultr", "type": "vultr"}}})
+	if _, err := st.Save(ctx, nokey); err == nil || !strings.Contains(err.Error(), "enter its API key") {
+		t.Fatalf("a new cloud provider without a key: %v", err)
+	}
 }
 
 const hooks = `onRecordCreate((e) => {

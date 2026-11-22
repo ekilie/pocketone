@@ -157,10 +157,12 @@
                     t.span({ className: "txt" }, ti.title),
                     t.span({ className: "label" }, `${p.name || "?"}/…`),
                     t.div({ className: "flex-fill" }),
-                    p.key ? t.span({ className: "label success" }, "New key")
-                        : p.keySet ? t.span({ className: "label success" }, "Key set")
-                        : t.span({ className: "label warning" }, "No key"),
-                        p.result?.kind === "success" ? t.i({ className: "ri-checkbox-circle-fill txt-success", ariaDescription: app.attrs.tooltip("Tested: the provider answered with this key", "left") }) : null,
+                    // a key is set (saved or just typed): green once it passed its test, gray until then
+                    p.key || p.keySet
+                        ? p.result?.kind === "success"
+                            ? t.i({ className: "ri-checkbox-circle-fill txt-success", ariaDescription: app.attrs.tooltip("Tested: the provider answered with this key", "left") })
+                            : t.i({ className: "ri-checkbox-circle-line txt-hint", ariaDescription: app.attrs.tooltip("Key set, not tested yet", "left") })
+                        : null,
                 ),
                 t.p({ className: "m-t-0 txt-hint" }, ti.about || ""),
                 t.div(

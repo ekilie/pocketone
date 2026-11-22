@@ -248,6 +248,10 @@ func (s settingsSection) parse(values json.RawMessage) (Settings, error) {
 				p.Key = old.Key
 			}
 		}
+		// every cloud needs a key; an OpenAI-compatible server on your own machine (Ollama, llama-server) may not
+		if p.Key == "" && p.Type != TypeOpenAI {
+			return Settings{}, badRequest(fmt.Sprintf("provider %s: enter its %s", p.Name, keyWord(ti)))
+		}
 		next.Providers = append(next.Providers, p)
 	}
 	return next, nil
@@ -274,4 +278,12 @@ func keyHint(key string) string {
 		return key[:4] + "••••••••"
 	}
 	return "••••••••"
+}
+
+// keyWord is what the provider type calls its key in Settings → LLM.
+func keyWord(ti TypeInfo) string {
+	if ti.Account {
+		return "API token"
+	}
+	return "API key"
 }
