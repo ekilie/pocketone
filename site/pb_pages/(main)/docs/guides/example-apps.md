@@ -69,14 +69,20 @@ and quiet music underneath. You choose the length and how many pictures. Each st
 shared.
 
 ```
-pb_migrations/                  the stories collection, and its views count
+pb_migrations/         stories, their listens, each call's cost, the saved tuning, audio samples
+pb_hooks/
+  admin_plugins.pb.js  registers the tuning screen with the dashboard
+pb_admin_ext/
+  bedtime/main.js      the tuning screen: Settings → Bedtime Story
 pb_pages/
   index.ets            ask for a story, or Inspire me; stories told, most listened to first
   inspire/+api.ts      POST /inspire: a topic no story has covered yet
   view/+api.ts         POST /view: counts a listen
   story/+api.ts        POST /story: saves the record, starts making the story
   story/[id].ets       progress while it's made, then the player
-  _private/story.ts    the models, the limits and the six steps
+  admin/tuning/+api.ts GET/POST /admin/tuning: the tuning (superusers only)
+  admin/sample/+api.ts POST /admin/sample: tries a piece with unsaved tuning (superusers only)
+  _private/story.ts    the default tuning, the limits and the six steps
 ```
 
 **Making a story takes longer than a request should wait**, so `POST /story` saves a `stories` record with status
@@ -113,14 +119,59 @@ page, to the text model, which suggests one that none of them covers. **Listens:
 (time playing, not scrubbing), the player posts `/view`, which adds one to the story's `views` in a single SQL update so
 listens at the same moment all count. The front page lists stories by it.
 
-**Tuning in the dashboard.** Settings → Bedtime Story in the PocketBase dashboard edits the narrator (voice,
-instructions, seed, speed), the prompts, the picture and music additions, the models and the budget, each with a
-Sample button that plays or shows the result before you save. It's a superuser UI extension registered from
-`pb_hooks/admin_plugins.pb.js` (`e.uiExtensions.push({ name, fs: $os.dirFS(...) })` in `$app.onServe()`), with its
-screen in `pb_admin_ext/bedtime/main.js`. Each story records the models and voice that made it, how long it took and
-what it cost, shown on its splash.
+### Tuning it from the dashboard
 
-**Guards for a public copy.** Every model call's cost (`usage.costMicroUSD`) is saved as a row; once the day's total
+Everything that shapes a story (the narrator's voice, what the models are told, how pictures and music are asked for,
+which models run and how much a day may cost) can be changed without touching code, from **Settings → Bedtime Story**
+in the PocketBase dashboard (`/_/`, superusers only). Each part has a **Sample** button, so you hear or see a change
+before any listener does.
+
+| Part | What you set | Sample |
+|---|---|---|
+| **Narrator** | **Voice:** `default`, a calm middle-aged woman with a low, clear voice, generated afresh each call; or `design`, a new voice made from the description in Instructions. **Instructions:** how `default` reads, or the voice itself for `design` ("A deep, calm older man's voice, slow and soft"). **Seed:** the same seed gives the same voice every time; empty lets it vary a little. **Speed:** 1 is normal. **Sample text:** what Sample reads. | Reads the sample text in that voice. `design` with no description is refused. |
+| **Writing the story** | The writer's instructions. Placeholders: `{minutes}`, `{minWords}`, `{maxWords}`, `{anyTopic}`. Keep the field names it mentions (title, language, topic, look, sentences): the shape of the answer is fixed. | Writes a 1-minute story on the topic you give (or one it picks) and shows its sentences. |
+| **Choosing the pictures** | The instructions that turn the timed transcript into pictures, their style and the music prompt (placeholder `{n}`), and the words added after every picture's prompt. | Paints one picture in the style you give. |
+| **Music** | The words added after every story's music prompt, and how many seconds of music to make (it loops). | Plays 20 seconds for the music prompt you give. |
+| **Inspire me** | The instructions for suggesting a topic no story has covered. | Suggests one. |
+| **Models and budget** | Each step's model as `provider/model` (a provider in Settings → LLM), and the daily budget in US dollars, with what's been spent today. | |
+
+**Sample** uses what's on the screen, saved or not, and shows which model answered, how long it took and what it cost.
+Samples are recorded with every other model call, but the daily budget never stops them. **Save changes** stores the
+tuning; every story started after that uses it. **Put back the defaults** forgets it.
+
+**What stories remember.** Since the tuning can change, each story keeps how it was made: the seconds it took and the
+models and voice that made it. The story's splash shows them with its date and cost, for example "Made Nov 22, 2026 in
+21 s for $0.057", then writing `vultr/mimo-v2.6-flash`, voice `vultr/auk`, narrator `default, seed 7`.
+
+**How it's built.**
+
+- **Where the tuning lives.** `_private/story.ts` holds the defaults (`DEFAULT_TUNING`, with models overridable from
+  the environment). A save writes the changed values to a `settings` record (key `tuning`, open to no one but
+  superusers and the app), and `tuning(app)` merges it over the defaults each time a story or a suggestion starts.
+  `/admin/sample` merges the screen's unsaved values over that again, so a sample never changes what listeners get.
+- **The screen is a dashboard extension**, registered from `pb_hooks` the way
+  [PocketHost's guide](https://pockethost.io/docs/admin-extensions) shows. The hook hands PocketBase the folder
+  holding the screen:
+
+  ```js
+  // pb_hooks/admin_plugins.pb.js
+  $app.onServe().bindFunc((e) => {
+    e.uiExtensions.push({ name: "bedtime", fs: $os.dirFS(`${__hooks}/../pb_admin_ext/bedtime`) })
+    e.next()
+  })
+  ```
+
+  PocketBase serves the folder at `/_/extensions/bedtime/` and loads its `main.js` into the dashboard. `main.js` adds
+  the Settings entry (`app.store.settingsNavGroups`) and the page (`app.routes.superuserOnly("#/settings/bedtime", ...)`),
+  built from the dashboard's own pieces, and calls `/admin/tuning` and `/admin/sample` with `app.pb.send`, which carries
+  the signed-in superuser's token. Those two endpoints answer only superusers.
+- **Audio samples are saved, then played.** The dashboard plays media only from its own address (its
+  Content-Security-Policy blocks `data:` audio), so each audio sample is saved in a `samples` collection, viewable by
+  its random id only and trimmed to the last 20, and played from `/api/files/...`. Picture samples come back inline.
+
+### Guards for a public copy
+
+Every model call's cost (`usage.costMicroUSD`) is saved as a row; once the day's total
 (from 00:00 UTC) reaches the budget, $1 by default, the form turns off with "Out of tokens for today" and the API
 refuses new stories. Before anything is made, the app checks that each model's provider is set up, answering and
 offering that model, and refuses the same way when it isn't. Stories are at most 5 minutes with 5 pictures, held both
