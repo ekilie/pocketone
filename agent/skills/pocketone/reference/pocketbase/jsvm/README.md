@@ -6,6 +6,11 @@ examples. Typedoc generates the site from the PocketBase site's `jsvm/types.d.ts
 pages at commit `3aeec327`. Each page starts with its pocketbase.io URL. Don't edit them: run
 `.github/pocketbase-docs` again.
 
+[types.d.ts](types.d.ts) is that declarations file itself, every declaration with its doc comment in one place (about
+800 KB): handy to search. It isn't published on pocketbase.io; its source is
+[jsvm/types.d.ts in the mirror](https://github.com/pocketonehq/pocketbase-site/blob/3aeec327cf8d6e043b01ef074e7a47739eae01b0/jsvm/types.d.ts) at the same
+commit.
+
 PocketOne runs pb_hooks on its own engine (QuickJS), with the same API plus its own (`.async` on every Go
 function, imports, the extensions' globals such as `$llm`). PocketOne's full declarations are in each app's
 `pb_data/types.d.ts`.

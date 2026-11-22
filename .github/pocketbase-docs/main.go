@@ -7,6 +7,7 @@
 //	agent/skills/pocketone/reference/pocketbase/llms-full.txt  every page in one file ("---" and "Source:" between pages)
 //	agent/skills/pocketone/reference/pocketbase/README.md      what this is, the commit and PocketBase version, the license
 //	agent/skills/pocketone/reference/pocketbase/jsvm/...       the JSVM reference (pocketbase.io/jsvm), one file per page
+//	agent/skills/pocketone/reference/pocketbase/jsvm/types.d.ts  the declarations it's generated from
 //
 // The JSVM reference is typedoc's site for PocketBase's JS API, committed in the site repo as static/jsvm: its pages
 // are converted as they are, each starting with its pocketbase.io/jsvm URL.
@@ -129,6 +130,17 @@ func run(update bool, siteDir string) error {
 	if err := writeJSVM(jsvm, commit); err != nil {
 		return err
 	}
+	// the declarations the reference is generated from, as they are: unpublished, so linked at the mirror's commit
+	types, err := os.ReadFile(filepath.Join(siteDir, "jsvm", "types.d.ts"))
+	if err != nil {
+		return err
+	}
+	head := fmt.Sprintf("// PocketBase's JS API declarations (the source of %s), copied by .github/pocketbase-docs from\n"+
+		"// https://github.com/pocketonehq/pocketbase-site/blob/%s/jsvm/types.d.ts. Don't edit: run the tool again.\n\n", jsvmSite, commit)
+	if err := writeIfChanged(filepath.Join(outDir, "jsvm", "types.d.ts"), head+string(types)); err != nil {
+		return err
+	}
+	logf("copied jsvm/types.d.ts (%d KB)", len(types)/1024)
 	logf("wrote %s/jsvm (%d pages)", outDir, len(jsvm))
 	return nil
 }

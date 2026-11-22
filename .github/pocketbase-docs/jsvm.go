@@ -246,6 +246,7 @@ func writeJSVM(pages []page, commit string) error {
 		}
 	}
 	want["README.md"] = true
+	want["types.d.ts"] = true // written by run
 	if err := writeIfChanged(filepath.Join(root, "README.md"), jsvmReadme(pages, commit)); err != nil {
 		return err
 	}
@@ -272,11 +273,16 @@ examples. Typedoc generates the site from the PocketBase site's `+"`jsvm/types.d
 pages at commit `+"`%[2]s`"+`. Each page starts with its pocketbase.io URL. Don't edit them: run
 `+"`.github/pocketbase-docs`"+` again.
 
+[types.d.ts](types.d.ts) is that declarations file itself, every declaration with its doc comment in one place (about
+800 KB): handy to search. It isn't published on pocketbase.io; its source is
+[jsvm/types.d.ts in the mirror](https://github.com/pocketonehq/pocketbase-site/blob/%[3]s/jsvm/types.d.ts) at the same
+commit.
+
 PocketOne runs pb_hooks on its own engine (QuickJS), with the same API plus its own (`+"`.async`"+` on every Go
 function, imports, the extensions' globals such as `+"`$llm`"+`). PocketOne's full declarations are in each app's
 `+"`pb_data/types.d.ts`"+`.
 
-`, jsvmSite, short(commit))
+`, jsvmSite, short(commit), commit)
 	groups := map[string][]page{}
 	for _, p := range pages {
 		dir := path.Dir(p.slug)
