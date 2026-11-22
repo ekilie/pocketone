@@ -156,8 +156,8 @@ var errGuestsUncapped = &extkit.Error{Code: llmc.ErrLimit.Code, Status: llmc.Err
 
 // admit checks every rule that applies to c. The first one used up refuses it with ErrLimit's code, naming the
 // rule and when its window resets.
-func (r *router) admit(ctx context.Context, limits []Limit, c *call) error {
-	if llmc.IsGuest(c.subject) {
+func (r *router) admit(ctx context.Context, limits []Limit, c *call, guestsCapped bool) error {
+	if llmc.IsGuest(c.subject) && !guestsCapped {
 		capped := false
 		for _, l := range limits {
 			if l.Scope == ScopeGuests && l.applies(c) {

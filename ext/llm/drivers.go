@@ -45,13 +45,13 @@ type driver interface {
 
 // jobInput is music's and video's create input, merged.
 type jobInput struct {
-	Prompt      string
-	Lyrics      string
-	Seconds     float64
-	Size        string
-	AspectRatio string
-	Image       *llmc.File
-	Options     llmc.Options
+	Prompt      string       `json:"prompt"`
+	Lyrics      string       `json:"lyrics,omitempty"`
+	Seconds     float64      `json:"seconds,omitempty"`
+	Size        string       `json:"size,omitempty"`
+	AspectRatio string       `json:"aspectRatio,omitempty"`
+	Image       *llmc.File   `json:"image,omitempty"`
+	Options     llmc.Options `json:"options,omitempty"`
 }
 
 func newDriver(p Provider) (driver, error) {

@@ -46,11 +46,11 @@ func checkText(in textv1.CompleteInput) error {
 	return nil
 }
 
-func (s textService) answer(ctx context.Context, a extkit.Auth, in textv1.CompleteInput, onDelta func(text, reasoning string) bool) (textv1.CompleteResult, error) {
+func (s textService) answer(ctx context.Context, a extkit.Auth, op string, in textv1.CompleteInput, onDelta func(text, reasoning string) bool) (textv1.CompleteResult, error) {
 	if err := checkText(in); err != nil {
 		return textv1.CompleteResult{}, err
 	}
-	t, err := s.r.begin(ctx, a, llmc.KindText, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindText, op, in.Model, &in)
 	if err != nil {
 		return textv1.CompleteResult{}, err
 	}
@@ -101,19 +101,21 @@ func (s textService) enrich(ctx context.Context, in textv1.CompleteInput) (textv
 }
 
 func (s textService) Complete(ctx context.Context, a extkit.Auth, in textv1.CompleteInput) (textv1.CompleteResult, error) {
-	return s.answer(ctx, a, in, nil)
+	return s.answer(ctx, a, "complete", in, nil)
 }
 
 func (s textService) Stream(ctx context.Context, a extkit.Auth, in textv1.CompleteInput) (extkit.Stream, error) {
 	if err := checkText(in); err != nil {
 		return extkit.Stream{}, err
 	}
-	if _, err := s.r.begin(ctx, a, llmc.KindText, in.Model); err != nil {
-		return extkit.Stream{}, err // before the stream starts, as a plain error (a limit included)
+	// only the model is checked here: the limits run where the answer does, off the JS VM (a $llm.onCall handler run
+	// here, when page code starts a stream, would wait for its own VM)
+	if _, err := s.r.resolve(llmc.KindText, in.Model); err != nil {
+		return extkit.Stream{}, err // before the stream starts, as a plain error
 	}
 	subject := llmc.SubjectOf(ctx)
 	return extkit.Stream{Run: func(ctx context.Context, send func(any) error) error {
-		res, err := s.answer(llmc.WithSubject(ctx, subject), a, in, func(text, reasoning string) bool {
+		res, err := s.answer(llmc.WithSubject(ctx, subject), a, "stream", in, func(text, reasoning string) bool {
 			if text == "" && reasoning == "" {
 				return true
 			}
@@ -144,11 +146,11 @@ type imageService struct{ r *router }
 
 var _ imagev1.Image = imageService{}
 
-func (s imageService) run(ctx context.Context, a extkit.Auth, in imagev1.GenerateInput, edit []llmc.File) (imagev1.Result, error) {
+func (s imageService) run(ctx context.Context, a extkit.Auth, op string, in imagev1.GenerateInput, edit []llmc.File) (imagev1.Result, error) {
 	if strings.TrimSpace(in.Prompt) == "" {
 		return imagev1.Result{}, badInput("give a prompt")
 	}
-	t, err := s.r.begin(ctx, a, llmc.KindImage, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindImage, op, in.Model, &in)
 	if err != nil {
 		return imagev1.Result{}, err
 	}
@@ -165,14 +167,14 @@ func (s imageService) run(ctx context.Context, a extkit.Auth, in imagev1.Generat
 }
 
 func (s imageService) Generate(ctx context.Context, a extkit.Auth, in imagev1.GenerateInput) (imagev1.Result, error) {
-	return s.run(ctx, a, in, nil)
+	return s.run(ctx, a, "generate", in, nil)
 }
 
 func (s imageService) Edit(ctx context.Context, a extkit.Auth, in imagev1.EditInput) (imagev1.Result, error) {
 	if len(in.Images) == 0 {
 		return imagev1.Result{}, badInput("give the images to edit")
 	}
-	return s.run(ctx, a, in.GenerateInput, in.Images)
+	return s.run(ctx, a, "edit", in.GenerateInput, in.Images)
 }
 
 func (s imageService) Models(ctx context.Context, _ extkit.Auth, in llmc.ModelsInput) (llmc.Models, error) {
@@ -187,7 +189,7 @@ func (s speechService) Speak(ctx context.Context, a extkit.Auth, in speechv1.Spe
 	if strings.TrimSpace(in.Text) == "" {
 		return speechv1.Result{}, badInput("give the text to say")
 	}
-	t, err := s.r.begin(ctx, a, llmc.KindSpeech, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindSpeech, "speak", in.Model, &in)
 	if err != nil {
 		return speechv1.Result{}, err
 	}
@@ -224,7 +226,7 @@ func (s transcribeService) Transcribe(ctx context.Context, a extkit.Auth, in tra
 	if len(in.Audio.Data) == 0 {
 		return transcribev1.Result{}, badInput("give the audio's data")
 	}
-	t, err := s.r.begin(ctx, a, llmc.KindTranscribe, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindTranscribe, "transcribe", in.Model, &in)
 	if err != nil {
 		return transcribev1.Result{}, err
 	}
@@ -249,7 +251,7 @@ func (s embedService) Embed(ctx context.Context, a extkit.Auth, in embedv1.Embed
 	if len(in.Input) == 0 {
 		return embedv1.Result{}, badInput("give the texts to embed")
 	}
-	t, err := s.r.begin(ctx, a, llmc.KindEmbed, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindEmbed, "embed", in.Model, &in)
 	if err != nil {
 		return embedv1.Result{}, err
 	}
@@ -285,7 +287,7 @@ func (s alignService) Align(ctx context.Context, a extkit.Auth, in alignv1.Align
 	default:
 		return alignv1.Result{}, badInput(`mode must be "speech" or "lyrics"`)
 	}
-	t, err := s.r.begin(ctx, a, llmc.KindAlign, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindAlign, "align", in.Model, &in)
 	if err != nil {
 		return alignv1.Result{}, err
 	}
@@ -312,7 +314,7 @@ func (s jobService) create(ctx context.Context, a extkit.Auth, model, wait strin
 	if strings.TrimSpace(in.Prompt) == "" {
 		return llmc.Job{}, badInput("give a prompt")
 	}
-	t, err := s.r.begin(ctx, a, s.kind, model)
+	t, err := s.r.begin(ctx, a, s.kind, "create", model, &in)
 	if err != nil {
 		return llmc.Job{}, err
 	}

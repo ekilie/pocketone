@@ -86,31 +86,53 @@ func (r *router) resolve(kind, ref string) (target, error) {
 	return target{p: p, d: d, model: model}, nil
 }
 
-// begin starts a billable call: it resolves ref, works out whom the call is for (the subject its context carries,
-// else the auth record a request came with) and checks the limits in Settings → LLM. A refused call gets a ledger row
-// saying why and never reaches the provider.
-func (r *router) begin(ctx context.Context, a extkit.Auth, kind, ref string) (target, error) {
-	t, err := r.resolve(kind, ref)
+// errNoNext refuses a call whose OnCall chain stopped without refusing: a handler that didn't call e.Next().
+var errNoNext = &extkit.Error{Code: llmc.ErrLimit.Code, Status: llmc.ErrLimit.Status,
+	Message: "a limits handler ($llm.onCall) didn't call e.next(), so the call was refused"}
+
+// begin starts a billable call: it works out whom the call is for (the subject its context carries, else the auth
+// record a request came with), runs the OnCall hook (custom handlers, then the limits in Settings → LLM), and resolves
+// the model the handlers settled on. in points to the operation's input, which handlers may change. A refused call
+// gets a ledger row saying why and never reaches the provider.
+func (r *router) begin(ctx context.Context, a extkit.Auth, kind, op, ref string, in any) (target, error) {
+	subject := llmc.SubjectOf(ctx)
+	if subject == "" && a.Kind == "record" && a.Collection != "" {
+		subject = llmc.UserSubject(a.Collection, a.RecordID)
+	}
+	e := &llmc.CallEvent{App: r.app, Context: ctx, Kind: kind, Op: op, Model: ref, Subject: subject, Input: in, Auth: a}
+	reached := false
+	err := llmc.OnCall(r.app).Trigger(e, func(e *llmc.CallEvent) error {
+		reached = true
+		return e.Next()
+	})
+	if err == nil && !reached {
+		err = errNoNext
+	}
 	if err != nil {
-		return target{}, err
-	}
-	c := &call{kind: kind, model: t.ref(), subject: llmc.SubjectOf(ctx), via: a.Via}
-	if c.subject == "" && a.Kind == "record" && a.Collection != "" {
-		c.subject = llmc.UserSubject(a.Collection, a.RecordID)
-	}
-	s, err := r.settings()
-	if err != nil {
-		return target{}, err
-	}
-	if err := r.admit(ctx, s.Limits, c); err != nil {
 		var xe *extkit.Error
 		if errors.As(err, &xe) && xe.Code == llmc.ErrLimit.Code {
-			r.record(ctx, c, llmc.Usage{}, xe.Message)
+			r.record(ctx, &call{kind: kind, op: op, model: e.Model, subject: e.Subject, via: a.Via}, llmc.Usage{}, xe.Message)
 		}
 		return target{}, err
 	}
-	t.c = c
+	t, err := r.resolve(kind, e.Model)
+	if err != nil {
+		return target{}, err
+	}
+	t.c = &call{kind: kind, op: op, model: t.ref(), subject: e.Subject, via: a.Via}
 	return t, nil
+}
+
+// limitsHandler is the limits in Settings → LLM as an OnCall handler.
+func (r *router) limitsHandler(e *llmc.CallEvent) error {
+	s, err := r.settings()
+	if err != nil {
+		return err
+	}
+	if err := r.admit(e.Context, s.Limits, &call{kind: e.Kind, model: e.Model, subject: e.Subject}, e.GuestsCapped); err != nil {
+		return err
+	}
+	return e.Next()
 }
 
 // fingerprint keys a provider's cached list: a change to anything that reaches it lists again.

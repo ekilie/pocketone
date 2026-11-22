@@ -11,6 +11,7 @@ import (
 	"io/fs"
 
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
+	"ganigeorgiev.com/pocketbase/pocketbase/tools/hook"
 
 	llmc "pocketone.dev/ext/contracts/llm"
 	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
@@ -66,6 +67,8 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 		return se.Next()
 	})
 	settingsv1.Add(app, settingsSection{r: r})
+	// the limits in Settings → LLM: the built-in limits middleware, after custom handlers
+	llmc.OnCall(app).Bind(&hook.Handler[*llmc.CallEvent]{Id: llmc.LimitsHandlerID, Priority: llmc.LimitsPriority, Func: r.limitsHandler})
 	// the ledger keeps 13 months
 	app.Cron().MustAdd("__llmLedgerPrune__", "41 3 * * *", func() {
 		if err := pruneLedger(app); err != nil {
