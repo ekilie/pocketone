@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -52,7 +53,8 @@ func tokens(s string) int { return (len(s) + 3) / 4 }
 // piece is one chunk before it's stored.
 type piece struct {
 	Heading    string
-	Start, End int // 1-based lines, inclusive
+	Anchor     string // the id of the section's heading (H2-H6), as a Markdown renderer gives it; "" for the top
+	Start, End int    // 1-based lines, inclusive
 	Text       string
 }
 
@@ -107,8 +109,12 @@ func splitMarkdown(lines []string) []piece {
 		return strings.Join(parts, " › ")
 	}
 	start, fence := from, ""
+	anchor, seen := "", map[string]bool{}
 	flush := func(end int) {
-		out = append(out, pack(heading(), paragraphs(lines, start, end))...)
+		for _, p := range pack(heading(), paragraphs(lines, start, end)) {
+			p.Anchor = anchor
+			out = append(out, p)
+		}
 	}
 	for i := from; i < len(lines); i++ {
 		t := strings.TrimSpace(lines[i])
@@ -128,6 +134,11 @@ func splitMarkdown(lines []string) []piece {
 		}
 		flush(i)
 		level := len(m[1])
+		if id := headingID(headingText(m[2]), seen); level > 1 {
+			anchor = id
+		} else {
+			anchor = ""
+		}
 		if len(stack) >= level {
 			stack = stack[:level-1]
 		}
@@ -248,4 +259,55 @@ func embedText(p piece) string {
 		return p.Text
 	}
 	return p.Heading + "\n\n" + p.Text
+}
+
+var (
+	mdImageRe = regexp.MustCompile(`!\[([^\]]*)\]\([^)]*\)`)
+	mdLinkRe  = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
+	mdTagRe   = regexp.MustCompile(`(?s)<[^>]+>`)
+)
+
+// headingText is a heading's plain text, as a Markdown renderer sees it for the heading's id: links and images as
+// their text, no tags, code marks or bold.
+func headingText(s string) string {
+	s = mdImageRe.ReplaceAllString(s, "$1")
+	s = mdLinkRe.ReplaceAllString(s, "$1")
+	s = mdTagRe.ReplaceAllString(s, "")
+	return strings.TrimSpace(strings.NewReplacer("`", "", "**", "", "__", "").Replace(s))
+}
+
+// headingID is goldmark's automatic heading id (what PocketOne's Pages and most Markdown sites render): ASCII letters,
+// digits and _ lowercased; a run of spaces and - becomes one -; the rest (non-ASCII too) drops; a repeat on the page
+// gets -1, -2, ...
+func headingID(text string, seen map[string]bool) string {
+	var b strings.Builder
+	for i := 0; i < len(text); i++ {
+		c := text[i]
+		switch {
+		case c >= 0x80:
+		case c >= 'A' && c <= 'Z':
+			b.WriteByte(c + 'a' - 'A')
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '_':
+			b.WriteByte(c)
+		case c == ' ' || c == '\t' || c == '-':
+			if !strings.HasSuffix(b.String(), "-") {
+				b.WriteByte('-')
+			}
+		}
+	}
+	id := b.String()
+	if id == "" {
+		id = "heading"
+	}
+	if !seen[id] {
+		seen[id] = true
+		return id
+	}
+	for i := 1; ; i++ {
+		n := id + "-" + strconv.Itoa(i)
+		if !seen[n] {
+			seen[n] = true
+			return n
+		}
+	}
 }

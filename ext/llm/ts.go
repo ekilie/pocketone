@@ -140,6 +140,10 @@ type LlmAPI = {
   addURL(o: { bucket: string; url: string; kind?: "page" | "git"; every?: "hour" | "day" | "week"; commits?: number; exclude?: string[] }): SearchSource
   /** Adds a collection: a document per record the filter keeps, kept in sync as records are saved and deleted. */
   follow(o: { bucket: string; collection: string; fields: string[]; filter?: string }): SearchSource
+  /** Adds a folder of the app's own files on the server (path relative to the app's folder: "pb_pages/docs"), read
+   * now and again every few minutes. url ("/docs/{path}") links each result to the page its file is published at, with
+   * the section's anchor. */
+  addFolder(o: { bucket: string; path: string; include?: string[]; exclude?: string[]; url?: string }): SearchSource
   /** Reads a source again now. */
   refresh(bucket: string, source: string): SearchSource
   /** Takes sources out of a bucket, with their documents. */
@@ -160,15 +164,15 @@ type LlmAPI = {
  * A call a limit refuses throws with code "limit" (429), naming the limit and when it resets.
  */
 declare var $llm: LlmAPI & {
-  for(e: core.RequestEvent | { event: core.RequestEvent }): LlmAPI
+  for(e: core.RequestEvent | { req: { event: core.RequestEvent } }): LlmAPI
 }
 
 type SearchBucket = { name: string; title: string; description: string; owner: string;
   maxDocuments: number; maxBytes: number; sources: number; documents: number; chunks: number; bytes: number; pending: number;
   errors: number; created: string; updated: string }
 
-type SearchSource = { bucket: string; name: string; kind: "file" | "text" | "folder" | "zip" | "page" | "git" | "collection";
-  url?: string; every?: "hour" | "day" | "week"; commits?: number; exclude?: string[];
+type SearchSource = { bucket: string; name: string; kind: "file" | "text" | "folder" | "dir" | "zip" | "page" | "git" | "collection";
+  url?: string; every?: "hour" | "day" | "week"; commits?: number; exclude?: string[]; path?: string; include?: string[]; pageURL?: string;
   collection?: string; fields?: string[]; filter?: string; hash?: string;
   status: "reading" | "ready" | "error"; error?: string; documents: number; chunks: number; bytes: number; pending: number;
   costMicroUSD: number; refreshed?: string; next?: string; created: string }
@@ -180,7 +184,9 @@ type SearchDocument = { bucket: string; source: string; name: string; kind: "mar
   costMicroUSD: number; created: string; updated: string }
 
 type SearchResult = { bucket: string; source: string; document: string; text: string; heading?: string; startLine: number;
-  endLine: number; record?: SearchRecordRef; score: number }
+  endLine: number; record?: SearchRecordRef;
+  /** where the passage is published: a web page's URL, or a server folder's url pattern with the section's anchor */
+  url?: string; score: number }
 
 type LlmChatOptions = {
   /** "provider/model": every send needs one, here or on the send. */

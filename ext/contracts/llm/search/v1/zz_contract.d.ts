@@ -135,6 +135,31 @@ declare namespace contracts.llm.search.v1 {
   }
 
   /**
+   * FolderInput is a folder of the app's files on the server.
+   */
+  interface FolderInput {
+    bucket: string;
+    /**
+     * Path is the folder, relative to the app's own folder (the one holding pb_data, pb_pages and pb_public); it can't
+     * leave that folder or be pb_data. "pb_pages/docs", say.
+     */
+    path: string;
+    /**
+     * Include keeps only files matching one of these patterns (against the file name or its path in the folder:
+     * "*.md"); none keeps every text file. Exclude leaves out matches, beside what's always skipped (dot folders and
+     * dotfiles, node_modules, vendor, lockfiles, binaries).
+     */
+    include: Array<string>;
+    exclude: Array<string>;
+    /**
+     * URL is where each file is published, with {path} for the file's path in the folder without its extension (an
+     * index file is its folder): "/docs/{path}" makes guides/install.md /docs/guides/install and guides/index.md
+     * /docs/guides. Results from Markdown files add their section's anchor (#heading-id). "" gives no links.
+     */
+    url: string;
+  }
+
+  /**
    * URLRef is a URL.
    */
   interface URLRef {
@@ -346,6 +371,17 @@ declare function onLlmSearchPrune(handler: (e: contracts.CallEvent<contracts.llm
  * @group PocketOne
  */
 declare function onLlmSearchAddURL(handler: (e: contracts.CallEvent<contracts.llm.search.v1.URLInput>) => void): void;
+/**
+ * AddFolder adds a folder of the app's own files on the server (named by its path, replacing one of that name):
+ * every text file in it, read in the background and read again every few minutes, so changed files are embedded
+ * again and removed ones leave. With URL, each result from it links to the page that file is published at.
+ *
+ * Runs on every add_folder call to llm.search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onLlmSearchAddFolder(handler: (e: contracts.CallEvent<contracts.llm.search.v1.FolderInput>) => void): void;
 /**
  * DetectURL says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any
  * host, with or without .git), otherwise as a web page.

@@ -101,6 +101,9 @@ $llm.search.addURL({ bucket: "help", url: "https://github.com/acme/help-articles
 
 // a collection: a document per published article, kept in sync as records are saved and deleted
 $llm.search.follow({ bucket: "help", collection: "articles", fields: ["title", "body"], filter: "published = true" })
+
+// a folder of the app's own files (your docs pages), read again every five minutes; each result links to its page
+$llm.search.addFolder({ bucket: "help", path: "pb_pages/docs", include: ["*.md"], url: "/docs/{path}" })
 ```
 
 Then look at what's there, and tidy up:
@@ -180,11 +183,12 @@ Every call is local and returns at once, except `searchAsync`.
 | `add({ bucket, name, text, replace? })` | A file or text as a source; `replace` names an older source a renamed version replaces. |
 | `addURL({ bucket, url, every?, kind?, commits?, exclude? })` | A web page or Git repository (`kind` is decided by asking the server); `every` is `hour`, `day` or `week`. |
 | `follow({ bucket, collection, fields, filter? })` | A collection; the first field is each record's title. |
+| `addFolder({ bucket, path, include?, exclude?, url? })` | A folder of the app's own files (`path` relative to the app's folder, never `pb_data`), read again every five minutes; `url` (`"/docs/{path}"`) links each result to its page and section. |
 | `refresh(bucket, source)` | Reads a source again now. |
 | `remove(bucket, sources)` | Takes sources out, with their documents. |
 | `documents(bucket \| { bucket, source?, prefix? })` | Documents, with their status and how many chunks are embedded. |
 | `status()` | The app's embedding model, and how many chunks are embedded of how many. |
-| `await searchAsync({ query, buckets?, limit?, prefix?, viewer? })` | Hybrid search across the buckets (all when none are named): `{ results: [{ bucket, source, document, heading, text, record, score }], model, usage }`. |
+| `await searchAsync({ query, buckets?, limit?, prefix?, viewer? })` | Hybrid search across the buckets (all when none are named): `{ results: [{ bucket, source, document, heading, text, record, url, score }], model, usage }`. |
 
 The same operations are the [llm.search/v1](../../../contracts/llm/search/v1/README.md) contract: over HTTP at
 `/api/_c/llm.search/v1/…` (a superuser, or an API token with the `search` scope), from Go with

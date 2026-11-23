@@ -503,7 +503,7 @@
         return body;
     }
 
-    const kindIcon = { file: "ri-file-text-line", text: "ri-text", folder: "ri-folder-line", zip: "ri-file-zip-line", page: "ri-global-line", git: "ri-git-branch-line", collection: "ri-database-2-line" };
+    const kindIcon = { file: "ri-file-text-line", text: "ri-text", folder: "ri-folder-line", dir: "ri-hard-drive-2-line", zip: "ri-file-zip-line", page: "ri-global-line", git: "ri-git-branch-line", collection: "ri-database-2-line" };
     const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString() : "");
 
     app.routes.superuserOnly("#/search/b/{name}", (route) => {

@@ -195,6 +195,7 @@ var jsPrelude = `(() => {
     add: (o) => sc("add", o),
     addURL: (o) => sc("add-url", o),
     follow: (o) => sc("follow", o),
+    addFolder: (o) => sc("add-folder", o),
     refresh: (bucket, source) => sc("refresh", { bucket, source }),
     remove: (bucket, list) => sc("remove", { bucket, sources: names(list) }).count,
     documents: (x) => sc("documents", typeof x === "string" ? { bucket: x } : x).documents,
