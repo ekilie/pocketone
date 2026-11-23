@@ -101,7 +101,7 @@ search sees everything, as your own server code does.
 
 ## Changing the model
 
-The Search screen shows the app's embedding model. Change it there and every bucket is embedded again in the
+**Settings** on the Search screen shows the app's embedding model. Change it there and every bucket is embedded again in the
 background, with its progress on the screen. Search keeps working meanwhile; parts not yet re-embedded are still found
 by their words.
 
