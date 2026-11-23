@@ -297,6 +297,9 @@ func docsPages(root string, s docsSite, generated map[string]string) (map[string
 	return out, nil
 }
 
+// includeRe matches an EJS include of a _private partial.
+var includeRe = regexp.MustCompile(`<%-\s*include\(\s*['"]([^'"]+)['"]\s*\)\s*%>`)
+
 // includeIn inlines `<%- include('name') %>` from the nearest _private folder, as the site does.
 func includeIn(root, pages, dir, content string) string {
 	return includeRe.ReplaceAllStringFunc(content, func(s string) string {

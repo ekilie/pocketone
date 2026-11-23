@@ -53,15 +53,18 @@ cd site/sync && go run .
   `pb_pages/(main)/docs/writing-a-plugin/`.
 - It also writes the extension index (`/docs/extensions`) and the extension part of the docs nav (between the markers in
   `pb_pages/(main)/_private/toc.md`).
-- It also writes the search index, `pb_pages/assets/search-index.json`: every docs and blog page, hand-written ones
-  included, one entry per H2-H4 section. **So after editing any page, run sync too.**
-- CI (`.github/workflows/site.yml`) runs `go test .` and `go run . --check`, and fails when a page or the index is out
-  of date.
+- CI (`.github/workflows/site.yml`) runs `go test .` and `go run . --check`, and fails when a page is out of date.
 
-## Search and comments
+## Ask and comments
 
-- **Search** (`pb_pages/assets/search.js`): the header button, `/` or Cmd/Ctrl-K opens a dialog that loads
-  [MiniSearch](https://lucaong.github.io/minisearch/) and the index the first time it's used. No external service.
+- **Ask** (`pb_pages/assets/ask.js`, `pb_pages/ask/+api.ts`, `pb_pages/_private/ask.ts`): the header button, `/` or
+  Cmd/Ctrl-K opens a box that answers a question from the docs, citing the pages it used. The pages come from an LLM
+  Search bucket, `docs`, which `_private/ask.ts` keeps in step with every page under `/docs` (checked at most every 10
+  minutes, on the next question; a changed page is embedded again, a removed one leaves). The answer is one `$llm`
+  call per question, for the visitor (`$llm.for`), with `ASK_MODEL` (see the file for the default). It needs an AI
+  provider with text and embedding models in **Settings → LLM** and a limit for **All guests together** (guest calls
+  are refused without one). A limit used up still leaves the matching pages listed. The same question asked again,
+  until the docs change, gets the stored answer.
 - **Comments** (`pb_pages/_private/docs-footer.js`, `pb_pages/assets/docs.js`): each docs page ends with a
   [giscus](https://giscus.app) box backed by GitHub Discussions (the Q&A category of pocketonehq/pocketone). A page's
   thread is found by an exact term, not its URL: `pocketone.dev/docs/plugins/<name>` (the pre-rename URL, so old threads follow) for an extension and its guides,

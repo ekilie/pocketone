@@ -1412,7 +1412,7 @@
   }
 }
 
-/* Search: the header button and the dialog (assets/search.js) */
+/* The ask box: the header button and the dialog (assets/ask.js) */
 @layer components {
   .search-btn {
     display: flex;
@@ -1535,6 +1535,71 @@
     color: var(--muted);
     &:empty {
       display: none;
+    }
+  }
+  .ask-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    & .search-results {
+      overflow: visible;
+    }
+    &:has(.search-status:empty):has(.ask-answer:empty):has(.search-results:empty) {
+      display: none;
+    }
+  }
+  .ask-answer {
+    padding: 0.75rem 1.25rem 0;
+    font-size: 0.9375rem;
+    &:empty {
+      display: none;
+    }
+    & > :first-child {
+      margin-top: 0;
+    }
+    & pre {
+      font-size: 0.8125rem;
+    }
+    & .cite {
+      display: inline-block;
+      min-width: 1.15rem;
+      margin-left: 0.15rem;
+      padding: 0 0.3rem;
+      border-radius: var(--radius-sm);
+      background: color-mix(in oklab, var(--color-primary) 14%, transparent);
+      color: var(--color-primary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.4;
+      text-align: center;
+      text-decoration: none;
+      vertical-align: 0.15em;
+      &:hover {
+        background: color-mix(in oklab, var(--color-primary) 26%, transparent);
+      }
+    }
+    & .ask-note {
+      color: var(--muted);
+    }
+    & .ask-caret {
+      color: var(--faint);
+    }
+  }
+  .ask-more {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.8125rem;
+    color: var(--faint);
+    &[hidden] {
+      display: none;
+    }
+    & a {
+      font-weight: 600;
     }
   }
 }
