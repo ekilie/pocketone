@@ -10,7 +10,7 @@ import (
 
 	llmc "pocketone.dev/ext/contracts/llm"
 	chatv1 "pocketone.dev/ext/contracts/llm/chat/v1"
-	searchv1 "pocketone.dev/ext/contracts/search/v1"
+	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	"pocketone.dev/ext/extkit"
 	llmchat "pocketone.dev/ext/llm-chat"
 )
@@ -28,7 +28,7 @@ type fakeSearchExt struct{}
 
 func (fakeSearchExt) Name() string { return "fake-search" }
 func (fakeSearchExt) Contracts() extkit.Contracts {
-	return extkit.Contracts{Implements: extkit.IDs("search/v1")}
+	return extkit.Contracts{Implements: extkit.IDs("llm.search/v1")}
 }
 func (fakeSearchExt) Register(app core.App, _ extkit.Config) error {
 	searchv1.Contract.Provide(app, fakeSearch{})

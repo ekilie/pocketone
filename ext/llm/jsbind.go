@@ -15,6 +15,7 @@ import (
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
+	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	transcribev1 "pocketone.dev/ext/contracts/llm/transcribe/v1"
@@ -38,6 +39,13 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		llmc.KindMusic:      invoker(app, musicv1.Contract, musicv1.W),
 		llmc.KindVideo:      invoker(app, videov1.Contract, videov1.W),
 		llmc.KindEmbed:      invoker(app, embedv1.Contract, embedv1.W),
+		// $llm.search: whoever provides llm.search/v1 (the llm-search extension); ext/llm imports only the contract
+		"search": func(op string, raw json.RawMessage) (any, error) {
+			if _, ok := searchv1.Contract.Of(app); !ok {
+				return nil, searchv1.ErrNoSearch
+			}
+			return invoker(app, searchv1.Contract, searchv1.W)(op, raw)
+		},
 	}
 	n := rt.NewObject()
 	// call(kind, op, opts): any operation that answers JSON; the prelude calls it with .async
@@ -166,6 +174,32 @@ var jsPrelude = `(() => {
     getAsync: (id) => callAsync(kind, "get", { id }),
     contentAsync: (id, index) => callAsync(kind, "content", { id, index: index ?? 0 }),
     modelsAsync: modelsAsync(kind),
+  });
+  // $llm.search: buckets of the app's content (llm.search/v1). Only searchAsync reaches a provider (it embeds the query).
+  const sc = (op, o) => J(n.call("search", op, S(o)));
+  const ref = (x) => (typeof x === "string" ? { name: x } : x);
+  const names = (x) => (x == null ? [] : [].concat(x));
+  const searchQuery = (o) => {
+    const q = { ...o };
+    if (typeof q.buckets === "string") q.buckets = [q.buckets];
+    if ("viewer" in q) q.viewer = enrichOf({ viewer: q.viewer }).viewer;
+    return q;
+  };
+  const search = Object.freeze({
+    buckets: () => sc("buckets").buckets,
+    bucket: (name) => sc("bucket", ref(name)),
+    ensure: (o) => sc("ensure", ref(o)),
+    update: (o) => sc("update", o),
+    deleteBucket: (name) => sc("delete", ref(name)).count,
+    sources: (bucket) => sc("sources", { bucket }).sources,
+    add: (o) => sc("add", o),
+    addURL: (o) => sc("add-url", o),
+    follow: (o) => sc("follow", o),
+    refresh: (bucket, source) => sc("refresh", { bucket, source }),
+    remove: (bucket, list) => sc("remove", { bucket, sources: names(list) }).count,
+    documents: (x) => sc("documents", typeof x === "string" ? { bucket: x } : x).documents,
+    status: () => sc("status"),
+    searchAsync: (o) => callAsync("search", "search", searchQuery(o)),
   });` + streamPrelude + chatPrelude + `
   return Object.freeze({
     text: Object.freeze({
@@ -195,6 +229,7 @@ var jsPrelude = `(() => {
     file: (f) => n.file(S(f), false),
     fileAsync: (f) => n.file.async(S(f), true),
     chat,
+    search,
   });
   };
   const base = build("");

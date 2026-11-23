@@ -9,8 +9,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/tests"
 
 	llmc "pocketone.dev/ext/contracts/llm"
+	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
-	searchv1 "pocketone.dev/ext/contracts/search/v1"
 	"pocketone.dev/ext/extkit"
 	"pocketone.dev/ext/llm"
 )
@@ -32,7 +32,7 @@ type fakeSearchExt struct{ f *fakeSearch }
 
 func (fakeSearchExt) Name() string { return "fake-search" }
 func (fakeSearchExt) Contracts() extkit.Contracts {
-	return extkit.Contracts{Implements: extkit.IDs("search/v1")}
+	return extkit.Contracts{Implements: extkit.IDs("llm.search/v1")}
 }
 func (x fakeSearchExt) Register(app core.App, _ extkit.Config) error {
 	searchv1.Contract.Provide(app, x.f)

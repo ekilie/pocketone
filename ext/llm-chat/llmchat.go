@@ -18,8 +18,8 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"pocketone.dev/ext/contracts/llm"
 	chatv1 "pocketone.dev/ext/contracts/llm/chat/v1"
+	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
-	searchv1 "pocketone.dev/ext/contracts/search/v1"
 	"pocketone.dev/ext/extkit"
 )
 
@@ -48,7 +48,7 @@ func (*Extension) Name() string { return Name }
 
 // Contracts implements extkit.Declarer: it answers with llm.text/v1, so it needs a provider of it (ext/llm).
 func (*Extension) Contracts() extkit.Contracts {
-	return extkit.Contracts{Implements: extkit.IDs("llm.chat/v1"), Requires: extkit.IDs("llm.text/v1"), WorksWith: extkit.IDs("search/v1")}
+	return extkit.Contracts{Implements: extkit.IDs("llm.chat/v1"), Requires: extkit.IDs("llm.text/v1"), WorksWith: extkit.IDs("llm.search/v1")}
 }
 
 // Register implements extkit.Extension.

@@ -171,6 +171,7 @@ require (
 	pocketone.dev/ext/kv v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/llm v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/llm-chat v0.0.0-00010101000000-000000000000 // indirect
+	pocketone.dev/ext/llm-search v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/mcp v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/multisite v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/pages v0.0.0-00010101000000-000000000000 // indirect
@@ -180,7 +181,6 @@ require (
 	pocketone.dev/ext/s3-fallback v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/s3redirect v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/sandbox v0.0.0-00010101000000-000000000000 // indirect
-	pocketone.dev/ext/search v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/settings v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/templates v0.0.0-00010101000000-000000000000 // indirect
 	pocketone.dev/ext/uicache v0.0.0-00010101000000-000000000000 // indirect
@@ -197,4 +197,4 @@ replace pocketone.dev/ext/llm-chat => ../../llm-chat
 
 replace pocketone.dev/ext/kv => ../../kv
 
-replace pocketone.dev/ext/search => ../../search
+replace pocketone.dev/ext/llm-search => ../../llm-search

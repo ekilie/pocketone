@@ -12,11 +12,11 @@ import (
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
+	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	transcribev1 "pocketone.dev/ext/contracts/llm/transcribe/v1"
 	videov1 "pocketone.dev/ext/contracts/llm/video/v1"
-	searchv1 "pocketone.dev/ext/contracts/search/v1"
 	"pocketone.dev/ext/extkit"
 )
 
