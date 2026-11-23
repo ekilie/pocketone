@@ -1,0 +1,78 @@
+---
+title: Realtime API
+description: Subscribe to record changes over server-sent events - connect, choose collections or single records, pass a filter, and get each create, update and delete as it happens.
+---
+
+# Realtime API
+
+Realtime sends record changes to clients as they happen, over [server-sent
+events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events). A client connects once, says what it
+wants to hear about, and gets an event for each create, update and delete that its auth may see.
+
+The JS SDK does all of this with `pb.collection("posts").subscribe("*", callback)`. Underneath, it's two endpoints.
+
+## Connect
+
+`GET /api/realtime`
+
+Opens the event stream. The first event is `PB_CONNECT`, with the client's id:
+
+```
+id:r8vS3kq9vZ0W1x7yBqA2nC5d
+event:PB_CONNECT
+data:{"clientId":"r8vS3kq9vZ0W1x7yBqA2nC5d"}
+```
+
+Keep the connection open. The server closes one that has had no events for 5 minutes, and any connection after 30
+minutes; reconnect when it closes (the SDK does, and subscribes again).
+
+## Subscribe
+
+`POST /api/realtime`
+
+| Body | |
+|---|---|
+| `clientId` | the id from `PB_CONNECT` |
+| `subscriptions` | the topics to hear about; replaces the client's current ones (send `[]` to stop) |
+
+Send the client's `Authorization` header with this request: its events are checked against that auth.
+
+| Topic | Gets |
+|---|---|
+| `posts/*` | every change to any `posts` record the client may list |
+| `posts/RECORD_ID` | changes to that one record, if the client may view it |
+| `posts/*?options={"query":{"filter":"published=true"}}` | the same, narrowed by a filter (and `expand`, `fields`) |
+
+```bash
+curl -X POST http://127.0.0.1:8090/api/realtime \
+  -H "Authorization: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": "r8vS3kq9vZ0W1x7yBqA2nC5d", "subscriptions": ["posts/*"]}'
+```
+
+Answers `204`.
+
+## Events
+
+Each change arrives as an event named for the topic it matched:
+
+```
+event:posts/*
+data:{"action":"create","record":{"collectionName":"posts","id":"bxt6kzt400873g5","title":"Hello World!"}}
+```
+
+`action` is `create`, `update` or `delete`. The record is shaped as the Records API would answer it, for this client:
+hidden fields left out, [onRecordEnrich](/docs/hooks) applied.
+
+Which events a client gets follows the collection's rules: **list** for `collection/*` topics, **view** for a single
+record's topic. A client never hears about a record it couldn't fetch.
+
+## Your own messages
+
+Hooks can send any message to subscribed clients, on topics of your own: see `$app.subscriptionsBroker()` in the
+[JavaScript API](/docs/reference/javascript/pocketbase/subscriptions) and the realtime hooks in [Hooks](/docs/hooks#the-apps-own-events).
+
+## Next
+
+- [Records API](/docs/rest/records): fetch what changed.
+- [API rules and filters](/docs/api-rules): what each client may hear about.

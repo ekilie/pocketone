@@ -58,6 +58,19 @@
 
 # REST API
 
+- [Overview](/docs/rest)
+- [Records](/docs/rest/records)
+- [Authentication](/docs/rest/authentication)
+- [Realtime](/docs/rest/realtime)
+- [Files](/docs/rest/files)
+- [Batch](/docs/rest/batch)
+- [Collections](/docs/rest/collections)
+- [Settings](/docs/rest/settings)
+- [Logs](/docs/rest/logs)
+- [Crons](/docs/rest/crons)
+- [Backups](/docs/rest/backups)
+- [SQL](/docs/rest/sql)
+- [Health](/docs/rest/health)
 - [Extension APIs](/docs/reference/rest)
 
 # Reference

@@ -1,0 +1,26 @@
+---
+title: Health API
+description: Check whether the app is up, for load balancers, uptime monitors and deploy scripts.
+---
+
+# Health API
+
+`GET /api/health`
+
+Answers `200` while the app is serving. Anyone may call it, so it suits load balancers and uptime checks.
+
+```json
+{ "code": 200, "message": "API is healthy.", "data": {} }
+```
+
+With a superuser's token, `data` also has:
+
+| Key | Is |
+|---|---|
+| `canBackup` | `false` while a backup or restore is running |
+| `realIP` | the client IP the app sees |
+| `possibleProxyHeader` | a proxy header the request carried that the app isn't set to trust (set **Settings → Trusted proxy**) |
+
+## Next
+
+- [Run on a Linux server](/docs/guides/linux-server): running the app behind a proxy.

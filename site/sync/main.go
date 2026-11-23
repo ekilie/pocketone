@@ -339,6 +339,9 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	if err := fieldsInPage(root, out); err != nil {
 		return nil, err
 	}
+	if err := checkRESTCoverage(root); err != nil {
+		return nil, err
+	}
 	for _, r := range jsRefs(m) {
 		out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(m, r, allGo)
 	}
