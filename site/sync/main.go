@@ -328,6 +328,12 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	out[referenceOut+"/cli.md"] = cliReference(m)
 	out[referenceOut+"/rest.md"] = restReference(m)
 	out[referenceOut+"/mcp.md"] = mcpReference(m)
+	if refs := jsRefs(m); len(refs) > 0 {
+		out[referenceOut+"/javascript.md"] = jsIndex(m)
+		for _, r := range refs {
+			out[referenceOut+"/javascript/"+r.Extension+".md"] = jsPage(m, r)
+		}
+	}
 
 	for _, c := range m.contracts {
 		body, title, err := rw.page(c.Src, "")

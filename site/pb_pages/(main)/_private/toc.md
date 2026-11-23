@@ -41,6 +41,7 @@
 - [CLI](/docs/reference/cli)
 - [REST](/docs/reference/rest)
 - [MCP](/docs/reference/mcp)
+- [JavaScript API](/docs/reference/javascript)
 - [pocketone.yaml](/docs/config-reference)
 - [Folders](/docs/folders)
 - [Pages](/docs/extensions/pages)

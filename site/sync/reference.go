@@ -20,6 +20,7 @@ type reference struct {
 	Global    []flagRef     `json:"global"`
 	Commands  []commandRef  `json:"commands"`
 	Contracts []contractRef `json:"contracts"`
+	JS        []jsRef       `json:"js"`
 }
 
 type flagRef struct {
@@ -333,6 +334,7 @@ func extensionSurfaces(m *manifest, p *extension) string {
 		}
 		b.WriteString("\n")
 	}
+	b.WriteString(jsSurface(m, p.Name))
 	if b.Len() == 0 {
 		return ""
 	}

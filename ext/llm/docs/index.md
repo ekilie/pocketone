@@ -73,6 +73,8 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
 - [Users and guests](guides/users-and-guests.md): `$llm.for(ctx)`, so per-user and per-guest limits apply.
 - [Spend and the ledger](guides/spend.md): `$llm.ledger`: what's left of each limit, what someone spent, where the money goes.
 
+Every member of `$llm`, with its options and types, is in the [LLM JavaScript API](/docs/reference/javascript/llm) reference, generated from the declarations your editor sees in `types.d.ts`.
+
 ## Thinking models
 
 Many models think before they answer, and their thinking counts toward `maxTokens`. For short jobs (a label, a title,
