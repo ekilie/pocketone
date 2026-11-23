@@ -54,7 +54,7 @@ type LlmModelsOpts = { provider?: string }
  * Every call that reaches a provider is async (its name ends in Async) and runs off the app's VM, so other requests keep
  * being served while a model works: await it in an async handler.
  */
-declare var $llm: {
+type LlmAPI = {
   text: {
     completeAsync(opts: LlmTextInput): Promise<LlmTextAnswer>
     /** Like completeAsync, calling onText with each piece of the answer as it's written (false stops it). */
@@ -121,6 +121,15 @@ declare var $llm: {
     /** Deletes every chat whose meta matches; returns how many. */
     forget(opts: { meta: Record<string, any> }): number
   }
+}
+
+/**
+ * Cloud models, as $llm. $llm.for(e) is the same API with every call counted for whom the request is for (its user,
+ * else its guest), so the limits in Settings → LLM can cap each user and each guest: pass a route's e or a page's ctx.
+ * A call a limit refuses throws with code "limit" (429), naming the limit and when it resets.
+ */
+declare var $llm: LlmAPI & {
+  for(e: core.RequestEvent | { event: core.RequestEvent }): LlmAPI
 }
 
 type LlmChatOptions = {

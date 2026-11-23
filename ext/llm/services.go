@@ -46,11 +46,11 @@ func checkText(in textv1.CompleteInput) error {
 	return nil
 }
 
-func (s textService) answer(ctx context.Context, in textv1.CompleteInput, onDelta func(text, reasoning string) bool) (textv1.CompleteResult, error) {
+func (s textService) answer(ctx context.Context, a extkit.Auth, in textv1.CompleteInput, onDelta func(text, reasoning string) bool) (textv1.CompleteResult, error) {
 	if err := checkText(in); err != nil {
 		return textv1.CompleteResult{}, err
 	}
-	t, err := s.r.resolve(llmc.KindText, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindText, in.Model)
 	if err != nil {
 		return textv1.CompleteResult{}, err
 	}
@@ -100,19 +100,20 @@ func (s textService) enrich(ctx context.Context, in textv1.CompleteInput) (textv
 	return in, passages, nil
 }
 
-func (s textService) Complete(ctx context.Context, _ extkit.Auth, in textv1.CompleteInput) (textv1.CompleteResult, error) {
-	return s.answer(ctx, in, nil)
+func (s textService) Complete(ctx context.Context, a extkit.Auth, in textv1.CompleteInput) (textv1.CompleteResult, error) {
+	return s.answer(ctx, a, in, nil)
 }
 
-func (s textService) Stream(_ context.Context, _ extkit.Auth, in textv1.CompleteInput) (extkit.Stream, error) {
+func (s textService) Stream(ctx context.Context, a extkit.Auth, in textv1.CompleteInput) (extkit.Stream, error) {
 	if err := checkText(in); err != nil {
 		return extkit.Stream{}, err
 	}
-	if _, err := s.r.resolve(llmc.KindText, in.Model); err != nil {
-		return extkit.Stream{}, err // before the stream starts, as a plain error
+	if _, err := s.r.begin(ctx, a, llmc.KindText, in.Model); err != nil {
+		return extkit.Stream{}, err // before the stream starts, as a plain error (a limit included)
 	}
+	subject := llmc.SubjectOf(ctx)
 	return extkit.Stream{Run: func(ctx context.Context, send func(any) error) error {
-		res, err := s.answer(ctx, in, func(text, reasoning string) bool {
+		res, err := s.answer(llmc.WithSubject(ctx, subject), a, in, func(text, reasoning string) bool {
 			if text == "" && reasoning == "" {
 				return true
 			}
@@ -143,11 +144,11 @@ type imageService struct{ r *router }
 
 var _ imagev1.Image = imageService{}
 
-func (s imageService) run(ctx context.Context, in imagev1.GenerateInput, edit []llmc.File) (imagev1.Result, error) {
+func (s imageService) run(ctx context.Context, a extkit.Auth, in imagev1.GenerateInput, edit []llmc.File) (imagev1.Result, error) {
 	if strings.TrimSpace(in.Prompt) == "" {
 		return imagev1.Result{}, badInput("give a prompt")
 	}
-	t, err := s.r.resolve(llmc.KindImage, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindImage, in.Model)
 	if err != nil {
 		return imagev1.Result{}, err
 	}
@@ -163,15 +164,15 @@ func (s imageService) run(ctx context.Context, in imagev1.GenerateInput, edit []
 	return res, nil
 }
 
-func (s imageService) Generate(ctx context.Context, _ extkit.Auth, in imagev1.GenerateInput) (imagev1.Result, error) {
-	return s.run(ctx, in, nil)
+func (s imageService) Generate(ctx context.Context, a extkit.Auth, in imagev1.GenerateInput) (imagev1.Result, error) {
+	return s.run(ctx, a, in, nil)
 }
 
-func (s imageService) Edit(ctx context.Context, _ extkit.Auth, in imagev1.EditInput) (imagev1.Result, error) {
+func (s imageService) Edit(ctx context.Context, a extkit.Auth, in imagev1.EditInput) (imagev1.Result, error) {
 	if len(in.Images) == 0 {
 		return imagev1.Result{}, badInput("give the images to edit")
 	}
-	return s.run(ctx, in.GenerateInput, in.Images)
+	return s.run(ctx, a, in.GenerateInput, in.Images)
 }
 
 func (s imageService) Models(ctx context.Context, _ extkit.Auth, in llmc.ModelsInput) (llmc.Models, error) {
@@ -182,11 +183,11 @@ type speechService struct{ r *router }
 
 var _ speechv1.Speech = speechService{}
 
-func (s speechService) Speak(ctx context.Context, _ extkit.Auth, in speechv1.SpeakInput) (speechv1.Result, error) {
+func (s speechService) Speak(ctx context.Context, a extkit.Auth, in speechv1.SpeakInput) (speechv1.Result, error) {
 	if strings.TrimSpace(in.Text) == "" {
 		return speechv1.Result{}, badInput("give the text to say")
 	}
-	t, err := s.r.resolve(llmc.KindSpeech, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindSpeech, in.Model)
 	if err != nil {
 		return speechv1.Result{}, err
 	}
@@ -219,11 +220,11 @@ type transcribeService struct{ r *router }
 
 var _ transcribev1.Transcribe = transcribeService{}
 
-func (s transcribeService) Transcribe(ctx context.Context, _ extkit.Auth, in transcribev1.TranscribeInput) (transcribev1.Result, error) {
+func (s transcribeService) Transcribe(ctx context.Context, a extkit.Auth, in transcribev1.TranscribeInput) (transcribev1.Result, error) {
 	if len(in.Audio.Data) == 0 {
 		return transcribev1.Result{}, badInput("give the audio's data")
 	}
-	t, err := s.r.resolve(llmc.KindTranscribe, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindTranscribe, in.Model)
 	if err != nil {
 		return transcribev1.Result{}, err
 	}
@@ -244,11 +245,11 @@ type embedService struct{ r *router }
 
 var _ embedv1.Embed = embedService{}
 
-func (s embedService) Embed(ctx context.Context, _ extkit.Auth, in embedv1.EmbedInput) (embedv1.Result, error) {
+func (s embedService) Embed(ctx context.Context, a extkit.Auth, in embedv1.EmbedInput) (embedv1.Result, error) {
 	if len(in.Input) == 0 {
 		return embedv1.Result{}, badInput("give the texts to embed")
 	}
-	t, err := s.r.resolve(llmc.KindEmbed, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindEmbed, in.Model)
 	if err != nil {
 		return embedv1.Result{}, err
 	}
@@ -272,7 +273,7 @@ type alignService struct{ r *router }
 
 var _ alignv1.Align = alignService{}
 
-func (s alignService) Align(ctx context.Context, _ extkit.Auth, in alignv1.AlignInput) (alignv1.Result, error) {
+func (s alignService) Align(ctx context.Context, a extkit.Auth, in alignv1.AlignInput) (alignv1.Result, error) {
 	if len(in.Audio.Data) == 0 {
 		return alignv1.Result{}, badInput("give the audio's data")
 	}
@@ -284,7 +285,7 @@ func (s alignService) Align(ctx context.Context, _ extkit.Auth, in alignv1.Align
 	default:
 		return alignv1.Result{}, badInput(`mode must be "speech" or "lyrics"`)
 	}
-	t, err := s.r.resolve(llmc.KindAlign, in.Model)
+	t, err := s.r.begin(ctx, a, llmc.KindAlign, in.Model)
 	if err != nil {
 		return alignv1.Result{}, err
 	}
@@ -307,11 +308,11 @@ type jobService struct {
 	kind string
 }
 
-func (s jobService) create(ctx context.Context, model, wait string, in jobInput) (llmc.Job, error) {
+func (s jobService) create(ctx context.Context, a extkit.Auth, model, wait string, in jobInput) (llmc.Job, error) {
 	if strings.TrimSpace(in.Prompt) == "" {
 		return llmc.Job{}, badInput("give a prompt")
 	}
-	t, err := s.r.resolve(s.kind, model)
+	t, err := s.r.begin(ctx, a, s.kind, model)
 	if err != nil {
 		return llmc.Job{}, err
 	}
@@ -320,9 +321,12 @@ func (s jobService) create(ctx context.Context, model, wait string, in jobInput)
 		return llmc.Job{}, providerError(t.p, err)
 	}
 	j.ID, j.Model = jobID(t.p, j.ID), t.ref()
+	t.c.job = j.ID // so get can fill in its cost once it's done
 	j, err = s.r.waitJob(ctx, t, s.kind, j, wait)
 	if err == nil && j.Status == llmc.JobDone {
 		s.r.fillCost(ctx, t, &j.Usage, used{files: len(j.Files)})
+	} else {
+		s.r.record(ctx, t.c, j.Usage, "") // counted as a call now; a job's cost is known only once it's done
 	}
 	return j, err
 }
@@ -337,6 +341,7 @@ func (s jobService) get(ctx context.Context, in llmc.JobRef) (llmc.Job, error) {
 		return llmc.Job{}, providerError(t.p, err)
 	}
 	j.ID = in.ID
+	s.r.settleJob(ctx, t, in.ID, &j)
 	return j, nil
 }
 
@@ -353,8 +358,8 @@ type musicService struct{ jobService }
 
 var _ musicv1.Music = musicService{}
 
-func (s musicService) Create(ctx context.Context, _ extkit.Auth, in musicv1.CreateInput) (llmc.Job, error) {
-	return s.create(ctx, in.Model, in.Wait, jobInput{Prompt: in.Prompt, Lyrics: in.Lyrics, Seconds: in.Seconds, Options: in.Options})
+func (s musicService) Create(ctx context.Context, a extkit.Auth, in musicv1.CreateInput) (llmc.Job, error) {
+	return s.create(ctx, a, in.Model, in.Wait, jobInput{Prompt: in.Prompt, Lyrics: in.Lyrics, Seconds: in.Seconds, Options: in.Options})
 }
 func (s musicService) Get(ctx context.Context, _ extkit.Auth, in llmc.JobRef) (llmc.Job, error) {
 	return s.get(ctx, in)
@@ -370,8 +375,8 @@ type videoService struct{ jobService }
 
 var _ videov1.Video = videoService{}
 
-func (s videoService) Create(ctx context.Context, _ extkit.Auth, in videov1.CreateInput) (llmc.Job, error) {
-	return s.create(ctx, in.Model, in.Wait, jobInput{Prompt: in.Prompt, Seconds: in.Seconds, Size: in.Size, AspectRatio: in.AspectRatio,
+func (s videoService) Create(ctx context.Context, a extkit.Auth, in videov1.CreateInput) (llmc.Job, error) {
+	return s.create(ctx, a, in.Model, in.Wait, jobInput{Prompt: in.Prompt, Seconds: in.Seconds, Size: in.Size, AspectRatio: in.AspectRatio,
 		Image: in.Image, Options: in.Options})
 }
 func (s videoService) Get(ctx context.Context, _ extkit.Auth, in llmc.JobRef) (llmc.Job, error) {

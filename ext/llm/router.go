@@ -50,6 +50,7 @@ type target struct {
 	p     Provider
 	d     driver
 	model string // the provider's id
+	c     *call  // a billable call's ledger row, from begin; nil for lists and job lookups
 }
 
 // ref is the full "provider/model".
@@ -83,6 +84,33 @@ func (r *router) resolve(kind, ref string) (target, error) {
 		return target{}, err
 	}
 	return target{p: p, d: d, model: model}, nil
+}
+
+// begin starts a billable call: it resolves ref, works out whom the call is for (the subject its context carries,
+// else the auth record a request came with) and checks the limits in Settings → LLM. A refused call gets a ledger row
+// saying why and never reaches the provider.
+func (r *router) begin(ctx context.Context, a extkit.Auth, kind, ref string) (target, error) {
+	t, err := r.resolve(kind, ref)
+	if err != nil {
+		return target{}, err
+	}
+	c := &call{kind: kind, model: t.ref(), subject: llmc.SubjectOf(ctx), via: a.Via}
+	if c.subject == "" && a.Kind == "record" && a.Collection != "" {
+		c.subject = llmc.UserSubject(a.Collection, a.RecordID)
+	}
+	s, err := r.settings()
+	if err != nil {
+		return target{}, err
+	}
+	if err := r.admit(ctx, s.Limits, c); err != nil {
+		var xe *extkit.Error
+		if errors.As(err, &xe) && xe.Code == llmc.ErrLimit.Code {
+			r.record(ctx, c, llmc.Usage{}, xe.Message)
+		}
+		return target{}, err
+	}
+	t.c = c
+	return t, nil
 }
 
 // fingerprint keys a provider's cached list: a change to anything that reaches it lists again.

@@ -66,6 +66,12 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 		return se.Next()
 	})
 	settingsv1.Add(app, settingsSection{r: r})
+	// the ledger keeps 13 months
+	app.Cron().MustAdd("__llmLedgerPrune__", "41 3 * * *", func() {
+		if err := pruneLedger(app); err != nil {
+			app.Logger().Warn("llm: ledger prune failed", "error", err)
+		}
+	})
 	textv1.Contract.Provide(app, textService{r})
 	imagev1.Contract.Provide(app, imageService{r})
 	speechv1.Contract.Provide(app, speechService{r})

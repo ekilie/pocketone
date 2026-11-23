@@ -71,7 +71,7 @@ func streamStart(app core.App, kind, opts string) (string, error) {
 		if !ok {
 			return "", llmc.ErrNotConfigured
 		}
-		s, err = t.Stream(context.Background(), extkit.Internal, in)
+		s, err = t.Stream(subjectCtx(opts), extkit.Internal, in)
 	case "chat":
 		var in chatv1.SendInput
 		if err := json.Unmarshal([]byte(opts), &in); err != nil {
@@ -81,14 +81,14 @@ func streamStart(app core.App, kind, opts string) (string, error) {
 		if !ok {
 			return "", errNoChat
 		}
-		s, err = c.SendStream(context.Background(), extkit.Internal, in)
+		s, err = c.SendStream(subjectCtx(opts), extkit.Internal, in)
 	default:
 		return "", fmt.Errorf("$llm: no stream kind %q", kind)
 	}
 	if err != nil {
 		return "", err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(subjectCtx(opts)) // the answer's own calls count for the same subject
 	js := &jsStream{ch: make(chan textv1.Chunk, 1024), cancel: cancel, used: time.Now()}
 	b := make([]byte, 12)
 	_, _ = rand.Read(b)

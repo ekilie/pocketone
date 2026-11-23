@@ -63,6 +63,14 @@ one it was entered for (change a provider's endpoint and you enter its key again
 [key-value store](../kv/README.md), under the private name `_llm/settings` (only Go code reaches it; the kv/v1 API
 and `$kv` don't).
 
+Under the providers, **Limits** cap what the app spends: the whole app, each signed-in user, each guest or all guests
+together, at most so many US dollars, output tokens, input tokens or calls a UTC day or month, optionally for one kind
+or model. Every call passes them before it reaches a provider, and a used-up limit refuses it with code `limit` (429).
+Page code says whom a call is for with `$llm.for(ctx)` (a page's `ctx` or a route's `e`): its signed-in user, or else a
+guest told apart by a signed cookie. Guest calls are refused until there's a limit for all guests together. Every call
+is recorded in the `_llm_calls` collection, and the screen shows today's and this month's spend from it
+([Limits](docs/guides/limits.md), [Whom a call is for](docs/guides/whom.md), [Spend and the ledger](docs/guides/spend.md)).
+
 There's no pocketone.yaml configuration besides the switch: `llm: {enabled: false}` turns it off on a single app (on a
 host, an instance's `extensions.llm`), and with it `$llm` and the `llm.*` contracts.
 

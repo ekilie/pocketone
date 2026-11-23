@@ -53,7 +53,7 @@ func bindChatJS(app core.App, rt js.Runtime, n js.Object) {
 		if err := json.Unmarshal(raw, &in); err != nil {
 			return nil, err
 		}
-		return c.Send(ctx, extkit.Internal, in)
+		return c.Send(subjectCtx(raw), extkit.Internal, in)
 	}))
 	_ = n.Set("chatGet", call("chat.get", func(c chatv1.Chats, raw []byte) (any, error) {
 		return c.Get(ctx, extkit.Internal, chatv1.Ref{ID: string(raw)})
