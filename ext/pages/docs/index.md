@@ -1,6 +1,6 @@
 ---
 title: Pages
-section: Reference
+section: Web
 description: No-build, server-rendered multi-page apps for PocketOne. Pages is built into the pocketone binary as the pages extension.
 ---
 

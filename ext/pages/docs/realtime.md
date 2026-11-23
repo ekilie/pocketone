@@ -1,6 +1,8 @@
 ---
 title: Realtime Events
 description: Send realtime messages from pages with the realtime plugin, and receive them in the browser with the PocketBase JS SDK.
+section: Guides
+nav: "Push live updates to a page"
 ---
 
 # Realtime Events

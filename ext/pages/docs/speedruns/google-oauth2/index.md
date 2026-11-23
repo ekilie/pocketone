@@ -1,6 +1,8 @@
 ---
 title: 'Speedrun: Google OAuth2'
 description: Set up Google OAuth2 sign-in for a PocketOne app with the auth plugin.
+section: Guides
+nav: "Let users sign in with Google"
 ---
 
 # Google OAuth2 Setup Guide

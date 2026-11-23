@@ -134,10 +134,99 @@
     window.scrollBy(0, b.getBoundingClientRect().top - before)
   })
 
+  // On this page: an outline of the page's H2s (and the H3s under the one being read), built from #content after each
+  // swap. A sticky rail beside the article on wide screens, a box you open above it on narrow ones. Pages with more
+  // than 30 headings (the API references) get a filter that searches every H2 and H3. Shown when a page has 3+ H2s.
+  const wide = window.matchMedia('(width >= 80rem)')
+  let spyItems = []
+  const spy = () => {
+    if (!spyItems.length) return
+    let at = spyItems[0]
+    for (const it of spyItems) {
+      if (it.h.getBoundingClientRect().top > 96) break
+      at = it
+    }
+    for (const it of spyItems) {
+      it.a.classList.toggle('active', it === at)
+      if (it.sub) it.li.classList.toggle('open', it === at || it === at.parent)
+    }
+  }
+  const outline = () => {
+    const main = document.querySelector('.docs-main')
+    const content = document.getElementById('content')
+    if (!main || !content) return
+    let box = document.getElementById('page-outline')
+    const hs = [...content.querySelectorAll('h2[id], h3[id]')].filter((h) => !h.closest('details, .code-tabs'))
+    const key = location.pathname + '|' + hs.map((h) => h.id).join(',')
+    if (box && box.dataset.key === key) return
+    if (hs.filter((h) => h.tagName === 'H2').length < 3) {
+      box?.remove()
+      spyItems = []
+      return
+    }
+    if (!box) {
+      box = document.createElement('aside')
+      box.id = 'page-outline'
+      box.className = 'docs-outline'
+      box.setAttribute('aria-label', 'On this page')
+      main.prepend(box)
+    }
+    box.dataset.key = key
+    const details = document.createElement('details')
+    details.open = wide.matches
+    const summary = document.createElement('summary')
+    summary.textContent = 'On this page'
+    details.append(summary)
+    const list = document.createElement('ol')
+    spyItems = []
+    let parent = null
+    for (const h of hs) {
+      const li = document.createElement('li')
+      const a = document.createElement('a')
+      a.href = '#' + h.id
+      a.textContent = h.textContent.replace(/#\s*$/, '').trim()
+      a.target = '_self'
+      li.append(a)
+      const it = { h, a, li, parent: null }
+      if (h.tagName === 'H2' || !parent) {
+        it.sub = document.createElement('ol')
+        li.append(it.sub)
+        list.append(li)
+        parent = it
+      } else {
+        it.parent = parent
+        parent.sub.append(li)
+      }
+      spyItems.push(it)
+    }
+    if (hs.length > 30) {
+      const input = document.createElement('input')
+      input.type = 'search'
+      input.placeholder = 'Filter this page'
+      input.setAttribute('aria-label', 'Filter this page')
+      input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase()
+        box.classList.toggle('filtering', q !== '')
+        for (const it of spyItems) it.li.hidden = q !== '' && !it.a.textContent.toLowerCase().includes(q)
+        if (q) for (const it of spyItems) if (!it.li.hidden && it.parent) it.parent.li.hidden = false
+      })
+      details.append(input)
+    }
+    details.append(list)
+    box.replaceChildren(details)
+    spy()
+  }
+  window.addEventListener('scroll', () => requestAnimationFrame(spy), { passive: true })
+  wide.addEventListener('change', () => {
+    const d = document.querySelector('#page-outline details')
+    if (d) d.open = wide.matches
+  })
+
   const load = () => {
     markCurrent()
     groupCode()
     highlight()
+    outline()
     const title = document.getElementById('page-footer')?.dataset.title
     if (title && document.title !== title) document.title = title
     const slot = document.querySelector('[data-giscus-term]')
@@ -168,10 +257,13 @@
     if (/^\/docs\/extensions(\/|$)/.test(path)) return 'extensions'
     if (/^\/docs\/contracts(\/|$)/.test(path)) return 'contracts'
     if (/^\/docs\/examples(\/|$)/.test(path)) return 'examples'
+    if (/^\/docs\/reference\/javascript(\/|$)/.test(path)) return 'javascript'
+    if (/^\/docs\/reference\/go(\/|$)/.test(path)) return 'go'
     return ''
   }
-  // how deep a nav is: the main nav, a section (Contracts, Extensions, Example apps), an extension's own docs
-  const depth = (nav) => (nav === '' ? 0 : nav === 'contracts' || nav === 'extensions' || nav === 'examples' ? 1 : 2)
+  // how deep a nav is: the main nav, a section (Contracts, Extensions, Example apps, the API references), an extension's own docs
+  const sections = new Set(['contracts', 'extensions', 'examples', 'javascript', 'go'])
+  const depth = (nav) => (nav === '' ? 0 : sections.has(nav) ? 1 : 2)
   const current = toc?.dataset.nav || ''
   document.querySelectorAll('.docs-toc-navigation a[href^="/"]').forEach((a) => {
     const to = navOf(a.getAttribute('href'))

@@ -382,6 +382,32 @@ func (api *pbAPI) resolve() {
 // ---------------------------------------------------------------------------------------------------------------
 // Pages
 
+// coreFamilies split PocketBase's core package, far too big for one page, into a page per family of types, in the
+// JavaScript and the Go reference alike; the rest (App, BaseApp, helpers) stays on core's own page.
+var coreFamilies = []struct{ Slug, Title string }{
+	{"records", "Records and collections"}, {"fields", "Fields"}, {"events", "Events"}, {"settings", "Settings"},
+}
+
+var (
+	coreRecordsRe  = regexp.MustCompile(`^(Record|Collection|BaseModel|Model|ExternalAuth|MFA|OTP|AuthOrigin|Log|Param|BaseRecord)`)
+	coreSettingsRe = regexp.MustCompile(`Config|Settings|Options$`)
+)
+
+// coreFamily is the family page a core type is on ("" for core's own page).
+func coreFamily(name string) string {
+	switch {
+	case strings.Contains(name, "Event"):
+		return "events"
+	case strings.HasSuffix(name, "Field") || strings.HasPrefix(name, "Field"):
+		return "fields"
+	case coreSettingsRe.MatchString(name):
+		return "settings"
+	case coreRecordsRe.MatchString(name):
+		return "records"
+	}
+	return ""
+}
+
 // pbNSURL is a namespace's page.
 func pbNSURL(ns string) string { return pbJSURL + "/" + ns }
 
@@ -412,7 +438,13 @@ var pbIdentRe = regexp.MustCompile(`[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*`)
 
 func (api *pbAPI) typeURL(cur, id string) string {
 	if t := api.lookup(cur, id); t != nil && t.Call == nil && !strings.HasPrefix(t.Name, "_") {
-		return pbNSURL(t.NS) + "#" + gid(t.NS+"."+t.Name)
+		u := pbNSURL(t.NS)
+		if t.NS == "core" {
+			if f := coreFamily(t.Name); f != "" {
+				u += "/" + f
+			}
+		}
+		return u + "#" + gid(t.NS+"."+t.Name)
 	}
 	if !strings.Contains(id, ".") {
 		for _, t := range api.Top {
@@ -670,13 +702,22 @@ func (api *pbAPI) writeFields(b *strings.Builder, cur string, fields []apiEntry)
 }
 
 // pbNSPage is one namespace's page: its types, with their members.
-func pbNSPage(api pbAPI, ns string, gopkgs []goRefPackage) string {
+func pbNSPage(api pbAPI, ns string, gopkgs []goRefPackage, fam string) string {
 	var b strings.Builder
 	goPage := pbGoPage(ns, gopkgs)
-	desc := "The " + ns + " types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types."
-	b.WriteString(refFrontMatter(ns+" (JavaScript)", desc))
-	fmt.Fprintf(&b, "# %s\n\n", ns)
-	if goPage != "" {
+	title := ns
+	for _, f := range coreFamilies {
+		if f.Slug == fam {
+			title = ns + ": " + f.Title
+		}
+	}
+	desc := "The " + title + " types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types."
+	b.WriteString(refFrontMatter(title+" (JavaScript)", desc))
+	fmt.Fprintf(&b, "# %s\n\n", title)
+	if fam != "" {
+		fmt.Fprintf(&b, "Part of [core](%s), PocketBase's Go package `core` as JavaScript sees it. The same types in Go: [core: %s](%s).\n\n",
+			pbNSURL(ns), strings.TrimPrefix(title, ns+": "), goPage+"/"+fam)
+	} else if goPage != "" {
 		fmt.Fprintf(&b, "Types from PocketBase's Go package `%s`, as JavaScript sees them: you get these objects from "+
 			"[`$app` and the other globals](%s) and from hook events, and call their methods by their JS names "+
 			"(Go's `FindRecordById` is `findRecordById`). The same package in Go: [%s](%s).\n\n", ns, pbJSURL, ns, goPage)
@@ -684,9 +725,16 @@ func pbNSPage(api pbAPI, ns string, gopkgs []goRefPackage) string {
 		fmt.Fprintf(&b, "Types from the Go package `%s` (a library PocketBase builds on), as JavaScript sees them: they turn up "+
 			"as values of [PocketBase's types](%s) and of hook events.\n\n", ns, pbJSURL)
 	}
+	if ns == "core" && fam == "" {
+		b.WriteString("Its types are on five pages: this one (the app, `core.App`, and what doesn't fit elsewhere)")
+		for _, f := range coreFamilies {
+			fmt.Fprintf(&b, ", [%s](%s)", f.Title, pbNSURL(ns)+"/"+f.Slug)
+		}
+		b.WriteString(".\n\n")
+	}
 	for _, n := range api.NSOrder[ns] {
 		t := api.NS[ns][n]
-		if t.Call != nil || strings.HasPrefix(n, "_") {
+		if t.Call != nil || strings.HasPrefix(n, "_") || (ns == "core" && coreFamily(n) != fam) {
 			continue
 		}
 		fmt.Fprintf(&b, "## %s.%s\n\n", ns, n)
@@ -724,7 +772,12 @@ func pbJSPages(root string, gopkgs []goRefPackage) (map[string]string, []string)
 	pages := map[string]string{pbJSURL: pbGlobalsPage(api, gopkgs)}
 	nss := api.namespaces()
 	for _, ns := range nss {
-		pages[pbNSURL(ns)] = pbNSPage(api, ns, gopkgs)
+		pages[pbNSURL(ns)] = pbNSPage(api, ns, gopkgs, "")
+		if ns == "core" {
+			for _, f := range coreFamilies {
+				pages[pbNSURL(ns)+"/"+f.Slug] = pbNSPage(api, ns, gopkgs, f.Slug)
+			}
+		}
 	}
 	return pages, nss
 }

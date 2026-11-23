@@ -1,6 +1,8 @@
 ---
 title: 'HTMX Integration'
 description: 'Use HTMX with Pages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.'
+section: Guides
+nav: "Update pages live with htmx"
 ---
 
 # HTMX Integration with Pages

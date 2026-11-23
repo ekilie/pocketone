@@ -130,7 +130,7 @@ func TestParsePBTypes(t *testing.T) {
 		t.Error("dbx.and not read as a function")
 	}
 
-	if h := api.typeHTML("core", "Array<Record>|null"); !strings.Contains(h, `<a href="/docs/reference/javascript/pocketbase/core#corerecord">Record</a>`) ||
+	if h := api.typeHTML("core", "Array<Record>|null"); !strings.Contains(h, `<a href="/docs/reference/javascript/pocketbase/core/records#corerecord">Record</a>`) ||
 		strings.Contains(h, "|") || !strings.Contains(h, "&lt;") {
 		t.Errorf("typeHTML = %s", h)
 	}
@@ -146,7 +146,7 @@ func TestParsePBTypes(t *testing.T) {
 			t.Errorf("globals page lacks %q", want)
 		}
 	}
-	ns := pbNSPage(api, "core", nil)
+	ns := pbNSPage(api, "core", nil, "records")
 	for _, want := range []string{"## core.Record", "Has everything", "corebasemodel", "`getString()`", "`collection()`"} {
 		if !strings.Contains(ns, want) {
 			t.Errorf("core page lacks %q", want)

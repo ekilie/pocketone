@@ -26,8 +26,9 @@ const goRefRoot = "ext/contracts"
 // goRefPackage is one package's page: its import path, name and rendered sections.
 type goRefPackage struct {
 	Dir, Import, Name, Synopsis string
-	URL                         string // its page
-	PocketBase                  bool   // one of PocketBase's own packages, not a contract
+	URL                         string            // its page
+	Extra                       map[string]string // more pages of it, by URL (core's families)
+	PocketBase                  bool              // one of PocketBase's own packages, not a contract
 	Page                        string
 }
 
@@ -160,6 +161,23 @@ func goRefRead(root, dir, importPath, url string) (goRefPackage, bool) {
 		return goRefPackage{}, false
 	}
 	gp := goRefPackage{Dir: dir, Import: importPath, Name: pkg.Name, Synopsis: pkg.Synopsis(pkg.Doc), URL: url}
+	split := dir == "core" // PocketBase's core: a page per family of types (coreFamilies)
+	isType := map[string]bool{}
+	heading := map[string]bool{} // every "Type.Method" with a heading of its own (an interface's methods have none)
+	for _, t := range pkg.Types {
+		isType[t.Name] = true
+		for _, m := range t.Methods {
+			heading[t.Name+"."+m.Name] = true
+		}
+	}
+	pageOf := func(name string) string { // the page a symbol is on
+		if split && isType[name] {
+			if f := coreFamily(name); f != "" {
+				return url + "/" + f
+			}
+		}
+		return url
+	}
 	print := func(n any) string {
 		var b bytes.Buffer
 		_ = (&printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 8}).Fprint(&b, fset, n)
@@ -167,8 +185,18 @@ func goRefRead(root, dir, importPath, url string) (goRefPackage, bool) {
 	}
 	md := func(text string) string {
 		out := strings.TrimSpace(string(pkg.Markdown(strings.TrimSpace(text))))
-		// go/doc links in-page symbols as #Get; the site's heading anchors are lowercase
-		return goDocLinkRe.ReplaceAllStringFunc(out, func(l string) string { return "](#" + gid(l[3:len(l)-1]) + ")" })
+		// go/doc links in-page symbols as #Get; the site's heading anchors are lowercase, and in a split package the
+		// symbol may be on another of its pages
+		return goDocLinkRe.ReplaceAllStringFunc(out, func(l string) string {
+			sym := l[3 : len(l)-1]
+			if typ, _, ok := strings.Cut(sym, "."); ok && isType[typ] && !heading[sym] {
+				sym = typ // an interface's method: its interface's entry
+			}
+			if !split {
+				return "](#" + gid(sym) + ")"
+			}
+			return "](" + pageOf(strings.SplitN(sym, ".", 2)[0]) + "#" + gid(sym) + ")"
+		})
 	}
 	example := func(ex *doc.Example) string {
 		lines := strings.Split(print(ex.Code), "\n")
@@ -222,6 +250,18 @@ func goRefRead(root, dir, importPath, url string) (goRefPackage, bool) {
 		b.WriteString(d + "\n\n")
 	}
 	fmt.Fprintf(&b, "Source: [`%s`](%s/tree/main/%s).\n\n", path.Clean(dir), repoURL, dir)
+	fam := map[string]*strings.Builder{}
+	if split {
+		b.WriteString("Its types are on five pages: this one (the app, `App` and `BaseApp`, and what doesn't fit elsewhere)")
+		for _, f := range coreFamilies {
+			fmt.Fprintf(&b, ", [%s](%s)", f.Title, url+"/"+f.Slug)
+			fb := &strings.Builder{}
+			fb.WriteString(refFrontMatter(pkg.Name+": "+f.Title+" (Go)", "The "+f.Title+" types of PocketBase's Go package core."))
+			fmt.Fprintf(fb, "# %s: %s\n\n```go\nimport %s %q\n```\n\nPart of [%s](%s).\n\n## Types\n\n", pkg.Name, f.Title, pkg.Name, importPath, pkg.Name, url)
+			fam[f.Slug] = fb
+		}
+		b.WriteString(".\n\n")
+	}
 
 	if len(pkg.Consts) > 0 {
 		b.WriteString("## Constants\n\n")
@@ -240,24 +280,36 @@ func goRefRead(root, dir, importPath, url string) (goRefPackage, bool) {
 	if len(pkg.Types) > 0 {
 		b.WriteString("## Types\n\n")
 		for _, t := range pkg.Types {
+			w := &b
+			if split {
+				if fb := fam[coreFamily(t.Name)]; fb != nil {
+					w = fb
+				}
+			}
 			d := *t.Decl
 			d.Doc = nil
-			fmt.Fprintf(&b, "### %s\n\n```go\n%s\n```\n\n", t.Name, print(&d))
+			fmt.Fprintf(w, "### %s\n\n```go\n%s\n```\n\n", t.Name, print(&d))
 			if doc := md(t.Doc); doc != "" {
-				b.WriteString(doc + "\n\n")
+				w.WriteString(doc + "\n\n")
 			}
-			examples(&b, t.Examples)
-			values(&b, t.Consts)
-			values(&b, t.Vars)
+			examples(w, t.Examples)
+			values(w, t.Consts)
+			values(w, t.Vars)
 			for _, f := range t.Funcs {
-				funcEntry(&b, f, f.Name)
+				funcEntry(w, f, f.Name)
 			}
 			for _, f := range t.Methods {
-				funcEntry(&b, f, t.Name+"."+f.Name)
+				funcEntry(w, f, t.Name+"."+f.Name)
 			}
 		}
 	}
 	gp.Page = escapeEJS(b.String())
+	for slug, fb := range fam {
+		if gp.Extra == nil {
+			gp.Extra = map[string]string{}
+		}
+		gp.Extra[url+"/"+slug] = escapeEJS(fb.String())
+	}
 	return gp, true
 }
 
@@ -299,8 +351,16 @@ func goRefLink(pkgs []goRefPackage, target string) string {
 		return ""
 	}
 	for _, p := range pkgs {
-		if p.Name == name && strings.Contains(p.Page, "\n### "+sym+"\n") {
+		if p.Name != name {
+			continue
+		}
+		if strings.Contains(p.Page, "\n### "+sym+"\n") {
 			return p.URL + "#" + gid(sym)
+		}
+		for u, page := range p.Extra {
+			if strings.Contains(page, "\n### "+sym+"\n") {
+				return u + "#" + gid(sym)
+			}
 		}
 	}
 	return ""
@@ -327,4 +387,30 @@ func dedent(s string) string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+// goRefNav is the Go API's own sidebar (toc-go): every package, contracts then PocketBase's.
+func goRefNav(pkgs, pbpkgs []goRefPackage) string {
+	var b strings.Builder
+	b.WriteString("<!-- Generated by site/sync from the Go packages' doc comments. -->\n\n# Go API\n\n" + backLink + "- [Overview](/docs/reference/go)\n")
+	if len(pbpkgs) > 0 {
+		b.WriteString("\n# PocketBase\n\n")
+		for _, p := range pbpkgs {
+			name := strings.TrimPrefix(strings.TrimPrefix(p.URL, pbGoURL), "/")
+			if name == "" {
+				name = p.Name
+			}
+			fmt.Fprintf(&b, "- [%s](%s)\n", name, p.URL)
+			if p.Dir == "core" {
+				for _, f := range coreFamilies {
+					fmt.Fprintf(&b, "- [core: %s](%s)\n", f.Title, p.URL+"/"+f.Slug)
+				}
+			}
+		}
+	}
+	b.WriteString("\n# Contracts\n\n")
+	for _, p := range pkgs {
+		fmt.Fprintf(&b, "- [%s](%s)\n", strings.TrimPrefix(p.Import, "pocketone.dev/ext/contracts/"), p.URL)
+	}
+	return b.String()
 }

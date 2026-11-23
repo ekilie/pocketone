@@ -1,6 +1,8 @@
 ---
 title: Custom limits
 description: "Your own limits in code: $llm.onCall runs before every model call and can change it or refuse it, $llm.onCallDone runs after with what it cost. Plan tiers, credits, a model per plan and team buckets."
+section: Guides
+nav: "Write your own AI limits"
 ---
 
 # Custom limits

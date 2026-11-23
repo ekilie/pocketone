@@ -1,6 +1,8 @@
 ---
 title: Authentication
 description: Sign users in and out with the auth plugin - passwords, one-time passwords, OAuth2 and anonymous sessions.
+section: Guides
+nav: "Sign users in on your pages"
 ---
 
 # Authentication

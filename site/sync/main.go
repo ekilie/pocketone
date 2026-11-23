@@ -53,11 +53,12 @@ type extension struct {
 	Name, Title, Group, Summary string
 	Link                        string // no README: point here (repo path) instead
 	guides                      []guide
-	site                        []string // ext/<name>/docs, paths relative to it (extsite.go)
-	blog                        []string // ext/<name>/blog/*.md, file names
-	nav                         string   // the site's nav sections, ready for the docs nav
-	landing                     bool     // it has docs (ext/<name>/docs/index.md): they're /docs/extensions/<name>, the README moves under it
-	section, docsTitle          string   // the main nav section that links its docs, and the link's text (docs/index.md's front matter)
+	site                        []string  // ext/<name>/docs, paths relative to it (extsite.go)
+	blog                        []string  // ext/<name>/blog/*.md, file names
+	nav                         string    // the site's nav sections, ready for the docs nav
+	landing                     bool      // it has docs (ext/<name>/docs/index.md): they're /docs/extensions/<name>, the README moves under it
+	section, docsTitle          string    // the main nav section that links its docs, and the link's text (docs/index.md's front matter)
+	navLinks                    []navLink // other docs pages the main nav also lists (their front matter `section:`), such as a guide under Guides
 }
 
 type guide struct {
@@ -338,8 +339,13 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	for _, r := range jsRefs(m) {
 		out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(m, r, allGo)
 	}
+	out[path.Dir(contractsNav)+"/toc-javascript.md"] = jsRefNav(m, pbNS, pbpkgs)
+	out[path.Dir(contractsNav)+"/toc-go.md"] = goRefNav(gopkgs, pbpkgs)
 	out[referenceOut+"/go.md"] = goRefIndex(gopkgs, pbpkgs)
 	for _, p := range allGo {
+		for u, page := range p.Extra {
+			out[referenceOut+strings.TrimPrefix(u, "/docs/reference")+".md"] = page
+		}
 		out[referenceOut+strings.TrimPrefix(p.URL, "/docs/reference")+".md"] = p.Page
 	}
 

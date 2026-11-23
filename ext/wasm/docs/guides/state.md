@@ -1,6 +1,8 @@
 ---
 title: Keeping state in JS
 description: Modules keep nothing between calls. Keep the state in the app (a record, or $app.store()), pass it in with each call, and save what comes back. With a TinyGo example.
+section: Guides
+nav: "Keep state between WASM calls"
 ---
 
 # Keeping state in JS

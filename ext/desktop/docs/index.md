@@ -1,6 +1,6 @@
 ---
 title: Desktop apps
-section: New in PocketOne
+section: Run
 description: "Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker."
 ---
 
