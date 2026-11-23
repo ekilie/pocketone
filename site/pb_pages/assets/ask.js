@@ -60,11 +60,21 @@
       if (kind) html.push(`</${kind}>`)
       kind = null
     }
-    text.split(/^```[a-zA-Z0-9_-]*[ \t]*$/m).forEach((part, i) => {
-      if (i % 2) {
+    // code fences, with their language (a fence still being written runs to the end)
+    const parts = []
+    const fence = /^```([\w+-]*)[^\n]*\n([\s\S]*?)(?:^```[ \t]*$|(?![\s\S]))/gm
+    let last = 0
+    for (const m of text.matchAll(fence)) {
+      parts.push(text.slice(last, m.index), { lang: m[1].toLowerCase(), code: m[2].replace(/\n$/, '') })
+      last = m.index + m[0].length
+    }
+    parts.push(text.slice(last))
+    parts.forEach((part) => {
+      if (typeof part !== 'string') {
         endPara()
         endList()
-        html.push(`<pre><code>${esc(part.replace(/^\n|\n$/g, ''))}</code></pre>`)
+        const lang = window.Prism?.languages[part.lang] ? part.lang : ''
+        html.push(`<pre><code${lang ? ` class="language-${lang}"` : ''}>${esc(part.code)}</code></pre>`)
         return
       }
       for (const line of part.split('\n')) {
@@ -104,6 +114,12 @@
       .replace(/[`*_#>|]+/g, '')
       .replace(/\s+/g, ' ')
       .trim()
+
+  // Colors the answer's code blocks with the site's Prism (the same theme and copy button as the docs).
+  const highlight = () => {
+    if (!window.Prism) return
+    out.querySelectorAll('pre > code[class*="language-"]').forEach((code) => window.Prism.highlightElement(code))
+  }
 
   // The pages, one row each (passages from the same page and section show once); once the answer is in, the ones it
   // cites come first, in the order it cites them.
@@ -177,6 +193,7 @@
           written += data
           status.textContent = ''
           out.innerHTML = md(written) + '<span class="ask-caret"> ▍</span>'
+          highlight()
         } else if (event === 'error') {
           failed = data.code === 'limit' ? data.message : `No answer right now (${data.message}).`
         }
@@ -188,6 +205,7 @@
     status.textContent = ''
     if (written) {
       out.innerHTML = md(written)
+      highlight()
       showSources(written)
     }
     if (failed) out.insertAdjacentHTML('beforeend', `<p class="ask-note">${esc(failed)}${sources.length ? ' These pages match your question:' : ''}</p>`)
