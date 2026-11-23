@@ -1,7 +1,7 @@
 ---
 title: Key-Value Store
-section: Data
 description: "$kv keeps your app's settings and small pieces of state as named JSON values: no collection, no migration, and they ride along in backups."
+section: Database
 ---
 
 # Key-Value Store

@@ -1,8 +1,6 @@
 ---
 title: Conversations
 description: "Chats that remember: send the conversation with each call, or let LLM Chat store it, summarize it and send it for you."
-section: Guides
-nav: "Build a chat with memory"
 ---
 
 # Conversations

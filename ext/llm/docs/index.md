@@ -1,7 +1,7 @@
 ---
 title: AI in your app
-section: Code
 description: "$llm gives your pages and Go code cloud models: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API, on your own keys."
+section: AI
 ---
 
 # AI in your app

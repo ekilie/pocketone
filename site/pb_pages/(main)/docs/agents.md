@@ -1,9 +1,9 @@
 ---
-title: Teach your coding agent
+title: LLM skills for coding agents
 description: Teach Claude Code, Cursor, Codex and other coding agents PocketOne and Pages with our Agent Skills and llms.txt.
 ---
 
-# Teach your coding agent
+# LLM skills for coding agents
 
 PocketOne is new, so coding agents haven't seen much of it. Two things close that gap. Both are built from these docs, so they change when the docs change.
 

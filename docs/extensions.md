@@ -473,25 +473,27 @@ ext/<name>/
   extension's URL: `docs/ctx/req.md` is `/docs/extensions/<name>/ctx/req`. [`ext/pages/docs`](../ext/pages/docs)
   (Pages' docs) and [`ext/wasm/docs`](../ext/wasm/docs) are the examples.
   - `docs/index.md` is required: the docs' landing page, at `/docs/extensions/<name>`. Its front matter names the main
-    nav section that links it, one of the `# Section` headings of the main docs nav: a feature group (`Data`, `Users`,
-    `Code`, `Web`, `Run`) for what your extension does, and the link's text is its `title`:
+    nav section that links it, one of the `# Section` headings of the main docs nav: the subject your extension is about
+    (`Database`, `Users and sign-in`, `Hooks and routes`, `Websites`, `Email`, `AI`, `Go`, `Deploy and run`), and the
+    link's text is its `title`:
 
     ```yaml
     ---
     title: WASM
-    section: Code
+    section: Hooks and routes
     description: Bring your own WASM ...
     ---
     ```
 
-  - Any other page can be listed in the main nav too, the same way. A guide (a page that gets something done, start to
-    finish) goes under `Guides`, with `nav:` as the link's text when the page's title doesn't say the outcome:
+  - Any other page can be listed in the main nav too, the same way. A guide that gets something done across features
+    (start to finish, not just with your extension) goes under `How-to guides`, with `nav:` as the link's text when the
+    page's title doesn't say the outcome; guides about your extension alone stay in your own nav:
 
     ```yaml
     ---
-    title: Structured answers
-    section: Guides
-    nav: "Get structured answers from a model"
+    title: 'Speedrun: Google OAuth2'
+    section: How-to guides
+    nav: "Let users sign in with Google"
     ---
     ```
 

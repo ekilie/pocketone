@@ -339,7 +339,8 @@ var extPageRe = regexp.MustCompile(`^/docs/extensions/[^/#?]+$`)
 
 // mainNav is the main nav (_private/toc.md, otherwise hand-written) with each extension's docs linked at the end of
 // the section their index.md names (`section:`), by the index's title. Sync owns those links: a line that links an
-// extension's docs anywhere else is dropped, so moving docs to another section is a front matter change.
+// extension's docs anywhere else is dropped, so moving docs to another section is a front matter change. A line that
+// links them in the right section keeps its place, so the toc can order them among its own links.
 func mainNav(root string, m *manifest) (string, error) {
 	raw, err := os.ReadFile(filepath.Join(root, tocFile))
 	if err != nil {
@@ -347,6 +348,7 @@ func mainNav(root string, m *manifest) (string, error) {
 	}
 	docs := map[string][]navLink{} // section -> the extension docs pages it links
 	owned := map[string]bool{}     // the URLs sync links
+	placed := map[string]bool{}    // owned links the toc already has in their section: they stay where they are
 	exists := map[string]bool{}    // every extension's page
 	for _, p := range m.Extensions {
 		exists["/docs/extensions/"+p.Name] = true
@@ -370,13 +372,22 @@ func mainNav(root string, m *manifest) (string, error) {
 	section := ""
 	flush := func() { // the section's docs links, after its own
 		for _, l := range docs[section] {
-			out = append(out, "- ["+l.Title+"]("+l.URL+")")
+			if !placed[l.URL] {
+				out = append(out, "- ["+l.Title+"]("+l.URL+")")
+			}
 		}
 		delete(docs, section)
 	}
 	// flushEmpty links the current section's docs when it had no links of its own to follow: under its heading
 	flushEmpty := func() {
-		if len(docs[section]) == 0 {
+		left := 0
+		for _, l := range docs[section] {
+			if !placed[l.URL] {
+				left++
+			}
+		}
+		if left == 0 {
+			delete(docs, section)
 			return
 		}
 		for len(out) > 0 && strings.TrimSpace(out[len(out)-1]) == "" {
@@ -389,6 +400,15 @@ func mainNav(root string, m *manifest) (string, error) {
 	lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
 	for i, l := range lines {
 		if m := tocLinkRe.FindStringSubmatch(l); m != nil && (owned[m[2]] || gone(m[2])) {
+			// an owned link in the section its front matter names keeps its place (with sync's text); elsewhere, dropped
+			if owned[m[2]] {
+				for _, d := range docs[section] {
+					if d.URL == m[2] && !placed[d.URL] {
+						placed[d.URL] = true
+						out = append(out, "- ["+d.Title+"]("+d.URL+")")
+					}
+				}
+			}
 			continue
 		}
 		if h := h1Re.FindStringSubmatch(l); h != nil {

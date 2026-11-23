@@ -1,8 +1,6 @@
 ---
 title: Recipes
 description: "WASM modules built on real libraries, each with page code that calls it: Markdown, HTML sanitizing, QR codes, thumbnails, diffs, CSV, EDIFACT and XML orders, and crypto JS lacks."
-section: Guides
-nav: "WASM recipes"
 ---
 
 # Recipes

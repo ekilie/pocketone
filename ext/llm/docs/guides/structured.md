@@ -1,8 +1,6 @@
 ---
 title: Structured answers
 description: "Give $llm.text a JSON schema and get back data you can store."
-section: Guides
-nav: "Get structured answers from a model"
 ---
 
 # Structured answers

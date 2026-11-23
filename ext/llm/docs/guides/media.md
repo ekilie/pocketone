@@ -1,8 +1,6 @@
 ---
 title: Pictures, speech and music
 description: "Generate pictures, narration, music and video with $llm and save them on your records as files."
-section: Guides
-nav: "Make pictures, speech and music"
 ---
 
 # Pictures, speech and music

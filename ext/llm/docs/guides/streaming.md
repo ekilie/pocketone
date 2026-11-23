@@ -1,8 +1,6 @@
 ---
 title: Streaming answers
 description: "Show an answer as the model writes it: $llm.text.streamAsync in a page, forwarded to the browser with ctx.res.sse()."
-section: Guides
-nav: "Stream a model's answer to a page"
 ---
 
 # Streaming answers

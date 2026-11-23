@@ -1,8 +1,6 @@
 ---
 title: Signing and sharing
 description: "Sign your PocketOne desktop app so people can install it without warnings: Developer ID signing and notarization on macOS, Authenticode on Windows, checksums and signatures on Linux."
-section: Guides
-nav: "Sign and share a desktop app"
 ---
 
 # Signing and sharing

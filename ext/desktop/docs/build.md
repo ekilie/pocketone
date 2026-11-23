@@ -1,8 +1,6 @@
 ---
 title: Building
 description: "pocketone desktop build: which platforms, the Docker build image, building with your own Go, and what lands in dist/."
-section: Guides
-nav: "Ship a desktop app"
 ---
 
 # Building

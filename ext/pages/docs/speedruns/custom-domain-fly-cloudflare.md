@@ -1,8 +1,8 @@
 ---
 title: 'Speedrun: Connecting Your Fly.io App to a Custom Domain with Cloudflare Proxy'
 description: 'Step-by-step process to configure DNS records, SSL certificates, and domain verification between Fly.io and Cloudflare. Includes specific settings for A/AAAA records, CNAME verification, and SSL/TLS encryption modes.'
-section: Guides
-nav: "Set up a custom domain on Fly and Cloudflare"
+section: How-to guides
+nav: "Use a custom domain"
 ---
 
 # Speedrun: Connecting Your Fly.io App to a Custom Domain with Cloudflare Proxy
