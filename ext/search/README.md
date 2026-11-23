@@ -124,8 +124,8 @@ tokens with the `search` scope (or `search:read` to list and search) get in.
 
 **Enriching a model call.** `enrich` on `$llm.text.completeAsync`, `streamAsync` and LLM Chat's `sendAsync` (or a
 chat's options) searches the buckets with the prompt and sends the best passages after it, numbered so the model can
-cite them; `answer.passages` lists them. Give the buckets (`enrich: ["help"]`) or `{ buckets, limit?, query? }` (default
-5 passages, at most 20). LLM Chat saves the passages with the question, so later turns send the same thing.
+cite them; `answer.passages` lists them. Give the buckets (`enrich: ["help"]`) or `{ buckets, limit?, query?, viewer? }`
+(default 5 passages, at most 20); `viewer: ctx.auth` applies collections' view rules, as for a search. LLM Chat saves the passages with the question, so later turns send the same thing.
 
 **Cost.** Embedding goes through llm.embed/v1, billed to your provider account like any other `$llm` call. Each
 document shows what embedding it cost. `qwen3-embedding-4b` on Vultr is $0.05 per million tokens, about 4 MB of text.

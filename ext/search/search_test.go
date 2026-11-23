@@ -625,6 +625,14 @@ func TestFollowCollection(t *testing.T) {
 		t.Fatalf("viewers: all %s, ann %s, guest %s", ids(all), ids(asAnn), ids(asGuest))
 	}
 
+	// enrich follows the same rules: a guest gets no passages from these records, ann gets hers
+	if _, p, err := searchv1.Enrich(ctx, app, &llmc.Enrich{Buckets: []string{"notes"}, Viewer: &llmc.Viewer{}}, "fox"); err != nil || len(p) != 0 {
+		t.Fatalf("enrich as a guest: %+v %v", p, err)
+	}
+	if _, p, err := searchv1.Enrich(ctx, app, &llmc.Enrich{Buckets: []string{"notes"}, Viewer: &llmc.Viewer{Collection: "members", ID: ann.Id}}, "fox"); err != nil || len(p) != 1 {
+		t.Fatalf("enrich as ann: %+v %v", p, err)
+	}
+
 	n1.Set("body", "<p>The red fox naps in the sun.</p>")
 	_ = app.Save(n1)
 	drain(t, app)

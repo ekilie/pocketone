@@ -39,7 +39,9 @@ type LlmTextInput = {
 type LlmPassage = { bucket: string; document: string; heading?: string; text: string; score: number }
 
 /** Adds the best passages from the app's search buckets after the prompt: the buckets, or { buckets, limit?, query? }. */
-type LlmEnrich = string[] | { buckets: string[]; limit?: number; query?: string }
+type LlmEnrich = string[] | { buckets: string[]; limit?: number; query?: string;
+  /** who the answer is for (ctx.auth, or null for a guest): passages from records they can't view are left out */
+  viewer?: core.Record | null }
 
 type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?: string; model: string; usage: LlmUsage;
   /** what enrich added to the prompt, best first */

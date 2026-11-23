@@ -156,6 +156,15 @@ type Enrich struct {
 	Buckets []string `json:"buckets"`
 	Limit   int      `json:"limit,omitempty"` // passages to add (default 5, at most 20)
 	Query   string   `json:"query,omitempty"`
+	// Viewer is who the answer is for: passages from records they can't view (the collection's view rule) are left
+	// out. Nil sees everything, as the app's own server code.
+	Viewer *Viewer `json:"viewer,omitempty"`
+}
+
+// Viewer is a signed-in auth record (Collection and ID), or a guest (both empty).
+type Viewer struct {
+	Collection string `json:"collection,omitempty"`
+	ID         string `json:"id,omitempty"`
 }
 
 // UnmarshalJSON takes the object form or a list of bucket names.

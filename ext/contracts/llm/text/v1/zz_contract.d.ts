@@ -70,6 +70,12 @@ declare namespace contracts.llm.text.v1 {
     buckets: Array<string>;
     limit: number;
     query: string;
+    viewer: LlmViewer | null;
+  }
+
+  interface LlmViewer {
+    collection: string;
+    id: string;
   }
 }
 

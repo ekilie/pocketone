@@ -286,7 +286,7 @@
         const data = store({
             loading: true, bucket: null, sources: [], status: null, over: false, adding: "",
             form: "", // "paste" | "url" | "follow" | "settings"
-            pasteName: "", pasteText: "", url: "", every: "day", urlKind: "", urlChecking: false, follow: { collection: "", fields: "", filter: "" },
+            pasteName: "", pasteText: "", url: "", every: "day", urlKind: "", urlChecking: false, follow: { collection: "", fields: [], filter: "" },
             edit: {}, collections: [], open: {}, docs: {},
         });
         let timer = null;
@@ -408,6 +408,14 @@
                 load();
             };
             input.click();
+        }
+
+        // searchable are the field types whose text a collection source can search; text and editor fields start checked
+        const searchable = new Set(["text", "editor", "email", "url", "select", "json"]);
+        function pickCollection(nameOf) {
+            const col = data.collections.find((c) => c.name === nameOf);
+            data.follow = { ...data.follow, collection: nameOf,
+                fields: (col?.fields || []).filter((f) => !f.hidden && !f.system && (f.type === "text" || f.type === "editor")).map((f) => f.name) };
         }
 
         // detectSoon asks the server how a URL would be read, once typing pauses
@@ -634,13 +642,31 @@
                 () => data.form === "follow" ? t.form({ className: "grid m-b-base", onsubmit: (e) => {
                     e.preventDefault();
                     const f = data.follow;
-                    submit("/follow", { bucket: name, collection: f.collection, fields: f.fields.split(",").map((x) => x.trim()).filter(Boolean), filter: f.filter.trim() });
+                    if (!f.fields.length) return app.toasts.error("Check at least one field to search.");
+                    submit("/follow", { bucket: name, collection: f.collection, fields: f.fields, filter: f.filter.trim() });
                 } },
-                    field("Collection", t.select({ required: true, onchange: (e) => (data.follow.collection = e.target.value) },
+                    field("Collection", t.select({ required: true, onchange: (e) => pickCollection(e.target.value) },
                         t.option({ value: "" }, "Pick one"),
-                        ...data.collections.map((c) => t.option({ value: c.name, selected: c.name === data.follow.collection }, c.name))), "col-lg-4"),
-                    field("Fields to search (the first is the title)", bound(data.follow, "fields", { required: true, placeholder: "title, body" }), "col-lg-4"),
-                    field("Only records matching", bound(data.follow, "filter", { placeholder: "published = true" }), "col-lg-4"),
+                        ...data.collections.map((c) => t.option({ value: c.name, selected: c.name === data.follow.collection }, c.name))), "col-lg-6"),
+                    field("Only records matching (optional)", bound(data.follow, "filter", { placeholder: "published = true" }), "col-lg-6"),
+                    () => {
+                        const col = data.collections.find((c) => c.name === data.follow.collection);
+                        if (!col) return null;
+                        const fields = (col.fields || []).filter((f) => !f.hidden && !f.primaryKey && searchable.has(f.type));
+                        const on = (n) => data.follow.fields.includes(n);
+                        const flip = (n) => (data.follow.fields = on(n) ? data.follow.fields.filter((x) => x !== n)
+                            : fields.map((f) => f.name).filter((x) => x === n || on(x))); // keep the collection's order
+                        return t.div({ className: "col-lg-12" },
+                            t.div({ className: "m-b-5" }, "Fields to search ",
+                                t.span({ className: "txt-hint txt-sm" }, data.follow.fields.length
+                                    ? `(${data.follow.fields[0]} is each record's title)` : "(check one or more)")),
+                            fields.length
+                                ? t.div({ className: "flex gap-sm", style: "flex-wrap: wrap" }, ...fields.map((f) => t.label({
+                                    className: () => `btn xs ${on(f.name) ? "" : "secondary"}`, style: "cursor: pointer",
+                                }, t.input({ type: "checkbox", checked: () => on(f.name), onchange: () => flip(f.name), style: "margin-right: 6px" }),
+                                    f.name, t.span({ className: "txt-hint txt-sm m-l-5" }, f.type))))
+                                : t.span({ className: "txt-hint" }, "This collection has no text fields to search."));
+                    },
                     formButtons("Follow")) : null,
 
                 data.sources.length

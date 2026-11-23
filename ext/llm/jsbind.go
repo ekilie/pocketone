@@ -128,7 +128,20 @@ var jsPrelude = `(() => {
   const S = (o) => JSON.stringify(o ?? {});
   // a provider call, off the VM
   const callAsync = async (kind, op, o) => J(await n.call.async(kind, op, S(o)));
-  const text = (o) => (o && typeof o.schema === "string" ? { ...o, schema: JSON.parse(o.schema) } : o);
+  // enrich: the buckets, or { buckets, limit, query, viewer }; viewer is an auth record (ctx.auth) or null for a guest
+  const enrichOf = (e) => {
+    if (e == null || Array.isArray(e) || typeof e !== "object") return e;
+    if (!("viewer" in e)) return e;
+    const v = e.viewer;
+    const viewer = v == null ? {} : typeof v.collection === "function" ? { collection: v.collection().name, id: v.id } : v;
+    return { ...e, viewer };
+  };
+  const text = (o) => {
+    if (!o) return o;
+    const out = typeof o.schema === "string" ? { ...o, schema: JSON.parse(o.schema) } : { ...o };
+    if (out.enrich !== undefined) out.enrich = enrichOf(out.enrich);
+    return out;
+  };
   const count = (x) => typeof x === "string" ? { text: x } : Array.isArray(x) ? { messages: x } : (x ?? {});
   const modelsAsync = (kind) => (o) => callAsync(kind, "models", o);
   const jobs = (kind) => Object.freeze({

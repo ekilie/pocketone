@@ -54,8 +54,9 @@ Open the dashboard and choose **Search** in the header. Every bucket is listed w
 - **Add a URL or Git repo**: paste any URL. Its server is asked whether it's a Git repository (with or without `.git`,
   on any host), and the form shows how it will be read, with a switch if you want the other. Pick how often to read it
   again: every hour, day or week. A repository brings its default branch's text files and its recent commits.
-- **Follow a collection**: pick the collection, the fields to search (the first is each record's title) and, if you
-  like, which records (`published = true`). It reads the records there now and keeps up as they're saved and deleted.
+- **Follow a collection**: pick the collection, check the fields to search (its text fields start checked; the first
+  is each record's title) and, if you like, which records (`published = true`). It reads the records there now and
+  keeps up as they're saved and deleted.
 
 Dropping something with the same name as a source replaces it: files that didn't change cost nothing, and files it no
 longer has are removed. For a new version under another name (`guide-v2.zip`), use **Upload a new version** on the old
@@ -91,7 +92,8 @@ left out (`null` is a signed-out visitor):
 const found = await $search.searchAsync({ buckets: ["notes"], query, viewer: ctx.auth })
 ```
 
-Without `viewer`, a search sees everything, as your own server code does.
+The same goes for `enrich` on a model call: `enrich: { buckets: ["notes"], viewer: ctx.auth }`. Without `viewer`, a
+search sees everything, as your own server code does.
 
 ## Changing the model
 

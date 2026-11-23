@@ -42,7 +42,11 @@ func Enrich(ctx context.Context, app core.App, e *llm.Enrich, query string) (str
 		limit = EnrichDefault
 	}
 	limit = min(limit, EnrichMax)
-	res, err := s.Search(ctx, extkit.Internal, SearchInput{Buckets: e.Buckets, Query: query, Limit: limit})
+	in := SearchInput{Buckets: e.Buckets, Query: query, Limit: limit}
+	if e.Viewer != nil {
+		in.Viewer = &Viewer{Collection: e.Viewer.Collection, ID: e.Viewer.ID}
+	}
+	res, err := s.Search(ctx, extkit.Internal, in)
 	if err != nil {
 		return "", nil, fmt.Errorf("enrich: %w", err)
 	}

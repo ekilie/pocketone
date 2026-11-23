@@ -94,6 +94,12 @@ declare namespace contracts.llm.chat.v1 {
     buckets: Array<string>;
     limit: number;
     query: string;
+    viewer: LlmViewer | null;
+  }
+
+  interface LlmViewer {
+    collection: string;
+    id: string;
   }
 }
 
