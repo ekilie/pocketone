@@ -6,6 +6,10 @@ renames the section to that version ([Changelogs](../../docs/extensions.md#chang
 
 ## Unreleased
 
+### Added
+
+- `enrich` on a chat's options or a send (llm.chat/v1): the best passages from the named search buckets go after the question and are saved with it, so later turns send the same thing; the answer's `passages` lists them.
+
 ## 0.1.0 (2026-11-22)
 
 ### Changed

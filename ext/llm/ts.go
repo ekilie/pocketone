@@ -20,6 +20,7 @@ type LlmMessage = { role: "system" | "user" | "assistant"; content: string }
 type LlmTextInput = {
   /** "provider/model", e.g. "vultr/glm-5.3". */
   model: string
+  enrich?: LlmEnrich
   system?: string
   prompt?: string
   messages?: LlmMessage[]
@@ -34,7 +35,17 @@ type LlmTextInput = {
   options?: Record<string, any>
 }
 
-type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?: string; model: string; usage: LlmUsage }
+/** A passage enrich added to the prompt, from a search bucket. */
+type LlmPassage = { bucket: string; document: string; heading?: string; text: string; score: number }
+
+/** Adds the best passages from the app's search buckets after the prompt: the buckets, or { buckets, limit?, query? }. */
+type LlmEnrich = string[] | { buckets: string[]; limit?: number; query?: string;
+  /** who the answer is for (ctx.auth, or null for a guest): passages from records they can't view are left out */
+  viewer?: core.Record | null }
+
+type LlmTextAnswer = { text: string; data?: any; reasoning?: string; stopReason?: string; model: string; usage: LlmUsage;
+  /** what enrich added to the prompt, best first */
+  passages?: LlmPassage[] }
 
 type LlmModelsOpts = { provider?: string }
 
@@ -110,6 +121,37 @@ type LlmAPI = {
     /** Deletes every chat whose meta matches; returns how many. */
     forget(opts: { meta: Record<string, any> }): number
   }
+  /** Buckets of the app's content, searched by meaning (llm.search/v1, the llm-search extension). Only searchAsync
+   * reaches a provider (it embeds the query); everything else is local (a URL or collection is read in the background). */
+  search: {
+  /** Every bucket, by name. */
+  buckets(): SearchBucket[]
+  bucket(name: string): SearchBucket
+  /** Makes the bucket if it's missing (call it at startup for the bucket your app needs) and returns it. */
+  ensure(o: string | { name: string; title?: string; description?: string; owner?: string }): SearchBucket
+  update(o: { name: string; title?: string; description?: string; maxDocuments?: number; maxBytes?: number }): SearchBucket
+  /** Deletes a bucket and everything in it. */
+  deleteBucket(name: string): number
+  /** A bucket's sources: files, text, folders, zips, pages, repositories, collections. */
+  sources(bucket: string): SearchSource[]
+  /** Adds a file or text as its own source (replacing the source of that name, or the one named by replace). */
+  add(o: { bucket: string; name: string; text: string; kind?: "file" | "text"; replace?: string }): SearchSource
+  /** Adds a web page or a Git repository (kind decided from the URL), read now and every hour, day or week. */
+  addURL(o: { bucket: string; url: string; kind?: "page" | "git"; every?: "hour" | "day" | "week"; commits?: number; exclude?: string[] }): SearchSource
+  /** Adds a collection: a document per record the filter keeps, kept in sync as records are saved and deleted. */
+  follow(o: { bucket: string; collection: string; fields: string[]; filter?: string }): SearchSource
+  /** Reads a source again now. */
+  refresh(bucket: string, source: string): SearchSource
+  /** Takes sources out of a bucket, with their documents. */
+  remove(bucket: string, sources: string | string[]): number
+  documents(bucket: string | { bucket: string; source?: string; prefix?: string }): SearchDocument[]
+  /** The app's embedding model and how much is embedded. */
+  status(): { model: string; chunks: number; embedded: number; note?: string }
+  /** The best matches for a query across buckets (all of them when none are named), best first. viewer (an auth record,
+   * or null for a guest) leaves out records they can't view; left out, the search sees everything. */
+  searchAsync(o: { query: string; buckets?: string | string[]; bucket?: string; limit?: number; prefix?: string; viewer?: core.Record | null }):
+    Promise<{ results: SearchResult[]; model?: string; usage: { costMicroUSD: number; inputTokens?: number } }>
+  }
 }
 
 /**
@@ -121,9 +163,30 @@ declare var $llm: LlmAPI & {
   for(e: core.RequestEvent | { event: core.RequestEvent }): LlmAPI
 }
 
+type SearchBucket = { name: string; title: string; description: string; owner: string;
+  maxDocuments: number; maxBytes: number; sources: number; documents: number; chunks: number; bytes: number; pending: number;
+  errors: number; created: string; updated: string }
+
+type SearchSource = { bucket: string; name: string; kind: "file" | "text" | "folder" | "zip" | "page" | "git" | "collection";
+  url?: string; every?: "hour" | "day" | "week"; commits?: number; exclude?: string[];
+  collection?: string; fields?: string[]; filter?: string; hash?: string;
+  status: "reading" | "ready" | "error"; error?: string; documents: number; chunks: number; bytes: number; pending: number;
+  costMicroUSD: number; refreshed?: string; next?: string; created: string }
+
+type SearchRecordRef = { collection: string; id: string }
+
+type SearchDocument = { bucket: string; source: string; name: string; kind: "markdown" | "code" | "text"; size: number; hash: string;
+  status: "queued" | "embedding" | "ready" | "error"; error?: string; chunks: number; record?: SearchRecordRef; tokens: number;
+  costMicroUSD: number; created: string; updated: string }
+
+type SearchResult = { bucket: string; source: string; document: string; text: string; heading?: string; startLine: number;
+  endLine: number; record?: SearchRecordRef; score: number }
+
 type LlmChatOptions = {
   /** "provider/model": every send needs one, here or on the send. */
   model?: string
+  /** passages from search buckets, added after each question (and saved with it) */
+  enrich?: LlmEnrich
   reasoning?: "" | "off" | "low" | "medium" | "high"
   system?: string
   /** Sent after the question (history shows the question alone): text, or a function of the question. */

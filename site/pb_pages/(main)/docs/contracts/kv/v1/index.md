@@ -147,6 +147,7 @@ Removes a value. Deleting a name with no value is not an error.
 | [api-tokens](/docs/extensions/api-tokens) | works with |
 | [bulkmail](/docs/extensions/bulkmail) | works with |
 | [llm](/docs/extensions/llm/extension) | works with |
+| [llm-search](/docs/extensions/llm-search) | works with |
 
 <!-- /contracts:index -->
 

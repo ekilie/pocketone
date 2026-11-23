@@ -20,6 +20,7 @@
 - [Key-Value Store](/docs/extensions/kv/extension)
 - [LLM](/docs/extensions/llm/extension)
 - [LLM Chat](/docs/extensions/llm-chat)
+- [LLM Search](/docs/extensions/llm-search)
 - [MCP](/docs/extensions/mcp)
 - [Pages](/docs/extensions/pages/extension)
 - [Pages: Pages specification](/docs/extensions/pages/spec)

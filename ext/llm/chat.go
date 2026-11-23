@@ -102,7 +102,8 @@ const chatPrelude = `
   const sendInput = (id, o, text, s) => ({ id, text, system: o.system, window: o.window, summarizeEvery: o.summarizeEvery,
     model: s.model ?? o.model, reasoning: s.reasoning ?? o.reasoning,
     maxTokens: s.maxTokens ?? o.maxTokens, temperature: s.temperature ?? o.temperature,
-    schema: typeof s.schema === "string" ? JSON.parse(s.schema) : s.schema, context: contextOf(s.context ?? o.context, text) });
+    schema: typeof s.schema === "string" ? JSON.parse(s.schema) : s.schema, context: contextOf(s.context ?? o.context, text),
+    enrich: enrichOf(s.enrich ?? o.enrich) });
   const openChat = (id, o = {}) => {
     if (!id) throw new Error("$llm.chat.open: give the chat's id ($llm.chat.new() returns one)");
     return Object.freeze({

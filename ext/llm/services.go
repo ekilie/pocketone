@@ -12,6 +12,7 @@ import (
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
+	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	transcribev1 "pocketone.dev/ext/contracts/llm/transcribe/v1"
@@ -53,8 +54,13 @@ func (s textService) answer(ctx context.Context, a extkit.Auth, in textv1.Comple
 	if err != nil {
 		return textv1.CompleteResult{}, err
 	}
+	in, passages, err := s.enrich(ctx, in)
+	if err != nil {
+		return textv1.CompleteResult{}, err
+	}
 	res, err := t.d.complete(ctx, t.model, in, onDelta)
 	res.Model = t.ref()
+	res.Passages = passages
 	if err != nil && !errors.Is(err, errStopped) {
 		return res, providerError(t.p, err)
 	}
@@ -63,6 +69,35 @@ func (s textService) answer(ctx context.Context, a extkit.Auth, in textv1.Comple
 	}
 	s.r.fillCost(ctx, t, &res.Usage, used{})
 	return res, nil
+}
+
+// enrich adds the passages in.Enrich asks for after the prompt (or the last message, when there's no prompt).
+func (s textService) enrich(ctx context.Context, in textv1.CompleteInput) (textv1.CompleteInput, []llmc.Passage, error) {
+	if in.Enrich == nil {
+		return in, nil, nil
+	}
+	last := -1
+	query := in.Prompt
+	if strings.TrimSpace(query) == "" {
+		for i := len(in.Messages) - 1; i >= 0; i-- {
+			if in.Messages[i].Role == "user" {
+				last, query = i, in.Messages[i].Content
+				break
+			}
+		}
+	}
+	text, passages, err := searchv1.Enrich(ctx, s.r.app, in.Enrich, query)
+	if err != nil || text == "" {
+		return in, passages, err
+	}
+	if last < 0 {
+		in.Prompt += "\n\n" + text
+		return in, passages, nil
+	}
+	msgs := append([]textv1.Message(nil), in.Messages...)
+	msgs[last].Content += "\n\n" + text
+	in.Messages = msgs
+	return in, passages, nil
 }
 
 func (s textService) Complete(ctx context.Context, a extkit.Auth, in textv1.CompleteInput) (textv1.CompleteResult, error) {

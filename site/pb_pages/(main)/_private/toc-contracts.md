@@ -28,6 +28,7 @@
 - [llm.embed/v1](/docs/contracts/llm.embed/v1)
 - [llm.image/v1](/docs/contracts/llm.image/v1)
 - [llm.music/v1](/docs/contracts/llm.music/v1)
+- [llm.search/v1](/docs/contracts/llm.search/v1)
 - [llm.speech/v1](/docs/contracts/llm.speech/v1)
 - [llm.text/v1](/docs/contracts/llm.text/v1)
 - [llm.transcribe/v1](/docs/contracts/llm.transcribe/v1)

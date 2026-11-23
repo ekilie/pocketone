@@ -70,8 +70,8 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | Tool | What it does | Reads only | Token scope | Arguments |
 |---|---|---|---|---|
 | `llm_chat_new` | Starts a chat and returns it; its id is how the app finds it again. |  | `chat` | `title` (string), `meta` (json) |
-| `llm_chat_send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
-| `llm_chat_send_stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
+| `llm_chat_send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
+| `llm_chat_send_stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
 | `llm_chat_get` | Returns a chat. |  | `chat:read` | `id` (string) |
 | `llm_chat_history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). |  | `chat:read` | `id` (string), `limit` (int), `before` (string) |
 | `llm_chat_update` | Sets a chat's title or meta (fields left out stay). |  | `chat` | `id` (string), `title` (json), `meta` (json) |
@@ -109,6 +109,31 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | `llm_music_content` | Fetches one of a done job's files. |  | `llm:read` | `id` (string), `index` (int) |
 | `llm_music_models` | Lists the music models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
 
+## llm.search/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/llm.search/v1). Answered by [LLM Search](https://pocketone.dev/docs/extensions/llm-search) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_search_status` | Is the app's embedding model and how far embedding has got across every bucket. | yes | `search:read` |  |
+| `llm_search_set_model` | Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again). |  | `search` | `model` (string) |
+| `llm_search_buckets` | Lists the app's buckets with their counts. | yes | `search:read` |  |
+| `llm_search_bucket` | Returns one bucket with its counts. | yes | `search:read` | `name` (string) |
+| `llm_search_ensure` | Makes a bucket if it's missing and returns it. |  | `search` | `name` (string), `title` (string), `description` (string), `owner` (string) |
+| `llm_search_update` | Changes a bucket's title, description or limits (fields left out stay). |  | `search` | `name` (string), `title` (json), `description` (json), `maxDocuments` (json), `maxBytes` (json) |
+| `llm_search_delete` | Removes a bucket and everything in it. |  | `search` | `name` (string) |
+| `llm_search_sources` | Lists a bucket's sources, by name. | yes | `search:read` | `bucket` (string) |
+| `llm_search_add` | Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. |  | `search` | `bucket` (string), `name` (string), `text` (string), `kind` (string), `replace` (string) |
+| `llm_search_put` | Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it. |  | `search` | `bucket` (string), `source` (string), `path` (string), `text` (string), `replace` (string) |
+| `llm_search_prune` | Removes the documents of a folder source that aren't in Keep: the files the folder no longer has. |  | `search` | `bucket` (string), `source` (string), `keep` (strings) |
+| `llm_search_add_u_r_l` | Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current. |  | `search` | `bucket` (string), `url` (string), `kind` (string), `every` (string), `commits` (int), `exclude` (strings) |
+| `llm_search_detect_u_r_l` | Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page. |  | `search:read` | `url` (string) |
+| `llm_search_follow` | Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted. |  | `search` | `bucket` (string), `collection` (string), `fields` (strings), `filter` (string) |
+| `llm_search_refresh` | Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip. |  | `search` | `bucket` (string), `source` (string) |
+| `llm_search_remove` | Takes sources out of a bucket, with their documents. |  | `search` | `bucket` (string), `sources` (strings) |
+| `llm_search_documents` | Lists a bucket's documents (or one source's), by source and name. | yes | `search:read` | `bucket` (string), `source` (string), `prefix` (string) |
+| `llm_search_search` | Returns the chunks that best match a query across the buckets named, best first. |  | `search:read` | `buckets` (strings), `bucket` (string), `query` (string), `limit` (int), `prefix` (string), `viewer` (json) |
+
 ## llm.speech/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.speech/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.
@@ -125,8 +150,8 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 
 | Tool | What it does | Reads only | Token scope | Arguments |
 |---|---|---|---|---|
-| `llm_text_complete` | Answers a prompt or a conversation. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
-| `llm_text_stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
+| `llm_text_complete` | Answers a prompt or a conversation. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
+| `llm_text_stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
 | `llm_text_count` | Says about how many tokens a text or a conversation is, for budgeting what to send. |  | `llm:read` | `model` (string), `text` (string), `system` (string), `messages` (json) |
 | `llm_text_models` | Lists the text models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
 

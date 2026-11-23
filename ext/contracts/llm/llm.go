@@ -7,6 +7,7 @@
 package llm
 
 import (
+	"encoding/json"
 	"math"
 	"strings"
 
@@ -150,3 +151,42 @@ var (
 	// limit and when its window resets ("try again after 00:00 UTC").
 	ErrLimit = &extkit.Error{Code: "limit", Status: 429, Message: "a limit in Settings → LLM refused this call"}
 )
+
+// Enrich adds passages from the app's search buckets (search/v1) to a call's prompt: the call searches Buckets with
+// Query (default: the prompt, or the last user message) and sends the best Limit passages after it. In JSON it's an
+// object, or just the list of buckets (["storytime"]).
+type Enrich struct {
+	Buckets []string `json:"buckets"`
+	Limit   int      `json:"limit,omitempty"` // passages to add (default 5, at most 20)
+	Query   string   `json:"query,omitempty"`
+	// Viewer is who the answer is for: passages from records they can't view (the collection's view rule) are left
+	// out. Nil sees everything, as the app's own server code.
+	Viewer *Viewer `json:"viewer,omitempty"`
+}
+
+// Viewer is a signed-in auth record (Collection and ID), or a guest (both empty).
+type Viewer struct {
+	Collection string `json:"collection,omitempty"`
+	ID         string `json:"id,omitempty"`
+}
+
+// UnmarshalJSON takes the object form or a list of bucket names.
+func (e *Enrich) UnmarshalJSON(b []byte) error {
+	var names []string
+	if err := json.Unmarshal(b, &names); err == nil {
+		*e = Enrich{Buckets: names}
+		return nil
+	}
+	type plain Enrich
+	return json.Unmarshal(b, (*plain)(e))
+}
+
+// Passage is a piece of a search bucket that was added to a prompt, and where it came from.
+type Passage struct {
+	Bucket   string  `json:"bucket"`
+	Source   string  `json:"source,omitempty"`
+	Document string  `json:"document"`
+	Heading  string  `json:"heading,omitempty"`
+	Text     string  `json:"text"`
+	Score    float64 `json:"score"`
+}

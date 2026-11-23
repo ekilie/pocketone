@@ -76,6 +76,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [llm.embed/v1](https://pocketone.dev/docs/contracts/llm.embed/v1): Turn texts into vectors for search by meaning: texts in, one vector each out.
 - [llm.image/v1](https://pocketone.dev/docs/contracts/llm.image/v1): Make pictures from a prompt, or change pictures you give it; they come back as files.
 - [llm.music/v1](https://pocketone.dev/docs/contracts/llm.music/v1): Make music from a prompt and lyrics, as a job: start it, follow it, fetch its files (or wait for them).
+- [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1): RAG knowledge bases (buckets) with hybrid search: sources (files, folders, zips, pages, Git repositories, collections) kept current, one embedding model per app.
 - [llm.speech/v1](https://pocketone.dev/docs/contracts/llm.speech/v1): Read text aloud: text in, an audio file out, in a voice the model offers.
 - [llm.text/v1](https://pocketone.dev/docs/contracts/llm.text/v1): Ask a language model: a prompt or a conversation in, text (or JSON matching a schema) out, whole or streamed.
 - [llm.transcribe/v1](https://pocketone.dev/docs/contracts/llm.transcribe/v1): Write down what's said in audio: an audio file in, text out.
@@ -114,6 +115,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension): Named JSON values for an app's settings and state, with no collection or migration. On by default.
 - [LLM](https://pocketone.dev/docs/extensions/llm/extension): Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API.
 - [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat): Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries.
+- [LLM Search](https://pocketone.dev/docs/extensions/llm-search): RAG and hybrid search: knowledge bases (buckets) of files, folders, zips, web pages, Git repositories and collections; $llm.search, and enrich to ground $llm calls in them.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
 - [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
 - [Pages: Pages specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: Pages specification
@@ -167,6 +169,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Streaming answers](https://pocketone.dev/docs/extensions/llm/guides/streaming): Show an answer as the model writes it: $llm.text.streamAsync in a page, forwarded to the browser with ctx.res.sse().
 - [Pictures, speech and music](https://pocketone.dev/docs/extensions/llm/guides/media): Generate pictures, narration, music and video with $llm and save them on your records as files.
 - [Conversations](https://pocketone.dev/docs/extensions/llm/guides/conversations): Chats that remember: send the conversation with each call, or let LLM Chat store it, summarize it and send it for you.
+- [Search and RAG](https://pocketone.dev/docs/extensions/llm/guides/search): Retrieval-augmented generation (RAG) and hybrid search over your own content: knowledge bases (buckets) filled from files, web pages, Git repositories and collections, and enrich to ground any $llm call in them.
 - [Limits](https://pocketone.dev/docs/extensions/llm/guides/limits): Cap what your app spends on models: limits in Settings → LLM for the whole app, each user, each guest and all guests together, by dollars, tokens or calls, per UTC day or month.
 - [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom): $llm.for(ctx) counts a page's model calls for its signed-in user or its guest, so per-user and per-guest limits apply; how guests are told apart, and how to handle a refused call.
 - [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend): Every model call is a row in _llm_calls: what it was, whom it was for and what it cost. Read spend per user or model, and sell credits from a hook.

@@ -82,7 +82,7 @@ Asks the chat a question: the provider sends the system text, the chat's summary
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.chat/v1/send` |
-| CLI | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` |
+| CLI | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` |
 | MCP | `llm_chat_send` |
 | Token scope | `chat` |
 
@@ -99,6 +99,7 @@ Asks the chat a question: the provider sends the system text, the chat's summary
 | `temperature` | `--temperature` | json |
 | `model` | `--model` | string |
 | `reasoning` | `--reasoning` | string |
+| `enrich` | `--enrich` | json |
 
 ### send_stream
 
@@ -107,7 +108,7 @@ Is Send with the answer as it's written: llm.text/v1 chunks, the last one with d
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.chat/v1/send-stream` |
-| CLI | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` |
+| CLI | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` |
 | MCP | `llm_chat_send_stream` |
 | Token scope | `chat` |
 | Answer | a stream of JSON entries (server-sent events); the command prints one line each |
@@ -125,6 +126,7 @@ Is Send with the answer as it's written: llm.text/v1 chunks, the last one with d
 | `temperature` | `--temperature` | json |
 | `model` | `--model` | string |
 | `reasoning` | `--reasoning` | string |
+| `enrich` | `--enrich` | json |
 
 ### get
 

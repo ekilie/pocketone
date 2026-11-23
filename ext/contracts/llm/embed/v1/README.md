@@ -49,6 +49,7 @@ full `provider/model` that answered, and `usage` with what the provider reports.
 | Extension | |
 |---|---|
 | [llm](../../../../../ext/llm/README.md) | provides |
+| [llm-search](../../../../../ext/llm-search/README.md) | works with |
 
 <!-- /contracts:index -->
 

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"pocketone.dev/ext/contracts/llm"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	"pocketone.dev/ext/extkit"
 )
@@ -106,7 +107,9 @@ type SendInput struct {
 	// Model is the text model to answer with ("provider/model", required).
 	Model string `json:"model"`
 	// Reasoning is how much a reasoning model thinks first: "", "off", "low", "medium" or "high".
-	Reasoning string `json:"reasoning,omitempty"`
+	Reasoning string `json:"reasoning,omitempty"` // Enrich adds the best passages from the app's search buckets after the question, beside Context (search/v1);
+	// the answer's Passages lists them.
+	Enrich *llm.Enrich `json:"enrich,omitempty"`
 }
 
 // SendResult is the answer, and whether this turn folded older messages into the summary.

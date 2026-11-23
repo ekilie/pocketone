@@ -82,6 +82,7 @@ Lists the embedding models of every provider in Settings → LLM.
 | Extension | |
 |---|---|
 | [llm](https://pocketone.dev/docs/extensions/llm/extension) | provides |
+| [llm-search](https://pocketone.dev/docs/extensions/llm-search) | works with |
 
 <!-- /contracts:index -->
 

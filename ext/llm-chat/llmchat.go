@@ -18,6 +18,7 @@ import (
 	"ganigeorgiev.com/pocketbase/pocketbase/core"
 	"pocketone.dev/ext/contracts/llm"
 	chatv1 "pocketone.dev/ext/contracts/llm/chat/v1"
+	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
 	"pocketone.dev/ext/extkit"
 )
@@ -47,7 +48,7 @@ func (*Extension) Name() string { return Name }
 
 // Contracts implements extkit.Declarer: it answers with llm.text/v1, so it needs a provider of it (ext/llm).
 func (*Extension) Contracts() extkit.Contracts {
-	return extkit.Contracts{Implements: extkit.IDs("llm.chat/v1"), Requires: extkit.IDs("llm.text/v1")}
+	return extkit.Contracts{Implements: extkit.IDs("llm.chat/v1"), Requires: extkit.IDs("llm.text/v1"), WorksWith: extkit.IDs("llm.search/v1")}
 }
 
 // Register implements extkit.Extension.
@@ -138,16 +139,17 @@ func (c *chats) messages(chatID string, from int) ([]*core.Record, error) {
 
 // prepared is a send's llm.text/v1 input and what it needs to save afterwards.
 type prepared struct {
-	chat    *core.Record
-	input   textv1.CompleteInput
-	next    int // the question's seq
-	window  int
-	every   int
-	pending []*core.Record // the messages since the last fold
-	sent    string         // the question as sent, with its context
+	chat     *core.Record
+	input    textv1.CompleteInput
+	next     int // the question's seq
+	window   int
+	every    int
+	pending  []*core.Record // the messages since the last fold
+	sent     string         // the question as sent, with its context
+	passages []llm.Passage  // what enrich added, for the answer
 }
 
-func (c *chats) prepare(in chatv1.SendInput) (*prepared, error) {
+func (c *chats) prepare(ctx context.Context, in chatv1.SendInput) (*prepared, error) {
 	if strings.TrimSpace(in.Text) == "" {
 		return nil, badRequest("give the question's text")
 	}
@@ -184,6 +186,17 @@ func (c *chats) prepare(in chatv1.SendInput) (*prepared, error) {
 	question := in.Text
 	if strings.TrimSpace(in.Context) != "" {
 		question += "\n\n" + in.Context // after the question: the cached start stays the same
+	}
+	if in.Enrich != nil {
+		// the passages go with the question and are saved with it, so later turns send the same start
+		text, passages, err := searchv1.Enrich(ctx, c.app, in.Enrich, in.Text)
+		if err != nil {
+			return nil, err
+		}
+		if text != "" {
+			question += "\n\n" + text
+		}
+		p.passages = passages
 	}
 	msgs = append(msgs, textv1.Message{Role: "user", Content: question})
 	p.sent = question
@@ -271,7 +284,7 @@ func (c *chats) fold(ctx context.Context, chat *core.Record, n int, model string
 
 // Send implements llm.chat/v1.
 func (c *chats) Send(ctx context.Context, _ extkit.Auth, in chatv1.SendInput) (chatv1.SendResult, error) {
-	p, err := c.prepare(in)
+	p, err := c.prepare(ctx, in)
 	if err != nil {
 		return chatv1.SendResult{}, err
 	}
@@ -283,6 +296,7 @@ func (c *chats) Send(ctx context.Context, _ extkit.Auth, in chatv1.SendInput) (c
 	if err != nil {
 		return chatv1.SendResult{}, err
 	}
+	res.Passages = p.passages
 	folded, err := c.save(ctx, p, in.Text, res.Text)
 	if err != nil {
 		return chatv1.SendResult{Answer: res}, err
@@ -291,8 +305,8 @@ func (c *chats) Send(ctx context.Context, _ extkit.Auth, in chatv1.SendInput) (c
 }
 
 // SendStream implements llm.chat/v1: llm.text/v1's stream, with both turns saved before the last chunk.
-func (c *chats) SendStream(_ context.Context, _ extkit.Auth, in chatv1.SendInput) (extkit.Stream, error) {
-	p, err := c.prepare(in)
+func (c *chats) SendStream(ctx context.Context, _ extkit.Auth, in chatv1.SendInput) (extkit.Stream, error) {
+	p, err := c.prepare(ctx, in)
 	if err != nil {
 		return extkit.Stream{}, err
 	}
@@ -323,6 +337,7 @@ func (c *chats) SendStream(_ context.Context, _ extkit.Auth, in chatv1.SendInput
 		if _, err := c.save(ctx, p, in.Text, res.Text); err != nil {
 			return err
 		}
+		res.Passages = p.passages
 		return send(textv1.Chunk{Done: true, Result: res})
 	}}, nil
 }

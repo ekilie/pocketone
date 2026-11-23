@@ -58,7 +58,7 @@ Answers a prompt or a conversation.
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.text/v1/complete` |
-| CLI | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` |
+| CLI | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` |
 | MCP | `llm_text_complete` |
 | Token scope | `llm` |
 
@@ -74,6 +74,7 @@ Answers a prompt or a conversation.
 | `stop` | `--stop` | strings |
 | `reasoning` | `--reasoning` | string |
 | `options` | `--options` | json |
+| `enrich` | `--enrich` | json |
 
 ### stream
 
@@ -82,7 +83,7 @@ Answers like Complete, sending the answer as it's written: a chunk with text (or
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.text/v1/stream` |
-| CLI | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` |
+| CLI | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` |
 | MCP | `llm_text_stream` |
 | Token scope | `llm` |
 | Answer | a stream of JSON entries (server-sent events); the command prints one line each |
@@ -99,6 +100,7 @@ Answers like Complete, sending the answer as it's written: a chunk with text (or
 | `stop` | `--stop` | strings |
 | `reasoning` | `--reasoning` | string |
 | `options` | `--options` | json |
+| `enrich` | `--enrich` | json |
 
 ### count
 

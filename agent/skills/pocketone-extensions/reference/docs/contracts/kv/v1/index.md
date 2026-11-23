@@ -141,6 +141,7 @@ Removes a value. Deleting a name with no value is not an error.
 | [api-tokens](https://pocketone.dev/docs/extensions/api-tokens) | works with |
 | [bulkmail](https://pocketone.dev/docs/extensions/bulkmail) | works with |
 | [llm](https://pocketone.dev/docs/extensions/llm/extension) | works with |
+| [llm-search](https://pocketone.dev/docs/extensions/llm-search) | works with |
 
 <!-- /contracts:index -->
 

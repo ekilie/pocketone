@@ -1078,6 +1078,7 @@ Calls POST /api/\_c/llm.chat/v1/send on the remote (token scope: chat).
 | Flag | Type | Default | |
 |---|---|---|---|
 | `--context` | string | – |  |
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--id` | string | – |  |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
@@ -1108,6 +1109,7 @@ Calls POST /api/\_c/llm.chat/v1/send-stream on the remote (token scope: chat).
 | Flag | Type | Default | |
 |---|---|---|---|
 | `--context` | string | – |  |
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--id` | string | – |  |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
@@ -1348,6 +1350,395 @@ Calls GET /api/\_c/llm.music/v1/models on the remote (token scope: llm:read).
 
 From [llm.music/v1](https://pocketone.dev/docs/contracts/llm.music/v1) (generated).
 
+### pocketone remote llm search
+
+Calls llm.search/v1 on a remote
+
+### pocketone remote llm search add
+
+Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name (llm.search/v1)
+
+```
+pocketone remote llm search add
+```
+
+Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. The same text again costs nothing; changed text embeds only its new chunks. It returns at once; the document is embedded in the background (its status says how far it got).
+
+Calls POST /api/\_c/llm.search/v1/add on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--kind` | string | – |  |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--replace` | string | – |  |
+| `--text` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search add-u-r-l
+
+Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current (llm.search/v1)
+
+```
+pocketone remote llm search add-u-r-l
+```
+
+Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current.
+
+Calls POST /api/\_c/llm.search/v1/add-url on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--commits` | int64 | `0` |  |
+| `--every` | string | – |  |
+| `--exclude` | stringSlice | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--kind` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--url` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search bucket
+
+Returns one bucket with its counts (llm.search/v1)
+
+```
+pocketone remote llm search bucket
+```
+
+Returns one bucket with its counts.
+
+Calls GET /api/\_c/llm.search/v1/bucket on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search buckets
+
+Lists the app's buckets with their counts (llm.search/v1)
+
+```
+pocketone remote llm search buckets
+```
+
+Lists the app's buckets with their counts.
+
+Calls GET /api/\_c/llm.search/v1/buckets on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search delete
+
+Removes a bucket and everything in it (llm.search/v1)
+
+```
+pocketone remote llm search delete
+```
+
+Removes a bucket and everything in it.
+
+Calls POST /api/\_c/llm.search/v1/delete on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search detect-u-r-l
+
+Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page (llm.search/v1)
+
+```
+pocketone remote llm search detect-u-r-l
+```
+
+Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page.
+
+Calls POST /api/\_c/llm.search/v1/detect-url on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--url` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search documents
+
+Lists a bucket's documents (or one source's), by source and name (llm.search/v1)
+
+```
+pocketone remote llm search documents
+```
+
+Lists a bucket's documents (or one source's), by source and name.
+
+Calls GET /api/\_c/llm.search/v1/documents on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--prefix` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search ensure
+
+Makes a bucket if it's missing and returns it (llm.search/v1)
+
+```
+pocketone remote llm search ensure
+```
+
+Makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an empty title, description or owner is filled in. Apps call it at startup for the bucket they need.
+
+Calls POST /api/\_c/llm.search/v1/ensure on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--description` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `--owner` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search follow
+
+Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted (llm.search/v1)
+
+```
+pocketone remote llm search follow
+```
+
+Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted.
+
+Calls POST /api/\_c/llm.search/v1/follow on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--collection` | string | – |  |
+| `--fields` | stringSlice | – |  |
+| `--filter` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search prune
+
+Removes the documents of a folder source that aren't in Keep: the files the folder no longer has (llm.search/v1)
+
+```
+pocketone remote llm search prune
+```
+
+Removes the documents of a folder source that aren't in Keep: the files the folder no longer has.
+
+Calls POST /api/\_c/llm.search/v1/prune on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--keep` | stringSlice | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search put
+
+Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it (llm.search/v1)
+
+```
+pocketone remote llm search put
+```
+
+Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it.
+
+Calls POST /api/\_c/llm.search/v1/put on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--path` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--replace` | string | – |  |
+| `--source` | string | – |  |
+| `--text` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search refresh
+
+Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip (llm.search/v1)
+
+```
+pocketone remote llm search refresh
+```
+
+Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip.
+
+Calls POST /api/\_c/llm.search/v1/refresh on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search remove
+
+Takes sources out of a bucket, with their documents (llm.search/v1)
+
+```
+pocketone remote llm search remove
+```
+
+Takes sources out of a bucket, with their documents.
+
+Calls POST /api/\_c/llm.search/v1/remove on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--sources` | stringSlice | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search set-model
+
+Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again) (llm.search/v1)
+
+```
+pocketone remote llm search set-model
+```
+
+Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again). Every bucket is embedded again in the background; until a chunk is, keywords still find it.
+
+Calls POST /api/\_c/llm.search/v1/set-model on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--model` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search sources
+
+Lists a bucket's sources, by name (llm.search/v1)
+
+```
+pocketone remote llm search sources
+```
+
+Lists a bucket's sources, by name.
+
+Calls GET /api/\_c/llm.search/v1/sources on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search status
+
+Is the app's embedding model and how far embedding has got across every bucket (llm.search/v1)
+
+```
+pocketone remote llm search status
+```
+
+Is the app's embedding model and how far embedding has got across every bucket.
+
+Calls GET /api/\_c/llm.search/v1/status on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search update
+
+Changes a bucket's title, description or limits (fields left out stay) (llm.search/v1)
+
+```
+pocketone remote llm search update
+```
+
+Changes a bucket's title, description or limits (fields left out stay).
+
+Calls POST /api/\_c/llm.search/v1/update on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--description` | string | – | a JSON value (@file reads a file) |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxbytes` | string | – | a JSON value (@file reads a file) |
+| `--maxdocuments` | string | – | a JSON value (@file reads a file) |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – | a JSON value (@file reads a file) |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search upload
+
+Adds a file sent as the request body: ?bucket=&lt;name&gt;&name=&lt;file name&gt;[&replace=&lt;source&gt;] (llm.search/v1)
+
+```
+pocketone remote llm search upload
+```
+
+Adds a file sent as the request body: ?bucket=&lt;name&gt;&name=&lt;file name&gt;[&replace=&lt;source&gt;]. A .zip is one source with a document per text file inside it; anything else is a file source.
+
+Calls POST /api/\_c/llm.search/v1/upload on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--content-type` | string | `application/octet-stream` | the body's content type |
+| `--file` | string | `-` | the body to send (- for stdin) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
 ### pocketone remote llm speech
 
 Calls llm.speech/v1 on a remote
@@ -1436,6 +1827,7 @@ Calls POST /api/\_c/llm.text/v1/complete on the remote (token scope: llm).
 
 | Flag | Type | Default | |
 |---|---|---|---|
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
 | `--messages` | string | – | a JSON value (@file reads a file) |
@@ -1508,6 +1900,7 @@ Calls POST /api/\_c/llm.text/v1/stream on the remote (token scope: llm).
 
 | Flag | Type | Default | |
 |---|---|---|---|
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
 | `--messages` | string | – | a JSON value (@file reads a file) |

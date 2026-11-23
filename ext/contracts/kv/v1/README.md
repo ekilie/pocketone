@@ -80,6 +80,7 @@ helpers read and write it directly.
 | [api-tokens](../../../../ext/api-tokens/README.md) | works with |
 | [bulkmail](../../../../ext/bulkmail/README.md) | works with |
 | [llm](../../../../ext/llm/README.md) | works with |
+| [llm-search](../../../../ext/llm-search/README.md) | works with |
 
 <!-- /contracts:index -->
 

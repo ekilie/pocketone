@@ -83,8 +83,8 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 | Endpoint | What it does | Token scope | Input |
 |---|---|---|---|
 | `POST /api/_c/llm.chat/v1/new` | Starts a chat and returns it; its id is how the app finds it again. | `chat` | `title` (string), `meta` (json) |
-| `POST /api/_c/llm.chat/v1/send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
-| `POST /api/_c/llm.chat/v1/send-stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. (stream) | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
+| `POST /api/_c/llm.chat/v1/send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
+| `POST /api/_c/llm.chat/v1/send-stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. (stream) | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
 | `POST /api/_c/llm.chat/v1/get` | Returns a chat. | `chat:read` | `id` (string) |
 | `POST /api/_c/llm.chat/v1/history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). | `chat:read` | `id` (string), `limit` (int), `before` (string) |
 | `POST /api/_c/llm.chat/v1/update` | Sets a chat's title or meta (fields left out stay). | `chat` | `id` (string), `title` (json), `meta` (json) |
@@ -122,6 +122,32 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 | `POST /api/_c/llm.music/v1/content` | Fetches one of a done job's files. | `llm:read` | `id` (string), `index` (int) |
 | `GET /api/_c/llm.music/v1/models` | Lists the music models of every provider in Settings → LLM. | `llm:read` | `provider` (string) |
 
+## llm.search/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/llm.search/v1). Answered by [LLM Search](https://pocketone.dev/docs/extensions/llm-search) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `GET /api/_c/llm.search/v1/status` | Is the app's embedding model and how far embedding has got across every bucket. | `search:read` |  |
+| `POST /api/_c/llm.search/v1/set-model` | Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again). | `search` | `model` (string) |
+| `GET /api/_c/llm.search/v1/buckets` | Lists the app's buckets with their counts. | `search:read` |  |
+| `GET /api/_c/llm.search/v1/bucket` | Returns one bucket with its counts. | `search:read` | `name` (string) |
+| `POST /api/_c/llm.search/v1/ensure` | Makes a bucket if it's missing and returns it. | `search` | `name` (string), `title` (string), `description` (string), `owner` (string) |
+| `POST /api/_c/llm.search/v1/update` | Changes a bucket's title, description or limits (fields left out stay). | `search` | `name` (string), `title` (json), `description` (json), `maxDocuments` (json), `maxBytes` (json) |
+| `POST /api/_c/llm.search/v1/delete` | Removes a bucket and everything in it. | `search` | `name` (string) |
+| `GET /api/_c/llm.search/v1/sources` | Lists a bucket's sources, by name. | `search:read` | `bucket` (string) |
+| `POST /api/_c/llm.search/v1/add` | Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. | `search` | `bucket` (string), `name` (string), `text` (string), `kind` (string), `replace` (string) |
+| `POST /api/_c/llm.search/v1/upload` | Adds a file sent as the request body: ?bucket=&lt;name&gt;&name=&lt;file name&gt;[&replace=&lt;source&gt;]. | `search` | raw body |
+| `POST /api/_c/llm.search/v1/put` | Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it. | `search` | `bucket` (string), `source` (string), `path` (string), `text` (string), `replace` (string) |
+| `POST /api/_c/llm.search/v1/prune` | Removes the documents of a folder source that aren't in Keep: the files the folder no longer has. | `search` | `bucket` (string), `source` (string), `keep` (strings) |
+| `POST /api/_c/llm.search/v1/add-url` | Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current. | `search` | `bucket` (string), `url` (string), `kind` (string), `every` (string), `commits` (int), `exclude` (strings) |
+| `POST /api/_c/llm.search/v1/detect-url` | Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page. | `search:read` | `url` (string) |
+| `POST /api/_c/llm.search/v1/follow` | Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted. | `search` | `bucket` (string), `collection` (string), `fields` (strings), `filter` (string) |
+| `POST /api/_c/llm.search/v1/refresh` | Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip. | `search` | `bucket` (string), `source` (string) |
+| `POST /api/_c/llm.search/v1/remove` | Takes sources out of a bucket, with their documents. | `search` | `bucket` (string), `sources` (strings) |
+| `GET /api/_c/llm.search/v1/documents` | Lists a bucket's documents (or one source's), by source and name. | `search:read` | `bucket` (string), `source` (string), `prefix` (string) |
+| `POST /api/_c/llm.search/v1/search` | Returns the chunks that best match a query across the buckets named, best first. | `search:read` | `buckets` (strings), `bucket` (string), `query` (string), `limit` (int), `prefix` (string), `viewer` (json) |
+
 ## llm.speech/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.speech/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.
@@ -138,8 +164,8 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 
 | Endpoint | What it does | Token scope | Input |
 |---|---|---|---|
-| `POST /api/_c/llm.text/v1/complete` | Answers a prompt or a conversation. | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
-| `POST /api/_c/llm.text/v1/stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. (stream) | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
+| `POST /api/_c/llm.text/v1/complete` | Answers a prompt or a conversation. | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
+| `POST /api/_c/llm.text/v1/stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. (stream) | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
 | `POST /api/_c/llm.text/v1/count` | Says about how many tokens a text or a conversation is, for budgeting what to send. | `llm:read` | `model` (string), `text` (string), `system` (string), `messages` (json) |
 | `GET /api/_c/llm.text/v1/models` | Lists the text models of every provider in Settings → LLM. | `llm:read` | `provider` (string) |
 

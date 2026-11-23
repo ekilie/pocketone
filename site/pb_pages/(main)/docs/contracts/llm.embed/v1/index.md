@@ -88,6 +88,7 @@ Lists the embedding models of every provider in Settings → LLM.
 | Extension | |
 |---|---|
 | [llm](/docs/extensions/llm/extension) | provides |
+| [llm-search](/docs/extensions/llm-search) | works with |
 
 <!-- /contracts:index -->
 

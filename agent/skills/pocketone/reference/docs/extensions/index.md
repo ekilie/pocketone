@@ -21,6 +21,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) | Named JSON values for an app's settings and state, with no collection or migration. On by default. |
 | [LLM](https://pocketone.dev/docs/extensions/llm/extension) | Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API. |
 | [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat) | Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries. |
+| [LLM Search](https://pocketone.dev/docs/extensions/llm-search) | RAG and hybrid search: knowledge bases (buckets) of files, folders, zips, web pages, Git repositories and collections; $llm.search, and enrich to ground $llm calls in them. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [PITR](https://pocketone.dev/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |

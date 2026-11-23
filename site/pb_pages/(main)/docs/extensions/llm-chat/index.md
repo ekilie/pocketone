@@ -71,6 +71,7 @@ Options for `$llm.chat.open(id, ...)`, used by every send (a send can override t
 | `reasoning` | the model's | As in `$llm.text.completeAsync`. Summaries always use `"off"`. |
 | `system` | | The preamble, first on every turn. |
 | `context` | | Text, or a function of the question returning text, sent after the question: the passages that answer it. `history()` shows the question alone; later turns send it with its context again, so each prompt starts the same way. |
+| `enrich` | | Search buckets whose best passages go after the question (`["help"]`, or `{ buckets, limit, query, viewer }`; `viewer: ctx.auth` applies collections' view rules), saved with it like `context`; the answer's `passages` lists them. Needs the [LLM Search](/docs/extensions/llm-search) extension. |
 | `window` | 12 | Messages sent before the summary takes over. |
 | `summarizeEvery` | 6 | Once that many messages have piled up past the window, the oldest are folded into the summary (a second, short call). If that call fails, the answer is still returned and saved, and the next send tries again. |
 | `maxTokens`, `temperature` | the provider's | As in `$llm.text.completeAsync`. |
@@ -103,8 +104,8 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 | Operation | CLI | REST | MCP |
 |---|---|---|---|
 | [new](/docs/contracts/llm.chat/v1#new) | `pocketone remote llm chat new --title <value> --meta <json>` | `POST /api/_c/llm.chat/v1/new` | `llm_chat_new` |
-| [send](/docs/contracts/llm.chat/v1#send) | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` | `POST /api/_c/llm.chat/v1/send` | `llm_chat_send` |
-| [send_stream](/docs/contracts/llm.chat/v1#send_stream) | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` | `POST /api/_c/llm.chat/v1/send-stream` | `llm_chat_send_stream` |
+| [send](/docs/contracts/llm.chat/v1#send) | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` | `POST /api/_c/llm.chat/v1/send` | `llm_chat_send` |
+| [send_stream](/docs/contracts/llm.chat/v1#send_stream) | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` | `POST /api/_c/llm.chat/v1/send-stream` | `llm_chat_send_stream` |
 | [get](/docs/contracts/llm.chat/v1#get) | `pocketone remote llm chat get --id <value>` | `POST /api/_c/llm.chat/v1/get` | `llm_chat_get` |
 | [history](/docs/contracts/llm.chat/v1#history) | `pocketone remote llm chat history --id <value> --limit <n> --before <value>` | `POST /api/_c/llm.chat/v1/history` | `llm_chat_history` |
 | [update](/docs/contracts/llm.chat/v1#update) | `pocketone remote llm chat update --id <value> --title <json> --meta <json>` | `POST /api/_c/llm.chat/v1/update` | `llm_chat_update` |

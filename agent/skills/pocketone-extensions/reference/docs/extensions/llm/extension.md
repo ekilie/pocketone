@@ -89,7 +89,8 @@ while a model works; there are no blocking versions to reach for. Each call name
 
 | Call | What it does |
 |---|---|
-| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage }`. With `schema`, `data` is the parsed JSON. |
+| `$llm.search.searchAsync({ query, buckets?, limit?, viewer? })` and the rest of `$llm.search` | Hybrid search over knowledge bases (buckets) of your content, through the [LLM Search](https://pocketone.dev/docs/extensions/llm-search) extension ([Search and RAG](https://pocketone.dev/docs/extensions/llm/guides/search)). |
+| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, enrich?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage, passages }`. With `schema`, `data` is the parsed JSON. With `enrich` (RAG: buckets to search, `["help"]`), the best passages from them are sent after the prompt and listed in `passages` ([LLM Search](https://pocketone.dev/docs/extensions/llm-search)). |
 | `$llm.text.streamAsync(opts, onText, onReasoning?)` | The same, calling `onText` with each piece as it's written (`false` stops it). |
 | `$llm.text.count(text \| messages)` | About how many tokens (four characters each). Local, so not async. |
 | `$llm.image.generateAsync({ model, prompt, n?, size?, aspectRatio? })`, `editAsync({ ..., images })` | Pictures: `{ files, model, usage }`. |
@@ -190,8 +191,8 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 
 | Operation | CLI | REST | MCP |
 |---|---|---|---|
-| [complete](https://pocketone.dev/docs/contracts/llm.text/v1#complete) | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` | `POST /api/_c/llm.text/v1/complete` | `llm_text_complete` |
-| [stream](https://pocketone.dev/docs/contracts/llm.text/v1#stream) | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` | `POST /api/_c/llm.text/v1/stream` | `llm_text_stream` |
+| [complete](https://pocketone.dev/docs/contracts/llm.text/v1#complete) | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` | `POST /api/_c/llm.text/v1/complete` | `llm_text_complete` |
+| [stream](https://pocketone.dev/docs/contracts/llm.text/v1#stream) | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` | `POST /api/_c/llm.text/v1/stream` | `llm_text_stream` |
 | [count](https://pocketone.dev/docs/contracts/llm.text/v1#count) | `pocketone remote llm text count --model <value> --text <value> --system <value> --messages <json>` | `POST /api/_c/llm.text/v1/count` | `llm_text_count` |
 | [models](https://pocketone.dev/docs/contracts/llm.text/v1#models) | `pocketone remote llm text models --provider <value>` | `GET /api/_c/llm.text/v1/models` | `llm_text_models` |
 

@@ -61,6 +61,8 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
 - [Streaming answers](https://pocketone.dev/docs/extensions/llm/guides/streaming): show an answer as it's written.
 - [Pictures, speech and music](https://pocketone.dev/docs/extensions/llm/guides/media): generate files and save them on records.
 - [Conversations](https://pocketone.dev/docs/extensions/llm/guides/conversations): chats that remember, with LLM Chat.
+- [Search and RAG](https://pocketone.dev/docs/extensions/llm/guides/search): retrieval-augmented generation over your own files, web pages, Git repositories
+  and records: knowledge bases (buckets), hybrid search with `$llm.search`, and `enrich` to ground any call in them.
 - [Limits](https://pocketone.dev/docs/extensions/llm/guides/limits): cap what the app spends, per day or month, for the whole app, each user and each guest.
 - [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom): `$llm.for(ctx)`, so per-user and per-guest limits apply.
 - [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend): every call's cost, per user and per model; selling credits.

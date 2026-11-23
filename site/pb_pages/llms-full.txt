@@ -2238,6 +2238,8 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
 - [Streaming answers](https://pocketone.dev/docs/extensions/llm/guides/streaming): show an answer as it's written.
 - [Pictures, speech and music](https://pocketone.dev/docs/extensions/llm/guides/media): generate files and save them on records.
 - [Conversations](https://pocketone.dev/docs/extensions/llm/guides/conversations): chats that remember, with LLM Chat.
+- [Search and RAG](https://pocketone.dev/docs/extensions/llm/guides/search): retrieval-augmented generation over your own files, web pages, Git repositories
+  and records: knowledge bases (buckets), hybrid search with `$llm.search`, and `enrich` to ground any call in them.
 - [Limits](https://pocketone.dev/docs/extensions/llm/guides/limits): cap what the app spends, per day or month, for the whole app, each user and each guest.
 - [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom): `$llm.for(ctx)`, so per-user and per-guest limits apply.
 - [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend): every call's cost, per user and per model; selling credits.
@@ -3181,12 +3183,13 @@ The table is generated from each contract's README and every extension's `Contra
 | [`instance.source/v1`](https://pocketone.dev/docs/contracts/instance.source/v1) | The instance record a multisite host serves, and where the records come from. | mothership | pocker |  | @benallfree |
 | [`instance.tokens/v1`](https://pocketone.dev/docs/contracts/instance.tokens/v1) | A multisite host checks an API token one of its instances issued, to accept it on the routes it answers. | pocker |  |  | @benallfree |
 | [`instance.watch/v1`](https://pocketone.dev/docs/contracts/instance.watch/v1) | An edge follows a control plane lazily: one stream, hostnames watched as requests name them. | mothership |  |  | @benallfree |
-| [`kv/v1`](https://pocketone.dev/docs/contracts/kv/v1) | An app's key-value store: named JSON values with no collection or migration, kept in PocketBase's _params. | kv (default) |  | api-tokens, bulkmail, llm | @benallfree |
+| [`kv/v1`](https://pocketone.dev/docs/contracts/kv/v1) | An app's key-value store: named JSON values with no collection or migration, kept in PocketBase's _params. | kv (default) |  | api-tokens, bulkmail, llm, llm-search | @benallfree |
 | [`llm.align/v1`](https://pocketone.dev/docs/contracts/llm.align/v1) | Forced alignment: audio and the exact words spoken in it in, the time of every line and word out. | llm |  |  | @benallfree |
 | [`llm.chat/v1`](https://pocketone.dev/docs/contracts/llm.chat/v1) | Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | llm-chat |  |  | @benallfree |
-| [`llm.embed/v1`](https://pocketone.dev/docs/contracts/llm.embed/v1) | Turn texts into vectors for search by meaning: texts in, one vector each out. | llm |  |  | @benallfree |
+| [`llm.embed/v1`](https://pocketone.dev/docs/contracts/llm.embed/v1) | Turn texts into vectors for search by meaning: texts in, one vector each out. | llm |  | llm-search | @benallfree |
 | [`llm.image/v1`](https://pocketone.dev/docs/contracts/llm.image/v1) | Make pictures from a prompt, or change pictures you give it; they come back as files. | llm |  |  | @benallfree |
 | [`llm.music/v1`](https://pocketone.dev/docs/contracts/llm.music/v1) | Make music from a prompt and lyrics, as a job: start it, follow it, fetch its files (or wait for them). | llm |  |  | @benallfree |
+| [`llm.search/v1`](https://pocketone.dev/docs/contracts/llm.search/v1) | RAG knowledge bases (buckets) with hybrid search: sources (files, folders, zips, pages, Git repositories, collections) kept current, one embedding model per app. | llm-search |  | llm-chat | @benallfree |
 | [`llm.speech/v1`](https://pocketone.dev/docs/contracts/llm.speech/v1) | Read text aloud: text in, an audio file out, in a voice the model offers. | llm |  |  | @benallfree |
 | [`llm.text/v1`](https://pocketone.dev/docs/contracts/llm.text/v1) | Ask a language model: a prompt or a conversation in, text (or JSON matching a schema) out, whole or streamed. | llm | llm-chat |  | @benallfree |
 | [`llm.transcribe/v1`](https://pocketone.dev/docs/contracts/llm.transcribe/v1) | Write down what's said in audio: an audio file in, text out. | llm |  |  | @benallfree |
@@ -3337,6 +3340,7 @@ These ship with `pocketone` and add no work to an app that doesn't use them.
 | [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) | Named JSON values for an app's settings and state, with no collection or migration. On by default. |
 | [LLM](https://pocketone.dev/docs/extensions/llm/extension) | Cloud models for your app: text, pictures, speech, transcription, alignment, music, video and embeddings from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API. |
 | [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat) | Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries. |
+| [LLM Search](https://pocketone.dev/docs/extensions/llm-search) | RAG and hybrid search: knowledge bases (buckets) of files, folders, zips, web pages, Git repositories and collections; $llm.search, and enrich to ground $llm calls in them. |
 | [MCP](https://pocketone.dev/docs/extensions/mcp) | An MCP endpoint at /mcp so agents can manage your app and call its tools. |
 | [Pages](https://pocketone.dev/docs/extensions/pages/extension) | Server-rendered pages from a pb_pages folder (formerly PocketPages). |
 | [PITR](https://pocketone.dev/docs/extensions/pitr) | Point-in-time restore of your database with Litestream. On by default. |
@@ -4758,6 +4762,7 @@ Calls POST /api/\_c/llm.chat/v1/send on the remote (token scope: chat).
 | Flag | Type | Default | |
 |---|---|---|---|
 | `--context` | string | – |  |
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--id` | string | – |  |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
@@ -4788,6 +4793,7 @@ Calls POST /api/\_c/llm.chat/v1/send-stream on the remote (token scope: chat).
 | Flag | Type | Default | |
 |---|---|---|---|
 | `--context` | string | – |  |
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--id` | string | – |  |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
@@ -5028,6 +5034,395 @@ Calls GET /api/\_c/llm.music/v1/models on the remote (token scope: llm:read).
 
 From [llm.music/v1](https://pocketone.dev/docs/contracts/llm.music/v1) (generated).
 
+### pocketone remote llm search
+
+Calls llm.search/v1 on a remote
+
+### pocketone remote llm search add
+
+Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name (llm.search/v1)
+
+```
+pocketone remote llm search add
+```
+
+Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. The same text again costs nothing; changed text embeds only its new chunks. It returns at once; the document is embedded in the background (its status says how far it got).
+
+Calls POST /api/\_c/llm.search/v1/add on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--kind` | string | – |  |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--replace` | string | – |  |
+| `--text` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search add-u-r-l
+
+Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current (llm.search/v1)
+
+```
+pocketone remote llm search add-u-r-l
+```
+
+Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current.
+
+Calls POST /api/\_c/llm.search/v1/add-url on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--commits` | int64 | `0` |  |
+| `--every` | string | – |  |
+| `--exclude` | stringSlice | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--kind` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--url` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search bucket
+
+Returns one bucket with its counts (llm.search/v1)
+
+```
+pocketone remote llm search bucket
+```
+
+Returns one bucket with its counts.
+
+Calls GET /api/\_c/llm.search/v1/bucket on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search buckets
+
+Lists the app's buckets with their counts (llm.search/v1)
+
+```
+pocketone remote llm search buckets
+```
+
+Lists the app's buckets with their counts.
+
+Calls GET /api/\_c/llm.search/v1/buckets on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search delete
+
+Removes a bucket and everything in it (llm.search/v1)
+
+```
+pocketone remote llm search delete
+```
+
+Removes a bucket and everything in it.
+
+Calls POST /api/\_c/llm.search/v1/delete on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search detect-u-r-l
+
+Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page (llm.search/v1)
+
+```
+pocketone remote llm search detect-u-r-l
+```
+
+Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page.
+
+Calls POST /api/\_c/llm.search/v1/detect-url on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--url` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search documents
+
+Lists a bucket's documents (or one source's), by source and name (llm.search/v1)
+
+```
+pocketone remote llm search documents
+```
+
+Lists a bucket's documents (or one source's), by source and name.
+
+Calls GET /api/\_c/llm.search/v1/documents on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--prefix` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search ensure
+
+Makes a bucket if it's missing and returns it (llm.search/v1)
+
+```
+pocketone remote llm search ensure
+```
+
+Makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an empty title, description or owner is filled in. Apps call it at startup for the bucket they need.
+
+Calls POST /api/\_c/llm.search/v1/ensure on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--description` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--name` | string | – |  |
+| `--owner` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search follow
+
+Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted (llm.search/v1)
+
+```
+pocketone remote llm search follow
+```
+
+Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted.
+
+Calls POST /api/\_c/llm.search/v1/follow on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--collection` | string | – |  |
+| `--fields` | stringSlice | – |  |
+| `--filter` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search prune
+
+Removes the documents of a folder source that aren't in Keep: the files the folder no longer has (llm.search/v1)
+
+```
+pocketone remote llm search prune
+```
+
+Removes the documents of a folder source that aren't in Keep: the files the folder no longer has.
+
+Calls POST /api/\_c/llm.search/v1/prune on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--keep` | stringSlice | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search put
+
+Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it (llm.search/v1)
+
+```
+pocketone remote llm search put
+```
+
+Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it.
+
+Calls POST /api/\_c/llm.search/v1/put on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--path` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--replace` | string | – |  |
+| `--source` | string | – |  |
+| `--text` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search refresh
+
+Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip (llm.search/v1)
+
+```
+pocketone remote llm search refresh
+```
+
+Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip.
+
+Calls POST /api/\_c/llm.search/v1/refresh on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--source` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search remove
+
+Takes sources out of a bucket, with their documents (llm.search/v1)
+
+```
+pocketone remote llm search remove
+```
+
+Takes sources out of a bucket, with their documents.
+
+Calls POST /api/\_c/llm.search/v1/remove on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--sources` | stringSlice | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search set-model
+
+Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again) (llm.search/v1)
+
+```
+pocketone remote llm search set-model
+```
+
+Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again). Every bucket is embedded again in the background; until a chunk is, keywords still find it.
+
+Calls POST /api/\_c/llm.search/v1/set-model on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--model` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search sources
+
+Lists a bucket's sources, by name (llm.search/v1)
+
+```
+pocketone remote llm search sources
+```
+
+Lists a bucket's sources, by name.
+
+Calls GET /api/\_c/llm.search/v1/sources on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search status
+
+Is the app's embedding model and how far embedding has got across every bucket (llm.search/v1)
+
+```
+pocketone remote llm search status
+```
+
+Is the app's embedding model and how far embedding has got across every bucket.
+
+Calls GET /api/\_c/llm.search/v1/status on the remote (token scope: search:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search update
+
+Changes a bucket's title, description or limits (fields left out stay) (llm.search/v1)
+
+```
+pocketone remote llm search update
+```
+
+Changes a bucket's title, description or limits (fields left out stay).
+
+Calls POST /api/\_c/llm.search/v1/update on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--description` | string | – | a JSON value (@file reads a file) |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--maxbytes` | string | – | a JSON value (@file reads a file) |
+| `--maxdocuments` | string | – | a JSON value (@file reads a file) |
+| `--name` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--title` | string | – | a JSON value (@file reads a file) |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
+### pocketone remote llm search upload
+
+Adds a file sent as the request body: ?bucket=&lt;name&gt;&name=&lt;file name&gt;[&replace=&lt;source&gt;] (llm.search/v1)
+
+```
+pocketone remote llm search upload
+```
+
+Adds a file sent as the request body: ?bucket=&lt;name&gt;&name=&lt;file name&gt;[&replace=&lt;source&gt;]. A .zip is one source with a document per text file inside it; anything else is a file source.
+
+Calls POST /api/\_c/llm.search/v1/upload on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--content-type` | string | `application/octet-stream` | the body's content type |
+| `--file` | string | `-` | the body to send (- for stdin) |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
 ### pocketone remote llm speech
 
 Calls llm.speech/v1 on a remote
@@ -5116,6 +5511,7 @@ Calls POST /api/\_c/llm.text/v1/complete on the remote (token scope: llm).
 
 | Flag | Type | Default | |
 |---|---|---|---|
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
 | `--messages` | string | – | a JSON value (@file reads a file) |
@@ -5188,6 +5584,7 @@ Calls POST /api/\_c/llm.text/v1/stream on the remote (token scope: llm).
 
 | Flag | Type | Default | |
 |---|---|---|---|
+| `--enrich` | string | – | a JSON value (@file reads a file) |
 | `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
 | `--maxtokens` | int64 | `0` |  |
 | `--messages` | string | – | a JSON value (@file reads a file) |
@@ -5999,8 +6396,8 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 | Endpoint | What it does | Token scope | Input |
 |---|---|---|---|
 | `POST /api/_c/llm.chat/v1/new` | Starts a chat and returns it; its id is how the app finds it again. | `chat` | `title` (string), `meta` (json) |
-| `POST /api/_c/llm.chat/v1/send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
-| `POST /api/_c/llm.chat/v1/send-stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. (stream) | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
+| `POST /api/_c/llm.chat/v1/send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
+| `POST /api/_c/llm.chat/v1/send-stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. (stream) | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
 | `POST /api/_c/llm.chat/v1/get` | Returns a chat. | `chat:read` | `id` (string) |
 | `POST /api/_c/llm.chat/v1/history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). | `chat:read` | `id` (string), `limit` (int), `before` (string) |
 | `POST /api/_c/llm.chat/v1/update` | Sets a chat's title or meta (fields left out stay). | `chat` | `id` (string), `title` (json), `meta` (json) |
@@ -6038,6 +6435,32 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 | `POST /api/_c/llm.music/v1/content` | Fetches one of a done job's files. | `llm:read` | `id` (string), `index` (int) |
 | `GET /api/_c/llm.music/v1/models` | Lists the music models of every provider in Settings → LLM. | `llm:read` | `provider` (string) |
 
+## llm.search/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/llm.search/v1). Answered by [LLM Search](https://pocketone.dev/docs/extensions/llm-search) in the standard set.
+
+| Endpoint | What it does | Token scope | Input |
+|---|---|---|---|
+| `GET /api/_c/llm.search/v1/status` | Is the app's embedding model and how far embedding has got across every bucket. | `search:read` |  |
+| `POST /api/_c/llm.search/v1/set-model` | Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again). | `search` | `model` (string) |
+| `GET /api/_c/llm.search/v1/buckets` | Lists the app's buckets with their counts. | `search:read` |  |
+| `GET /api/_c/llm.search/v1/bucket` | Returns one bucket with its counts. | `search:read` | `name` (string) |
+| `POST /api/_c/llm.search/v1/ensure` | Makes a bucket if it's missing and returns it. | `search` | `name` (string), `title` (string), `description` (string), `owner` (string) |
+| `POST /api/_c/llm.search/v1/update` | Changes a bucket's title, description or limits (fields left out stay). | `search` | `name` (string), `title` (json), `description` (json), `maxDocuments` (json), `maxBytes` (json) |
+| `POST /api/_c/llm.search/v1/delete` | Removes a bucket and everything in it. | `search` | `name` (string) |
+| `GET /api/_c/llm.search/v1/sources` | Lists a bucket's sources, by name. | `search:read` | `bucket` (string) |
+| `POST /api/_c/llm.search/v1/add` | Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. | `search` | `bucket` (string), `name` (string), `text` (string), `kind` (string), `replace` (string) |
+| `POST /api/_c/llm.search/v1/upload` | Adds a file sent as the request body: ?bucket=&lt;name&gt;&name=&lt;file name&gt;[&replace=&lt;source&gt;]. | `search` | raw body |
+| `POST /api/_c/llm.search/v1/put` | Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it. | `search` | `bucket` (string), `source` (string), `path` (string), `text` (string), `replace` (string) |
+| `POST /api/_c/llm.search/v1/prune` | Removes the documents of a folder source that aren't in Keep: the files the folder no longer has. | `search` | `bucket` (string), `source` (string), `keep` (strings) |
+| `POST /api/_c/llm.search/v1/add-url` | Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current. | `search` | `bucket` (string), `url` (string), `kind` (string), `every` (string), `commits` (int), `exclude` (strings) |
+| `POST /api/_c/llm.search/v1/detect-url` | Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page. | `search:read` | `url` (string) |
+| `POST /api/_c/llm.search/v1/follow` | Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted. | `search` | `bucket` (string), `collection` (string), `fields` (strings), `filter` (string) |
+| `POST /api/_c/llm.search/v1/refresh` | Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip. | `search` | `bucket` (string), `source` (string) |
+| `POST /api/_c/llm.search/v1/remove` | Takes sources out of a bucket, with their documents. | `search` | `bucket` (string), `sources` (strings) |
+| `GET /api/_c/llm.search/v1/documents` | Lists a bucket's documents (or one source's), by source and name. | `search:read` | `bucket` (string), `source` (string), `prefix` (string) |
+| `POST /api/_c/llm.search/v1/search` | Returns the chunks that best match a query across the buckets named, best first. | `search:read` | `buckets` (strings), `bucket` (string), `query` (string), `limit` (int), `prefix` (string), `viewer` (json) |
+
 ## llm.speech/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.speech/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.
@@ -6054,8 +6477,8 @@ Its own API under `/api/_c/deploy/v1/`: see [deploy/v1](https://pocketone.dev/do
 
 | Endpoint | What it does | Token scope | Input |
 |---|---|---|---|
-| `POST /api/_c/llm.text/v1/complete` | Answers a prompt or a conversation. | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
-| `POST /api/_c/llm.text/v1/stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. (stream) | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
+| `POST /api/_c/llm.text/v1/complete` | Answers a prompt or a conversation. | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
+| `POST /api/_c/llm.text/v1/stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. (stream) | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
 | `POST /api/_c/llm.text/v1/count` | Says about how many tokens a text or a conversation is, for budgeting what to send. | `llm:read` | `model` (string), `text` (string), `system` (string), `messages` (json) |
 | `GET /api/_c/llm.text/v1/models` | Lists the text models of every provider in Settings → LLM. | `llm:read` | `provider` (string) |
 
@@ -6219,8 +6642,8 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | Tool | What it does | Reads only | Token scope | Arguments |
 |---|---|---|---|---|
 | `llm_chat_new` | Starts a chat and returns it; its id is how the app finds it again. |  | `chat` | `title` (string), `meta` (json) |
-| `llm_chat_send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
-| `llm_chat_send_stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string) |
+| `llm_chat_send` | Asks the chat a question: the provider sends the system text, the chat's summary, its recent messages and the question (with Context after it) to llm.text/v1, saves both turns, and folds older messages into the summary when it's due. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
+| `llm_chat_send_stream` | Is Send with the answer as it's written: llm.text/v1 chunks, the last one with done and the result. |  | `chat` | `id` (string), `text` (string), `system` (string), `window` (int), `summarizeEvery` (int), `context` (string), `schema` (json), `maxTokens` (int), `temperature` (json), `model` (string), `reasoning` (string), `enrich` (json) |
 | `llm_chat_get` | Returns a chat. |  | `chat:read` | `id` (string) |
 | `llm_chat_history` | Returns a chat's messages, oldest first: the last Limit before the message Before (all when 0 and ""). |  | `chat:read` | `id` (string), `limit` (int), `before` (string) |
 | `llm_chat_update` | Sets a chat's title or meta (fields left out stay). |  | `chat` | `id` (string), `title` (json), `meta` (json) |
@@ -6258,6 +6681,31 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | `llm_music_content` | Fetches one of a done job's files. |  | `llm:read` | `id` (string), `index` (int) |
 | `llm_music_models` | Lists the music models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
 
+## llm.search/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/llm.search/v1). Answered by [LLM Search](https://pocketone.dev/docs/extensions/llm-search) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_search_status` | Is the app's embedding model and how far embedding has got across every bucket. | yes | `search:read` |  |
+| `llm_search_set_model` | Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again). |  | `search` | `model` (string) |
+| `llm_search_buckets` | Lists the app's buckets with their counts. | yes | `search:read` |  |
+| `llm_search_bucket` | Returns one bucket with its counts. | yes | `search:read` | `name` (string) |
+| `llm_search_ensure` | Makes a bucket if it's missing and returns it. |  | `search` | `name` (string), `title` (string), `description` (string), `owner` (string) |
+| `llm_search_update` | Changes a bucket's title, description or limits (fields left out stay). |  | `search` | `name` (string), `title` (json), `description` (json), `maxDocuments` (json), `maxBytes` (json) |
+| `llm_search_delete` | Removes a bucket and everything in it. |  | `search` | `name` (string) |
+| `llm_search_sources` | Lists a bucket's sources, by name. | yes | `search:read` | `bucket` (string) |
+| `llm_search_add` | Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. |  | `search` | `bucket` (string), `name` (string), `text` (string), `kind` (string), `replace` (string) |
+| `llm_search_put` | Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it. |  | `search` | `bucket` (string), `source` (string), `path` (string), `text` (string), `replace` (string) |
+| `llm_search_prune` | Removes the documents of a folder source that aren't in Keep: the files the folder no longer has. |  | `search` | `bucket` (string), `source` (string), `keep` (strings) |
+| `llm_search_add_u_r_l` | Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current. |  | `search` | `bucket` (string), `url` (string), `kind` (string), `every` (string), `commits` (int), `exclude` (strings) |
+| `llm_search_detect_u_r_l` | Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page. |  | `search:read` | `url` (string) |
+| `llm_search_follow` | Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted. |  | `search` | `bucket` (string), `collection` (string), `fields` (strings), `filter` (string) |
+| `llm_search_refresh` | Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip. |  | `search` | `bucket` (string), `source` (string) |
+| `llm_search_remove` | Takes sources out of a bucket, with their documents. |  | `search` | `bucket` (string), `sources` (strings) |
+| `llm_search_documents` | Lists a bucket's documents (or one source's), by source and name. | yes | `search:read` | `bucket` (string), `source` (string), `prefix` (string) |
+| `llm_search_search` | Returns the chunks that best match a query across the buckets named, best first. |  | `search:read` | `buckets` (strings), `bucket` (string), `query` (string), `limit` (int), `prefix` (string), `viewer` (json) |
+
 ## llm.speech/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.speech/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.
@@ -6274,8 +6722,8 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 
 | Tool | What it does | Reads only | Token scope | Arguments |
 |---|---|---|---|---|
-| `llm_text_complete` | Answers a prompt or a conversation. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
-| `llm_text_stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json) |
+| `llm_text_complete` | Answers a prompt or a conversation. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
+| `llm_text_stream` | Answers like Complete, sending the answer as it's written: a chunk with text (or reasoning) for each piece, then one with done and the whole result. |  | `llm` | `model` (string), `system` (string), `prompt` (string), `messages` (json), `schema` (json), `maxTokens` (int), `temperature` (json), `stop` (strings), `reasoning` (string), `options` (json), `enrich` (json) |
 | `llm_text_count` | Says about how many tokens a text or a conversation is, for budgeting what to send. |  | `llm:read` | `model` (string), `text` (string), `system` (string), `messages` (json) |
 | `llm_text_models` | Lists the text models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
 
@@ -6571,6 +7019,16 @@ Owned by [LLM](https://pocketone.dev/docs/extensions/llm).
 #### `llm-chat:`
 
 Turns the llm-chat extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.llm-chat`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
+Owned by [Standard Set](https://pocketone.dev/docs/extensions/standard).
+
+#### `llm-search:`
+
+Turns the llm-search extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.llm-search`.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -8253,6 +8711,7 @@ Removes a value. Deleting a name with no value is not an error.
 | [api-tokens](https://pocketone.dev/docs/extensions/api-tokens) | works with |
 | [bulkmail](https://pocketone.dev/docs/extensions/bulkmail) | works with |
 | [llm](https://pocketone.dev/docs/extensions/llm/extension) | works with |
+| [llm-search](https://pocketone.dev/docs/extensions/llm-search) | works with |
 
 <!-- /contracts:index -->
 
@@ -8451,7 +8910,7 @@ Asks the chat a question: the provider sends the system text, the chat's summary
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.chat/v1/send` |
-| CLI | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` |
+| CLI | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` |
 | MCP | `llm_chat_send` |
 | Token scope | `chat` |
 
@@ -8468,6 +8927,7 @@ Asks the chat a question: the provider sends the system text, the chat's summary
 | `temperature` | `--temperature` | json |
 | `model` | `--model` | string |
 | `reasoning` | `--reasoning` | string |
+| `enrich` | `--enrich` | json |
 
 ### send_stream
 
@@ -8476,7 +8936,7 @@ Is Send with the answer as it's written: llm.text/v1 chunks, the last one with d
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.chat/v1/send-stream` |
-| CLI | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` |
+| CLI | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` |
 | MCP | `llm_chat_send_stream` |
 | Token scope | `chat` |
 | Answer | a stream of JSON entries (server-sent events); the command prints one line each |
@@ -8494,6 +8954,7 @@ Is Send with the answer as it's written: llm.text/v1 chunks, the last one with d
 | `temperature` | `--temperature` | json |
 | `model` | `--model` | string |
 | `reasoning` | `--reasoning` | string |
+| `enrich` | `--enrich` | json |
 
 ### get
 
@@ -8695,6 +9156,7 @@ Lists the embedding models of every provider in Settings → LLM.
 | Extension | |
 |---|---|
 | [llm](https://pocketone.dev/docs/extensions/llm/extension) | provides |
+| [llm-search](https://pocketone.dev/docs/extensions/llm-search) | works with |
 
 <!-- /contracts:index -->
 
@@ -8953,6 +9415,420 @@ MIT
 
 ---
 
+Source: https://pocketone.dev/docs/contracts/llm.search/v1
+
+# llm.search/v1
+
+Knowledge bases (buckets) an app searches with hybrid search, for retrieval-augmented generation (RAG). An app makes the bucket it needs (`ensure`); its admins fill it
+with sources, each one tracked unit however many documents it brings: a file, pasted text, a folder, a zip, a web
+page, a Git repository or one of the app's collections. Adding a source of the same name again replaces it (unchanged
+documents cost nothing, missing ones go); pages and repositories are read again on an interval, collections kept in
+sync. The provider splits each document into chunks that keep their source (document, section, lines, record), embeds
+them with the app's one embedding model (llm.embed/v1, picked automatically; identical chunks anywhere in the app are
+embedded once), and returns the best chunks for a query across the buckets asked for. It never answers the question
+itself; llm.text/v1 and llm.chat/v1 calls take `enrich` to add a search's passages to their prompt, through the
+[`Enrich`](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/llm/search/v1/enrich.go) helper every provider of those contracts uses.
+
+A wire contract at `/api/_c/llm.search/v1` ([search.go](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/llm/search/v1/search.go)), one provider. The [llm-search](https://pocketone.dev/docs/extensions/llm-search)
+extension provides it. It brings the dashboard's **Search** screen ([ui/main.js](https://github.com/pocketonehq/pocketone/blob/main/ext/contracts/llm/search/v1/ui/main.js)), which calls only this
+contract (and llm.embed/v1's model list), so it works whoever provides it.
+
+## Use
+
+In page code it's `$llm.search` (bound by the llm extension), and `enrich` on `$llm` calls:
+
+```js
+$llm.search.ensure({ name: "help", title: "Help center", description: "Our help articles." })
+$llm.search.addURL({ bucket: "help", url: "https://github.com/acme/docs", every: "day" })
+const r = await $llm.search.searchAsync({ buckets: ["help"], query: "export to PDF", limit: 5, viewer: ctx.auth })
+const answer = await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: question, enrich: ["help"] })
+```
+
+Over HTTP (a superuser, or a token with the scope shown):
+
+| Operation | HTTP | Body | Token scope |
+|---|---|---|---|
+| Status | `GET /api/_c/llm.search/v1/status` | | `search:read` |
+| Set model | `POST /api/_c/llm.search/v1/set-model` | `{"model"}` (`""` picks one again) | `search` |
+| Buckets | `GET /api/_c/llm.search/v1/buckets` | | `search:read` |
+| Bucket | `GET /api/_c/llm.search/v1/bucket` | `?name=` | `search:read` |
+| Ensure | `POST /api/_c/llm.search/v1/ensure` | `{"name", "title", "description", "owner"}` | `search` |
+| Update | `POST /api/_c/llm.search/v1/update` | `{"name", "title"?, "description"?, "maxDocuments"?, "maxBytes"?}` | `search` |
+| Delete | `POST /api/_c/llm.search/v1/delete` | `{"name"}` | `search` |
+| Sources | `GET /api/_c/llm.search/v1/sources` | `?bucket=` | `search:read` |
+| Add | `POST /api/_c/llm.search/v1/add` | `{"bucket", "name", "text", "kind"?, "replace"?}` (a file or text) | `search` |
+| Upload | `POST /api/_c/llm.search/v1/upload` | `?bucket=&name=&replace=`, the file (or `.zip`) as the body | `search` |
+| Put | `POST /api/_c/llm.search/v1/put` | `{"bucket", "source", "path", "text", "replace"?}` (a folder's file) | `search` |
+| Prune | `POST /api/_c/llm.search/v1/prune` | `{"bucket", "source", "keep": [...]}` (ends a folder) | `search` |
+| Add URL | `POST /api/_c/llm.search/v1/add-url` | `{"bucket", "url", "kind"?, "every"?, "commits"?, "exclude"?}` | `search` |
+| Detect URL | `POST /api/_c/llm.search/v1/detect-url` | `{"url"}` → `{"kind"}`: `git` when the server answers the Git protocol, else `page` | `search:read` |
+| Follow | `POST /api/_c/llm.search/v1/follow` | `{"bucket", "collection", "fields": [...], "filter"?}` | `search` |
+| Refresh | `POST /api/_c/llm.search/v1/refresh` | `{"bucket", "source"}` | `search` |
+| Remove | `POST /api/_c/llm.search/v1/remove` | `{"bucket", "sources": [...]}` | `search` |
+| Documents | `GET /api/_c/llm.search/v1/documents` | `?bucket=&source=&prefix=` | `search:read` |
+| Search | `POST /api/_c/llm.search/v1/search` | `{"buckets": [...], "query", "limit", "prefix", "viewer"}` | `search:read` |
+
+A source answers `{"bucket", "name", "kind", "url", "every", "commits", "exclude", "collection", "fields", "filter",
+"hash", "status", "error", "documents", "chunks", "embedded", "bytes", "pending", "costMicroUSD", "refreshed", "next"}` (`embedded` below `chunks`: embedding under way; documents carry the same); `kind` is
+`file`, `text`, `folder`, `zip`, `page`, `git` or `collection`, `status` is `reading`, `ready` or `error`, and `hash` is
+a file's or zip's sha256, to spot an exact duplicate under another name. `replace` names an existing source the new one
+replaces under its new name. Search answers `{"results": [{"bucket", "source", "document", "text", "heading",
+"startLine", "endLine", "record", "score"}], "model", "usage"}`; no buckets searches every bucket. `viewer`
+(`{"collection", "id"}`, or `{}` for a guest) leaves out records it can't view by the collection's view rule. Status
+answers `{"model", "chunks", "embedded", "note"}`: `embedded` below `chunks` means embedding is under way.
+
+Errors: `not_found` (no such bucket or source), `bad_request` (a bad name, URL, collection or field, an empty query,
+binary content), `too_large` (over the bucket's limits, a document over 10 MB, a zip over 100 MB), `not_configured` (no
+embedding model), and llm.embed/v1's errors from embedding the query.
+
+From Go: `searchv1.Contract.Must(app)` (from `pocketone.dev/ext/contracts/llm/search/v1`), and
+`searchv1.Enrich(ctx, app, enrich, query)` for the passages a model call adds.
+
+## Provide
+
+Implement `searchv1.Search` and provide it in `Register` (`searchv1.Contract.Provide(app, impl)`). Keep these promises:
+
+- `Ensure` is idempotent: an existing bucket keeps its settings; only an empty title, description or owner is filled in.
+- A source is identified by its name within its bucket; adding one of the same name (or naming it in `replace`)
+  replaces it, leaving sources in other buckets alone. Unchanged documents cost nothing; documents the new version
+  doesn't have go.
+- One embedding model for the app, so any buckets can be searched together; vectors from two models are never
+  compared, a new model embeds every chunk again, and a chunk's content is embedded once however many sources hold it.
+- A collection source's documents follow its records: saved, filtered out, deleted. Pages and repositories with an
+  interval are read again when it comes round.
+- With a `viewer`, no result comes from a record the viewer can't view.
+- Results are chunks with their source, best first, at most `limit` (default 5, at most 50); `score` orders them.
+- Searching is the only operation that waits on a model; adding and reading sources return before embedding is done.
+
+## Commands and APIs
+
+Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](https://pocketone.dev/docs/features/remote), or the full [CLI](https://pocketone.dev/docs/reference/cli), [REST](https://pocketone.dev/docs/reference/rest) and [MCP](https://pocketone.dev/docs/reference/mcp) references.
+
+### status
+
+Is the app's embedding model and how far embedding has got across every bucket.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/llm.search/v1/status` |
+| CLI | `pocketone remote llm search status` |
+| MCP | `llm_search_status` |
+| Token scope | `search:read` |
+
+### set_model
+
+Changes the app's embedding model ("provider/model" from llm.embed/v1's models; "" picks one again). Every bucket is embedded again in the background; until a chunk is, keywords still find it.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/set-model` |
+| CLI | `pocketone remote llm search set-model --model <value>` |
+| MCP | `llm_search_set_model` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `model` | `--model` | string |
+
+### buckets
+
+Lists the app's buckets with their counts.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/llm.search/v1/buckets` |
+| CLI | `pocketone remote llm search buckets` |
+| MCP | `llm_search_buckets` |
+| Token scope | `search:read` |
+
+### bucket
+
+Returns one bucket with its counts.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/llm.search/v1/bucket` |
+| CLI | `pocketone remote llm search bucket --name <value>` |
+| MCP | `llm_search_bucket` |
+| Token scope | `search:read` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `name` | `--name` | string |
+
+### ensure
+
+Makes a bucket if it's missing and returns it. An existing bucket keeps its settings, except that an empty title, description or owner is filled in. Apps call it at startup for the bucket they need.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/ensure` |
+| CLI | `pocketone remote llm search ensure --name <value> --title <value> --description <value> --owner <value>` |
+| MCP | `llm_search_ensure` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `name` | `--name` | string |
+| `title` | `--title` | string |
+| `description` | `--description` | string |
+| `owner` | `--owner` | string |
+
+### update
+
+Changes a bucket's title, description or limits (fields left out stay).
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/update` |
+| CLI | `pocketone remote llm search update --name <value> --title <json> --description <json> --maxdocuments <json> --maxbytes <json>` |
+| MCP | `llm_search_update` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `name` | `--name` | string |
+| `title` | `--title` | json |
+| `description` | `--description` | json |
+| `maxDocuments` | `--maxdocuments` | json |
+| `maxBytes` | `--maxbytes` | json |
+
+### delete
+
+Removes a bucket and everything in it.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/delete` |
+| CLI | `pocketone remote llm search delete --name <value>` |
+| MCP | `llm_search_delete` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `name` | `--name` | string |
+
+### sources
+
+Lists a bucket's sources, by name.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/llm.search/v1/sources` |
+| CLI | `pocketone remote llm search sources --bucket <value>` |
+| MCP | `llm_search_sources` |
+| Token scope | `search:read` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+
+### add
+
+Puts a file or pasted text in a bucket as its own source (one document), replacing the source of that name. The same text again costs nothing; changed text embeds only its new chunks. It returns at once; the document is embedded in the background (its status says how far it got).
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/add` |
+| CLI | `pocketone remote llm search add --bucket <value> --name <value> --text <value> --kind <value> --replace <value>` |
+| MCP | `llm_search_add` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `name` | `--name` | string |
+| `text` | `--text` | string |
+| `kind` | `--kind` | string |
+| `replace` | `--replace` | string |
+
+### upload
+
+Adds a file sent as the request body: ?bucket=&lt;name&gt;&name=&lt;file name&gt;[&replace=&lt;source&gt;]. A .zip is one source with a document per text file inside it; anything else is a file source.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/upload` |
+| CLI | `pocketone remote llm search upload --file <path>` |
+| Token scope | `search` |
+| Body | the raw upload, not JSON |
+
+### put
+
+Adds one file to a folder source (made on the first one), the way the dashboard sends a dropped folder; Prune ends it.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/put` |
+| CLI | `pocketone remote llm search put --bucket <value> --source <value> --path <value> --text <value> --replace <value>` |
+| MCP | `llm_search_put` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `source` | `--source` | string |
+| `path` | `--path` | string |
+| `text` | `--text` | string |
+| `replace` | `--replace` | string |
+
+### prune
+
+Removes the documents of a folder source that aren't in Keep: the files the folder no longer has.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/prune` |
+| CLI | `pocketone remote llm search prune --bucket <value> --source <value> --keep <a,b>` |
+| MCP | `llm_search_prune` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `source` | `--source` | string |
+| `keep` | `--keep` | strings |
+
+### add_u_r_l
+
+Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/add-url` |
+| CLI | `pocketone remote llm search add-u-r-l --bucket <value> --url <value> --kind <value> --every <value> --commits <n> --exclude <a,b>` |
+| MCP | `llm_search_add_u_r_l` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `url` | `--url` | string |
+| `kind` | `--kind` | string |
+| `every` | `--every` | string |
+| `commits` | `--commits` | int |
+| `exclude` | `--exclude` | strings |
+
+### detect_u_r_l
+
+Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/detect-url` |
+| CLI | `pocketone remote llm search detect-u-r-l --url <value>` |
+| MCP | `llm_search_detect_u_r_l` |
+| Token scope | `search:read` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `url` | `--url` | string |
+
+### follow
+
+Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/follow` |
+| CLI | `pocketone remote llm search follow --bucket <value> --collection <value> --fields <a,b> --filter <value>` |
+| MCP | `llm_search_follow` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `collection` | `--collection` | string |
+| `fields` | `--fields` | strings |
+| `filter` | `--filter` | string |
+
+### refresh
+
+Reads a source again now: fetches a URL or repository, rereads a collection, resplits a file or zip.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/refresh` |
+| CLI | `pocketone remote llm search refresh --bucket <value> --source <value>` |
+| MCP | `llm_search_refresh` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `source` | `--source` | string |
+
+### remove
+
+Takes sources out of a bucket, with their documents.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/remove` |
+| CLI | `pocketone remote llm search remove --bucket <value> --sources <a,b>` |
+| MCP | `llm_search_remove` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `sources` | `--sources` | strings |
+
+### documents
+
+Lists a bucket's documents (or one source's), by source and name.
+
+| | |
+|---|---|
+| REST | `GET /api/_c/llm.search/v1/documents` |
+| CLI | `pocketone remote llm search documents --bucket <value> --source <value> --prefix <value>` |
+| MCP | `llm_search_documents` |
+| Token scope | `search:read` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `source` | `--source` | string |
+| `prefix` | `--prefix` | string |
+
+### search
+
+Returns the chunks that best match a query across the buckets named, best first.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/search` |
+| CLI | `pocketone remote llm search --buckets <a,b> --bucket <value> --query <value> --limit <n> --prefix <value> --viewer <json>` |
+| MCP | `llm_search_search` |
+| Token scope | `search:read` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `buckets` | `--buckets` | strings |
+| `bucket` | `--bucket` | string |
+| `query` | `--query` | string |
+| `limit` | `--limit` | int |
+| `prefix` | `--prefix` | string |
+| `viewer` | `--viewer` | json |
+
+## Extensions
+
+<!-- contracts:index (generated by `go run ./.github/extensions contracts` from each extension's Contracts(); don't edit) -->
+
+| Extension | |
+|---|---|
+| [llm-search](https://pocketone.dev/docs/extensions/llm-search) | provides |
+| [llm-chat](https://pocketone.dev/docs/extensions/llm-chat) | works with |
+
+<!-- /contracts:index -->
+
+## License
+
+MIT
+
+
+---
+
 Source: https://pocketone.dev/docs/contracts/llm.speech/v1
 
 # llm.speech/v1
@@ -9130,7 +10006,7 @@ Answers a prompt or a conversation.
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.text/v1/complete` |
-| CLI | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` |
+| CLI | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` |
 | MCP | `llm_text_complete` |
 | Token scope | `llm` |
 
@@ -9146,6 +10022,7 @@ Answers a prompt or a conversation.
 | `stop` | `--stop` | strings |
 | `reasoning` | `--reasoning` | string |
 | `options` | `--options` | json |
+| `enrich` | `--enrich` | json |
 
 ### stream
 
@@ -9154,7 +10031,7 @@ Answers like Complete, sending the answer as it's written: a chunk with text (or
 | | |
 |---|---|
 | REST | `POST /api/_c/llm.text/v1/stream` |
-| CLI | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` |
+| CLI | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` |
 | MCP | `llm_text_stream` |
 | Token scope | `llm` |
 | Answer | a stream of JSON entries (server-sent events); the command prints one line each |
@@ -9171,6 +10048,7 @@ Answers like Complete, sending the answer as it's written: a chunk with text (or
 | `stop` | `--stop` | strings |
 | `reasoning` | `--reasoning` | string |
 | `options` | `--options` | json |
+| `enrich` | `--enrich` | json |
 
 ### count
 
@@ -13517,7 +14395,8 @@ while a model works; there are no blocking versions to reach for. Each call name
 
 | Call | What it does |
 |---|---|
-| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage }`. With `schema`, `data` is the parsed JSON. |
+| `$llm.search.searchAsync({ query, buckets?, limit?, viewer? })` and the rest of `$llm.search` | Hybrid search over knowledge bases (buckets) of your content, through the [LLM Search](https://pocketone.dev/docs/extensions/llm-search) extension ([Search and RAG](https://pocketone.dev/docs/extensions/llm/guides/search)). |
+| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, enrich?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage, passages }`. With `schema`, `data` is the parsed JSON. With `enrich` (RAG: buckets to search, `["help"]`), the best passages from them are sent after the prompt and listed in `passages` ([LLM Search](https://pocketone.dev/docs/extensions/llm-search)). |
 | `$llm.text.streamAsync(opts, onText, onReasoning?)` | The same, calling `onText` with each piece as it's written (`false` stops it). |
 | `$llm.text.count(text \| messages)` | About how many tokens (four characters each). Local, so not async. |
 | `$llm.image.generateAsync({ model, prompt, n?, size?, aspectRatio? })`, `editAsync({ ..., images })` | Pictures: `{ files, model, usage }`. |
@@ -13618,8 +14497,8 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 
 | Operation | CLI | REST | MCP |
 |---|---|---|---|
-| [complete](https://pocketone.dev/docs/contracts/llm.text/v1#complete) | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` | `POST /api/_c/llm.text/v1/complete` | `llm_text_complete` |
-| [stream](https://pocketone.dev/docs/contracts/llm.text/v1#stream) | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json>` | `POST /api/_c/llm.text/v1/stream` | `llm_text_stream` |
+| [complete](https://pocketone.dev/docs/contracts/llm.text/v1#complete) | `pocketone remote llm text complete --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` | `POST /api/_c/llm.text/v1/complete` | `llm_text_complete` |
+| [stream](https://pocketone.dev/docs/contracts/llm.text/v1#stream) | `pocketone remote llm text stream --model <value> --system <value> --prompt <value> --messages <json> --schema <json> --maxtokens <n> --temperature <json> --stop <a,b> --reasoning <value> --options <json> --enrich <json>` | `POST /api/_c/llm.text/v1/stream` | `llm_text_stream` |
 | [count](https://pocketone.dev/docs/contracts/llm.text/v1#count) | `pocketone remote llm text count --model <value> --text <value> --system <value> --messages <json>` | `POST /api/_c/llm.text/v1/count` | `llm_text_count` |
 | [models](https://pocketone.dev/docs/contracts/llm.text/v1#models) | `pocketone remote llm text models --provider <value>` | `GET /api/_c/llm.text/v1/models` | `llm_text_models` |
 
@@ -13770,6 +14649,7 @@ Options for `$llm.chat.open(id, ...)`, used by every send (a send can override t
 | `reasoning` | the model's | As in `$llm.text.completeAsync`. Summaries always use `"off"`. |
 | `system` | | The preamble, first on every turn. |
 | `context` | | Text, or a function of the question returning text, sent after the question: the passages that answer it. `history()` shows the question alone; later turns send it with its context again, so each prompt starts the same way. |
+| `enrich` | | Search buckets whose best passages go after the question (`["help"]`, or `{ buckets, limit, query, viewer }`; `viewer: ctx.auth` applies collections' view rules), saved with it like `context`; the answer's `passages` lists them. Needs the [LLM Search](https://pocketone.dev/docs/extensions/llm-search) extension. |
 | `window` | 12 | Messages sent before the summary takes over. |
 | `summarizeEvery` | 6 | Once that many messages have piled up past the window, the oldest are folded into the summary (a second, short call). If that call fails, the answer is still returned and saved, and the next send tries again. |
 | `maxTokens`, `temperature` | the provider's | As in `$llm.text.completeAsync`. |
@@ -13802,8 +14682,8 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 | Operation | CLI | REST | MCP |
 |---|---|---|---|
 | [new](https://pocketone.dev/docs/contracts/llm.chat/v1#new) | `pocketone remote llm chat new --title <value> --meta <json>` | `POST /api/_c/llm.chat/v1/new` | `llm_chat_new` |
-| [send](https://pocketone.dev/docs/contracts/llm.chat/v1#send) | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` | `POST /api/_c/llm.chat/v1/send` | `llm_chat_send` |
-| [send_stream](https://pocketone.dev/docs/contracts/llm.chat/v1#send_stream) | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value>` | `POST /api/_c/llm.chat/v1/send-stream` | `llm_chat_send_stream` |
+| [send](https://pocketone.dev/docs/contracts/llm.chat/v1#send) | `pocketone remote llm chat send --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` | `POST /api/_c/llm.chat/v1/send` | `llm_chat_send` |
+| [send_stream](https://pocketone.dev/docs/contracts/llm.chat/v1#send_stream) | `pocketone remote llm chat send-stream --id <value> --text <value> --system <value> --window <n> --summarizeevery <n> --context <value> --schema <json> --maxtokens <n> --temperature <json> --model <value> --reasoning <value> --enrich <json>` | `POST /api/_c/llm.chat/v1/send-stream` | `llm_chat_send_stream` |
 | [get](https://pocketone.dev/docs/contracts/llm.chat/v1#get) | `pocketone remote llm chat get --id <value>` | `POST /api/_c/llm.chat/v1/get` | `llm_chat_get` |
 | [history](https://pocketone.dev/docs/contracts/llm.chat/v1#history) | `pocketone remote llm chat history --id <value> --limit <n> --before <value>` | `POST /api/_c/llm.chat/v1/history` | `llm_chat_history` |
 | [update](https://pocketone.dev/docs/contracts/llm.chat/v1#update) | `pocketone remote llm chat update --id <value> --title <json> --meta <json>` | `POST /api/_c/llm.chat/v1/update` | `llm_chat_update` |
@@ -13846,6 +14726,220 @@ func main() {
 	app := pocketbase.New()
 	devusers.Register(app)
 	if _, err := extkit.Setup(app, []extkit.Extension{llm.New(), llmchat.New()}, nil, nil); err != nil {
+		log.Fatal(err)
+	}
+	if err := app.Start(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+## License
+
+MIT
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/llm-search
+
+# LLM Search
+
+Version 0.1.0 · Owners: [@benallfree](https://github.com/benallfree)
+
+LLM Search is retrieval-augmented generation (RAG) for PocketOne apps, part of [AI in your app](https://pocketone.dev/docs/extensions/llm/extension). It
+keeps **buckets**, knowledge bases of your content, and runs the pipeline: **ingestion** (sources become documents,
+documents become chunks that remember their section, lines and record), **embeddings** with the app's one embedding
+model (picked for you from Settings → LLM), and **hybrid search** (semantic search by vector similarity and keyword
+search by BM25, merged). Your app makes the bucket it needs; you fill it on the dashboard's **Search** screen with
+**sources**: files, folders and zips you drop, pasted text, web pages and Git repositories it keeps current, or
+collections it keeps in sync. **Chat** on that screen lets you try it out.
+
+The usual use is grounding a model's answer in your content. Name the buckets on a model call (`enrich`) and the best
+passages go into the prompt:
+
+```ts
+const answer = await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: question, enrich: ["help"] })
+// answer.passages: what was added, to show where the answer came from
+```
+
+Or search yourself:
+
+```ts
+$llm.search.ensure({ name: "storytime", title: "Story Time library", description: "Stories, characters and places to draw on." })
+const found = await $llm.search.searchAsync({ buckets: ["storytime"], query: "a fox who lives by the sea", limit: 5 })
+for (const r of found.results) console.log(r.bucket, r.document, r.heading, r.text)
+```
+
+In Go:
+
+```go
+s := searchv1.Contract.Must(app) // llm.search/v1, from pocketone.dev/ext/contracts/llm/search/v1
+s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "storytime", Title: "Story Time library"})
+res, err := s.Search(ctx, extkit.Internal, searchv1.SearchInput{Buckets: []string{"storytime"}, Query: "a fox who lives by the sea"})
+```
+
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Integrations](#integrations) · [Example](#example)
+
+## Install
+
+LLM Search is built into `pocketone` and on by default, in every app and every instance of a host (a standard member). In
+your own Go build, next to LLM:
+
+```go
+extkit.Setup(app, []extkit.Extension{llm.New(), llmsearch.New()}, nil, nil)
+```
+
+The module is `pocketone.dev/ext/llm-search`; page code reaches it as `$llm.search`, bound by the LLM extension. Its collections (`_llm_search_buckets`, `_llm_search_documents`, `_llm_search_chunks`)
+and its keyword index (the SQLite FTS5 table `_llm_search_fts`) come from its own migration, `0001_buckets` in
+[schema.go](https://github.com/pocketonehq/pocketone/blob/main/ext/llm-search/schema.go), which runs on the first start. They stay empty until something makes a bucket.
+
+## Configure
+
+Searching needs an AI provider with embedding models in Settings → LLM (Vultr's `qwen3-embedding-4b`, say). There's
+nothing else to set:
+
+- **The embedding model** is one for the whole app, so every bucket can be searched together. The first time anything
+  needs it, Search picks the cheapest embedding model your providers list and keeps it (in kv, `_llm_search/model`).
+  Change it on the Search screen: every bucket is embedded again in the background, with its progress shown there, and
+  search keeps working meanwhile (chunks not yet done are still found by their words). Content added before there's a
+  provider waits, and is embedded once there is one.
+- **Each bucket** has a title, a description of what belongs in it, and limits: at most 2,000 documents and 50 MB of
+  text. A document is at most 10 MB, a zip 100 MB.
+
+Turn the extension off on a single app with `llm-search: {enabled: false}` in pocketone.yaml (on a host, an instance's
+`extensions.llm-search`); its collections and data stay.
+
+## Use
+
+**Buckets.** `$llm.search.ensure({ name, title?, description?, owner? })` makes a bucket if it's missing and
+returns it; call it at startup for the bucket your app needs. An existing bucket keeps its settings (only an empty
+title, description or owner is filled in), so your admins' changes stick. The description is what the Search
+screen shows them: say what to load. A name is letters, digits, `-` and `_`, up to 64.
+
+**Sources.** A bucket holds sources, each one tracked unit however many documents it brings:
+
+| Source | Add it | Documents | Adding it again |
+|---|---|---|---|
+| File | drop it, or `$llm.search.add({ bucket, name, text })`, or `POST upload?bucket=&name=` with the file as the body | one | replaces it |
+| Text | **paste text**, or `add` with `kind: "text"` | one | replaces it |
+| Folder | drop it (sent file by file, then pruned) | one per text file, by its path in the folder | updates changed files, adds new ones, **removes missing ones** |
+| Zip | drop it, or `upload` a `.zip` | one per text file inside (a shared top folder is dropped) | the same, from the new zip |
+| Web page | **add a URL**, or `$llm.search.addURL({ bucket, url, every })` | one | read again on its interval |
+| Git repository | add its URL, with or without `.git`: the server is asked whether it's a repository (the Git protocol's `info/refs`), on any host | one per text file on the default branch, plus one per recent commit (300; `commits`) | read again on its interval: one small request when nothing changed |
+| Collection | **follow a collection**, or `$llm.search.follow({ bucket, collection, fields, filter })` | one per record the filter keeps | kept in sync as records are saved and deleted |
+
+A source's name identifies it in its bucket: the file, folder or zip name, the URL, or the collection. Adding one of
+the same name replaces it, and the screen asks first. A new version under another name (`notes-v2.zip` for
+`notes-v1.zip`) replaces the old one when you say so: **Upload a new version** on its row, or `replace: "<old name>"`.
+Dropping content that's already in the bucket under another name (same sha256) asks before adding it again. Each
+bucket's sources are its own: replacing `foo.zip` in one bucket leaves a `foo.zip` in another as it was.
+
+Nothing is embedded twice. A document whose text didn't change is left alone, a changed one embeds only its chunks
+whose text changed, and a chunk whose content was embedded anywhere in the app (another source, another bucket) reuses
+that vector. So two buckets following the same collection, or the same zip in two buckets, cost one embedding.
+
+Folders, zips and repositories leave out binaries, files over 1 MB, dot folders and dotfiles (`.git`, `.github`),
+`node_modules`, `vendor` and lockfiles; a repository also takes `exclude` patterns (`"docs/old"`, `"*.min.js"`). Markdown is
+split at headings (each chunk carries its heading path, led by the front matter's `title`), code and text at blank
+lines, into chunks of about 500 tokens; a page's HTML becomes Markdown (scripts, navigation and footers left out) and
+a commit is its subject, body, author, date and the files it changed (no diffs). A collection's record is its first
+field as the title and the others below it (editor fields' HTML as text); results from it name their `record`.
+
+Everything is embedded in the background: 64 chunks to a request, under 120 requests a minute, picking up where it
+left off after a restart. **Refresh** on a row (or `$llm.search.refresh(bucket, source)`) reads a source again now;
+`$llm.search.remove(bucket, sources)` takes sources out; `$llm.search.deleteBucket(name)` removes a bucket. URL and repository
+intervals (`every`: `hour`, `day`, `week`) are checked every five minutes. Fetches use Go's default HTTP client, so on
+a multitenant host (Pocker) the host's outbound guard applies; only `http` and `https` URLs are taken, public
+repositories only, with a 30-second limit per page and five minutes per repository.
+
+**Searching.** `await $llm.search.searchAsync({ query, buckets?, limit?, prefix?, viewer? })` returns the best chunks across
+the buckets named (every bucket when none are): `{ results: [{ bucket, document, text, heading, startLine, endLine,
+record, score }], model, usage }`. `limit` is 5 by default, at most 50; `prefix` keeps documents whose name starts with
+it. Each search embeds the query once (a few tokens; a repeated query is cached), the only part that calls a provider,
+so it's the only async call. Ranking merges similarity of meaning (a loop in Go over vectors cached in memory) with
+keyword matching (BM25), so exact names like `onRecordCreate` or a character's name rank where they should.
+
+**Who sees what.** A bucket holds a copy of its records' text, so pass `viewer` to apply the collection's view rules:
+`viewer: ctx.auth` (or `e.auth`) leaves out matches from records that user can't view, and `null` is a signed-out
+guest. Without `viewer` a search sees everything, as your own server code. Over HTTP and MCP only superusers and API
+tokens with the `search` scope (or `search:read` to list and search) get in.
+
+**Enriching a model call.** `enrich` on `$llm.text.completeAsync`, `streamAsync` and LLM Chat's `sendAsync` (or a
+chat's options) searches the buckets with the prompt and sends the best passages after it, numbered so the model can
+cite them; `answer.passages` lists them. Give the buckets (`enrich: ["help"]`) or `{ buckets, limit?, query?, viewer? }`
+(default 5 passages, at most 20); `viewer: ctx.auth` applies collections' view rules, as for a search. LLM Chat saves the passages with the question, so later turns send the same thing.
+
+**Cost.** Embedding goes through llm.embed/v1, billed to your provider account like any other `$llm` call. Each
+document shows what embedding it cost. `qwen3-embedding-4b` on Vultr is $0.05 per million tokens, about 4 MB of text.
+
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [status](https://pocketone.dev/docs/contracts/llm.search/v1#status) | `pocketone remote llm search status` | `GET /api/_c/llm.search/v1/status` | `llm_search_status` |
+| [set_model](https://pocketone.dev/docs/contracts/llm.search/v1#set_model) | `pocketone remote llm search set-model --model <value>` | `POST /api/_c/llm.search/v1/set-model` | `llm_search_set_model` |
+| [buckets](https://pocketone.dev/docs/contracts/llm.search/v1#buckets) | `pocketone remote llm search buckets` | `GET /api/_c/llm.search/v1/buckets` | `llm_search_buckets` |
+| [bucket](https://pocketone.dev/docs/contracts/llm.search/v1#bucket) | `pocketone remote llm search bucket --name <value>` | `GET /api/_c/llm.search/v1/bucket` | `llm_search_bucket` |
+| [ensure](https://pocketone.dev/docs/contracts/llm.search/v1#ensure) | `pocketone remote llm search ensure --name <value> --title <value> --description <value> --owner <value>` | `POST /api/_c/llm.search/v1/ensure` | `llm_search_ensure` |
+| [update](https://pocketone.dev/docs/contracts/llm.search/v1#update) | `pocketone remote llm search update --name <value> --title <json> --description <json> --maxdocuments <json> --maxbytes <json>` | `POST /api/_c/llm.search/v1/update` | `llm_search_update` |
+| [delete](https://pocketone.dev/docs/contracts/llm.search/v1#delete) | `pocketone remote llm search delete --name <value>` | `POST /api/_c/llm.search/v1/delete` | `llm_search_delete` |
+| [sources](https://pocketone.dev/docs/contracts/llm.search/v1#sources) | `pocketone remote llm search sources --bucket <value>` | `GET /api/_c/llm.search/v1/sources` | `llm_search_sources` |
+| [add](https://pocketone.dev/docs/contracts/llm.search/v1#add) | `pocketone remote llm search add --bucket <value> --name <value> --text <value> --kind <value> --replace <value>` | `POST /api/_c/llm.search/v1/add` | `llm_search_add` |
+| [upload](https://pocketone.dev/docs/contracts/llm.search/v1#upload) | `pocketone remote llm search upload --file <path>` | `POST /api/_c/llm.search/v1/upload` | – |
+| [put](https://pocketone.dev/docs/contracts/llm.search/v1#put) | `pocketone remote llm search put --bucket <value> --source <value> --path <value> --text <value> --replace <value>` | `POST /api/_c/llm.search/v1/put` | `llm_search_put` |
+| [prune](https://pocketone.dev/docs/contracts/llm.search/v1#prune) | `pocketone remote llm search prune --bucket <value> --source <value> --keep <a,b>` | `POST /api/_c/llm.search/v1/prune` | `llm_search_prune` |
+| [add_u_r_l](https://pocketone.dev/docs/contracts/llm.search/v1#add_u_r_l) | `pocketone remote llm search add-u-r-l --bucket <value> --url <value> --kind <value> --every <value> --commits <n> --exclude <a,b>` | `POST /api/_c/llm.search/v1/add-url` | `llm_search_add_u_r_l` |
+| [detect_u_r_l](https://pocketone.dev/docs/contracts/llm.search/v1#detect_u_r_l) | `pocketone remote llm search detect-u-r-l --url <value>` | `POST /api/_c/llm.search/v1/detect-url` | `llm_search_detect_u_r_l` |
+| [follow](https://pocketone.dev/docs/contracts/llm.search/v1#follow) | `pocketone remote llm search follow --bucket <value> --collection <value> --fields <a,b> --filter <value>` | `POST /api/_c/llm.search/v1/follow` | `llm_search_follow` |
+| [refresh](https://pocketone.dev/docs/contracts/llm.search/v1#refresh) | `pocketone remote llm search refresh --bucket <value> --source <value>` | `POST /api/_c/llm.search/v1/refresh` | `llm_search_refresh` |
+| [remove](https://pocketone.dev/docs/contracts/llm.search/v1#remove) | `pocketone remote llm search remove --bucket <value> --sources <a,b>` | `POST /api/_c/llm.search/v1/remove` | `llm_search_remove` |
+| [documents](https://pocketone.dev/docs/contracts/llm.search/v1#documents) | `pocketone remote llm search documents --bucket <value> --source <value> --prefix <value>` | `GET /api/_c/llm.search/v1/documents` | `llm_search_documents` |
+| [search](https://pocketone.dev/docs/contracts/llm.search/v1#search) | `pocketone remote llm search --buckets <a,b> --bucket <value> --query <value> --limit <n> --prefix <value> --viewer <json>` | `POST /api/_c/llm.search/v1/search` | `llm_search_search` |
+
+## Integrations
+
+| With | What happens |
+|---|---|
+| [LLM](https://pocketone.dev/docs/extensions/llm/extension) | Embeds chunks and queries (llm.embed/v1), and adds passages to text calls with `enrich`. Search's own HTTP and MCP API is the [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) contract. |
+| [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat) | `enrich` on a chat or a send. |
+| [Key-Value Store](https://pocketone.dev/docs/extensions/kv/extension) | Keeps the app's embedding model. |
+| [Sandbox](https://pocketone.dev/docs/extensions/sandbox) | On a Pocker host, its egress guard covers page and repository fetches. |
+| [Multisite](https://pocketone.dev/docs/extensions/multisite) | Each instance keeps its own buckets and model in its own database. |
+
+## Example
+
+```go
+// Command example is a PocketBase app with search buckets: the llm extension embeds, search keeps the buckets. Add a
+// provider with embedding models in Settings → LLM, run `go run . serve`, open the dashboard's Search screen, make a
+// bucket and drop Markdown files on it. Or over HTTP as a superuser:
+//
+//	POST /api/_c/search/v1/ensure   {"name": "docs"}
+//	POST /api/_c/search/v1/add      {"bucket": "docs", "name": "install.md", "text": "# Install\n..."}
+//	POST /api/_c/search/v1/search   {"buckets": ["docs"], "query": "how do I install it"}
+//
+// In page code the same is $search.ensure(...), $search.add(...) and await $search.searchAsync(...).
+package main
+
+import (
+	"log"
+
+	"ganigeorgiev.com/pocketbase/pocketbase"
+
+	"pocketone.dev/ext/devusers"
+	"pocketone.dev/ext/extkit"
+	"pocketone.dev/ext/llm"
+	llmsearch "pocketone.dev/ext/llm-search"
+)
+
+func main() {
+	app := pocketbase.New()
+	devusers.Register(app)
+	if _, err := extkit.Setup(app, []extkit.Extension{llm.New(), llmsearch.New()}, nil, nil); err != nil {
 		log.Fatal(err)
 	}
 	if err := app.Start(); err != nil {
@@ -20010,6 +21104,14 @@ Turns the llm-chat extension off on a single app (`enabled: false`). On a multis
 |---|---|---|---|
 | `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
 
+#### `llm-search:`
+
+Turns the llm-search extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.llm-search`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool |  | On unless false. Extensions that require it turn off too, and the startup lines say why. |
+
 #### `mcp:`
 
 Turns the mcp extension off on a single app (`enabled: false`). On a multisite host it doesn't reach the instances: use pocker's isolate_config, or an instance's `extensions.mcp`.
@@ -20445,6 +21547,199 @@ Providers cache the start of recent prompts and bill it cheaper when the next pr
 keeps the start of each turn identical until the next summary: the same system text, the same summary, the same earlier
 turns. Do the same in your own calls: put what changes (the question, the passages that answer it) at the end, and keep
 the system text the same from call to call.
+
+
+---
+
+Source: https://pocketone.dev/docs/extensions/llm/guides/search
+
+# Search and RAG
+
+**Retrieval-augmented generation (RAG)** means searching your own content for the passages that answer a question,
+and sending them to the model with the prompt, so the answer is **grounded** in your content instead of the model's
+memory. PocketOne does the whole pipeline: you put content in a **bucket** (a knowledge base), it's chunked and
+embedded in the background, and one option on any `$llm` call does the retrieval:
+
+```ts
+const answer = await $llm.text.completeAsync({
+  model: "vultr/glm-5.3",
+  system: "Answer from the passages given. Say so when they don't cover it.",
+  prompt: "How do I export my notes?",
+  enrich: ["help"], // RAG: search the "help" bucket and send the best passages with the prompt
+})
+// answer.text is the answer; answer.passages are the passages it was grounded in
+```
+
+It uses the provider you added in Settings → LLM ([AI in your app](https://pocketone.dev/docs/extensions/llm)), which needs embedding models
+(Vultr's, for one). The embedding model is picked for you and kept; you never name one.
+
+## Why not just put everything in the prompt?
+
+You can, for a little content: that's **context stuffing**, and long context windows make it tempting. It gets slow
+and expensive as content grows (every call pays for all of it), and models pay less attention to the middle of a long
+prompt. RAG sends only the few passages that match the question, so a question costs the same whether the knowledge
+base is one page or ten thousand.
+
+## How it works
+
+1. **Ingestion.** Each **source** you add (a file, a folder, a zip, a web page, a Git repository, a collection) becomes
+   **documents**, and each document is split into **chunks** of about 500 tokens: Markdown at its headings (each chunk
+   keeps its heading path, like "Install › macOS"), code and text at blank lines.
+2. **Embeddings.** Each chunk is turned into a vector by your embedding model, in the background. A chunk whose text
+   didn't change is never embedded again, and identical text anywhere in the app is embedded once.
+3. **Retrieval.** A question is embedded too, and ranked against the chunks by meaning (**semantic search**, vector
+   similarity) and by words (**keyword search**, BM25 over a local index) at once: **hybrid search**. Keywords catch
+   exact names like `onRecordCreate` that embeddings blur; meaning catches a reworded question.
+4. **Generation.** `enrich` sends the best chunks after the prompt, numbered so the model can cite them, and the answer
+   lists them in `passages`.
+
+## 1. Make a bucket
+
+A bucket is a knowledge base: content that's searched together. Your app makes the bucket it needs, once at startup.
+The description is what your admins see on the dashboard's Search screen, so say what belongs there:
+
+```ts
+// pb_hooks/search.pb.js
+onBootstrap((e) => {
+  e.next()
+  $llm.search.ensure({
+    name: "help",
+    title: "Help center",
+    owner: "Help desk",
+    description: "Our help articles, as Markdown. The help desk answers from these.",
+  })
+})
+```
+
+Calling it again changes nothing, so your admins' changes stick. You can also make a bucket on the Search screen.
+
+## 2. Add your content
+
+Open the dashboard and choose **Search** in the header. A sidebar lists **Chat**, **Search**, **Settings** and every
+bucket. Open yours and add **sources**. Each one is a single row you can refresh, replace or remove, however many
+documents it brings:
+
+- **Drop files, folders or zips** on it (Markdown, text or code inside), or choose files.
+- **Paste text.**
+- **Add a URL or Git repo**: paste any URL. Its server is asked whether it's a Git repository (with or without `.git`,
+  on any host), and the form shows how it will be read, with a switch if you want the other. Pick how often to read it
+  again: every hour, day or week. A repository brings its default branch's text files and its recent commits.
+- **Follow a collection**: pick the collection, check the fields to search (its text fields start checked; the first
+  is each record's title) and, if you like, which records (`published = true`). It reads the records there now and
+  keeps up as they're saved and deleted.
+
+Adding something with the same name as a source replaces it: files that didn't change cost nothing, and files it no
+longer has are removed. For a new version under another name (`guide-v2.zip`), use **Upload a new version** on the old
+one's row. Each source goes from `reading` to `ready`, and its documents from `in line` to `embedding` to `ready`; open
+a row to see its documents.
+
+To try a bucket out, use **Chat** in the sidebar: pick buckets and a model, ask questions in words, and read the
+answers with the passages they're grounded in (follow-ups keep the conversation). **Search** shows the raw hybrid
+search results instead: exactly what `$llm.search` and `enrich` get.
+
+### From code
+
+Everything the screen does, your code can do with `$llm.search`. Adding returns at once; ingestion happens in the
+background.
+
+```ts
+// a file's text, or text you put together (a source of one document; the same name again replaces it)
+$llm.search.add({ bucket: "help", name: "export.md", text: "# Exporting\n\nChoose File → Export…" })
+
+// a web page or a Git repository, read again every day
+$llm.search.addURL({ bucket: "help", url: "https://github.com/acme/help-articles", every: "day" })
+
+// a collection: a document per published article, kept in sync as records are saved and deleted
+$llm.search.follow({ bucket: "help", collection: "articles", fields: ["title", "body"], filter: "published = true" })
+```
+
+Then look at what's there, and tidy up:
+
+```ts
+const sources = $llm.search.sources("help")          // [{ name, kind, status, documents, pending, error, ... }]
+const docs = $llm.search.documents({ bucket: "help", source: "export.md" })
+$llm.search.refresh("help", "https://github.com/acme/help-articles") // read it again now
+$llm.search.remove("help", ["export.md"])            // take sources out, with their documents
+const { model, chunks, embedded } = $llm.search.status() // embedded < chunks: still embedding
+```
+
+A source's name is how it's found again: the file name you gave, the URL, or the collection.
+
+## 3. RAG with enrich
+
+`enrich` works on `$llm.text.completeAsync`, `$llm.text.streamAsync` and LLM Chat (on a chat's options or a send):
+
+```ts
+const chat = $llm.chat.open(id, { model: "vultr/glm-5.3", system: preamble, enrich: ["help"] })
+const answer = await chat.sendAsync("And as PDF?")
+```
+
+Name several buckets to search them together (`enrich: ["help", "changelog"]`), or pass `{ buckets, limit, query }`:
+`limit` is how many passages go in (5 by default, at most 20) and `query` searches for something other than the prompt.
+LLM Chat saves the passages with each question, so later turns send the same thing.
+
+## Search directly
+
+To show results yourself (a search box, related articles), run the hybrid search without a model call:
+
+```ts
+const found = await $llm.search.searchAsync({ buckets: ["help"], query: "export notes", limit: 5 })
+// found.results: [{ bucket, source, document, heading, text, record, score }, ...], best first
+```
+
+Leave `buckets` out to search every bucket. It's the only async `$llm.search` call: it embeds the query (a few tokens;
+a repeated query is cached).
+
+## Who sees what
+
+A collection source holds a copy of its records' text, so retrieval skips the collection's API rules unless you say
+who's asking. Pass the signed-in user as `viewer` and passages from records they can't view are left out (`null` is a
+signed-out visitor):
+
+```ts
+const found = await $llm.search.searchAsync({ buckets: ["notes"], query, viewer: ctx.auth })
+const answer = await $llm.text.completeAsync({ model, prompt: question, enrich: { buckets: ["notes"], viewer: ctx.auth } })
+```
+
+Without `viewer`, a search sees everything, as your own server code does. Always pass it when the answer is for a user.
+
+## The embedding model
+
+One embedding model embeds every bucket, so any of them can be searched together. **Settings** on the Search screen
+shows it and lets you change it; every bucket is then embedded again in the background, with its progress shown.
+Search keeps working meanwhile: chunks not yet re-embedded are still found by keyword search.
+
+## What it costs
+
+Embedding is billed to your provider account like any `$llm` call: `qwen3-embedding-4b` on Vultr is $0.05 per million
+tokens, about 4 MB of text, embedded once. Each document shows what it cost. Each search embeds only the query, a few
+tokens; the model call that uses the passages pays for them as input tokens.
+
+## `$llm.search` at a glance
+
+Every call is local and returns at once, except `searchAsync`.
+
+| Call | What it does |
+|---|---|
+| `buckets()` | Every bucket, with its counts. |
+| `bucket(name)` | One bucket. |
+| `ensure({ name, title?, description?, owner? })` | Makes the bucket if it's missing and returns it; an existing one keeps its settings. |
+| `update({ name, title?, description?, maxDocuments?, maxBytes? })` | Changes a bucket. |
+| `deleteBucket(name)` | Deletes a bucket and everything in it. |
+| `sources(bucket)` | Its sources: `{ name, kind, status, documents, chunks, embedded, pending, error, refreshed, next, ... }`. |
+| `add({ bucket, name, text, replace? })` | A file or text as a source; `replace` names an older source a renamed version replaces. |
+| `addURL({ bucket, url, every?, kind?, commits?, exclude? })` | A web page or Git repository (`kind` is decided by asking the server); `every` is `hour`, `day` or `week`. |
+| `follow({ bucket, collection, fields, filter? })` | A collection; the first field is each record's title. |
+| `refresh(bucket, source)` | Reads a source again now. |
+| `remove(bucket, sources)` | Takes sources out, with their documents. |
+| `documents(bucket \| { bucket, source?, prefix? })` | Documents, with their status and how many chunks are embedded. |
+| `status()` | The app's embedding model, and how many chunks are embedded of how many. |
+| `await searchAsync({ query, buckets?, limit?, prefix?, viewer? })` | Hybrid search across the buckets (all when none are named): `{ results: [{ bucket, source, document, heading, text, record, score }], model, usage }`. |
+
+The same operations are the [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) contract: over HTTP at
+`/api/_c/llm.search/v1/…` (a superuser, or an API token with the `search` scope), from Go with
+`searchv1.Contract.Must(app)`, and as MCP tools. The [LLM Search extension](https://pocketone.dev/docs/extensions/llm-search) has the
+details: what's skipped in folders, zips and repositories, the limits, and how ranking works.
 
 
 ---
