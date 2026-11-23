@@ -167,6 +167,9 @@ waits for (not published on pocketone.dev). `site/extensions.json` holds
   touches only its own files; its generated files go in its merge commit into `main`. Outside pull requests are the exception: their
   authors never commit generated files (they only check that the site builds, `cd site/sync && go run . --validate`),
   and CI regenerates on `main` after the merge and commits as github-actions[bot].
+- **Screenshots** in the docs are listed in `site/screenshots.json` (what each shows, the pages that use it, the feature
+  it depends on, how to retake it); site/sync fails when the list and the docs disagree. A change to a screen or a
+  starter kit that a screenshot shows retakes that screenshot in the same commit.
 - Agent Skills (`agent/`, listed in `.claude-plugin/marketplace.json`): `site/sync` also writes each skill's `reference/`
   folder and both sites' `llms.txt` / `llms-full.txt` from the docs pages (regenerated on `main`, as above). The `SKILL.md` files are hand-written: a change
   that makes one wrong (a command, a `pocketone.yaml` key, an extension, a Pages API) fixes it in the same commit.
