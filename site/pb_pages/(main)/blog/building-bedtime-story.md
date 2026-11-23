@@ -161,4 +161,4 @@ Add a provider in Settings → LLM. The defaults use Vultr models for writing, s
 
 The live copy runs on PocketHost, deployed with `pocketone deploy --restart`.
 
-The [Bedtime Story walkthrough](/docs/examples/bedtime-story) in the docs has the full reference, including every tuning field. If you missed it, here's [how Docs Chat works](/blog/building-docs-chat).
+The [Bedtime Story walkthrough](/docs/examples/bedtime-story) in the docs has the full reference, including every tuning field. If you missed it, here's [how Docs Chat became the ask starter kit](/blog/building-docs-chat).
