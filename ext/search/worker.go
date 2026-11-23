@@ -2,10 +2,10 @@ package search
 
 import (
 	"context"
-	"fmt"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -21,7 +21,7 @@ import (
 // Embedding pace: chunks per request, and the least time between requests (Vultr allows 120 a minute).
 var (
 	BatchSize       = 64
-	Parallel        = 4 // requests at once
+	Parallel        = 4     // requests at once
 	BatchChars      = 48000 // and at most this much text a request (about 12K tokens): big requests are slow
 	RequestTimeout  = 90 * time.Second
 	RequestInterval = 550 * time.Millisecond
@@ -105,7 +105,7 @@ func (s *service) embedNext(ctx context.Context) (bool, error) {
 		"c.document AS document", "c.bucket AS bucket").
 		From(ChunksCollection+" c").InnerJoin(DocumentsCollection+" d", dbx.NewExp("d.id = c.document")).
 		Where(dbx.And(stale, dbx.In("d.status", StatusQueued, StatusEmbedding))).
-		OrderBy("d.updated", "d.id", "c.seq").Limit(int64(BatchSize*Parallel)).All(&rows); err != nil {
+		OrderBy("d.updated", "d.id", "c.seq").Limit(int64(BatchSize * Parallel)).All(&rows); err != nil {
 		return false, err
 	}
 	if len(rows) == 0 {

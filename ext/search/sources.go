@@ -62,6 +62,7 @@ func (s *service) findSource(bucketID, name string) (*core.Record, error) {
 
 type sourceStats struct {
 	Src       string `db:"src"`
+	Embedded  int    `db:"-"`
 	Documents int    `db:"documents"`
 	Bytes     int64  `db:"bytes"`
 	Chunks    int    `db:"chunks"`
@@ -77,6 +78,32 @@ func (s *service) sourceStats(bucketID string) map[string]sourceStats {
 	out := map[string]sourceStats{}
 	for _, r := range rows {
 		out[r.Src] = r
+	}
+	for src, n := range s.embeddedBy(bucketID, "d.src") {
+		st := out[src]
+		st.Embedded = n
+		out[src] = st
+	}
+	return out
+}
+
+// embeddedBy counts a bucket's chunks with the app's model's vectors, grouped by a documents column (d.src, d.id).
+func (s *service) embeddedBy(bucketID, column string) map[string]int {
+	out := map[string]int{}
+	model := s.knownModel()
+	if model == "" {
+		return out
+	}
+	var rows []struct {
+		Key string `db:"k"`
+		N   int    `db:"n"`
+	}
+	_ = s.app.DB().Select(column+" AS k", "count(*) AS n").From(ChunksCollection+" c").
+		InnerJoin(DocumentsCollection+" d", dbx.NewExp("d.id = c.document")).
+		Where(dbx.And(dbx.HashExp{"c.bucket": bucketID, "c.model": model}, dbx.NewExp("c.vector != ''"))).
+		GroupBy(column).All(&rows)
+	for _, r := range rows {
+		out[r.Key] = r.N
 	}
 	return out
 }
@@ -94,7 +121,7 @@ func sourceOf(bucket string, r *core.Record, st sourceStats) searchv1.Source {
 	return searchv1.Source{Bucket: bucket, Name: r.GetString("name"), Kind: r.GetString("kind"), URL: sp.URL, Every: sp.Every,
 		Commits: sp.Commits, Exclude: sp.Exclude, Collection: sp.Collection, Fields: sp.Fields, Filter: sp.Filter,
 		Hash: r.GetString("hash"), Status: r.GetString("status"), Error: r.GetString("error"), Documents: st.Documents,
-		Chunks: st.Chunks, Bytes: st.Bytes, Pending: st.Pending, CostMicroUSD: st.Cost,
+		Chunks: st.Chunks, Embedded: st.Embedded, Bytes: st.Bytes, Pending: st.Pending, CostMicroUSD: st.Cost,
 		Refreshed: timePtr(r.GetDateTime("refreshed")), Next: timePtr(r.GetDateTime("next")), Created: r.GetDateTime("created").Time()}
 }
 

@@ -464,11 +464,23 @@
             t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.form = "") }, t.span({ className: "txt" }, "Cancel")),
             t.button({ className: "btn" }, t.span({ className: "txt" }, label)));
 
+        // docStatus is a document's progress: ready, failed, embedding (with how far), or waiting its turn
+        function docStatus(d) {
+            if (d.status === "ready") return t.span({ className: "label success" }, "ready");
+            if (d.status === "error") return t.span({ className: "label danger", title: d.error }, "error");
+            if (!data.status?.model) return t.span({ className: "label warning" }, "waiting for a provider");
+            if (d.status === "embedding" || d.embedded > 0) {
+                return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), `embedding ${d.embedded} of ${d.chunks}`);
+            }
+            return t.span({ className: "label", title: "Embedded in the order it was added, after what came before it" }, "in line");
+        }
+
         function sourceStatus(src) {
             if (src.status === "error") return t.span({ className: "label danger", title: src.error }, "error");
             if (src.status === "reading") return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), "reading");
             if (src.pending && !data.status?.model) return t.span({ className: "label warning", title: "Add an AI provider with embedding models in Settings → LLM" }, `${src.pending} waiting for a provider`);
-            if (src.pending) return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), `embedding ${src.pending}`);
+            if (src.pending) return t.span({ className: "label warning", title: `${src.pending} document${src.pending === 1 ? "" : "s"} still to embed` },
+                t.span({ className: "loader sm m-r-5" }), `embedding ${src.embedded} of ${src.chunks} chunks`);
             return t.span({ className: "label success" }, "ready");
         }
 
@@ -503,7 +515,7 @@
                             t.td(null, d.record ? t.a({ href: recordHref(d.record) }, d.name) : d.name, d.error ? t.div({ className: "txt-danger txt-sm" }, d.error) : null),
                             t.td({ className: "search-num" }, d.chunks + " chunks"),
                             t.td({ className: "search-num" }, fmtBytes(d.size)),
-                            t.td(null, statusLabel(d.status, d.error))))),
+                            t.td(null, docStatus(d))))),
                         docs.length > 200 ? t.tr(null, t.td({ className: "txt-hint" }, `and ${docs.length - 200} more`)) : null))));
             }
             return rows;

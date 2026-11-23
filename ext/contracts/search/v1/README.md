@@ -54,7 +54,7 @@ Over HTTP (a superuser, or a token with the scope shown):
 | Search | `POST /api/_c/search/v1/search` | `{"buckets": [...], "query", "limit", "prefix", "viewer"}` | `search:read` |
 
 A source answers `{"bucket", "name", "kind", "url", "every", "commits", "exclude", "collection", "fields", "filter",
-"hash", "status", "error", "documents", "chunks", "bytes", "pending", "costMicroUSD", "refreshed", "next"}`; `kind` is
+"hash", "status", "error", "documents", "chunks", "embedded", "bytes", "pending", "costMicroUSD", "refreshed", "next"}` (`embedded` below `chunks`: embedding under way; documents carry the same); `kind` is
 `file`, `text`, `folder`, `zip`, `page`, `git` or `collection`, `status` is `reading`, `ready` or `error`, and `hash` is
 a file's or zip's sha256, to spot an exact duplicate under another name. `replace` names an existing source the new one
 replaces under its new name. Search answers `{"results": [{"bucket", "source", "document", "text", "heading",

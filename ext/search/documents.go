@@ -276,9 +276,12 @@ func (s *service) Documents(_ context.Context, _ extkit.Auth, in searchv1.Docume
 	if err != nil {
 		return searchv1.DocumentList{}, err
 	}
+	embedded := s.embeddedBy(b.Id, "d.id")
 	out := searchv1.DocumentList{Documents: []searchv1.Document{}}
 	for _, r := range recs {
-		out.Documents = append(out.Documents, documentOf(in.Bucket, names[r.GetString("src")], r))
+		d := documentOf(in.Bucket, names[r.GetString("src")], r)
+		d.Embedded = embedded[r.Id]
+		out.Documents = append(out.Documents, d)
 	}
 	return out, nil
 }

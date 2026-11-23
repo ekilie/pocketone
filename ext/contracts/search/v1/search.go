@@ -219,6 +219,7 @@ type Source struct {
 	Error        string     `json:"error,omitempty"`
 	Documents    int        `json:"documents"`
 	Chunks       int        `json:"chunks"`
+	Embedded     int        `json:"embedded"` // chunks with the app's model's vectors
 	Bytes        int64      `json:"bytes"`
 	Pending      int        `json:"pending"` // documents waiting to be embedded
 	CostMicroUSD int64      `json:"costMicroUSD"`
@@ -313,9 +314,11 @@ type Document struct {
 	Size   int64  `json:"size"`
 	Hash   string `json:"hash"` // sha256 of the text
 	// Status is queued (waiting to be embedded), embedding, ready or error.
-	Status       string     `json:"status"`
-	Error        string     `json:"error,omitempty"`
-	Chunks       int        `json:"chunks"`
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+	Chunks int    `json:"chunks"`
+	// Embedded is how many of its chunks have the app's model's vectors (Chunks when it's ready).
+	Embedded     int        `json:"embedded"`
 	Record       *RecordRef `json:"record,omitempty"` // the record it was made from, in a collection source
 	Tokens       int        `json:"tokens"`           // the text's estimated size in tokens
 	CostMicroUSD int64      `json:"costMicroUSD"`     // what embedding it has cost so far
