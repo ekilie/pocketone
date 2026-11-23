@@ -59,12 +59,13 @@ cd site/sync && go run .
 
 - **Ask** (`pb_pages/assets/ask.js`, `pb_pages/ask/+api.ts`, `pb_pages/_private/ask.ts`): the header button, `/` or
   Cmd/Ctrl-K opens a box that answers a question from the docs, citing the pages it used. The pages come from an LLM
-  Search bucket, `docs`, which `_private/ask.ts` keeps in step with every page under `/docs` (checked at most every 10
-  minutes, on the next question; a changed page is embedded again, a removed one leaves). The answer is one `$llm`
-  call per question, for the visitor (`$llm.for`), with `ASK_MODEL` (see the file for the default). It needs an AI
-  provider with text and embedding models in **Settings → LLM** and a limit for **All guests together** (guest calls
-  are refused without one). A limit used up still leaves the matching pages listed. The same question asked again,
-  until the docs change, gets the stored answer.
+  Search bucket, `docs`, holding the site's own docs folder (`$llm.search.addFolder` on `pb_pages/(main)/docs`, read
+  again every five minutes, each result linked to its page and section). The answer is one `$llm` call per question,
+  for the visitor (`$llm.for`), with `ASK_MODEL` (see the file for the default). It needs an AI provider with text and
+  embedding models in **Settings → LLM** and a limit for **All guests together** (guest calls are refused without
+  one). A limit used up still leaves the matching pages listed. The same question asked again within the hour gets
+  the stored answer. Run locally with `--dir ./pb_data` (the docs folder is found from the app's folder, the one
+  holding `pb_data`).
 - **Comments** (`pb_pages/_private/docs-footer.js`, `pb_pages/assets/docs.js`): each docs page ends with a
   [giscus](https://giscus.app) box backed by GitHub Discussions (the Q&A category of pocketonehq/pocketone). A page's
   thread is found by an exact term, not its URL: `pocketone.dev/docs/plugins/<name>` (the pre-rename URL, so old threads follow) for an extension and its guides,
