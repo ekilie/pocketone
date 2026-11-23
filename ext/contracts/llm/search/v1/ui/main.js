@@ -734,7 +734,7 @@
         }
 
         function sourceRows(src) {
-            const refreshable = ["page", "git", "collection", "zip"].includes(src.kind);
+            const refreshable = ["page", "git", "collection", "zip", "dir"].includes(src.kind);
             const rows = [t.tr(null,
                 t.td(null,
                     t.a({ href: "#", onclick: (e) => { e.preventDefault(); toggle(src.name); } },
