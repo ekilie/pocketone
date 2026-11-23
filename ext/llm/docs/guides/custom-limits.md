@@ -36,7 +36,7 @@ A handler gets one call on its way to a provider:
 | `e.op` | The operation: `complete`, `stream`, `generate`, `edit`, `speak`, `transcribe`, `align`, `create` (music and video) or `embed`. |
 | `e.model` | The model, as `provider/model`. Set it to send the call to another model. |
 | `e.input` | The call's input: `prompt`, `messages`, `maxTokens`, `size`, ... as the page passed it. Change any of it. |
-| `e.subject` | Whom the call is for (see [Whom a call is for](whom.md)). Set it to count the call for someone else, or for a name of your own (`team:acme`). |
+| `e.subject` | Whom the call is for (see [Users and guests](users-and-guests.md)). Set it to count the call for someone else, or for a name of your own (`team:acme`). |
 | `e.user` | The signed-in user the call is for, as `{ collection, id }`, or `null`. |
 | `e.guest` | `true` when the call is for a guest. |
 | `e.guestsCapped` | Set it to `true` when your handler takes care of what guests spend (see below). |

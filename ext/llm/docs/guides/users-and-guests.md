@@ -1,12 +1,12 @@
 ---
-title: Whom a call is for
+title: Users and guests
 description: "$llm.for(ctx) counts a page's model calls for its signed-in user or its guest, so per-user and per-guest limits apply; how guests are told apart, and how to handle a refused call."
 ---
 
-# Whom a call is for
+# Users and guests
 
-[Limits](limits.md) on each user, each guest and all guests together need to know whom each call is for. Page code says
-so with one change: call the model through `$llm.for(ctx)` instead of `$llm`.
+[Limits](limits.md) on each user, each guest and all guests together need to know which user or guest made each call.
+Page code says so with one change: call the model through `$llm.for(ctx)` instead of `$llm`.
 
 ```ts
 // pb_pages/ask/+api.ts

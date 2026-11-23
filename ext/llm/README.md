@@ -69,7 +69,7 @@ or model. Every call passes them before it reaches a provider, and a used-up lim
 Page code says whom a call is for with `$llm.for(ctx)` (a page's `ctx` or a route's `e`): its signed-in user, or else a
 guest told apart by a signed cookie. Guest calls are refused until there's a limit for all guests together. Every call
 is recorded in the `_llm_calls` collection, and the screen shows today's and this month's spend from it
-([Limits](docs/guides/limits.md), [Whom a call is for](docs/guides/whom.md)). `$llm.ledger` reads it: what's left of
+([Limits](docs/guides/limits.md), [Users and guests](docs/guides/users-and-guests.md)). `$llm.ledger` reads it: what's left of
 each limit, what someone spent, totals by model or person ([Spend and the ledger](docs/guides/spend.md)). The screen's
 limits are the built-in handler on `$llm.onCall`; your own handlers there add plan tiers, credits or anything else
 ([Custom limits](docs/guides/custom-limits.md)).

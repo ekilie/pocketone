@@ -70,7 +70,7 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
   and records: knowledge bases (buckets), hybrid search with `$llm.search`, and `enrich` to ground any call in them.
 - [Limits](guides/limits.md): cap what the app spends, per day or month, for the whole app, each user and each guest.
 - [Custom limits](guides/custom-limits.md): your own rules in code with `$llm.onCall` and `$llm.onCallDone`: plan tiers, credits, team buckets.
-- [Whom a call is for](guides/whom.md): `$llm.for(ctx)`, so per-user and per-guest limits apply.
+- [Users and guests](guides/users-and-guests.md): `$llm.for(ctx)`, so per-user and per-guest limits apply.
 - [Spend and the ledger](guides/spend.md): `$llm.ledger`: what's left of each limit, what someone spent, where the money goes.
 
 ## Thinking models

@@ -7,5 +7,5 @@
 - [Search and RAG](../guides/search.md)
 - [Limits](../guides/limits.md)
 - [Custom limits](../guides/custom-limits.md)
-- [Whom a call is for](../guides/whom.md)
+- [Users and guests](../guides/users-and-guests.md)
 - [Spend and the ledger](../guides/spend.md)

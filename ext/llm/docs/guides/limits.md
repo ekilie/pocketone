@@ -14,7 +14,7 @@ before it reaches a provider. Anything they can't express, such as a user's plan
 they're on, you write as your own handler on the same hook ([Custom limits](custom-limits.md)). Yours run first, and
 the built-in limits count what they settled on.
 
-This page covers the built-in limits. [Whom a call is for](whom.md) covers the one line page code adds so per-user and
+This page covers the built-in limits. [Users and guests](users-and-guests.md) covers the one line page code adds so per-user and
 per-guest limits work, and [Spend and the ledger](spend.md) covers the record every call leaves and how to read what's
 left.
 
@@ -53,14 +53,14 @@ limit reached: each guest, $0.10 a day (used $0.10); it resets at 00:00 UTC
 limit reached: the whole app, 20 calls a month of video (used 20 calls); it resets on Dec 1 (UTC)
 ```
 
-The message is written to show to the person who made the call. [Whom a call is for](whom.md#when-a-call-is-refused)
+The message is written to show to the person who made the call. [Users and guests](users-and-guests.md#when-a-call-is-refused)
 shows how to catch it in a page.
 
 A refused call still gets a row in the ledger, with the limit's message, so you can see how often visitors hit it.
 
 ## Guests need a total
 
-A guest is told apart by a cookie (see [Whom a call is for](whom.md#guests)), and anyone can clear their cookies and
+A guest is told apart by a cookie (see [Users and guests](users-and-guests.md#guests)), and anyone can clear their cookies and
 come back as a new guest with a fresh allowance. A limit on **each guest** keeps one visitor from using everything up
 by accident, but it doesn't cap what guests spend. Only a limit on **all guests together** does.
 
