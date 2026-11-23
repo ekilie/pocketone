@@ -35,6 +35,15 @@
         .search-q { font-weight: 600; margin-bottom: 6px; }
         .search-a { line-height: 1.55; } .search-a pre { white-space: pre-wrap; } .search-a code { font-size: 0.92em; }
         .search-passages { margin-top: 8px; }
+        .search-sources { display: flex; flex-direction: column; gap: 10px; margin-bottom: var(--baseSpacing); }
+        .search-source { border: 1px solid var(--baseAlt2Color); border-radius: var(--baseRadius); padding: 12px 14px; }
+        .search-source-head { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .search-source-icon { font-size: 1.35em; color: var(--txtHintColor); line-height: 1.2; }
+        .search-source-name { font-weight: 600; word-break: break-all; }
+        .search-source-meta { color: var(--txtHintColor); font-size: var(--smFontSize); margin-top: 2px; }
+        .search-source-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+        .search-source-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: var(--smFontSize); }
+        .search-source-docs { margin-top: 8px; overflow-x: auto; }
         .search-passages summary { cursor: pointer; color: var(--txtHintColor); font-size: var(--smFontSize); }`;
     document.head.append(style);
 
@@ -505,6 +514,22 @@
 
     const kindIcon = { file: "ri-file-text-line", text: "ri-text", folder: "ri-folder-line", dir: "ri-hard-drive-2-line", zip: "ri-file-zip-line", page: "ri-global-line", git: "ri-git-branch-line", collection: "ri-database-2-line" };
     const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString() : "");
+    // kindName says what a source is, in words
+    const kindName = { file: "File", text: "Pasted text", folder: "Dropped folder", dir: "Folder on the server", zip: "Zip",
+        page: "Web page", git: "Git repository", collection: "Collection" };
+    const everyName = { hour: "every hour", day: "every day", week: "every week" };
+    // ago and until: "just now", "4 min ago", "in 3 min", "yesterday"... (the full time is the title)
+    function span(ms) {
+        const m = Math.round(Math.abs(ms) / 60000);
+        if (m < 1) return "";
+        if (m < 60) return m + " min";
+        const h = Math.round(m / 60);
+        if (h < 24) return h + " h";
+        const d = Math.round(h / 24);
+        return d + (d === 1 ? " day" : " days");
+    }
+    const ago = (iso) => { const s = span(Date.now() - new Date(iso)); return s ? s + " ago" : "just now"; };
+    const until = (iso) => { const s = span(new Date(iso) - Date.now()); return s ? "in " + s : "any moment"; };
 
     app.routes.superuserOnly("#/search/b/{name}", (route) => {
         const name = decodeURIComponent(route.params.name);
@@ -724,50 +749,73 @@
             return t.span({ className: "label", title: "Embedded in the order it was added, after what came before it" }, "in line");
         }
 
+        // sourceStatus is how a source is doing, as a label: ready, reading, embedding (how far), waiting, failed
         function sourceStatus(src) {
-            if (src.status === "error") return t.span({ className: "label danger", title: src.error }, "error");
-            if (src.status === "reading") return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), "reading");
-            if (src.pending && !data.status?.model) return t.span({ className: "label warning", title: "Add an AI provider with embedding models in Settings → LLM" }, `${src.pending} waiting for a provider`);
-            if (src.pending) return t.span({ className: "label warning", title: `${src.pending} document${src.pending === 1 ? "" : "s"} still to embed` },
-                t.span({ className: "loader sm m-r-5" }), `embedding ${src.embedded} of ${src.chunks} chunks`);
-            return t.span({ className: "label success" }, "ready");
+            if (src.status === "error") return t.span({ className: "label danger" }, "couldn't read it");
+            if (src.status === "reading") return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), "reading…");
+            if (src.pending && !data.status?.model) return t.span({ className: "label warning", title: "Add an AI provider with embedding models in Settings → LLM" }, "waiting for an AI provider");
+            if (src.pending) return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), `embedding ${src.embedded} of ${src.chunks} chunks`);
+            return t.span({ className: "label success" }, "ready to search");
         }
 
-        function sourceRows(src) {
-            const refreshable = ["page", "git", "collection", "zip", "dir"].includes(src.kind);
-            const rows = [t.tr(null,
-                t.td(null,
-                    t.a({ href: "#", onclick: (e) => { e.preventDefault(); toggle(src.name); } },
-                        t.i({ className: (data.open[src.name] ? "ri-arrow-down-s-line" : "ri-arrow-right-s-line") + " m-r-5", ariaHidden: true }),
-                        t.i({ className: (kindIcon[src.kind] || "ri-file-line") + " m-r-5", ariaHidden: true }), src.name),
-                    src.kind === "collection" ? t.div({ className: "txt-hint txt-sm" }, `${src.fields.join(", ")}${src.filter ? "; " + src.filter : ""}`) : null,
-                    src.error ? t.div({ className: "txt-danger txt-sm" }, src.error) : null),
-                t.td(null, src.kind),
-                t.td({ className: "search-num" }, src.documents),
-                t.td({ className: "search-num" }, fmtBytes(src.bytes)),
-                t.td({ className: "search-num" }, fmtCost(src.costMicroUSD)),
-                t.td(null, sourceStatus(src),
-                    src.refreshed ? t.div({ className: "txt-hint txt-sm" }, "read " + fmtWhen(src.refreshed)) : null,
-                    src.next ? t.div({ className: "txt-hint txt-sm" }, "next " + fmtWhen(src.next)) : null),
-                t.td({ className: "txt-right", style: "white-space: nowrap" },
-                    refreshable ? t.button({ type: "button", className: "btn xs transparent secondary", title: "Read it again now",
-                        onclick: () => submit("/refresh", { bucket: name, source: src.name }) }, t.i({ className: "ri-refresh-line", ariaHidden: true })) : null,
-                    src.kind === "file" || src.kind === "zip" ? t.button({ type: "button", className: "btn xs transparent secondary", title: "Upload a new version",
-                        onclick: () => newVersion(src) }, t.i({ className: "ri-upload-2-line", ariaHidden: true })) : null,
-                    t.button({ type: "button", className: "btn xs transparent danger", title: "Remove", onclick: () => remove(src) },
-                        t.i({ className: "ri-delete-bin-7-line", ariaHidden: true }))))];
-            if (data.open[src.name]) {
-                const docs = data.docs[src.name];
-                rows.push(t.tr(null, t.td({ colSpan: 7, style: "padding-left: 40px" },
+        // sourceAbout is what a source is and where it comes from, in one line
+        function sourceAbout(src) {
+            const bits = [kindName[src.kind] || src.kind];
+            if (src.kind === "page" || src.kind === "git") bits.push(src.every ? "read " + everyName[src.every] : "read when you refresh it");
+            if (src.kind === "collection") bits.push(`${src.fields.join(", ")}${src.filter ? " where " + src.filter : ""}`, "kept in sync");
+            if (src.kind === "dir") {
+                if (src.include?.length) bits.push(src.include.join(", "));
+                bits.push("checked every 5 minutes");
+                if (src.pageURL) bits.push("links to " + src.pageURL);
+            }
+            bits.push(`${src.documents} document${src.documents === 1 ? "" : "s"}`, fmtBytes(src.bytes));
+            if (src.costMicroUSD) bits.push(fmtCost(src.costMicroUSD) + " to embed");
+            return bits.join(" · ");
+        }
+
+        // sourceWhen: when it was last read, and when it's read next
+        function sourceWhen(src) {
+            const parts = [];
+            if (src.refreshed) parts.push(t.span({ title: fmtWhen(src.refreshed) }, "read " + ago(src.refreshed)));
+            if (src.next) parts.push(t.span({ title: fmtWhen(src.next) }, "next check " + until(src.next)));
+            return parts.length ? t.span({ className: "txt-hint" }, ...parts.flatMap((p, i) => (i ? [" · ", p] : [p]))) : null;
+        }
+
+        const refreshTitle = {
+            page: "Fetch the page again now", git: "Read the repository again now", collection: "Read every record again now",
+            zip: "Split the zip again now", dir: "Read the folder again now: changed files are embedded again, removed ones leave",
+        };
+
+        function sourceCard(src) {
+            const open = data.open[src.name];
+            const docs = data.docs[src.name];
+            return t.div({ className: "search-source" },
+                t.div({ className: "search-source-head" },
+                    t.i({ className: "search-source-icon " + (kindIcon[src.kind] || "ri-file-line"), ariaHidden: true }),
+                    t.div({ style: "min-width: 0; flex: 1 1 240px" },
+                        t.div({ className: "search-source-name" }, src.url ? t.a({ href: src.url, target: "_blank", rel: "noopener" }, src.name) : src.name),
+                        t.div({ className: "search-source-meta" }, sourceAbout(src))),
+                    t.div({ className: "search-source-actions" },
+                        refreshTitle[src.kind] ? t.button({ type: "button", className: "btn xs secondary", title: refreshTitle[src.kind],
+                            disabled: src.status === "reading", onclick: () => submit("/refresh", { bucket: name, source: src.name }) },
+                            t.i({ className: "ri-refresh-line", ariaHidden: true }), t.span({ className: "txt" }, "Refresh")) : null,
+                        src.kind === "file" || src.kind === "zip" ? t.button({ type: "button", className: "btn xs secondary", title: "Upload a new version of it",
+                            onclick: () => newVersion(src) }, t.i({ className: "ri-upload-2-line", ariaHidden: true }), t.span({ className: "txt" }, "New version")) : null,
+                        t.button({ type: "button", className: "btn xs transparent danger", title: "Take it out of this bucket", onclick: () => remove(src) },
+                            t.i({ className: "ri-delete-bin-7-line", ariaHidden: true }), t.span({ className: "txt" }, "Remove")))),
+                t.div({ className: "search-source-status" }, sourceStatus(src), sourceWhen(src),
+                    t.a({ href: "#", className: "m-l-auto txt-sm", onclick: (e) => { e.preventDefault(); toggle(src.name); } },
+                        open ? "Hide documents" : `Show documents`,
+                        t.i({ className: open ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line", ariaHidden: true }))),
+                src.error ? t.div({ className: "txt-danger txt-sm m-t-5" }, src.error) : null,
+                open ? t.div({ className: "search-source-docs" },
                     !docs ? t.span({ className: "loader sm" }) : !docs.length ? t.span({ className: "txt-hint" }, "No documents.")
                         : t.table({ className: "search-table" }, t.tbody(null, ...docs.slice(0, 200).map((d) => t.tr(null,
                             t.td(null, d.record ? t.a({ href: recordHref(d.record) }, d.name) : d.name, d.error ? t.div({ className: "txt-danger txt-sm" }, d.error) : null),
                             t.td({ className: "search-num" }, d.chunks + " chunks"),
                             t.td({ className: "search-num" }, fmtBytes(d.size)),
-                            t.td(null, docStatus(d))))),
-                        docs.length > 200 ? t.tr(null, t.td({ className: "txt-hint" }, `and ${docs.length - 200} more`)) : null))));
-            }
-            return rows;
+                            t.td(null, docStatus(d)))),
+                            docs.length > 200 ? t.tr(null, t.td({ className: "txt-hint" }, `and ${docs.length - 200} more`)) : null))) : null);
         }
 
         return t.div({ className: "page-search-bucket", onunmount: () => clearTimeout(timer) }, page(name, crumbs, () => {
@@ -897,10 +945,7 @@
                     formButtons("Follow")) : null,
 
                 data.sources.length
-                    ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table m-b-base" },
-                        t.thead(null, t.tr(null, t.th(null, "Source"), t.th(null, "Kind"), t.th({ className: "search-num" }, "Documents"),
-                            t.th({ className: "search-num" }, "Size"), t.th({ className: "search-num" }, "Cost"), t.th(null, "Status"), t.th(null, ""))),
-                        t.tbody(null, ...data.sources.flatMap(sourceRows))))
+                    ? t.div({ className: "search-sources" }, ...data.sources.map(sourceCard))
                     : t.div({ className: "block txt-center txt-hint p-base" }, "Nothing in this bucket yet."),
 
             );
