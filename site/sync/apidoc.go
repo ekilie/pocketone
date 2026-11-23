@@ -417,6 +417,7 @@ type goSym struct {
 	Examples []string // each Example's code
 	Fields   []goField
 	Decl     string // a struct's declaration as written, comments included
+	Comment  string // the doc comment as Go source: "// Get decodes ..." lines, to show above the signature
 	Import   string // the package's import path
 	Pkg      string // the package's name
 }
@@ -472,10 +473,20 @@ func goPackages(root string, dirs []string) map[string]map[string]goSym {
 		md := func(text string) string {
 			return strings.TrimSpace(string(p.Markdown(text)))
 		}
+		comment := func(text string) string {
+			var lines []string
+			for _, l := range strings.Split(strings.TrimRight(text, "\n"), "\n") {
+				lines = append(lines, strings.TrimRight("// "+l, " "))
+			}
+			if len(lines) == 1 && lines[0] == "//" {
+				return ""
+			}
+			return strings.Join(lines, "\n")
+		}
 		addFunc := func(name string, f *doc.Func) {
 			decl := *f.Decl
 			decl.Body, decl.Doc = nil, nil
-			syms[name] = goSym{Sig: print(&decl), Doc: md(f.Doc), Examples: examples(f.Examples), Import: importPath, Pkg: p.Name}
+			syms[name] = goSym{Sig: print(&decl), Doc: md(f.Doc), Comment: comment(f.Doc), Examples: examples(f.Examples), Import: importPath, Pkg: p.Name}
 		}
 		for _, f := range p.Funcs {
 			addFunc(f.Name, f)
@@ -518,7 +529,7 @@ func goPackages(root string, dirs []string) map[string]map[string]goSym {
 						continue
 					}
 					sig := "func (" + t.Name + ") " + m.Names[0].Name + strings.TrimPrefix(print(ft), "func")
-					syms[t.Name+"."+m.Names[0].Name] = goSym{Sig: sig, Doc: md(m.Doc.Text()), Import: importPath, Pkg: p.Name}
+					syms[t.Name+"."+m.Names[0].Name] = goSym{Sig: sig, Doc: md(m.Doc.Text()), Comment: comment(m.Doc.Text()), Import: importPath, Pkg: p.Name}
 				}
 			default:
 				sym.Sig = "type " + t.Name + " " + print(ts.Type)
@@ -668,7 +679,12 @@ func writeEntry(b *strings.Builder, e apiEntry, pkgs map[string]map[string]goSym
 	if len(gos) > 0 {
 		var sigs []string
 		for _, s := range gos {
-			sigs = append(sigs, s.Sig)
+			// the Go doc comment over the signature, as Go shows its docs
+			if s.Comment != "" {
+				sigs = append(sigs, s.Comment+"\n"+s.Sig)
+			} else {
+				sigs = append(sigs, s.Sig)
+			}
 		}
 		fmt.Fprintf(b, "```go\n%s\n```\n\n", strings.Join(sigs, "\n"))
 	}
@@ -697,11 +713,7 @@ func writeEntry(b *strings.Builder, e apiEntry, pkgs map[string]map[string]goSym
 		}
 		b.WriteString(".\n\n")
 	}
-	for _, s := range gos {
-		if s.Doc != "" {
-			fmt.Fprintf(b, "In Go (`%s.%s`):\n\n%s\n\n", s.Pkg, goName(s.Sig), s.Doc)
-		}
-	}
+
 	// examples: each JS example beside the Go one in the same place
 	var goEx []string
 	for _, s := range gos {
