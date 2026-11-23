@@ -1,11 +1,11 @@
 ---
 owners: ["@benallfree"]
-summary: "Named buckets of content an app searches by meaning: sources (files, folders, zips, pages, Git repositories, collections) kept current, one embedding model per app."
+summary: "RAG knowledge bases (buckets) with hybrid search: sources (files, folders, zips, pages, Git repositories, collections) kept current, one embedding model per app."
 ---
 
 # llm.search/v1
 
-Named buckets of content an app searches by meaning. An app makes the bucket it needs (`ensure`); its admins fill it
+Knowledge bases (buckets) an app searches with hybrid search, for retrieval-augmented generation (RAG). An app makes the bucket it needs (`ensure`); its admins fill it
 with sources, each one tracked unit however many documents it brings: a file, pasted text, a folder, a zip, a web
 page, a Git repository or one of the app's collections. Adding a source of the same name again replaces it (unchanged
 documents cost nothing, missing ones go); pages and repositories are read again on an interval, collections kept in
@@ -92,7 +92,8 @@ Implement `searchv1.Search` and provide it in `Register` (`searchv1.Contract.Pro
 
 | Extension | |
 |---|---|
-| [search](../../../../ext/search/README.md) | provides |
+| [llm-search](../../../../../ext/llm-search/README.md) | provides |
+| [llm-chat](../../../../../ext/llm-chat/README.md) | works with |
 
 <!-- /contracts:index -->
 

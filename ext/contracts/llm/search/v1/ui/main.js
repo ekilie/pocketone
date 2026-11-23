@@ -1,6 +1,6 @@
 // The Search screen for the PocketBase dashboard, for the llm.search/v1 contract (PocketOne ext/contracts/llm/search/v1). A
-// sidebar leads to: Ask (questions answered from chosen buckets, with the passages they came from), Search (the raw
-// matching passages), each bucket (its sources: files, pasted text, folders, zips, web pages, Git repositories,
+// sidebar leads to: Chat (RAG: questions answered from chosen buckets, with the passages they came from), Search (the raw
+// hybrid search results), each bucket (its sources: files, pasted text, folders, zips, web pages, Git repositories,
 // collections, and their documents), and Settings (the app's embedding model and embedding progress). It calls
 // llm.search/v1, and llm.text/v1 and llm.embed/v1 for Ask and the model pickers, so it works whoever provides them.
 // Served at /_/extensions/search/main.js.
@@ -77,7 +77,7 @@
             t.nav({ className: "sidebar-content scrollable" }, () => [
                 t.details({ className: "nav-group", open: true },
                     t.summary({ tabIndex: -1, onclick: () => false }, "Search"),
-                    item("#/search/ask", "ri-question-answer-line", "Ask"),
+                    item("#/search/chat", "ri-chat-3-line", "Chat"),
                     item("#/search/find", "ri-search-line", "Search"),
                     item("#/search/settings", "ri-settings-3-line", "Settings")),
                 t.details({ className: "nav-group", open: true },
@@ -128,7 +128,7 @@
         if (!r) return null;
         if (!r.results.length) return t.div({ className: "txt-hint" }, "No matches.");
         return t.div(null,
-            t.div({ className: "txt-hint txt-sm m-b-sm" }, `Ranked by meaning and keywords with ${r.model}` +
+            t.div({ className: "txt-hint txt-sm m-b-sm" }, `Hybrid search (semantic with ${r.model}, plus keywords)` +
                 (r.usage?.costMicroUSD ? `; the query cost ${fmtCost(r.usage.costMicroUSD)}` : "") + "."),
             ...r.results.map((x) => t.div({ className: "search-result" },
                 t.div({ className: "flex gap-sm" },
@@ -172,8 +172,8 @@
         return page("Search", [crumb("Search"), crumb("All buckets")], () => {
             if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
             return t.div(null,
-                t.p({ className: "m-t-0 txt-hint" }, "Buckets of content your app searches and answers from. Open one to fill it; ",
-                    t.a({ href: "#/search/ask" }, "Ask"), " questions about them."),
+                t.p({ className: "m-t-0 txt-hint" }, "Knowledge bases your app searches and grounds its AI answers in (RAG). Open one to fill it; ",
+                    t.a({ href: "#/search/chat" }, "Chat"), " with them to try them out."),
                 data.status && !data.status.model ? noModel() : null,
                 data.buckets.length
                     ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table m-b-base" },
@@ -229,8 +229,8 @@
         }
         if (data.query) run();
 
-        return page("Search", [crumb("Search"), crumb("Search")], () => t.div(null,
-            t.p({ className: "m-t-0 txt-hint" }, "The passages that best match, ranked by meaning (your embedding model) and by keywords (a local index) together. This is what ",
+        return page("Search", [crumb("Search"), crumb("Hybrid search")], () => t.div(null,
+            t.p({ className: "m-t-0 txt-hint" }, "Hybrid search: the passages that best match, ranked by meaning (semantic search with your embedding model) and by words (keyword search, a local index) together. This is what ",
                 t.code(null, "$llm.search"), " and ", t.code(null, "enrich"), " get."),
             data.status && !data.status.model ? noModel() : null,
             bucketPicker(data),
@@ -241,7 +241,7 @@
             () => results(data.results)));
     });
 
-    // ---- ask: answers from the buckets
+    // ---- chat: RAG over the buckets
 
     // textModels is llm.text/v1's list
     async function textModels() {
@@ -327,7 +327,7 @@
     const askSystem = "You answer questions about the user's own content, using the numbered passages given after each question. " +
         "Cite the passages you use by number, like [1]. If the passages don't answer the question, say so plainly instead of guessing.";
 
-    app.routes.superuserOnly("#/search/ask", (route) => {
+    app.routes.superuserOnly("#/search/chat", (route) => {
         const data = store({ picked: pickedFrom(route), models: [], model: "", question: "", turns: [], asking: false, status: null });
         let abort = null;
         send("/status").then((st) => (data.status = st)).catch(() => {});
@@ -364,8 +364,8 @@
             abort = null;
         }
 
-        return t.div({ onunmount: () => abort?.abort() }, page("Ask", [crumb("Search"), crumb("Ask")], () => t.div(null,
-            t.p({ className: "m-t-0 txt-hint" }, "Ask about what's in your buckets. Each question searches them and the model answers from the passages it finds, citing them. It's ",
+        return t.div({ onunmount: () => abort?.abort() }, page("Chat", [crumb("Search"), crumb("Chat with your content")], () => t.div(null,
+            t.p({ className: "m-t-0 txt-hint" }, "Retrieval-augmented generation (RAG) over your buckets: each question runs a hybrid search, and the model answers from the passages it finds, citing them. It's ",
                 t.code(null, "$llm.text"), " with ", t.code(null, "enrich"), ", as your pages would call it."),
             data.status && !data.status.model ? noModel() : null,
             bucketPicker(data),
@@ -391,7 +391,7 @@
                             t.span(null, p.document), p.heading ? t.span({ className: "txt-hint" }, "› " + p.heading) : null),
                         t.pre(null, p.text)))) : null))),
             t.form({ className: "flex gap-sm", onsubmit: ask },
-                t.textarea({ rows: 2, style: "flex: 1", placeholder: () => data.turns.length ? "Ask a follow-up" : "Ask a question about your buckets",
+                t.textarea({ rows: 2, style: "flex: 1", placeholder: () => data.turns.length ? "A follow-up" : "Ask anything about what's in your buckets",
                     value: () => data.question, oninput: (e) => (data.question = e.target.value),
                     onkeydown: (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(); } } }),
                 t.button({ className: () => `btn ${data.asking ? "loading" : ""}`, disabled: () => data.asking }, t.span({ className: "txt" }, "Ask"))))));
@@ -781,8 +781,8 @@
                 t.div({ className: "flex gap-sm m-b-sm", style: "align-items: center; flex-wrap: wrap" },
                     t.span({ className: "txt-hint" }, `${b.sources} source${b.sources === 1 ? "" : "s"}, ${b.documents} documents, ${b.chunks} chunks, ${fmtBytes(b.bytes)}`),
                     t.div({ className: "m-l-auto" }),
-                    t.a({ className: "btn xs secondary", href: "#/search/ask?buckets=" + encodeURIComponent(name) },
-                        t.i({ className: "ri-question-answer-line", ariaHidden: true }), t.span({ className: "txt" }, "Ask this bucket")),
+                    t.a({ className: "btn xs secondary", href: "#/search/chat?buckets=" + encodeURIComponent(name) },
+                        t.i({ className: "ri-chat-3-line", ariaHidden: true }), t.span({ className: "txt" }, "Chat with this bucket")),
                     t.a({ className: "btn xs secondary", href: "#/search/find?buckets=" + encodeURIComponent(name) },
                         t.i({ className: "ri-search-line", ariaHidden: true }), t.span({ className: "txt" }, "Search this bucket")),
                     t.button({ type: "button", className: "btn xs secondary", title: "Bucket settings", onclick: () => openForm("settings") },

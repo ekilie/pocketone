@@ -66,8 +66,8 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
 - [Streaming answers](guides/streaming.md): show an answer as it's written.
 - [Pictures, speech and music](guides/media.md): generate files and save them on records.
 - [Conversations](guides/conversations.md): chats that remember, with LLM Chat.
-- [Answer from your content](guides/search.md): fill buckets with your files, web pages, Git repositories and records,
-  then `enrich` a call so the answer comes from them; `$llm.search` to search them yourself.
+- [Search and RAG](guides/search.md): retrieval-augmented generation over your own files, web pages, Git repositories
+  and records: knowledge bases (buckets), hybrid search with `$llm.search`, and `enrich` to ground any call in them.
 - [Limits](guides/limits.md): cap what the app spends, per day or month, for the whole app, each user and each guest.
 - [Whom a call is for](guides/whom.md): `$llm.for(ctx)`, so per-user and per-guest limits apply.
 - [Spend and the ledger](guides/spend.md): every call's cost, per user and per model; selling credits.

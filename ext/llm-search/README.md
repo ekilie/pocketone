@@ -3,20 +3,21 @@ owners: ["@benallfree"]
 version: 0.1.0
 title: "LLM Search"
 group: binary
-summary: "Buckets of content your app searches by meaning: files, folders, zips, web pages, Git repositories and collections; $llm.search, and enrich on $llm calls to answer from them."
+summary: "RAG and hybrid search: knowledge bases (buckets) of files, folders, zips, web pages, Git repositories and collections; $llm.search, and enrich to ground $llm calls in them."
 ---
 
 # LLM Search
 
-LLM Search keeps **buckets** of content your app searches by meaning, part of [AI in your app](../llm/README.md), and the dashboard's **Search** screen lets you fill
-them and ask questions about them (**Ask**: answers with the passages they came from). Your app makes the bucket it needs; you fill it from
-the dashboard's **Search** screen with **sources**: files, folders and zips you drop, pasted text, web pages and Git
-repositories it keeps current, or collections it keeps in sync. Each document is split into chunks that remember where they came from (the document, its section,
-its lines, its record) and embedded with the app's one embedding model, picked for you from your providers in
-Settings → LLM.
+LLM Search is retrieval-augmented generation (RAG) for PocketOne apps, part of [AI in your app](../llm/README.md). It
+keeps **buckets**, knowledge bases of your content, and runs the pipeline: **ingestion** (sources become documents,
+documents become chunks that remember their section, lines and record), **embeddings** with the app's one embedding
+model (picked for you from Settings → LLM), and **hybrid search** (semantic search by vector similarity and keyword
+search by BM25, merged). Your app makes the bucket it needs; you fill it on the dashboard's **Search** screen with
+**sources**: files, folders and zips you drop, pasted text, web pages and Git repositories it keeps current, or
+collections it keeps in sync. **Chat** on that screen lets you try it out.
 
-The usual use is answering from your own content. Name the buckets on a model call and it adds the best passages to
-the prompt:
+The usual use is grounding a model's answer in your content. Name the buckets on a model call (`enrich`) and the best
+passages go into the prompt:
 
 ```ts
 const answer = await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: question, enrich: ["help"] })

@@ -82,8 +82,8 @@ while a model works; there are no blocking versions to reach for. Each call name
 
 | Call | What it does |
 |---|---|
-| `$llm.search.searchAsync({ query, buckets?, limit?, viewer? })` and the rest of `$llm.search` | Buckets of your content searched by meaning, through the [LLM Search](../llm-search/README.md) extension ([Answer from your content](docs/guides/search.md)). |
-| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, enrich?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage, passages }`. With `schema`, `data` is the parsed JSON. With `enrich` (search buckets, `["help"]`), the best passages from them are sent after the prompt and listed in `passages` ([LLM Search](../llm-search/README.md)). |
+| `$llm.search.searchAsync({ query, buckets?, limit?, viewer? })` and the rest of `$llm.search` | Hybrid search over knowledge bases (buckets) of your content, through the [LLM Search](../llm-search/README.md) extension ([Search and RAG](docs/guides/search.md)). |
+| `$llm.text.completeAsync({ model, system?, prompt \| messages, schema?, maxTokens?, temperature?, stop?, reasoning?, enrich?, options? })` | Answers: `{ text, data, reasoning, stopReason, model, usage, passages }`. With `schema`, `data` is the parsed JSON. With `enrich` (RAG: buckets to search, `["help"]`), the best passages from them are sent after the prompt and listed in `passages` ([LLM Search](../llm-search/README.md)). |
 | `$llm.text.streamAsync(opts, onText, onReasoning?)` | The same, calling `onText` with each piece as it's written (`false` stops it). |
 | `$llm.text.count(text \| messages)` | About how many tokens (four characters each). Local, so not async. |
 | `$llm.image.generateAsync({ model, prompt, n?, size?, aspectRatio? })`, `editAsync({ ..., images })` | Pictures: `{ files, model, usage }`. |
