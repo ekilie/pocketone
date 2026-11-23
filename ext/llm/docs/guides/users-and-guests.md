@@ -6,7 +6,8 @@ description: "$llm.for(ctx) counts a page's model calls for its signed-in user o
 # Users and guests
 
 [Limits](limits.md) on each user, each guest and all guests together need to know which user or guest made each call.
-Page code says so with one change: call the model through `$llm.for(ctx)` instead of `$llm`.
+Page code says so with one change: call the model through `$llm.for(ctx)` instead of `$llm`. In Go, the same thing is
+the call's context, carrying the subject `llm.SubjectOf(app, e)` works out from the request.
 
 ```ts
 // pb_pages/ask/+api.ts
@@ -17,22 +18,30 @@ export async function post(ctx: pages.Context) {
 }
 ```
 
+```go
+se.Router.POST("/ask", func(e *core.RequestEvent) error {
+	body := struct{ Question string }{}
+	if err := e.BindBody(&body); err != nil {
+		return e.BadRequestError("send {question}", err)
+	}
+	ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+	r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
+		Model: "vultr/glm-5.3", Prompt: body.Question})
+	if err != nil {
+		return err
+	}
+	return e.JSON(200, map[string]string{"answer": r.Text})
+})
+```
+
 `$llm.for()` takes the request you're answering: a page's `ctx`, or a `pb_hooks` route's `e`. It returns the same API as
 `$llm`, every kind, chats and streams included, with each call counted for that request:
 
 - **its signed-in user**, when the request carries an auth record (counted as `user:<collection>/<id>`);
 - else **a guest**, told apart by a cookie (below).
 
-```js
-// pb_hooks/ask.pb.js
-routerAdd("POST", "/api/ask", async (e) => {
-  const { question } = e.requestInfo().body
-  const r = await $llm.for(e).text.completeAsync({ model: "vultr/glm-5.3", prompt: question })
-  return e.json(200, { answer: r.text })
-})
-```
-
-Keep the object for the whole request when you make several calls, so they all count for the same person:
+Keep the object (in Go, the context) for the whole request when you make several calls, so they all count for the same
+person:
 
 ```ts
 const llm = $llm.for(ctx)
@@ -41,14 +50,22 @@ const r = await chat.sendAsync(question)
 const more = await llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: `Three follow-up questions to: ${question}` })
 ```
 
+```go
+ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+r, err := chatv1.Contract.Must(app).Send(ctx, extkit.Internal, chatv1.SendInput{ID: chatID, Text: question, Model: "vultr/glm-5.3"})
+// ...
+more, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
+	Model: "vultr/glm-5.3", Prompt: "Three follow-up questions to: " + question})
+```
+
 ## Calls that aren't for anyone
 
-Plain `$llm` counts toward limits on **the whole app** only. Use it for work that isn't on someone's behalf: a cron,
-a hook that tags new records, a migration. Those calls are recorded with no subject, never count as a guest's, and are
-never refused for a missing guest total.
+Plain `$llm`, or a context with no subject, counts toward limits on **the whole app** only. Use it for work that isn't
+on someone's behalf: a cron, a hook that tags new records, a migration. Those calls are recorded with no subject, never
+count as a guest's, and are never refused for a missing guest total.
 
-```js
-// pb_hooks/tags.pb.js: tags every new post; counted toward the whole app only
+```ts
+// pb_hooks/tags.pb.ts: tags every new post; counted toward the whole app only
 onRecordAfterCreateSuccess(async (e) => {
   const r = await $llm.text.completeAsync({ model: "vultr/glm-5.3", prompt: "Three tags for: " + e.record.get("title") })
   e.record.set("tags", r.text)
@@ -57,13 +74,28 @@ onRecordAfterCreateSuccess(async (e) => {
 }, "posts")
 ```
 
+```go
+app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
+	r, err := textv1.Contract.Must(e.App).Complete(context.Background(), extkit.Internal, textv1.CompleteInput{
+		Model: "vultr/glm-5.3", Prompt: "Three tags for: " + e.Record.GetString("title")})
+	if err == nil {
+		e.Record.Set("tags", r.Text)
+		err = e.App.Save(e.Record)
+	}
+	if err != nil {
+		return err
+	}
+	return e.Next()
+})
+```
+
 Calls over HTTP and MCP (`/api/_c/llm.text/v1/...`) come from superusers and API tokens, never from visitors, so they
 also count toward the whole app only.
 
 ## Guests
 
 A visitor who isn't signed in is a guest. Guests are told apart by a cookie, `pocketone_llm_guest`, which the first
-`$llm.for()` call for a visitor sets on the response:
+`$llm.for()` call (in Go, `llm.SubjectOf`) for a visitor sets on the response:
 
 - It holds a random id and a signature, so a visitor can't pick someone else's id. The signing key is made the first
   time it's needed and kept in the app's [key-value store](/docs/extensions/kv) at the private name `_llm/guest-key`.
@@ -79,9 +111,9 @@ together](limits.md#guests-need-a-total) before they're answered: it's the only 
 
 ## When a call is refused
 
-A refused call throws, whether a built-in limit refused it or one of your [onCall handlers](custom-limits.md) did.
-Its message is written for the person who made the request ("limit reached: each guest, $0.10 a day (used $0.10); it
-resets at 00:00 UTC", or your handler's own words), so the simplest handling is to show it:
+A refused call fails, whether a built-in limit refused it or one of your [onCall handlers](custom-limits.md) did. Its
+code is `limit` and its message is written for the person who made the request ("limit reached: each guest, $0.10 a day
+(used $0.10); it resets at 00:00 UTC", or your handler's own words), so the simplest handling is to show it:
 
 ```ts
 // pb_pages/ask/+api.ts
@@ -91,12 +123,25 @@ export async function post(ctx: pages.Context) {
     const r: LlmTextAnswer = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt: question })
     return ctx.res.json({ answer: r.text })
   } catch (err: any) {
-    return ctx.res.json(429, { error: String(err.message || err) })
+    if (err.code === "limit") return ctx.res.json(429, { error: err.message })
+    throw err
   }
 }
 ```
 
-A streamed answer throws the same way, before any text arrives. With server-sent events, send the message as an event
+```go
+r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{Model: "vultr/glm-5.3", Prompt: question})
+var xe *extkit.Error
+if errors.As(err, &xe) && xe.Code == llmc.ErrLimit.Code {
+	return e.JSON(429, map[string]string{"error": xe.Message})
+}
+if err != nil {
+	return err
+}
+return e.JSON(200, map[string]string{"answer": r.Text})
+```
+
+A streamed answer fails the same way, before any text arrives. With server-sent events, send the message as an event
 the page shows in place of the answer, as [Docs Chat](/docs/examples/docs-chat) does:
 
 ```ts
@@ -109,14 +154,36 @@ export async function post(ctx: pages.Context) {
       (text) => stream.send("text", JSON.stringify(text)))
     stream.send("done", JSON.stringify({ usage: r.usage }))
   } catch (err: any) {
-    stream.send("error", JSON.stringify(String(err.message || err)))
+    stream.send("error", JSON.stringify(err.message))
   }
   stream.close()
 }
 ```
 
-To tell a refused call apart from other failures (a wrong key, a provider that's down), check `err.code === "limit"`.
-Over HTTP, refused calls answer `429` with `{"code": "limit", ...}`.
+```go
+s, err := textv1.Contract.Must(app).Stream(ctx, extkit.Internal, textv1.CompleteInput{Model: "vultr/glm-5.3", Prompt: question})
+if err != nil {
+	return err // a bad model, before the stream starts
+}
+e.Response.Header().Set("Content-Type", "text/event-stream")
+send := func(event string, data any) {
+	b, _ := json.Marshal(data)
+	fmt.Fprintf(e.Response, "event: %s\ndata: %s\n\n", event, b)
+	_ = e.Flush()
+}
+err = s.Run(ctx, func(v any) error {
+	if c, ok := v.(textv1.Chunk); ok && c.Text != "" {
+		send("text", c.Text)
+	}
+	return nil
+})
+if err != nil {
+	send("error", err.Error()) // a limit's refusal arrives here
+}
+return nil
+```
+
+Over HTTP, refused calls answer `429` with `{"code": "limit", "message": "..."}`.
 
 ## Showing what's left
 
@@ -128,32 +195,22 @@ say "4 questions left today" before anyone hits a refusal ([Spend and the ledger
 <%% if (left) { %><p><%%= left.left %> of <%%= left.amount %> left today</p><%% } %>
 ```
 
-## In Go
-
-A custom build makes calls through the `llm.*` contracts. The subject travels in the call's context, set with the
-helpers in the shared contract package:
-
 ```go
-import (
-	llmc "pocketone.dev/ext/contracts/llm"
-	textv1 "pocketone.dev/ext/contracts/llm/text/v1"
-	"pocketone.dev/ext/extkit"
-	"pocketone.dev/ext/llm"
-)
-
-func answer(app core.App, e *core.RequestEvent, question string) (string, error) {
-	// whom the request is for: its auth record, else its guest cookie (set on e's response when missing), else its IP
-	ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
-	r, err := textv1.Contract.Must(app).Complete(ctx, extkit.Internal, textv1.CompleteInput{
-		Model: "vultr/glm-5.3", Prompt: question,
-	})
-	return r.Text, err
+ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+rem, err := ledgerv1.Contract.Must(app).Remaining(ctx, extkit.Internal, ledgerv1.RemainingInput{})
+if err == nil && len(rem.Limits) > 0 {
+	left := rem.Limits[0] // the tightest
+	fmt.Fprintf(e.Response, "<p>%v of %v left today</p>", left.Left, left.Amount)
 }
 ```
 
-- `llmc.WithSubject(ctx, s)` and `llmc.SubjectOf(ctx)` set and read the subject; `llmc.UserSubject(collection, id)`
-  builds a user's. A call whose context has no subject counts toward the whole app only.
-- `llm.SubjectOf(app, e)` is what `$llm.for(e)` uses: the request's user, guest or IP.
+## The Go side
+
+- `llmc.WithSubject(ctx, s)` and `llmc.SubjectOf(ctx)` (in `pocketone.dev/ext/contracts/llm`) set and read the
+  subject; `llmc.UserSubject(collection, id)` builds a user's. A call whose context has no subject counts toward the
+  whole app only.
+- `llm.SubjectOf(app, e)` (in `pocketone.dev/ext/llm`) is what `$llm.for(e)` uses: the request's user, else its guest
+  cookie (set on `e`'s response when missing), else its IP.
 - Pass the context on and the subject goes with it: LLM Chat's calls to `llm.text/v1` count for the subject of the
   send that made them.
 - A refused call returns an `*extkit.Error` with `Code` `"limit"` and `Status` `429` (`llmc.ErrLimit`'s).

@@ -17,7 +17,17 @@ $llm.ledger.summary({ by: "model", window: "month" })   // where the money went 
 $llm.ledger.calls({ status: "refused", limit: 20 })     // the latest calls a limit refused
 ```
 
-These read the app's own database, so they're plain calls, not `Async` ones.
+```go
+ledger := ledgerv1.Contract.Must(app) // pocketone.dev/ext/contracts/llm/ledger/v1
+ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+ledger.Remaining(ctx, extkit.Internal, ledgerv1.RemainingInput{})                    // what's left, for this visitor
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Window: "day"})                // what this visitor has spent today
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "model", Window: "month"}) // where the money went
+ledger.Calls(ctx, extkit.Internal, ledgerv1.CallsInput{Status: "refused", Limit: 20})    // the latest refused calls
+```
+
+These read the app's own database, so they're plain calls, not `Async` ones. In Go they're the `llm.ledger/v1` contract;
+each returns its result and an error.
 
 ## What's left
 
@@ -32,7 +42,21 @@ export function load(ctx: pages.Context) {
 }
 ```
 
-```ts
+```go
+ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+rem, err := ledgerv1.Contract.Must(app).Remaining(ctx, extkit.Internal, ledgerv1.RemainingInput{})
+if err != nil {
+	return err
+}
+var tightest *ledgerv1.LimitLeft
+if len(rem.Limits) > 0 {
+	tightest = &rem.Limits[0]
+}
+```
+
+It answers:
+
+```js
 [
   {
     limit: "each guest, 10 calls a day",   // the limit in words
@@ -59,6 +83,15 @@ $llm.ledger.spent({ window: "month" })    // no subject: the whole app
 // { calls: 42, refused: 3, input: 51200, cached: 20480, output: 9800, seconds: 0, costMicroUSD: 312000 }
 ```
 
+```go
+ledger := ledgerv1.Contract.Must(app)
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Window: "day"}) // ctx's subject (llmc.WithSubject), today (UTC)
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Window: "month"})
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Subject: "user:users/abc", Since: "2026-11-01", Until: "2026-11-15"})
+ledger.Spent(context.Background(), extkit.Internal, ledgerv1.SpentInput{Window: "month"}) // no subject: the whole app
+// ledgerv1.Totals{Calls: 42, Refused: 3, Input: 51200, Cached: 20480, Output: 9800, CostMicroUSD: 312000}
+```
+
 `calls` counts calls that reached a provider and `refused` the ones a limit refused. `costMicroUSD` is in millionths of
 a US dollar, like every result's `usage.costMicroUSD`: divide by 1,000,000 for dollars. Add `kind` or `model` to count
 only those calls.
@@ -79,6 +112,16 @@ $llm.ledger.summary({ by: "kind", window: "month" })                 // text vs 
 $llm.ledger.summary({ by: "day", since: "2026-11-01" })              // a row per day, latest first
 ```
 
+```go
+ledger := ledgerv1.Contract.Must(app)
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "model", Window: "month"})
+// .Rows: []ledgerv1.SummaryRow{{Key: "vultr/glm-5.3", Totals: ledgerv1.Totals{Calls: 812, CostMicroUSD: 4120000}}, ...}
+
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "subject", Window: "day", Limit: 10}) // today's ten biggest spenders
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "kind", Window: "month"})            // text vs pictures vs video
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "day", Since: "2026-11-01"})          // a row per day, latest first
+```
+
 Narrow it with `subject`, `kind` or `model`, as with `spent`.
 
 ## The calls themselves
@@ -89,6 +132,13 @@ Narrow it with `subject`, `kind` or `model`, as with `spent`.
 const page = $llm.ledger.calls({ subject: "user:users/abc", window: "month", limit: 20 })
 page.calls  // [{ id, created, kind, model, subject, via, input, cached, output, seconds, costMicroUSD, estimated, refused, job }]
 page.more   // true when there are more: ask again with offset: 20
+```
+
+```go
+page, err := ledgerv1.Contract.Must(app).Calls(ctx, extkit.Internal,
+	ledgerv1.CallsInput{Subject: "user:users/abc", Window: "month", Limit: 20})
+// page.Calls: []ledgerv1.Call{{ID, Created, Kind, Model, Subject, Via, Input, Cached, Output, Seconds, CostMicroUSD, ...}}
+// page.More: true when there are more: ask again with Offset: 20
 ```
 
 `status: "refused"` lists only refused calls (each with the limit's message in `refused`), and `status: "ok"` only the
