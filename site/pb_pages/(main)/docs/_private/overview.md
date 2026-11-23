@@ -92,7 +92,7 @@ extension behind it without changing anything else. [How PocketOne fits together
 ### Everything else
 
 Automatic TLS certificates, bulk mail to your own users, scheduled VACUUM, signed S3 download redirects, and more. See
-[all extensions](/docs/extensions).
+[all extensions](/docs/extensions/all).
 
 ## What stays the same
 
@@ -120,4 +120,4 @@ PocketOne is open to everyone. Ask questions and share ideas in
 ## Where to next
 
 - [Install PocketOne](/docs/installation)
-- [Browse the extensions](/docs/extensions)
+- [Browse the extensions](/docs/extensions/all)

@@ -84,7 +84,7 @@ pocker: { root: ./pb_root }
 | [pocketone.yaml](/docs/pocketone-yaml) | One config file, with every extension's options and a `.env` for secrets |
 
 Each page shows the feature in the dashboard, from your terminal and from an agent. For how a feature works or how to
-build on it, follow its **How it works** links to the [extension](/docs/extensions) pages.
+build on it, follow its **How it works** links to the [extension](/docs/extensions/all) pages.
 
 ## Also built in
 
