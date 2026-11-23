@@ -328,18 +328,19 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	out[referenceOut+"/cli.md"] = cliReference(m)
 	out[referenceOut+"/rest.md"] = restReference(m)
 	out[referenceOut+"/mcp.md"] = mcpReference(m)
-	gopkgs := goRefPackages(root)
-	if refs := jsRefs(m); len(refs) > 0 {
-		out[referenceOut+"/javascript.md"] = jsIndex(m)
-		for _, r := range refs {
-			out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(m, r, gopkgs)
-		}
+	gopkgs, pbpkgs := goRefPackages(root), pbGoPackages(root)
+	allGo := append(append([]goRefPackage{}, gopkgs...), pbpkgs...)
+	pbPages, pbNS := pbJSPages(root, pbpkgs)
+	for u, page := range pbPages {
+		out[referenceOut+strings.TrimPrefix(u, "/docs/reference")+".md"] = page
 	}
-	if len(gopkgs) > 0 {
-		out[referenceOut+"/go.md"] = goRefIndex(gopkgs)
-		for _, p := range gopkgs {
-			out[referenceOut+strings.TrimPrefix(goRefURL(p.Dir), "/docs/reference")+".md"] = p.Page
-		}
+	out[referenceOut+"/javascript.md"] = jsIndex(m, pbNS, pbpkgs)
+	for _, r := range jsRefs(m) {
+		out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(m, r, allGo)
+	}
+	out[referenceOut+"/go.md"] = goRefIndex(gopkgs, pbpkgs)
+	for _, p := range allGo {
+		out[referenceOut+strings.TrimPrefix(p.URL, "/docs/reference")+".md"] = p.Page
 	}
 
 	for _, c := range m.contracts {

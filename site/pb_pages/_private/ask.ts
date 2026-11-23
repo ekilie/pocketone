@@ -10,6 +10,7 @@
 export const MODEL: string = process.env.ASK_MODEL || 'vultr/deepseek-v4-flash'
 
 const BUCKET = 'docs'
+const PB_REFERENCE = ['reference/javascript/pocketbase', 'reference/javascript/pocketbase.md', 'reference/go/pocketbase', 'reference/go/pocketbase.md']
 const MAX_QUESTION = 300
 const PASSAGES = 6
 const CACHE_FOR = 60 * 60 * 1000 // an answer is reused for an hour (docs questions repeat a lot)
@@ -62,7 +63,8 @@ function ensureDocs() {
   if (ready) return
   $llm.search.ensure({ name: BUCKET, title: 'pocketone.dev docs', owner: 'pocketone.dev',
     description: "Every page under /docs, added by the site's ask box (pb_pages/_private/ask.ts)." })
-  $llm.search.addFolder({ bucket: BUCKET, path: 'pb_pages/(main)/docs', include: ['*.md'], exclude: ['_private'], url: '/docs/{path}' })
+  // the generated PocketBase API reference (about 1.2 MB) stays out: the guides and the other references link to it
+  $llm.search.addFolder({ bucket: BUCKET, path: 'pb_pages/(main)/docs', include: ['*.md'], exclude: ['_private', ...PB_REFERENCE], url: '/docs/{path}' })
   ready = true
 }
 

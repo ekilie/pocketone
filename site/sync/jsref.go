@@ -307,14 +307,34 @@ func jsRefs(m *manifest) []jsRef {
 }
 
 // jsIndex is /docs/reference/javascript: every extension that adds to the JS API, with its globals.
-func jsIndex(m *manifest) string {
+func jsIndex(m *manifest, pbNS []string, pbpkgs []goRefPackage) string {
 	var b strings.Builder
-	b.WriteString(refFrontMatter("JavaScript API", "What PocketOne's extensions add to the JavaScript API of pb_hooks and page code: their globals, generated from their TypeScript declarations."))
+	b.WriteString(refFrontMatter("JavaScript API", "The whole JavaScript API of pb_hooks and page code: what core gives every app ($app, the hooks, the classes and every type) and what each extension adds, generated from the TypeScript declarations."))
 	b.WriteString("# JavaScript API\n\n")
-	b.WriteString("`pb_hooks` and page code run on PocketBase's JavaScript API ([its reference](https://pocketbase.io/jsvm/index.html)), " +
-		"and each PocketOne extension adds to it: a global such as `$llm`, functions to bind hooks, types. Each page below lists what " +
-		"one extension adds, generated from the TypeScript declarations it ships, the same ones your app's `types.d.ts` gets, so " +
-		"your editor knows them too. An extension that's off on your app adds nothing.\n\n")
+	b.WriteString("Everything `pb_hooks` and page code can call, generated from the TypeScript declarations PocketOne ships " +
+		"(the same ones your app's `types.d.ts` gets, so your editor knows them too).\n\n")
+	if len(pbNS) > 0 {
+		b.WriteString("## PocketBase\n\n")
+		b.WriteString("What core gives every app: [the globals, hooks, functions and classes](" + pbJSURL + ") (`$app`, `$apis`, " +
+			"`$security`, `routerAdd`, `cronAdd`, `onRecordCreate`, `new Record()`...), and the types they hand you, one page per Go " +
+			"namespace:\n\n")
+		var own, libs []string
+		for _, ns := range pbNS {
+			l := fmt.Sprintf("[%s](%s)", ns, pbNSURL(ns))
+			if pbGoPage(ns, pbpkgs) != "" || ns == "dbx" {
+				own = append(own, l)
+			} else {
+				libs = append(libs, l)
+			}
+		}
+		b.WriteString("- PocketBase's: " + strings.Join(own, ", ") + "\n")
+		if len(libs) > 0 {
+			b.WriteString("- From the Go libraries it builds on: " + strings.Join(libs, ", ") + "\n")
+		}
+		b.WriteString("\n## Extensions\n\n")
+	}
+	b.WriteString("Each PocketOne extension adds to that: a global such as `$llm`, functions to bind hooks, types. Each page below " +
+		"lists what one extension adds. An extension that's off on your app adds nothing.\n\n")
 	b.WriteString("| Extension | Adds |\n|---|---|\n")
 	for _, r := range jsRefs(m) {
 		var names []string

@@ -14,6 +14,7 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -25,7 +26,69 @@ const goRefRoot = "ext/contracts"
 // goRefPackage is one package's page: its import path, name and rendered sections.
 type goRefPackage struct {
 	Dir, Import, Name, Synopsis string
+	URL                         string // its page
+	PocketBase                  bool   // one of PocketBase's own packages, not a contract
 	Page                        string
+}
+
+// pbGoSkip are PocketBase folders whose Go code isn't an API anyone builds on (or is PocketOne's own, documented
+// elsewhere).
+var pbGoSkip = map[string]bool{"cmd": true, "migrations": true, "mails/templates": true, "plugins/jsvm": true, "ui": true,
+	"ext": true, "site": true, "examples": true, "docs": true, "agent": true, "node_modules": true}
+
+const pbGoURL = "/docs/reference/go/pocketbase"
+
+// pbGoDirs lists PocketBase's own Go packages: the root package, core, apis, forms, mails, tools/..., plugins/... and
+// tests (internal ones and testdata left out).
+func pbGoDirs(root string) []string {
+	var dirs []string
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || !d.IsDir() {
+			return nil
+		}
+		rel, _ := filepath.Rel(root, path)
+		rel = filepath.ToSlash(rel)
+		base := filepath.Base(path)
+		if rel != "." && (pbGoSkip[rel] || base == "internal" || base == "testdata" || strings.HasPrefix(base, ".") || strings.HasPrefix(base, "_")) {
+			return filepath.SkipDir
+		}
+		if rel != "." {
+			if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
+				return filepath.SkipDir // another module
+			}
+		}
+		entries, _ := os.ReadDir(path)
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".go") && !strings.HasSuffix(e.Name(), "_test.go") {
+				dirs = append(dirs, rel)
+				break
+			}
+		}
+		return nil
+	})
+	sort.Strings(dirs)
+	return dirs
+}
+
+// pbGoPackages reads and renders PocketBase's packages, at /docs/reference/go/pocketbase/<folder>.
+func pbGoPackages(root string) []goRefPackage {
+	raw, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		return nil
+	}
+	module := strings.TrimSpace(strings.TrimPrefix(strings.SplitN(string(raw), "\n", 2)[0], "module"))
+	var out []goRefPackage
+	for _, dir := range pbGoDirs(root) {
+		imp, url := module, pbGoURL
+		if dir != "." {
+			imp, url = module+"/"+dir, pbGoURL+"/"+dir
+		}
+		if p, ok := goRefRead(root, dir, imp, url); ok {
+			p.PocketBase = true
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // goRefDirs lists the Go package folders under ext/contracts (internal ones and the cmd tools left out).
@@ -67,14 +130,14 @@ func goRefURL(dir string) string {
 func goRefPackages(root string) []goRefPackage {
 	var out []goRefPackage
 	for _, dir := range goRefDirs(root) {
-		if p, ok := goRefRead(root, dir); ok {
+		if p, ok := goRefRead(root, dir, "pocketone.dev/"+dir, goRefURL(dir)); ok {
 			out = append(out, p)
 		}
 	}
 	return out
 }
 
-func goRefRead(root, dir string) (goRefPackage, bool) {
+func goRefRead(root, dir, importPath, url string) (goRefPackage, bool) {
 	fset := token.NewFileSet()
 	entries, err := os.ReadDir(filepath.Join(root, dir))
 	if err != nil {
@@ -92,12 +155,11 @@ func goRefRead(root, dir string) (goRefPackage, bool) {
 		// a _test.go file of another package (pkg_test) still holds the examples doc.NewFromFiles wants
 		files = append(files, f)
 	}
-	importPath := "pocketone.dev/" + dir
 	pkg, err := doc.NewFromFiles(fset, files, importPath)
 	if err != nil || pkg.Name == "" {
 		return goRefPackage{}, false
 	}
-	gp := goRefPackage{Dir: dir, Import: importPath, Name: pkg.Name, Synopsis: pkg.Synopsis(pkg.Doc)}
+	gp := goRefPackage{Dir: dir, Import: importPath, Name: pkg.Name, Synopsis: pkg.Synopsis(pkg.Doc), URL: url}
 	print := func(n any) string {
 		var b bytes.Buffer
 		_ = (&printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 8}).Fprint(&b, fset, n)
@@ -106,7 +168,7 @@ func goRefRead(root, dir string) (goRefPackage, bool) {
 	md := func(text string) string {
 		out := strings.TrimSpace(string(pkg.Markdown(strings.TrimSpace(text))))
 		// go/doc links in-page symbols as #Get; the site's heading anchors are lowercase
-		return goDocLinkRe.ReplaceAllStringFunc(out, func(l string) string { return "](#" + anchor(l[3:len(l)-1]) + ")" })
+		return goDocLinkRe.ReplaceAllStringFunc(out, func(l string) string { return "](#" + gid(l[3:len(l)-1]) + ")" })
 	}
 	example := func(ex *doc.Example) string {
 		lines := strings.Split(print(ex.Code), "\n")
@@ -142,7 +204,7 @@ func goRefRead(root, dir string) (goRefPackage, bool) {
 			d := *v.Decl
 			d.Doc = nil
 			for _, n := range v.Names { // constants and variables have no heading; links to them land here
-				fmt.Fprintf(b, "<a id=%q></a>", anchor(n))
+				fmt.Fprintf(b, "<a id=%q></a>", gid(n))
 			}
 			b.WriteString("\n\n")
 			fmt.Fprintf(b, "```go\n%s\n```\n\n", print(&d))
@@ -159,7 +221,7 @@ func goRefRead(root, dir string) (goRefPackage, bool) {
 	if d := md(pkg.Doc); d != "" {
 		b.WriteString(d + "\n\n")
 	}
-	fmt.Fprintf(&b, "Source: [`%s`](%s/tree/main/%s).\n\n", dir, repoURL, dir)
+	fmt.Fprintf(&b, "Source: [`%s`](%s/tree/main/%s).\n\n", path.Clean(dir), repoURL, dir)
 
 	if len(pkg.Consts) > 0 {
 		b.WriteString("## Constants\n\n")
@@ -200,7 +262,7 @@ func goRefRead(root, dir string) (goRefPackage, bool) {
 }
 
 // goRefIndex is /docs/reference/go: every package, by folder.
-func goRefIndex(pkgs []goRefPackage) string {
+func goRefIndex(pkgs, pbpkgs []goRefPackage) string {
 	var b strings.Builder
 	b.WriteString(refFrontMatter("Go API", "The Go packages extensions and custom PocketOne builds program against: every contract's interface and types, and the helpers they share."))
 	b.WriteString("# Go API\n\n")
@@ -208,11 +270,24 @@ func goRefIndex(pkgs []goRefPackage) string {
 		"interface, the types its operations take and return, and the helpers it ships, for a custom build or an extension " +
 		"that calls one. Generated from the source with `go/doc`, examples included. An extension's JavaScript side is in the " +
 		"[JavaScript API](/docs/reference/javascript).\n\n")
-	b.WriteString("| Package | |\n|---|---|\n")
+	b.WriteString("## Contracts\n\n| Package | |\n|---|---|\n")
 	for _, p := range pkgs {
-		fmt.Fprintf(&b, "| [`%s`](%s) | %s |\n", strings.TrimPrefix(p.Import, "pocketone.dev/ext/contracts/"), goRefURL(p.Dir), cell(strings.TrimSpace(p.Synopsis)))
+		fmt.Fprintf(&b, "| [`%s`](%s) | %s |\n", strings.TrimPrefix(p.Import, "pocketone.dev/ext/contracts/"), p.URL, cell(strings.TrimSpace(p.Synopsis)))
 	}
 	b.WriteString("\n")
+	if len(pbpkgs) > 0 {
+		b.WriteString("## PocketBase\n\nPocketOne's core: the app (`core`), its HTTP API (`apis`), the tools it's built from, and the " +
+			"test helpers (`tests`). A custom build or an extension imports these by the module path in each page's import line.\n\n")
+		b.WriteString("| Package | |\n|---|---|\n")
+		for _, p := range pbpkgs {
+			name := strings.TrimPrefix(strings.TrimPrefix(p.URL, pbGoURL), "/")
+			if name == "" {
+				name = p.Name
+			}
+			fmt.Fprintf(&b, "| [`%s`](%s) | %s |\n", name, p.URL, cell(strings.TrimSpace(p.Synopsis)))
+		}
+		b.WriteString("\n")
+	}
 	return b.String()
 }
 
@@ -225,7 +300,7 @@ func goRefLink(pkgs []goRefPackage, target string) string {
 	}
 	for _, p := range pkgs {
 		if p.Name == name && strings.Contains(p.Page, "\n### "+sym+"\n") {
-			return goRefURL(p.Dir) + "#" + anchor(sym)
+			return p.URL + "#" + gid(sym)
 		}
 	}
 	return ""
