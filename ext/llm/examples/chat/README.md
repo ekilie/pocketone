@@ -18,6 +18,8 @@ runs live at
   the question with its excerpts after it, and keeps the question as sent, so each turn's prompt starts like the last
   one (providers bill a repeated start cheaper); [`chat/+api.ts`](pb_pages/chat/+api.ts) forwards each piece to the
   browser with `ctx.res.sse()`;
+- **a question in the link:** `https://learn.pocketone.dev/?q=<question>` starts the chat with that question
+  (pocketone.dev's ask box links here to carry on);
 - **structured output:** a second call, `await $llm.text.completeAsync({ schema })`, suggests three follow-up
   questions as JSON in the shape the schema asks for;
 - **async throughout:** every `$llm` call is awaited in an async handler, so the model works off the app's JS VM and

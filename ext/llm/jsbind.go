@@ -102,7 +102,7 @@ func invoker[T any](app core.App, c *extkit.Contract[T], w *extkit.Wire[T]) func
 			return nil, llmc.ErrNotConfigured
 		}
 		for _, o := range w.Ops {
-			if o.Name != op || o.Out != extkit.OutJSON {
+			if (o.Name != op && o.Path != op) || o.Out != extkit.OutJSON { // by name ("follow") or path ("add-url")
 				continue
 			}
 			req := extkit.OpRequest{JSON: raw}
@@ -195,6 +195,7 @@ var jsPrelude = `(() => {
     add: (o) => sc("add", o),
     addURL: (o) => sc("add-url", o),
     follow: (o) => sc("follow", o),
+    addFolder: (o) => sc("add-folder", o),
     refresh: (bucket, source) => sc("refresh", { bucket, source }),
     remove: (bucket, list) => sc("remove", { bucket, sources: names(list) }).count,
     documents: (x) => sc("documents", typeof x === "string" ? { bucket: x } : x).documents,
@@ -233,6 +234,7 @@ var jsPrelude = `(() => {
   });
   };
   const base = build("");
-  // for(e): e is a request event (a pb_hooks route's e) or a page's ctx (its .event)
-  globalThis.$llm = Object.freeze({ ...base, for: (e) => build(n.subject(e && e.event ? e.event : e)) });
+  // for(e): e is a request event (a pb_hooks route's e) or a page's ctx (whose request event is ctx.req.event)
+  const eventOf = (e) => (e && e.req && e.req.event) || (e && e.event) || e;
+  globalThis.$llm = Object.freeze({ ...base, for: (e) => build(n.subject(eventOf(e))) });
 })()`

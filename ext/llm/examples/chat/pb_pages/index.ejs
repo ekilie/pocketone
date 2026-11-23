@@ -251,6 +251,12 @@ q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.p
 log.addEventListener('click', e => {
   if (e.target.matches('.chips button') && !send.disabled) ask(e.target.textContent)
 })
+// ?q=...: start with that question (pocketone.dev's ask box links here to carry on a conversation)
+const startWith = new URLSearchParams(location.search).get('q')
+if (startWith && startWith.trim()) {
+  window.history.replaceState(null, '', location.pathname)
+  ask(startWith.trim().slice(0, 1000))
+}
 </script>
 </body>
 </html>

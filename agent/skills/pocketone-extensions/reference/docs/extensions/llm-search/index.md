@@ -84,8 +84,10 @@ screen shows them: say what to load. A name is letters, digits, `-` and `_`, up 
 | Web page | **add a URL**, or `$llm.search.addURL({ bucket, url, every })` | one | read again on its interval |
 | Git repository | add its URL, with or without `.git`: the server is asked whether it's a repository (the Git protocol's `info/refs`), on any host | one per text file on the default branch, plus one per recent commit (300; `commits`) | read again on its interval: one small request when nothing changed |
 | Collection | **follow a collection**, or `$llm.search.follow({ bucket, collection, fields, filter })` | one per record the filter keeps | kept in sync as records are saved and deleted |
+| Server folder | `$llm.search.addFolder({ bucket, path, include?, exclude?, url? })`: a folder of the app's own files | one per text file, by its path in the folder | read again every five minutes: changed files are embedded again, removed ones leave |
 
-A source's name identifies it in its bucket: the file, folder or zip name, the URL, or the collection. Adding one of
+A source's name identifies it in its bucket: the file, folder or zip name, the URL, the collection, or the server
+folder's path. Adding one of
 the same name replaces it, and the screen asks first. A new version under another name (`notes-v2.zip` for
 `notes-v1.zip`) replaces the old one when you say so: **Upload a new version** on its row, or `replace: "<old name>"`.
 Dropping content that's already in the bucket under another name (same sha256) asks before adding it again. Each
@@ -109,9 +111,28 @@ intervals (`every`: `hour`, `day`, `week`) are checked every five minutes. Fetch
 a multitenant host (Pocker) the host's outbound guard applies; only `http` and `https` URLs are taken, public
 repositories only, with a 30-second limit per page and five minutes per repository.
 
+**Server folders.** `addFolder` reads files that are already on the server: your docs in `pb_pages`, notes in
+`pb_public`, or any folder you put beside them. `path` is relative to the app's own folder (the one holding `pb_data`,
+`pb_pages` and `pb_public`) and must stay inside it: no absolute paths, no `..`, no links out of it, and never
+`pb_data`. `include` keeps matching files (`["*.md"]`, against the name or the path in the folder), `exclude` leaves out
+matches (`["_private", "drafts"]`), beside the usual skips. The folder is read in the background when added and every
+five minutes after; an unchanged folder (same files, sizes and times) costs a walk of it. A deploy that changes files
+shows up within five minutes, with no restart. `url` says where each file is published, with `{path}` for its path
+without the extension (an index file is its folder): with `url: "/docs/{path}"`, `guides/install.md` links to
+`/docs/guides/install`, and a result from its "macOS" section to `/docs/guides/install#macos`. Anchors are the ids
+PocketOne's Pages (and most Markdown sites) give headings.
+
+```ts
+$llm.search.ensure({ name: "docs", title: "Our docs" })
+$llm.search.addFolder({ bucket: "docs", path: "pb_pages/docs", include: ["*.md"], exclude: ["_private"], url: "/docs/{path}" })
+const found = await $llm.search.searchAsync({ buckets: "docs", query: "install on a Mac" })
+// found.results[0].url → "/docs/install#macos"
+```
+
 **Searching.** `await $llm.search.searchAsync({ query, buckets?, limit?, prefix?, viewer? })` returns the best chunks across
 the buckets named (every bucket when none are): `{ results: [{ bucket, document, text, heading, startLine, endLine,
-record, score }], model, usage }`. `limit` is 5 by default, at most 50; `prefix` keeps documents whose name starts with
+record, url, score }], model, usage }`; `url` links to where the passage is published, for a web page or a server folder
+with a `url` pattern. `limit` is 5 by default, at most 50; `prefix` keeps documents whose name starts with
 it. Each search embeds the query once (a few tokens; a repeated query is cached), the only part that calls a provider,
 so it's the only async call. Ranking merges similarity of meaning (a loop in Go over vectors cached in memory) with
 keyword matching (BM25), so exact names like `onRecordCreate` or a character's name rank where they should.
@@ -150,6 +171,7 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 | [put](https://pocketone.dev/docs/contracts/llm.search/v1#put) | `pocketone remote llm search put --bucket <value> --source <value> --path <value> --text <value> --replace <value>` | `POST /api/_c/llm.search/v1/put` | `llm_search_put` |
 | [prune](https://pocketone.dev/docs/contracts/llm.search/v1#prune) | `pocketone remote llm search prune --bucket <value> --source <value> --keep <a,b>` | `POST /api/_c/llm.search/v1/prune` | `llm_search_prune` |
 | [add_u_r_l](https://pocketone.dev/docs/contracts/llm.search/v1#add_u_r_l) | `pocketone remote llm search add-u-r-l --bucket <value> --url <value> --kind <value> --every <value> --commits <n> --exclude <a,b>` | `POST /api/_c/llm.search/v1/add-url` | `llm_search_add_u_r_l` |
+| [add_folder](https://pocketone.dev/docs/contracts/llm.search/v1#add_folder) | `pocketone remote llm search add-folder --bucket <value> --path <value> --include <a,b> --exclude <a,b> --url <value>` | `POST /api/_c/llm.search/v1/add-folder` | `llm_search_add_folder` |
 | [detect_u_r_l](https://pocketone.dev/docs/contracts/llm.search/v1#detect_u_r_l) | `pocketone remote llm search detect-u-r-l --url <value>` | `POST /api/_c/llm.search/v1/detect-url` | `llm_search_detect_u_r_l` |
 | [follow](https://pocketone.dev/docs/contracts/llm.search/v1#follow) | `pocketone remote llm search follow --bucket <value> --collection <value> --fields <a,b> --filter <value>` | `POST /api/_c/llm.search/v1/follow` | `llm_search_follow` |
 | [refresh](https://pocketone.dev/docs/contracts/llm.search/v1#refresh) | `pocketone remote llm search refresh --bucket <value> --source <value>` | `POST /api/_c/llm.search/v1/refresh` | `llm_search_refresh` |

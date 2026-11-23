@@ -35,6 +35,22 @@
         .search-q { font-weight: 600; margin-bottom: 6px; }
         .search-a { line-height: 1.55; } .search-a pre { white-space: pre-wrap; } .search-a code { font-size: 0.92em; }
         .search-passages { margin-top: 8px; }
+        .search-rows td { vertical-align: middle; }
+        .search-rows .name { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .search-rows .name a { color: inherit; text-decoration: none; } .search-rows .name a:hover { text-decoration: underline; }
+        .search-rows .icons { white-space: nowrap; text-align: right; }
+        .search-rows .icons .btn { margin-left: 2px; }
+        .search-status-icon { font-size: 1.2em; vertical-align: middle; }
+        .search-totals { color: var(--txtHintColor); font-size: var(--smFontSize); margin-top: 8px; }
+        .search-sources { display: flex; flex-direction: column; gap: 10px; margin-bottom: var(--baseSpacing); }
+        .search-source { border: 1px solid var(--baseAlt2Color); border-radius: var(--baseRadius); padding: 12px 14px; }
+        .search-source-head { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .search-source-icon { font-size: 1.35em; color: var(--txtHintColor); line-height: 1.2; }
+        .search-source-name { font-weight: 600; word-break: break-all; }
+        .search-source-meta { color: var(--txtHintColor); font-size: var(--smFontSize); margin-top: 2px; }
+        .search-source-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+        .search-source-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: var(--smFontSize); }
+        .search-source-docs { margin-top: 8px; overflow-x: auto; }
         .search-passages summary { cursor: pointer; color: var(--txtHintColor); font-size: var(--smFontSize); }`;
     document.head.append(style);
 
@@ -77,7 +93,7 @@
             t.nav({ className: "sidebar-content scrollable" }, () => [
                 t.details({ className: "nav-group", open: true },
                     t.summary({ tabIndex: -1, onclick: () => false }, "Search"),
-                    item("#/search/chat", "ri-chat-3-line", "Chat"),
+                    item("#/search/chat", "ri-sparkling-2-line", "Chat"),
                     item("#/search/find", "ri-search-line", "Search"),
                     item("#/search/settings", "ri-settings-3-line", "Settings")),
                 t.details({ className: "nav-group", open: true },
@@ -89,13 +105,24 @@
             ]));
     }
 
-    function page(title, crumbs, body) {
+    // stateIcon is a status as one icon, its words in the tooltip
+    const stateIcon = (cls, tip) => t.i({ className: "search-status-icon " + cls, ariaLabel: app.attrs.tooltip(tip) });
+
+    // showModal mounts a modal (app.modals wants it in the page) and opens it; it's removed again once closed
+    function showModal(el) {
+        document.body.appendChild(el);
+        app.modals.open(el);
+    }
+
+    function page(title, crumbs, body, actions) {
         app.store.title = title;
         refreshNav();
         return t.div({ className: "page page-search" },
             sidebar(),
             t.div({ className: "page-content full-height" },
-                t.header({ className: "page-header" }, t.nav({ className: "breadcrumbs" }, ...crumbs)),
+                t.header({ className: "page-header flex-nowrap" }, t.nav({ className: "breadcrumbs" }, ...crumbs),
+                    actions?.secondary ? t.div({ className: "page-header-secondary-btns" }, ...actions.secondary) : null,
+                    actions?.primary ? t.div({ className: "page-header-primary-btns" }, ...actions.primary) : null),
                 t.div({ className: "wrapper m-b-base" }, body),
                 t.footer({ className: "page-footer" }, app.components.credits())));
     }
@@ -161,6 +188,7 @@
             e.preventDefault();
             try {
                 const b = await send("/ensure", { name: data.name.trim(), title: data.title.trim(), description: data.description.trim() });
+                app.modals.close();
                 window.location.hash = bucketHref(b.name);
             } catch (err) {
                 app.toasts.error(errText(err));
@@ -172,27 +200,45 @@
         return page("Search", [crumb("Search"), crumb("All buckets")], () => {
             if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
             return t.div(null,
-                t.p({ className: "m-t-0 txt-hint" }, "Knowledge bases your app searches and grounds its AI answers in (RAG). Open one to fill it; ",
-                    t.a({ href: "#/search/chat" }, "Chat"), " with them to try them out."),
                 data.status && !data.status.model ? noModel() : null,
                 data.buckets.length
-                    ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table m-b-base" },
+                    ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table search-rows m-b-base" },
                         t.thead(null, t.tr(null, t.th(null, "Bucket"), t.th(null, "Made by"), t.th({ className: "search-num" }, "Sources"),
-                            t.th({ className: "search-num" }, "Documents"), t.th({ className: "search-num" }, "Size"), t.th(null, "Status"))),
+                            t.th({ className: "search-num" }, "Documents"), t.th({ className: "search-num" }, "Size"), t.th(null, ""))),
                         t.tbody(null, ...data.buckets.map((b) => t.tr({ className: "link", onclick: () => (window.location.hash = bucketHref(b.name)) },
-                            t.td(null, t.strong(null, b.title || b.name), b.title ? t.div({ className: "txt-hint txt-sm" }, b.name) : null,
-                                b.description ? t.div({ className: "txt-hint txt-sm" }, b.description) : null),
-                            t.td(null, b.owner || ""),
-                            t.td({ className: "search-num" }, b.sources),
-                            t.td({ className: "search-num" }, b.documents),
-                            t.td({ className: "search-num" }, fmtBytes(b.bytes)),
-                            t.td(null, b.documents === 0 ? t.span({ className: "label" }, "empty")
-                                : b.errors ? t.span({ className: "label danger" }, b.errors + " failed")
-                                    : b.pending ? t.span({ className: "label warning" }, b.pending + " waiting")
-                                        : t.span({ className: "label success" }, "ready")))))))
-                    : t.div({ className: "block txt-center txt-hint p-base" }, "No buckets yet."),
-                () => data.creating
-                    ? t.form({ className: "grid m-b-base", onsubmit: create },
+                            t.td({ className: "name" }, t.strong(null, b.title || b.name),
+                                b.title && b.title !== b.name ? t.span({ className: "txt-hint m-l-5" }, b.name) : null,
+                                b.description ? t.i({ className: "ri-information-line txt-hint m-l-5", ariaLabel: app.attrs.tooltip(b.description) }) : null),
+                            t.td({ className: "txt-hint", style: "white-space: nowrap" }, b.owner || ""),
+                            t.td({ className: "search-num txt-hint" }, b.sources),
+                            t.td({ className: "search-num txt-hint" }, b.documents),
+                            t.td({ className: "search-num txt-hint" }, fmtBytes(b.bytes)),
+                            t.td({ className: "txt-center" }, b.documents === 0 ? stateIcon("ri-checkbox-blank-circle-line txt-hint", "Empty: open it to add something")
+                                : b.errors ? stateIcon("ri-error-warning-fill txt-danger", `${b.errors} failed: open it to see why`)
+                                    : b.pending ? stateIcon("ri-time-line txt-warning", `${b.pending} document${b.pending === 1 ? "" : "s"} waiting to be embedded`)
+                                        : stateIcon("ri-checkbox-circle-fill txt-success", "Ready to search")))))))
+                    : t.div({ className: "block txt-center txt-hint p-base" },
+                        "No buckets yet. A bucket is a knowledge base your app searches and grounds its AI answers in (RAG). ",
+                        t.a({ href: "#", onclick: (e) => { e.preventDefault(); openNew(); } }, "Make one"), "."),
+            );
+        }, { secondary: [
+            t.a({ className: "btn circle transparent secondary", href: "#/search/find", ariaLabel: app.attrs.tooltip("Search every bucket") },
+                t.i({ className: "ri-search-line", ariaHidden: true })),
+            t.a({ className: "btn circle transparent secondary", href: "#/search/chat", ariaLabel: app.attrs.tooltip("Chat with your buckets") },
+                t.i({ className: "ri-sparkling-2-line", ariaHidden: true }))],
+        primary: [
+            t.button({ type: "button", className: "btn", onclick: () => openNew() },
+                t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New bucket"))] });
+
+        function openNew() {
+            data.name = data.title = data.description = "";
+            showModal(t.div({ className: "modal popup", onafterclose: (el) => el.remove() },
+                t.header({ className: "modal-header" }, t.h5({ className: "m-auto" }, "New bucket")),
+                t.div({ className: "modal-content" }, newForm())));
+        }
+
+        function newForm() {
+            return t.form({ className: "grid", onsubmit: create },
                         t.div({ className: "col-lg-4" }, t.div({ className: "field" }, t.label({}, "Name"),
                             t.input({ type: "text", required: true, pattern: "[A-Za-z0-9][A-Za-z0-9_\\-]{0,63}", placeholder: "docs",
                                 value: () => data.name, oninput: (e) => (data.name = e.target.value) }))),
@@ -200,13 +246,10 @@
                             t.input({ type: "text", value: () => data.title, oninput: (e) => (data.title = e.target.value) }))),
                         t.div({ className: "col-lg-12" }, t.div({ className: "field" }, t.label({}, "What belongs in it"),
                             t.input({ type: "text", value: () => data.description, oninput: (e) => (data.description = e.target.value) }))),
-                        t.div({ className: "col-lg-12 flex" },
-                            t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.creating = false) }, t.span({ className: "txt" }, "Cancel")),
-                            t.button({ className: "btn" }, t.span({ className: "txt" }, "Create bucket"))))
-                    : t.button({ type: "button", className: "btn secondary sm", onclick: () => (data.creating = true) },
-                        t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New bucket")),
-            );
-        });
+                        t.div({ className: "col-lg-12 flex" }, t.div({ className: "m-r-auto" }),
+                            t.button({ type: "button", className: "btn transparent secondary", onclick: () => app.modals.close() }, t.span({ className: "txt" }, "Cancel")),
+                            t.button({ className: "btn" }, t.span({ className: "txt" }, "Create bucket"))));
+        }
     });
 
     // ---- search: the matching passages
@@ -503,8 +546,24 @@
         return body;
     }
 
-    const kindIcon = { file: "ri-file-text-line", text: "ri-text", folder: "ri-folder-line", zip: "ri-file-zip-line", page: "ri-global-line", git: "ri-git-branch-line", collection: "ri-database-2-line" };
+    const kindIcon = { file: "ri-file-text-line", text: "ri-text", folder: "ri-folder-line", dir: "ri-hard-drive-2-line", zip: "ri-file-zip-line", page: "ri-global-line", git: "ri-git-branch-line", collection: "ri-database-2-line" };
     const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString() : "");
+    // kindName says what a source is, in words
+    const kindName = { file: "File", text: "Pasted text", folder: "Dropped folder", dir: "Folder on the server", zip: "Zip",
+        page: "Web page", git: "Git repository", collection: "Collection" };
+    const everyName = { hour: "every hour", day: "every day", week: "every week" };
+    // ago and until: "just now", "4 min ago", "in 3 min", "yesterday"... (the full time is the title)
+    function span(ms) {
+        const m = Math.round(Math.abs(ms) / 60000);
+        if (m < 1) return "";
+        if (m < 60) return m + " min";
+        const h = Math.round(m / 60);
+        if (h < 24) return h + " h";
+        const d = Math.round(h / 24);
+        return d + (d === 1 ? " day" : " days");
+    }
+    const ago = (iso) => { const s = span(Date.now() - new Date(iso)); return s ? s + " ago" : "just now"; };
+    const until = (iso) => { const s = span(new Date(iso) - Date.now()); return s ? "in " + s : "any moment"; };
 
     app.routes.superuserOnly("#/search/b/{name}", (route) => {
         const name = decodeURIComponent(route.params.name);
@@ -664,6 +723,7 @@
         async function submit(path, body, after) {
             try {
                 await send(path, body);
+                if (data.form) app.modals.close();
                 data.form = "";
                 after?.();
                 load();
@@ -706,7 +766,9 @@
 
         load();
 
-        const crumbs = [crumb("Search"), crumb("Buckets", "#/search"), t.div({ className: "breadcrumb-item" }, () => data.bucket?.title || name)];
+        const crumbs = [crumb("Search"), crumb("Buckets", "#/search"), t.div({ className: "breadcrumb-item" }, () => data.bucket?.title || name,
+            () => data.bucket?.description ? t.i({ className: "ri-information-line txt-hint m-l-5", style: "font-size: 0.8em",
+                ariaLabel: app.attrs.tooltip((data.bucket.owner ? data.bucket.owner + " wants: " : "") + data.bucket.description) }) : null)];
         const field = (label, input, cls = "col-lg-12") => t.div({ className: cls }, t.div({ className: "field" }, t.label({}, label), input));
         const bound = (obj, key, props = {}) => t.input({ type: "text", ...props, value: () => obj[key], oninput: (e) => (obj[key] = e.target.value) });
         const formButtons = (label) => t.div({ className: "col-lg-12 flex" }, t.div({ className: "m-r-auto" }),
@@ -724,71 +786,148 @@
             return t.span({ className: "label", title: "Embedded in the order it was added, after what came before it" }, "in line");
         }
 
+        // sourceStatus is how a source is doing, as a label: ready, reading, embedding (how far), waiting, failed
         function sourceStatus(src) {
-            if (src.status === "error") return t.span({ className: "label danger", title: src.error }, "error");
-            if (src.status === "reading") return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), "reading");
-            if (src.pending && !data.status?.model) return t.span({ className: "label warning", title: "Add an AI provider with embedding models in Settings → LLM" }, `${src.pending} waiting for a provider`);
-            if (src.pending) return t.span({ className: "label warning", title: `${src.pending} document${src.pending === 1 ? "" : "s"} still to embed` },
-                t.span({ className: "loader sm m-r-5" }), `embedding ${src.embedded} of ${src.chunks} chunks`);
-            return t.span({ className: "label success" }, "ready");
+            if (src.status === "error") return t.span({ className: "label danger" }, "couldn't read it");
+            if (src.status === "reading") return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), "reading…");
+            if (src.pending && !data.status?.model) return t.span({ className: "label warning", title: "Add an AI provider with embedding models in Settings → LLM" }, "waiting for an AI provider");
+            if (src.pending) return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), `embedding ${src.embedded} of ${src.chunks} chunks`);
+            return t.span({ className: "label success" }, "ready to search");
         }
 
+        // sourceAbout is what a source is and where it comes from, in one line
+        function sourceAbout(src) {
+            const bits = [kindName[src.kind] || src.kind];
+            if (src.kind === "page" || src.kind === "git") bits.push(src.every ? "read " + everyName[src.every] : "read when you refresh it");
+            if (src.kind === "collection") bits.push(`${src.fields.join(", ")}${src.filter ? " where " + src.filter : ""}`, "kept in sync");
+            if (src.kind === "dir") {
+                if (src.include?.length) bits.push(src.include.join(", "));
+                bits.push("checked every 5 minutes");
+                if (src.pageURL) bits.push("links to " + src.pageURL);
+            }
+            bits.push(`${src.documents} document${src.documents === 1 ? "" : "s"}`, fmtBytes(src.bytes));
+            if (src.costMicroUSD) bits.push(fmtCost(src.costMicroUSD) + " to embed");
+            return bits.join(" · ");
+        }
+
+        // sourceWhen: when it was last read, and when it's read next
+        function sourceWhen(src) {
+            const parts = [];
+            if (src.refreshed) parts.push(t.span({ title: fmtWhen(src.refreshed) }, "read " + ago(src.refreshed)));
+            if (src.next) parts.push(t.span({ title: fmtWhen(src.next) }, "next check " + until(src.next)));
+            return parts.length ? t.span({ className: "txt-hint" }, ...parts.flatMap((p, i) => (i ? [" · ", p] : [p]))) : null;
+        }
+
+        const refreshTitle = {
+            page: "Fetch the page again now", git: "Read the repository again now", collection: "Read every record again now",
+            zip: "Split the zip again now", dir: "Read the folder again now: changed files are embedded again, removed ones leave",
+        };
+
+        // statusIcon is how a source is doing, as one icon (the words are its tooltip)
+        function statusIcon(src) {
+            const icon = (cls, tip) => t.i({ className: "search-status-icon " + cls, ariaLabel: app.attrs.tooltip(tip) });
+            if (src.status === "error") return icon("ri-error-warning-fill txt-danger", "Couldn't read it: " + src.error);
+            if (src.status === "reading") return t.span({ className: "loader sm", ariaLabel: app.attrs.tooltip("Reading…") });
+            if (src.pending && !data.status?.model) return icon("ri-time-line txt-warning", "Waiting for an AI provider with embedding models (Settings → LLM)");
+            if (src.pending) return t.span({ className: "txt-hint txt-sm", ariaLabel: app.attrs.tooltip(`Embedding ${src.embedded} of ${src.chunks} chunks`) },
+                t.span({ className: "loader sm m-r-5" }), Math.floor((100 * src.embedded) / Math.max(1, src.chunks)) + "%");
+            if (src.error) return icon("ri-error-warning-line txt-warning", src.error);
+            return icon("ri-checkbox-circle-fill txt-success", "Ready to search");
+        }
+
+        // sourceInfo is the tooltip on a source's info icon: what it is, and when it was read
+        function sourceInfo(src) {
+            const when = [];
+            if (src.refreshed) when.push("read " + ago(src.refreshed));
+            if (src.next) when.push("next check " + until(src.next));
+            return sourceAbout(src) + (when.length ? "\n" + when.join(" · ") : "");
+        }
+
+        const iconBtn = (icon, tip, onclick, cls = "secondary", props = {}) => t.button({ type: "button",
+            className: `btn xs circle transparent ${cls}`, ariaLabel: app.attrs.tooltip(tip), onclick, ...props }, t.i({ className: icon, ariaHidden: true }));
+
+        // blank holds an icon's place on a row without it, so every row's icons line up
+        const blank = () => t.span({ className: "btn xs circle transparent", style: "visibility: hidden", ariaHidden: true }, t.i({ className: "ri-refresh-line" }));
+
         function sourceRows(src) {
-            const refreshable = ["page", "git", "collection", "zip"].includes(src.kind);
+            const open = data.open[src.name];
+            const docs = data.docs[src.name];
             const rows = [t.tr(null,
-                t.td(null,
-                    t.a({ href: "#", onclick: (e) => { e.preventDefault(); toggle(src.name); } },
-                        t.i({ className: (data.open[src.name] ? "ri-arrow-down-s-line" : "ri-arrow-right-s-line") + " m-r-5", ariaHidden: true }),
-                        t.i({ className: (kindIcon[src.kind] || "ri-file-line") + " m-r-5", ariaHidden: true }), src.name),
-                    src.kind === "collection" ? t.div({ className: "txt-hint txt-sm" }, `${src.fields.join(", ")}${src.filter ? "; " + src.filter : ""}`) : null,
-                    src.error ? t.div({ className: "txt-danger txt-sm" }, src.error) : null),
-                t.td(null, src.kind),
-                t.td({ className: "search-num" }, src.documents),
-                t.td({ className: "search-num" }, fmtBytes(src.bytes)),
-                t.td({ className: "search-num" }, fmtCost(src.costMicroUSD)),
-                t.td(null, sourceStatus(src),
-                    src.refreshed ? t.div({ className: "txt-hint txt-sm" }, "read " + fmtWhen(src.refreshed)) : null,
-                    src.next ? t.div({ className: "txt-hint txt-sm" }, "next " + fmtWhen(src.next)) : null),
-                t.td({ className: "txt-right", style: "white-space: nowrap" },
-                    refreshable ? t.button({ type: "button", className: "btn xs transparent secondary", title: "Read it again now",
-                        onclick: () => submit("/refresh", { bucket: name, source: src.name }) }, t.i({ className: "ri-refresh-line", ariaHidden: true })) : null,
-                    src.kind === "file" || src.kind === "zip" ? t.button({ type: "button", className: "btn xs transparent secondary", title: "Upload a new version",
-                        onclick: () => newVersion(src) }, t.i({ className: "ri-upload-2-line", ariaHidden: true })) : null,
-                    t.button({ type: "button", className: "btn xs transparent danger", title: "Remove", onclick: () => remove(src) },
-                        t.i({ className: "ri-delete-bin-7-line", ariaHidden: true }))))];
-            if (data.open[src.name]) {
-                const docs = data.docs[src.name];
-                rows.push(t.tr(null, t.td({ colSpan: 7, style: "padding-left: 40px" },
+                t.td({ className: "name" }, t.a({ href: "#", title: src.name, onclick: (e) => { e.preventDefault(); toggle(src.name); } },
+                    t.i({ className: (open ? "ri-arrow-down-s-line" : "ri-arrow-right-s-line") + " txt-hint", ariaHidden: true }),
+                    t.i({ className: (kindIcon[src.kind] || "ri-file-line") + " txt-hint m-r-5", ariaHidden: true }), src.name)),
+                t.td({ className: "search-num txt-hint" }, src.documents + (src.documents === 1 ? " doc" : " docs")),
+                t.td({ className: "search-num txt-hint" }, fmtBytes(src.bytes)),
+                t.td({ className: "txt-center" }, statusIcon(src)),
+                t.td({ className: "icons" },
+                    t.span({ className: "btn xs circle transparent secondary", style: "cursor: default", ariaLabel: app.attrs.tooltip(sourceInfo(src)) },
+                        t.i({ className: "ri-information-line", ariaHidden: true })),
+                    refreshTitle[src.kind] ? iconBtn("ri-refresh-line", refreshTitle[src.kind], () => submit("/refresh", { bucket: name, source: src.name }),
+                        "secondary", { disabled: src.status === "reading" }) : blank(),
+                    src.kind === "file" || src.kind === "zip" ? iconBtn("ri-upload-2-line", "Upload a new version", () => newVersion(src))
+                        : data.sources.some((x) => x.kind === "file" || x.kind === "zip") ? blank() : null,
+                    iconBtn("ri-delete-bin-7-line", "Remove from this bucket", () => remove(src), "danger")))];
+            if (open) {
+                rows.push(t.tr(null, t.td({ colSpan: 5, style: "padding-left: 34px" },
                     !docs ? t.span({ className: "loader sm" }) : !docs.length ? t.span({ className: "txt-hint" }, "No documents.")
-                        : t.table({ className: "search-table" }, t.tbody(null, ...docs.slice(0, 200).map((d) => t.tr(null,
-                            t.td(null, d.record ? t.a({ href: recordHref(d.record) }, d.name) : d.name, d.error ? t.div({ className: "txt-danger txt-sm" }, d.error) : null),
-                            t.td({ className: "search-num" }, d.chunks + " chunks"),
-                            t.td({ className: "search-num" }, fmtBytes(d.size)),
-                            t.td(null, docStatus(d))))),
-                        docs.length > 200 ? t.tr(null, t.td({ className: "txt-hint" }, `and ${docs.length - 200} more`)) : null))));
+                        : t.div({ style: "overflow-x: auto; max-height: 360px; overflow-y: auto" }, t.table({ className: "search-table" }, t.tbody(null,
+                            ...docs.slice(0, 200).map((d) => t.tr(null,
+                                t.td(null, d.record ? t.a({ href: recordHref(d.record) }, d.name) : d.name, d.error ? t.div({ className: "txt-danger txt-sm" }, d.error) : null),
+                                t.td({ className: "search-num txt-hint" }, d.chunks + " chunks"),
+                                t.td({ className: "search-num txt-hint" }, fmtBytes(d.size)),
+                                t.td(null, docStatus(d)))),
+                            docs.length > 200 ? t.tr(null, t.td({ className: "txt-hint" }, `and ${docs.length - 200} more`)) : null))))));
             }
             return rows;
         }
 
-        return t.div({ className: "page-search-bucket", onunmount: () => clearTimeout(timer) }, page(name, crumbs, () => {
-            if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
-            const b = data.bucket;
-            if (!b) return t.div({ className: "block txt-center txt-hint p-base" }, "No bucket named ", t.code(null, name), ".");
-            return t.div(null,
-                b.description ? t.div({ className: "alert info m-b-sm" }, t.div({ className: "content" },
-                    b.owner ? t.strong(null, b.owner + " wants: ") : null, b.description)) : null,
-                data.status && !data.status.model ? noModel() : null,
-                t.div({ className: "flex gap-sm m-b-sm", style: "align-items: center; flex-wrap: wrap" },
-                    t.span({ className: "txt-hint" }, `${b.sources} source${b.sources === 1 ? "" : "s"}, ${b.documents} documents, ${b.chunks} chunks, ${fmtBytes(b.bytes)}`),
-                    t.div({ className: "m-l-auto" }),
-                    t.a({ className: "btn xs secondary", href: "#/search/chat?buckets=" + encodeURIComponent(name) },
-                        t.i({ className: "ri-chat-3-line", ariaHidden: true }), t.span({ className: "txt" }, "Chat with this bucket")),
-                    t.a({ className: "btn xs secondary", href: "#/search/find?buckets=" + encodeURIComponent(name) },
-                        t.i({ className: "ri-search-line", ariaHidden: true }), t.span({ className: "txt" }, "Search this bucket")),
-                    t.button({ type: "button", className: "btn xs secondary", title: "Bucket settings", onclick: () => openForm("settings") },
-                        t.i({ className: "ri-settings-3-line", ariaHidden: true }))),
+        // ---- modals: add a source, bucket settings
 
-                () => data.form === "settings" ? t.form({ className: "grid m-b-base", onsubmit: (e) => {
+        function addTab(form, icon, label) {
+            return t.button({ type: "button", className: () => `btn sm ${data.form === form ? "" : "secondary"}`,
+                onclick: () => (data.form === form ? (data.form = "") : openForm(form)) }, t.i({ className: icon, ariaHidden: true }), t.span({ className: "txt" }, label));
+        }
+
+        function openAdd() {
+            data.form = "";
+            showModal(t.div({ className: "modal popup", onafterclose: (el) => { data.form = ""; el.remove(); } },
+                t.header({ className: "modal-header" }, t.h5({ className: "m-auto" }, "Add to " + (data.bucket?.title || name))),
+                t.div({ className: "modal-content" },
+                    t.div({
+                        className: () => `search-dropzone m-b-sm ${data.over ? "over" : ""}`,
+                        ondragover: (e) => { e.preventDefault(); data.over = true; },
+                        ondragleave: () => (data.over = false),
+                        ondrop: (e) => { app.modals.close(); onDrop(e); },
+                    },
+                        () => data.adding ? t.span(null, t.span({ className: "loader sm m-r-5" }), data.adding) : t.span(null,
+                            t.i({ className: "ri-upload-cloud-line", ariaHidden: true }), " Drop files, folders or zips here, or ",
+                            t.label({ className: "link-primary", style: "cursor: pointer" }, "choose files",
+                                t.input({ type: "file", multiple: true, hidden: true, onchange: async (e) => {
+                                    const files = [...e.target.files];
+                                    app.modals.close();
+                                    for (const f of files) {
+                                        data.adding = "Adding " + f.name;
+                                        try { await addFile(f); } catch (err) { app.toasts.error(`${f.name}: ${errText(err)}`); }
+                                    }
+                                    data.adding = "";
+                                    load();
+                                } })), ".")),
+                    t.div({ className: "flex gap-sm m-b-sm", style: "flex-wrap: wrap; justify-content: center" },
+                        addTab("url", "ri-global-line", "Web page or Git repo"), addTab("paste", "ri-text", "Paste text"), addTab("follow", "ri-database-2-line", "A collection")),
+                    () => addForm()),
+                t.footer({ className: "modal-footer" },
+                    t.button({ type: "button", className: "btn transparent m-l-auto", onclick: () => app.modals.close() }, t.span({ className: "txt" }, "Close")))));
+        }
+
+        function openSettings() {
+            openForm("settings");
+            showModal(t.div({ className: "modal popup", onafterclose: (el) => { data.form = ""; el.remove(); } },
+                t.header({ className: "modal-header" }, t.h5({ className: "m-auto" }, "Bucket settings")),
+                t.div({ className: "modal-content" }, () => settingsForm())));
+        }
+
+        function settingsForm() {
+            return t.form({ className: "grid m-b-base", onsubmit: (e) => {
                     e.preventDefault();
                     const x = data.edit;
                     submit("/update", { name, title: x.title, description: x.description, maxDocuments: parseInt(x.maxDocuments) || 0, maxBytes: (parseInt(x.maxMB) || 0) * (1 << 20) });
@@ -801,37 +940,13 @@
                         t.button({ type: "button", className: "btn sm transparent danger", onclick: deleteBucket },
                             t.i({ className: "ri-delete-bin-7-line", ariaHidden: true }), t.span({ className: "txt" }, "Delete bucket")),
                         t.div({ className: "m-r-auto" }),
-                        t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.form = "") }, t.span({ className: "txt" }, "Cancel")),
-                        t.button({ className: "btn" }, t.span({ className: "txt" }, "Save")))) : null,
+                        t.button({ type: "button", className: "btn transparent secondary", onclick: () => app.modals.close() }, t.span({ className: "txt" }, "Cancel")),
+                        t.button({ className: "btn" }, t.span({ className: "txt" }, "Save"))));
+        }
 
-                t.div({
-                    className: () => `search-dropzone m-b-sm ${data.over ? "over" : ""}`,
-                    ondragover: (e) => { e.preventDefault(); data.over = true; },
-                    ondragleave: () => (data.over = false),
-                    ondrop: onDrop,
-                },
-                    () => data.adding ? t.span(null, t.span({ className: "loader sm m-r-5" }), data.adding) : t.span(null,
-                        t.i({ className: "ri-upload-cloud-line", ariaHidden: true }),
-                        " Drop files, folders or zips here, or ",
-                        t.label({ className: "link-primary", style: "cursor: pointer" }, "choose files",
-                            t.input({ type: "file", multiple: true, hidden: true, onchange: async (e) => {
-                                for (const f of [...e.target.files]) {
-                                    data.adding = "Adding " + f.name;
-                                    try { await addFile(f); } catch (err) { app.toasts.error(`${f.name}: ${errText(err)}`); }
-                                }
-                                data.adding = "";
-                                load();
-                            } })),
-                        ".")),
-                t.div({ className: "flex gap-sm m-b-sm", style: "flex-wrap: wrap" },
-                    ...[["url", "ri-global-line", "Add a URL or Git repo"], ["paste", "ri-text", "Paste text"], ["follow", "ri-database-2-line", "Follow a collection"]]
-                        .map(([form, icon, label]) => t.button({
-                            type: "button",
-                            className: () => `btn sm ${data.form === form ? "" : "secondary"}`,
-                            onclick: () => openForm(form),
-                        }, t.i({ className: icon, ariaHidden: true }), t.span({ className: "txt" }, label)))),
-
-                () => data.form === "paste" ? t.form({ className: "grid m-b-base", onsubmit: async (e) => {
+        // addForm is the add modal's open form: a URL, pasted text or a collection ("" shows none)
+        function addForm() {
+            if (data.form === "paste") return t.form({ className: "grid m-b-base", onsubmit: async (e) => {
                     e.preventDefault();
                     const n = data.pasteName.trim();
                     if (!(await confirmAdd(n))) return;
@@ -839,9 +954,8 @@
                 } },
                     field("Name", bound(data, "pasteName", { required: true, placeholder: "characters.md" })),
                     field("Text", t.textarea({ rows: 8, required: true, value: () => data.pasteText, oninput: (e) => (data.pasteText = e.target.value) })),
-                    formButtons("Add")) : null,
-
-                () => data.form === "url" ? t.form({ className: "grid m-b-base", onsubmit: async (e) => {
+                    formButtons("Add"));
+            if (data.form === "url") return t.form({ className: "grid m-b-base", onsubmit: async (e) => {
                     e.preventDefault();
                     const u = data.url.trim();
                     if (!(await confirmAdd(u))) return;
@@ -864,9 +978,8 @@
                                 ? "Its default branch's text files and recent commits (no binaries, lockfiles, node_modules or vendor)."
                                 : "One document: the page's text (HTML as Markdown)."));
                     }),
-                    formButtons("Add URL")) : null,
-
-                () => data.form === "follow" ? t.form({ className: "grid m-b-base", onsubmit: (e) => {
+                    formButtons("Add URL"));
+            if (data.form === "follow") return t.form({ className: "grid m-b-base", onsubmit: (e) => {
                     e.preventDefault();
                     const f = data.follow;
                     if (!f.fields.length) return app.toasts.error("Check at least one field to search.");
@@ -894,16 +1007,33 @@
                                     f.name, t.span({ className: "txt-hint txt-sm m-l-5" }, f.type))))
                                 : t.span({ className: "txt-hint" }, "This collection has no text fields to search."));
                     },
-                    formButtons("Follow")) : null,
+                    formButtons("Follow"));
+            return null;
+        }
 
+        return t.div({ className: "page-search-bucket", onunmount: () => clearTimeout(timer) }, page(name, crumbs, () => {
+            if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
+            const b = data.bucket;
+            if (!b) return t.div({ className: "block txt-center txt-hint p-base" }, "No bucket named ", t.code(null, name), ".");
+            return t.div(null,
+                data.status && !data.status.model ? noModel() : null,
+                () => data.adding ? t.div({ className: "txt-hint m-b-sm" }, t.span({ className: "loader sm m-r-5" }), data.adding) : null,
                 data.sources.length
-                    ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table m-b-base" },
-                        t.thead(null, t.tr(null, t.th(null, "Source"), t.th(null, "Kind"), t.th({ className: "search-num" }, "Documents"),
-                            t.th({ className: "search-num" }, "Size"), t.th({ className: "search-num" }, "Cost"), t.th(null, "Status"), t.th(null, ""))),
-                        t.tbody(null, ...data.sources.flatMap(sourceRows))))
-                    : t.div({ className: "block txt-center txt-hint p-base" }, "Nothing in this bucket yet."),
-
+                    ? t.table({ className: "search-table search-rows" }, t.tbody(null, ...data.sources.flatMap(sourceRows)))
+                    : t.div({ className: "block txt-center txt-hint p-base" }, "Nothing in this bucket yet. ",
+                        t.a({ href: "#", onclick: (e) => { e.preventDefault(); openAdd(); } }, "Add something"), "."),
+                data.sources.length ? t.div({ className: "search-totals" },
+                    `${b.sources} source${b.sources === 1 ? "" : "s"} · ${b.documents} documents · ${b.chunks} chunks · ${fmtBytes(b.bytes)}`) : null,
             );
-        }));
+        }, { secondary: [
+            t.a({ className: "btn circle transparent secondary", href: "#/search/find?buckets=" + encodeURIComponent(name), ariaLabel: app.attrs.tooltip("Search this bucket") },
+                t.i({ className: "ri-search-line", ariaHidden: true })),
+            t.a({ className: "btn circle transparent secondary", href: "#/search/chat?buckets=" + encodeURIComponent(name), ariaLabel: app.attrs.tooltip("Chat with this bucket") },
+                t.i({ className: "ri-sparkling-2-line", ariaHidden: true })),
+            t.button({ type: "button", className: "btn circle transparent secondary", ariaLabel: app.attrs.tooltip("Bucket settings"), onclick: openSettings },
+                t.i({ className: "ri-settings-3-line", ariaHidden: true }))],
+        primary: [
+            t.button({ type: "button", className: "btn", onclick: openAdd },
+                t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "Add source"))] }));
     });
 })();

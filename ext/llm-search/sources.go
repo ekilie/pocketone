@@ -40,6 +40,9 @@ type spec struct {
 	Collection string   `json:"collection,omitempty"`
 	Fields     []string `json:"fields,omitempty"`
 	Filter     string   `json:"filter,omitempty"`
+	Path       string   `json:"path,omitempty"`
+	Include    []string `json:"include,omitempty"`
+	PageURL    string   `json:"pageURL,omitempty"`
 }
 
 func specOf(r *core.Record) spec {
@@ -121,6 +124,7 @@ func sourceOf(bucket string, r *core.Record, st sourceStats) searchv1.Source {
 	sp := specOf(r)
 	return searchv1.Source{Bucket: bucket, Name: r.GetString("name"), Kind: r.GetString("kind"), URL: sp.URL, Every: sp.Every,
 		Commits: sp.Commits, Exclude: sp.Exclude, Collection: sp.Collection, Fields: sp.Fields, Filter: sp.Filter,
+		Path: sp.Path, Include: sp.Include, PageURL: sp.PageURL,
 		Hash: r.GetString("hash"), Status: r.GetString("status"), Error: r.GetString("error"), Documents: st.Documents,
 		Chunks: st.Chunks, Embedded: st.Embedded, Bytes: st.Bytes, Pending: st.Pending, CostMicroUSD: st.Cost,
 		Refreshed: timePtr(r.GetDateTime("refreshed")), Next: timePtr(r.GetDateTime("next")), Created: r.GetDateTime("created").Time()}
@@ -292,7 +296,11 @@ func (s *service) finish(src *core.Record, readErr error, state string) {
 	}
 	now := time.Now().UTC()
 	fresh.Set("refreshed", now)
-	if d := interval(specOf(fresh).Every); d > 0 {
+	d := interval(specOf(fresh).Every)
+	if fresh.GetString("kind") == searchv1.KindDir {
+		d = DirEvery
+	}
+	if d > 0 {
 		fresh.Set("next", now.Add(d))
 	} else {
 		fresh.Set("next", "")
@@ -569,6 +577,28 @@ func (s *service) AddURL(_ context.Context, _ extkit.Auth, in searchv1.URLInput)
 	return s.sourceResult(b, src)
 }
 
+// AddFolder implements search/v1.
+func (s *service) AddFolder(_ context.Context, _ extkit.Auth, in searchv1.FolderInput) (searchv1.Source, error) {
+	b, err := s.findBucket(in.Bucket)
+	if err != nil {
+		return searchv1.Source{}, err
+	}
+	rel, _, err := s.appFolder(in.Path)
+	if err != nil {
+		return searchv1.Source{}, err
+	}
+	if in.URL != "" && !strings.Contains(in.URL, "{path}") {
+		return searchv1.Source{}, badRequest("url needs {path} where the file's path goes (\"/docs/{path}\")")
+	}
+	sp := spec{Path: rel, Include: in.Include, Exclude: in.Exclude, PageURL: in.URL}
+	src, err := s.putSource(b, rel, "", searchv1.KindDir, sp)
+	if err != nil {
+		return searchv1.Source{}, err
+	}
+	s.read(b, src, false)
+	return s.sourceResult(b, src)
+}
+
 // Follow implements search/v1.
 func (s *service) Follow(_ context.Context, _ extkit.Auth, in searchv1.FollowInput) (searchv1.Source, error) {
 	b, err := s.findBucket(in.Bucket)
@@ -628,6 +658,8 @@ func (s *service) readNow(b, src *core.Record, force bool) (string, error) {
 		return s.readGit(b, src, force)
 	case searchv1.KindCollection:
 		return "", s.syncCollection(b, src)
+	case searchv1.KindDir:
+		return s.readDir(b, src, force)
 	case searchv1.KindZip:
 		fsys, err := s.app.NewFilesystem()
 		if err != nil {

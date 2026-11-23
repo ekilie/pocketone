@@ -153,7 +153,7 @@ func (s *service) addDoc(b, src *core.Record, in docIn, o addOpts) (*core.Record
 				m = model
 			}
 			if _, err := tx.DB().Insert(ChunksCollection, dbx.Params{"id": id, "bucket": b.Id, "document": doc.Id, "seq": i,
-				"heading": p.Heading, "start_line": p.Start, "end_line": p.End, "text": p.Text, "hash": hashes[i],
+				"heading": p.Heading, "anchor": p.Anchor, "start_line": p.Start, "end_line": p.End, "text": p.Text, "hash": hashes[i],
 				"vector": vec, "model": m}).Execute(); err != nil {
 				return err
 			}

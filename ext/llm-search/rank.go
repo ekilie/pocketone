@@ -2,7 +2,9 @@ package llmsearch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -177,12 +179,15 @@ type chunkRow struct {
 	ID        string `db:"id"`
 	Text      string `db:"text"`
 	Heading   string `db:"heading"`
+	Anchor    string `db:"anchor"`
 	StartLine int    `db:"start_line"`
 	EndLine   int    `db:"end_line"`
 	Name      string `db:"name"`
 	Record    string `db:"record"`
 	Bucket    string `db:"bucket"`
 	Source    string `db:"source"`
+	Kind      string `db:"kind"`
+	Spec      string `db:"spec"`
 }
 
 // searchBuckets is the bucket records a search names (every bucket when it names none).
@@ -291,8 +296,9 @@ func (s *service) Search(ctx context.Context, _ extkit.Auth, in searchv1.SearchI
 		args[i] = id
 	}
 	var rows []chunkRow
-	err = s.app.DB().Select("c.id AS id", "c.text AS text", "c.heading AS heading", "c.start_line AS start_line",
-		"c.end_line AS end_line", "d.name AS name", "d.record AS record", "c.bucket AS bucket", "s.name AS source").
+	err = s.app.DB().Select("c.id AS id", "c.text AS text", "c.heading AS heading", "c.anchor AS anchor", "c.start_line AS start_line",
+		"c.end_line AS end_line", "d.name AS name", "d.record AS record", "c.bucket AS bucket", "s.name AS source",
+		"s.kind AS kind", "s.spec AS spec").
 		From(ChunksCollection+" c").InnerJoin(DocumentsCollection+" d", dbx.NewExp("d.id = c.document")).
 		InnerJoin(SourcesCollection+" s", dbx.NewExp("s.id = d.src")).
 		Where(dbx.In("c.id", args...)).All(&rows)
@@ -324,7 +330,7 @@ func (s *service) Search(ctx context.Context, _ extkit.Auth, in searchv1.SearchI
 			}
 		}
 		out.Results = append(out.Results, searchv1.Result{Bucket: nameOf[r.Bucket], Source: r.Source, Document: r.Name, Text: r.Text,
-			Heading: r.Heading, StartLine: r.StartLine, EndLine: r.EndLine, Record: ref, Score: score[id]})
+			Heading: r.Heading, StartLine: r.StartLine, EndLine: r.EndLine, Record: ref, URL: resultURL(r), Score: score[id]})
 	}
 	return out, nil
 }
@@ -357,4 +363,44 @@ func (s *service) canView(v *viewerAuth, ref *searchv1.RecordRef) bool {
 	}
 	ok, err := s.app.CanAccessRecord(rec, &core.RequestInfo{Auth: v.auth}, rec.Collection().ViewRule)
 	return err == nil && ok
+}
+
+// resultURL is where a result is published: a web page's URL, or a server folder's URL pattern for the file, with the
+// section's anchor; "" when its source doesn't know.
+func resultURL(r chunkRow) string {
+	switch r.Kind {
+	case searchv1.KindPage:
+		return r.Name
+	case searchv1.KindDir:
+		var sp spec
+		_ = json.Unmarshal([]byte(r.Spec), &sp)
+		u := pageURL(sp.PageURL, r.Name)
+		if u != "" && r.Anchor != "" {
+			u += "#" + r.Anchor
+		}
+		return u
+	}
+	return ""
+}
+
+// pageURL fills a URL pattern's {path} with a file's path without its extension; an index file is its folder
+// ("guides/index.md" is "guides", the folder's own "index.md" is ""). "" when there's no pattern.
+func pageURL(pattern, file string) string {
+	if pattern == "" {
+		return ""
+	}
+	p := strings.TrimSuffix(file, path.Ext(file))
+	if p == "index" {
+		p = ""
+	} else {
+		p = strings.TrimSuffix(p, "/index")
+	}
+	u := strings.ReplaceAll(pattern, "{path}", p)
+	if p == "" && strings.Contains(pattern, "/{path}") {
+		u = strings.Replace(pattern, "/{path}", "", 1)
+		if u == "" {
+			u = "/"
+		}
+	}
+	return u
 }

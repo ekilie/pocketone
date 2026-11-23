@@ -45,17 +45,18 @@ Over HTTP (a superuser, or a token with the scope shown):
 | Add URL | `POST /api/_c/llm.search/v1/add-url` | `{"bucket", "url", "kind"?, "every"?, "commits"?, "exclude"?}` | `search` |
 | Detect URL | `POST /api/_c/llm.search/v1/detect-url` | `{"url"}` → `{"kind"}`: `git` when the server answers the Git protocol, else `page` | `search:read` |
 | Follow | `POST /api/_c/llm.search/v1/follow` | `{"bucket", "collection", "fields": [...], "filter"?}` | `search` |
+| Add folder | `POST /api/_c/llm.search/v1/add-folder` | `{"bucket", "path", "include"?, "exclude"?, "url"?}` (a folder of the app's files on the server) | `search` |
 | Refresh | `POST /api/_c/llm.search/v1/refresh` | `{"bucket", "source"}` | `search` |
 | Remove | `POST /api/_c/llm.search/v1/remove` | `{"bucket", "sources": [...]}` | `search` |
 | Documents | `GET /api/_c/llm.search/v1/documents` | `?bucket=&source=&prefix=` | `search:read` |
 | Search | `POST /api/_c/llm.search/v1/search` | `{"buckets": [...], "query", "limit", "prefix", "viewer"}` | `search:read` |
 
 A source answers `{"bucket", "name", "kind", "url", "every", "commits", "exclude", "collection", "fields", "filter",
-"hash", "status", "error", "documents", "chunks", "embedded", "bytes", "pending", "costMicroUSD", "refreshed", "next"}` (`embedded` below `chunks`: embedding under way; documents carry the same); `kind` is
-`file`, `text`, `folder`, `zip`, `page`, `git` or `collection`, `status` is `reading`, `ready` or `error`, and `hash` is
+"path", "include", "pageURL", "hash", "status", "error", "documents", "chunks", "embedded", "bytes", "pending", "costMicroUSD", "refreshed", "next"}` (`embedded` below `chunks`: embedding under way; documents carry the same); `kind` is
+`file`, `text`, `folder`, `dir` (a server folder), `zip`, `page`, `git` or `collection`, `status` is `reading`, `ready` or `error`, and `hash` is
 a file's or zip's sha256, to spot an exact duplicate under another name. `replace` names an existing source the new one
 replaces under its new name. Search answers `{"results": [{"bucket", "source", "document", "text", "heading",
-"startLine", "endLine", "record", "score"}], "model", "usage"}`; no buckets searches every bucket. `viewer`
+"startLine", "endLine", "record", "url", "score"}], "model", "usage"}`; no buckets searches every bucket. `viewer`
 (`{"collection", "id"}`, or `{}` for a guest) leaves out records it can't view by the collection's view rule. Status
 answers `{"model", "chunks", "embedded", "note"}`: `embedded` below `chunks` means embedding is under way.
 
@@ -77,7 +78,11 @@ Implement `searchv1.Search` and provide it in `Register` (`searchv1.Contract.Pro
 - One embedding model for the app, so any buckets can be searched together; vectors from two models are never
   compared, a new model embeds every chunk again, and a chunk's content is embedded once however many sources hold it.
 - A collection source's documents follow its records: saved, filtered out, deleted. Pages and repositories with an
-  interval are read again when it comes round.
+  interval are read again when it comes round; a server folder is read again every few minutes.
+- A server folder's path stays inside the app's own folder (the one holding `pb_data`) and never reaches `pb_data`, by
+  the path or by a link.
+- A result's `url`, when set, is where the passage is published: a page's URL, or a server folder's `url` pattern with
+  `{path}` filled in and the section's heading id as the anchor.
 - With a `viewer`, no result comes from a record the viewer can't view.
 - Results are chunks with their source, best first, at most `limit` (default 5, at most 50); `score` orders them.
 - Searching is the only operation that waits on a model; adding and reading sources return before embedding is done.
@@ -290,6 +295,25 @@ Adds a web page or a Git repository as a source (named by its URL, replacing one
 | `every` | `--every` | string |
 | `commits` | `--commits` | int |
 | `exclude` | `--exclude` | strings |
+
+### add_folder
+
+Adds a folder of the app's own files on the server (named by its path, replacing one of that name): every text file in it, read in the background and read again every few minutes, so changed files are embedded again and removed ones leave. With URL, each result from it links to the page that file is published at.
+
+| | |
+|---|---|
+| REST | `POST /api/_c/llm.search/v1/add-folder` |
+| CLI | `pocketone remote llm search add-folder --bucket <value> --path <value> --include <a,b> --exclude <a,b> --url <value>` |
+| MCP | `llm_search_add_folder` |
+| Token scope | `search` |
+
+| Input field | Flag | Type |
+|---|---|---|
+| `bucket` | `--bucket` | string |
+| `path` | `--path` | string |
+| `include` | `--include` | strings |
+| `exclude` | `--exclude` | strings |
+| `url` | `--url` | string |
 
 ### detect_u_r_l
 

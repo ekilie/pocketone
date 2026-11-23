@@ -1,7 +1,7 @@
 // Package searchv1 is the llm.search/v1 contract: named buckets of content an app searches. An app makes the bucket it
 // needs (Ensure); its admins fill it from the dashboard's Search screen. A bucket holds sources, each one tracked unit
 // however many documents it brings: a file, pasted text, a folder, a zip, a web page, a Git repository or one of the
-// app's collections. Adding a source of the same name again replaces it: unchanged documents cost nothing, missing
+// app's collections, or a folder on the server. Adding a source of the same name again replaces it: unchanged documents cost nothing, missing
 // ones go. URL, repository and collection sources keep themselves current. The provider splits each document into
 // chunks with their source (document, section, lines, record), embeds them with the app's one embedding model
 // (llm.embed/v1, picked automatically; identical chunks anywhere in the app are embedded once), and returns the chunks
@@ -87,6 +87,12 @@ type Search interface {
 	//
 	//op: POST add-url
 	AddURL(ctx context.Context, a extkit.Auth, in URLInput) (Source, error)
+	// AddFolder adds a folder of the app's own files on the server (named by its path, replacing one of that name):
+	// every text file in it, read in the background and read again every few minutes, so changed files are embedded
+	// again and removed ones leave. With URL, each result from it links to the page that file is published at.
+	//
+	//op: POST add-folder
+	AddFolder(ctx context.Context, a extkit.Auth, in FolderInput) (Source, error)
 	// DetectURL says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any
 	// host, with or without .git), otherwise as a web page.
 	//
@@ -188,6 +194,7 @@ const (
 	KindFile       = "file"       // one dropped or uploaded file
 	KindText       = "text"       // pasted text
 	KindFolder     = "folder"     // a dropped folder, file by file
+	KindDir        = "dir"        // a folder of the app's files on the server, read again every few minutes
 	KindZip        = "zip"        // a zip, a document per text file inside
 	KindPage       = "page"       // a web page, fetched
 	KindGit        = "git"        // a Git repository: the default branch's files and recent commits
@@ -212,6 +219,10 @@ type Source struct {
 	Every   string   `json:"every,omitempty"`
 	Commits int      `json:"commits,omitempty"`
 	Exclude []string `json:"exclude,omitempty"`
+	// Path, Include, PageURL: a server folder's settings (Exclude too).
+	Path    string   `json:"path,omitempty"`
+	Include []string `json:"include,omitempty"`
+	PageURL string   `json:"pageURL,omitempty"`
 	// Collection, Fields, Filter: a collection source's settings.
 	Collection string   `json:"collection,omitempty"`
 	Fields     []string `json:"fields,omitempty"`
@@ -288,6 +299,23 @@ type URLInput struct {
 	// Exclude skips a repository's files whose path, or any folder in it, matches one of these patterns ("docs/old",
 	// "*.min.js"), beside what's always skipped (binaries, .git, node_modules, vendor, lockfiles).
 	Exclude []string `json:"exclude,omitempty"`
+}
+
+// FolderInput is a folder of the app's files on the server.
+type FolderInput struct {
+	Bucket string `json:"bucket"`
+	// Path is the folder, relative to the app's own folder (the one holding pb_data, pb_pages and pb_public); it can't
+	// leave that folder or be pb_data. "pb_pages/docs", say.
+	Path string `json:"path"`
+	// Include keeps only files matching one of these patterns (against the file name or its path in the folder:
+	// "*.md"); none keeps every text file. Exclude leaves out matches, beside what's always skipped (dot folders and
+	// dotfiles, node_modules, vendor, lockfiles, binaries).
+	Include []string `json:"include,omitempty"`
+	Exclude []string `json:"exclude,omitempty"`
+	// URL is where each file is published, with {path} for the file's path in the folder without its extension (an
+	// index file is its folder): "/docs/{path}" makes guides/install.md /docs/guides/install and guides/index.md
+	// /docs/guides. Results from Markdown files add their section's anchor (#heading-id). "" gives no links.
+	URL string `json:"url,omitempty"`
 }
 
 // URLRef is a URL.
@@ -397,7 +425,10 @@ type Result struct {
 	StartLine int        `json:"startLine"`
 	EndLine   int        `json:"endLine"`
 	Record    *RecordRef `json:"record,omitempty"`
-	Score     float64    `json:"score"` // orders the results; higher is better
+	// URL links to where the passage is published, when its source knows: a web page's URL, or a server folder's URL
+	// pattern with the section's anchor ("/docs/guides/install#macos").
+	URL   string  `json:"url,omitempty"`
+	Score float64 `json:"score"` // orders the results; higher is better
 }
 
 // Errors.

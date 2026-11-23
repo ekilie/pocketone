@@ -217,6 +217,21 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 		},
 	},
 	extkit.Op[Search]{
+		Name:   "add_folder",
+		Desc:   "Adds a folder of the app's own files on the server (named by its path, replacing one of that name): every text file in it, read in the background and read again every few minutes, so changed files are embedded again and removed ones leave. With URL, each result from it links to the page that file is published at.",
+		Method: "POST",
+		Path:   "add-folder",
+		In:     reflect.TypeOf(FolderInput{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in FolderInput
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.AddFolder(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
 		Name:   "detect_u_r_l",
 		Desc:   "Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page.",
 		Method: "POST",
@@ -501,6 +516,20 @@ func OnAddURL(owner any, fn func(e *extkit.CallEvent, in *URLInput) error) {
 	})
 }
 
+func (d *guardSearch) AddFolder(ctx context.Context, a extkit.Auth, in FolderInput) (Source, error) {
+	return extkit.Run(d.g, a, "add_folder", &in, func(in *FolderInput) (Source, error) {
+		return d.inner.AddFolder(ctx, a, *in)
+	})
+}
+
+// OnAddFolder binds fn to add_folder calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnAddFolder(owner any, fn func(e *extkit.CallEvent, in *FolderInput) error) {
+	W.On(owner, "add_folder").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*FolderInput))
+	})
+}
+
 func (d *guardSearch) DetectURL(ctx context.Context, a extkit.Auth, in URLRef) (URLKind, error) {
 	return extkit.Run(d.g, a, "detect_u_r_l", &in, func(in *URLRef) (URLKind, error) {
 		return d.inner.DetectURL(ctx, a, *in)
@@ -659,6 +688,11 @@ func (c *Client) Prune(ctx context.Context, _ extkit.Auth, in PruneInput) (Sourc
 func (c *Client) AddURL(ctx context.Context, _ extkit.Auth, in URLInput) (Source, error) {
 	var out Source
 	return out, c.c.Call(ctx, "POST", "add-url", in, &out)
+}
+
+func (c *Client) AddFolder(ctx context.Context, _ extkit.Auth, in FolderInput) (Source, error) {
+	var out Source
+	return out, c.c.Call(ctx, "POST", "add-folder", in, &out)
 }
 
 func (c *Client) DetectURL(ctx context.Context, _ extkit.Auth, in URLRef) (URLKind, error) {

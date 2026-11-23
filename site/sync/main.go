@@ -13,8 +13,7 @@
 // the page.
 //
 // It owns: pb_pages/(main)/docs/extensions/**, pb_pages/(main)/docs/config-reference.md, pb_pages/(main)/docs/writing-an-extension.md (from docs/extensions.md), the Contracts and
-// Extensions navs (pb_pages/(main)/_private/toc-contracts.md, toc-extensions.md; the main toc.md is hand-written), and pb_pages/assets/search-index.json (the search box's
-// index of every docs and blog page, hand-written ones included), each site's llms.txt and llms-full.txt, and the Agent
+// Extensions navs (pb_pages/(main)/_private/toc-contracts.md, toc-extensions.md; the main toc.md is hand-written), each site's llms.txt and llms-full.txt, and the Agent
 // Skills' reference folders (agent/skills/*/reference; see agent.go). Each extension's catalogue entry (title, group,
 // summary) is in the front matter of its README; site/extensions.json holds the groups and the few folders without a
 // page of their own (links).
@@ -365,9 +364,6 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		return nil, err
 	}
 
-	if out[searchOut], err = searchIndex(root, out); err != nil {
-		return nil, err
-	}
 	if err := agentFiles(root, out); err != nil {
 		return nil, err
 	}

@@ -22,9 +22,13 @@ const (
 // MaxFileBytes is the largest document.
 const MaxFileBytes = 10 << 20
 
-// Migrations implements extkit.Migrator: 0001 creates the buckets, documents, chunks and the keyword index.
+// Migrations implements extkit.Migrator: 0001 creates the buckets, documents, chunks and the keyword index; 0002 gives
+// chunks their section's anchor.
 func (*Extension) Migrations() []extkit.Migration {
-	return []extkit.Migration{{Name: "0001_buckets", Up: createTables, Down: dropTables}}
+	return []extkit.Migration{
+		{Name: "0001_buckets", Up: createTables, Down: dropTables},
+		{Name: "0002_anchor", Up: addAnchor, Down: dropAnchor},
+	}
 }
 
 func createTables(tx core.App) error {
@@ -140,4 +144,47 @@ func dropTables(tx core.App) error {
 		}
 	}
 	return nil
+}
+
+// addAnchor adds server folder sources (kind dir) and gives chunks the id of their section's heading, for links into
+// a page. Chunks split before it have none until their document is read again.
+func addAnchor(tx core.App) error {
+	if err := sourceKinds(tx, append(sourceKindsV1, "dir")); err != nil {
+		return err
+	}
+	c, err := tx.FindCollectionByNameOrId(ChunksCollection)
+	if err != nil {
+		return err
+	}
+	c.Fields.Add(&core.TextField{Id: "sc_anchor", Name: "anchor", Max: 300, Help: "The id of the chunk's section heading (#anchor), for Markdown."})
+	return tx.Save(c)
+}
+
+func dropAnchor(tx core.App) error {
+	c, err := tx.FindCollectionByNameOrId(ChunksCollection)
+	if err != nil {
+		return err
+	}
+	c.Fields.RemoveById("sc_anchor")
+	if err := tx.Save(c); err != nil {
+		return err
+	}
+	return sourceKinds(tx, sourceKindsV1)
+}
+
+// sourceKindsV1 are the source kinds 0001 made.
+var sourceKindsV1 = []string{"file", "text", "folder", "zip", "page", "git", "collection"}
+
+// sourceKinds sets the values the sources' kind field takes.
+func sourceKinds(tx core.App, kinds []string) error {
+	c, err := tx.FindCollectionByNameOrId(SourcesCollection)
+	if err != nil {
+		return err
+	}
+	f, ok := c.Fields.GetById("ss_kind").(*core.SelectField)
+	if !ok {
+		return nil
+	}
+	f.Values = append([]string(nil), kinds...)
+	return tx.Save(c)
 }

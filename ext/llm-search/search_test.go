@@ -674,7 +674,12 @@ const hooks = `onRecordCreate(async (e) => {
   const b = $llm.search.ensure({ name: "storytime", title: "Story Time library" })
   const src = $llm.search.add({ bucket: "storytime", name: "fox.md", text: "# Fox\n\nThe red fox naps in the dunes." })
   const r = await $llm.search.searchAsync({ buckets: "storytime", query: "fox", viewer: null })
-  e.record.set("result", JSON.stringify({
+  // operations whose path isn't their name (add-folder, add-url) are reached too: these fail on their input
+  const reached = []
+  for (const call of [() => $llm.search.addFolder({ bucket: "storytime", path: "no/such/folder" }), () => $llm.search.addURL({ bucket: "storytime", url: "ftp://x" })]) {
+    try { call() } catch (err) { if (!String(err).includes("has no operation")) reached.push(true) }
+  }
+  e.record.set("result", JSON.stringify({ reached: reached.length,
     title: b.title, kind: src.kind, sources: $llm.search.sources("storytime").length, docs: $llm.search.documents("storytime").length,
     heading: r.results[0].heading, source: r.results[0].source, model: $llm.search.status().model,
     removed: $llm.search.remove("storytime", "fox.md"),
@@ -707,13 +712,13 @@ func TestJS(t *testing.T) {
 	}
 	var out struct {
 		Title, Kind, Heading, Source, Model string
-		Sources, Docs, Removed              int
+		Sources, Docs, Removed, Reached     int
 	}
 	if err := json.Unmarshal([]byte(r.GetString("result")), &out); err != nil {
 		t.Fatalf("result %q: %v", r.GetString("result"), err)
 	}
 	if out.Title != "Story Time library" || out.Kind != "file" || out.Sources != 1 || out.Docs != 1 ||
-		out.Heading != "Fox" || out.Source != "fox.md" || out.Model != "p/cheap" || out.Removed != 1 {
+		out.Heading != "Fox" || out.Source != "fox.md" || out.Model != "p/cheap" || out.Removed != 1 || out.Reached != 2 {
 		t.Fatalf("from JS: %+v", out)
 	}
 }

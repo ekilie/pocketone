@@ -1378,6 +1378,30 @@ Calls POST /api/\_c/llm.search/v1/add on the remote (token scope: search).
 
 From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
 
+### pocketone remote llm search add-folder
+
+Adds a folder of the app's own files on the server (named by its path, replacing one of that name): every text file in it, read in the background and read again every few minutes, so changed files are embedded again and removed ones leave (llm.search/v1)
+
+```
+pocketone remote llm search add-folder
+```
+
+Adds a folder of the app's own files on the server (named by its path, replacing one of that name): every text file in it, read in the background and read again every few minutes, so changed files are embedded again and removed ones leave. With URL, each result from it links to the page that file is published at.
+
+Calls POST /api/\_c/llm.search/v1/add-folder on the remote (token scope: search).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--bucket` | string | – |  |
+| `--exclude` | stringSlice | – |  |
+| `--include` | stringSlice | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--path` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--url` | string | – |  |
+
+From [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1) (generated).
+
 ### pocketone remote llm search add-u-r-l
 
 Adds a web page or a Git repository as a source (named by its URL, replacing one of that name) and reads it in the background; Every keeps it current (llm.search/v1)
