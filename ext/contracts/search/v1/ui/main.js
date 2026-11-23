@@ -34,7 +34,7 @@
     const statusLabel = (s, err) => t.span({
         className: `label ${s === "ready" ? "success" : s === "error" ? "danger" : "warning"}`,
         title: err || null,
-    }, s === "queued" ? "waiting" : s);
+    }, s === "queued" ? "waiting" : s === "embedding" ? "embedding" : s);
     const recordHref = (r) => `#/collections?collection=${encodeURIComponent(r.collection)}&recordId=${encodeURIComponent(r.id)}`;
 
     // embedModels is llm.embed/v1's list: [{ id: "provider/model", name, prices }]
@@ -284,7 +284,7 @@
     app.routes.superuserOnly("#/search/{name}", (route) => {
         const name = decodeURIComponent(route.params.name);
         const data = store({
-            loading: true, bucket: null, sources: [], over: false, adding: "",
+            loading: true, bucket: null, sources: [], status: null, over: false, adding: "",
             form: "", // "paste" | "url" | "follow" | "settings"
             pasteName: "", pasteText: "", url: "", every: "day", follow: { collection: "", fields: "", filter: "" },
             edit: {}, collections: [], open: {}, docs: {},
@@ -293,16 +293,19 @@
 
         async function load() {
             try {
-                const [b, l] = await Promise.all([send("/bucket?name=" + encodeURIComponent(name)), send("/sources?bucket=" + encodeURIComponent(name))]);
+                const [b, l, st] = await Promise.all([send("/bucket?name=" + encodeURIComponent(name)),
+                    send("/sources?bucket=" + encodeURIComponent(name)), send("/status")]);
                 data.bucket = b;
                 data.sources = l.sources || [];
+                data.status = st;
                 for (const src of data.sources) if (data.open[src.name]) loadDocs(src.name);
             } catch (err) {
                 app.checkApiError(err);
             }
             data.loading = false;
             clearTimeout(timer);
-            const busy = data.bucket?.pending || data.sources.some((x) => x.status === "reading");
+            // follow embedding while it runs (not while it waits for a provider: nothing would change)
+            const busy = (data.bucket?.pending && data.status?.model) || data.sources.some((x) => x.status === "reading");
             if (busy && document.querySelector(".page-search-bucket")) timer = setTimeout(load, 2000);
         }
 
@@ -464,7 +467,8 @@
         function sourceStatus(src) {
             if (src.status === "error") return t.span({ className: "label danger", title: src.error }, "error");
             if (src.status === "reading") return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), "reading");
-            if (src.pending) return t.span({ className: "label warning" }, `${src.pending} waiting`);
+            if (src.pending && !data.status?.model) return t.span({ className: "label warning", title: "Add an AI provider with embedding models in Settings → LLM" }, `${src.pending} waiting for a provider`);
+            if (src.pending) return t.span({ className: "label warning" }, t.span({ className: "loader sm m-r-5" }), `embedding ${src.pending}`);
             return t.span({ className: "label success" }, "ready");
         }
 
@@ -512,6 +516,10 @@
             return t.div(null,
                 b.description ? t.div({ className: "alert info m-b-sm" }, t.div({ className: "content" },
                     b.owner ? t.strong(null, b.owner + " wants: ") : null, b.description)) : null,
+                data.status && !data.status.model ? t.div({ className: "alert warning m-b-sm" }, t.div({ className: "content" },
+                    "Nothing can be searched or embedded yet: add an AI provider with embedding models in ",
+                    t.a({ href: "#/settings/llm" }, "Settings → LLM"),
+                    ". What you add meanwhile waits, and is embedded as soon as there is one.")) : null,
                 t.p({ className: "txt-hint m-t-0" },
                     `${b.sources} source${b.sources === 1 ? "" : "s"}, ${b.documents} documents, ${b.chunks} chunks, ${fmtBytes(b.bytes)}. `,
                     t.a({ href: "#", onclick: (e) => { e.preventDefault(); openForm("settings"); } }, "Settings")),
