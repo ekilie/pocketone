@@ -14,6 +14,15 @@
   let sources = []
   let run = 0 // the latest question; an older one's events are dropped
 
+  // The reader's code language: the docs' TS | Go tabs remember it (assets/docs.js); TypeScript unless they picked Go.
+  const lang = () => {
+    try {
+      return localStorage.getItem('code-lang') === 'go' ? 'go' : 'ts'
+    } catch {
+      return 'ts'
+    }
+  }
+
   const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
   // [1], [2, 3] and [1][2] become links to those passages' pages; a number with no passage drops.
@@ -157,7 +166,7 @@
     let written = ''
     let failed = ''
     try {
-      await streamPost('/ask', { q }, (event, data) => {
+      await streamPost('/ask', { q, lang: lang() }, (event, data) => {
         if (me !== run) return
         if (event === 'sources') {
           sources = data

@@ -21,6 +21,33 @@ the sentence they support. Be brief: a few sentences or a short list, with a sho
 passages don't answer the question, say so in one sentence. Never write URLs or Markdown links: the citations are the
 links.`
 
+/**
+ * What code to show, by the reader's choice on the docs' TS | Go tabs. Most people extend PocketOne with TypeScript
+ * page code and hooks, and the docs show both, so without this the model often picks the Go sample.
+ */
+const LANG = {
+  ts: `The reader writes TypeScript: page code in pb_pages and hooks in pb_hooks, on the stock pocketone binary. Show
+TypeScript (the $-globals such as $llm, $app and ctx), never Go, unless the question asks about Go or the passages only
+cover it in Go; then say it's done in Go.`,
+  go: `The reader writes Go, building their own binary with PocketOne's extensions. Show Go samples, unless the question
+asks about TypeScript, page code or hooks.`,
+}
+
+/** Code fences in the other language, which a passage loses before the model sees it (the reader still gets the page). */
+const OTHER = {
+  ts: /^(go|golang)$/i,
+  go: /^(ts|typescript|js|javascript|ets|ejs|tsx|jsx)$/i,
+}
+
+/** A passage's text without code blocks in the other language, so the model can't copy a sample the reader won't use. */
+function forLang(text: string, lang: 'ts' | 'go'): string {
+  return text
+    .replace(/^([ \t]*)(```|~~~)[ \t]*([\w+-]*)[^\n]*\n[\s\S]*?^\1\2[ \t]*$/gm, (block, _i, _f, info) =>
+      OTHER[lang].test(info) ? '' : block)
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 type Passage = { n: number; title: string; heading: string; url: string; text: string }
 type Answer = { sources: Passage[]; text: string; model?: string; at: number }
 
@@ -50,11 +77,13 @@ const key = (q: string) => q.toLowerCase().replace(/[^\p{L}\p{N}$_.]+/gu, ' ').t
 export async function ask(
   ctx: any,
   question: string,
+  lang: 'ts' | 'go',
   { onSources, onText }: { onSources: (s: Passage[]) => void; onText: (t: string) => void },
 ): Promise<{ model?: string; usage?: LlmUsage; cached: boolean }> {
   const q = question.trim().slice(0, MAX_QUESTION)
   ensureDocs()
-  const hit = cache.get(key(q))
+  const k = `${lang} ${key(q)}`
+  const hit = cache.get(k)
   if (hit && Date.now() - hit.at < CACHE_FOR) {
     onSources(hit.sources)
     onText(hit.text)
@@ -69,15 +98,19 @@ export async function ask(
   onSources(passages)
   if (!passages.length) return { cached: false }
 
-  const excerpts = passages.map((p) => `[${p.n}] ${p.title}${p.heading ? ` › ${p.heading}` : ''}\n${p.text}`).join('\n\n')
+  const excerpts = passages
+    .map((p) => `[${p.n}] ${p.title}${p.heading ? ` › ${p.heading}` : ''}\n${forLang(p.text, lang) || '(code samples only)'}`)
+    .join('\n\n')
   const res = await $llm.for(ctx).text.streamAsync(
-    { model: MODEL, system: SYSTEM, prompt: `Documentation passages:\n\n${excerpts}\n\nQuestion: ${q}`, maxTokens: 500,
+    { model: MODEL, system: `${SYSTEM}
+
+${LANG[lang]}`, prompt: `Documentation passages:\n\n${excerpts}\n\nQuestion: ${q}`, maxTokens: 500,
       temperature: 0.2, reasoning: 'off' },
     (t) => onText(t),
   )
   const text = res.text.trim()
-  cache.delete(key(q))
+  cache.delete(k)
   if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value!)
-  cache.set(key(q), { sources: passages, text, model: res.model, at: Date.now() })
+  cache.set(k, { sources: passages, text, model: res.model, at: Date.now() })
   return { model: res.model, usage: res.usage, cached: false }
 }

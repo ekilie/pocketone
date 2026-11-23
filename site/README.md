@@ -61,7 +61,9 @@ cd site/sync && go run .
   Cmd/Ctrl-K opens a box that answers a question from the docs, citing the pages it used. The pages come from an LLM
   Search bucket, `docs`, holding the site's own docs folder (`$llm.search.addFolder` on `pb_pages/(main)/docs`, read
   again every five minutes, each result linked to its page and section). The answer is one `$llm` call per question,
-  for the visitor (`$llm.for`), with `ASK_MODEL` (see the file for the default). It needs an AI provider with text and
+  for the visitor (`$llm.for`), with `ASK_MODEL` (see the file for the default). Answers show code in the reader's
+  language, the one the docs' TS | Go tabs remember (TypeScript unless they picked Go): the passages lose their code
+  blocks in the other language before the model sees them. It needs an AI provider with text and
   embedding models in **Settings → LLM** and a limit for **All guests together** (guest calls are refused without
   one). A limit used up still leaves the matching pages listed. The same question asked again within the hour gets
   the stored answer. Run locally with `--dir ./pb_data` (the docs folder is found from the app's folder, the one
