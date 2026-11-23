@@ -12,3 +12,16 @@ pocketone serve --dir ./pb_data
 ```
 
 Then open http://127.0.0.1:8090.
+
+## Files
+
+```
+pb_pages/
+  +config.ts                     turns on the realtime plugin
+  (site)/+layout.ets, index.ets  the page, in the site layout
+  _private/                      the chat message and counter partials
+  fragments/chat/                renders a message and broadcasts it
+  fragments/count/               the counter fragment
+```
+
+Live demo: [pocketpages-htmx.pockethost.io](https://pocketpages-htmx.pockethost.io).

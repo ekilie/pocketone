@@ -23,6 +23,14 @@ type Reference struct {
 	Global    []FlagRef     `json:"global"` // the root's persistent flags, which every command takes
 	Commands  []CommandRef  `json:"commands"`
 	Contracts []ContractRef `json:"contracts"`
+	JS        []JSRef       `json:"js,omitempty"`
+}
+
+// JSRef is what one extension adds to an app's JS API (pb_hooks and page code): its TypeScript declarations, as they
+// go into the app's types.d.ts. Extension "contracts" is extkit's: the contracts' action hooks and types open to JS.
+type JSRef struct {
+	Extension string `json:"extension"`
+	Types     string `json:"types"`
 }
 
 // FlagRef is one flag.
@@ -123,6 +131,19 @@ func BuildReference(app core.App, root *cobra.Command) Reference {
 			cr.Ops = append(cr.Ops, or)
 		}
 		ref.Contracts = append(ref.Contracts, cr)
+	}
+	type typer interface{ TypeScript() string }
+	for _, e := range extkit.Running(app) {
+		if t, ok := e.(typer); ok {
+			if d := strings.TrimSpace(t.TypeScript()); d != "" {
+				ref.JS = append(ref.JS, JSRef{Extension: e.Name(), Types: d})
+			}
+		}
+	}
+	if t, ok := extkit.JSContracts(app).(typer); ok {
+		if d := strings.TrimSpace(t.TypeScript()); d != "" {
+			ref.JS = append(ref.JS, JSRef{Extension: "contracts", Types: d})
+		}
 	}
 	return ref
 }

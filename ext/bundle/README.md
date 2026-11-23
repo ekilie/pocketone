@@ -10,7 +10,7 @@ summary: "An app's hooks, migrations and public files embedded in the binary."
 
 Ship an app's files inside the binary instead of folders on disk: its JS hooks (`pb_hooks`), migrations
 (`pb_migrations`) and public files (`pb_public`). Nothing is written to disk and nothing on disk can override them.
-PocketHost's mothership uses it for its own hooks. Formerly `jsembed`.
+PocketHost's mothership uses it for its own hooks.
 
 ## Install
 

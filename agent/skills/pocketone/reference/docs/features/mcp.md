@@ -98,10 +98,10 @@ in. The name agents see is your app's **Settings → Application → Application
 ## How it works
 
 - [MCP](https://pocketone.dev/docs/extensions/mcp) serves `/mcp` and turns each tool call into a request to your app's API.
-- The [OAuth server](https://pocketone.dev/docs/extensions/tokens/oauth) in [Tokens](https://pocketone.dev/docs/extensions/tokens) runs the sign-in and consent
+- The [OAuth server](https://pocketone.dev/docs/extensions/api-tokens/oauth) in [Tokens](https://pocketone.dev/docs/extensions/api-tokens) runs the sign-in and consent
   pages, and issues the agent's token.
 - Admin tools come from the [contracts](https://pocketone.dev/docs/contracts) your app answers. Another MCP server can stand in through
   the [mcp/v1](https://pocketone.dev/docs/contracts/mcp/v1) contract and serve the same tools.
 
 Looking to teach a coding agent how to build with PocketOne? That's a different thing: see
-[Teach your coding agent](https://pocketone.dev/docs/agents).
+[LLM skills for coding agents](https://pocketone.dev/docs/agents).

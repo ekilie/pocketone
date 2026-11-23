@@ -1,0 +1,116 @@
+# Extensions
+
+PocketOne is PocketBase plus extensions. An extension is a Go module in [`ext/`](../ext) that adds one feature to an
+app: point-in-time restore, deploys, API tokens, MCP, bulk mail, AI models, server-rendered pages. Each is compiled into
+the binary, registers itself on every app, and is configured in `pocketone.yaml`. PocketBase's own code ("core")
+changes only where an extension needs a place to hook in.
+
+This page is the reference for how extensions work. To build one, see [Writing an extension](extensions.md); for the
+idea behind contracts, [How PocketOne fits together](contracts.md).
+
+## Kinds
+
+| Kind | What it is | Where |
+|---|---|---|
+| **Standard** | ships in every `pocketone` binary and runs on every app unless turned off | the [standard set](../ext/standard/README.md) |
+| **Community** | in `ext/`, added to a custom Go build | the [catalogue](/docs/extensions/all) |
+| **Host** | runs many apps on one server (isolates, docker, edges) | in the standard set, on only in that mode |
+
+Every extension has its own README (its page in the catalogue), a version, a changelog and owners.
+
+## Turning one on and off
+
+- **Standard extensions** are on. Turn one off on a single app with `enabled: false` in its `pocketone.yaml` section:
+
+  ```yaml
+  bulkmail:
+    enabled: false
+  ```
+
+  Extensions that require it turn off too, and the startup lines say why.
+- **Community extensions** are added to a custom build in Go: `set.Add(myextension.New(...))` on the standard set.
+- **On a multisite host**, each instance's `extensions.<name>` settings sit over the defaults, and `enabled: false`
+  keeps an extension from running for that instance.
+
+## What an extension is made of
+
+| Part | What it does | Where it shows |
+|---|---|---|
+| `Name()` | its config key, table prefix and log name | `pocketone.yaml` section `<name>:`, collections `_<name>_*` |
+| `Register(app, cfg)` | binds it to an app: its hooks, its contracts | every app it runs on |
+| `Contracts()` | the contracts it implements, requires, wraps and works with | the startup lines, the contract catalogue |
+| Settings | its `pocketone.yaml` section, read on start | `pocketone config`, the [pocketone.yaml reference](/docs/config-reference) |
+| Migrations | its own tables, tracked apart from the app's `pb_migrations` | `_<name>_*` collections |
+| `BindJS`, `TypeScript()` | a global for hooks and page code (`$llm`, `$kv`) and its types | the [JavaScript API](/docs/reference/javascript) |
+| A dashboard screen | the contract's `UI` | the dashboard's sidebar |
+| Disposable files | caches it can rebuild | `pb_cache/<name>/` |
+
+An extension has no HTTP routes of its own. Everything a client can call is a contract.
+
+## Contracts
+
+A contract is a named, versioned Go interface in [`ext/contracts`](../ext/contracts/README.md): `deploy/v1`,
+`kv/v1`, `llm.text/v1`. Extensions meet only through contracts, never by importing each other:
+
+- An extension **provides** a contract (`Contract.Provide`) or a default that steps aside for any other provider
+  (`ProvideDefault`).
+- An extension, a hook or a custom build **looks one up** by contract (`Contract.Must(app)`), not by extension.
+- A **wrapper** decorates whatever provides a contract (`Contract.Wrap`).
+- **`providers:`** in `pocketone.yaml` picks one when two extensions provide the same contract:
+
+  ```yaml
+  providers:
+    restore/v1: backups
+  ```
+
+At startup, PocketOne resolves every contract and prints who provides it:
+
+```
+standard: restore/v1 ← pitr
+standard: bulkmail off: needs mail.fallback/v1, which nothing provides
+```
+
+A contract's major version is part of its name. Its promise never changes within a version; a different promise is a
+new version beside the old one. Each contract has a README with its owners, how to use it and how to provide it, and
+a generated list of the extensions that provide, require and work with it: the [contract catalogue](/docs/contracts).
+
+## Extension APIs
+
+A contract with operations is a wire API. Every operation is, from one definition:
+
+| Surface | Where |
+|---|---|
+| An HTTP endpoint | `/api/_c/<contract>/<operation>`: the [Extension APIs](/docs/extensions/apis) reference |
+| A `pocketone` command | `pocketone remote <contract> <operation>`: the [CLI reference](/docs/reference/cli) |
+| An MCP tool | at `/mcp`: the [MCP tools](/docs/reference/mcp) reference |
+| A hook in Go and JS | `deployv1.OnUpload`, `onDeployUpload`: change the input or refuse the call |
+
+Every caller passes the same check: a superuser's auth token, or an [API token](/docs/features/tokens) with the
+operation's scope. Only paths a standard fixes stay outside `/api/_c/`: `/.well-known/*` and `/mcp`.
+
+## From JavaScript
+
+An app's own JS takes part in contracts too:
+
+- Extensions with a JS API add a global (`$llm`, `$kv`, `$bulkmail`) whose types land in the app's `types.d.ts`.
+- Each wire operation has a hook, `on<Contract><Operation>`, that sees the call's input and may change or refuse it.
+- `onContracts` in `pb_hooks` provides contracts from JS, and declares the ones the app requires:
+
+  ```ts
+  // pb_hooks/contracts.pb.ts
+  onContracts((e) => {
+    e.provide("mail.fallback/v1", { send(m) { /* deliver it some other way */ } })
+    e.require("restore/v1")
+    e.next()
+  })
+  ```
+
+The [Contracts JavaScript API](/docs/reference/javascript/contracts) lists every hook and type.
+
+## Find your way
+
+- [All extensions](/docs/extensions/all): every extension, by group, each with its reference page.
+- [Contracts](/docs/contracts): every contract, who provides it and who uses it.
+- [Extension APIs](/docs/extensions/apis): every endpoint under `/api/_c/`.
+- [Writing an extension](extensions.md): build one, step by step.
+- [How PocketOne fits together](contracts.md): why everything is a contract.

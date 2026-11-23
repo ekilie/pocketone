@@ -70,7 +70,7 @@ Each bucket (`defaults` and `buckets.<name>`), its own budget:
 
 Sizes take `KiB`, `MiB`, `GiB` (or `KB`, `MB`, `GB`); durations take `s`, `m`, `h`.
 
-The disk tier is [`pb_cache`](https://pocketone.dev/docs/folders): never backed up or deployed, and emptied when the
+The disk tier is [`pb_cache`](https://pocketone.dev/docs/running#pb_cache): never backed up or deployed, and emptied when the
 process starts. `pocketone cache clear cache` empties it by hand.
 
 ### pocketone.yaml reference

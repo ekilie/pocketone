@@ -5,13 +5,17 @@
 - [← PocketOne docs](/docs)
 - [Home](/docs/extensions/llm)
 
+# How it works
+
+- [Search and RAG](/docs/extensions/llm/guides/search)
+- [Limits](/docs/extensions/llm/guides/limits)
+- [Users and guests](/docs/extensions/llm/guides/users-and-guests)
+- [Spend and the ledger](/docs/extensions/llm/guides/spend)
+
 # Guides
 
 - [Structured answers](/docs/extensions/llm/guides/structured)
 - [Streaming answers](/docs/extensions/llm/guides/streaming)
 - [Pictures, speech and music](/docs/extensions/llm/guides/media)
 - [Conversations](/docs/extensions/llm/guides/conversations)
-- [Search and RAG](/docs/extensions/llm/guides/search)
-- [Limits](/docs/extensions/llm/guides/limits)
-- [Whom a call is for](/docs/extensions/llm/guides/whom)
-- [Spend and the ledger](/docs/extensions/llm/guides/spend)
+- [Custom limits](/docs/extensions/llm/guides/custom-limits)

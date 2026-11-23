@@ -12,3 +12,17 @@ pocketone serve --dir ./pb_data
 ```
 
 Then open http://127.0.0.1:8090.
+
+## Files
+
+```
+pb_pages/
+  +config.ts                     the datastar add-on and the realtime plugin
+  (site)/index.ets               the lobby
+  (site)/[roomName]/index.ets    a chat room
+  _private/                      the chat, message and counter partials, and datastar.js
+  fragments/chat/+page.ts        posts a message and patches every tab in the room
+  fragments/count/               the counter, returned as a patchElements event
+```
+
+Live demo: [pocketpages-datastar.pockethost.io](https://pocketpages-datastar.pockethost.io).

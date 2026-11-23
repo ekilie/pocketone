@@ -11,8 +11,14 @@ Every model call spends money on your provider account. On a page anyone can ope
 that: you set them in **Settings → LLM**, and every call passes them before it reaches a provider. A call a used-up
 limit refuses never reaches the provider and costs nothing.
 
-This page covers setting limits up. [Whom a call is for](/docs/extensions/llm/guides/whom) covers the one line page code adds so per-user and
-per-guest limits work, and [Spend and the ledger](/docs/extensions/llm/guides/spend) covers the record every call leaves.
+The limits on this screen are PocketOne's built-in limits: one handler on the hook every call passes through
+before it reaches a provider. Anything they can't express, such as a user's plan, credits they bought or the team
+they're on, you write as your own handler on the same hook ([Custom limits](/docs/extensions/llm/guides/custom-limits)). Yours run first, and
+the built-in limits count what they settled on.
+
+This page covers the built-in limits. [Users and guests](/docs/extensions/llm/guides/users-and-guests) covers the one line page code adds so per-user and
+per-guest limits work, and [Spend and the ledger](/docs/extensions/llm/guides/spend) covers the record every call leaves and how to read what's
+left.
 
 ## Setting a limit
 
@@ -49,14 +55,14 @@ limit reached: each guest, $0.10 a day (used $0.10); it resets at 00:00 UTC
 limit reached: the whole app, 20 calls a month of video (used 20 calls); it resets on Dec 1 (UTC)
 ```
 
-The message is written to show to the person who made the call. [Whom a call is for](/docs/extensions/llm/guides/whom#when-a-call-is-refused)
+The message is written to show to the person who made the call. [Users and guests](/docs/extensions/llm/guides/users-and-guests#when-a-call-is-refused)
 shows how to catch it in a page.
 
 A refused call still gets a row in the ledger, with the limit's message, so you can see how often visitors hit it.
 
 ## Guests need a total
 
-A guest is told apart by a cookie (see [Whom a call is for](/docs/extensions/llm/guides/whom#guests)), and anyone can clear their cookies and
+A guest is told apart by a cookie (see [Users and guests](/docs/extensions/llm/guides/users-and-guests#guests)), and anyone can clear their cookies and
 come back as a new guest with a fresh allowance. A limit on **each guest** keeps one visitor from using everything up
 by accident, but it doesn't cap what guests spend. Only a limit on **all guests together** does.
 
@@ -98,7 +104,7 @@ soon as it starts, and its cost is added to its ledger row once `createAsync` wi
 
 - The whole app, US dollars, at most 20, per month.
 
-**A public demo**, like [Docs Chat](/docs/examples/docs-chat), where visitors aren't signed in:
+**A public demo**, like an [ask your docs](/docs/starters/ask) page, where visitors aren't signed in:
 
 - All guests together, US dollars, at most 1, per day.
 - Each guest, US dollars, at most 0.10, per day.
@@ -115,4 +121,4 @@ soon as it starts, and its cost is added to its ledger row once `createAsync` wi
 - The whole app, US dollars, at most 5, per day, kind image.
 
 Plan tiers, credits users buy, and anything else that depends on who the user is belong in your app's own code: see
-[Spend and the ledger](/docs/extensions/llm/guides/spend#selling-credits).
+[Custom limits](/docs/extensions/llm/guides/custom-limits).

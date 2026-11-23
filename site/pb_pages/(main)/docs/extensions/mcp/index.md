@@ -188,6 +188,14 @@ Without the OAuth server on the app, MCP logs a warning on serve:
 `mcp: the OAuth server (ext/api-tokens) is off; /mcp accepts pasted PocketBase auth tokens only, and clients can't sign in by themselves`.
 In `pocketone` it always is.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### JavaScript API
+
+What it adds to `pb_hooks` and page code: [MCP JavaScript API](/docs/reference/javascript/mcp).
+
 ## Integrations
 
 ### Works with

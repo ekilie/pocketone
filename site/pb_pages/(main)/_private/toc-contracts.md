@@ -27,6 +27,7 @@
 - [llm.chat/v1](/docs/contracts/llm.chat/v1)
 - [llm.embed/v1](/docs/contracts/llm.embed/v1)
 - [llm.image/v1](/docs/contracts/llm.image/v1)
+- [llm.ledger/v1](/docs/contracts/llm.ledger/v1)
 - [llm.music/v1](/docs/contracts/llm.music/v1)
 - [llm.search/v1](/docs/contracts/llm.search/v1)
 - [llm.speech/v1](/docs/contracts/llm.speech/v1)

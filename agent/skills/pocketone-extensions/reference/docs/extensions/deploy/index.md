@@ -153,7 +153,7 @@ out, such as ones your hooks generate, in `.pocketoneignore`, one gitignore-styl
 |---|---|
 | `--prefer local\|remote` | First sync: who wins where both sides differ (default: ask). |
 | `--poll <duration>` | How often to check the remote (default 5s). |
-| `--push-only` | Only upload, the way `dev` used to work. Also used by itself for remotes without two-way sync. |
+| `--push-only` | Only upload; never bring the remote's changes back. Also used by itself for remotes without two-way sync. |
 | `--no-logs` | Don't stream the remote's logs. |
 
 It takes the same file flags as `deploy`.

@@ -14,6 +14,7 @@ import (
 	alignv1 "pocketone.dev/ext/contracts/llm/align/v1"
 	embedv1 "pocketone.dev/ext/contracts/llm/embed/v1"
 	imagev1 "pocketone.dev/ext/contracts/llm/image/v1"
+	ledgerv1 "pocketone.dev/ext/contracts/llm/ledger/v1"
 	musicv1 "pocketone.dev/ext/contracts/llm/music/v1"
 	searchv1 "pocketone.dev/ext/contracts/llm/search/v1"
 	speechv1 "pocketone.dev/ext/contracts/llm/speech/v1"
@@ -46,6 +47,7 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 			}
 			return invoker(app, searchv1.Contract, searchv1.W)(op, raw)
 		},
+		"ledger": invoker(app, ledgerv1.Contract, ledgerv1.W),
 	}
 	n := rt.NewObject()
 	// call(kind, op, opts): any operation that answers JSON; the prelude calls it with .async
@@ -82,8 +84,20 @@ func (*Extension) BindJS(app core.App, rt js.Runtime) {
 		}
 		return filesystem.NewFileFromURL(context.Background(), v.URL)
 	})
+	bindHooksJS(app, n) // onCall, onCallDone
 	// subject(e): whom a request's calls are for ($llm.for(e)); sets the guest cookie when the request has none
-	_ = n.Set("subject", func(e *core.RequestEvent) string { return SubjectOf(app, e) })
+	_ = n.Set("subject", js.NativeFunc(func(c js.Call) (any, error) {
+		switch e := c.Arg(0).Export().(type) {
+		case *core.RequestEvent:
+			return SubjectOf(app, e), nil
+		case core.RequestEvent:
+			return SubjectOf(app, &e), nil
+		case nil:
+			return nil, errors.New("$llm.for: pass the request: a page's ctx or a route's e")
+		default:
+			return nil, fmt.Errorf("$llm.for: pass the request (a page's ctx or a route's e), not a %T", e)
+		}
+	}))
 	bindChatJS(app, rt, n)
 	if err := rt.Set(nativeGlobal, n); err != nil {
 		panic(fmt.Errorf("llm: bind JS: %w", err))
@@ -148,11 +162,20 @@ var jsPrelude = `(() => {
   const n = globalThis.__pocketone_llm;
   delete globalThis.__pocketone_llm;
   const J = (s) => JSON.parse(s);
+  // a contract's error arrives as "code: message"; throw it as an Error with that message and err.code set
+  const clean = (err) => {
+    const m = /^([a-z][a-z_]*): ([\s\S]*)$/.exec(err && err.message || "");
+    if (!m || err.code) return err;
+    const e = new Error(m[2]);
+    e.code = m[1];
+    return e;
+  };
+  const sync = (kind, op, s) => { try { return J(n.call(kind, op, s)); } catch (err) { throw clean(err); } };
   // build(sub) is $llm with every call made for subject sub ("" for nobody in particular): $llm.for(e) names it
   const build = (sub) => {
   const S = (o) => JSON.stringify(sub ? { ...(o ?? {}), __subject: sub } : (o ?? {}));
   // a provider call, off the VM
-  const callAsync = async (kind, op, o) => J(await n.call.async(kind, op, S(o)));
+  const callAsync = async (kind, op, o) => { try { return J(await n.call.async(kind, op, S(o))); } catch (err) { throw clean(err); } };
   // enrich: the buckets, or { buckets, limit, query, viewer }; viewer is an auth record (ctx.auth) or null for a guest
   const enrichOf = (e) => {
     if (e == null || Array.isArray(e) || typeof e !== "object") return e;
@@ -206,7 +229,7 @@ var jsPrelude = `(() => {
     text: Object.freeze({
       completeAsync: (o) => callAsync("text", "complete", text(o)),
       streamAsync: async (o, onText, onReasoning) => readStream(n.streamStart("text", S(text(o))), onText, onReasoning),
-      count: (x) => J(n.call("text", "count", S(count(x)))).tokens,
+      count: (x) => sync("text", "count", S(count(x))).tokens,
       modelsAsync: modelsAsync("text"),
     }),
     image: Object.freeze({
@@ -231,10 +254,17 @@ var jsPrelude = `(() => {
     fileAsync: (f) => n.file.async(S(f), true),
     chat,
     search,
+    // the ledger: local reads, so plain calls; on $llm.for(e) they answer about that request's user or guest
+    ledger: Object.freeze({
+      remaining: (o) => sync("ledger", "remaining", S(o)).limits,
+      spent: (o) => sync("ledger", "spent", S(typeof o === "string" ? { window: o } : o)),
+      summary: (o) => sync("ledger", "summary", S(o)).rows,
+      calls: (o) => sync("ledger", "calls", S(o)),
+    }),
   });
   };
-  const base = build("");
+  const base = build("");` + hooksPrelude + `
   // for(e): e is a request event (a pb_hooks route's e) or a page's ctx (whose request event is ctx.req.event)
   const eventOf = (e) => (e && e.req && e.req.event) || (e && e.event) || e;
-  globalThis.$llm = Object.freeze({ ...base, for: (e) => build(n.subject(eventOf(e))) });
+  globalThis.$llm = Object.freeze({ ...base, for: (e) => build(n.subject(eventOf(e))), ...hooks });
 })()`

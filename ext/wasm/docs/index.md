@@ -1,7 +1,7 @@
 ---
 title: WASM
-section: New in PocketOne
 description: "Bring your own WASM: call code written in Go, Rust, C or Zig from your page code, for libraries JavaScript doesn't have and work JavaScript does too slowly."
+section: Hooks and routes
 ---
 
 # WASM

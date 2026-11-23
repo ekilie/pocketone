@@ -72,7 +72,10 @@ or model. Every call passes them before it reaches a provider, and a used-up lim
 Page code says whom a call is for with `$llm.for(ctx)` (a page's `ctx` or a route's `e`): its signed-in user, or else a
 guest told apart by a signed cookie. Guest calls are refused until there's a limit for all guests together. Every call
 is recorded in the `_llm_calls` collection, and the screen shows today's and this month's spend from it
-([Limits](/docs/extensions/llm/guides/limits), [Whom a call is for](/docs/extensions/llm/guides/whom), [Spend and the ledger](/docs/extensions/llm/guides/spend)).
+([Limits](/docs/extensions/llm/guides/limits), [Users and guests](/docs/extensions/llm/guides/users-and-guests)). `$llm.ledger` reads it: what's left of
+each limit, what someone spent, totals by model or person ([Spend and the ledger](/docs/extensions/llm/guides/spend)). The screen's
+limits are the built-in handler on `$llm.onCall`; your own handlers there add plan tiers, credits or anything else
+([Custom limits](/docs/extensions/llm/guides/custom-limits)).
 
 There's no pocketone.yaml configuration besides the switch: `llm: {enabled: false}` turns it off on a single app (on a
 host, an instance's `extensions.llm`), and with it `$llm` and the `llm.*` contracts.
@@ -176,6 +179,15 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 | [edit](/docs/contracts/llm.image/v1#edit) | `pocketone remote llm image edit --generateinput <json> --images <json>` | `POST /api/_c/llm.image/v1/edit` | `llm_image_edit` |
 | [models](/docs/contracts/llm.image/v1#models) | `pocketone remote llm image models --provider <value>` | `GET /api/_c/llm.image/v1/models` | `llm_image_models` |
 
+### [llm.ledger/v1](/docs/contracts/llm.ledger/v1)
+
+| Operation | CLI | REST | MCP |
+|---|---|---|---|
+| [remaining](/docs/contracts/llm.ledger/v1#remaining) | `pocketone remote llm ledger remaining --subject <value>` | `GET /api/_c/llm.ledger/v1/remaining` | `llm_ledger_remaining` |
+| [spent](/docs/contracts/llm.ledger/v1#spent) | `pocketone remote llm ledger spent --subject <value> --window <value> --since <value> --until <value> --kind <value> --model <value>` | `GET /api/_c/llm.ledger/v1/spent` | `llm_ledger_spent` |
+| [summary](/docs/contracts/llm.ledger/v1#summary) | `pocketone remote llm ledger summary --by <value> --window <value> --since <value> --until <value> --subject <value> --kind <value> --model <value> --limit <n>` | `GET /api/_c/llm.ledger/v1/summary` | `llm_ledger_summary` |
+| [calls](/docs/contracts/llm.ledger/v1#calls) | `pocketone remote llm ledger calls --window <value> --since <value> --until <value> --subject <value> --kind <value> --model <value> --status <value> --limit <n> --offset <n>` | `GET /api/_c/llm.ledger/v1/calls` | `llm_ledger_calls` |
+
 ### [llm.music/v1](/docs/contracts/llm.music/v1)
 
 | Operation | CLI | REST | MCP |
@@ -217,6 +229,10 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 | [get](/docs/contracts/llm.video/v1#get) | `pocketone remote llm video get --id <value>` | `POST /api/_c/llm.video/v1/get` | `llm_video_get` |
 | [content](/docs/contracts/llm.video/v1#content) | `pocketone remote llm video content --id <value> --index <n>` | `POST /api/_c/llm.video/v1/content` | `llm_video_content` |
 | [models](/docs/contracts/llm.video/v1#models) | `pocketone remote llm video models --provider <value>` | `GET /api/_c/llm.video/v1/models` | `llm_video_models` |
+
+### JavaScript API
+
+What it adds to `pb_hooks` and page code: [LLM JavaScript API](/docs/reference/javascript/llm).
 
 ## Integrations
 
@@ -270,9 +286,8 @@ func main() {
 }
 ```
 
-[examples/chat](https://github.com/pocketonehq/pocketone/blob/main/ext/llm/examples/chat/README.md) is a whole PocketOne app (no Go) on `$llm`: a chat about PocketOne that
-arms the model with a preamble and docs read from disk, streams each answer into a stored chat, and suggests follow-up
-questions with a JSON schema.
+The [ask starter kit](https://github.com/pocketonehq/pocketone/blob/main/ext/pages/starters/ask/README.md) (`pocketone pages create mydocs --starter ask`) is a whole PocketOne app
+(no Go) on `$llm`: it answers questions from a folder of Markdown docs kept in an LLM Search bucket, citing its pages.
 
 ## License
 

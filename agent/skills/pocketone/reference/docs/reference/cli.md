@@ -1260,6 +1260,110 @@ Calls GET /api/\_c/llm.image/v1/models on the remote (token scope: llm:read).
 
 From [llm.image/v1](https://pocketone.dev/docs/contracts/llm.image/v1) (generated).
 
+### pocketone remote llm ledger
+
+Calls llm.ledger/v1 on a remote
+
+### pocketone remote llm ledger calls
+
+Lists the ledger's rows, newest first (llm.ledger/v1)
+
+```
+pocketone remote llm ledger calls
+```
+
+Lists the ledger's rows, newest first.
+
+Calls GET /api/\_c/llm.ledger/v1/calls on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--kind` | string | – |  |
+| `--limit` | int64 | `0` |  |
+| `--model` | string | – |  |
+| `--offset` | int64 | `0` |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--since` | string | – |  |
+| `--status` | string | – |  |
+| `--subject` | string | – |  |
+| `--until` | string | – |  |
+| `--window` | string | – |  |
+
+From [llm.ledger/v1](https://pocketone.dev/docs/contracts/llm.ledger/v1) (generated).
+
+### pocketone remote llm ledger remaining
+
+Is, for each limit in Settings → LLM that counts the subject's calls, how much is used and left in its current window, the tightest first (llm.ledger/v1)
+
+```
+pocketone remote llm ledger remaining
+```
+
+Is, for each limit in Settings → LLM that counts the subject's calls, how much is used and left in its current window, the tightest first.
+
+Calls GET /api/\_c/llm.ledger/v1/remaining on the remote (token scope: public).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--subject` | string | – |  |
+
+From [llm.ledger/v1](https://pocketone.dev/docs/contracts/llm.ledger/v1) (generated).
+
+### pocketone remote llm ledger spent
+
+Is what the subject's calls used in a window (llm.ledger/v1)
+
+```
+pocketone remote llm ledger spent
+```
+
+Is what the subject's calls used in a window.
+
+Calls GET /api/\_c/llm.ledger/v1/spent on the remote (token scope: public).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--kind` | string | – |  |
+| `--model` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--since` | string | – |  |
+| `--subject` | string | – |  |
+| `--until` | string | – |  |
+| `--window` | string | – |  |
+
+From [llm.ledger/v1](https://pocketone.dev/docs/contracts/llm.ledger/v1) (generated).
+
+### pocketone remote llm ledger summary
+
+Is what calls used, grouped by model, kind, subject or day (llm.ledger/v1)
+
+```
+pocketone remote llm ledger summary
+```
+
+Is what calls used, grouped by model, kind, subject or day.
+
+Calls GET /api/\_c/llm.ledger/v1/summary on the remote (token scope: llm:read).
+
+| Flag | Type | Default | |
+|---|---|---|---|
+| `--by` | string | – |  |
+| `--json` | string | – | the whole input as JSON (@file reads a file, - reads stdin); flags override its fields |
+| `--kind` | string | – |  |
+| `--limit` | int64 | `0` |  |
+| `--model` | string | – |  |
+| `-r`, `--remote` | string | – | the remote (a name or URL); default: the project's default remote |
+| `--since` | string | – |  |
+| `--subject` | string | – |  |
+| `--until` | string | – |  |
+| `--window` | string | – |  |
+
+From [llm.ledger/v1](https://pocketone.dev/docs/contracts/llm.ledger/v1) (generated).
+
 ### pocketone remote llm music
 
 Calls llm.music/v1 on a remote

@@ -24,7 +24,7 @@ Implement `clearv1.Clearer` and provide it in `Register` beside your cache/v1 pr
 
 ## Commands and APIs
 
-Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](https://pocketone.dev/docs/features/remote), or the full [CLI](https://pocketone.dev/docs/reference/cli), [REST](https://pocketone.dev/docs/reference/rest) and [MCP](https://pocketone.dev/docs/reference/mcp) references.
+Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](https://pocketone.dev/docs/features/remote), or the full [CLI](https://pocketone.dev/docs/reference/cli), [Extension APIs](https://pocketone.dev/docs/extensions/apis) and [MCP](https://pocketone.dev/docs/reference/mcp) references.
 
 ### clear
 

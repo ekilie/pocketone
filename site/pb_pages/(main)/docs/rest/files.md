@@ -1,0 +1,49 @@
+---
+title: Files API
+description: Download a record's files and image thumbnails, and get short-lived tokens for protected files.
+---
+
+# Files API
+
+A record's files are uploaded with the record itself (a `multipart/form-data` create or update, see the [Records
+API](/docs/rest/records#create-a-record)); a `file` field then holds the stored file names. This API serves them.
+
+## Download a file
+
+`GET /api/files/{collection}/{recordId}/{filename}`
+
+| Query | |
+|---|---|
+| `thumb` | for images: a thumbnail size from the field's `thumbs` list (`100x100`, `0x300`, `300x0`; `t` for top-crop, `b` bottom, `f` fit) |
+| `token` | a file token, for a protected file |
+| `download` | `1` to download it as an attachment instead of showing it |
+
+```bash
+curl -O "http://127.0.0.1:8090/api/files/posts/bxt6kzt400873g5/cover_8k2jd9a1p3.jpg?thumb=100x100"
+```
+
+Anyone who may view the record may download its files, unless the field is **protected**.
+
+## Protected files
+
+A field set to **protected** needs a file token. Get one while signed in, then add it to the URL:
+
+`POST /api/files/token`
+
+```bash
+curl -X POST http://127.0.0.1:8090/api/files/token -H "Authorization: $TOKEN"
+# {"token": "eyJhbGciOiJIUzI1NiJ9..."}
+```
+
+A file token lasts a few minutes (set per collection), so ask for one when you show the file. The download is then
+allowed if the token's record may view the file's record.
+
+## Storage
+
+Files are kept in `pb_data/storage`, or in S3-compatible storage when the app's settings say so (**Settings → Files
+storage**, or `PATCH /api/settings` with `s3`). The URLs above stay the same either way.
+
+## Next
+
+- [Records API](/docs/rest/records): upload and remove files.
+- [Collections and fields](/docs/collections): the `file` field's options (size, types, thumbnails, protected).

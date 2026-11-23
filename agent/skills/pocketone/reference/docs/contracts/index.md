@@ -42,6 +42,7 @@ The table is generated from each contract's README and every extension's `Contra
 | [`llm.chat/v1`](https://pocketone.dev/docs/contracts/llm.chat/v1) | Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta. | llm-chat |  |  | @benallfree |
 | [`llm.embed/v1`](https://pocketone.dev/docs/contracts/llm.embed/v1) | Turn texts into vectors for search by meaning: texts in, one vector each out. | llm |  | llm-search | @benallfree |
 | [`llm.image/v1`](https://pocketone.dev/docs/contracts/llm.image/v1) | Make pictures from a prompt, or change pictures you give it; they come back as files. | llm |  |  | @benallfree |
+| [`llm.ledger/v1`](https://pocketone.dev/docs/contracts/llm.ledger/v1) | What an app's model calls used and cost, from the ledger every llm.* call leaves, and how much of each limit is left. | llm |  |  | @benallfree |
 | [`llm.music/v1`](https://pocketone.dev/docs/contracts/llm.music/v1) | Make music from a prompt and lyrics, as a job: start it, follow it, fetch its files (or wait for them). | llm |  |  | @benallfree |
 | [`llm.search/v1`](https://pocketone.dev/docs/contracts/llm.search/v1) | RAG knowledge bases (buckets) with hybrid search: sources (files, folders, zips, pages, Git repositories, collections) kept current, one embedding model per app. | llm-search |  | llm-chat | @benallfree |
 | [`llm.speech/v1`](https://pocketone.dev/docs/contracts/llm.speech/v1) | Read text aloud: text in, an audio file out, in a voice the model offers. | llm |  |  | @benallfree |

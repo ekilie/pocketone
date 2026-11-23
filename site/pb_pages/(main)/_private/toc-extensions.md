@@ -3,7 +3,11 @@
 # Extensions
 
 - [← PocketOne docs](/docs)
-- [All extensions](/docs/extensions)
+- [Overview](/docs/extensions)
+- [All extensions](/docs/extensions/all)
+- [Extension APIs](/docs/extensions/apis)
+- [Contracts](/docs/contracts)
+- [Writing an extension](/docs/writing-an-extension)
 
 # Standard extensions
 

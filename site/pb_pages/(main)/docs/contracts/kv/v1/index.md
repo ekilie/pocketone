@@ -60,7 +60,7 @@ signing keys, which a `kv:read` token must never see.
 
 **Moving an extension's own row:** an extension that kept a `_params` row of its own before kv/v1 moves it once with
 `kvv1.MoveParamOnce(app, "oldrow", "_myext/settings")` before reading (`MoveParam` for a one-off): the value and its
-times move to the name and the old row goes away. LLM, Bulk Mail and API Tokens did this.
+times move to the name and the old row goes away.
 
 **Storage:** name `storytime/settings` is the `_params` row with id `kv:storytime/settings`, its value the row's
 `value`. The `kv:` prefix keeps every name apart from PocketBase's own params (`settings`) and from rows extensions
@@ -74,7 +74,7 @@ helpers read and write it directly.
 
 ## Commands and APIs
 
-Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](/docs/features/remote), or the full [CLI](/docs/reference/cli), [REST](/docs/reference/rest) and [MCP](/docs/reference/mcp) references.
+Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](/docs/features/remote), or the full [CLI](/docs/reference/cli), [Extension APIs](/docs/extensions/apis) and [MCP](/docs/reference/mcp) references.
 
 ### list
 

@@ -47,7 +47,7 @@ How a command is named and read:
 - **Output:** JSON, so you can pipe it to `jq`. A stream (`remote logs`) prints one JSON line per entry until Ctrl-C.
 - **Errors:** if the app doesn't offer the contract, the command says so ("this remote doesn't offer restore/v1").
 
-In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for one remote) to an [API token](/docs/extensions/tokens) instead of
+In CI, set `P1_TOKEN` (or `P1_TOKEN_PROD` for one remote) to an [API token](/docs/extensions/api-tokens) instead of
 signing in. [Remotes](/docs/extensions/remotes) covers remotes and saved logins.
 
 ## From a script: REST
@@ -80,7 +80,7 @@ The command, the endpoint and the tool all call the contract, so each passes the
 ## Every command, endpoint and tool
 
 - [CLI reference](/docs/reference/cli): every command of `pocketone`, PocketBase's own included.
-- [REST reference](/docs/reference/rest): every contract endpoint.
+- [Extension APIs](/docs/extensions/apis): every contract endpoint.
 - [MCP reference](/docs/reference/mcp): every contract tool.
 
 Each [contract page](/docs/contracts) lists its operations all three ways. Each extension page lists the commands

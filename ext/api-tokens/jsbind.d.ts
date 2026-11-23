@@ -1,5 +1,6 @@
 // ---- ext/api-tokens: $apiTokens ----
 
+/** API Tokens' types: the scopes API tokens and OAuth clients can be granted (a scope's definition, and a scope as registered). */
 declare namespace tokens {
   /** A scope API tokens and OAuth clients can be granted. */
   interface ScopeDef {

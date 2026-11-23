@@ -1,104 +1,178 @@
 ---
 title: Spend and the ledger
-description: "Every model call is a row in _llm_calls: what it was, whom it was for and what it cost. Read spend per user or model, and sell credits from a hook."
+description: "Every model call is recorded: $llm.ledger tells you what's left of each limit, what a user or guest has spent, and where the money goes, by model, kind, person or day."
 ---
 
 # Spend and the ledger
 
-Every call that reaches a provider, and every call a [limit](limits.md) refuses, leaves a row in the `_llm_calls`
-collection: what kind of call it was, which model answered, whom it was for, what it used and what it cost. Limits count
-from it, Settings → LLM shows today's and this month's spend from it, and your app can read it like any other
-collection.
+Every call that reaches a provider, and every call a limit refuses, is recorded in the app's ledger: its kind and
+model, whom it was for, what it used and what it cost. The limits count from it, Settings → LLM shows today's and this
+month's spend from it, and `$llm.ledger` reads it for you:
 
-## What a row holds
+```ts
+const llm = $llm.for(ctx)
+llm.ledger.remaining()                                  // what's left of each limit, for this visitor
+llm.ledger.spent("day")                                 // what this visitor has spent today
+$llm.ledger.summary({ by: "model", window: "month" })   // where the money went this month
+$llm.ledger.calls({ status: "refused", limit: 20 })     // the latest calls a limit refused
+```
+
+```go
+ledger := ledgerv1.Contract.Must(app) // pocketone.dev/ext/contracts/llm/ledger/v1
+ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+ledger.Remaining(ctx, extkit.Internal, ledgerv1.RemainingInput{})                    // what's left, for this visitor
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Window: "day"})                // what this visitor has spent today
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "model", Window: "month"}) // where the money went
+ledger.Calls(ctx, extkit.Internal, ledgerv1.CallsInput{Status: "refused", Limit: 20})    // the latest refused calls
+```
+
+These read the app's own database, so they're plain calls, not `Async` ones. In Go they're the `llm.ledger/v1` contract;
+each returns its result and an error.
+
+## What's left
+
+`remaining()` lists every limit in Settings → LLM that counts the subject's calls, with how much is used and left in
+its current window, the tightest first:
+
+```ts
+// pb_pages/ask/+page.ts: "4 questions left today"
+export function load(ctx: pages.Context) {
+  const tightest = $llm.for(ctx).ledger.remaining()[0]
+  return { left: tightest }
+}
+```
+
+```go
+ctx := llmc.WithSubject(e.Request.Context(), llm.SubjectOf(app, e))
+rem, err := ledgerv1.Contract.Must(app).Remaining(ctx, extkit.Internal, ledgerv1.RemainingInput{})
+if err != nil {
+	return err
+}
+var tightest *ledgerv1.LimitLeft
+if len(rem.Limits) > 0 {
+	tightest = &rem.Limits[0]
+}
+```
+
+It answers:
+
+```js
+[
+  {
+    limit: "each guest, 10 calls a day",   // the limit in words
+    scope: "guest", window: "day", metric: "calls",
+    amount: 10, used: 6, left: 4,           // in the metric's unit: dollars for cost, else tokens or calls
+    resets: "2026-11-23T00:00:00Z",         // when its window ends
+  },
+  { limit: "all guests together, $1.00 a day", metric: "cost", amount: 1, used: 0.31, left: 0.69, ... },
+]
+```
+
+It's the same count the limits use, so it agrees with what the next refusal would say. Limits your own
+[onCall handlers](custom-limits.md) enforce aren't in it: they're your code, so show their numbers your way.
+
+## What someone has spent
+
+`spent()` is the totals for one subject in a window:
+
+```ts
+$llm.for(ctx).ledger.spent("day")         // this request's user or guest, today (UTC)
+$llm.for(ctx).ledger.spent("month")
+$llm.ledger.spent({ subject: "user:users/abc", since: "2026-11-01", until: "2026-11-15" })
+$llm.ledger.spent({ window: "month" })    // no subject: the whole app
+// { calls: 42, refused: 3, input: 51200, cached: 20480, output: 9800, seconds: 0, costMicroUSD: 312000 }
+```
+
+```go
+ledger := ledgerv1.Contract.Must(app)
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Window: "day"}) // ctx's subject (llmc.WithSubject), today (UTC)
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Window: "month"})
+ledger.Spent(ctx, extkit.Internal, ledgerv1.SpentInput{Subject: "user:users/abc", Since: "2026-11-01", Until: "2026-11-15"})
+ledger.Spent(context.Background(), extkit.Internal, ledgerv1.SpentInput{Window: "month"}) // no subject: the whole app
+// ledgerv1.Totals{Calls: 42, Refused: 3, Input: 51200, Cached: 20480, Output: 9800, CostMicroUSD: 312000}
+```
+
+`calls` counts calls that reached a provider and `refused` the ones a limit refused. `costMicroUSD` is in millionths of
+a US dollar, like every result's `usage.costMicroUSD`: divide by 1,000,000 for dollars. Add `kind` or `model` to count
+only those calls.
+
+Windows are UTC: `"day"` and `"month"` are the calendar day and month holding now, the same windows limits count in.
+`since` and `until` take a date (`2026-11-01`) or a full time; `until` is exclusive.
+
+## Where the money goes
+
+`summary()` groups the totals, costliest first:
+
+```ts
+$llm.ledger.summary({ by: "model", window: "month" })
+// [{ key: "vultr/glm-5.3", calls: 812, costMicroUSD: 4120000, ... }, { key: "vultr/z-image-turbo", ... }]
+
+$llm.ledger.summary({ by: "subject", window: "day", limit: 10 })   // today's ten biggest spenders
+$llm.ledger.summary({ by: "kind", window: "month" })                 // text vs pictures vs video
+$llm.ledger.summary({ by: "day", since: "2026-11-01" })              // a row per day, latest first
+```
+
+```go
+ledger := ledgerv1.Contract.Must(app)
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "model", Window: "month"})
+// .Rows: []ledgerv1.SummaryRow{{Key: "vultr/glm-5.3", Totals: ledgerv1.Totals{Calls: 812, CostMicroUSD: 4120000}}, ...}
+
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "subject", Window: "day", Limit: 10}) // today's ten biggest spenders
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "kind", Window: "month"})            // text vs pictures vs video
+ledger.Summary(ctx, extkit.Internal, ledgerv1.SummaryInput{By: "day", Since: "2026-11-01"})          // a row per day, latest first
+```
+
+Narrow it with `subject`, `kind` or `model`, as with `spent`.
+
+## The calls themselves
+
+`calls()` lists the rows, newest first, 50 at a time:
+
+```ts
+const page = $llm.ledger.calls({ subject: "user:users/abc", window: "month", limit: 20 })
+page.calls  // [{ id, created, kind, model, subject, via, input, cached, output, seconds, costMicroUSD, estimated, refused, job }]
+page.more   // true when there are more: ask again with offset: 20
+```
+
+```go
+page, err := ledgerv1.Contract.Must(app).Calls(ctx, extkit.Internal,
+	ledgerv1.CallsInput{Subject: "user:users/abc", Window: "month", Limit: 20})
+// page.Calls: []ledgerv1.Call{{ID, Created, Kind, Model, Subject, Via, Input, Cached, Output, Seconds, CostMicroUSD, ...}}
+// page.More: true when there are more: ask again with Offset: 20
+```
+
+`status: "refused"` lists only refused calls (each with the limit's message in `refused`), and `status: "ok"` only the
+ones that reached a provider.
+
+## Over HTTP
+
+The same four operations are the `llm.ledger/v1` contract, at `/api/_c/llm.ledger/v1/remaining`, `spent`, `summary`
+and `calls`, with the options as query parameters (`?window=day`). `remaining` and `spent` answer a signed-in user
+about themselves, so a frontend can show "4 left" with the user's own token; superusers may name any `subject`.
+`summary` and `calls` are for superusers (or a superuser's token with the `llm:read` scope). Guests can't ask over
+HTTP, since the operation sees credentials, not the guest cookie: answer them from page code with `$llm.for(ctx)`.
+
+## The rows
+
+The ledger is the `_llm_calls` collection, if you'd rather query it yourself:
 
 | Field | |
 |---|---|
 | `kind` | `text`, `image`, `speech`, `transcribe`, `align`, `music`, `video` or `embed`. |
 | `model` | The model, as `provider/model`. |
-| `subject` | Whom the call was for: `user:<collection>/<id>`, `guest:<id>`, `guest:ip:<address>`, or empty for calls made with plain `$llm` ([Whom a call is for](whom.md)). |
+| `subject` | Whom the call was for: `user:<collection>/<id>`, `guest:<id>`, `guest:ip:<address>`, a name an `onCall` handler gave it, or empty for calls made with plain `$llm`. |
 | `via` | How the call arrived: `go` (page code and hooks), `http`, `mcp`. |
 | `input`, `cached`, `output` | Input tokens, the input tokens billed at the cheaper cached rate, and output tokens. |
 | `seconds` | Seconds of audio or video, for the kinds billed by length. |
-| `cost` | What the call cost, in millionths of a US dollar (`57000` is $0.057). |
+| `cost` | What it cost, in millionths of a US dollar. |
 | `estimated` | True when the cost was worked out from the model's listed prices because the provider didn't report one. |
-| `refused` | Why a limit refused the call (its message); empty for a call that reached the provider. |
-| `job` | A music or video job's id. Its cost is filled in once the job is done ([Limits](limits.md#dollars-need-prices)). |
+| `refused` | Why the call was refused (the limit's or handler's message); empty for a call that reached the provider. |
+| `job` | A music or video job's id. Its cost is filled in once the job is done. |
 | `created` | When the call was made. |
 
-It's a system collection with no API rules: superusers see it in the dashboard (Collections → `_llm_calls`), and your
-app's own code reads it with `$app`. Visitors can't list it. Show them what's theirs through your own routes.
+It's a system collection with no API rules: superusers see it in the dashboard (Collections → `_llm_calls`), and only
+your app's code and the contract above read it. Rows are kept for 13 months; a daily job deletes older ones.
 
-Rows are kept for 13 months. A daily job deletes older ones, since limits only look back a month.
-
-## Reading spend
-
-What a signed-in user has spent today, for a page that shows it:
-
-```ts
-// pb_pages/usage/+page.ts
-export function load(ctx: pages.Context) {
-  if (!ctx.auth) return { spent: 0 }
-  const since = new Date().toISOString().slice(0, 10) + " 00:00:00.000Z" // today, UTC
-  const row = new DynamicModel({ cost: 0 })
-  $app.db()
-    .newQuery("SELECT COALESCE(SUM(cost), 0) AS cost FROM _llm_calls WHERE subject = {:s} AND created >= {:since} AND refused = ''")
-    .bind({ s: `user:${ctx.auth.collection().name}/${ctx.auth.id}`, since })
-    .one(row)
-  return { spent: row.cost / 1e6 } // dollars
-}
-```
-
-This month's spend by model, for an admin page:
-
-```sql
-SELECT model, COUNT(*) AS calls, SUM(cost) / 1e6 AS dollars
-FROM _llm_calls
-WHERE created >= strftime('%Y-%m-01 00:00:00.000Z', 'now') AND refused = ''
-GROUP BY model ORDER BY dollars DESC
-```
-
-And how often limits refused calls today, by limit:
-
-```sql
-SELECT refused, COUNT(*) AS times
-FROM _llm_calls
-WHERE created >= strftime('%Y-%m-%d 00:00:00.000Z', 'now') AND refused != ''
-GROUP BY refused ORDER BY times DESC
-```
-
-Each of these runs in the dashboard's SQL console too.
-
-## Selling credits
-
-Limits cap spending per period. If users buy credits, keep the balance on their own record and use the ledger to
-spend it: every row is created like any record, so a hook sees each call as it's recorded.
-
-```js
-// pb_hooks/credits.pb.js: users have a "credits" number field, in millionths of a dollar
-onRecordAfterCreateSuccess((e) => {
-  const m = e.record.get("subject").match(/^user:users\/(.+)$/)
-  if (m && e.record.get("cost") > 0) {
-    e.app.db()
-      .newQuery("UPDATE users SET credits = credits - {:cost} WHERE id = {:id}")
-      .bind({ cost: e.record.get("cost"), id: m[1] })
-      .execute()
-  }
-  e.next()
-}, "_llm_calls")
-```
-
-Then check the balance before calling the model, and refuse in your own words:
-
-```ts
-// pb_pages/ask/+api.ts
-export async function post(ctx: pages.Context) {
-  if (!ctx.auth) throw ctx.httpError(401, "sign in first")
-  if (ctx.auth.getInt("credits") <= 0) return ctx.res.json(402, { error: "You're out of credits." })
-  const r: LlmTextAnswer = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt: ctx.req.body().question })
-  return ctx.res.json({ answer: r.text })
-}
-```
-
-As with limits, the check comes before the call and the cost after it, so a user's last call can take them a little
-below zero. Keep a whole-app limit as well, so a mistake in your own code can't run up the bill.
+To act on each call as it's recorded, such as spending a user's credits, use
+[`$llm.onCallDone`](custom-limits.md#credits) rather than a hook on the collection: it gets the call's usage and its
+user already taken apart.

@@ -1,0 +1,37 @@
+# Ask starter
+
+Ask your docs a question and get a short answer with links to the pages it came from. The docs are Markdown files in
+`pb_pages/docs/`, served as pages and kept in an [LLM Search](https://pocketone.dev/docs/extensions/llm/guides/search)
+bucket that's read again whenever they change. Each answer is one model call, counted for the visitor, so the limits in
+Settings → LLM keep a public copy from running up a bill.
+
+```bash
+pocketone pages create mydocs --starter ask
+cd mydocs
+pocketone superuser upsert you@example.com <password> --dir ./pb_data
+pocketone serve --dir ./pb_data
+```
+
+Then, in the dashboard (http://127.0.0.1:8090/_/):
+
+1. **Settings → LLM:** add a provider with chat and embedding models (Vultr has both), and a limit for **all guests
+   together**, such as $1 a day. Answers to visitors who aren't signed in are refused until there is one.
+2. Open http://127.0.0.1:8090 and ask something. The first question after a start waits a moment while the docs are
+   embedded; **Search** in the dashboard shows the `docs` bucket and its progress.
+
+Make it yours:
+
+- Replace the pages in `pb_pages/docs/` with your own. Every `.md` file there is a page and part of what answers draw on.
+- `pb_pages/_private/ask.ts` holds the model (`ASK_MODEL` overrides it), the instructions the model gets, and how many
+  passages it reads.
+- To answer from another site instead of local files, swap `addFolder` for `addURL` with that site's pages.
+
+## Files
+
+```
+pb_pages/
+  +layout.ets                    the page shell (MVP.css), with links to Ask and Docs
+  index.ets                      the question form and the answer, written on the server (/?q=...)
+  _private/ask.ts                the docs bucket, the search and the model call
+  docs/                          your docs as Markdown pages: what answers draw on
+```

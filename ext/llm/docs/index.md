@@ -1,7 +1,7 @@
 ---
 title: AI in your app
-section: New in PocketOne
 description: "$llm gives your pages and Go code cloud models: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API, on your own keys."
+section: AI
 ---
 
 # AI in your app
@@ -69,8 +69,11 @@ Keep model names in one place in your app (a `_private/models.ts` module, say), 
 - [Search and RAG](guides/search.md): retrieval-augmented generation over your own files, web pages, Git repositories
   and records: knowledge bases (buckets), hybrid search with `$llm.search`, and `enrich` to ground any call in them.
 - [Limits](guides/limits.md): cap what the app spends, per day or month, for the whole app, each user and each guest.
-- [Whom a call is for](guides/whom.md): `$llm.for(ctx)`, so per-user and per-guest limits apply.
-- [Spend and the ledger](guides/spend.md): every call's cost, per user and per model; selling credits.
+- [Custom limits](guides/custom-limits.md): your own rules in code with `$llm.onCall` and `$llm.onCallDone`: plan tiers, credits, team buckets.
+- [Users and guests](guides/users-and-guests.md): `$llm.for(ctx)`, so per-user and per-guest limits apply.
+- [Spend and the ledger](guides/spend.md): `$llm.ledger`: what's left of each limit, what someone spent, where the money goes.
+
+Every member of `$llm`, with its options and types, is in the [LLM JavaScript API](/docs/reference/javascript/llm) reference, generated from the declarations your editor sees in `types.d.ts`.
 
 ## Thinking models
 
@@ -80,7 +83,16 @@ back empty. For hard questions, `"high"` lets the model think longer. A model th
 
 ## When something goes wrong
 
-A failed call throws an error with a code:
+A failed call throws an `Error` whose `code` says what went wrong, with a message you can show:
+
+```ts
+try {
+  const r = await $llm.for(ctx).text.completeAsync({ model: "vultr/glm-5.3", prompt })
+} catch (err: any) {
+  if (err.code === "limit") return ctx.res.json(429, { error: err.message })   // "limit reached: ..., it resets at 00:00 UTC"
+  throw err
+}
+```
 
 | Code | Means |
 |---|---|
@@ -89,6 +101,7 @@ A failed call throws an error with a code:
 | `not_supported` | That kind of provider doesn't do this (music on Cloudflare, say). |
 | `provider` | The provider said no: a wrong key, no credits, a model it doesn't have. Its message is kept, with your provider's name in front. |
 | `timeout` | The provider didn't answer in time. |
+| `limit` | A limit refused the call before it reached the provider: one in Settings → LLM or your own ([Limits](guides/limits.md)). |
 
 ## Costs
 

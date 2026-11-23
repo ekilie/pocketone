@@ -5,8 +5,11 @@
 - [← PocketOne docs](/docs)
 - [Home](/docs/extensions/desktop)
 
+# How it works
+
+- [How the app runs](/docs/extensions/desktop/runtime)
+
 # Guides
 
 - [Building](/docs/extensions/desktop/build)
-- [How the app runs](/docs/extensions/desktop/runtime)
 - [Signing and sharing](/docs/extensions/desktop/signing)

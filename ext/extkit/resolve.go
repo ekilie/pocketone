@@ -235,6 +235,7 @@ func Finish(app core.App, plan *Plan, choices Choices) ([]string, error) {
 		names = append(names, e.Name())
 	}
 	app.Store().Set(extensionsKey, names)
+	app.Store().Set(runningKey, append([]Extension(nil), plan.On...))
 	app.Store().Set(startedKey, time.Now())
 	// check Implements against what was provided
 	var lines []string
@@ -276,6 +277,7 @@ func (s *Scope) providedBy(id ContractID, ext string) bool {
 
 const (
 	extensionsKey = "extkit.extensions"
+	runningKey    = "extkit.running"
 	startedKey    = "extkit.started"
 )
 
@@ -283,6 +285,13 @@ const (
 func Extensions(app core.App) []string {
 	names, _ := app.Store().Get(extensionsKey).([]string)
 	return names
+}
+
+// Running is the extensions running on app, in registration order (after Finish): Extensions' values, for code that
+// asks them something (pocketone reference collects their TypeScript declarations).
+func Running(app core.App) []Extension {
+	exts, _ := app.Store().Get(runningKey).([]Extension)
+	return exts
 }
 
 // Started is when app's extensions were set up: when this app (instance) last started.

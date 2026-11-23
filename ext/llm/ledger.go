@@ -63,6 +63,7 @@ func dropLedger(tx core.App) error {
 // call is one billable call on its way through: what the ledger row will say.
 type call struct {
 	kind    string
+	op      string
 	model   string
 	subject string
 	via     string
@@ -95,6 +96,18 @@ func (r *router) record(ctx context.Context, c *call, u llmc.Usage, refused stri
 	rec.Set("job", c.job)
 	if err := r.app.SaveWithContext(ctx, rec); err != nil {
 		r.app.Logger().Warn("llm: ledger: write failed", "model", c.model, "error", err)
+	}
+	// a job still running has no cost yet: OnCallDone waits for settleJob
+	if refused == "" && (c.job == "" || u.CostMicroUSD != 0) {
+		r.done(ctx, c, u)
+	}
+}
+
+// done triggers OnCallDone for a call that reached a provider. Handlers' errors are logged: the call has happened.
+func (r *router) done(ctx context.Context, c *call, u llmc.Usage) {
+	e := &llmc.CallDoneEvent{App: r.app, Context: ctx, Kind: c.kind, Op: c.op, Model: c.model, Subject: c.subject, Usage: u, Job: c.job}
+	if err := llmc.OnCallDone(r.app).Trigger(e); err != nil {
+		r.app.Logger().Warn("llm: an onCallDone handler failed", "model", c.model, "error", err)
 	}
 }
 
@@ -136,7 +149,11 @@ func (r *router) settleJob(ctx context.Context, t target, id string, j *llmc.Job
 	}
 	if err := r.app.SaveWithContext(ctx, rec); err != nil {
 		r.app.Logger().Warn("llm: ledger: job cost not saved", "job", id, "error", err)
+		return
 	}
+	u := j.Usage
+	r.done(ctx, &call{kind: rec.GetString("kind"), op: "create", model: rec.GetString("model"), subject: rec.GetString("subject"),
+		via: rec.GetString("via"), job: id}, u)
 }
 
 // windowStart is when the UTC day or month holding t began; next is when the next one begins.

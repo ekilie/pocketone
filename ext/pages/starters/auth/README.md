@@ -23,3 +23,19 @@ Notes:
 
 - Anonymous login needs password login enabled (PocketBase's default).
 - OTP login is enabled by the migrations. OAuth2 is enabled with no providers: add one in the dashboard under Collections > users > Options > OAuth2.
+
+## Files
+
+```
+pb_migrations/                   the users collection's auth settings and email templates
+pb_pages/
+  +config.ts                     turns on the auth plugin
+  +layout.ets
+  auth/login/                    +page.ts signs in; _private/ holds one form per method (password, otp, oauth2, ...)
+  auth/forgot/                   asks for a password reset email
+  auth/confirm/[token]/          the pages the emails link to: verification, password reset, email change
+  account/+middleware.ts         sends anyone not signed in to the login page
+  account/                       the signed-in user's page, and change-email
+```
+
+Live demo: [pocketpages-auth.pockethost.io](https://pocketpages-auth.pockethost.io).

@@ -10,48 +10,77 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 - [What is PocketOne?](https://pocketone.dev/docs/overview): PocketOne is a community fork of PocketBase. Its core changes are kept small; everything else is an extension.
 - [Installation](https://pocketone.dev/docs/installation): Install PocketOne on macOS, Windows or Linux with Homebrew, Scoop or the install script, run it, and keep it up to date.
+- [Running PocketOne](https://pocketone.dev/docs/running): Your whole backend in one file - how to start it, the folders an app is made of, what superusers are, how your app's users differ, and where everything lives.
 - [Coming from PocketBase](https://pocketone.dev/docs/pocketbase): PocketOne is PocketBase with more built in. What stays the same, and how each added feature compares.
-- [Teach your coding agent](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and Pages with our Agent Skills and llms.txt.
+- [LLM skills for coding agents](https://pocketone.dev/docs/agents): Teach Claude Code, Cursor, Codex and other coding agents PocketOne and Pages with our Agent Skills and llms.txt.
 
-## New in PocketOne
+## Database
 
-- [Everything new](https://pocketone.dev/docs/features): Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built into the pocketone binary.
-- [QuickJS: async, import, TS](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
-- [Pages: TSX, TS, EJS](https://pocketone.dev/docs/features/sites): Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
-- [Isolates: many apps, one process](https://pocketone.dev/docs/features/isolates): Run hundreds of PocketBase apps as isolates inside one pocketone process, routed by hostname. Each starts on its first request in tens of milliseconds, costs a few MB, and is sandboxed from the others.
-- [Point-in-time restore](https://pocketone.dev/docs/features/restore): Put your app's data back as it was at any moment in the last few days, from the dashboard, your terminal or an agent.
-- [Deploy and live sync](https://pocketone.dev/docs/features/deploy): Send your app's hooks, migrations, pages and public files to a running PocketOne app with one command, and keep a folder in step while you work.
-- [Remote CLI](https://pocketone.dev/docs/features/remote): Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
-- [API tokens and OAuth](https://pocketone.dev/docs/features/tokens): Give a script, a CI job or a service its own long-lived token, limited to what it needs, and revoke it whenever you like. Apps and tools can also sign in to get one.
-- [MCP for AI agents](https://pocketone.dev/docs/features/mcp): Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
-- [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
-- [pocketone.yaml](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
-- [Desktop apps](https://pocketone.dev/docs/extensions/desktop): Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker.
+- [Collections and fields](https://pocketone.dev/docs/collections): Collections are your app's tables - base, auth and view collections, every field type and its options, and how to create and change them in the dashboard, in a migration or from code.
+- [Records](https://pocketone.dev/docs/records): Find, create, change and delete records from your own code - filters with parameters, sorting and paging, reading typed values, expanding relations, transactions and raw SQL.
+- [API rules and filters](https://pocketone.dev/docs/api-rules): Decide who can list, view, create, update and delete each collection's records with API rules, written in the same filter language clients use to search - with the request, auth and other collections in reach.
+- [Migrations](https://pocketone.dev/docs/migrations): Migrations carry your collection changes and seed data with your code - automigrate writes them when you change collections in the dashboard, deploys apply them, and you can write your own in TypeScript or Go.
 - [Key-Value Store](https://pocketone.dev/docs/extensions/kv): $kv keeps your app's settings and small pieces of state as named JSON values: no collection, no migration, and they ride along in backups.
-- [AI in your app](https://pocketone.dev/docs/extensions/llm): $llm gives your pages and Go code cloud models: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API, on your own keys.
+
+## Users and sign-in
+
+- [Authentication](https://pocketone.dev/docs/authentication): Sign users in with a password, a one-time code or an OAuth2 provider, add multi-factor auth, verify emails and reset passwords, and use the signed-in user in your rules and code.
+- [API tokens and OAuth](https://pocketone.dev/docs/features/tokens): Give a script, a CI job or a service its own long-lived token, limited to what it needs, and revoke it whenever you like. Apps and tools can also sign in to get one.
+
+## Hooks and routes
+
+- [Hooks](https://pocketone.dev/docs/hooks): Run your own code when something happens in your app - before or after a record is saved, on an API request, when mail is sent, when the app starts. The hook model, written in TypeScript or Go.
+- [Custom routes](https://pocketone.dev/docs/routes): Add your own API endpoints to your app - path parameters, request bodies, JSON and HTML answers, auth requirements, middleware and errors - in TypeScript or Go.
+- [QuickJS: the JS engine](https://pocketone.dev/docs/quickjs): PocketOne runs pb_hooks on QuickJS, a drop-in replacement for PocketBase's JS engine that adds imports, TypeScript, async handlers, shared globals and hard memory and time limits.
 - [WASM](https://pocketone.dev/docs/extensions/wasm): Bring your own WASM: call code written in Go, Rust, C or Zig from your page code, for libraries JavaScript doesn't have and work JavaScript does too slowly.
 
-## Extend PocketOne
+## Websites
 
-- [How PocketOne fits together](https://pocketone.dev/docs/how-pocketone-fits-together): How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.
-- [Writing an extension](https://pocketone.dev/docs/writing-an-extension): How to write a PocketOne extension.
-- [Contracts](https://pocketone.dev/docs/contracts): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
-- [Extensions](https://pocketone.dev/docs/extensions): Every extension in PocketOne, grouped by what it's for.
+- [Pages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. Pages is built into the pocketone binary as the pages extension.
 
-## Guides
+## Email
 
-- [Advanced installation](https://pocketone.dev/docs/guides/advanced-installation): Install PocketOne off the usual path - the install script's settings, Windows without Scoop, a release zip, or building it from source.
+- [Bulk mail](https://pocketone.dev/docs/features/bulk-mail): Send a newsletter or announcement to your app's own users, from the dashboard, your terminal or an agent.
+
+## AI
+
+- [AI in your app](https://pocketone.dev/docs/extensions/llm): $llm gives your pages and Go code cloud models: text, pictures, speech, transcription, music, video and embeddings, from Vultr, Cloudflare, OpenRouter or any OpenAI-compatible API, on your own keys.
+- [MCP for AI agents](https://pocketone.dev/docs/features/mcp): Connect Claude or another MCP client to your app, sign in once, and let it work with your data and settings with exactly your rights.
+
+## Deploy and run
+
+- [Configuration](https://pocketone.dev/docs/pocketone-yaml): Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
+- [Deploy and live sync](https://pocketone.dev/docs/features/deploy): Send your app's hooks, migrations, pages and public files to a running PocketOne app with one command, and keep a folder in step while you work.
+- [Remote CLI](https://pocketone.dev/docs/features/remote): Manage any PocketOne app from your terminal, a script or an agent. Every extension API is a command, a REST endpoint and an MCP tool at once.
 - [Run on a Linux server](https://pocketone.dev/docs/guides/linux-server): Install PocketOne on a Linux server as a .deb, .rpm or .apk package, run it as a systemd service with its own HTTPS or behind a proxy, deploy your app, upgrade and uninstall.
-- [Example apps](https://pocketone.dev/docs/examples): PocketOne apps you can try live and read end to end - Docs Chat, Bedtime Story and the Pages starter kits - what each does and how it's built.
+- [Backups and restore](https://pocketone.dev/docs/features/restore): Put your app's data back as it was at any moment in the last few days, from the dashboard, your terminal or an agent.
+- [Many apps on one server](https://pocketone.dev/docs/features/isolates): Run hundreds of PocketBase apps as isolates inside one pocketone process, routed by hostname. Each starts on its first request in tens of milliseconds, costs a few MB, and is sandboxed from the others.
+- [Desktop apps](https://pocketone.dev/docs/extensions/desktop): Turn your PocketOne app into a native desktop app for macOS, Windows and Linux: the same folder you serve, one executable per platform, built from any machine with Docker.
+
+## How-to guides
+
+- [Starter kits](https://pocketone.dev/docs/starters): The Pages starter kits - from a one-page site to sign-in, realtime, a docs site and an ask-your-docs app - and how to start an app from one.
+- [Example apps](https://pocketone.dev/docs/examples): PocketOne apps you can try live and read end to end - Bedtime Story and the Pages starter kits - what each does and how it's built.
+- [Update pages live with htmx](https://pocketone.dev/docs/extensions/pages/htmx): Use HTMX with Pages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.
+- [Use a custom domain](https://pocketone.dev/docs/extensions/pages/speedruns/custom-domain-fly-cloudflare): Step-by-step process to configure DNS records, SSL certificates, and domain verification between Fly.io and Cloudflare. Includes specific settings for A/AAAA records, CNAME verification, and SSL/TLS encryption modes.
+- [Let users sign in with Google](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketOne app with the auth plugin.
+- [Send email through Amazon SES](https://pocketone.dev/docs/extensions/pages/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
 
 ## Reference
 
+- [JavaScript API](https://pocketone.dev/docs/reference/javascript): The whole JavaScript API of pb_hooks and page code: what core gives every app ($app, the hooks, the classes and every type) and what each extension adds, generated from the TypeScript declarations.
+- [Go API](https://pocketone.dev/docs/reference/go): The Go packages extensions and custom PocketOne builds program against: every contract's interface and types, and the helpers they share.
+- [REST API](https://pocketone.dev/docs/rest): Every PocketOne app serves a REST API for its records, sign-in, files and realtime, plus admin endpoints for superusers. The base URL, auth header, errors, and the query parameters every list takes.
 - [CLI](https://pocketone.dev/docs/reference/cli): Every command of the pocketone binary: PocketBase's own, the standard extensions', and one per contract operation.
-- [REST](https://pocketone.dev/docs/reference/rest): Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input.
-- [MCP](https://pocketone.dev/docs/reference/mcp): Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments.
+- [MCP tools](https://pocketone.dev/docs/reference/mcp): Every MCP tool a PocketOne app's contracts add at /mcp, with its token scope and arguments.
 - [pocketone.yaml](https://pocketone.dev/docs/config-reference): Every section of the pocketone.yaml config file, generated from the pocketone binary.
-- [Folders](https://pocketone.dev/docs/folders): What each pb_* folder next to your app holds, which ones are backed up, deployed or safe to delete, and where extensions keep their tables and files.
-- [Pages](https://pocketone.dev/docs/extensions/pages): No-build, server-rendered multi-page apps for PocketOne. Pages is built into the pocketone binary as the pages extension.
+
+## Extensions
+
+- [Overview](https://pocketone.dev/docs/extensions): What a PocketOne extension is and how extensions work: kinds, settings, contracts, extension APIs and JavaScript.
+- [Contracts](https://pocketone.dev/docs/contracts): Every contract in PocketOne: what it promises and which extensions provide, require and work with it.
+- [How PocketOne fits together](https://pocketone.dev/docs/how-pocketone-fits-together): How PocketOne extensions work together: every extension API is a named, versioned contract that any extension can provide.
+- [Writing an extension](https://pocketone.dev/docs/writing-an-extension): How to write a PocketOne extension.
 
 ## Contracts: By name
 
@@ -75,6 +104,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [llm.chat/v1](https://pocketone.dev/docs/contracts/llm.chat/v1): Stored conversations with a language model: start a chat, send to it, read its history, find and forget chats by the app's own meta.
 - [llm.embed/v1](https://pocketone.dev/docs/contracts/llm.embed/v1): Turn texts into vectors for search by meaning: texts in, one vector each out.
 - [llm.image/v1](https://pocketone.dev/docs/contracts/llm.image/v1): Make pictures from a prompt, or change pictures you give it; they come back as files.
+- [llm.ledger/v1](https://pocketone.dev/docs/contracts/llm.ledger/v1): What an app's model calls used and cost, from the ledger every llm.* call leaves, and how much of each limit is left.
 - [llm.music/v1](https://pocketone.dev/docs/contracts/llm.music/v1): Make music from a prompt and lyrics, as a job: start it, follow it, fetch its files (or wait for them).
 - [llm.search/v1](https://pocketone.dev/docs/contracts/llm.search/v1): RAG knowledge bases (buckets) with hybrid search: sources (files, folders, zips, pages, Git repositories, collections) kept current, one embedding model per app.
 - [llm.speech/v1](https://pocketone.dev/docs/contracts/llm.speech/v1): Read text aloud: text in, an audio file out, in a voice the model offers.
@@ -94,11 +124,19 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [tls/v1](https://pocketone.dev/docs/contracts/tls/v1): The TLS of a multisite host's listener: automatic certificates instead of certificate files.
 - [vacuum/v1](https://pocketone.dev/docs/contracts/vacuum/v1): Compacting an app's databases so freed space goes back to the disk, and when it last happened.
 
+## Desktop: How it works
+
+- [How the app runs](https://pocketone.dev/docs/extensions/desktop/runtime): What a PocketOne desktop app does on your users' machines: where their data lives, how upgrades migrate it, the window, and what each platform needs.
+
 ## Desktop: Guides
 
 - [Building](https://pocketone.dev/docs/extensions/desktop/build): pocketone desktop build: which platforms, the Docker build image, building with your own Go, and what lands in dist/.
-- [How the app runs](https://pocketone.dev/docs/extensions/desktop/runtime): What a PocketOne desktop app does on your users' machines: where their data lives, how upgrades migrate it, the window, and what each platform needs.
 - [Signing and sharing](https://pocketone.dev/docs/extensions/desktop/signing): Sign your PocketOne desktop app so people can install it without warnings: Developer ID signing and notarization on macOS, Authenticode on Windows, checksums and signatures on Linux.
+
+## Extensions
+
+- [All extensions](https://pocketone.dev/docs/extensions/all): Every extension in PocketOne, grouped by what it's for.
+- [Extension APIs](https://pocketone.dev/docs/extensions/apis): Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input.
 
 ## Extensions: Standard extensions
 
@@ -117,7 +155,7 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [LLM Chat](https://pocketone.dev/docs/extensions/llm-chat): Stored conversations with a language model: $llm.chat.open(id).sendAsync(text), with history and summaries.
 - [LLM Search](https://pocketone.dev/docs/extensions/llm-search): RAG and hybrid search: knowledge bases (buckets) of files, folders, zips, web pages, Git repositories and collections; $llm.search, and enrich to ground $llm calls in them.
 - [MCP](https://pocketone.dev/docs/extensions/mcp): An MCP endpoint at /mcp so agents can manage your app and call its tools.
-- [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder (formerly PocketPages).
+- [Pages](https://pocketone.dev/docs/extensions/pages/extension): Server-rendered pages from a pb_pages folder.
 - [Pages: Pages specification](https://pocketone.dev/docs/extensions/pages/spec): Pages: Pages specification
 - [PITR](https://pocketone.dev/docs/extensions/pitr): Point-in-time restore of your database with Litestream. On by default.
 - [Remotes](https://pocketone.dev/docs/extensions/remotes): Named remotes and saved logins for the pocketone command.
@@ -163,16 +201,167 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 - [Mail Trap](https://pocketone.dev/docs/extensions/mailtrap): Dev mode: mail from an app without SMTP lands in a built-in inbox.
 - [Standard Set](https://pocketone.dev/docs/extensions/standard): The extensions every PocketOne app has, as one set a host configures.
 
+## Go API: PocketBase
+
+- [pocketbase](https://pocketone.dev/docs/reference/go/pocketbase)
+- [apis](https://pocketone.dev/docs/reference/go/pocketbase/apis)
+- [core](https://pocketone.dev/docs/reference/go/pocketbase/core): Package core is the backbone of PocketBase.
+- [core: Records and collections](https://pocketone.dev/docs/reference/go/pocketbase/core/records): The Records and collections types of PocketBase's Go package core.
+- [core: Fields](https://pocketone.dev/docs/reference/go/pocketbase/core/fields): The Fields types of PocketBase's Go package core.
+- [core: Events](https://pocketone.dev/docs/reference/go/pocketbase/core/events): The Events types of PocketBase's Go package core.
+- [core: Settings](https://pocketone.dev/docs/reference/go/pocketbase/core/settings): The Settings types of PocketBase's Go package core.
+- [core/validators](https://pocketone.dev/docs/reference/go/pocketbase/core/validators): Package validators implements some common custom PocketBase validators.
+- [forms](https://pocketone.dev/docs/reference/go/pocketbase/forms)
+- [mails](https://pocketone.dev/docs/reference/go/pocketbase/mails): Package mails implements various helper methods for sending common emails like forgotten password, verification, etc.
+- [plugins/ghupdate](https://pocketone.dev/docs/reference/go/pocketbase/plugins/ghupdate): Package ghupdate implements a new command to selfupdate the current PocketBase executable with the latest GitHub release.
+- [plugins/migratecmd](https://pocketone.dev/docs/reference/go/pocketbase/plugins/migratecmd): Package migratecmd adds a new "migrate" command support to a PocketBase instance.
+- [plugins/update](https://pocketone.dev/docs/reference/go/pocketbase/plugins/update): Package update implements a new command to replace the current PocketBase executable with the one from the latest BugStage releases.
+- [tests](https://pocketone.dev/docs/reference/go/pocketbase/tests): Package tests provides common helpers and mocks used in PocketBase application tests.
+- [tools/archive](https://pocketone.dev/docs/reference/go/pocketbase/tools/archive)
+- [tools/auth](https://pocketone.dev/docs/reference/go/pocketbase/tools/auth)
+- [tools/cron](https://pocketone.dev/docs/reference/go/pocketbase/tools/cron): Package cron implements a crontab-like service to execute and schedule repeative tasks/jobs.
+- [tools/dbutils](https://pocketone.dev/docs/reference/go/pocketbase/tools/dbutils)
+- [tools/filesystem](https://pocketone.dev/docs/reference/go/pocketbase/tools/filesystem)
+- [tools/filesystem/blob](https://pocketone.dev/docs/reference/go/pocketbase/tools/filesystem/blob): Package blob defines a lightweight abstration for interacting with various storage services (local filesystem, S3, etc.).
+- [tools/hook](https://pocketone.dev/docs/reference/go/pocketbase/tools/hook)
+- [tools/inflector](https://pocketone.dev/docs/reference/go/pocketbase/tools/inflector)
+- [tools/list](https://pocketone.dev/docs/reference/go/pocketbase/tools/list)
+- [tools/logger](https://pocketone.dev/docs/reference/go/pocketbase/tools/logger)
+- [tools/mailer](https://pocketone.dev/docs/reference/go/pocketbase/tools/mailer)
+- [tools/osutils](https://pocketone.dev/docs/reference/go/pocketbase/tools/osutils)
+- [tools/picker](https://pocketone.dev/docs/reference/go/pocketbase/tools/picker)
+- [tools/router](https://pocketone.dev/docs/reference/go/pocketbase/tools/router)
+- [tools/routine](https://pocketone.dev/docs/reference/go/pocketbase/tools/routine)
+- [tools/search](https://pocketone.dev/docs/reference/go/pocketbase/tools/search)
+- [tools/security](https://pocketone.dev/docs/reference/go/pocketbase/tools/security)
+- [tools/store](https://pocketone.dev/docs/reference/go/pocketbase/tools/store)
+- [tools/subscriptions](https://pocketone.dev/docs/reference/go/pocketbase/tools/subscriptions)
+- [tools/template](https://pocketone.dev/docs/reference/go/pocketbase/tools/template): Package template is a thin wrapper around the standard html/template and text/template packages that implements a convenient registry to load and cache templates on the fly concurrently.
+- [tools/tokenizer](https://pocketone.dev/docs/reference/go/pocketbase/tools/tokenizer): Package tokenizer implements a rudimentary tokens parser of buffered io.Reader while respecting quotes and parenthesis boundaries.
+- [tools/types](https://pocketone.dev/docs/reference/go/pocketbase/tools/types): Package types implements some commonly used db serializable types like datetime, json, etc.
+
+## Go API: Contracts
+
+- [api-tokens/v1](https://pocketone.dev/docs/reference/go/api-tokens/v1): Package apitokensv1 is the api-tokens/v1 contract: an app's API tokens.
+- [api-tokens/verify/v1](https://pocketone.dev/docs/reference/go/api-tokens/verify/v1): Package verifyv1 is the api-tokens.verify/v1 contract: another server checks an app's API token.
+- [bulkmail/v1](https://pocketone.dev/docs/reference/go/bulkmail/v1): Package bulkmailv1 is the bulkmail/v1 contract: campaigns to many recipients, sent at a safe pace.
+- [cache/clear/v1](https://pocketone.dev/docs/reference/go/cache/clear/v1): Package clearv1 is the cache.clear/v1 contract: empty an app's cache buckets from outside the app's code, so its admins (the dashboard, `pocketone remote cache clear`, an agent) can drop what cache/v1 keeps for it after a change that left stale entries behind.
+- [cache/v1](https://pocketone.dev/docs/reference/go/cache/v1): Package cachev1 is the cache/v1 contract: named buckets of bytes an app keeps for a while, so extensions and apps can remember what was expensive to compute.
+- [cli/commands/v1](https://pocketone.dev/docs/reference/go/cli/commands/v1): Package clicmdv1 is the cli.commands/v1 contract: the `pocketone` command tree.
+- [deploy/v1](https://pocketone.dev/docs/reference/go/deploy/v1): Package deployv1 is the deploy/v1 contract: a project's code files on an app (check, upload, commit, list, read, write, delete, tree).
+- [gate/v1](https://pocketone.dev/docs/reference/go/gate/v1): Package gatev1 is the gate/v1 contract: what admits requests on a multisite host, before an instance is served or forwarded (a firewall: peer allow lists, client IPs, rate limits).
+- [http/wrap/v1](https://pocketone.dev/docs/reference/go/http/wrap/v1): Package wrapv1 is the http.wrap/v1 contract: middleware around everything a multisite host serves (a Server-Timing header, request logging).
+- [instance/fs/v1](https://pocketone.dev/docs/reference/go/instance/fs/v1): Package fsv1 is the instance.fs/v1 contract: one instance's code files on local disk, for extensions that read and write them (ext/deploy today).
+- [instance/lookup/v1](https://pocketone.dev/docs/reference/go/instance/lookup/v1): Package lookupv1 is the instance.lookup/v1 contract: a multisite host asks for a hostname it doesn't know.
+- [instance/resolve/v1](https://pocketone.dev/docs/reference/go/instance/resolve/v1): Package resolvev1 is the instance.resolve/v1 contract: on a control plane (a mothership), what a hostname serves for a given edge, built from the control plane's own records, and which records each answer was built from.
+- [instance/source/v1](https://pocketone.dev/docs/reference/go/instance/source/v1): Package sourcev1 is the instance.source/v1 contract: the instance record a multisite host serves (its id, hostnames, version, folder, secrets, limits, ...) and where the records come from.
+- [instance/source/v1/sourcetest](https://pocketone.dev/docs/reference/go/instance/source/v1/sourcetest): Package sourcetest is an instance.source/v1 provider for tests: a fixed list of instances that a test can change while it runs, the way an edit to a host's instances file or a control plane's update would.
+- [instance/tokens/v1](https://pocketone.dev/docs/reference/go/instance/tokens/v1): Package tokensv1 is the instance.tokens/v1 contract: a multisite host checks an API token one of its instances issued, so it can accept the instance's own tokens on the routes it answers for that instance (deploy/v1, remote/v1).
+- [instance/watch/v1](https://pocketone.dev/docs/reference/go/instance/watch/v1): Package watchv1 is the instance.watch/v1 contract: an edge follows a control plane (a mothership) lazily.
+- [kv/v1](https://pocketone.dev/docs/reference/go/kv/v1): Package kvv1 is the kv/v1 contract: an app's key-value store.
+- [llm](https://pocketone.dev/docs/reference/go/llm): Package llm holds what the llm.* contracts share: a model reference, generated files, usage, model info, jobs and errors.
+- [llm/align/v1](https://pocketone.dev/docs/reference/go/llm/align/v1): Package alignv1 is the llm.align/v1 contract: forced alignment.
+- [llm/chat/v1](https://pocketone.dev/docs/reference/go/llm/chat/v1): Package chatv1 is the llm.chat/v1 contract: stored conversations with the app's language model.
+- [llm/embed/v1](https://pocketone.dev/docs/reference/go/llm/embed/v1): Package embedv1 is the llm.embed/v1 contract: a model turns texts into vectors, for search by meaning.
+- [llm/image/v1](https://pocketone.dev/docs/reference/go/llm/image/v1): Package imagev1 is the llm.image/v1 contract: a model makes pictures from a prompt, or changes pictures it's given.
+- [llm/ledger/v1](https://pocketone.dev/docs/reference/go/llm/ledger/v1): Package ledgerv1 is the llm.ledger/v1 contract: what an app's model calls have used and cost, read from the ledger every llm.* call leaves (the provider's own record of each call), and how much of each limit is left.
+- [llm/music/v1](https://pocketone.dev/docs/reference/go/llm/music/v1): Package musicv1 is the llm.music/v1 contract: a model makes music from a prompt (and lyrics).
+- [llm/search/v1](https://pocketone.dev/docs/reference/go/llm/search/v1): Package searchv1 is the llm.search/v1 contract: named buckets of content an app searches.
+- [llm/speech/v1](https://pocketone.dev/docs/reference/go/llm/speech/v1): Package speechv1 is the llm.speech/v1 contract: a model reads text aloud.
+- [llm/text/v1](https://pocketone.dev/docs/reference/go/llm/text/v1): Package textv1 is the llm.text/v1 contract: a language model answers a prompt or a conversation.
+- [llm/transcribe/v1](https://pocketone.dev/docs/reference/go/llm/transcribe/v1): Package transcribev1 is the llm.transcribe/v1 contract: a model writes down what's said in audio.
+- [llm/video/v1](https://pocketone.dev/docs/reference/go/llm/video/v1): Package videov1 is the llm.video/v1 contract: a model makes a video from a prompt (and a first frame).
+- [mail/fallback/v1](https://pocketone.dev/docs/reference/go/mail/fallback/v1): Package fallbackv1 is the mail.fallback/v1 contract: where an app's mail goes when its SMTP is off.
+- [mail/feedback/v1](https://pocketone.dev/docs/reference/go/mail/feedback/v1): Package feedbackv1 is the mail.feedback/v1 contract: what mail providers report back about mail an app sent (bounces, complaints, unsubscribes), received at one place and turned into [Event]s that any extension can act on.
+- [mail/suppression/v1](https://pocketone.dev/docs/reference/go/mail/suppression/v1): Package suppressionv1 is the mail.suppression/v1 contract: addresses an app must not send bulk mail to (unsubscribed, bounced, complained), and the unsubscribe link every bulk message carries.
+- [mcp/v1](https://pocketone.dev/docs/reference/go/mcp/v1): Package mcpv1 is the mcp/v1 contract: the app's Model Context Protocol endpoint, so agents (a Claude connector, Claude Code, any Streamable HTTP client) can work with it.
+- [oauth/v1](https://pocketone.dev/docs/reference/go/oauth/v1): Package oauthv1 is the oauth/v1 contract: an OAuth 2.1 authorization server for the app (authorization code with PKCE, device code, refresh, revocation, dynamic and metadata-document client registration), so the CLI and MCP clients like Claude can sign in.
+- [remote/v1](https://pocketone.dev/docs/reference/go/remote/v1): Package remotev1 is the remote/v1 contract: remote control of an app.
+- [remote/v1/remoteclient](https://pocketone.dev/docs/reference/go/remote/v1/remoteclient): Package remoteclient is remote/v1's CLI client: the remotes a project links (.pocketone/remotes.yaml), saved logins, sign-in (an API token, a password, or OAuth in the browser or with a device code), and an authenticated HTTP client for a remote.
+- [restore/v1](https://pocketone.dev/docs/reference/go/restore/v1): Package restorev1 is the restore/v1 contract: put an app's data back as it was at a moment.
+- [runtime/v1](https://pocketone.dev/docs/reference/go/runtime/v1): Package runtimev1 is the runtime/v1 contract: what runs a multisite host's instances (ext/pocker as isolates, ext/docker in containers).
+- [settings/v1](https://pocketone.dev/docs/reference/go/settings/v1): Package settingsv1 is the settings/v1 contract: the settings an app's admins change for its extensions (pitr's S3 bucket, bulkmail's sending limits), one API for all of them.
+- [templates/v1](https://pocketone.dev/docs/reference/go/templates/v1): Package templatesv1 is the templates/v1 contract: an extension's own pages as a set of Go html/template files that a project can override.
+- [tls/v1](https://pocketone.dev/docs/reference/go/tls/v1): Package tlsv1 is the tls/v1 contract: the TLS of a multisite host's main listener (automatic certificates).
+- [vacuum/v1](https://pocketone.dev/docs/reference/go/vacuum/v1): Package vacuumv1 is the vacuum/v1 contract: an app's databases are compacted (SQLite VACUUM) so space freed by deleted records goes back to the disk, and its admins can see when that last happened.
+
+## JavaScript API: PocketBase
+
+- [Globals, hooks and classes](https://pocketone.dev/docs/reference/javascript/pocketbase): Every global, hook and class PocketOne's core gives pb_hooks and page code: $app, $apis, $security, routerAdd, cronAdd, onRecordCreate and the rest, with signatures and linked types.
+- [apis](https://pocketone.dev/docs/reference/javascript/pocketbase/apis): The apis types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [auth](https://pocketone.dev/docs/reference/javascript/pocketbase/auth): The auth types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [blob](https://pocketone.dev/docs/reference/javascript/pocketbase/blob): The blob types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [core](https://pocketone.dev/docs/reference/javascript/pocketbase/core): The core types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [core: Records and collections](https://pocketone.dev/docs/reference/javascript/pocketbase/core/records): The core: Records and collections types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [core: Fields](https://pocketone.dev/docs/reference/javascript/pocketbase/core/fields): The core: Fields types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [core: Events](https://pocketone.dev/docs/reference/javascript/pocketbase/core/events): The core: Events types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [core: Settings](https://pocketone.dev/docs/reference/javascript/pocketbase/core/settings): The core: Settings types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [cron](https://pocketone.dev/docs/reference/javascript/pocketbase/cron): The cron types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [dbx](https://pocketone.dev/docs/reference/javascript/pocketbase/dbx): The dbx types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [filesystem](https://pocketone.dev/docs/reference/javascript/pocketbase/filesystem): The filesystem types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [forms](https://pocketone.dev/docs/reference/javascript/pocketbase/forms): The forms types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [hook](https://pocketone.dev/docs/reference/javascript/pocketbase/hook): The hook types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [logger](https://pocketone.dev/docs/reference/javascript/pocketbase/logger): The logger types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [mailer](https://pocketone.dev/docs/reference/javascript/pocketbase/mailer): The mailer types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [pocketbase](https://pocketone.dev/docs/reference/javascript/pocketbase/pocketbase): The pocketbase types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [router](https://pocketone.dev/docs/reference/javascript/pocketbase/router): The router types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [search](https://pocketone.dev/docs/reference/javascript/pocketbase/search): The search types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [store](https://pocketone.dev/docs/reference/javascript/pocketbase/store): The store types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [subscriptions](https://pocketone.dev/docs/reference/javascript/pocketbase/subscriptions): The subscriptions types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [template](https://pocketone.dev/docs/reference/javascript/pocketbase/template): The template types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [types](https://pocketone.dev/docs/reference/javascript/pocketbase/types): The types types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+
+## JavaScript API: Go libraries
+
+- [bufio](https://pocketone.dev/docs/reference/javascript/pocketbase/bufio): The bufio types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [bytes](https://pocketone.dev/docs/reference/javascript/pocketbase/bytes): The bytes types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [cobra](https://pocketone.dev/docs/reference/javascript/pocketbase/cobra): The cobra types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [context](https://pocketone.dev/docs/reference/javascript/pocketbase/context): The context types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [exec](https://pocketone.dev/docs/reference/javascript/pocketbase/exec): The exec types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [filepath](https://pocketone.dev/docs/reference/javascript/pocketbase/filepath): The filepath types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [fs](https://pocketone.dev/docs/reference/javascript/pocketbase/fs): The fs types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [http](https://pocketone.dev/docs/reference/javascript/pocketbase/http): The http types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [io](https://pocketone.dev/docs/reference/javascript/pocketbase/io): The io types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [jwt](https://pocketone.dev/docs/reference/javascript/pocketbase/jwt): The jwt types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [multipart](https://pocketone.dev/docs/reference/javascript/pocketbase/multipart): The multipart types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [net](https://pocketone.dev/docs/reference/javascript/pocketbase/net): The net types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [oauth2](https://pocketone.dev/docs/reference/javascript/pocketbase/oauth2): The oauth2 types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [os](https://pocketone.dev/docs/reference/javascript/pocketbase/os): The os types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [ozzo_validation](https://pocketone.dev/docs/reference/javascript/pocketbase/ozzo_validation): The ozzo_validation types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [slog](https://pocketone.dev/docs/reference/javascript/pocketbase/slog): The slog types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [sql](https://pocketone.dev/docs/reference/javascript/pocketbase/sql): The sql types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [sync](https://pocketone.dev/docs/reference/javascript/pocketbase/sync): The sync types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [syntax](https://pocketone.dev/docs/reference/javascript/pocketbase/syntax): The syntax types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [syscall](https://pocketone.dev/docs/reference/javascript/pocketbase/syscall): The syscall types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [textproto](https://pocketone.dev/docs/reference/javascript/pocketbase/textproto): The textproto types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [time](https://pocketone.dev/docs/reference/javascript/pocketbase/time): The time types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+- [url](https://pocketone.dev/docs/reference/javascript/pocketbase/url): The url types PocketOne's JS reaches through $app, the other globals and hook events: each with its members, signatures and linked types.
+
+## JavaScript API: Extensions
+
+- [API Tokens](https://pocketone.dev/docs/reference/javascript/api-tokens): Every function and type API Tokens adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+- [Bulk Mail](https://pocketone.dev/docs/reference/javascript/bulkmail): Every function and type Bulk Mail adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+- [Key-Value Store](https://pocketone.dev/docs/reference/javascript/kv): Every function and type Key-Value Store adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+- [LLM](https://pocketone.dev/docs/reference/javascript/llm): Every function and type LLM adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+- [MCP](https://pocketone.dev/docs/reference/javascript/mcp): Every function and type MCP adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+- [Pages](https://pocketone.dev/docs/reference/javascript/pages): Every function and type Pages adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+- [WASM](https://pocketone.dev/docs/reference/javascript/wasm): Every function and type WASM adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+- [Contract hooks](https://pocketone.dev/docs/reference/javascript/contracts): Every function and type Contract hooks adds to pb_hooks and page code: signatures, parameters, what each returns, and examples. Generated from its TypeScript declarations.
+
+## LLM: How it works
+
+- [Search and RAG](https://pocketone.dev/docs/extensions/llm/guides/search): Retrieval-augmented generation (RAG) and hybrid search over your own content: knowledge bases (buckets) filled from files, web pages, Git repositories and collections, and enrich to ground any $llm call in them.
+- [Limits](https://pocketone.dev/docs/extensions/llm/guides/limits): Cap what your app spends on models: limits in Settings → LLM for the whole app, each user, each guest and all guests together, by dollars, tokens or calls, per UTC day or month.
+- [Users and guests](https://pocketone.dev/docs/extensions/llm/guides/users-and-guests): $llm.for(ctx) counts a page's model calls for its signed-in user or its guest, so per-user and per-guest limits apply; how guests are told apart, and how to handle a refused call.
+- [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend): Every model call is recorded: $llm.ledger tells you what's left of each limit, what a user or guest has spent, and where the money goes, by model, kind, person or day.
+
 ## LLM: Guides
 
 - [Structured answers](https://pocketone.dev/docs/extensions/llm/guides/structured): Give $llm.text a JSON schema and get back data you can store.
 - [Streaming answers](https://pocketone.dev/docs/extensions/llm/guides/streaming): Show an answer as the model writes it: $llm.text.streamAsync in a page, forwarded to the browser with ctx.res.sse().
 - [Pictures, speech and music](https://pocketone.dev/docs/extensions/llm/guides/media): Generate pictures, narration, music and video with $llm and save them on your records as files.
 - [Conversations](https://pocketone.dev/docs/extensions/llm/guides/conversations): Chats that remember: send the conversation with each call, or let LLM Chat store it, summarize it and send it for you.
-- [Search and RAG](https://pocketone.dev/docs/extensions/llm/guides/search): Retrieval-augmented generation (RAG) and hybrid search over your own content: knowledge bases (buckets) filled from files, web pages, Git repositories and collections, and enrich to ground any $llm call in them.
-- [Limits](https://pocketone.dev/docs/extensions/llm/guides/limits): Cap what your app spends on models: limits in Settings → LLM for the whole app, each user, each guest and all guests together, by dollars, tokens or calls, per UTC day or month.
-- [Whom a call is for](https://pocketone.dev/docs/extensions/llm/guides/whom): $llm.for(ctx) counts a page's model calls for its signed-in user or its guest, so per-user and per-guest limits apply; how guests are told apart, and how to handle a refused call.
-- [Spend and the ledger](https://pocketone.dev/docs/extensions/llm/guides/spend): Every model call is a row in _llm_calls: what it was, whom it was for and what it cost. Read spend per user or model, and sell credits from a hook.
+- [Custom limits](https://pocketone.dev/docs/extensions/llm/guides/custom-limits): Your own limits in code: $llm.onCall runs before every model call and can change it or refuse it, $llm.onCallDone runs after with what it cost. Plan tiers, credits, a model per plan and team buckets.
 
 ## Pages: Introduction
 
@@ -252,12 +441,20 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 ## Pages: Guides
 
 - [Authentication](https://pocketone.dev/docs/extensions/pages/authentication): Sign users in and out with the auth plugin - passwords, one-time passwords, OAuth2 and anonymous sessions.
-- [HTMX Integration](https://pocketone.dev/docs/extensions/pages/htmx): Use HTMX with Pages: route organization, HTML fragments without layouts, shared partials, forms, and realtime updates.
 - [Realtime Events](https://pocketone.dev/docs/extensions/pages/realtime): Send realtime messages from pages with the realtime plugin, and receive them in the browser with the PocketBase JS SDK.
-- [Custom Domains on Fly+Cloudflare](https://pocketone.dev/docs/extensions/pages/speedruns/custom-domain-fly-cloudflare): Step-by-step process to configure DNS records, SSL certificates, and domain verification between Fly.io and Cloudflare. Includes specific settings for A/AAAA records, CNAME verification, and SSL/TLS encryption modes.
-- [Google OAuth2](https://pocketone.dev/docs/extensions/pages/speedruns/google-oauth2): Set up Google OAuth2 sign-in for a PocketOne app with the auth plugin.
-- [Outgoing Email with Amazon SES](https://pocketone.dev/docs/extensions/pages/speedruns/ses): Step-by-step configuration of AWS Simple Email Service (SES) with Google Suite, including DNS records, DKIM setup, SMTP credentials, and PocketBase integration for production email delivery.
 - [Setting up a new email domain in Google Suite](https://pocketone.dev/docs/extensions/pages/speedruns/gs-gmail): Complete walkthrough for configuring email domains in Google Suite, including domain verification, Gmail activation, catch-all email setup, MX record configuration, and sender account integration.
+
+## Starter kits: Kits
+
+- [Ask](https://pocketone.dev/docs/starters/ask): Ask your docs a question and get a short answer with links to the pages it came from.
+- [Auth](https://pocketone.dev/docs/starters/auth): Multi-page app (MPA) auth with the built-in `auth` plugin: register, password, anonymous, OTP and OAuth2 login, logout, email verification (with a resend page), password reset by email, email change with confirmation, and a protected `/account` section (`account/+middleware.ts`).
+- [DaisyUI](https://pocketone.dev/docs/starters/daisyui): A layout with a responsive navbar and drawer, built with [Tailwind CSS](https://tailwindcss.com/) and [DaisyUI](https://daisyui.com/) (cupcake theme).
+- [DaisyUI docs](https://pocketone.dev/docs/starters/daisyui-docs): A docs site built from Markdown pages, styled with [Tailwind CSS](https://tailwindcss.com/) and [DaisyUI](https://daisyui.com/).
+- [Datastar](https://pocketone.dev/docs/starters/datastar): A realtime chat with rooms and a live counter, built with [Datastar](https://data-star.dev/) and the Datastar add-on (`_private/datastar.js`, listed as `'datastar'`) and the built-in `realtime` plugin.
+- [htmx](https://pocketone.dev/docs/starters/htmx): A realtime demo with [htmx](https://htmx.org/) and the built-in `realtime` plugin.
+- [Minimal](https://pocketone.dev/docs/starters/minimal): A single `index.ets` page: a Tailwind (CDN) splash screen with no layout, no config and no build step.
+- [MVP.css](https://pocketone.dev/docs/starters/mvp): One page styled with [MVP.css](https://andybrewer.github.io/mvp/): classless CSS that makes plain semantic HTML look good, for a minimal, responsive, mobile-friendly site with no build step.
+- [TSX](https://pocketone.dev/docs/starters/tsx): Server-rendered components: a `+layout.tsx`, an `index.tsx` page built from a `_private/Feature.tsx` component, and a `+page.ts` that loads the page's data.
 
 ## WASM: Languages
 
@@ -290,5 +487,18 @@ Every page below in one file: https://pocketone.dev/llms-full.txt
 
 - [PocketBase compatibility](https://pocketone.dev/docs/compatibility): Live results of PocketBase's own test suite, unmodified, run against PocketOne's core on every core change and daily.
 - [Bedtime Story](https://pocketone.dev/docs/examples/bedtime-story): One topic told slowly and in depth, read aloud with pictures and music - the six steps, the player, the guards and the tuning screen in the dashboard.
-- [Docs Chat](https://pocketone.dev/docs/examples/docs-chat): A chat about PocketOne and PocketBase that answers from both sets of docs, streams its answer and shows what it cost - how it's built, file by file.
-- [Starters](https://pocketone.dev/docs/examples/starters): The Pages starter kits - minimal, mvp, auth, daisyui, daisyui-docs, htmx, datastar and tsx - what each shows, how it's built and how to start an app from one.
+- [New in PocketOne](https://pocketone.dev/docs/features): Everything PocketOne adds to PocketBase, side by side with what PocketBase gives you. All built into the pocketone binary.
+- [Pages: sites in TSX, TypeScript or EJS](https://pocketone.dev/docs/features/sites): Server-rendered pages in TSX, JSX, TypeScript, EJS or Markdown, straight from a pb_pages folder next to your data. esbuild is built in, so there's no Node, no npm install and no build step.
+- [Advanced installation](https://pocketone.dev/docs/guides/advanced-installation): Install PocketOne off the usual path - the install script's settings, Windows without Scoop, a release zip, or building it from source.
+- [Authentication API](https://pocketone.dev/docs/rest/authentication): Sign in to an auth collection over HTTP with a password, a one-time code or OAuth2, refresh tokens, verify emails, reset passwords, change emails and impersonate users.
+- [Backups API](https://pocketone.dev/docs/rest/backups): Make, list, download, upload, delete and restore backups of the app's pb_data over HTTP - for superusers.
+- [Batch API](https://pocketone.dev/docs/rest/batch): Send several record creates, updates and deletes in one request, run in one transaction - all of them happen, or none.
+- [Collections API](https://pocketone.dev/docs/rest/collections): Create, change, delete and import collections over HTTP - the endpoints the dashboard uses, for superusers.
+- [Crons API](https://pocketone.dev/docs/rest/crons): List the app's scheduled jobs and run one now - for superusers.
+- [Files API](https://pocketone.dev/docs/rest/files): Download a record's files and image thumbnails, and get short-lived tokens for protected files.
+- [Health API](https://pocketone.dev/docs/rest/health): Check whether the app is up, for load balancers, uptime monitors and deploy scripts.
+- [Logs API](https://pocketone.dev/docs/rest/logs): List, filter and read the app's request and app logs, and count them by hour - for superusers.
+- [Realtime API](https://pocketone.dev/docs/rest/realtime): Subscribe to record changes over server-sent events - connect, choose collections or single records, pass a filter, and get each create, update and delete as it happens.
+- [Records API](https://pocketone.dev/docs/rest/records): List, view, create, update and delete a collection's records over HTTP, with filters, sorting, paging, expanded relations, field selection and file uploads.
+- [Settings API](https://pocketone.dev/docs/rest/settings): Read and change the app's settings over HTTP - application, mail, files storage, backups, rate limits, logs and batch - and send test emails and S3 checks. For superusers.
+- [SQL API](https://pocketone.dev/docs/rest/sql): Run a SQL statement against the app's database over HTTP and get columns and rows back - for superusers.

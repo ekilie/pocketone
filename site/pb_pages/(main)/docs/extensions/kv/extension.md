@@ -77,6 +77,10 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 | [set](/docs/contracts/kv/v1#set) | `pocketone remote kv set --name <value> --value <json>` | `POST /api/_c/kv/v1/set` | `kv_set` |
 | [delete](/docs/contracts/kv/v1#delete) | `pocketone remote kv delete --name <value>` | `POST /api/_c/kv/v1/delete` | `kv_delete` |
 
+### JavaScript API
+
+What it adds to `pb_hooks` and page code: [Key-Value Store JavaScript API](/docs/reference/javascript/kv).
+
 ## Integrations
 
 | Extension | How they fit |

@@ -3,7 +3,7 @@ owners: ["@benallfree"]
 version: 0.1.2
 title: "Pages"
 group: binary
-summary: "Server-rendered pages from a pb_pages folder (formerly PocketPages)."
+summary: "Server-rendered pages from a pb_pages folder."
 ---
 
 # Pages
@@ -13,7 +13,7 @@ summary: "Server-rendered pages from a pb_pages folder (formerly PocketPages)."
 Server-rendered pages from a `pb_pages` folder, next to your `pb_data`. Each file becomes a route: `.ets` templates
 (EJS tags holding TypeScript) or [TSX](docs/jsx.md) components, Markdown pages, layouts, `.ts` middleware and API
 routes, plus static files. Every file type is listed in [File types](docs/file-types.md). Page code runs in your app's JS VM, so it
-can use your data directly. This is Pages, formerly the npm PocketPages package.
+can use your data directly. Coming from the npm PocketPages package? See [Moving from PocketPages 0.x](docs/moving-from-0x.md).
 
 ## Install
 
@@ -162,10 +162,6 @@ isolate runtime ([Pocker](../pocker/README.md)), where instances are isolates in
   [multiinstance_test.go](multiinstance/multiinstance_test.go).
 - An instance turns pages off in its settings with `extensions: { pages: { enabled: false } }`.
 
-Measured on the earlier goja engine (same machine as [Speed](#speed), docs kit; not yet re-measured on jsvm): each
-awake instance added about **2.3 MB** (50 instances: 41 MB idle to 155 MB), and one instance under pocker served about
-**4,000 requests/s** (p50 5.6 ms, p99 80 ms at 50 concurrent).
-
 To try it: copy sites into `multiinstance/example/pb_root/<name>.localhost/pb_pages`, run
 `go run ./multiinstance/example`, and open `http://<name>.localhost:8791`.
 
@@ -251,7 +247,7 @@ bench/run.sh v1-docs 8804 /docs/overview "$(which pocketone)" /tmp/v1-docs
 - [SPEC.md](SPEC.md): the full Pages contract.
 - [fixtures/](fixtures/README.md): the request test cases (`go test ./...` runs them all).
 - [starters/](starters): the starter kits. [addons/](addons/README.md): JS add-ons such as Datastar.
-- [docs/](docs/_private/toc.md): the Pages docs, as pages (formerly pocketpages.dev), shown on
+- [docs/](docs/_private/toc.md): the Pages docs, as pages, shown on
   pocketone.dev under this page. [blog/](blog): the Pages blog posts.
 
 ## License

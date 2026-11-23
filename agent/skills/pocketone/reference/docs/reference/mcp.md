@@ -98,6 +98,17 @@ A PocketOne app serves MCP at `/mcp` ([MCP](https://pocketone.dev/docs/extension
 | `llm_image_edit` | Changes the pictures it's given as the prompt says. |  | `llm` | `GenerateInput` (json), `images` (json) |
 | `llm_image_models` | Lists the image models of every provider in Settings → LLM. | yes | `llm:read` | `provider` (string) |
 
+## llm.ledger/v1
+
+[Contract page](https://pocketone.dev/docs/contracts/llm.ledger/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.
+
+| Tool | What it does | Reads only | Token scope | Arguments |
+|---|---|---|---|---|
+| `llm_ledger_remaining` | Is, for each limit in Settings → LLM that counts the subject's calls, how much is used and left in its current window, the tightest first. | yes | public | `subject` (string) |
+| `llm_ledger_spent` | Is what the subject's calls used in a window. | yes | public | `subject` (string), `window` (string), `since` (string), `until` (string), `kind` (string), `model` (string) |
+| `llm_ledger_summary` | Is what calls used, grouped by model, kind, subject or day. | yes | `llm:read` | `by` (string), `window` (string), `since` (string), `until` (string), `subject` (string), `kind` (string), `model` (string), `limit` (int) |
+| `llm_ledger_calls` | Lists the ledger's rows, newest first. | yes | `llm:read` | `window` (string), `since` (string), `until` (string), `subject` (string), `kind` (string), `model` (string), `status` (string), `limit` (int), `offset` (int) |
+
 ## llm.music/v1
 
 [Contract page](https://pocketone.dev/docs/contracts/llm.music/v1). Answered by [LLM](https://pocketone.dev/docs/extensions/llm/extension) in the standard set.

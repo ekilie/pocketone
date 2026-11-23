@@ -1,5 +1,5 @@
 // Command pocketbase-docs builds PocketBase's documentation (pocketbase.io/docs) as Markdown for PocketOne's Agent
-// Skill and Docs Chat. It checks out PocketOne's mirror of the PocketBase site (github.com/pocketonehq/pocketbase-site)
+// Skill. It checks out PocketOne's mirror of the PocketBase site (github.com/pocketonehq/pocketbase-site)
 // at the commit in PIN, builds the site (npm ci, vite build: SvelteKit's static adapter writes every docs page as
 // build/docs/<page>/index.html, at its pocketbase.io URL), and converts each page's article to Markdown:
 //

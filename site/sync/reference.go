@@ -20,6 +20,7 @@ type reference struct {
 	Global    []flagRef     `json:"global"`
 	Commands  []commandRef  `json:"commands"`
 	Contracts []contractRef `json:"contracts"`
+	JS        []jsRef       `json:"js"`
 }
 
 type flagRef struct {
@@ -216,7 +217,7 @@ func contractSurfaces(r *reference, id string) string {
 		fmt.Fprintf(&b, "Its own HTTP API under `%s/`, described above. It has no generated commands or MCP tools. [Remote CLI](/docs/features/remote) explains how PocketOne apps are managed from afar.\n\n", c.Prefix)
 		return b.String()
 	}
-	b.WriteString("Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](/docs/features/remote), or the full [CLI](/docs/reference/cli), [REST](/docs/reference/rest) and [MCP](/docs/reference/mcp) references.\n\n")
+	b.WriteString("Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](/docs/features/remote), or the full [CLI](/docs/reference/cli), [Extension APIs](/docs/extensions/apis) and [MCP](/docs/reference/mcp) references.\n\n")
 	for _, op := range c.Ops {
 		fmt.Fprintf(&b, "### %s\n\n", op.Name)
 		if op.Desc != "" {
@@ -333,6 +334,7 @@ func extensionSurfaces(m *manifest, p *extension) string {
 		}
 		b.WriteString("\n")
 	}
+	b.WriteString(jsSurface(m, p.Name))
 	if b.Len() == 0 {
 		return ""
 	}
@@ -417,8 +419,8 @@ func cliReference(m *manifest) string {
 func restReference(m *manifest) string {
 	r := m.ref
 	var b strings.Builder
-	b.WriteString(refFrontMatter("REST reference", "Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input."))
-	b.WriteString("# REST reference\n\nEvery contract API a PocketOne app with its [standard extensions](/docs/extensions/standard) answers, under `/api/_c/<contract>/`. PocketBase's own API (records, collections, auth, files, settings…) is unchanged; see the [PocketBase docs](/docs/pocketbase).\n\n")
+	b.WriteString(refFrontMatter("Extension APIs", "Every contract API of a PocketOne app with its standard extensions: method, path, token scope and input."))
+	b.WriteString("# Extension APIs\n\nEvery contract API a PocketOne app with its [standard extensions](/docs/extensions/standard) answers, under `/api/_c/<contract>/`. The core API (records, collections, auth, files, settings…) is the [REST API](/docs/rest).\n\n")
 	b.WriteString("- **Auth:** an `Authorization` header with a superuser's auth token or an [API token](/docs/extensions/api-tokens). Each operation needs its token scope; a superuser's own auth token passes every scope.\n")
 	b.WriteString("- **Discovery:** `GET /api/_c/remote/v1` says who you are and lists every contract the app offers ([remote/v1](/docs/contracts/remote/v1)).\n")
 	b.WriteString("- **Input:** a JSON body for `POST`, query parameters for `GET`. **Answers** are JSON; streams are server-sent events.\n")

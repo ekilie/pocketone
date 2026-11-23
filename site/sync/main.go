@@ -53,11 +53,12 @@ type extension struct {
 	Name, Title, Group, Summary string
 	Link                        string // no README: point here (repo path) instead
 	guides                      []guide
-	site                        []string // ext/<name>/docs, paths relative to it (extsite.go)
-	blog                        []string // ext/<name>/blog/*.md, file names
-	nav                         string   // the site's nav sections, ready for the docs nav
-	landing                     bool     // it has docs (ext/<name>/docs/index.md): they're /docs/extensions/<name>, the README moves under it
-	section, docsTitle          string   // the main nav section that links its docs, and the link's text (docs/index.md's front matter)
+	site                        []string  // ext/<name>/docs, paths relative to it (extsite.go)
+	blog                        []string  // ext/<name>/blog/*.md, file names
+	nav                         string    // the site's nav sections, ready for the docs nav
+	landing                     bool      // it has docs (ext/<name>/docs/index.md): they're /docs/extensions/<name>, the README moves under it
+	section, docsTitle          string    // the main nav section that links its docs, and the link's text (docs/index.md's front matter)
+	navLinks                    []navLink // other docs pages the main nav also lists (their front matter `section:`), such as a guide under Guides
 }
 
 type guide struct {
@@ -267,6 +268,7 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	out := map[string]string{}
 	pages := map[string]string{"docs/extensions.md": "/docs/writing-an-extension"} // repo path -> site URL
 	pages["docs/contracts.md"] = "/docs/how-pocketone-fits-together"
+	pages["docs/extensions-overview.md"] = "/docs/extensions"
 	pages["ext/contracts/README.md"] = "/docs/contracts"
 	pages["ext/contracts"] = "/docs/contracts"
 	for _, c := range m.contracts {
@@ -326,8 +328,39 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	}
 	out[configOut] = configReference(m, secs)
 	out[referenceOut+"/cli.md"] = cliReference(m)
-	out[referenceOut+"/rest.md"] = restReference(m)
+	out[extensionsOut+"/apis.md"] = restReference(m)
 	out[referenceOut+"/mcp.md"] = mcpReference(m)
+	gopkgs, pbpkgs := goRefPackages(root), pbGoPackages(root)
+	allGo := append(append([]goRefPackage{}, gopkgs...), pbpkgs...)
+	pbPages, pbNS := pbJSPages(root, pbpkgs)
+	for u, page := range pbPages {
+		out[referenceOut+strings.TrimPrefix(u, "/docs/reference")+".md"] = page
+	}
+	out[referenceOut+"/javascript.md"] = jsIndex(m, pbNS, pbpkgs)
+	if err := fieldsInPage(root, out); err != nil {
+		return nil, err
+	}
+	if err := starterPages(root, out); err != nil {
+		return nil, err
+	}
+	if err := checkScreenshots(root, out); err != nil {
+		return nil, err
+	}
+	if err := checkRESTCoverage(root); err != nil {
+		return nil, err
+	}
+	for _, r := range jsRefs(m) {
+		out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(m, r, allGo)
+	}
+	out[path.Dir(contractsNav)+"/toc-javascript.md"] = jsRefNav(m, pbNS, pbpkgs)
+	out[path.Dir(contractsNav)+"/toc-go.md"] = goRefNav(gopkgs, pbpkgs)
+	out[referenceOut+"/go.md"] = goRefIndex(gopkgs, pbpkgs)
+	for _, p := range allGo {
+		for u, page := range p.Extra {
+			out[referenceOut+strings.TrimPrefix(u, "/docs/reference")+".md"] = page
+		}
+		out[referenceOut+strings.TrimPrefix(p.URL, "/docs/reference")+".md"] = p.Page
+	}
 
 	for _, c := range m.contracts {
 		body, title, err := rw.page(c.Src, "")
@@ -353,7 +386,13 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		return nil, err
 	}
 	out[authorsOut] = frontMatter(title, "How to write a PocketOne extension.", "docs/extensions.md") + body
-	out[extensionsOut+"/index.md"] = index(m)
+	// /docs/extensions: what extensions are and how they work (docs/extensions-overview.md); the catalogue is under it
+	if body, title, err := rw.page("docs/extensions-overview.md", ""); err == nil {
+		out[extensionsOut+"/index.md"] = frontMatter(title, "What a PocketOne extension is and how extensions work: kinds, settings, contracts, extension APIs and JavaScript.", "docs/extensions-overview.md") + body
+	} else {
+		return nil, err
+	}
+	out[extensionsOut+"/all.md"] = index(m)
 
 	sectionNavs(m, out)
 	siteNavs(m, out)
@@ -384,8 +423,8 @@ func link(p *extension) string {
 
 func index(m *manifest) string {
 	var b strings.Builder
-	b.WriteString(frontMatter("Extensions", "Every extension in PocketOne, grouped by what it's for.", ""))
-	b.WriteString("# Extensions\n\nEach extension is a Go module in [`ext/`](" + repoURL + "/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing an extension](/docs/writing-an-extension).\n")
+	b.WriteString(frontMatter("All extensions", "Every extension in PocketOne, grouped by what it's for.", ""))
+	b.WriteString("# All extensions\n\nEach extension is a Go module in [`ext/`](" + repoURL + "/tree/main/ext) with its own README; the pages here are those READMEs. Want to add one? Read [Writing an extension](/docs/writing-an-extension).\n")
 	for _, g := range m.Groups {
 		fmt.Fprintf(&b, "\n## %s\n\n%s\n\n| Extension | What it does |\n|---|---|\n", g.Title, g.Intro)
 		for _, p := range m.Extensions {
@@ -417,7 +456,7 @@ func sectionNavs(m *manifest, out map[string]string) {
 
 	b.Reset()
 	b.WriteString("<!-- Generated by site/sync from site/extensions.json and each extension's README front matter. -->\n\n# Extensions\n\n" + backLink +
-		"- [All extensions](/docs/extensions)\n")
+		"- [Overview](/docs/extensions)\n- [All extensions](/docs/extensions/all)\n- [Extension APIs](/docs/extensions/apis)\n- [Contracts](/docs/contracts)\n- [Writing an extension](/docs/writing-an-extension)\n")
 	for _, g := range m.Groups {
 		fmt.Fprintf(&b, "\n# %s\n\n", g.Title)
 		for _, p := range m.Extensions {

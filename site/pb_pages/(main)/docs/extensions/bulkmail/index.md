@@ -171,6 +171,10 @@ Generated from the `pocketone` binary and the contracts this extension provides.
 | [unsubscribe_page](/docs/contracts/mail.suppression/v1#unsubscribe_page) | – | `GET /api/_c/mail.suppression/v1/unsubscribe` | – |
 | [unsubscribe](/docs/contracts/mail.suppression/v1#unsubscribe) | – | `POST /api/_c/mail.suppression/v1/unsubscribe` | – |
 
+### JavaScript API
+
+What it adds to `pb_hooks` and page code: [Bulk Mail JavaScript API](/docs/reference/javascript/bulkmail).
+
 ## Integrations
 
 ### Works with

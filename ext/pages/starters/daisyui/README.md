@@ -19,3 +19,14 @@ To change styles, rebuild the CSS while you edit (Tailwind scans `pb_pages/**/*.
 npm i
 npm run dev:css
 ```
+
+## Files
+
+```
+pb_pages/
+  +layout.ets                    the navbar and drawer around every page
+  index.ets
+  app.css                        compiled Tailwind and DaisyUI
+```
+
+Live demo: [pocketpages-daisyui.pockethost.io](https://pocketpages-daisyui.pockethost.io).

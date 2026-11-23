@@ -52,7 +52,7 @@ token that isn't valid: return `Valid: false` and a reason.
 
 ## Commands and APIs
 
-Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](/docs/features/remote), or the full [CLI](/docs/reference/cli), [REST](/docs/reference/rest) and [MCP](/docs/reference/mcp) references.
+Every operation is a REST endpoint, a `pocketone` command and an MCP tool, all generated from the contract and behind the same token scope check and hooks. See [Remote CLI](/docs/features/remote), or the full [CLI](/docs/reference/cli), [Extension APIs](/docs/extensions/apis) and [MCP](/docs/reference/mcp) references.
 
 ### verify
 

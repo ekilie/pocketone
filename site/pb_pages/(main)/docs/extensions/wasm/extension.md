@@ -292,6 +292,14 @@ once with the defaults: fine for a cron job, an import or an admin action. A mod
 every request) is better in C, Rust, Zig or TinyGo (the same Go source, a module 15 times smaller), whose calls take a
 few milliseconds and under 1 MB.
 
+## Commands and APIs
+
+Generated from the `pocketone` binary and the contracts this extension provides.
+
+### JavaScript API
+
+What it adds to `pb_hooks` and page code: [WASM JavaScript API](/docs/reference/javascript/wasm).
+
 ## Integrations
 
 ### Works with
@@ -405,7 +413,7 @@ so `/wasm`-style pages and the wazero CLI can try it), built with the command in
 | [`summary/wat`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/wat), [`summary/llvm`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/summary/llvm) | WAT, LLVM IR | The C summary written by hand in two assembly languages, for fun: WebAssembly text calling WASI directly (1.8 KB), and LLVM IR built by clang with wasi-libc (3.8 KB). See [WAT](/docs/extensions/wasm/languages/wat) and [LLVM IR](/docs/extensions/wasm/languages/llvm). |
 | [`stats-tinygo`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/stats-tinygo) | TinyGo | State kept by the app: running statistics whose state the app stores in a record and passes in with each call ([Keeping state in JS](/docs/extensions/wasm/guides/state)). |
 | [`markdown`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/markdown), [`sanitize-html`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/sanitize-html), [`diff`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/diff), [`thumbnail`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/thumbnail), [`qrcode`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/qrcode), [`csv`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/csv) | Rust | Real libraries for real jobs (pulldown-cmark, ammonia, similar, image, qrcode, csv), each with page code in the [recipes](/docs/extensions/wasm/recipes). |
-| [`crypto`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/crypto) | Go | What an app used to run with `$os.exec`: AES-256-GCM. The key comes in with each call; the module can't keep it or send it anywhere. |
+| [`crypto`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/crypto) | Go | AES-256-GCM encryption, with no `$os.exec`. The key comes in with each call; the module can't keep it or send it anywhere. |
 | [`waflows`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/waflows) | Rust | What JS can't do: a WhatsApp Flows endpoint needs RSA-OAEP and AES-GCM with WhatsApp's key and IV. Your code keeps the JSON and HTTP; the module does only those two. |
 | [`edifact-orders-rust`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/edifact-orders-rust) | Rust | A real format with a real library (edifact-rs): an EDIFACT ORDERS message, as raw text, read into an order. |
 | [`order-xml`](https://github.com/pocketonehq/pocketone/tree/main/ext/wasm/example/order-xml) | Rust | The same order from XML (roxmltree), so one route takes either format and stores one shape. |

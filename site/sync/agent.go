@@ -95,7 +95,7 @@ func agentFiles(root string, out map[string]string) error {
 			// the skill gets only this part of the site, at paths relative to it (the landing page is docs/index.md)
 			sub := map[string]docsPage{}
 			for u, p := range pages {
-				if under(u, s.Within) {
+				if under(u, s.Within) && !underAny(u, pbRefPrefixes) {
 					rel := strings.TrimPrefix(strings.TrimPrefix(u, s.Within), "/")
 					if rel == "" {
 						rel = "index"
@@ -113,7 +113,7 @@ func agentFiles(root string, out map[string]string) error {
 		}
 		if s.Pick != nil {
 			for u, p := range pages {
-				if underAny(u, s.Pick) && !underAny(u, s.Skip) {
+				if underAny(u, s.Pick) && !underAny(u, s.Skip) && !underAny(u, pbRefPrefixes) {
 					out[s.SkillRef+"/docs/"+p.file] = p.body
 				}
 			}
@@ -155,7 +155,7 @@ func agentFiles(root string, out map[string]string) error {
 		}
 		sort.Strings(urls)
 		for _, u := range urls {
-			if !underAny(u, s.Skip) {
+			if !underAny(u, s.Skip) && !underAny(u, pbRefPrefixes) {
 				out[s.SkillRef+"/docs/"+pages[u].file] = pages[u].body
 			}
 		}
@@ -174,6 +174,9 @@ func agentFiles(root string, out map[string]string) error {
 		seen := map[string]bool{}
 		writePage := func(u string) {
 			p := pages[u]
+			if underAny(u, pbRefPrefixes) {
+				return // listed in llms.txt, too big for llms-full.txt
+			}
 			fmt.Fprintf(&full, "\n\n---\n\nSource: %s%s\n\n%s", s.URL, u, strings.TrimSpace(stripGenerated(p.body))+"\n")
 		}
 		for _, sec := range sections {
