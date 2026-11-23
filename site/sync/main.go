@@ -328,14 +328,17 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	out[referenceOut+"/cli.md"] = cliReference(m)
 	out[referenceOut+"/rest.md"] = restReference(m)
 	out[referenceOut+"/mcp.md"] = mcpReference(m)
+	gopkgs := goRefPackages(root)
 	if refs := jsRefs(m); len(refs) > 0 {
 		out[referenceOut+"/javascript.md"] = jsIndex(m)
 		for _, r := range refs {
-			if typedPages[r.Extension] {
-				out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(root, m, r)
-			} else {
-				out[referenceOut+"/javascript/"+r.Extension+".md"] = jsPage(m, r)
-			}
+			out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(m, r, gopkgs)
+		}
+	}
+	if len(gopkgs) > 0 {
+		out[referenceOut+"/go.md"] = goRefIndex(gopkgs)
+		for _, p := range gopkgs {
+			out[referenceOut+strings.TrimPrefix(goRefURL(p.Dir), "/docs/reference")+".md"] = p.Page
 		}
 	}
 
