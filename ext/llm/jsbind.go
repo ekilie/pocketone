@@ -102,7 +102,7 @@ func invoker[T any](app core.App, c *extkit.Contract[T], w *extkit.Wire[T]) func
 			return nil, llmc.ErrNotConfigured
 		}
 		for _, o := range w.Ops {
-			if o.Name != op || o.Out != extkit.OutJSON {
+			if (o.Name != op && o.Path != op) || o.Out != extkit.OutJSON { // by name ("follow") or path ("add-url")
 				continue
 			}
 			req := extkit.OpRequest{JSON: raw}
