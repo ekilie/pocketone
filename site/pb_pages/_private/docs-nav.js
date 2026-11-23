@@ -12,7 +12,7 @@
 // take effect until a restart. assets/docs.js decides the same way which links change the nav.
 //
 //   const docsNav = ctx.resolve('docs-nav')(ctx)
-//   docsNav.name  // '' for the main nav, 'contracts', 'extensions', 'examples', 'javascript', 'go', 'rest', or an extension's name (its docs)
+//   docsNav.name  // '' for the main nav, 'contracts', 'extensions', 'examples', 'javascript', 'go', 'rest', 'starters', or an extension's name (its docs)
 //   docsNav.toc   // the partial to include: 'toc' or 'toc-<name>'
 //   docsNav.names // every extension with docs of its own
 module.exports = (ctx) => {
@@ -33,5 +33,6 @@ module.exports = (ctx) => {
   else if (/^\/docs\/reference\/javascript(\/|$)/.test(path)) name = 'javascript'
   else if (/^\/docs\/reference\/go(\/|$)/.test(path)) name = 'go'
   else if (/^\/docs\/rest(\/|$)/.test(path)) name = 'rest'
+  else if (/^\/docs\/starters(\/|$)/.test(path)) name = 'starters'
   return { name, names, toc: name ? `toc-${name}` : 'toc' }
 }

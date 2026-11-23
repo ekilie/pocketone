@@ -366,10 +366,6 @@ func mainNav(root string, m *manifest) (string, error) {
 			owned[l.URL] = true
 		}
 	}
-	for _, l := range starterNavLinks(root) { // a link per starter kit
-		docs[l.Section] = append(docs[l.Section], l)
-		owned[l.URL] = true
-	}
 	// gone is a link to the page of an extension that no longer exists (a removed or renamed one): dropped too
 	gone := func(url string) bool { return extPageRe.MatchString(url) && !exists[url] }
 	var out []string

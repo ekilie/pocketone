@@ -6,19 +6,6 @@
 - [Coming from PocketBase](/docs/pocketbase)
 - [LLM skills for coding agents](/docs/agents)
 
-# Starter kits
-
-- [All starter kits](/docs/starters)
-- [Ask](/docs/starters/ask)
-- [Auth](/docs/starters/auth)
-- [DaisyUI](/docs/starters/daisyui)
-- [DaisyUI docs](/docs/starters/daisyui-docs)
-- [Datastar](/docs/starters/datastar)
-- [htmx](/docs/starters/htmx)
-- [Minimal](/docs/starters/minimal)
-- [MVP.css](/docs/starters/mvp)
-- [TSX](/docs/starters/tsx)
-
 # Database
 
 - [Collections and fields](/docs/collections)
@@ -64,6 +51,7 @@
 
 # How-to guides
 
+- [Starter kits](/docs/starters)
 - [Example apps](/docs/examples)
 - [Update pages live with htmx](/docs/extensions/pages/htmx)
 - [Use a custom domain](/docs/extensions/pages/speedruns/custom-domain-fly-cloudflare)
