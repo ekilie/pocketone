@@ -361,16 +361,18 @@ func zipDocs(data []byte) ([]docIn, error) {
 	if err != nil {
 		return nil, fmt.Errorf("not a zip file")
 	}
+	// macOS adds __MACOSX/ (resource forks) beside the files; it isn't content, and it would hide the shared top folder
+	junk := func(name string) bool { return strings.HasPrefix(name, "__MACOSX/") }
 	var names []string
 	for _, f := range zr.File {
-		if !f.FileInfo().IsDir() {
+		if !f.FileInfo().IsDir() && !junk(f.Name) {
 			names = append(names, f.Name)
 		}
 	}
 	top := commonTop(names)
 	var docs []docIn
 	for _, f := range zr.File {
-		if f.FileInfo().IsDir() {
+		if f.FileInfo().IsDir() || junk(f.Name) {
 			continue
 		}
 		p := strings.TrimPrefix(f.Name, top)

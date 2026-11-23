@@ -96,7 +96,7 @@ func (s *service) addDoc(b, src *core.Record, in docIn, o addOpts) (*core.Record
 	pieces := split(kind, in.text)
 	hashes := make([]string, len(pieces))
 	for i, p := range pieces {
-		hashes[i] = sha(embedText(name, p))
+		hashes[i] = sha(embedText(p))
 	}
 	model := s.knownModel()
 	reuse := s.vectorsByHash(model, hashes)

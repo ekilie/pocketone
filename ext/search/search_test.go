@@ -191,7 +191,7 @@ func TestAddEmbedSearch(t *testing.T) {
 	}
 	add(t, s, "other", "owl.md", "# Owl\n\nThe old owl watches the fox from the tower.")
 	drain(t, app)
-	if fe.embedded() != 4 || fe.models[0] != "p/cheap" || !strings.HasPrefix(fe.inputs[1], "lighthouse.md — Lighthouse › The fox\n\n") {
+	if fe.embedded() != 4 || fe.models[0] != "p/cheap" || !strings.HasPrefix(fe.inputs[1], "Lighthouse › The fox\n\n") {
 		t.Fatalf("embedded: %q with %q", fe.inputs, fe.models)
 	}
 	if st, _ := s.Status(ctx, extkit.Internal); st.Model != "p/cheap" || st.Chunks != 4 || st.Embedded != 4 {
@@ -329,7 +329,7 @@ func TestZip(t *testing.T) {
 	v1 := zipOf(t, map[string]string{
 		"repo/README.md": "# Readme\n\nHello fox.", "repo/src/main.go": "package main\n\nfunc main() {}\n",
 		"repo/notes.txt": "Old notes.", "repo/.git/config": "[core]", "repo/node_modules/x/index.js": "x",
-		"repo/package-lock.json": "{}", "repo/logo.png": "\x89PNG\x00\x01",
+		"repo/package-lock.json": "{}", "repo/logo.png": "\x89PNG\x00\x01", "__MACOSX/repo/._README.md": "\x00\x05junk",
 	})
 	src := upload(t, s, "kb", "repo.zip", "", v1)
 	if src.Kind != searchv1.KindZip || src.Documents != 3 || src.Hash == "" {
@@ -355,7 +355,12 @@ func TestZip(t *testing.T) {
 	}
 	drain(t, app)
 
+	// a loose file with the same content as a file in the zip is ready at once: nothing to embed
 	before := fe.embedded()
+	if src := add(t, s, "kb", "copy-of-readme.md", "# Readme\n\nHello fox and owl."); src.Pending != 0 {
+		t.Fatalf("the loose copy waits: %+v", src)
+	}
+
 	upload(t, s, "other", "repo.zip", "", v3) // same content, another bucket
 	drain(t, app)
 	if fe.embedded() != before {

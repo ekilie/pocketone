@@ -2,10 +2,12 @@ package search
 
 import (
 	"context"
+	"fmt"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"math"
+	"sync"
 	"time"
 
 	"ganigeorgiev.com/pocketbase/dbx"
@@ -19,6 +21,9 @@ import (
 // Embedding pace: chunks per request, and the least time between requests (Vultr allows 120 a minute).
 var (
 	BatchSize       = 64
+	Parallel        = 4 // requests at once
+	BatchChars      = 48000 // and at most this much text a request (about 12K tokens): big requests are slow
+	RequestTimeout  = 90 * time.Second
 	RequestInterval = 550 * time.Millisecond
 	retryWait       = 3 * time.Second
 	// background: false leaves queued documents for drain (tests).
@@ -69,28 +74,23 @@ func (s *service) drain(ctx context.Context) error {
 }
 
 type pendingChunk struct {
-	ID      string `db:"id"`
-	Heading string `db:"heading"`
-	Text    string `db:"text"`
+	ID       string `db:"id"`
+	Hash     string `db:"hash"`
+	Heading  string `db:"heading"`
+	Text     string `db:"text"`
+	Document string `db:"document"`
+	Bucket   string `db:"bucket"`
 }
 
-// embedNext embeds the oldest queued document; false when there's none.
+// embedNext embeds the next round: chunks without the model's vectors, from the documents waiting longest, across
+// documents (so a source of many small files fills each request), in up to Parallel requests at once of at most
+// BatchSize chunks and BatchChars of text each. False when nothing is waiting.
 //
 // It holds s.work only while it writes, never across a model call, so adding or removing documents (page code, on the
 // app's one JS VM) never waits for the network. A vector written for a chunk replaced meanwhile updates no row.
 func (s *service) embedNext(ctx context.Context) (bool, error) {
 	s.drainMu.Lock()
 	defer s.drainMu.Unlock()
-	docs, err := s.app.FindRecordsByFilter(DocumentsCollection, "status = {:q} || status = {:e}", "updated", 1, 0,
-		dbx.Params{"q": StatusQueued, "e": StatusEmbedding})
-	if err != nil || len(docs) == 0 {
-		return false, err
-	}
-	doc := docs[0]
-	b, err := s.app.FindRecordById(BucketsCollection, doc.GetString("bucket"))
-	if err != nil {
-		return true, s.fail(doc, "its bucket is gone")
-	}
 	model, err := s.currentModel(ctx)
 	if err != nil {
 		return false, nil // no embedding model yet: documents wait, and Status says why
@@ -99,80 +99,181 @@ func (s *service) embedNext(ctx context.Context) (bool, error) {
 	if !ok {
 		return false, nil
 	}
-	if err := s.setStatus(doc, StatusEmbedding, ""); err != nil {
+	stale := dbx.Or(dbx.HashExp{"c.vector": ""}, dbx.Not(dbx.HashExp{"c.model": model}))
+	var rows []pendingChunk
+	if err := s.app.DB().Select("c.id AS id", "c.hash AS hash", "c.heading AS heading", "c.text AS text",
+		"c.document AS document", "c.bucket AS bucket").
+		From(ChunksCollection+" c").InnerJoin(DocumentsCollection+" d", dbx.NewExp("d.id = c.document")).
+		Where(dbx.And(stale, dbx.In("d.status", StatusQueued, StatusEmbedding))).
+		OrderBy("d.updated", "d.id", "c.seq").Limit(int64(BatchSize*Parallel)).All(&rows); err != nil {
+		return false, err
+	}
+	if len(rows) == 0 {
+		return false, s.markDone(model)
+	}
+
+	// content embedded meanwhile (the same file added elsewhere) is reused; the rest is split into requests, a repeat
+	// going once
+	hashes := make([]string, len(rows))
+	for i, c := range rows {
+		hashes[i] = c.Hash
+	}
+	vecs := s.vectorsByHash(model, hashes)
+	type request struct {
+		in     embedv1.EmbedInput
+		hashes []string
+		chars  int
+		docs   map[string]bool
+	}
+	var reqs []*request
+	assigned := map[string]*request{}
+	var batch []pendingChunk // the chunks this round covers
+	for _, c := range rows {
+		if _, done := vecs[c.Hash]; done {
+			batch = append(batch, c)
+			continue
+		}
+		if r := assigned[c.Hash]; r != nil {
+			r.docs[c.Document] = true
+			batch = append(batch, c)
+			continue
+		}
+		text := embedText(piece{Heading: c.Heading, Text: c.Text})
+		var r *request
+		if n := len(reqs); n > 0 && len(reqs[n-1].hashes) < BatchSize && reqs[n-1].chars+len(text) <= BatchChars {
+			r = reqs[n-1]
+		} else if len(reqs) < Parallel {
+			r = &request{in: embedv1.EmbedInput{Model: model}, docs: map[string]bool{}}
+			reqs = append(reqs, r)
+		} else {
+			break // the rest wait for the next round
+		}
+		r.in.Input = append(r.in.Input, text)
+		r.hashes = append(r.hashes, c.Hash)
+		r.chars += len(text)
+		r.docs[c.Document] = true
+		assigned[c.Hash] = r
+		batch = append(batch, c)
+	}
+	docs := map[string]int{} // document -> its chunks this round
+	for _, c := range batch {
+		docs[c.Document]++
+		_, _ = s.app.DB().Update(DocumentsCollection, dbx.Params{"status": StatusEmbedding}, dbx.HashExp{"id": c.Document, "status": StatusQueued}).Execute()
+	}
+
+	type answer struct {
+		vecs [][]float64
+		cost int64
+		err  error
+	}
+	answers := make([]answer, len(reqs))
+	var wg sync.WaitGroup
+	for i, r := range reqs {
+		wg.Add(1)
+		go func(i int, r *request) {
+			defer wg.Done()
+			// spaced out, to stay under the provider's request rate
+			select {
+			case <-ctx.Done():
+				answers[i].err = ctx.Err()
+				return
+			case <-time.After(time.Duration(i) * RequestInterval):
+			}
+			res, err := s.embedOnce(ctx, embed, r.in)
+			if err == nil && len(res.Vectors) != len(r.in.Input) {
+				err = errors.New("the model returned a different number of vectors")
+			}
+			answers[i] = answer{vecs: res.Vectors, cost: res.Usage.CostMicroUSD, err: err}
+		}(i, r)
+	}
+	wg.Wait()
+	if ctx.Err() != nil {
+		return false, ctx.Err() // shutting down: stays queued
+	}
+	if len(reqs) > 0 {
+		if wait := time.Duration(len(reqs))*RequestInterval - time.Since(s.lastRequest); wait > 0 {
+			time.Sleep(wait)
+		}
+		s.lastRequest = time.Now()
+	}
+	var cost int64
+	failed := map[string]string{} // document -> why its request failed
+	for i, r := range reqs {
+		if answers[i].err != nil {
+			for d := range r.docs {
+				failed[d] = errText(answers[i].err)
+			}
+			continue
+		}
+		for j, h := range r.hashes {
+			vecs[h] = encodeVector(answers[i].vecs[j])
+		}
+		cost += answers[i].cost
+	}
+
+	s.work.Lock()
+	err = s.app.RunInTransaction(func(tx core.App) error {
+		for _, c := range batch {
+			v, ok := vecs[c.Hash]
+			if !ok {
+				continue
+			}
+			if _, err := tx.DB().Update(ChunksCollection, dbx.Params{"vector": v, "model": model}, dbx.HashExp{"id": c.ID}).Execute(); err != nil {
+				return err
+			}
+		}
+		// the round's cost, shared by the documents in it, by chunks
+		for id, n := range docs {
+			share := cost * int64(n) / int64(len(batch))
+			if _, err := tx.DB().NewQuery("UPDATE " + DocumentsCollection + " SET cost = cost + {:c} WHERE id = {:id}").
+				Bind(dbx.Params{"c": share, "id": id}).Execute(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	s.work.Unlock()
+	if err != nil {
 		return true, err
 	}
-	name := doc.GetString("name")
-	for {
-		var batch []pendingChunk
-		if err := s.app.DB().Select("id", "heading", "text").From(ChunksCollection).
-			Where(dbx.And(dbx.HashExp{"document": doc.Id}, dbx.Or(dbx.HashExp{"vector": ""}, dbx.Not(dbx.HashExp{"model": model})))).
-			OrderBy("seq").Limit(int64(BatchSize)).All(&batch); err != nil {
-			return true, err
+	for id, why := range failed {
+		if d, err := s.app.FindRecordById(DocumentsCollection, id); err == nil {
+			_ = s.fail(d, why)
 		}
-		if len(batch) == 0 {
-			break
-		}
-		in := embedv1.EmbedInput{Model: model}
-		for _, c := range batch {
-			in.Input = append(in.Input, embedText(name, piece{Heading: c.Heading, Text: c.Text}))
-		}
-		res, err := s.embedPaced(ctx, embed, in)
-		if err != nil {
-			if ctx.Err() != nil {
-				return false, ctx.Err() // shutting down: stays queued
-			}
-			return true, s.fail(doc, errText(err))
-		}
-		if len(res.Vectors) != len(batch) {
-			return true, s.fail(doc, "the model returned a different number of vectors")
-		}
-		s.work.Lock()
-		err = s.app.RunInTransaction(func(tx core.App) error {
-			for i, c := range batch {
-				if _, err := tx.DB().Update(ChunksCollection, dbx.Params{"vector": encodeVector(res.Vectors[i]), "model": model}, dbx.HashExp{"id": c.ID}).Execute(); err != nil {
-					return err
-				}
-			}
-			_, err := tx.DB().NewQuery("UPDATE " + DocumentsCollection + " SET cost = cost + {:c} WHERE id = {:id}").
-				Bind(dbx.Params{"c": res.Usage.CostMicroUSD, "id": doc.Id}).Execute()
-			return err
-		})
-		s.work.Unlock()
-		if err != nil {
-			return true, err
-		}
-		s.bump(b.Id)
 	}
-	// ready unless the document was replaced meanwhile with chunks still to embed (then it's queued again)
-	s.work.Lock()
-	defer s.work.Unlock()
-	var left int
-	_ = s.app.DB().Select("count(*)").From(ChunksCollection).
-		Where(dbx.And(dbx.HashExp{"document": doc.Id}, dbx.Or(dbx.HashExp{"vector": ""}, dbx.Not(dbx.HashExp{"model": model})))).Row(&left)
-	if left > 0 {
-		return true, nil
+	buckets := map[string]bool{}
+	for _, c := range batch {
+		buckets[c.Bucket] = true
 	}
-	_, err = s.app.DB().Update(DocumentsCollection, dbx.Params{"status": StatusReady, "error": ""},
-		dbx.HashExp{"id": doc.Id, "status": StatusEmbedding}).Execute()
-	return true, err
+	for b := range buckets {
+		s.bump(b)
+	}
+	return true, s.markDone(model)
 }
 
-// embedPaced calls the model no faster than RequestInterval, retrying once after a failure.
-func (s *service) embedPaced(ctx context.Context, embed embedv1.Embed, in embedv1.EmbedInput) (embedv1.Result, error) {
+// markDone marks ready every waiting document whose chunks all have the model's vectors.
+func (s *service) markDone(model string) error {
+	s.work.Lock()
+	defer s.work.Unlock()
+	_, err := s.app.DB().NewQuery("UPDATE " + DocumentsCollection + " SET status = 'ready', error = '' " +
+		"WHERE status IN ('queued', 'embedding') AND NOT EXISTS (SELECT 1 FROM " + ChunksCollection + " c " +
+		"WHERE c.document = " + DocumentsCollection + ".id AND (c.vector = '' OR c.model != {:m}))").
+		Bind(dbx.Params{"m": model}).Execute()
+	return err
+}
+
+// embedOnce calls the model with a time limit, retrying once after a failure a retry might fix.
+func (s *service) embedOnce(ctx context.Context, embed embedv1.Embed, in embedv1.EmbedInput) (embedv1.Result, error) {
 	var res embedv1.Result
 	var err error
 	for attempt := 0; attempt < 2; attempt++ {
-		if wait := RequestInterval - time.Since(s.lastRequest); wait > 0 {
-			select {
-			case <-ctx.Done():
-				return res, ctx.Err()
-			case <-time.After(wait):
-			}
+		reqCtx, cancel := context.WithTimeout(ctx, RequestTimeout)
+		res, err = embed.Embed(reqCtx, extkit.Internal, in)
+		if err != nil && ctx.Err() == nil && errors.Is(reqCtx.Err(), context.DeadlineExceeded) {
+			err = fmt.Errorf("the embedding model didn't answer in %s", RequestTimeout)
 		}
-		s.lastRequest = time.Now()
-		res, err = embed.Embed(ctx, extkit.Internal, in)
-		if err == nil || isPermanent(err) {
+		cancel()
+		if err == nil || isPermanent(err) || ctx.Err() != nil {
 			return res, err
 		}
 		select {

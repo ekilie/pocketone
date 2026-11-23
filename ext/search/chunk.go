@@ -240,12 +240,12 @@ func cutLong(paras []para) []para {
 	return out
 }
 
-// embedText is what's embedded for a chunk: the document and section it's from, then its text, so a chunk that says
-// "Run it with --dir" still matches a question about the section it's in.
-func embedText(document string, p piece) string {
-	head := document
-	if p.Heading != "" {
-		head += " — " + p.Heading
+// embedText is what's embedded for a chunk: its section's heading path, then its text, so a chunk that says "Run it
+// with --dir" still matches a question about the section it's in. The document's name is left out, so the same content
+// embeds the same wherever it lives (a loose file, the same file in a zip, another bucket) and its vector is reused.
+func embedText(p piece) string {
+	if p.Heading == "" {
+		return p.Text
 	}
-	return head + "\n\n" + p.Text
+	return p.Heading + "\n\n" + p.Text
 }
