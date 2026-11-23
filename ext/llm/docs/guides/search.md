@@ -68,6 +68,35 @@ passages instead: what `$llm.search` and `enrich` get. **Settings** shows the em
 
 Nothing is embedded twice: the same file in two buckets, or two buckets following one collection, cost one embedding.
 
+### Fill it from code
+
+Everything the screen does, your code can do with `$llm.search`. Adding returns at once; the content is read and
+embedded in the background.
+
+```ts
+// a file's text, or text you put together (a source of one document; the same name again replaces it)
+$llm.search.add({ bucket: "help", name: "export.md", text: "# Exporting\n\nChoose File → Export…" })
+
+// a web page or a Git repository, read again every day
+$llm.search.addURL({ bucket: "help", url: "https://github.com/acme/help-articles", every: "day" })
+
+// a collection: a document per published article, kept in sync as records are saved and deleted
+$llm.search.follow({ bucket: "help", collection: "articles", fields: ["title", "body"], filter: "published = true" })
+```
+
+Then look at what's there, and tidy up:
+
+```ts
+const sources = $llm.search.sources("help")          // [{ name, kind, status, documents, pending, error, ... }]
+const docs = $llm.search.documents({ bucket: "help", source: "export.md" })
+$llm.search.refresh("help", "https://github.com/acme/help-articles") // read it again now
+$llm.search.remove("help", ["export.md"])            // take sources out, with their documents
+const { model, chunks, embedded } = $llm.search.status() // embedded < chunks: still embedding
+```
+
+A source's name is how it's found again: the file name you gave, the URL, or the collection. Adding one of the same
+name replaces it, and unchanged text isn't embedded again.
+
 ## 3. Answer from it
 
 `enrich` works on `$llm.text.completeAsync`, `$llm.text.streamAsync` and LLM Chat:
@@ -109,4 +138,28 @@ by their words.
 Embedding is billed to your provider account like any `$llm` call: `qwen3-embedding-4b` on Vultr is $0.05 per million
 tokens, about 4 MB of text. Each document shows what it cost. Each search embeds only the question, a few tokens.
 
-The full reference, with every operation over HTTP and Go, is the [LLM Search extension](../../../llm-search/README.md).
+## `$llm.search` at a glance
+
+Every call is local and returns at once, except `searchAsync`, which asks your embedding model about the query.
+
+| Call | What it does |
+|---|---|
+| `buckets()` | Every bucket, with its counts. |
+| `bucket(name)` | One bucket. |
+| `ensure({ name, title?, description?, owner? })` | Makes the bucket if it's missing and returns it; an existing one keeps its settings. |
+| `update({ name, title?, description?, maxDocuments?, maxBytes? })` | Changes a bucket. |
+| `deleteBucket(name)` | Deletes a bucket and everything in it. |
+| `sources(bucket)` | Its sources: `{ name, kind, status, documents, chunks, embedded, pending, error, refreshed, next, ... }`. |
+| `add({ bucket, name, text, replace? })` | A file or text as a source; `replace` names an older source a renamed version replaces. |
+| `addURL({ bucket, url, every?, kind?, commits?, exclude? })` | A web page or Git repository (`kind` is decided by asking the server); `every` is `hour`, `day` or `week`. |
+| `follow({ bucket, collection, fields, filter? })` | A collection; the first field is each record's title. |
+| `refresh(bucket, source)` | Reads a source again now. |
+| `remove(bucket, sources)` | Takes sources out, with their documents. |
+| `documents(bucket \| { bucket, source?, prefix? })` | Documents, with their status and how many chunks are embedded. |
+| `status()` | The app's embedding model, and how many chunks are embedded of how many. |
+| `await searchAsync({ query, buckets?, limit?, prefix?, viewer? })` | The best passages across the buckets (all when none are named): `{ results: [{ bucket, source, document, heading, text, record, score }], model, usage }`. |
+
+The same operations are the [llm.search/v1](../../../contracts/llm/search/v1/README.md) contract: over HTTP at
+`/api/_c/llm.search/v1/…` (a superuser, or an API token with the `search` scope), from Go with
+`searchv1.Contract.Must(app)`, and as MCP tools. The [LLM Search extension](../../../llm-search/README.md) has the
+details: what's skipped in folders, zips and repositories, the limits, and how it ranks.
