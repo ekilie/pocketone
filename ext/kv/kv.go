@@ -184,8 +184,20 @@ const jsPrelude = `(() => {
 // TypeScript implements jsvm's Typer: $kv's declarations, added to the app's types.d.ts.
 func (*Extension) TypeScript() string { return typeScript }
 
-const typeScript = `/** One value in the app's key-value store. created and updated are ISO 8601 times. */
-type KvEntry = { name: string; value: any; created: string; updated: string }
+const typeScript = `/**
+ * One value in the app's key-value store.
+ * @go kvv1.Entry
+ */
+type KvEntry = {
+  /** Its name. */
+  name: string
+  /** The value, parsed from its JSON. */
+  value: any
+  /** When it was first stored (ISO 8601, UTC). */
+  created: string
+  /** When it last changed (ISO 8601, UTC). */
+  updated: string
+}
 
 /**
  * The app's key-value store (ext/kv, the kv/v1 contract): named JSON values kept without a collection or a migration,
@@ -194,13 +206,39 @@ type KvEntry = { name: string; value: any; created: string; updated: string }
  * JSON up to 1 MiB. Every call is local and sync.
  */
 declare var $kv: {
-  /** The value stored under name, parsed, or null when there is none. */
+  /**
+   * The value stored under a name, parsed from its JSON.
+   * @param name - the value's name, such as "myapp/settings"
+   * @returns the value, or null when the name has none
+   * @example
+   * const settings = $kv.get("myapp/settings") ?? { theme: "light" }
+   * @go kvv1.Get
+   */
   get(name: string): any
-  /** Stores value (as JSON.stringify) under name, replacing any value it had. */
+  /**
+   * Stores a value under a name, replacing any value it had.
+   * @param name - the value's name, such as "myapp/settings"
+   * @param value - anything JSON.stringify takes, up to 1 MiB as JSON
+   * @example
+   * $kv.set("myapp/settings", { theme: "dark", lastRun: new Date().toISOString() })
+   * @go kvv1.Set
+   */
   set(name: string, value: any): void
-  /** Removes name's value; no error when there was none. */
+  /**
+   * Removes a name's value. Removing a name with no value isn't an error.
+   * @param name - the value's name
+   * @example
+   * $kv.delete("myapp/settings")
+   * @go kvv1.Delete
+   */
   delete(name: string): void
-  /** The values whose names start with prefix (all of them when it's omitted), sorted by name. */
+  /**
+   * The values whose names start with a prefix, sorted by name.
+   * @param prefix - the start every name shares, such as "myapp/"; omit it for every value
+   * @example
+   * for (const e of $kv.list("myapp/")) console.log(e.name, e.updated)
+   * @go kvv1.List
+   */
   list(prefix?: string): KvEntry[]
 }
 `

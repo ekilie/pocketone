@@ -331,7 +331,11 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	if refs := jsRefs(m); len(refs) > 0 {
 		out[referenceOut+"/javascript.md"] = jsIndex(m)
 		for _, r := range refs {
-			out[referenceOut+"/javascript/"+r.Extension+".md"] = jsPage(m, r)
+			if typedPages[r.Extension] {
+				out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(root, m, r)
+			} else {
+				out[referenceOut+"/javascript/"+r.Extension+".md"] = jsPage(m, r)
+			}
 		}
 	}
 
