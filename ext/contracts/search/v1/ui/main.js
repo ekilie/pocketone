@@ -1,7 +1,9 @@
-// The Search screen for the PocketBase dashboard, for the search/v1 contract (PocketOne ext/contracts/search/v1): every
-// search bucket of the app, its sources (files, pasted text, folders, zips, web pages, Git repositories, collections)
-// and their documents, a drop zone and forms to add them, a search to try, and the app's embedding model. It calls only search/v1 (and llm.embed/v1's model list for
-// the model picker), so it works whoever provides the contract. Served at /_/extensions/search/main.js.
+// The Search screen for the PocketBase dashboard, for the search/v1 contract (PocketOne ext/contracts/search/v1). A
+// sidebar leads to: Ask (questions answered from chosen buckets, with the passages they came from), Search (the raw
+// matching passages), each bucket (its sources: files, pasted text, folders, zips, web pages, Git repositories,
+// collections, and their documents), and Settings (the app's embedding model and embedding progress). It calls
+// search/v1, and llm.text/v1 and llm.embed/v1 for Ask and the model pickers, so it works whoever provides them.
+// Served at /_/extensions/search/main.js.
 (() => {
     const api = "/api/_c/search/v1";
     const send = (path, body) =>
@@ -26,7 +28,14 @@
         .search-table tr.link { cursor: pointer; } .search-table tr.link:hover td { background: var(--baseAlt1Color); }
         .search-result { border: 1px solid var(--baseAlt2Color); border-radius: var(--baseRadius); padding: 10px; margin-bottom: 8px; }
         .search-result pre { white-space: pre-wrap; margin: 6px 0 0; max-height: 240px; overflow: auto; font-size: var(--smFontSize); }
-        .search-num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }`;
+        .search-num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .search-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+        .search-chip { cursor: pointer; }
+        .search-turn { margin-bottom: 18px; }
+        .search-q { font-weight: 600; margin-bottom: 6px; }
+        .search-a { line-height: 1.55; } .search-a pre { white-space: pre-wrap; } .search-a code { font-size: 0.92em; }
+        .search-passages { margin-top: 8px; }
+        .search-passages summary { cursor: pointer; color: var(--txtHintColor); font-size: var(--smFontSize); }`;
     document.head.append(style);
 
     const fmtBytes = (n) => (n >= 1 << 20 ? (n / (1 << 20)).toFixed(1) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " B");
@@ -50,14 +59,69 @@
         return (m.name || m.id) + (p ? ` ($${p.usd} per ${p.unit})` : "");
     };
 
+    // nav is the sidebar's bucket list, shared by every Search page
+    const nav = store({ buckets: [] });
+    async function refreshNav() {
+        try {
+            nav.buckets = (await send("/buckets")).buckets || [];
+        } catch (_) {}
+    }
+    const bucketDot = (b) => b.errors ? "var(--dangerColor)" : b.pending ? "var(--warningColor)" : b.documents ? "var(--successColor)" : "var(--txtDisabledColor)";
+    const bucketHref = (n) => "#/search/b/" + encodeURIComponent(n);
+
+    function sidebar() {
+        const item = (href, icon, label, extra) => t.a({
+            href, className: () => `nav-item ${app.utils.isActivePath(href, false) ? "active" : ""}`,
+        }, t.i({ className: icon, ariaHidden: true }), t.span({ className: "txt" }, label), extra || null);
+        return app.components.pageSidebar({ className: "settings-sidebar" },
+            t.nav({ className: "sidebar-content scrollable" }, () => [
+                t.details({ className: "nav-group", open: true },
+                    t.summary({ tabIndex: -1, onclick: () => false }, "Search"),
+                    item("#/search/ask", "ri-question-answer-line", "Ask"),
+                    item("#/search/find", "ri-search-line", "Search"),
+                    item("#/search/settings", "ri-settings-3-line", "Settings")),
+                t.details({ className: "nav-group", open: true },
+                    t.summary({ tabIndex: -1, onclick: () => false }, "Buckets"),
+                    item("#/search", "ri-stack-line", "All buckets"),
+                    ...nav.buckets.map((b) => item(bucketHref(b.name), "ri-inbox-archive-line", b.title || b.name,
+                        t.span({ className: "search-dot", style: `background: ${bucketDot(b)}` }))),
+                    item("#/search?new=1", "ri-add-line", "New bucket")),
+            ]));
+    }
+
     function page(title, crumbs, body) {
         app.store.title = title;
+        refreshNav();
         return t.div({ className: "page page-search" },
+            sidebar(),
             t.div({ className: "page-content full-height" },
                 t.header({ className: "page-header" }, t.nav({ className: "breadcrumbs" }, ...crumbs)),
                 t.div({ className: "wrapper m-b-base" }, body),
                 t.footer({ className: "page-footer" }, app.components.credits())));
     }
+    const crumb = (label, href) => href ? t.a({ className: "breadcrumb-item", href }, label) : t.div({ className: "breadcrumb-item" }, label);
+
+    // noModel is the notice shown while there's no embedding model
+    const noModel = () => t.div({ className: "alert warning m-b-sm" }, t.div({ className: "content" },
+        "Nothing can be searched or embedded yet: add an AI provider with embedding models in ",
+        t.a({ href: "#/settings/llm" }, "Settings → LLM"), ". What you add meanwhile waits, and is embedded as soon as there is one."));
+
+    // bucketPicker lets the viewer choose buckets as chips; state.picked is the chosen names (none: every bucket)
+    function bucketPicker(state) {
+        const on = (n) => state.picked.includes(n);
+        const chip = (label, active, onclick, title) => t.button({ type: "button", title: title || null,
+            className: () => `btn xs search-chip ${active() ? "" : "secondary"}`, onclick }, label);
+        return t.div({ className: "flex gap-sm m-b-sm", style: "flex-wrap: wrap; align-items: center" },
+            t.span({ className: "txt-hint txt-sm" }, "In"),
+            () => [
+                chip("All buckets", () => !state.picked.length, () => (state.picked = [])),
+                ...nav.buckets.map((b) => chip(b.title || b.name, () => on(b.name),
+                    () => (state.picked = on(b.name) ? state.picked.filter((x) => x !== b.name) : [...state.picked, b.name]), b.name)),
+            ]);
+    }
+    // q is a query parameter (the router gives each as a list)
+    const q = (route, key) => [].concat(route.query?.[key] ?? [])[0] || "";
+    const pickedFrom = (route) => q(route, "buckets").split(",").map((x) => x.trim()).filter(Boolean);
 
     // results draws a search's matches
     function results(r) {
@@ -68,7 +132,8 @@
                 (r.usage?.costMicroUSD ? `; the query cost ${fmtCost(r.usage.costMicroUSD)}` : "") + "."),
             ...r.results.map((x) => t.div({ className: "search-result" },
                 t.div({ className: "flex gap-sm" },
-                    t.span({ className: "label" }, x.bucket),
+                    t.a({ className: "label", href: bucketHref(x.bucket) }, x.bucket),
+                    x.source && x.source !== x.document ? t.span({ className: "txt-hint" }, x.source + " ›") : null,
                     x.record ? t.a({ href: recordHref(x.record) }, t.strong(null, x.document)) : t.strong(null, x.document),
                     x.heading ? t.span({ className: "txt-hint" }, "› " + x.heading) : null,
                     t.span({ className: "txt-hint txt-sm" }, `lines ${x.startLine}–${x.endLine}`),
@@ -76,38 +141,11 @@
                 t.pre(null, x.text))));
     }
 
-    // searchBox is a query box over the given buckets (none: every bucket)
-    function searchBox(buckets) {
-        const s = store({ query: "", searching: false, results: null });
-        async function run(e) {
-            e.preventDefault();
-            if (!s.query.trim()) return;
-            s.searching = true;
-            try {
-                s.results = await send("/search", { buckets, query: s.query, limit: 8 });
-            } catch (err) {
-                s.results = null;
-                app.toasts.error(errText(err));
-            }
-            s.searching = false;
-        }
-        return t.div(null,
-            t.form({ className: "flex gap-sm m-b-sm", onsubmit: run },
-                t.input({ type: "text", placeholder: "A question or a few words", style: "flex: 1",
-                    value: () => s.query, oninput: (e) => (s.query = e.target.value) }),
-                t.button({ className: () => `btn ${s.searching ? "loading" : ""}` }, t.span({ className: "txt" }, "Search"))),
-            () => results(s.results));
-    }
+    // ---- all buckets
 
-    // ---- the bucket list
+    app.routes.superuserOnly("#/search", (route) => {
+        const data = store({ loading: true, buckets: [], status: null, creating: !!q(route, "new"), name: "", title: "", description: "" });
 
-    app.routes.superuserOnly("#/search", () => {
-        const data = store({
-            loading: true, buckets: [], status: null, models: [], changingModel: false, model: "",
-            creating: false, name: "", title: "", description: "",
-        });
-
-        let timer = null;
         async function load() {
             try {
                 const [b, st] = await Promise.all([send("/buckets"), send("/status")]);
@@ -117,36 +155,13 @@
                 app.checkApiError(err);
             }
             data.loading = false;
-            // while embedding runs (a new model, or content just added), follow it
-            clearTimeout(timer);
-            const st = data.status;
-            if (st?.model && st.embedded < st.chunks && document.querySelector(".page-search-list")) timer = setTimeout(load, 2000);
         }
 
         async function create(e) {
             e.preventDefault();
             try {
                 const b = await send("/ensure", { name: data.name.trim(), title: data.title.trim(), description: data.description.trim() });
-                window.location.hash = "#/search/" + encodeURIComponent(b.name);
-            } catch (err) {
-                app.toasts.error(errText(err));
-            }
-        }
-
-        async function openModel() {
-            data.models = await embedModels();
-            data.model = data.status?.model || "";
-            data.changingModel = true;
-        }
-
-        async function saveModel(e) {
-            e.preventDefault();
-            if (data.model === data.status?.model) return (data.changingModel = false);
-            const chunks = data.status?.chunks || 0;
-            if (chunks && !confirm(`Embed all ${chunks} chunks again with the new model? Search keeps working (by keywords) while it runs.`)) return;
-            try {
-                data.status = await send("/set-model", { model: data.model });
-                data.changingModel = false;
+                window.location.hash = bucketHref(b.name);
             } catch (err) {
                 app.toasts.error(errText(err));
             }
@@ -154,62 +169,27 @@
 
         load();
 
-        // progress is how far embedding has got across every bucket
-        function progress(st) {
-            const pct = st.chunks ? Math.floor((100 * st.embedded) / st.chunks) : 0;
-            return t.div({ className: "alert info m-t-sm" }, t.div({ className: "content" },
-                t.div({ className: "flex gap-sm" },
-                    t.span({ className: "loader sm" }),
-                    t.span(null, `Embedding: ${st.embedded} of ${st.chunks} chunks (${pct}%). Search keeps working; chunks not done yet are found by keywords.`)),
-                t.div({ style: "height: 6px; border-radius: 3px; background: var(--baseAlt2Color); margin-top: 8px; overflow: hidden" },
-                    t.div({ style: `height: 100%; width: ${pct}%; background: var(--primaryColor); transition: width 0.5s` }))));
-        }
-
-        function modelCard() {
-            const st = data.status;
-            if (!st) return null;
-            if (!st.model) {
-                return t.div({ className: "alert warning m-b-sm" }, t.div({ className: "content" },
-                    "Searching needs an AI provider with embedding models. Add one in ",
-                    t.a({ href: "#/settings/llm" }, "Settings → LLM"),
-                    "; content you add meanwhile waits and is embedded once there is one."));
-            }
-            return t.div({ className: "m-b-sm" },
-                () => data.changingModel
-                    ? t.form({ className: "flex gap-sm", onsubmit: saveModel },
-                        t.select({ onchange: (e) => (data.model = e.target.value) },
-                            ...data.models.map((m) => t.option({ value: m.id, selected: m.id === data.model }, modelLabel(m)))),
-                        t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.changingModel = false) }, t.span({ className: "txt" }, "Cancel")),
-                        t.button({ className: "btn" }, t.span({ className: "txt" }, "Use this model")))
-                    : t.div(null,
-                        t.p({ className: "txt-hint m-0" },
-                            "Every bucket is embedded with ", t.code(null, st.model), ". ",
-                            t.a({ href: "#", onclick: (e) => { e.preventDefault(); openModel(); } }, "Change")),
-                        st.embedded < st.chunks ? progress(st) : null));
-        }
-
-        return t.div({ className: "page-search-list", onunmount: () => clearTimeout(timer) }, page("Search", [t.div({ className: "breadcrumb-item" }, "Search")], () => {
+        return page("Search", [crumb("Search"), crumb("All buckets")], () => {
             if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
             return t.div(null,
-                t.p({ className: "m-t-0" },
-                    "Buckets of content your app searches, and adds to its AI prompts with ", t.code(null, "enrich"), ". ",
-                    "An app makes the bucket it needs; load it here by dropping files on it, pasting text, or having it follow a collection."),
-                modelCard(),
+                t.p({ className: "m-t-0 txt-hint" }, "Buckets of content your app searches and answers from. Open one to fill it; ",
+                    t.a({ href: "#/search/ask" }, "Ask"), " questions about them."),
+                data.status && !data.status.model ? noModel() : null,
                 data.buckets.length
-                    ? t.table({ className: "search-table m-b-base" },
-                        t.thead(null, t.tr(null, t.th(null, "Bucket"), t.th(null, "Made by"), t.th({ className: "search-num" }, "Documents"),
-                            t.th({ className: "search-num" }, "Chunks"), t.th({ className: "search-num" }, "Size"), t.th(null, "Content"), t.th(null, "Status"))),
-                        t.tbody(null, ...data.buckets.map((b) => t.tr({ className: "link", onclick: () => (window.location.hash = "#/search/" + encodeURIComponent(b.name)) },
-                            t.td(null, t.strong(null, b.title || b.name), b.title ? t.div({ className: "txt-hint txt-sm" }, b.name) : null),
+                    ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table m-b-base" },
+                        t.thead(null, t.tr(null, t.th(null, "Bucket"), t.th(null, "Made by"), t.th({ className: "search-num" }, "Sources"),
+                            t.th({ className: "search-num" }, "Documents"), t.th({ className: "search-num" }, "Size"), t.th(null, "Status"))),
+                        t.tbody(null, ...data.buckets.map((b) => t.tr({ className: "link", onclick: () => (window.location.hash = bucketHref(b.name)) },
+                            t.td(null, t.strong(null, b.title || b.name), b.title ? t.div({ className: "txt-hint txt-sm" }, b.name) : null,
+                                b.description ? t.div({ className: "txt-hint txt-sm" }, b.description) : null),
                             t.td(null, b.owner || ""),
+                            t.td({ className: "search-num" }, b.sources),
                             t.td({ className: "search-num" }, b.documents),
-                            t.td({ className: "search-num" }, b.chunks),
                             t.td({ className: "search-num" }, fmtBytes(b.bytes)),
-                            t.td(null, `${b.sources} source${b.sources === 1 ? "" : "s"}`),
-                            t.td(null, b.documents === 0 ? t.span({ className: "label warning" }, "empty")
+                            t.td(null, b.documents === 0 ? t.span({ className: "label" }, "empty")
                                 : b.errors ? t.span({ className: "label danger" }, b.errors + " failed")
                                     : b.pending ? t.span({ className: "label warning" }, b.pending + " waiting")
-                                        : t.span({ className: "label success" }, "ready"))))))
+                                        : t.span({ className: "label success" }, "ready")))))))
                     : t.div({ className: "block txt-center txt-hint p-base" }, "No buckets yet."),
                 () => data.creating
                     ? t.form({ className: "grid m-b-base", onsubmit: create },
@@ -223,13 +203,258 @@
                         t.div({ className: "col-lg-12 flex" },
                             t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.creating = false) }, t.span({ className: "txt" }, "Cancel")),
                             t.button({ className: "btn" }, t.span({ className: "txt" }, "Create bucket"))))
-                    : t.button({ type: "button", className: "btn secondary sm m-b-base", onclick: () => (data.creating = true) },
+                    : t.button({ type: "button", className: "btn secondary sm", onclick: () => (data.creating = true) },
                         t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New bucket")),
-                data.buckets.length && data.status?.model ? t.div(null,
-                    t.hr(),
-                    t.div({ className: "txt-lg m-b-sm" }, "Search every bucket"),
-                    searchBox([])) : null,
             );
+        });
+    });
+
+    // ---- search: the matching passages
+
+    app.routes.superuserOnly("#/search/find", (route) => {
+        const data = store({ picked: pickedFrom(route), query: q(route, "q"), searching: false, results: null, status: null });
+        send("/status").then((st) => (data.status = st)).catch(() => {});
+
+        async function run(e) {
+            e?.preventDefault();
+            if (!data.query.trim()) return;
+            data.searching = true;
+            try {
+                data.results = await send("/search", { buckets: data.picked, query: data.query, limit: 10 });
+            } catch (err) {
+                data.results = null;
+                app.toasts.error(errText(err));
+            }
+            data.searching = false;
+        }
+        if (data.query) run();
+
+        return page("Search", [crumb("Search"), crumb("Search")], () => t.div(null,
+            t.p({ className: "m-t-0 txt-hint" }, "The passages that best match, ranked by meaning (your embedding model) and by keywords (a local index) together. This is what ",
+                t.code(null, "$search"), " and ", t.code(null, "enrich"), " get."),
+            data.status && !data.status.model ? noModel() : null,
+            bucketPicker(data),
+            t.form({ className: "flex gap-sm m-b-sm", onsubmit: run },
+                t.input({ type: "text", placeholder: "A question or a few words", style: "flex: 1", autofocus: true,
+                    value: () => data.query, oninput: (e) => (data.query = e.target.value) }),
+                t.button({ className: () => `btn ${data.searching ? "loading" : ""}` }, t.span({ className: "txt" }, "Search"))),
+            () => results(data.results)));
+    });
+
+    // ---- ask: answers from the buckets
+
+    // textModels is llm.text/v1's list
+    async function textModels() {
+        try {
+            return (await app.pb.send("/api/_c/llm.text/v1/models", { requestKey: null })).models || [];
+        } catch (_) {
+            return [];
+        }
+    }
+    const remembered = (key, fallback) => { try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; } };
+    const remember = (key, v) => { try { localStorage.setItem(key, v); } catch (_) {} };
+
+    // streamText calls llm.text/v1's stream operation and hands each piece to onText; it resolves to the final result
+    async function streamText(body, onText, signal) {
+        const res = await fetch(app.pb.buildURL("/api/_c/llm.text/v1/stream"), {
+            method: "POST", signal, body: JSON.stringify(body),
+            headers: { Authorization: app.pb.authStore.token, "Content-Type": "application/json", Accept: "text/event-stream" },
+        });
+        if (!res.ok) {
+            const b = await res.json().catch(() => ({}));
+            throw new Error(b.message || res.statusText);
+        }
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "", result = null;
+        for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let i;
+            while ((i = buf.indexOf("\n\n")) >= 0) {
+                const block = buf.slice(0, i);
+                buf = buf.slice(i + 2);
+                let event = "", data = "";
+                for (const line of block.split("\n")) {
+                    if (line.startsWith("event:")) event = line.slice(6).trim();
+                    else if (line.startsWith("data:")) data += line.slice(5).trim();
+                }
+                if (!data) continue;
+                const msg = JSON.parse(data);
+                if (event === "error") throw new Error(msg.message || "the model failed");
+                if (msg.done) result = msg.result;
+                else if (msg.text) onText(msg.text);
+            }
+        }
+        return result;
+    }
+
+    // markdown turns a model's answer into safe HTML: everything escaped first, then headings, lists, code, bold,
+    // italics and [n] citations
+    function markdown(src) {
+        const esc = (x) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const inline = (x) => esc(x)
+            .replace(/`([^`]+)`/g, "<code>$1</code>")
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+            .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>")
+            .replace(/\[(\d+)\]/g, '<span class="label sm">$1</span>');
+        const out = [];
+        let list = null, code = null;
+        const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+        for (const line of src.split("\n")) {
+            if (code !== null) {
+                if (line.trim().startsWith("```")) { out.push("<pre>" + esc(code.join("\n")) + "</pre>"); code = null; } else code.push(line);
+                continue;
+            }
+            if (line.trim().startsWith("```")) { close(); code = []; continue; }
+            let m;
+            if ((m = line.match(/^(#{1,6})\s+(.*)/))) { close(); out.push(`<div class="txt-bold m-t-sm">${inline(m[2])}</div>`); continue; }
+            if ((m = line.match(/^\s*[-*]\s+(.*)/)) || (m = line.match(/^\s*\d+[.)]\s+(.*)/))) {
+                const tag = /^\s*\d/.test(line) ? "ol" : "ul";
+                if (list !== tag) { close(); out.push(`<${tag} style="margin: 4px 0 4px 20px">`); list = tag; }
+                out.push(`<li>${inline(m[1])}</li>`);
+                continue;
+            }
+            close();
+            out.push(line.trim() ? `<div>${inline(line)}</div>` : '<div style="height: 8px"></div>');
+        }
+        close();
+        if (code !== null) out.push("<pre>" + esc(code.join("\n")) + "</pre>");
+        return out.join("");
+    }
+
+    const askSystem = "You answer questions about the user's own content, using the numbered passages given after each question. " +
+        "Cite the passages you use by number, like [1]. If the passages don't answer the question, say so plainly instead of guessing.";
+
+    app.routes.superuserOnly("#/search/ask", (route) => {
+        const data = store({ picked: pickedFrom(route), models: [], model: "", question: "", turns: [], asking: false, status: null });
+        let abort = null;
+        send("/status").then((st) => (data.status = st)).catch(() => {});
+        textModels().then((m) => {
+            data.models = m;
+            const saved = remembered("pocketone.search.askModel", "");
+            data.model = m.some((x) => x.id === saved) ? saved : m[0]?.id || "";
+        });
+
+        async function ask(e) {
+            e?.preventDefault();
+            const q = data.question.trim();
+            if (!q || data.asking) return;
+            if (!data.model) return app.toasts.error("Add an AI provider with text models in Settings → LLM.");
+            const history = data.turns.filter((x) => x.answer && !x.error).flatMap((x) => [{ role: "user", content: x.question }, { role: "assistant", content: x.answer }]);
+            const turn = { question: q, answer: "", passages: [], error: "", cost: 0 };
+            data.turns = [...data.turns, turn];
+            const at = data.turns.length - 1;
+            const set = (changes) => (data.turns = data.turns.map((x, j) => (j === at ? { ...x, ...changes } : x)));
+            data.question = "";
+            data.asking = true;
+            abort = new AbortController();
+            let text = "";
+            try {
+                const result = await streamText({
+                    model: data.model, system: askSystem, messages: [...history, { role: "user", content: q }],
+                    enrich: { buckets: data.picked.length ? data.picked : nav.buckets.map((b) => b.name), limit: 6 },
+                }, (piece) => { text += piece; set({ answer: text }); }, abort.signal);
+                set({ answer: result?.text || text, passages: result?.passages || [], cost: result?.usage?.costMicroUSD || 0 });
+            } catch (err) {
+                if (err.name !== "AbortError") set({ error: errText(err) });
+            }
+            data.asking = false;
+            abort = null;
+        }
+
+        return t.div({ onunmount: () => abort?.abort() }, page("Ask", [crumb("Search"), crumb("Ask")], () => t.div(null,
+            t.p({ className: "m-t-0 txt-hint" }, "Ask about what's in your buckets. Each question searches them and the model answers from the passages it finds, citing them. It's ",
+                t.code(null, "$llm.text"), " with ", t.code(null, "enrich"), ", as your pages would call it."),
+            data.status && !data.status.model ? noModel() : null,
+            bucketPicker(data),
+            t.div({ className: "flex gap-sm m-b-base", style: "align-items: center; flex-wrap: wrap" },
+                t.span({ className: "txt-hint txt-sm" }, "Answered by"),
+                () => data.models.length
+                    ? t.select({ style: "max-width: 360px", onchange: (e) => { data.model = e.target.value; remember("pocketone.search.askModel", data.model); } },
+                        ...data.models.map((m) => t.option({ value: m.id, selected: m.id === data.model }, m.name || m.id)))
+                    : t.span({ className: "txt-hint" }, "no text models yet (Settings → LLM)"),
+                () => data.turns.length ? t.button({ type: "button", className: "btn xs secondary m-l-auto", onclick: () => (data.turns = []) },
+                    t.i({ className: "ri-refresh-line", ariaHidden: true }), t.span({ className: "txt" }, "New conversation")) : null),
+            () => t.div(null, ...data.turns.map((x) => t.div({ className: "search-turn" },
+                t.div({ className: "search-q" }, x.question),
+                x.error ? t.div({ className: "alert danger" }, t.div({ className: "content" }, x.error))
+                    : x.answer ? t.div({ className: "search-a", innerHTML: markdown(x.answer) })
+                        : t.span({ className: "loader sm" }),
+                x.passages.length ? t.details({ className: "search-passages" },
+                    t.summary(null, `From ${x.passages.length} passage${x.passages.length === 1 ? "" : "s"}` + (x.cost ? `, ${fmtCost(x.cost)}` : "")),
+                    ...x.passages.map((p, i) => t.div({ className: "search-result" },
+                        t.div({ className: "flex gap-sm" }, t.strong(null, `[${i + 1}]`),
+                            t.a({ className: "label", href: bucketHref(p.bucket) }, p.bucket),
+                            p.source && p.source !== p.document ? t.span({ className: "txt-hint" }, p.source + " ›") : null,
+                            t.span(null, p.document), p.heading ? t.span({ className: "txt-hint" }, "› " + p.heading) : null),
+                        t.pre(null, p.text)))) : null))),
+            t.form({ className: "flex gap-sm", onsubmit: ask },
+                t.textarea({ rows: 2, style: "flex: 1", placeholder: () => data.turns.length ? "Ask a follow-up" : "Ask a question about your buckets",
+                    value: () => data.question, oninput: (e) => (data.question = e.target.value),
+                    onkeydown: (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(); } } }),
+                t.button({ className: () => `btn ${data.asking ? "loading" : ""}`, disabled: () => data.asking }, t.span({ className: "txt" }, "Ask"))))));
+    });
+
+    // ---- settings: the app's embedding model
+
+    app.routes.superuserOnly("#/search/settings", () => {
+        const data = store({ status: null, models: [], model: "", saving: false });
+        let timer = null;
+        async function load() {
+            try {
+                data.status = await send("/status");
+            } catch (err) {
+                app.checkApiError(err);
+            }
+            clearTimeout(timer);
+            const st = data.status;
+            if (st?.model && st.embedded < st.chunks && document.querySelector(".page-search-settings")) timer = setTimeout(load, 2000);
+        }
+        load();
+        embedModels().then((m) => (data.models = m));
+
+        async function save(e) {
+            e.preventDefault();
+            if (!data.model || data.model === data.status?.model) return;
+            const chunks = data.status?.chunks || 0;
+            if (chunks && !confirm(`Embed all ${chunks} chunks again with the new model? Search keeps working (by keywords) while it runs.`)) return;
+            data.saving = true;
+            try {
+                data.status = await send("/set-model", { model: data.model });
+                data.model = "";
+                load();
+            } catch (err) {
+                app.toasts.error(errText(err));
+            }
+            data.saving = false;
+        }
+
+        function progress(st) {
+            const pct = st.chunks ? Math.floor((100 * st.embedded) / st.chunks) : 100;
+            return t.div({ className: `alert ${st.embedded < st.chunks ? "info" : "success"} m-b-base` }, t.div({ className: "content" },
+                st.embedded < st.chunks
+                    ? t.div({ className: "flex gap-sm" }, t.span({ className: "loader sm" }),
+                        t.span(null, `Embedding: ${st.embedded} of ${st.chunks} chunks (${pct}%). Search keeps working; chunks not done yet are found by keywords.`))
+                    : t.span(null, `All ${st.chunks} chunks are embedded.`),
+                t.div({ style: "height: 6px; border-radius: 3px; background: var(--baseAlt2Color); margin-top: 8px; overflow: hidden" },
+                    t.div({ style: `height: 100%; width: ${pct}%; background: var(--primaryColor); transition: width 0.5s` }))));
+        }
+
+        return t.div({ className: "page-search-settings", onunmount: () => clearTimeout(timer) }, page("Search settings", [crumb("Search"), crumb("Settings")], () => {
+            const st = data.status;
+            if (!st) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
+            return t.div(null,
+                t.div({ className: "txt-lg m-b-sm" }, "Embedding model"),
+                t.p({ className: "m-t-0 txt-hint" }, "One model embeds every bucket, so any of them can be searched together. It was picked for you (the cheapest your providers offer); change it here and everything is embedded again in the background."),
+                !st.model ? noModel() : t.p(null, "Every bucket is embedded with ", t.code(null, st.model), "."),
+                st.model ? progress(st) : null,
+                data.models.length ? t.form({ className: "flex gap-sm", onsubmit: save },
+                    t.select({ onchange: (e) => (data.model = e.target.value) },
+                        t.option({ value: "" }, "Change to…"),
+                        ...data.models.map((m) => t.option({ value: m.id, disabled: m.id === st.model }, modelLabel(m)))),
+                    t.button({ className: () => `btn ${data.saving ? "loading" : ""}`, disabled: () => !data.model }, t.span({ className: "txt" }, "Use this model"))) : null);
         }));
     });
 
@@ -281,7 +506,7 @@
     const kindIcon = { file: "ri-file-text-line", text: "ri-text", folder: "ri-folder-line", zip: "ri-file-zip-line", page: "ri-global-line", git: "ri-git-branch-line", collection: "ri-database-2-line" };
     const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString() : "");
 
-    app.routes.superuserOnly("#/search/{name}", (route) => {
+    app.routes.superuserOnly("#/search/b/{name}", (route) => {
         const name = decodeURIComponent(route.params.name);
         const data = store({
             loading: true, bucket: null, sources: [], status: null, over: false, adding: "",
@@ -299,6 +524,7 @@
                 data.sources = l.sources || [];
                 data.status = st;
                 for (const src of data.sources) if (data.open[src.name]) loadDocs(src.name);
+                refreshNav();
             } catch (err) {
                 app.checkApiError(err);
             }
@@ -441,6 +667,7 @@
                 data.form = "";
                 after?.();
                 load();
+                refreshNav();
             } catch (err) {
                 app.toasts.error(errText(err));
             }
@@ -479,10 +706,7 @@
 
         load();
 
-        const crumbs = [
-            t.a({ className: "breadcrumb-item", href: "#/search" }, "Search"),
-            t.div({ className: "breadcrumb-item" }, () => data.bucket?.title || name),
-        ];
+        const crumbs = [crumb("Search"), crumb("Buckets", "#/search"), t.div({ className: "breadcrumb-item" }, () => data.bucket?.title || name)];
         const field = (label, input, cls = "col-lg-12") => t.div({ className: cls }, t.div({ className: "field" }, t.label({}, label), input));
         const bound = (obj, key, props = {}) => t.input({ type: "text", ...props, value: () => obj[key], oninput: (e) => (obj[key] = e.target.value) });
         const formButtons = (label) => t.div({ className: "col-lg-12 flex" }, t.div({ className: "m-r-auto" }),
@@ -553,13 +777,16 @@
             return t.div(null,
                 b.description ? t.div({ className: "alert info m-b-sm" }, t.div({ className: "content" },
                     b.owner ? t.strong(null, b.owner + " wants: ") : null, b.description)) : null,
-                data.status && !data.status.model ? t.div({ className: "alert warning m-b-sm" }, t.div({ className: "content" },
-                    "Nothing can be searched or embedded yet: add an AI provider with embedding models in ",
-                    t.a({ href: "#/settings/llm" }, "Settings → LLM"),
-                    ". What you add meanwhile waits, and is embedded as soon as there is one.")) : null,
-                t.p({ className: "txt-hint m-t-0" },
-                    `${b.sources} source${b.sources === 1 ? "" : "s"}, ${b.documents} documents, ${b.chunks} chunks, ${fmtBytes(b.bytes)}. `,
-                    t.a({ href: "#", onclick: (e) => { e.preventDefault(); openForm("settings"); } }, "Settings")),
+                data.status && !data.status.model ? noModel() : null,
+                t.div({ className: "flex gap-sm m-b-sm", style: "align-items: center; flex-wrap: wrap" },
+                    t.span({ className: "txt-hint" }, `${b.sources} source${b.sources === 1 ? "" : "s"}, ${b.documents} documents, ${b.chunks} chunks, ${fmtBytes(b.bytes)}`),
+                    t.div({ className: "m-l-auto" }),
+                    t.a({ className: "btn xs secondary", href: "#/search/ask?buckets=" + encodeURIComponent(name) },
+                        t.i({ className: "ri-question-answer-line", ariaHidden: true }), t.span({ className: "txt" }, "Ask this bucket")),
+                    t.a({ className: "btn xs secondary", href: "#/search/find?buckets=" + encodeURIComponent(name) },
+                        t.i({ className: "ri-search-line", ariaHidden: true }), t.span({ className: "txt" }, "Search this bucket")),
+                    t.button({ type: "button", className: "btn xs secondary", title: "Bucket settings", onclick: () => openForm("settings") },
+                        t.i({ className: "ri-settings-3-line", ariaHidden: true }))),
 
                 () => data.form === "settings" ? t.form({ className: "grid m-b-base", onsubmit: (e) => {
                     e.preventDefault();
@@ -676,9 +903,6 @@
                         t.tbody(null, ...data.sources.flatMap(sourceRows))))
                     : t.div({ className: "block txt-center txt-hint p-base" }, "Nothing in this bucket yet."),
 
-                t.hr(),
-                t.div({ className: "txt-lg m-b-sm" }, "Try a search"),
-                searchBox([name]),
             );
         }));
     });

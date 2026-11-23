@@ -8,7 +8,8 @@ summary: "Buckets of content your app searches by meaning: files, folders, zips,
 
 # Search
 
-Search keeps **buckets** of content your app searches by meaning. Your app makes the bucket it needs; you fill it from
+Search keeps **buckets** of content your app searches by meaning, and the dashboard's **Search** screen lets you fill
+them and ask questions about them (**Ask**: answers with the passages they came from). Your app makes the bucket it needs; you fill it from
 the dashboard's **Search** screen with **sources**: files, folders and zips you drop, pasted text, web pages and Git
 repositories it keeps current, or collections it keeps in sync. Each document is split into chunks that remember where they came from (the document, its section,
 its lines, its record) and embedded with the app's one embedding model, picked for you from your providers in

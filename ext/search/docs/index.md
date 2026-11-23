@@ -46,8 +46,8 @@ Calling it again changes nothing, so your admins' changes stick. You can also ma
 
 ## 2. Fill it
 
-Open the dashboard and choose **Search** in the header. Every bucket is listed with what's in it. Open yours and add
-**sources**. Each one is a single row you can refresh, replace or remove, however many documents it brings:
+Open the dashboard and choose **Search** in the header. A sidebar lists **Ask**, **Search**, **Settings** and every
+bucket. Open yours and add **sources**. Each one is a single row you can refresh, replace or remove, however many documents it brings:
 
 - **Drop files, folders or zips** on it (Markdown, text or code inside), or choose files.
 - **Paste text.**
@@ -60,8 +60,12 @@ Open the dashboard and choose **Search** in the header. Every bucket is listed w
 
 Dropping something with the same name as a source replaces it: files that didn't change cost nothing, and files it no
 longer has are removed. For a new version under another name (`guide-v2.zip`), use **Upload a new version** on the old
-one's row. Watch each source go from `reading` to `ready` and its documents from `waiting` to embedded; open a row to
-see its documents. **Try a search** to see what comes back.
+one's row. Watch each source go from `reading` to `ready` and its documents from `in line` to `embedding` to `ready`;
+open a row to see its documents.
+
+To check what's in a bucket, use **Ask** in the sidebar: pick buckets and a model, ask a question in words, and read
+the answer with the passages it came from (a follow-up keeps the conversation). **Search** shows the raw matching
+passages instead: what `$search` and `enrich` get. **Settings** shows the embedding model and how far embedding has got.
 
 Nothing is embedded twice: the same file in two buckets, or two buckets following one collection, cost one embedding.
 
