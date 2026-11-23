@@ -107,7 +107,7 @@ func (s *service) addDoc(b, src *core.Record, in docIn, o addOpts) (*core.Record
 
 	s.work.Lock() // not while the worker writes this document's vectors
 	defer s.work.Unlock()
-	err = s.app.RunInTransaction(func(tx core.App) error {
+	err = s.tx(func(tx core.App) error {
 		if doc == nil {
 			col, err := tx.FindCachedCollectionByNameOrId(DocumentsCollection)
 			if err != nil {
@@ -225,7 +225,7 @@ func deleteChunks(tx core.App, where dbx.Expression) error {
 func (s *service) removeDoc(bucketID string, doc *core.Record) error {
 	s.work.Lock()
 	defer s.work.Unlock()
-	err := s.app.RunInTransaction(func(tx core.App) error {
+	err := s.tx(func(tx core.App) error {
 		if err := deleteChunks(tx, dbx.HashExp{"document": doc.Id}); err != nil {
 			return err
 		}

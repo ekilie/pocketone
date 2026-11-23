@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -299,7 +300,7 @@ func (s *service) Delete(_ context.Context, _ extkit.Auth, in searchv1.Ref) (sea
 	}
 	s.work.Lock()
 	defer s.work.Unlock()
-	err = s.app.RunInTransaction(func(tx core.App) error {
+	err = s.tx(func(tx core.App) error {
 		if _, err := tx.DB().Delete(ChunksCollection, dbx.HashExp{"bucket": r.Id}).Execute(); err != nil {
 			return err
 		}
@@ -337,4 +338,23 @@ func (s *service) Delete(_ context.Context, _ extkit.Auth, in searchv1.Ref) (sea
 func of(app core.App) *service {
 	s, _ := app.Store().Get(storeKey).(*service)
 	return s
+}
+
+// tx runs fn in a transaction, again (after a short wait) when SQLite says the database is locked: a transaction that
+// read before it wrote loses to another connection's commit (SQLITE_BUSY_SNAPSHOT), and PocketBase retries single
+// statements but not whole transactions.
+func (s *service) tx(fn func(tx core.App) error) error {
+	var err error
+	for attempt, wait := 0, 50*time.Millisecond; attempt < 8; attempt, wait = attempt+1, wait*2 {
+		if err = s.app.RunInTransaction(fn); err == nil || !isLocked(err) {
+			return err
+		}
+		time.Sleep(wait)
+	}
+	return err
+}
+
+func isLocked(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "database is locked") || strings.Contains(msg, "table is locked")
 }

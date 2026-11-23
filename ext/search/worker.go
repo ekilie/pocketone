@@ -212,7 +212,7 @@ func (s *service) embedNext(ctx context.Context) (bool, error) {
 	}
 
 	s.work.Lock()
-	err = s.app.RunInTransaction(func(tx core.App) error {
+	err = s.tx(func(tx core.App) error {
 		for _, c := range batch {
 			v, ok := vecs[c.Hash]
 			if !ok {
