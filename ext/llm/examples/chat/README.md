@@ -5,8 +5,8 @@ runs live at
 [learn.pocketone.dev](https://learn.pocketone.dev). It shows `$llm` from page code:
 
 - **answering from both sets of docs:** [`_private/llm.ts`](pb_pages/_private/llm.ts) loads (off the VM, every 10
-  minutes) PocketOne's user docs from pocketone.dev's `llms.txt` and `llms-full.txt` (the pages under Get started, New
-  in PocketOne and Guides, plus Pages, not the extension and contract reference) and PocketBase's own docs from
+  minutes) PocketOne's user docs from pocketone.dev's `llms.txt` and `llms-full.txt` (every section from Get started to the
+  REST API, Pages included, not the generated reference or Extend PocketOne) and PocketBase's own docs from
   the Markdown copy PocketOne keeps of pocketbase.io/docs
   ([`agent/skills/pocketone/reference/pocketbase/`](../../../../agent/skills/pocketone/reference/pocketbase/README.md)).
   It splits them into sections, and for each question picks the three that match best (BM25, plus a few synonyms:

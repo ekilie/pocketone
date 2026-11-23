@@ -111,8 +111,7 @@ func main() {
 ## How it works
 
 It's built on PocketBase's own `OnMailerSend` hook (the same way [Mail Relay](../mailrelay/README.md) takes over an
-instance's mail), so PocketBase is unchanged. It used to live in core (`tools/mailer/trap.go`); it moved here on
-2026-11-13.
+instance's mail), so PocketBase is unchanged.
 
 ## License
 

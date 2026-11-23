@@ -18,12 +18,13 @@ export const DOCS_URL: string = (process.env.DOCS_URL || 'https://pocketone.dev'
 
 /**
  * The user docs: the pages llms.txt lists under these sections, plus the pages below each of them (an extension's
- * guides). The rest of the site (Extend PocketOne, the contracts and extensions reference, the generated CLI, REST and
- * MCP reference) is for people writing extensions, not using PocketOne, so the chat leaves it out.
+ * guides). The rest of the site (the generated reference under Reference, and Extend PocketOne) is for people writing
+ * extensions or looking up exact signatures, so the chat leaves it out.
  */
-const SECTIONS = ['Get started', 'New in PocketOne', 'Guides']
+const SECTIONS = ['Get started', 'Database', 'Users and sign-in', 'Hooks and routes', 'Websites', 'Email', 'AI', 'Go',
+  'Deploy and run', 'How-to guides', 'REST API']
 /** User docs listed under other sections. */
-const ALSO = ['/docs/extensions/pages'] // Pages' docs, listed under Reference
+const ALSO: string[] = []
 
 /**
  * PocketBase's docs as one file (pages separated by "---", each starting "Source: <url>"): a URL, or a path to a local

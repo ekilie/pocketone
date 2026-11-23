@@ -39,5 +39,3 @@ For agents and tools that read the web:
 
 - [pocketone.dev/llms.txt](/llms.txt) indexes every docs page with a one-line summary.
 - [pocketone.dev/llms-full.txt](/llms-full.txt) holds every docs page in one Markdown file.
-
-Pages' docs are part of this site, under [/docs/extensions/pages](/docs/extensions/pages), so both files include them.
