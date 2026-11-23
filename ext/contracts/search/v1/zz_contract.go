@@ -217,6 +217,22 @@ var W = extkit.NewWire(Contract, "search", func(inner Search, g *extkit.Guard[Se
 		},
 	},
 	extkit.Op[Search]{
+		Name:   "detect_u_r_l",
+		Desc:   "Says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any host, with or without .git), otherwise as a web page.",
+		Method: "POST",
+		Path:   "detect-url",
+		Scope:  "search:read",
+		In:     reflect.TypeOf(URLRef{}),
+		Out:    extkit.OutJSON,
+		Invoke: func(ctx context.Context, impl Search, a extkit.Auth, req extkit.OpRequest) (any, error) {
+			var in URLRef
+			if err := extkit.DecodeInput(req.JSON, &in); err != nil {
+				return nil, err
+			}
+			return impl.DetectURL(ctx, a, in)
+		},
+	},
+	extkit.Op[Search]{
 		Name:   "follow",
 		Desc:   "Adds one of the app's collections as a source (named by the collection): each record the filter keeps is a document, kept in sync as records are saved and deleted.",
 		Method: "POST",
@@ -485,6 +501,20 @@ func OnAddURL(owner any, fn func(e *extkit.CallEvent, in *URLInput) error) {
 	})
 }
 
+func (d *guardSearch) DetectURL(ctx context.Context, a extkit.Auth, in URLRef) (URLKind, error) {
+	return extkit.Run(d.g, a, "detect_u_r_l", &in, func(in *URLRef) (URLKind, error) {
+		return d.inner.DetectURL(ctx, a, *in)
+	})
+}
+
+// OnDetectURL binds fn to detect_u_r_l calls on owner (an app, or a host's scope for calls the host answers). Call e.Next()
+// to continue; return an error to refuse. in is the call's input; changes reach the provider.
+func OnDetectURL(owner any, fn func(e *extkit.CallEvent, in *URLRef) error) {
+	W.On(owner, "detect_u_r_l").BindFunc(func(e *extkit.CallEvent) error {
+		return fn(e, e.Input.(*URLRef))
+	})
+}
+
 func (d *guardSearch) Follow(ctx context.Context, a extkit.Auth, in FollowInput) (Source, error) {
 	return extkit.Run(d.g, a, "follow", &in, func(in *FollowInput) (Source, error) {
 		return d.inner.Follow(ctx, a, *in)
@@ -629,6 +659,11 @@ func (c *Client) Prune(ctx context.Context, _ extkit.Auth, in PruneInput) (Sourc
 func (c *Client) AddURL(ctx context.Context, _ extkit.Auth, in URLInput) (Source, error) {
 	var out Source
 	return out, c.c.Call(ctx, "POST", "add-url", in, &out)
+}
+
+func (c *Client) DetectURL(ctx context.Context, _ extkit.Auth, in URLRef) (URLKind, error) {
+	var out URLKind
+	return out, c.c.Call(ctx, "POST", "detect-url", in, &out)
 }
 
 func (c *Client) Follow(ctx context.Context, _ extkit.Auth, in FollowInput) (Source, error) {

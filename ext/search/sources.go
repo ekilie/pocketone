@@ -484,16 +484,29 @@ func (s *service) Prune(_ context.Context, _ extkit.Auth, in searchv1.PruneInput
 
 // ---- URLs and collections
 
-// gitHosts are the hosts whose owner/repo URLs are repositories.
-var gitHosts = map[string]bool{"github.com": true, "gitlab.com": true, "codeberg.org": true}
-
-// urlKind says whether a URL is a repository or a page.
-func urlKind(u *url.URL) string {
-	p := strings.Trim(u.Path, "/")
-	if strings.HasSuffix(p, ".git") {
-		return searchv1.KindGit
+// parseURL takes an http or https URL.
+func parseURL(raw string) (*url.URL, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return nil, badRequest("give an http or https URL")
 	}
-	if gitHosts[strings.ToLower(u.Hostname())] && strings.Count(p, "/") == 1 {
+	return u, nil
+}
+
+// DetectURL implements search/v1.
+func (s *service) DetectURL(ctx context.Context, _ extkit.Auth, in searchv1.URLRef) (searchv1.URLKind, error) {
+	if _, err := parseURL(in.URL); err != nil {
+		return searchv1.URLKind{}, err
+	}
+	return searchv1.URLKind{Kind: detectKind(ctx, strings.TrimSpace(in.URL))}, nil
+}
+
+// detectKind asks the server the Git protocol's first question (its refs, as git ls-remote does): a repository
+// answers it on any host, with or without .git; anything else is read as a page.
+func detectKind(ctx context.Context, raw string) string {
+	ctx, cancel := context.WithTimeout(ctx, DetectTimeout)
+	defer cancel()
+	if _, err := remoteHead(ctx, raw); err == nil {
 		return searchv1.KindGit
 	}
 	return searchv1.KindPage
@@ -506,13 +519,12 @@ func (s *service) AddURL(_ context.Context, _ extkit.Auth, in searchv1.URLInput)
 		return searchv1.Source{}, err
 	}
 	raw := strings.TrimSpace(in.URL)
-	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-		return searchv1.Source{}, badRequest("give an http or https URL")
+	if _, err := parseURL(raw); err != nil {
+		return searchv1.Source{}, err
 	}
 	kind := in.Kind
 	if kind == "" {
-		kind = urlKind(u)
+		kind = detectKind(context.Background(), raw)
 	}
 	if kind != searchv1.KindPage && kind != searchv1.KindGit {
 		return searchv1.Source{}, badRequest("kind is page or git")

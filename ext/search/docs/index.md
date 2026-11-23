@@ -51,8 +51,9 @@ Open the dashboard and choose **Search** in the header. Every bucket is listed w
 
 - **Drop files, folders or zips** on it (Markdown, text or code inside), or choose files.
 - **Paste text.**
-- **Add a URL**: a web page, or a Git repository (`https://github.com/owner/repo`). Pick how often to read it again:
-  every hour, day or week. A repository brings its default branch's text files and its recent commits.
+- **Add a URL or Git repo**: paste any URL. Its server is asked whether it's a Git repository (with or without `.git`,
+  on any host), and the form shows how it will be read, with a switch if you want the other. Pick how often to read it
+  again: every hour, day or week. A repository brings its default branch's text files and its recent commits.
 - **Follow a collection**: pick the collection, the fields to search (the first is each record's title) and, if you
   like, which records (`published = true`). It reads the records there now and keeps up as they're saved and deleted.
 

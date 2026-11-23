@@ -286,7 +286,7 @@
         const data = store({
             loading: true, bucket: null, sources: [], status: null, over: false, adding: "",
             form: "", // "paste" | "url" | "follow" | "settings"
-            pasteName: "", pasteText: "", url: "", every: "day", follow: { collection: "", fields: "", filter: "" },
+            pasteName: "", pasteText: "", url: "", every: "day", urlKind: "", urlChecking: false, follow: { collection: "", fields: "", filter: "" },
             edit: {}, collections: [], open: {}, docs: {},
         });
         let timer = null;
@@ -408,6 +408,23 @@
                 load();
             };
             input.click();
+        }
+
+        // detectSoon asks the server how a URL would be read, once typing pauses
+        let detectTimer = null;
+        function detectSoon() {
+            clearTimeout(detectTimer);
+            data.urlKind = "";
+            const u = data.url.trim();
+            if (!/^https?:\/\/[^/]+\.[^/]+/.test(u)) return;
+            detectTimer = setTimeout(async () => {
+                data.urlChecking = true;
+                try {
+                    const r = await send("/detect-url", { url: u });
+                    if (data.url.trim() === u) data.urlKind = r.kind;
+                } catch (_) {}
+                data.urlChecking = false;
+            }, 600);
         }
 
         async function submit(path, body, after) {
@@ -593,13 +610,25 @@
                     e.preventDefault();
                     const u = data.url.trim();
                     if (!(await confirmAdd(u))) return;
-                    submit("/add-url", { bucket: name, url: u, every: data.every }, () => (data.url = ""));
+                    submit("/add-url", { bucket: name, url: u, every: data.every, kind: data.urlKind || undefined }, () => (data.url = data.urlKind = ""));
                 } },
-                    field("A web page or a Git repository", bound(data, "url", { type: "url", required: true, placeholder: "https://pocketone.dev/llms.txt or https://github.com/owner/repo" }), "col-lg-8"),
+                    field("A web page or a Git repository", t.input({ type: "url", required: true,
+                        placeholder: "https://pocketone.dev/llms.txt or https://github.com/owner/repo",
+                        value: () => data.url, oninput: (e) => { data.url = e.target.value; detectSoon(); } }), "col-lg-8"),
                     field("Read it again", t.select({ onchange: (e) => (data.every = e.target.value) },
                         ...[["", "Only when I refresh it"], ["hour", "Every hour"], ["day", "Every day"], ["week", "Every week"]].map(([v, l]) =>
                             t.option({ value: v, selected: v === data.every }, l))), "col-lg-4"),
-                    t.div({ className: "col-lg-12 txt-hint txt-sm" }, "A repository brings its default branch's text files and its recent commits (no history beyond that, no binaries, lockfiles, node_modules or vendor)."),
+                    t.div({ className: "col-lg-12" }, () => {
+                        if (data.urlChecking) return t.span({ className: "txt-hint" }, t.span({ className: "loader sm m-r-5" }), "Asking the server whether it's a Git repository…");
+                        if (!data.urlKind) return t.span({ className: "txt-hint txt-sm" }, "The server is asked whether it's a Git repository; anything else is read as a web page.");
+                        const pick = (kind, label) => t.button({ type: "button", className: () => `btn xs ${data.urlKind === kind ? "" : "secondary"}`,
+                            onclick: () => (data.urlKind = kind) }, label);
+                        return t.div({ className: "flex gap-sm", style: "align-items: center; flex-wrap: wrap" },
+                            t.span(null, "Will be read as"), pick("git", "Git repository"), pick("page", "Web page"),
+                            t.span({ className: "txt-hint txt-sm" }, data.urlKind === "git"
+                                ? "Its default branch's text files and recent commits (no binaries, lockfiles, node_modules or vendor)."
+                                : "One document: the page's text (HTML as Markdown)."));
+                    }),
                     formButtons("Add URL")) : null,
 
                 () => data.form === "follow" ? t.form({ className: "grid m-b-base", onsubmit: (e) => {

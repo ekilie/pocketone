@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"hash/fnv"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -478,16 +480,42 @@ func TestPage(t *testing.T) {
 	}
 }
 
-func TestURLKind(t *testing.T) {
-	for raw, want := range map[string]string{
-		"https://github.com/benallfree/nollama": "git", "https://github.com/benallfree/nollama.git": "git",
-		"https://example.com/x/repo.git": "git", "https://github.com/benallfree/nollama/blob/main/README.md": "page",
-		"https://pocketone.dev/llms.txt": "page",
-	} {
-		u, _ := url.Parse(raw)
-		if got := urlKind(u); got != want {
-			t.Errorf("%s: %s, want %s", raw, got, want)
+// fakeGit answers the Git protocol's first question (/info/refs) like a repository whose HEAD is main.
+func fakeGit(t *testing.T) *httptest.Server {
+	t.Helper()
+	pkt := func(line string) string { return fmt.Sprintf("%04x%s", len(line)+4, line) }
+	sha := strings.Repeat("ab", 20)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/info/refs") || r.URL.Query().Get("service") != "git-upload-pack" {
+			http.NotFound(w, r)
+			return
 		}
+		w.Header().Set("Content-Type", "application/x-git-upload-pack-advertisement")
+		_, _ = io.WriteString(w, pkt("# service=git-upload-pack\n")+"0000"+
+			pkt(sha+" HEAD\x00symref=HEAD:refs/heads/main agent=fake\n")+pkt(sha+" refs/heads/main\n")+"0000")
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// A URL is a repository when its server answers the Git protocol, with or without .git; anything else is a page.
+func TestDetectURL(t *testing.T) {
+	_, _, s := setup(t)
+	git := fakeGit(t)
+	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = io.WriteString(w, "<h1>Hello</h1>")
+	}))
+	defer page.Close()
+	for raw, want := range map[string]string{git.URL + "/owner/repo": "git", git.URL + "/owner/repo.git": "git", page.URL + "/owner/repo": "page",
+		page.URL + "/x.git": "page"} {
+		got, err := s.DetectURL(ctx, extkit.Internal, searchv1.URLRef{URL: raw})
+		if err != nil || got.Kind != want {
+			t.Errorf("%s: %+v %v, want %s", raw, got, err, want)
+		}
+	}
+	if _, err := s.DetectURL(ctx, extkit.Internal, searchv1.URLRef{URL: "ftp://example.com/x"}); err == nil {
+		t.Fatal("an ftp URL was accepted")
 	}
 	for p, skip := range map[string]bool{"src/a.go": false, ".git/HEAD": true, "a/node_modules/x.js": true, "go.sum": true,
 		"docs/old/x.md": true, "x.min.js": true, ".github/ci.yml": true} {

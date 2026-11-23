@@ -83,7 +83,7 @@ screen shows them: say what to load. A name is letters, digits, `-` and `_`, up 
 | Folder | drop it (sent file by file, then pruned) | one per text file, by its path in the folder | updates changed files, adds new ones, **removes missing ones** |
 | Zip | drop it, or `upload` a `.zip` | one per text file inside (a shared top folder is dropped) | the same, from the new zip |
 | Web page | **add a URL**, or `$search.addURL({ bucket, url, every })` | one | read again on its interval |
-| Git repository | add its URL (a `.git` ending, or `github.com`/`gitlab.com`/`codeberg.org` owner/repo) | one per text file on the default branch, plus one per recent commit (300; `commits`) | read again on its interval: one small request when nothing changed |
+| Git repository | add its URL, with or without `.git`: the server is asked whether it's a repository (the Git protocol's `info/refs`), on any host | one per text file on the default branch, plus one per recent commit (300; `commits`) | read again on its interval: one small request when nothing changed |
 | Collection | **follow a collection**, or `$search.follow({ bucket, collection, fields, filter })` | one per record the filter keeps | kept in sync as records are saved and deleted |
 
 A source's name identifies it in its bucket: the file, folder or zip name, the URL, or the collection. Adding one of

@@ -47,6 +47,7 @@ Over HTTP (a superuser, or a token with the scope shown):
 | Put | `POST /api/_c/search/v1/put` | `{"bucket", "source", "path", "text", "replace"?}` (a folder's file) | `search` |
 | Prune | `POST /api/_c/search/v1/prune` | `{"bucket", "source", "keep": [...]}` (ends a folder) | `search` |
 | Add URL | `POST /api/_c/search/v1/add-url` | `{"bucket", "url", "kind"?, "every"?, "commits"?, "exclude"?}` | `search` |
+| Detect URL | `POST /api/_c/search/v1/detect-url` | `{"url"}` → `{"kind"}`: `git` when the server answers the Git protocol, else `page` | `search:read` |
 | Follow | `POST /api/_c/search/v1/follow` | `{"bucket", "collection", "fields": [...], "filter"?}` | `search` |
 | Refresh | `POST /api/_c/search/v1/refresh` | `{"bucket", "source"}` | `search` |
 | Remove | `POST /api/_c/search/v1/remove` | `{"bucket", "sources": [...]}` | `search` |

@@ -87,6 +87,11 @@ type Search interface {
 	//
 	//op: POST add-url
 	AddURL(ctx context.Context, a extkit.Auth, in URLInput) (Source, error)
+	// DetectURL says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any
+	// host, with or without .git), otherwise as a web page.
+	//
+	//op: POST detect-url scope=search:read
+	DetectURL(ctx context.Context, a extkit.Auth, in URLRef) (URLKind, error)
 	// Follow adds one of the app's collections as a source (named by the collection): each record the filter keeps is
 	// a document, kept in sync as records are saved and deleted.
 	//
@@ -274,7 +279,7 @@ type PruneInput struct {
 type URLInput struct {
 	Bucket string `json:"bucket"`
 	URL    string `json:"url"` // http or https
-	// Kind is page or git; "" decides from the URL (a .git ending, or github.com/gitlab.com/codeberg.org owner/repo).
+	// Kind is page or git; "" asks the server (DetectURL).
 	Kind  string `json:"kind,omitempty"`
 	Every string `json:"every,omitempty"` // hour, day, week; "" reads it only when added or refreshed
 	// Commits is how many recent commits of a repository become documents (subject, body, author, date, files; no
@@ -283,6 +288,16 @@ type URLInput struct {
 	// Exclude skips a repository's files whose path, or any folder in it, matches one of these patterns ("docs/old",
 	// "*.min.js"), beside what's always skipped (binaries, .git, node_modules, vendor, lockfiles).
 	Exclude []string `json:"exclude,omitempty"`
+}
+
+// URLRef is a URL.
+type URLRef struct {
+	URL string `json:"url"`
+}
+
+// URLKind is how a URL would be read: git or page.
+type URLKind struct {
+	Kind string `json:"kind"`
 }
 
 // FollowInput is a collection.

@@ -115,7 +115,7 @@ declare namespace contracts.search.v1 {
      */
     url: string;
     /**
-     * Kind is page or git; "" decides from the URL (a .git ending, or github.com/gitlab.com/codeberg.org owner/repo).
+     * Kind is page or git; "" asks the server (DetectURL).
      */
     kind: string;
     /**
@@ -132,6 +132,13 @@ declare namespace contracts.search.v1 {
      * "*.min.js"), beside what's always skipped (binaries, .git, node_modules, vendor, lockfiles).
      */
     exclude: Array<string>;
+  }
+
+  /**
+   * URLRef is a URL.
+   */
+  interface URLRef {
+    url: string;
   }
 
   /**
@@ -339,6 +346,16 @@ declare function onSearchPrune(handler: (e: contracts.CallEvent<contracts.search
  * @group PocketOne
  */
 declare function onSearchAddURL(handler: (e: contracts.CallEvent<contracts.search.v1.URLInput>) => void): void;
+/**
+ * DetectURL says how AddURL would read a URL: as a Git repository when its server answers the Git protocol (any
+ * host, with or without .git), otherwise as a web page.
+ *
+ * Runs on every detect_u_r_l call to search/v1, from any surface (HTTP, Go, MCP, the CLI): change e.input, or throw to
+ * refuse.
+ *
+ * @group PocketOne
+ */
+declare function onSearchDetectURL(handler: (e: contracts.CallEvent<contracts.search.v1.URLRef>) => void): void;
 /**
  * Follow adds one of the app's collections as a source (named by the collection): each record the filter keeps is
  * a document, kept in sync as records are saved and deleted.

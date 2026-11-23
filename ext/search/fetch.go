@@ -20,7 +20,8 @@ import (
 // Fetch limits.
 var (
 	FetchTimeout      = 30 * time.Second
-	MaxMultiFileBytes = int64(1 << 20) // a file in a folder, zip or repository: larger ones are skipped (generated, data)
+	DetectTimeout     = 10 * time.Second // asking a URL's server whether it's a Git repository
+	MaxMultiFileBytes = int64(1 << 20)   // a file in a folder, zip or repository: larger ones are skipped (generated, data)
 )
 
 // httpClient fetches pages on Go's default transport, so a multitenant host's egress guard applies to it.
