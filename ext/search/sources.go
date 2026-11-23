@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -202,34 +203,47 @@ func (s *service) clearSource(bucketID string, src *core.Record) error {
 	return nil
 }
 
-// syncDocs makes a source hold exactly docs: each added (unchanged ones cost nothing), the rest removed.
+// syncDocs makes a source hold exactly docs: each added (unchanged ones cost nothing), the rest removed. A document
+// that can't be added doesn't stop the others: they're reported together as a partial error (the source stays
+// usable); only the bucket's limits stop it.
 func (s *service) syncDocs(b, src *core.Record, docs []docIn, force bool) error {
 	keep := map[string]bool{}
-	var firstErr error
+	var failed []string
 	for _, d := range docs {
 		keep[strings.TrimSpace(d.name)] = true
 		if _, _, err := s.addDoc(b, src, d, addOpts{force: force}); err != nil {
 			if isLimit(err) {
 				return err
 			}
-			if firstErr == nil {
-				firstErr = fmt.Errorf("%s: %w", d.name, err)
-			}
+			failed = append(failed, d.name+": "+errText(err))
 		}
 	}
-	return errors2(firstErr, s.prune(b, src, keep))
+	if err := s.prune(b, src, keep); err != nil {
+		return err
+	}
+	if len(failed) > 0 {
+		return &partialError{failed: failed, of: len(docs)}
+	}
+	return nil
+}
+
+// partialError: some of a source's documents couldn't be added; the rest are there.
+type partialError struct {
+	failed []string
+	of     int
+}
+
+func (e *partialError) Error() string {
+	msg := fmt.Sprintf("%d of %d files not added: %s", len(e.failed), e.of, e.failed[0])
+	if len(e.failed) > 1 {
+		msg += fmt.Sprintf(" (and %d more)", len(e.failed)-1)
+	}
+	return msg
 }
 
 func isLimit(err error) bool {
 	e, ok := err.(*extkit.Error)
 	return ok && e.Code == searchv1.ErrTooLarge.Code
-}
-
-func errors2(a, b error) error {
-	if a != nil {
-		return a
-	}
-	return b
 }
 
 // prune removes a source's documents that aren't in keep.
@@ -254,7 +268,15 @@ func (s *service) finish(src *core.Record, readErr error, state string) {
 	if err != nil {
 		return // removed meanwhile
 	}
-	if readErr != nil {
+	var partial *partialError
+	if errors.As(readErr, &partial) {
+		// usable: ready, with a note of what's missing
+		fresh.Set("status", SourceReady)
+		fresh.Set("error", partial.Error())
+		if state != "" {
+			fresh.Set("state", state)
+		}
+	} else if readErr != nil {
 		fresh.Set("status", SourceError)
 		msg := errText(readErr)
 		if len(msg) > 2000 {
@@ -324,7 +346,10 @@ func (s *service) addFile(bucket, name, replace, kind, text string) (searchv1.So
 	}
 	err = s.syncDocs(b, src, []docIn{{name: src.GetString("name"), text: text}}, false)
 	s.finish(src, err, "")
-	if err != nil {
+	var partial *partialError
+	if errors.As(err, &partial) {
+		return searchv1.Source{}, badRequest(partial.failed[0])
+	} else if err != nil {
 		return searchv1.Source{}, err
 	}
 	return s.sourceResult(b, src)
@@ -671,6 +696,25 @@ func (s *service) Remove(_ context.Context, _ extkit.Auth, in searchv1.RemoveInp
 	}
 	s.loadFollowers()
 	return searchv1.Removed{Count: n}, nil
+}
+
+// resumeReads reads again every source a restart (or crash) interrupted mid-read.
+func (s *service) resumeReads() {
+	stuck, err := s.app.FindRecordsByFilter(SourcesCollection, "status = 'reading'", "updated", 0, 0)
+	if err != nil {
+		return
+	}
+	for _, src := range stuck {
+		b, err := s.app.FindRecordById(BucketsCollection, src.GetString("bucket"))
+		if err != nil {
+			continue
+		}
+		if src.GetString("kind") == searchv1.KindFolder {
+			s.finish(src, nil, "") // a folder upload the browser didn't finish: keep what arrived
+			continue
+		}
+		s.read(b, src, false)
+	}
 }
 
 // refreshDue reads every source whose interval has come round.

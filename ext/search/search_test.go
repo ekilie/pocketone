@@ -716,3 +716,21 @@ func TestJS(t *testing.T) {
 		t.Fatalf("from JS: %+v", out)
 	}
 }
+
+// A file that can't be added doesn't fail its source: the rest go in and the source says what's missing. A read a
+// restart cut off is picked up again.
+func TestPartialAndResume(t *testing.T) {
+	app, _, s := setup(t)
+	_, _ = s.Ensure(ctx, extkit.Internal, searchv1.EnsureInput{Name: "kb"})
+	src := upload(t, s, "kb", "mixed.zip", "", zipOf(t, map[string]string{"ok.md": "# Fine", strings.Repeat("x", 1001) + ".md": "too long a name"}))
+	if src.Status != SourceReady || src.Documents != 1 || !strings.Contains(src.Error, "1 of 2 files not added") {
+		t.Fatalf("partial: %+v", src)
+	}
+	if _, err := app.DB().NewQuery("UPDATE " + SourcesCollection + " SET status = 'reading'").Execute(); err != nil {
+		t.Fatal(err)
+	}
+	of(app).resumeReads()
+	if l, _ := s.Sources(ctx, extkit.Internal, searchv1.BucketRef{Bucket: "kb"}); l.Sources[0].Status != SourceReady {
+		t.Fatalf("after resuming: %+v", l.Sources[0])
+	}
+}

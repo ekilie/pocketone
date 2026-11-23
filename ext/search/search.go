@@ -73,7 +73,8 @@ func (*Extension) Register(app core.App, _ extkit.Config) error {
 	s.bindCollections()
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		s.loadFollowers()
-		s.kickWorker() // resume what was queued before a restart
+		s.kickWorker()  // resume what was queued before a restart
+		s.resumeReads() // and sources a restart cut off mid-read
 		// URL and repository sources with an interval, read when they're due
 		app.Cron().MustAdd("__pocketoneSearchRefresh__", "*/5 * * * *", func() { s.refreshDue() })
 		return e.Next()
