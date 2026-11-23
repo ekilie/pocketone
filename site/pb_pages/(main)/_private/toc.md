@@ -18,7 +18,6 @@
 - [MCP for AI agents](/docs/features/mcp)
 - [Bulk mail](/docs/features/bulk-mail)
 - [pocketone.yaml](/docs/pocketone-yaml)
-- [AI in your app](/docs/extensions/agent)
 - [Desktop apps](/docs/extensions/desktop)
 - [Key-Value Store](/docs/extensions/kv)
 - [AI in your app](/docs/extensions/llm)

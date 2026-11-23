@@ -316,6 +316,9 @@ func homeLink(p *extension) string {
 	return "- [Home](/docs/extensions/" + p.Name + ")\n"
 }
 
+// extPageRe matches an extension's page URL (/docs/extensions/<name>), not its guides below it.
+var extPageRe = regexp.MustCompile(`^/docs/extensions/[^/#?]+$`)
+
 // mainNav is the main nav (_private/toc.md, otherwise hand-written) with each extension's docs linked at the end of
 // the section their index.md names (`section:`), by the index's title. Sync owns those links: a line that links an
 // extension's docs anywhere else is dropped, so moving docs to another section is a front matter change.
@@ -326,12 +329,16 @@ func mainNav(root string, m *manifest) (string, error) {
 	}
 	docs := map[string][]*extension{} // section -> extensions whose docs it links
 	owned := map[string]bool{}        // the URLs sync links
+	exists := map[string]bool{}       // every extension's page
 	for _, p := range m.Extensions {
+		exists["/docs/extensions/"+p.Name] = true
 		if p.landing {
 			docs[p.section] = append(docs[p.section], p)
 			owned["/docs/extensions/"+p.Name] = true
 		}
 	}
+	// gone is a link to the page of an extension that no longer exists (a removed or renamed one): dropped too
+	gone := func(url string) bool { return extPageRe.MatchString(url) && !exists[url] }
 	var out []string
 	section := ""
 	flush := func() { // the section's docs links, after its own
@@ -346,7 +353,7 @@ func mainNav(root string, m *manifest) (string, error) {
 	}
 	lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
 	for i, l := range lines {
-		if m := tocLinkRe.FindStringSubmatch(l); m != nil && owned[m[2]] {
+		if m := tocLinkRe.FindStringSubmatch(l); m != nil && (owned[m[2]] || gone(m[2])) {
 			continue
 		}
 		if h := h1Re.FindStringSubmatch(l); h != nil {
@@ -357,7 +364,7 @@ func mainNav(root string, m *manifest) (string, error) {
 		if tocLinkRe.MatchString(l) && section != "" {
 			rest := ""
 			for _, n := range lines[i+1:] {
-				if m := tocLinkRe.FindStringSubmatch(n); m != nil && owned[m[2]] {
+				if m := tocLinkRe.FindStringSubmatch(n); m != nil && (owned[m[2]] || gone(m[2])) {
 					continue
 				}
 				if strings.TrimSpace(n) != "" {
