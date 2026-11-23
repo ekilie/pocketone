@@ -343,6 +343,9 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 	if err := starterPages(root, out); err != nil {
 		return nil, err
 	}
+	if err := checkScreenshots(root, out); err != nil {
+		return nil, err
+	}
 	if err := checkRESTCoverage(root); err != nil {
 		return nil, err
 	}

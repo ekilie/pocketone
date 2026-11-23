@@ -1,0 +1,122 @@
+{
+  "about": "Every product screenshot in the docs: what it shows, the pages that use it, the feature it depends on, and how to take it again. When a feature changes, check its screenshots here. site/sync checks that each file exists, each page uses it, and every image under docs/screenshots is listed.",
+  "screenshots": [
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-ask.jpg",
+      "shows": "The ask kit: a question box over the docs",
+      "pages": [
+        "/docs/starters/ask"
+      ],
+      "feature": "starter kit ask (ext/pages/starters/ask)",
+      "retake": "pocketone pages create /tmp/ask --starter ask, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-ask-docs.jpg",
+      "shows": "A sample docs page in the ask kit",
+      "pages": [
+        "/docs/starters/ask"
+      ],
+      "feature": "starter kit ask (ext/pages/starters/ask)",
+      "retake": "pocketone pages create /tmp/ask --starter ask, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-auth.jpg",
+      "shows": "The auth kit's home page, with Login and Register links",
+      "pages": [
+        "/docs/starters/auth"
+      ],
+      "feature": "starter kit auth (ext/pages/starters/auth)",
+      "retake": "pocketone pages create /tmp/auth --starter auth, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-auth-login.jpg",
+      "shows": "The auth kit's sign-in page: anonymous and password sign-in",
+      "pages": [
+        "/docs/starters/auth"
+      ],
+      "feature": "starter kit auth (ext/pages/starters/auth)",
+      "retake": "pocketone pages create /tmp/auth --starter auth, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-daisyui.jpg",
+      "shows": "The DaisyUI kit: a navbar over a centered intro",
+      "pages": [
+        "/docs/starters/daisyui"
+      ],
+      "feature": "starter kit daisyui (ext/pages/starters/daisyui)",
+      "retake": "pocketone pages create /tmp/daisyui --starter daisyui, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-daisyui-docs.jpg",
+      "shows": "The DaisyUI docs kit's splash page",
+      "pages": [
+        "/docs/starters/daisyui-docs"
+      ],
+      "feature": "starter kit daisyui-docs (ext/pages/starters/daisyui-docs)",
+      "retake": "pocketone pages create /tmp/daisyui-docs --starter daisyui-docs, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-daisyui-docs-page.jpg",
+      "shows": "A docs page in the DaisyUI docs kit, with its sidebar",
+      "pages": [
+        "/docs/starters/daisyui-docs"
+      ],
+      "feature": "starter kit daisyui-docs (ext/pages/starters/daisyui-docs)",
+      "retake": "pocketone pages create /tmp/daisyui-docs --starter daisyui-docs, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-datastar.jpg",
+      "shows": "The Datastar kit: chat rooms with a message sent, and a live counter",
+      "pages": [
+        "/docs/starters/datastar"
+      ],
+      "feature": "starter kit datastar (ext/pages/starters/datastar)",
+      "retake": "pocketone pages create /tmp/datastar --starter datastar, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-htmx.jpg",
+      "shows": "The htmx kit: one message shown on both chat connections, and a live counter",
+      "pages": [
+        "/docs/starters/htmx"
+      ],
+      "feature": "starter kit htmx (ext/pages/starters/htmx)",
+      "retake": "pocketone pages create /tmp/htmx --starter htmx, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-minimal.jpg",
+      "shows": "The minimal kit's single splash page",
+      "pages": [
+        "/docs/starters/minimal"
+      ],
+      "feature": "starter kit minimal (ext/pages/starters/minimal)",
+      "retake": "pocketone pages create /tmp/minimal --starter minimal, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-mvp.jpg",
+      "shows": "The MVP.css kit's one page",
+      "pages": [
+        "/docs/starters/mvp"
+      ],
+      "feature": "starter kit mvp (ext/pages/starters/mvp)",
+      "retake": "pocketone pages create /tmp/mvp --starter mvp, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "site/pb_pages/(main)/docs/screenshots/starter-tsx.jpg",
+      "shows": "The TSX kit: a page built from components",
+      "pages": [
+        "/docs/starters/tsx"
+      ],
+      "feature": "starter kit tsx (ext/pages/starters/tsx)",
+      "retake": "pocketone pages create /tmp/tsx --starter tsx, serve it, screenshot at 1280x800"
+    },
+    {
+      "file": "ext/llm/docs/guides/limits-settings.png",
+      "shows": "Settings → LLM: four limits under today's and this month's spend",
+      "pages": [
+        "/docs/extensions/llm/guides/limits"
+      ],
+      "feature": "dashboard: Settings → LLM, limits (ext/llm ui)",
+      "retake": "dashboard /_/, Settings → LLM, with four limits set"
+    }
+  ]
+}

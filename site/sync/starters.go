@@ -74,12 +74,17 @@ func starterPages(root string, out map[string]string) error {
 	if err != nil {
 		return err
 	}
+	shots, err := loadScreenshots(root)
+	if err != nil {
+		return err
+	}
 	for _, k := range kits {
 		var b strings.Builder
 		b.WriteString(frontMatter(k.Title, k.Summary, startersDir+"/"+k.Name+"/README.md"))
 		fmt.Fprintf(&b, "# %s\n\n", k.Title)
 		fmt.Fprintf(&b, "Its files are in [`%s/%s`](%s/tree/main/%s/%s). See every [starter kit](%s).\n\n",
 			startersDir, k.Name, repoURL, startersDir, k.Name, startersURL)
+		b.WriteString(screenshotsFor(shots, startersURL+"/"+k.Name)) // from site/screenshots.json
 		b.WriteString(k.Body + "\n")
 		out[startersOut+"/"+k.Name+".md"] = escapeEJS(b.String())
 	}
