@@ -27,7 +27,7 @@ func TestPagesStarters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, k := range []string{"minimal", "mvp", "htmx", "daisyui", "daisyui-docs", "datastar", "auth", "tsx"} {
+	for _, k := range []string{"minimal", "mvp", "htmx", "daisyui", "daisyui-docs", "datastar", "auth", "tsx", "ask"} {
 		if !strings.Contains(out, k) {
 			t.Fatalf("missing %s in\n%s", k, out)
 		}

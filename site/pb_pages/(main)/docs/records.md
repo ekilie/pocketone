@@ -6,7 +6,7 @@ description: Find, create, change and delete records from your own code - filter
 # Records
 
 A record is one row of a [collection](/docs/collections). Clients reach records through the [REST
-API](/docs/reference/rest); this page is about your own code: a [hook](/docs/hooks), a [route](/docs/routes), a cron
+API](/docs/rest); this page is about your own code: a [hook](/docs/hooks), a [route](/docs/routes), a cron
 job or a migration. In JavaScript the app is `$app` (or `e.app` inside a handler, which is the right one inside a
 transaction); in Go it's your `app`.
 

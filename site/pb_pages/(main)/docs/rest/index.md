@@ -23,7 +23,7 @@ wraps it, but anything that speaks HTTP can use it.
 | [Backups](/docs/rest/backups) | make, download, upload and restore backups (superusers) |
 | [SQL](/docs/rest/sql) | run a SQL query (superusers) |
 | [Health](/docs/rest/health) | is the app up |
-| [Extension APIs](/docs/reference/rest) | the endpoints PocketOne's extensions add, under `/api/_c/` |
+| [Extension APIs](/docs/extensions/apis) | the endpoints PocketOne's extensions add, under `/api/_c/` |
 
 ## Requests
 

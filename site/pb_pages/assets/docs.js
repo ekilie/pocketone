@@ -259,10 +259,11 @@
     if (/^\/docs\/examples(\/|$)/.test(path)) return 'examples'
     if (/^\/docs\/reference\/javascript(\/|$)/.test(path)) return 'javascript'
     if (/^\/docs\/reference\/go(\/|$)/.test(path)) return 'go'
+    if (/^\/docs\/rest(\/|$)/.test(path)) return 'rest'
     return ''
   }
   // how deep a nav is: the main nav, a section (Contracts, Extensions, Example apps, the API references), an extension's own docs
-  const sections = new Set(['contracts', 'extensions', 'examples', 'javascript', 'go'])
+  const sections = new Set(['contracts', 'extensions', 'examples', 'javascript', 'go', 'rest'])
   const depth = (nav) => (nav === '' ? 0 : sections.has(nav) ? 1 : 2)
   const current = toc?.dataset.nav || ''
   document.querySelectorAll('.docs-toc-navigation a[href^="/"]').forEach((a) => {

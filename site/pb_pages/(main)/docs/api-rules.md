@@ -6,7 +6,7 @@ description: Decide who can list, view, create, update and delete each collectio
 # API rules and filters
 
 Every [collection](/docs/collections) has five API rules, one per action: **list**, **view**, **create**, **update**
-and **delete**. A rule decides who may do that action through the [REST API](/docs/reference/rest), and it's written in
+and **delete**. A rule decides who may do that action through the [REST API](/docs/rest), and it's written in
 the same filter language clients use to search. Superusers skip the rules; your own code (`$app.save`, `findRecords...`)
 isn't checked against them either.
 

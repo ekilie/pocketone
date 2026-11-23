@@ -1,9 +1,9 @@
 ---
-title: pocketone.yaml
+title: Configuration
 description: Put your app's settings in one file instead of a line of flags, keep secrets in a .env beside it, and set any extension's options.
 ---
 
-# pocketone.yaml
+# Configuration
 
 Every `pocketone` flag has a default. `pocketone.yaml` lets you change those defaults in one file, next to your app,
 instead of typing them on every start. The same file holds each extension's options, and your secrets go in a `.env`

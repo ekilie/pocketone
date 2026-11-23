@@ -2,8 +2,22 @@
 
 - [What is PocketOne?](/docs/overview)
 - [Installation](/docs/installation)
+- [Running PocketOne](/docs/running)
 - [Coming from PocketBase](/docs/pocketbase)
 - [LLM skills for coding agents](/docs/agents)
+
+# Starter kits
+
+- [All starter kits](/docs/starters)
+- [Ask](/docs/starters/ask)
+- [Auth](/docs/starters/auth)
+- [DaisyUI](/docs/starters/daisyui)
+- [DaisyUI docs](/docs/starters/daisyui-docs)
+- [Datastar](/docs/starters/datastar)
+- [htmx](/docs/starters/htmx)
+- [Minimal](/docs/starters/minimal)
+- [MVP.css](/docs/starters/mvp)
+- [TSX](/docs/starters/tsx)
 
 # Database
 
@@ -40,7 +54,7 @@
 
 # Deploy and run
 
-- [pocketone.yaml](/docs/pocketone-yaml)
+- [Configuration](/docs/pocketone-yaml)
 - [Deploy and live sync](/docs/features/deploy)
 - [Remote CLI](/docs/features/remote)
 - [Run on a Linux server](/docs/guides/linux-server)
@@ -56,35 +70,18 @@
 - [Let users sign in with Google](/docs/extensions/pages/speedruns/google-oauth2)
 - [Send email through Amazon SES](/docs/extensions/pages/speedruns/ses)
 
-# REST API
-
-- [Overview](/docs/rest)
-- [Records](/docs/rest/records)
-- [Authentication](/docs/rest/authentication)
-- [Realtime](/docs/rest/realtime)
-- [Files](/docs/rest/files)
-- [Batch](/docs/rest/batch)
-- [Collections](/docs/rest/collections)
-- [Settings](/docs/rest/settings)
-- [Logs](/docs/rest/logs)
-- [Crons](/docs/rest/crons)
-- [Backups](/docs/rest/backups)
-- [SQL](/docs/rest/sql)
-- [Health](/docs/rest/health)
-- [Extension APIs](/docs/reference/rest)
-
 # Reference
 
 - [JavaScript API](/docs/reference/javascript)
 - [Go API](/docs/reference/go)
+- [REST API](/docs/rest)
 - [CLI](/docs/reference/cli)
 - [MCP tools](/docs/reference/mcp)
 - [pocketone.yaml](/docs/config-reference)
-- [Folders](/docs/folders)
-- [Extensions](/docs/extensions)
+
+# Extensions
+
+- [Overview](/docs/extensions)
 - [Contracts](/docs/contracts)
-
-# Extend PocketOne
-
 - [How PocketOne fits together](/docs/how-pocketone-fits-together)
 - [Writing an extension](/docs/writing-an-extension)

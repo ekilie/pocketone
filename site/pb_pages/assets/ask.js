@@ -10,7 +10,6 @@
   const list = dialog.querySelector('.search-results')
   const status = dialog.querySelector('.search-status')
   const more = dialog.querySelector('.ask-more')
-  const chatURL = more.querySelector('a').dataset.base
   let sources = []
   let run = 0 // the latest question; an older one's events are dropped
 
@@ -178,7 +177,6 @@
     const me = ++run
     reset()
     status.textContent = 'Looking through the docs…'
-    more.querySelector('a').href = `${chatURL}/?q=${encodeURIComponent(q)}`
     let written = ''
     let failed = ''
     try {
@@ -224,7 +222,7 @@
   }
 
   dialog.addEventListener('click', (e) => {
-    if (e.target.closest('a[href]') && !e.target.closest('.ask-more')) dialog.close()
+    if (e.target.closest('a[href]')) dialog.close()
     // a click on the backdrop (the dialog element itself, outside its box) closes it
     if (e.target === dialog) dialog.close()
   })

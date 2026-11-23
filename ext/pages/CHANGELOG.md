@@ -7,6 +7,12 @@ Sections named after a PocketOne release are from before extensions had versions
 
 ## Unreleased
 
+### Added
+
+- The `ask` starter kit (`pocketone pages create mydocs --starter ask`): ask your docs a question and get a short
+  answer citing the pages it came from, from a folder of Markdown kept in an LLM Search bucket, with the visitor's
+  calls under the LLM limits.
+
 ## 0.1.2 (2026-11-20)
 
 ### Fixed

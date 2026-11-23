@@ -19,3 +19,17 @@ To change styles, rebuild the CSS while you edit:
 npm i
 npm run dev:css
 ```
+
+## Files
+
+```
+pb_pages/
+  +layout.ets
+  (splash)/index.ets             the home page, in its own layout
+  (main)/+layout.ets
+  (main)/docs/+layout.ets        the docs layout, with the table of contents
+  (main)/docs/_private/toc.md    the table of contents
+  (main)/docs/overview.md        a docs page: add more beside it
+```
+
+Live demo: [pocketpages-daisyui-docs.pockethost.io](https://pocketpages-daisyui-docs.pockethost.io).

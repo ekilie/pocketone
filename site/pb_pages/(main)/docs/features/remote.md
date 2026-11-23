@@ -80,7 +80,7 @@ The command, the endpoint and the tool all call the contract, so each passes the
 ## Every command, endpoint and tool
 
 - [CLI reference](/docs/reference/cli): every command of `pocketone`, PocketBase's own included.
-- [REST reference](/docs/reference/rest): every contract endpoint.
+- [Extension APIs](/docs/extensions/apis): every contract endpoint.
 - [MCP reference](/docs/reference/mcp): every contract tool.
 
 Each [contract page](/docs/contracts) lists its operations all three ways. Each extension page lists the commands

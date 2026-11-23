@@ -102,7 +102,7 @@ soon as it starts, and its cost is added to its ledger row once `createAsync` wi
 
 - The whole app, US dollars, at most 20, per month.
 
-**A public demo**, like [Docs Chat](/docs/examples/docs-chat), where visitors aren't signed in:
+**A public demo**, like an [ask your docs](/docs/starters/ask) page, where visitors aren't signed in:
 
 - All guests together, US dollars, at most 1, per day.
 - Each guest, US dollars, at most 0.10, per day.

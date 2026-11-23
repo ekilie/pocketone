@@ -142,7 +142,7 @@ return e.JSON(200, map[string]string{"answer": r.Text})
 ```
 
 A streamed answer fails the same way, before any text arrives. With server-sent events, send the message as an event
-the page shows in place of the answer, as [Docs Chat](/docs/examples/docs-chat) does:
+the page shows in place of the answer, as pocketone.dev's ask box does:
 
 ```ts
 // pb_pages/chat/+api.ts

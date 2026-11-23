@@ -6,7 +6,7 @@ description: Collections are your app's tables - base, auth and view collections
 # Collections and fields
 
 A collection is a table of records with fields you define, plus its own [API rules](/docs/api-rules) and a [REST
-API](/docs/reference/rest). Every app starts with two: `_superusers` (who can open the dashboard) and `users` (your
+API](/docs/rest). Every app starts with two: `_superusers` (who can open the dashboard) and `users` (your
 app's accounts). You add the rest.
 
 ## Three kinds

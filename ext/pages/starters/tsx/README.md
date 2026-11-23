@@ -10,3 +10,13 @@ pocketone serve --dir ./pb_data
 ```
 
 Then open http://127.0.0.1:8090.
+
+## Files
+
+```
+pb_pages/
+  +layout.tsx
+  +page.ts                       loads the page's data
+  index.tsx
+  _private/Feature.tsx           a component
+```

@@ -5,7 +5,7 @@ description: Add your own API endpoints to your app - path parameters, request b
 
 # Custom routes
 
-Your app already serves the [REST API](/docs/reference/rest) for its collections. A custom route adds an endpoint of
+Your app already serves the [REST API](/docs/rest) for its collections. A custom route adds an endpoint of
 your own: a webhook receiver, a report, a search that joins three collections, anything that isn't plain record CRUD.
 
 In JavaScript, add routes with `routerAdd` in a `pb_hooks/*.pb.ts` file. In Go, add them in an `onServe` hook.

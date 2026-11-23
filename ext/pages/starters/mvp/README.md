@@ -12,3 +12,12 @@ pocketone serve --dir ./pb_data
 ```
 
 Then open http://127.0.0.1:8090.
+
+## Files
+
+```
+pb_pages/
+  index.ets
+```
+
+Live demo: [pocketpages-mvp.pockethost.io](https://pocketpages-mvp.pockethost.io).

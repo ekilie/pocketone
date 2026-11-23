@@ -57,7 +57,7 @@ plus remote/v1's whoami (`/api/_c/remote/v1`); anywhere else it gets `403`. Exte
 Contract scopes are registered when the app serves, so **Settings → API tokens** on the running app lists every
 scope. The `pocketone token` command works offline and doesn't see them: `token scopes` lists only `deploy` and
 `deploy:read`, and `token create --scope restore` fails with `unknown scope "restore"`. Create a token with a
-contract scope from the dashboard or the [REST API](#rest-api).
+contract scope from the dashboard or the [REST API](#rest-api-api-tokensv1).
 
 ### Your own scopes
 
@@ -152,7 +152,7 @@ The list shows each token's name, its first characters, owner, scopes, expiry an
 Tokens issued by [the OAuth server](OAUTH.md) carry an `oauth: <client id>` label. Click **Revoke** and
 confirm to delete one; anything using it stops working at once.
 
-App users who aren't superusers manage their own tokens through the [REST API](#rest-api).
+App users who aren't superusers manage their own tokens through the [REST API](#rest-api-api-tokensv1).
 
 ### From the command line
 
