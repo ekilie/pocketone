@@ -15,6 +15,8 @@ request, and the request then knows who it's from: `@request.auth` in [API rules
 
 Turn them on per collection, in the dashboard (the collection's **Options**) or in code:
 
+![The users collection's Options: password, OAuth2 and one-time password on, multi-factor off, and its mail templates](/docs/screenshots/dashboard-auth-options.jpg)
+
 | Method | The user | Turn on |
 |---|---|---|
 | **Password** | enters an email (or another identity field) and a password | `passwordAuth` (on for `users`) |

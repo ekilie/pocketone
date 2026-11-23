@@ -86,6 +86,8 @@ of an instance never carry it.
 The dashboard at `/_/` is where you manage the app: collections and records, settings, logs, backups, and the
 screens extensions add (AI models, search, tokens, bulk mail).
 
+![Settings in the dashboard: application, mail, files storage, backups, crons, LLM, SQL console and API tokens](/docs/screenshots/dashboard-settings.jpg)
+
 **Superusers** are the people who can open it. They're records of a built-in collection, `_superusers`, and they can do
 everything: see and change every record, past every [API rule](/docs/api-rules), and call the admin endpoints. Keep
 them few.
@@ -99,12 +101,18 @@ pocketone superuser otp admin@example.com --dir ./pb_data                       
 Create the first one before the first `serve`. Without any superuser, the app prints a link (and opens it in a
 browser, on your own machine) to a page that creates one.
 
+![The dashboard's superuser sign-in](/docs/screenshots/dashboard-superuser-login.jpg)
+
+![The _superusers collection, under System with the tables extensions keep](/docs/screenshots/dashboard-superusers.jpg)
+
 ## Your app's users
 
 Your app's own accounts are a different thing: records of an **auth collection** you control. Every app starts with
 one, `users`, and you can add more (`customers`, `staff`). Users sign in through the [API](/docs/rest/authentication)
 or your [pages](/docs/extensions/pages/authentication), never the dashboard, and what each may do is decided by your
 collections' [API rules](/docs/api-rules).
+
+![The users collection: your app's accounts, with email, verified and name](/docs/screenshots/dashboard-users.jpg)
 
 | | Superusers | Users |
 |---|---|---|

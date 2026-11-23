@@ -10,6 +10,10 @@ API](/docs/rest); this page is about your own code: a [hook](/docs/hooks), a [ro
 job or a migration. In JavaScript the app is `$app` (or `e.app` inside a handler, which is the right one inside a
 transaction); in Go it's your `app`.
 
+In the dashboard, a collection's records are a table you can search and filter; open one to edit it. Saving there runs the same validation and hooks as your code.
+
+![Editing a posts record in the dashboard, with the slug a hook filled in](/docs/screenshots/dashboard-record-edit.jpg)
+
 ## Find records
 
 ```ts

@@ -257,6 +257,8 @@
       & > article {
         grid-column: 1;
         grid-row: 1;
+        min-width: 0; /* a grid item otherwise grows to its widest code block, under the outline */
+        margin-inline: 0; /* auto margins would size it to its content instead of its column */
       }
     }
   }

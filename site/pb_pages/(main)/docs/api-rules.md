@@ -18,6 +18,8 @@ isn't checked against them either.
 | empty string `""` | anyone, signed in or not |
 | a filter, like `author = @request.auth.id` | whoever the filter matches |
 
+![The posts collection's API rules in the dashboard: list, view, create and update rules, and delete for superusers only](/docs/screenshots/dashboard-api-rules.jpg)
+
 Set them in the dashboard (the collection's **API rules** tab) or in a migration:
 
 ```ts

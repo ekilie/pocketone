@@ -26,6 +26,12 @@ Open the dashboard (`/_/`), choose **New collection**, name it, add fields, and 
 default for `pocketone serve`), saving writes a migration file to `pb_migrations`, so the change goes with your code
 when you [deploy](/docs/features/deploy) it. See [Migrations](/docs/migrations).
 
+![The dashboard: collections in the sidebar, and the posts collection's records](/docs/screenshots/dashboard-collection-records.jpg)
+
+The gear next to a collection's name opens its settings: its fields, its API rules and, for an auth collection, its sign-in options.
+
+![Editing the posts collection: its fields, each with its type and options](/docs/screenshots/dashboard-collection-fields.jpg)
+
 ## Create one from code
 
 The same collection as a migration, so it's created on every copy of your app:

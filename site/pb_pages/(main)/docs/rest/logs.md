@@ -8,6 +8,10 @@ description: List, filter and read the app's request and app logs, and count the
 Every request and every `$app.logger()` line is kept in the app's logs database for **Settings → Logs → Max days**
 (5 by default). All endpoints are for **superusers**.
 
+The dashboard's **Logs** screen shows the same entries, with a chart by hour:
+
+![The Logs screen: requests by hour, and each entry with its level, message and data](/docs/screenshots/dashboard-logs.jpg)
+
 ## List logs
 
 `GET /api/logs`
