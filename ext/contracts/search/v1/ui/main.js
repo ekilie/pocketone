@@ -560,7 +560,7 @@
                 },
                     () => data.adding ? t.span(null, t.span({ className: "loader sm m-r-5" }), data.adding) : t.span(null,
                         t.i({ className: "ri-upload-cloud-line", ariaHidden: true }),
-                        " Drop files, folders or zips here, ",
+                        " Drop files, folders or zips here, or ",
                         t.label({ className: "link-primary", style: "cursor: pointer" }, "choose files",
                             t.input({ type: "file", multiple: true, hidden: true, onchange: async (e) => {
                                 for (const f of [...e.target.files]) {
@@ -570,13 +570,14 @@
                                 data.adding = "";
                                 load();
                             } })),
-                        ", ",
-                        t.a({ href: "#", className: "link-primary", onclick: (e) => { e.preventDefault(); openForm("paste"); } }, "paste text"),
-                        ", ",
-                        t.a({ href: "#", className: "link-primary", onclick: (e) => { e.preventDefault(); openForm("url"); } }, "add a URL"),
-                        " or ",
-                        t.a({ href: "#", className: "link-primary", onclick: (e) => { e.preventDefault(); openForm("follow"); } }, "follow a collection"),
                         ".")),
+                t.div({ className: "flex gap-sm m-b-sm", style: "flex-wrap: wrap" },
+                    ...[["url", "ri-global-line", "Add a URL or Git repo"], ["paste", "ri-text", "Paste text"], ["follow", "ri-database-2-line", "Follow a collection"]]
+                        .map(([form, icon, label]) => t.button({
+                            type: "button",
+                            className: () => `btn sm ${data.form === form ? "" : "secondary"}`,
+                            onclick: () => openForm(form),
+                        }, t.i({ className: icon, ariaHidden: true }), t.span({ className: "txt" }, label)))),
 
                 () => data.form === "paste" ? t.form({ className: "grid m-b-base", onsubmit: async (e) => {
                     e.preventDefault();
