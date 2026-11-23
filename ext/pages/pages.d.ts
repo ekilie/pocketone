@@ -15,6 +15,7 @@
 //     interface Context { hello(): string }
 //   }
 
+/** Types for page code: `ctx` and its parts, handlers, middleware, +config and components. None of them is a global at runtime. */
 declare namespace pages {
   /** What `ctx.data` holds: shared by middleware, handlers and templates. Add your own keys by redeclaring it. */
   interface Data {

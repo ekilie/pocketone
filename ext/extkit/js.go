@@ -238,6 +238,7 @@ func (j jsContracts) TypeScript() string {
 
 const jsContractsTypes = `// ---- contracts (ext/extkit): onContracts and the contracts' action hooks ----
 
+/** The contracts' shared types: who a call acts as (Auth), a call to one of their operations (CallEvent), and each contract's own types. */
 declare namespace contracts {
   interface Auth {
     /** "superuser", "record", "token", "host", or "" (anonymous). */

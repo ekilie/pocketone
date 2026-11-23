@@ -1,5 +1,6 @@
 // ---- ext/mcp: $mcp ----
 
+/** MCP's types: the tools /mcp offers, each one REST endpoint, and the requests they make. */
 declare namespace mcp {
   /** The REST request a tool makes; a request transform may change it. */
   interface ToolRequest {
