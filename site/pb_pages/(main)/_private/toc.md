@@ -7,15 +7,22 @@
 
 # Database
 
+- [Collections and fields](/docs/collections)
+- [Records](/docs/records)
+- [API rules and filters](/docs/api-rules)
+- [Migrations](/docs/migrations)
 - [Key-Value Store](/docs/extensions/kv)
 
 # Users and sign-in
 
+- [Authentication](/docs/authentication)
 - [API tokens and OAuth](/docs/features/tokens)
 
 # Hooks and routes
 
-- [Hooks](/docs/quickjs)
+- [Hooks](/docs/hooks)
+- [Custom routes](/docs/routes)
+- [QuickJS: the JS engine](/docs/quickjs)
 - [WASM](/docs/extensions/wasm)
 
 # Websites

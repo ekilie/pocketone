@@ -377,5 +377,6 @@ contracts, shared globals and async handlers.
 ## Next
 
 - [JSVM](/docs/extensions/jsvm): every file type, module resolution rule and setting.
-- PocketBase's [JS docs](https://pocketbase.io/docs/js-overview/): the JS API itself, which is unchanged.
-- [Teach your coding agent](/docs/agents): give your agent the PocketOne skill so it writes hooks the QuickJS way.
+- [Hooks](/docs/hooks) and [Custom routes](/docs/routes): what to write in a hook file.
+- [JavaScript API](/docs/reference/javascript/pocketbase): every global, hook and type.
+- [LLM skills for coding agents](/docs/agents): give your agent the PocketOne skill so it writes hooks the QuickJS way.

@@ -336,6 +336,9 @@ func generate(root string, m *manifest, secs []section) (map[string]string, erro
 		out[referenceOut+strings.TrimPrefix(u, "/docs/reference")+".md"] = page
 	}
 	out[referenceOut+"/javascript.md"] = jsIndex(m, pbNS, pbpkgs)
+	if err := fieldsInPage(root, out); err != nil {
+		return nil, err
+	}
 	for _, r := range jsRefs(m) {
 		out[referenceOut+"/javascript/"+r.Extension+".md"] = typedPage(m, r, allGo)
 	}
