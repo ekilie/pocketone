@@ -105,6 +105,15 @@
             ]));
     }
 
+    // stateIcon is a status as one icon, its words in the tooltip
+    const stateIcon = (cls, tip) => t.i({ className: "search-status-icon " + cls, ariaLabel: app.attrs.tooltip(tip) });
+
+    // showModal mounts a modal (app.modals wants it in the page) and opens it; it's removed again once closed
+    function showModal(el) {
+        document.body.appendChild(el);
+        app.modals.open(el);
+    }
+
     function page(title, crumbs, body, actions) {
         app.store.title = title;
         refreshNav();
@@ -179,6 +188,7 @@
             e.preventDefault();
             try {
                 const b = await send("/ensure", { name: data.name.trim(), title: data.title.trim(), description: data.description.trim() });
+                app.modals.close();
                 window.location.hash = bucketHref(b.name);
             } catch (err) {
                 app.toasts.error(errText(err));
@@ -190,27 +200,45 @@
         return page("Search", [crumb("Search"), crumb("All buckets")], () => {
             if (data.loading) return t.div({ className: "block txt-center" }, t.span({ className: "loader lg" }));
             return t.div(null,
-                t.p({ className: "m-t-0 txt-hint" }, "Knowledge bases your app searches and grounds its AI answers in (RAG). Open one to fill it; ",
-                    t.a({ href: "#/search/chat" }, "Chat"), " with them to try them out."),
                 data.status && !data.status.model ? noModel() : null,
                 data.buckets.length
-                    ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table m-b-base" },
+                    ? t.div({ style: "overflow-x: auto" }, t.table({ className: "search-table search-rows m-b-base" },
                         t.thead(null, t.tr(null, t.th(null, "Bucket"), t.th(null, "Made by"), t.th({ className: "search-num" }, "Sources"),
-                            t.th({ className: "search-num" }, "Documents"), t.th({ className: "search-num" }, "Size"), t.th(null, "Status"))),
+                            t.th({ className: "search-num" }, "Documents"), t.th({ className: "search-num" }, "Size"), t.th(null, ""))),
                         t.tbody(null, ...data.buckets.map((b) => t.tr({ className: "link", onclick: () => (window.location.hash = bucketHref(b.name)) },
-                            t.td(null, t.strong(null, b.title || b.name), b.title ? t.div({ className: "txt-hint txt-sm" }, b.name) : null,
-                                b.description ? t.div({ className: "txt-hint txt-sm" }, b.description) : null),
-                            t.td(null, b.owner || ""),
-                            t.td({ className: "search-num" }, b.sources),
-                            t.td({ className: "search-num" }, b.documents),
-                            t.td({ className: "search-num" }, fmtBytes(b.bytes)),
-                            t.td(null, b.documents === 0 ? t.span({ className: "label" }, "empty")
-                                : b.errors ? t.span({ className: "label danger" }, b.errors + " failed")
-                                    : b.pending ? t.span({ className: "label warning" }, b.pending + " waiting")
-                                        : t.span({ className: "label success" }, "ready")))))))
-                    : t.div({ className: "block txt-center txt-hint p-base" }, "No buckets yet."),
-                () => data.creating
-                    ? t.form({ className: "grid m-b-base", onsubmit: create },
+                            t.td({ className: "name" }, t.strong(null, b.title || b.name),
+                                b.title && b.title !== b.name ? t.span({ className: "txt-hint m-l-5" }, b.name) : null,
+                                b.description ? t.i({ className: "ri-information-line txt-hint m-l-5", ariaLabel: app.attrs.tooltip(b.description) }) : null),
+                            t.td({ className: "txt-hint", style: "white-space: nowrap" }, b.owner || ""),
+                            t.td({ className: "search-num txt-hint" }, b.sources),
+                            t.td({ className: "search-num txt-hint" }, b.documents),
+                            t.td({ className: "search-num txt-hint" }, fmtBytes(b.bytes)),
+                            t.td({ className: "txt-center" }, b.documents === 0 ? stateIcon("ri-checkbox-blank-circle-line txt-hint", "Empty: open it to add something")
+                                : b.errors ? stateIcon("ri-error-warning-fill txt-danger", `${b.errors} failed: open it to see why`)
+                                    : b.pending ? stateIcon("ri-time-line txt-warning", `${b.pending} document${b.pending === 1 ? "" : "s"} waiting to be embedded`)
+                                        : stateIcon("ri-checkbox-circle-fill txt-success", "Ready to search")))))))
+                    : t.div({ className: "block txt-center txt-hint p-base" },
+                        "No buckets yet. A bucket is a knowledge base your app searches and grounds its AI answers in (RAG). ",
+                        t.a({ href: "#", onclick: (e) => { e.preventDefault(); openNew(); } }, "Make one"), "."),
+            );
+        }, { secondary: [
+            t.a({ className: "btn circle transparent secondary", href: "#/search/find", ariaLabel: app.attrs.tooltip("Search every bucket") },
+                t.i({ className: "ri-search-line", ariaHidden: true })),
+            t.a({ className: "btn circle transparent secondary", href: "#/search/chat", ariaLabel: app.attrs.tooltip("Chat with your buckets") },
+                t.i({ className: "ri-sparkling-2-line", ariaHidden: true }))],
+        primary: [
+            t.button({ type: "button", className: "btn", onclick: () => openNew() },
+                t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New bucket"))] });
+
+        function openNew() {
+            data.name = data.title = data.description = "";
+            showModal(t.div({ className: "modal popup", onafterclose: (el) => el.remove() },
+                t.header({ className: "modal-header" }, t.h5({ className: "m-auto" }, "New bucket")),
+                t.div({ className: "modal-content" }, newForm())));
+        }
+
+        function newForm() {
+            return t.form({ className: "grid", onsubmit: create },
                         t.div({ className: "col-lg-4" }, t.div({ className: "field" }, t.label({}, "Name"),
                             t.input({ type: "text", required: true, pattern: "[A-Za-z0-9][A-Za-z0-9_\\-]{0,63}", placeholder: "docs",
                                 value: () => data.name, oninput: (e) => (data.name = e.target.value) }))),
@@ -218,13 +246,10 @@
                             t.input({ type: "text", value: () => data.title, oninput: (e) => (data.title = e.target.value) }))),
                         t.div({ className: "col-lg-12" }, t.div({ className: "field" }, t.label({}, "What belongs in it"),
                             t.input({ type: "text", value: () => data.description, oninput: (e) => (data.description = e.target.value) }))),
-                        t.div({ className: "col-lg-12 flex" },
-                            t.button({ type: "button", className: "btn transparent secondary", onclick: () => (data.creating = false) }, t.span({ className: "txt" }, "Cancel")),
-                            t.button({ className: "btn" }, t.span({ className: "txt" }, "Create bucket"))))
-                    : t.button({ type: "button", className: "btn secondary sm", onclick: () => (data.creating = true) },
-                        t.i({ className: "ri-add-line", ariaHidden: true }), t.span({ className: "txt" }, "New bucket")),
-            );
-        });
+                        t.div({ className: "col-lg-12 flex" }, t.div({ className: "m-r-auto" }),
+                            t.button({ type: "button", className: "btn transparent secondary", onclick: () => app.modals.close() }, t.span({ className: "txt" }, "Cancel")),
+                            t.button({ className: "btn" }, t.span({ className: "txt" }, "Create bucket"))));
+        }
     });
 
     // ---- search: the matching passages
@@ -861,12 +886,6 @@
         function addTab(form, icon, label) {
             return t.button({ type: "button", className: () => `btn sm ${data.form === form ? "" : "secondary"}`,
                 onclick: () => (data.form === form ? (data.form = "") : openForm(form)) }, t.i({ className: icon, ariaHidden: true }), t.span({ className: "txt" }, label));
-        }
-
-        // showModal mounts a modal (app.modals wants it in the page) and opens it; it's removed again once closed
-        function showModal(el) {
-            document.body.appendChild(el);
-            app.modals.open(el);
         }
 
         function openAdd() {
