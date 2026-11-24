@@ -1091,7 +1091,7 @@ pb.authStore.clear();
 
 ```
 {
-  "otpId": "2DRazL4in5vpfck"
+  "otpId": "sW1TWVLT1YaZy9X"
 }
 ```
 
